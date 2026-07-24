@@ -686,7 +686,7 @@ const DEFAULTS = {
   lyricsSource: 'local' as LyricsSource,
   showArtistPhoto: true,
   showDiscHeaders: true,
-  playerBackground: 'color' as ScreenBackground,
+  playerBackground: 'cover' as ScreenBackground,
   fitCoverArt: false,
   miniPlayerColorBackground: true,
   showLyricsCard: true,
