@@ -9,6 +9,23 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.5.4] - 2026-07-24
+
+### Added
+
+- The Russian translation is now complete.
+
+### Changed
+
+- Resonus is now released under the GPL-3.0-or-later license, so anything built
+  on it stays free under the same terms.
+
+### Fixed
+
+- A long value on the right of a settings row squeezed the label until it
+  wrapped one letter per line. Most visible in Russian, where the strings run
+  longest.
+
 ## [0.5.3] - 2026-07-24
 
 ### Added
