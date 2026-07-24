@@ -10,8 +10,13 @@
  * "missing"   = key exists in English but not in the locale (falls back to English).
  * "same"      = present but identical to the English text (often still untranslated).
  * "stale"     = key in the locale that no longer exists in English (safe to delete).
+ *
+ * Context overrides ("Base::context") are optional, so they never count as
+ * missing. They were also invisible here, which meant the only way to learn one
+ * existed was reading TRANSLATING.md and hoping it was up to date. The per
+ * locale report now lists them, read straight from the calls in the source.
  */
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -35,6 +40,23 @@ const baseKey = (k) => {
   const i = k.indexOf('::');
   return i === -1 ? k : k.slice(0, i);
 };
+
+/** Every `t('Base::context')` used in the source, so the report can offer them. */
+function findContextKeys() {
+  const out = new Set();
+  const walk = (dir) => {
+    for (const name of readdirSync(dir)) {
+      const full = join(dir, name);
+      if (statSync(full).isDirectory()) walk(full);
+      else if (/\.(ts|tsx)$/.test(name)) {
+        const src = readFileSync(full, 'utf8');
+        for (const m of src.matchAll(/['"`]([^'"`]+::[^'"`]+)['"`]/g)) out.add(m[1]);
+      }
+    }
+  };
+  walk(join(ROOT, 'src'));
+  return [...out].filter((k) => baseKey(k) in en).sort();
+}
 
 function analyze(code) {
   const dict = load(code);
@@ -77,6 +99,14 @@ if (one) {
   section('Missing', r.missing);
   section('Same as English', r.same);
   section('Stale (delete these)', r.stale);
+  // Optional: only worth adding when the base word can't cover both uses in
+  // this language, so these are listed as an offer, not as pending work.
+  const contexts = findContextKeys().filter((k) => !(k in r.dict));
+  if (contexts.length) {
+    console.log(`Context overrides you could add (${contexts.length}, all optional):`);
+    for (const k of contexts) console.log(`  ${k}   falls back to "${r.dict[baseKey(k)] ?? en[baseKey(k)]}"`);
+    console.log('');
+  }
   if (!r.missing.length && !r.same.length && !r.stale.length) console.log('All good ✓\n');
   process.exit(0);
 }

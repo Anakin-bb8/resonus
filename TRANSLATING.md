@@ -85,8 +85,12 @@ didn't add it, so overrides are always optional. Contexts available today:
 | --- | --- |
 | `About::artist` | Artist screen: the **biography** section title |
 | `About::app` | Settings → the **About this app** page title |
+| `Previous::queue` | Queue: the section above the current track |
 
-If a base key needs a context that doesn't exist yet, tell us and we'll add it.
+This table is kept by hand and can fall behind, so `pnpm i18n:status <locale>`
+lists the overrides available to you and what each one falls back to if you skip
+it. If a base key needs a context that doesn't exist yet, tell us and we'll add
+it.
 
 ## Checking what's left to translate
 
