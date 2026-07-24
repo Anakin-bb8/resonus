@@ -250,18 +250,28 @@ export default function PlayerScreen() {
   const [atTop, setAtTop] = useState(true);
   const atTopRef = useRef(true);
 
-  // Cover art swipe: left → next, right → previous. Unlike the buttons,
-  // swipe always changes tracks and wraps around at the end/beginning.
+  // Cover art swipe: left → next, right → previous. It mirrors the prev/next
+  // buttons, which don't wrap: you can't go back before the first track, and
+  // forward stops at the last one — except with repeat 'all', which wraps
+  // forward (same rule as `nextIndex` in the store). Wrapping backwards was
+  // especially bad with autoplay on: from the first track it jumped to the last
+  // (a freshly autoplay-added one), stranding the user far from the start (#35).
   const jumpTo = usePlayerStore((s) => s.jumpTo);
-  const canSwitch = usePlayerStore((s) => s.queue.length > 1);
-  // Neighbors in the queue (with wrap), so the carousel can show them when
-  // dragging. Stable references: only re-renders if the song changes.
+  const index = usePlayerStore((s) => s.index);
+  const queueLen = usePlayerStore((s) => s.queue.length);
+  const canPrev = queueLen > 1 && index > 0;
+  const canNext = queueLen > 1 && (index < queueLen - 1 || repeat === 'all');
+  // Neighbors in the queue, so the carousel can show them when dragging. Absent
+  // at the edges (no wrap), so there's nothing to drag toward past the ends.
+  // Stable references: only re-renders if the song changes.
   const prevSong = usePlayerStore((s) =>
-    s.queue.length > 1 ? s.queue[(s.index - 1 + s.queue.length) % s.queue.length] : undefined,
+    s.queue.length > 1 && s.index > 0 ? s.queue[s.index - 1] : undefined,
   );
-  const nextSong = usePlayerStore((s) =>
-    s.queue.length > 1 ? s.queue[(s.index + 1) % s.queue.length] : undefined,
-  );
+  const nextSong = usePlayerStore((s) => {
+    if (s.queue.length <= 1) return undefined;
+    if (s.index < s.queue.length - 1) return s.queue[s.index + 1];
+    return s.repeat === 'all' ? s.queue[0] : undefined;
+  });
   const prevCover = prevSong
     ? (prevSong.url ? radioCoverOf(prevSong) : coverArtUrl(prevSong.coverArt ?? prevSong.albumId, 600))
     : undefined;
@@ -269,12 +279,13 @@ export default function PlayerScreen() {
     ? (nextSong.url ? radioCoverOf(nextSong) : coverArtUrl(nextSong.coverArt ?? nextSong.albumId, 600))
     : undefined;
   const goNext = () => {
-    const { queue, index } = usePlayerStore.getState();
-    if (queue.length > 1) jumpTo(index < queue.length - 1 ? index + 1 : 0);
+    const { queue, index: i, repeat: r } = usePlayerStore.getState();
+    if (i < queue.length - 1) jumpTo(i + 1);
+    else if (r === 'all' && queue.length > 1) jumpTo(0);
   };
   const goPrev = () => {
-    const { queue, index } = usePlayerStore.getState();
-    if (queue.length > 1) jumpTo(index > 0 ? index - 1 : queue.length - 1);
+    const { index: i } = usePlayerStore.getState();
+    if (i > 0) jumpTo(i - 1);
   };
 
   // Net committed advances of the carousel: integer mirror of `-offset/W` at
@@ -293,17 +304,19 @@ export default function PlayerScreen() {
       dragBase.value = offset.value;
     })
     .onUpdate((e) => {
-      // With no more tracks, resistance (you feel there's nowhere to go).
-      // The drag is clamped to the already-loaded neighbor panels: beyond
-      // would show a panel with stale content.
-      const raw = dragBase.value + (canSwitch ? e.translationX : e.translationX / 4);
-      const min = -(spins + 1) * SCREEN_W;
-      const max = -(spins - 1) * SCREEN_W;
+      // Dragging right reveals the previous track, left reveals the next. Past
+      // the first/last track there's nowhere to go: the drag gets friction and
+      // is clamped so no (absent) neighbor panel can slide into view.
+      const goingPrev = e.translationX > 0;
+      const blocked = goingPrev ? !canPrev : !canNext;
+      const raw = dragBase.value + (blocked ? e.translationX / 4 : e.translationX);
+      const min = canNext ? -(spins + 1) * SCREEN_W : -spins * SCREEN_W;
+      const max = canPrev ? -(spins - 1) * SCREEN_W : -spins * SCREEN_W;
       offset.value = Math.min(max, Math.max(min, raw));
     })
     .onEnd((e) => {
-      const wantNext = canSwitch && (e.translationX < -SWIPE_THRESHOLD || e.velocityX < -600);
-      const wantPrev = canSwitch && (e.translationX > SWIPE_THRESHOLD || e.velocityX > 600);
+      const wantNext = canNext && (e.translationX < -SWIPE_THRESHOLD || e.velocityX < -600);
+      const wantPrev = canPrev && (e.translationX > SWIPE_THRESHOLD || e.velocityX > 600);
       const advance = wantNext ? 1 : wantPrev ? -1 : 0;
       const target = -(spins + advance) * SCREEN_W;
       if (advance !== 0) {
