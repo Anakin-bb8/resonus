@@ -28,7 +28,7 @@ import Animated, {
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { coverArtUrl, type Song } from '@/api/data';
@@ -204,7 +204,11 @@ export default function PlayerScreen() {
 
   // The player is scrollable (like Spotify): the first "page" fills the
   // screen and the lyrics card peeks below. The real height comes from the
-  // ScrollView's onLayout; until then, an approximation.
+  // ScrollView's onLayout; until then, approximate it from the safe-area insets
+  // (the ScrollView fills the screen minus the status/nav bars). A close-enough
+  // first guess keeps the controls from dropping into place once measured.
+  const insets = useSafeAreaInsets();
+  const approxPageH = SCREEN_H - insets.top - insets.bottom;
   const [pageH, setPageH] = useState(0);
   /**
    * Height left over for the cover once everything else has taken its share.
@@ -216,8 +220,31 @@ export default function PlayerScreen() {
    * keep in sync.
    */
   const [coverBoxH, setCoverBoxH] = useState(0);
+  const coverBoxHRef = useRef(0);
   /** Height of the rating row, measured so it can be subtracted from the slot. */
   const [starsH, setStarsH] = useState(0);
+  // The cover's size and vertical offset both come from the measured slot
+  // (`coverBoxH`) and the page height (`pageH`), neither known on the first
+  // paint. Rendered eagerly, the cover flashes full-width pinned to the top and
+  // then resizes/drops into place once measured — the visible "jump" on open.
+  // Keep it hidden until the slot has been measured UNDER THE REAL page height
+  // (not the first-paint approximation): revealing on the approximate measure
+  // makes the cover settle a few px on screen on a fast reopen. We flip `stable`
+  // from the cover slot's onLayout once the ScrollView's real height is known
+  // (or right away if the approximation already matched it); a timeout is a
+  // safety net so the cover can never stay hidden if the callbacks don't line up.
+  const [coverStable, setCoverStable] = useState(false);
+  const coverAppear = useSharedValue(0);
+  useEffect(() => {
+    if (coverStable) {
+      coverAppear.value = withTiming(1, { duration: 200, reduceMotion: ReduceMotion.Never });
+    }
+  }, [coverStable, coverAppear]);
+  useEffect(() => {
+    const id = setTimeout(() => setCoverStable(true), 300);
+    return () => clearTimeout(id);
+  }, []);
+  const coverAppearStyle = useAnimatedStyle(() => ({ opacity: coverAppear.value }));
   // The swipe-to-close gesture should only work when scrolled to the top;
   // otherwise it would steal the gesture when returning from the lyrics card.
   const [atTop, setAtTop] = useState(true);
@@ -411,7 +438,16 @@ export default function PlayerScreen() {
         <SafeAreaView style={styles.safe}>
         <ScrollView
           style={{ flex: 1 }}
-          onLayout={(e) => setPageH(e.nativeEvent.layout.height)}
+          onLayout={(e) => {
+            const h = e.nativeEvent.layout.height;
+            setPageH(h);
+            // If the approximation already matched, the slot won't re-lay-out
+            // (the cover's onLayout won't fire again), so its current measure is
+            // already final: reveal it now.
+            if (coverBoxHRef.current > 0 && Math.abs(h - approxPageH) < 1) {
+              setCoverStable(true);
+            }
+          }}
           onScroll={(e) => {
             const next = e.nativeEvent.contentOffset.y <= 4;
             if (next !== atTopRef.current) {
@@ -424,7 +460,14 @@ export default function PlayerScreen() {
         >
         <View
           style={{
-            height: pageH ? pageH - (lyrics && showLyricsCard ? LYRICS_PEEK : 0) : SCREEN_H * 0.85,
+            // Peek is reserved from `canLyrics` (known synchronously), not from
+            // `lyrics` (resolved async): tying the first page's height to the
+            // async result shrank it by LYRICS_PEEK the moment lyrics arrived,
+            // which reflowed the cover slot and shoved the controls — the jump on
+            // songs that have lyrics (and only those). Matching the card's own
+            // render gate keeps the height stable from the first frame.
+            height:
+              (pageH || approxPageH) - (canLyrics && showLyricsCard ? LYRICS_PEEK : 0),
           }}
         >
         <View style={styles.topBar}>
@@ -471,14 +514,23 @@ export default function PlayerScreen() {
 
         <View
           style={[styles.coverWrap, { paddingTop: coverTopPad }]}
-          onLayout={(e) => setCoverBoxH(e.nativeEvent.layout.height)}
+          onLayout={(e) => {
+            const h = e.nativeEvent.layout.height;
+            coverBoxHRef.current = h;
+            setCoverBoxH(h);
+            // `pageH` here is the render-time value: on the first paint it's 0
+            // (this measure used the approximation, so don't reveal yet); once
+            // the real height re-renders the page, this fires again with the
+            // final measure and we reveal.
+            if (pageH > 0) setCoverStable(true);
+          }}
         >
           <GestureDetector gesture={coverGesture}>
             {/* Recycled carousel: the current cover centered and the neighbors at
                 one screen, already entering on drag. No fade (transition 0): a
                 panel's content only changes off-screen and a fade is pointless
                 here. */}
-            <Animated.View style={{ width: coverSize, height: coverSize }}>
+            <Animated.View style={[{ width: coverSize, height: coverSize }, coverAppearStyle]}>
               {paneStyles.map((paneStyle, k) => {
                 const rel = paneRel(k);
                 const paneSong = rel === 0 ? song : rel === 1 ? nextSong : prevSong;
