@@ -1362,7 +1362,26 @@ function attachAppState() {
   if (appStateAttached) return;
   appStateAttached = true;
   AppState.addEventListener('change', (st) => {
-    if (st !== 'active') syncQueueNow();
+    if (st !== 'active') {
+      syncQueueNow();
+      return;
+    }
+    // Back to foreground. The native `playbackStatusUpdate` heartbeat that feeds
+    // `positionSec`/`durationSec` can stall while backgrounded — especially right
+    // after a background auto-advance, where the freshly `replace()`d track never
+    // gets a tick until a manual pause/resume. Discrete events (track metadata,
+    // play/pause) still arrive, so the cover/title update but the scrubber stays
+    // frozen/empty. Pull the current status once here so position and duration
+    // are correct the instant the screen is shown; the heartbeat resumes on its
+    // own from now on.
+    const p = activePlayer();
+    if (p && !remoteKind()) {
+      try {
+        onStatus(p.currentStatus);
+      } catch {
+        // A stale native player can throw on read; the next heartbeat recovers.
+      }
+    }
   });
 }
 
