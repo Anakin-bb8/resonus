@@ -490,9 +490,29 @@ export const settingsStyles = StyleSheet.create({
   },
   rowBorder: { borderTopWidth: 1, borderTopColor: colors.border },
   rowLabel: { color: colors.text, fontSize: fontSize.md },
-  rowLabelBox: { flex: 1 },
+  /**
+   * Label side of a settings row. The `minWidth` is what keeps it alive: with a
+   * zero flex basis it can't claim any space of its own, so a long value on the
+   * right took the whole row and left it wrapping one letter per line.
+   *
+   * A floor here rather than a cap on the value, so the split isn't fixed: a
+   * short value takes only what it needs and the label gets the rest, while a
+   * long one can stretch to 60% before the label starts pushing back.
+   */
+  rowLabelBox: { flex: 1, minWidth: '40%' },
   rowDescription: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: 2 },
-  rowValue: { color: colors.textSecondary, fontSize: fontSize.sm },
+  /**
+   * The value on the right of a settings row. `flexShrink` is 0 by default in
+   * React Native, so without this a long value never gave way; it wraps onto
+   * several lines instead, right-aligned so the lines stay flush to the edge.
+   * The label's `minWidth` is what stops it from taking the whole row.
+   */
+  rowValue: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    flexShrink: 1,
+    textAlign: 'right',
+  },
   textRow: { paddingVertical: spacing.md, paddingHorizontal: spacing.lg, gap: spacing.sm },
   textRowTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   textInput: {
