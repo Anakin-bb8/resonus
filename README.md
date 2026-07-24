@@ -73,5 +73,3 @@ want to help me keep working on it, you can buy me a coffee on
 
 [GPL-3.0-or-later](./LICENSE). You can use, study, change and share it, and
 anything you build on top of it has to stay free under the same terms.
-
-Releases up to and including v0.5.3 were published under the MIT license.
