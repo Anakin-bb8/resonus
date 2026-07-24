@@ -215,10 +215,10 @@ export default function ArtistScreen() {
    * full album because this one sings on a track is not what was asked. Shared
    * by download, add-to-playlist and shuffle-all.
    */
-  async function fetchAlbumSongs(): Promise<Song[] | null> {
+  async function fetchAlbumSongs(list: typeof albums = albums): Promise<Song[] | null> {
     try {
       const parts = await Promise.all(
-        albums.map((a) =>
+        list.map((a) =>
           // Same cache key as the album screen: if you've already entered one,
           // it comes from cache instead of refetching.
           queryClient.fetchQuery({ queryKey: ['album', a.id], queryFn: () => getAlbum(a.id) }),
@@ -236,10 +236,10 @@ export default function ArtistScreen() {
    * It covers ONLY this phase: if it stretched to cover the download, the button
    * would be deaf while downloading and couldn't be stopped.
    */
-  async function gatherSongs() {
+  async function gatherSongs(list: typeof albums = albums) {
     setGathering(true);
     try {
-      return await fetchAlbumSongs();
+      return await fetchAlbumSongs(list);
     } finally {
       setGathering(false);
     }
@@ -248,6 +248,19 @@ export default function ArtistScreen() {
   async function addToPlaylist() {
     const songs = await gatherSongs();
     if (songs && songs.length > 0) usePlaylistPicker.getState().open(songs);
+  }
+
+  /**
+   * ⋯ menu action: play the whole discography in chronological order (earliest
+   * album first, undated ones last; track order preserved within each album).
+   * The header Play button stays Spotify-like (popular tracks); this is the
+   * tucked-away way to hear the catalogue in order (#36). Only reachable when
+   * there are albums (the ⋯ button itself is gated on that).
+   */
+  async function playDiscography() {
+    const chrono = [...albums].sort((a, b) => (a.year ?? Infinity) - (b.year ?? Infinity));
+    const songs = await gatherSongs(chrono);
+    if (songs && songs.length > 0) await playQueue(songs, 0, name, `/artist/${id}`);
   }
 
   async function startDownload() {
@@ -535,16 +548,28 @@ export default function ArtistScreen() {
 
       <SheetModal openRef={menuRef}>
         {(close) => (
-          <Pressable
-            style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
-            onPress={() => {
-              close();
-              void addToPlaylist();
-            }}
-          >
-            <Ionicons name="add" size={24} color={colors.text} />
-            <Text style={styles.actionText}>{t('Add to a playlist')}</Text>
-          </Pressable>
+          <>
+            <Pressable
+              style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+              onPress={() => {
+                close();
+                void playDiscography();
+              }}
+            >
+              <Ionicons name="play" size={24} color={colors.text} />
+              <Text style={styles.actionText}>{t('Play discography')}</Text>
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+              onPress={() => {
+                close();
+                void addToPlaylist();
+              }}
+            >
+              <Ionicons name="add" size={24} color={colors.text} />
+              <Text style={styles.actionText}>{t('Add to a playlist')}</Text>
+            </Pressable>
+          </>
         )}
       </SheetModal>
     </View>
