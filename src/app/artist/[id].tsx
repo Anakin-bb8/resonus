@@ -61,6 +61,9 @@ export default function ArtistScreen() {
   const playQueue = usePlayerStore((s) => s.playQueue);
   const showListArtwork = useSettings((s) => s.showListArtwork);
   const toggleShuffle = usePlayerStore((s) => s.toggleShuffle);
+  const isPlaying = usePlayerStore((s) => s.isPlaying);
+  const sourceHref = usePlayerStore((s) => s.sourceHref);
+  const togglePlay = usePlayerStore((s) => s.toggle);
   const [bioExpanded, setBioExpanded] = useState(false);
   const [songsExpanded, setSongsExpanded] = useState(false);
   // ⋯ menu (imperative: opening/closing doesn't re-render the screen).
@@ -155,6 +158,12 @@ export default function ArtistScreen() {
   }
 
   const top = topSongs ?? [];
+  // The header play button doubles as play/pause when the queue currently
+  // playing is this artist's (Spotify-style); otherwise it starts the popular
+  // tracks. `sourceHref` identifies the context regardless of how it started
+  // (the play button and shuffle both set it).
+  const isCurrentArtistQueue = sourceHref === `/artist/${id}`;
+  const showPause = isCurrentArtistQueue && isPlaying;
   // Some servers (Navidrome with artist participations on) list collaboration
   // albums inside `getArtist` as well, so "already in the discography" does NOT
   // mean "own album". When the server confirmed a participation we move the
@@ -353,10 +362,19 @@ export default function ArtistScreen() {
           <Pressable
             style={[styles.playButton, { backgroundColor: colors.accent }]}
             accessibilityRole="button"
-            accessibilityLabel={t('Play')}
-            onPress={() => top.length > 0 && playQueue(top, 0, data.artist.name, `/artist/${id}`)}
+            accessibilityLabel={showPause ? t('Pause') : t('Play')}
+            onPress={() => {
+              if (isCurrentArtistQueue) togglePlay();
+              else if (top.length > 0) playQueue(top, 0, data.artist.name, `/artist/${id}`);
+            }}
           >
-            <Ionicons name="play" size={28} color="#000" style={{ marginLeft: 2 }} />
+            <Ionicons
+              name={showPause ? 'pause' : 'play'}
+              size={28}
+              color="#000"
+              // Optical centring only for the play triangle; pause is symmetric.
+              style={showPause ? undefined : { marginLeft: 2 }}
+            />
           </Pressable>
         </View>
 
