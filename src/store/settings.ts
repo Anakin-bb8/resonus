@@ -45,6 +45,11 @@ function settingsKey(): string {
   return `${STORAGE_KEY}.${hashKey(profileScopeId())}`;
 }
 
+/** Marker for the one-off «Rating» migration (see `hydrate`), per profile too. */
+function ratingShownKey(): string {
+  return `${STORAGE_KEY}.ratingShown.${hashKey(profileScopeId())}`;
+}
+
 /** 0 = original quality (no transcoding); the rest is bitrate in kbps. */
 export const BITRATE_OPTIONS = [
   { label: 'Original', value: 0 },
@@ -308,7 +313,12 @@ const SONG_MENU_ACTION_KEYS: SongMenuActionKey[] = [
   'sleepTimer',
 ];
 
-/** All visible except «Rating», which starts hidden (you asked for it). */
+/**
+ * Everything visible. «Rating» used to start hidden, but rating is also off by
+ * default in the player, so there was no way to rate a song without first
+ * digging a toggle out of Settings — and it was the only action in the menu
+ * that started hidden.
+ */
 export const DEFAULT_SONG_MENU_ACTIONS: SongMenuActions = {
   playlist: true,
   artist: true,
@@ -318,7 +328,7 @@ export const DEFAULT_SONG_MENU_ACTIONS: SongMenuActions = {
   playNext: true,
   queue: true,
   favorite: true,
-  rating: false,
+  rating: true,
   download: true,
   sleepTimer: true,
 };
@@ -1074,6 +1084,8 @@ export const useSettings = create<SettingsState>((set, get) => ({
       // default values for the whole read, and anything saved in that window
       // wrote those defaults over the real ones.
       const raw = (await getItem(key)) ?? (await getItem(STORAGE_KEY));
+      // Read here, with `raw`, so nothing is awaited once the store is claimed.
+      const ratingShown = await getItem(ratingShownKey());
       // A newer hydration started while we were reading (profile switch, or
       // the saved session arriving on startup): it owns the store now, and
       // applying this would restore the wrong profile's settings.
@@ -1399,6 +1411,18 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (parsed.appFont && parsed.appFont in APP_FONT_FAMILY) {
           set({ appFont: parsed.appFont });
+        }
+      }
+      // One-off: «Rating» used to start hidden in the song ⋯ menu, so every
+      // profile saved before this carries an explicit `false` that was never a
+      // decision — just the old default. Turn it on once and save it. The
+      // marker is what makes hiding it again from Settings stick, instead of
+      // it coming back on every launch.
+      if (!ratingShown) {
+        void setItem(ratingShownKey(), '1');
+        if (!get().songMenuActions.rating) {
+          set((s) => ({ songMenuActions: { ...s.songMenuActions, rating: true } }));
+          persist(snapshot(get));
         }
       }
       // Language: global (not per profile). If not yet saved separately, it is
