@@ -1,3 +1,17 @@
+diff --git a/android/src/main/AndroidManifest.xml b/android/src/main/AndroidManifest.xml
+index 4bf0f847760cd005ec81db876683f751704f48c3..e98b9cf8758dbb6b56af520237e4e9d5ec824776 100644
+--- a/android/src/main/AndroidManifest.xml
++++ b/android/src/main/AndroidManifest.xml
+@@ -1,4 +1,9 @@
+ <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+   <uses-permission android:name="android.permission.RECORD_AUDIO" />
+   <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
++  <!-- Required by ExoPlayer's setWakeMode (see AudioPlayer). Declared here, in
++       the module's own manifest, so it survives `expo prebuild` regenerating
++       the app one. It grants no wake lock by itself: media3 only holds one
++       while actually playing. -->
++  <uses-permission android:name="android.permission.WAKE_LOCK" />
+ </manifest>
 diff --git a/android/src/main/java/expo/modules/audio/AudioModule.kt b/android/src/main/java/expo/modules/audio/AudioModule.kt
 index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..cbc7c04fee051fb1caa9ac1bee6214fed3f6f102 100644
 --- a/android/src/main/java/expo/modules/audio/AudioModule.kt
@@ -19,10 +33,18 @@ index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..cbc7c04fee051fb1caa9ac1bee6214fe
          runOnMain {
            player.ref.playbackState == Player.STATE_BUFFERING
 diff --git a/android/src/main/java/expo/modules/audio/AudioPlayer.kt b/android/src/main/java/expo/modules/audio/AudioPlayer.kt
-index f7c43641fc12b627c70759fb49bbe65e746c4c1d..cd4f2b99e3fca0938d93299cdb479cd3c70b9089 100644
+index f7c43641fc12b627c70759fb49bbe65e746c4c1d..aa96a2b6899dacdaa5fc419e1ecf6d0235038ebd 100644
 --- a/android/src/main/java/expo/modules/audio/AudioPlayer.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioPlayer.kt
-@@ -37,6 +37,8 @@ import java.util.UUID
+@@ -7,6 +7,7 @@ import android.media.audiofx.Visualizer
+ import android.util.Log
+ import androidx.core.content.ContextCompat
+ import androidx.media3.common.AudioAttributes
++import androidx.media3.common.C
+ import androidx.media3.common.MediaItem
+ import androidx.media3.common.PlaybackParameters
+ import androidx.media3.common.Player
+@@ -37,6 +38,8 @@ import java.util.UUID
  
  private const val PLAYBACK_STATUS_UPDATE = "playbackStatusUpdate"
  private const val AUDIO_SAMPLE_UPDATE = "audioSampleUpdate"
@@ -31,7 +53,7 @@ index f7c43641fc12b627c70759fb49bbe65e746c4c1d..cd4f2b99e3fca0938d93299cdb479cd3
  private const val SEEK_JUMP_INTERVAL_MS: Long = 10_000
  
  @UnstableApi
-@@ -50,6 +52,12 @@ class AudioPlayer(
+@@ -50,6 +53,19 @@ class AudioPlayer(
    ExoPlayer.Builder(context)
      .setLooper(context.mainLooper)
      .setAudioAttributes(AudioAttributes.DEFAULT, false)
@@ -41,10 +63,17 @@ index f7c43641fc12b627c70759fb49bbe65e746c4c1d..cd4f2b99e3fca0938d93299cdb479cd3
 +    // but not for a headphone unplug and only inconsistently for Bluetooth — so
 +    // without this the app kept playing (or paused only sometimes) on disconnect.
 +    .setHandleAudioBecomingNoisy(true)
++    // Keep the CPU and the Wi-Fi radio awake while playing with the screen off.
++    // media3 defaults to WAKE_MODE_NONE: audio already being rendered keeps the
++    // device awake by itself, but fetching the NEXT track does not, so in Doze
++    // playback died at the end of a song and only came back on pause/resume.
++    // WAKE_MODE_NETWORK also takes a WifiLock, which is what stops Wi-Fi from
++    // being turned off in deep sleep. The locks are only held while playing.
++    .setWakeMode(C.WAKE_MODE_NETWORK)
      .setSeekForwardIncrementMs(SEEK_JUMP_INTERVAL_MS)
      .setSeekBackIncrementMs(SEEK_JUMP_INTERVAL_MS)
      .apply {
-@@ -114,6 +122,9 @@ class AudioPlayer(
+@@ -114,6 +130,9 @@ class AudioPlayer(
      startUpdating()
    }
  
