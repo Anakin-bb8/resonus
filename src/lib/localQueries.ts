@@ -123,6 +123,9 @@ interface CatAlbum {
   songCount?: number;
   year?: number;
   addedAt?: number;
+  // Persisted by `toLocalAlbum` (it spreads the full server Album), so multi-disc
+  // subtitles survive offline; the narrow shape just has to keep them typed.
+  discTitles?: Album['discTitles'];
 }
 interface CatArtist {
   id: string;
@@ -205,6 +208,7 @@ function toAlbum(local: CatAlbum): Album {
     coverArt: local.id,
     songCount: local.songCount,
     year: local.year,
+    discTitles: local.discTitles,
   };
 }
 
@@ -281,8 +285,13 @@ export async function getAlbum(albumId: string): Promise<{ album: Album; songs: 
   const c = await ensureCatalog();
   const songs = (c?.songs ?? [])
     .filter((s) => (s.albumId || normKey(s.album || 'Álbum desconocido')) === albumId)
-    // Sorted by track number (those without one go last, by title).
+    // Disc first, then track number (those without one go last, by title). On
+    // multi-disc albums track numbers repeat per disc, so sorting by track alone
+    // interleaved the discs and mislabeled them (matches the online order now).
     .sort((a, b) => {
+      const da = a.discNumber ?? 1;
+      const db = b.discNumber ?? 1;
+      if (da !== db) return da - db;
       const ta = a.track ?? Infinity;
       const tb = b.track ?? Infinity;
       if (ta !== tb) return ta - tb;
