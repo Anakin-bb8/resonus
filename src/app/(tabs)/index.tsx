@@ -483,14 +483,19 @@ export default function HomeScreen() {
   const initial = offline && !auth ? 'O' : (auth?.username ?? '?').charAt(0).toUpperCase();
 
   // Spanish-style time slots: morning until 13, afternoon until 21, evening
-  // the rest (including the early hours).
+  // until midnight and night the small hours. Spanish and Catalan say the same
+  // thing for the last two ("Buenas noches" / "Bona nit"), so splitting them
+  // changes nothing there; it's English that needed it, where "Good evening"
+  // at 3 in the morning reads wrong.
   const hour = new Date().getHours();
   const byHour =
     hour >= 6 && hour < 13
       ? t('Good morning')
       : hour >= 13 && hour < 21
         ? t('Good afternoon')
-        : t('Good evening');
+        : hour >= 21
+          ? t('Good evening')
+          : t('Good night');
   // Custom takes priority; leaving it blank falls back to the time-based one,
   // so clearing it is the way to undo (no need for a "reset" button).
   const greeting = customGreeting.trim() || byHour;
