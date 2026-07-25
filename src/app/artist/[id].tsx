@@ -64,6 +64,7 @@ export default function ArtistScreen() {
   const isPlaying = usePlayerStore((s) => s.isPlaying);
   const sourceHref = usePlayerStore((s) => s.sourceHref);
   const togglePlay = usePlayerStore((s) => s.toggle);
+  const playerShuffle = usePlayerStore((s) => s.shuffle);
   const [bioExpanded, setBioExpanded] = useState(false);
   const [songsExpanded, setSongsExpanded] = useState(false);
   // ⋯ menu (imperative: opening/closing doesn't re-render the screen).
@@ -164,6 +165,9 @@ export default function ArtistScreen() {
   // (the play button and shuffle both set it).
   const isCurrentArtistQueue = sourceHref === `/artist/${id}`;
   const showPause = isCurrentArtistQueue && isPlaying;
+  // Shuffle icon lights up (accent) while this artist's queue is the one playing
+  // and it's shuffled — same "reflects the live state" idea as the play button.
+  const shuffleActive = isCurrentArtistQueue && playerShuffle;
   // Some servers (Navidrome with artist participations on) list collaboration
   // albums inside `getArtist` as well, so "already in the discography" does NOT
   // mean "own album". When the server confirmed a participation we move the
@@ -323,18 +327,6 @@ export default function ArtistScreen() {
             starred={favArtistIds ? favArtistIds.has(data.artist.id) : !!data.artist.starred}
             size={30}
           />
-          <Pressable
-            hitSlop={10}
-            accessibilityRole="button"
-            accessibilityLabel={t('Shuffle')}
-            onPress={shufflePlay}
-          >
-            {shuffling ? (
-              <ActivityIndicator size="small" color={colors.text} />
-            ) : (
-              <Ionicons name="shuffle" size={28} color={colors.text} />
-            )}
-          </Pressable>
           {/* Locally no: what's here is already on the device. Same criteria
               (and same look) as the album and playlist header. */}
           {!offline && albums.length > 0 ? (
@@ -372,6 +364,19 @@ export default function ArtistScreen() {
             </Pressable>
           ) : null}
           <View style={{ flex: 1 }} />
+          {/* Shuffle sits right next to Play, both on the right (Spotify-style). */}
+          <Pressable
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={t('Shuffle')}
+            onPress={shufflePlay}
+          >
+            {shuffling ? (
+              <ActivityIndicator size="small" color={colors.text} />
+            ) : (
+              <Ionicons name="shuffle" size={28} color={shuffleActive ? colors.accent : colors.text} />
+            )}
+          </Pressable>
           <Pressable
             style={[styles.playButton, { backgroundColor: colors.accent }]}
             accessibilityRole="button"
