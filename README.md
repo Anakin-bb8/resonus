@@ -68,8 +68,3 @@ set up the project, run it on an emulator, and open a pull request.
 Resonus is free and open source, built in my spare time. If you enjoy it and
 want to help me keep working on it, you can buy me a coffee on
 [Ko-fi](https://ko-fi.com/juananzzz).
-
-## License
-
-[GPL-3.0-or-later](./LICENSE). You can use, study, change and share it, and
-anything you build on top of it has to stay free under the same terms.
