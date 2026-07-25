@@ -283,6 +283,22 @@ function sourceFor(song: Song, timeOffsetSec = 0): { uri: string } {
 let streamOffsetSec = 0;
 /** `transcodeOffset` support of the active server (null = unchecked). */
 let transcodeOffsetSupported: boolean | null = null;
+/**
+ * Does the source the player is playing have a known length? (null = not loaded yet)
+ *
+ * `isTranscoded` only knows what WE asked for, and the server may transcode
+ * without being asked: Navidrome applies the transcoding configured for the
+ * player, so with "original" settings the stream can still arrive re-encoded
+ * on the fly (`Accept-Ranges: none`, no `Content-Length`). The player then
+ * doesn't know the duration and a native seek restarts the track from zero.
+ * An unknown duration on a server stream is precisely that signal, so we use
+ * it to send those seeks through `timeOffset` as well.
+ *
+ * It also explains the confusing part of the report: the second time, the same
+ * track seeks fine. Navidrome caches the transcode and serves the cached copy
+ * WITH length and ranges, so only the first play of each track was broken.
+ */
+let sourceHasLength: boolean | null = null;
 
 /** Is this song being transcoded (the server generates it on the fly)? */
 function isTranscoded(song: Song): boolean {
@@ -297,6 +313,19 @@ function isTranscoded(song: Song): boolean {
   // forced (the server re-encodes even if the bitrate already fit). In both
   // cases the stream loses random access and native seek would restart.
   return useSettings.getState().streamFormat !== '' || (song.bitRate != null && song.bitRate > max);
+}
+
+/** Does seeking this song need a `timeOffset` re-request instead of a native seek? */
+function needsOffsetSeek(song: Song): boolean {
+  // Radio (own url), local library and downloads: real random access. And a
+  // radio must NEVER be re-requested against the Subsonic stream endpoint,
+  // even though its live stream has no length either.
+  if (song.url || song.localUri || downloadedUri(song)) return false;
+  // Already playing an offset segment: its native timeline starts at
+  // `streamOffsetSec`, so a native seek would land that much further ahead.
+  // From here on, every seek is another re-request.
+  if (streamOffsetSec > 0) return true;
+  return isTranscoded(song) || sourceHasLength === false;
 }
 
 /** Checks (once per profile) if the server supports `transcodeOffset`. */
@@ -314,6 +343,50 @@ async function ensureTranscodeOffsetSupport(): Promise<boolean> {
     // session. Retried on the next seek.
     return false;
   }
+}
+
+/**
+ * Seek on the active player: native seek, or a `timeOffset` re-request when the
+ * stream has no random access. Shared by the user's seek and by every path that
+ * restores a saved position, which used to restart those streams from zero too.
+ */
+function seekActive(sec: number) {
+  const state = usePlayerStore.getState();
+  const song = currentSong(state);
+  pendingSeek = { sec, at: Date.now() };
+  usePlayerStore.setState({ positionSec: sec });
+  if (!song || !needsOffsetSeek(song)) {
+    activePlayer()?.seekTo(sec);
+    return;
+  }
+  // A stream generated on the fly has no random access: native seek
+  // restarts. It must be re-requested with `timeOffset`, but only if the
+  // server supports it. That answer is warmed asynchronously on track load,
+  // so here we RESOLVE it (don't read a variable that, on a seek right after
+  // loading, would still be unchecked and send us to native seek → restart).
+  // The position and pendingSeek are already set so the slider doesn't bounce
+  // while it decides.
+  void ensureTranscodeOffsetSupport().then((supported) => {
+    // If the track changed while resolving, don't touch the new player.
+    if (currentSong(usePlayerStore.getState()) !== song) return;
+    const p = activePlayer();
+    if (!p) return;
+    pendingSeek = { sec, at: Date.now() }; // refreshes the wait window
+    if (supported) {
+      streamOffsetSec = sec;
+      try {
+        p.replace(sourceFor(song, sec));
+        p.volume = effectiveVolume(song);
+        if (usePlayerStore.getState().isPlaying) p.play();
+      } catch {
+        // ignore
+      }
+    } else {
+      // No offset support: native seek as best effort.
+      p.seekTo(sec);
+    }
+    usePlayerStore.setState({ positionSec: sec });
+  });
 }
 
 /** Cover art URL for lock screen (server only for now). */
@@ -486,6 +559,7 @@ async function loadIndex(index: number, autoplay: boolean) {
   cutCrossfade();
   pendingSeek = null;
   streamOffsetSec = 0;
+  sourceHasLength = null; // unknown until the new source is loaded
   scrobbledThisTrack = false;
   consumeQueuedOnIndexChange(index);
   if (remoteKind()) return remoteLoadIndex(index, autoplay);
@@ -514,8 +588,12 @@ async function loadIndex(index: number, autoplay: boolean) {
     applyLockScreen(p, song);
     onTrackChanged(song);
     // Warms up the "does it support timeOffset?" answer so the first seek
-    // on a transcoded stream already has the answer cached.
-    if (isTranscoded(song)) void ensureTranscodeOffsetSupport();
+    // on a transcoded stream already has the answer cached. For ANY server
+    // stream: the transcode may be the server's decision, and we only find
+    // out when the source loads without a length (see `sourceHasLength`).
+    if (!song.url && !song.localUri && !downloadedUri(song)) {
+      void ensureTranscodeOffsetSupport();
+    }
   } catch {
     useToast.getState().show(tg("Couldn't play the song"));
   }
@@ -897,11 +975,7 @@ function cancelHandoff() {
 function hardReload(index: number, sec: number, autoplay: boolean) {
   void (async () => {
     await loadIndex(index, autoplay);
-    if (sec > 0) {
-      pendingSeek = { sec, at: Date.now() };
-      activePlayer()?.seekTo(sec);
-      usePlayerStore.setState({ positionSec: sec });
-    }
+    if (sec > 0) seekActive(sec);
   })();
 }
 
@@ -916,7 +990,7 @@ function handoffToNewSource(index: number, song: Song, sec: number) {
   // With transcoded stream and timeOffset support, the new one starts right at
   // `sec` (native seek doesn't work on a real-time transcode). If not, from 0
   // and we seek: normal random access.
-  const useOffset = isTranscoded(song) && transcodeOffsetSupported === true;
+  const useOffset = needsOffsetSeek(song) && transcodeOffsetSupported === true;
   const startAt = useOffset ? sec : 0;
   const r = ensurePlayer(1 - activeIdx);
   const token = ++handoffToken;
@@ -1027,6 +1101,7 @@ function startCrossfade(index: number, fadeSec: number) {
   fadingOut = out;
   activeIdx = 1 - activeIdx;
   streamOffsetSec = 0; // the incoming track starts from the beginning
+  sourceHasLength = null; // and it's another source: unknown until it loads
   scrobbledThisTrack = false;
   usePlayerStore.setState({
     index,
@@ -1201,6 +1276,9 @@ function onStatus(status: AudioStatus) {
   const intendPlay = status.playing || prev.isPlaying;
   const buffering =
     intendPlay && !status.didJustFinish && (status.isBuffering || !status.isLoaded);
+  // Only once loaded: while buffering the duration is still unknown and would
+  // pass for a stream generated on the fly (see `sourceHasLength`).
+  if (status.isLoaded) sourceHasLength = (status.duration ?? 0) > 0;
   // With a stream re-requested with timeOffset, the native player counts from 0:
   // the real position is the offset plus its time.
   let positionSec = streamOffsetSec + (status.currentTime ?? 0);
@@ -1410,10 +1488,7 @@ export function initRemoteIntegration() {
       if (!queue[index]) return;
       void (async () => {
         await loadIndex(index, false);
-        if (lastPositionSec > 0) {
-          pendingSeek = { sec: lastPositionSec, at: Date.now() };
-          activePlayer()?.seekTo(lastPositionSec);
-        }
+        if (lastPositionSec > 0) seekActive(lastPositionSec);
         usePlayerStore.setState({ positionSec: lastPositionSec, isPlaying: false });
       })();
     },
@@ -1792,43 +1867,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       set({ positionSec: sec });
       return;
     }
-    const song = currentSong(get());
-    if (song && isTranscoded(song)) {
-      // A stream generated on the fly has no random access: native seek
-      // restarts. It must be re-requested with `timeOffset`, but only if the
-      // server supports it. That answer is warmed asynchronously on track load,
-      // so here we RESOLVE it (don't read a variable that, on a seek right after
-      // loading, would still be unchecked and send us to native seek → restart).
-      // We already set the position and pendingSeek so the slider doesn't bounce
-      // while it decides.
-      pendingSeek = { sec, at: Date.now() };
-      set({ positionSec: sec });
-      void ensureTranscodeOffsetSupport().then((supported) => {
-        // If the track changed while resolving, don't touch the new player.
-        if (currentSong(get()) !== song) return;
-        const p = activePlayer();
-        if (!p) return;
-        pendingSeek = { sec, at: Date.now() }; // refreshes the wait window
-        if (supported) {
-          streamOffsetSec = sec;
-          try {
-            p.replace(sourceFor(song, sec));
-            p.volume = effectiveVolume(song);
-            if (get().isPlaying) p.play();
-          } catch {
-            // ignore
-          }
-        } else {
-          // No offset support: native seek as best effort.
-          p.seekTo(sec);
-        }
-        set({ positionSec: sec });
-      });
-      return;
-    }
-    pendingSeek = { sec, at: Date.now() };
-    activePlayer()?.seekTo(sec);
-    set({ positionSec: sec });
+    seekActive(sec);
   },
 
   setVolume: (v) => {
@@ -1948,10 +1987,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         });
         // Like restoring the saved queue: track loaded, paused.
         await loadIndex(index, false);
-        if (positionSec > 0) {
-          pendingSeek = { sec: positionSec, at: Date.now() };
-          activePlayer()?.seekTo(positionSec);
-        }
+        if (positionSec > 0) seekActive(positionSec);
         usePlayerStore.setState({ positionSec, isPlaying: false });
         scheduleSync();
       })();
@@ -2109,10 +2145,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     });
     // Load the track (without playing) and leave the position ready.
     await loadIndex(index, false);
-    if (positionSec > 0) {
-      pendingSeek = { sec: positionSec, at: Date.now() };
-      activePlayer()?.seekTo(positionSec);
-    }
+    if (positionSec > 0) seekActive(positionSec);
     usePlayerStore.setState({ positionSec, isPlaying: false });
   },
 
@@ -2154,10 +2187,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       radioMode: saved.radioMode === true,
     });
     await loadIndex(index, false);
-    if (positionSec > 0) {
-      pendingSeek = { sec: positionSec, at: Date.now() };
-      activePlayer()?.seekTo(positionSec);
-    }
+    if (positionSec > 0) seekActive(positionSec);
     usePlayerStore.setState({ positionSec, isPlaying: false });
     return true;
   },
@@ -2205,6 +2235,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     clearLockScreen();
     playedHistory = [];
     streamOffsetSec = 0;
+    sourceHasLength = null;
     scrobbledThisTrack = false;
     // timeOffset support is per server: re-check on change.
     transcodeOffsetSupported = null;
