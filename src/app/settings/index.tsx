@@ -84,7 +84,7 @@ export default function SettingsScreen() {
       : [{ key: 'network', title: 'Network', icon: 'git-network-outline' as const }]),
     // Theme lives inside Appearance (row with chevron, like Language).
     { key: 'personalization', title: 'Appearance', icon: 'color-palette-outline' as const },
-    { key: 'about', title: 'About', icon: 'information-circle-outline' as const },
+    { key: 'about', title: 'About::app', icon: 'information-circle-outline' as const },
   ];
 
   return (
