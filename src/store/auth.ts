@@ -48,7 +48,15 @@ function same(a: Profile, b: Profile): boolean {
     return a.name === b.name;
   }
   if (a._type === 'server' && b._type === 'server') {
-    return primaryUrl(a) === primaryUrl(b) && a.username === b.username;
+    if (a.username !== b.username) return false;
+    if (primaryUrl(a) === primaryUrl(b)) return true;
+    // Signing in again through an alternative URL of the same account (the
+    // remote one while away from home, say) is the SAME profile. Matching only
+    // by primary URL forked a duplicate whose scope id is different, so its
+    // settings, pins and covers all looked wiped.
+    const au = a.urls ?? [a.serverUrl];
+    const bu = b.urls ?? [b.serverUrl];
+    return au.some((u) => bu.includes(u));
   }
   return false;
 }

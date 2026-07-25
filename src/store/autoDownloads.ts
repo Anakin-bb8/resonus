@@ -17,6 +17,7 @@ import { create } from 'zustand';
 import { getPlaylist, getStarred } from '@/api/data';
 import { type Playlist, type Song } from '@/api/subsonic';
 import { hashKey } from '@/lib/localLibrary';
+import { profileScopeGuard } from '@/lib/profileScope';
 import { getItem, setItem } from '@/lib/storage';
 import { profileScopeId, useAuthStore } from '@/store/auth';
 import { useDownloads } from '@/store/downloads';
@@ -34,6 +35,8 @@ const KEY = 'resonus.autodl';
 function storeKey(): string {
   return `${KEY}.${hashKey(profileScopeId())}`;
 }
+
+const scope = profileScopeGuard();
 
 /**
  * Can we reconcile now? Without connection or account, no. In background
@@ -73,7 +76,9 @@ export const useAutoDownloads = create<AutoDownloadsState>((set, get) => ({
     if (ids[playlistId]) delete ids[playlistId];
     else ids[playlistId] = true;
     set({ ids });
-    void setItem(storeKey(), JSON.stringify(ids));
+    const key = storeKey();
+    // Not one profile's list under another's key (see `profileScopeGuard`).
+    if (scope.owns(key)) void setItem(key, JSON.stringify(ids));
   },
 
   reconcile: async (playlistId, background = false) => {
@@ -119,11 +124,15 @@ export const useAutoDownloads = create<AutoDownloadsState>((set, get) => ({
   hydrate: async () => {
     // Re-executed on profile change: RESET to {} if the new profile has none, or
     // the previous profile's would remain in memory.
+    const key = storeKey();
+    const token = scope.start();
     try {
-      const raw = await getItem(storeKey());
+      const raw = await getItem(key);
+      // Overtaken by a newer hydration: that one owns the list now.
+      if (!scope.accept(token, key)) return;
       set({ ids: raw ? (JSON.parse(raw) as Record<string, true>) : {} });
     } catch {
-      set({ ids: {} });
+      if (scope.accept(token, key)) set({ ids: {} });
     }
   },
 }));

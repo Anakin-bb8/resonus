@@ -6,6 +6,7 @@
 import { create } from 'zustand';
 
 import { hashKey } from '@/lib/localLibrary';
+import { profileScopeGuard } from '@/lib/profileScope';
 import { getItem, setItem } from '@/lib/storage';
 import { profileScopeId } from '@/store/auth';
 
@@ -27,11 +28,19 @@ interface PinsState {
   hydrate: () => Promise<void>;
 }
 
+const scope = profileScopeGuard();
+
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 function scheduleSave(pins: Record<string, number>) {
+  // The key is resolved NOW, not when the timer fires: switching profile within
+  // the second of debounce used to save these pins under the new profile's key,
+  // wiping its own. And if what's in memory isn't this key's, don't save at all
+  // (see `profileScopeGuard`).
+  const key = pinsKey();
+  if (!scope.owns(key)) return;
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    void setItem(pinsKey(), JSON.stringify(pins));
+    void setItem(key, JSON.stringify(pins));
   }, 1000);
 }
 
@@ -54,13 +63,16 @@ export const usePins = create<PinsState>((set, get) => ({
   hydrate: async () => {
     // Re-executes on profile switch: must RESET to {} if the new profile has no
     // pins, otherwise the previous profile's pins would linger in memory.
+    const key = pinsKey();
+    const token = scope.start();
     try {
       const raw =
-        (await getItem(pinsKey())) ??
-        (profileScopeId() === 'local' ? await getItem(KEY) : null);
+        (await getItem(key)) ?? (profileScopeId() === 'local' ? await getItem(KEY) : null);
+      // Overtaken by a newer hydration: that one owns the pins now.
+      if (!scope.accept(token, key)) return;
       set({ pins: raw ? (JSON.parse(raw) as Record<string, number>) : {} });
     } catch {
-      set({ pins: {} });
+      if (scope.accept(token, key)) set({ pins: {} });
     }
   },
 }));

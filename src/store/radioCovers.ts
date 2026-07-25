@@ -9,6 +9,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { create } from 'zustand';
 
 import { hashKey } from '@/lib/localLibrary';
+import { profileScopeGuard } from '@/lib/profileScope';
 import { getItem, setItem } from '@/lib/storage';
 import { profileScopeId } from '@/store/auth';
 
@@ -18,7 +19,16 @@ function coversKey(): string {
   return `${KEY}.${hashKey(profileScopeId())}`;
 }
 
+const scope = profileScopeGuard();
+
 const COVERS_DIR = FileSystem.documentDirectory + 'radio-covers/';
+
+/** Saves the map, unless it belongs to another profile (see `profileScopeGuard`). */
+async function saveCovers(covers: Record<string, string>) {
+  const key = coversKey();
+  if (!scope.owns(key)) return;
+  await setItem(key, JSON.stringify(covers));
+}
 
 function deleteCoverFile(uri?: string) {
   if (uri) void FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
@@ -37,11 +47,15 @@ export const useRadioCovers = create<RadioCoversState>((set, get) => ({
   hydrate: async () => {
     // Re-executes on profile switch: must RESET to {} if the new profile has no
     // covers, otherwise the previous profile's covers would linger.
+    const key = coversKey();
+    const token = scope.start();
     try {
-      const raw = await getItem(coversKey());
+      const raw = await getItem(key);
+      // Overtaken by a newer hydration: that one owns the covers now.
+      if (!scope.accept(token, key)) return;
       set({ covers: raw ? (JSON.parse(raw) as Record<string, string>) : {} });
     } catch {
-      set({ covers: {} });
+      if (scope.accept(token, key)) set({ covers: {} });
     }
   },
 
@@ -56,7 +70,7 @@ export const useRadioCovers = create<RadioCoversState>((set, get) => ({
     deleteCoverFile(covers[id]);
     covers[id] = dest;
     set({ covers });
-    await setItem(coversKey(), JSON.stringify(covers));
+    await saveCovers(covers);
   },
 
   removeCover: async (id) => {
@@ -65,6 +79,6 @@ export const useRadioCovers = create<RadioCoversState>((set, get) => ({
     deleteCoverFile(covers[id]);
     delete covers[id];
     set({ covers });
-    await setItem(coversKey(), JSON.stringify(covers));
+    await saveCovers(covers);
   },
 }));

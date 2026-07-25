@@ -3,6 +3,7 @@ import { create } from 'zustand';
 
 import { LANGUAGE_NAMES, isLanguage, type Language } from '@/i18n/languages';
 import { hashKey } from '@/lib/localLibrary';
+import { profileScopeGuard } from '@/lib/profileScope';
 import { getItem, setItem } from '@/lib/storage';
 import { applyAccent, DEFAULT_ACCENT } from '@/theme';
 import { profileScopeId, useAuthStore } from './auth';
@@ -586,8 +587,15 @@ interface SettingsState {
   hydrate: () => Promise<void>;
 }
 
+const scope = profileScopeGuard();
+
 function persist(state: ReturnType<typeof snapshot>) {
-  void setItem(settingsKey(), JSON.stringify(state));
+  const key = settingsKey();
+  // Never write one profile's settings under another's key, and never write
+  // before hydrating: both save factory defaults over real preferences and the
+  // next hydrate reads them back as good. See `profileScopeGuard`.
+  if (!scope.owns(key)) return;
+  void setItem(key, JSON.stringify(state));
 }
 
 function snapshot(get: () => SettingsState) {
@@ -1056,16 +1064,27 @@ export const useSettings = create<SettingsState>((set, get) => ({
   },
 
   hydrate: async () => {
+    const key = settingsKey();
+    const token = scope.start();
+    let applied = false;
     try {
-      // Reset to factory first (preserving language, which is global): on
-      // profile switch it must not inherit the previous profile's settings.
-      // Accent is applied manually because it's a side effect (the blob
-      // re-applies it if present); the font is reactive and doesn't need it.
+      // Active profile settings; if it doesn't have its own yet, inherits the
+      // old (shared) ones as fallback/migration. Read BEFORE touching the
+      // store: resetting to factory up front left the settings in memory at
+      // default values for the whole read, and anything saved in that window
+      // wrote those defaults over the real ones.
+      const raw = (await getItem(key)) ?? (await getItem(STORAGE_KEY));
+      // A newer hydration started while we were reading (profile switch, or
+      // the saved session arriving on startup): it owns the store now, and
+      // applying this would restore the wrong profile's settings.
+      if (!scope.accept(token, key)) return;
+      // Reset to factory (preserving language, which is global): on profile
+      // switch it must not inherit the previous profile's settings. Accent is
+      // applied manually because it's a side effect (the blob re-applies it if
+      // present); the font is reactive and doesn't need it.
       set({ ...DEFAULTS, language: get().language });
       applyAccent(DEFAULT_ACCENT);
-      // Active profile settings; if it doesn't have its own yet, inherits the
-      // old (shared) ones as fallback/migration.
-      const raw = (await getItem(settingsKey())) ?? (await getItem(STORAGE_KEY));
+      applied = true;
       if (raw) {
         const parsed = JSON.parse(raw) as Partial<{
           maxBitRate: number;
@@ -1399,11 +1418,20 @@ export const useSettings = create<SettingsState>((set, get) => ({
           }
         }
       }
+      // Language is global, so it's applied even if another hydration took
+      // over the per-profile part in the meantime.
       if (isLanguage(lang)) {
         set({ language: lang });
       }
     } catch {
-      // default values on failure
+      // Factory values if the read failed (the reset used to happen before it),
+      // but not if the settings were already applied — a later failure, such as
+      // the global language read, must not undo them — and not if a newer
+      // hydration has taken over.
+      if (!applied && scope.accept(token, key)) {
+        set({ ...DEFAULTS, language: get().language });
+        applyAccent(DEFAULT_ACCENT);
+      }
     }
   },
 }));
