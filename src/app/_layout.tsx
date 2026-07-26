@@ -31,8 +31,8 @@ import { useLibraryMirror } from '@/store/libraryMirror';
 import { useOfflineQueue } from '@/store/offlineQueue';
 import { checkAutoUrlNow, initAutoUrl } from '@/store/autoUrl';
 import { initNetworkType } from '@/store/networkType';
+import { removeLegacyRadioCovers } from '@/lib/legacyRadioCovers';
 import { usePins } from '@/store/pins';
-import { useRadioCovers } from '@/store/radioCovers';
 import { initRemoteIntegration, usePlayerStore } from '@/store/player';
 import { usePlayCounts } from '@/store/playCounts';
 import { usePlayHistory } from '@/store/playHistory';
@@ -76,7 +76,7 @@ export default function RootLayout() {
     useSortPrefs.getState().hydrate();
     void useLastPlayed.getState().hydrate();
     void usePins.getState().hydrate();
-    void useRadioCovers.getState().hydrate();
+    void removeLegacyRadioCovers();
     void useDownloads.getState().hydrate();
     void useAutoDownloads.getState().hydrate();
     // Mirror + outbox for offline (reloaded when switching profiles). After

@@ -1051,6 +1051,12 @@ export interface RadioStation {
   name: string;
   streamUrl: string;
   homePageUrl?: string;
+  /**
+   * Station image (OpenSubsonic extension). Navidrome sends it only for
+   * stations that actually have one uploaded, so it's often absent. It lives
+   * on the server, so every client — and Navidrome's own UI — shows the same.
+   */
+  coverArt?: string;
 }
 
 /** Returns the radio stations saved on the server. */

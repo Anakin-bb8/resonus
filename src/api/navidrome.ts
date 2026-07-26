@@ -1,7 +1,7 @@
 /**
  * Minimal Navidrome native API client (non-Subsonic). Only used for what
- * the Subsonic API doesn't cover: currently, custom playlist cover art
- * (Navidrome ≥ 0.61). Requires cleartext username and password to obtain
+ * the Subsonic API doesn't cover: custom cover art for playlists (≥ 0.61) and
+ * for radio stations. Requires cleartext username and password to obtain
  * a JWT (`auth.ndPassword`); see SubsonicAuth.
  */
 import { type SubsonicAuth } from './subsonic';
@@ -52,37 +52,42 @@ async function ndFetch(auth: SubsonicAuth, path: string, init: RequestInit): Pro
   if (res.status === 401) throw new NavidromeError('Credenciales incorrectas', 'auth');
   if (res.status === 403) throw new NavidromeError('Subida de carátulas deshabilitada', 'forbidden');
   if (res.status === 404 || res.status === 405) {
-    throw new NavidromeError('El servidor no soporta carátulas de playlist', 'unsupported');
+    throw new NavidromeError('El servidor no soporta carátulas', 'unsupported');
   }
   throw new NavidromeError(`Error del servidor (${res.status})`, 'other');
 }
 
+/** What the image belongs to; both live under the same native API shape. */
+export type CoverKind = 'playlist' | 'radio';
+
 /**
- * Uploads a local image as the playlist cover art.
- * Endpoint: POST /api/playlist/{id}/image, multipart with "image" field
- * (jpeg/png/gif/webp). 403 if upload is disabled or the playlist doesn't
- * belong to the user; 404 on unsupported servers (< 0.61).
+ * Uploads a local image as the cover art of a playlist or a radio station.
+ * Endpoint: POST /api/{kind}/{id}/image, multipart with "image" field
+ * (jpeg/png/gif/webp). 403 if upload is disabled or the item doesn't belong
+ * to the user; 404 on servers too old for it.
  */
-export async function uploadPlaylistImage(
+export async function uploadCoverImage(
   auth: SubsonicAuth,
-  playlistId: string,
+  kind: CoverKind,
+  id: string,
   image: { uri: string; name: string; type: string },
 ): Promise<void> {
   const form = new FormData();
   // RN supports local files in FormData with {uri, name, type}.
   form.append('image', image as unknown as Blob);
-  await ndFetch(auth, `/api/playlist/${encodeURIComponent(playlistId)}/image`, {
+  await ndFetch(auth, `/api/${kind}/${encodeURIComponent(id)}/image`, {
     method: 'POST',
     body: form,
   });
 }
 
-/** Removes the custom cover art; Navidrome falls back to the default mosaic. */
-export async function deletePlaylistImage(
+/** Removes the custom cover art; Navidrome falls back to its own default. */
+export async function deleteCoverImage(
   auth: SubsonicAuth,
-  playlistId: string,
+  kind: CoverKind,
+  id: string,
 ): Promise<void> {
-  await ndFetch(auth, `/api/playlist/${encodeURIComponent(playlistId)}/image`, {
+  await ndFetch(auth, `/api/${kind}/${encodeURIComponent(id)}/image`, {
     method: 'DELETE',
   });
 }

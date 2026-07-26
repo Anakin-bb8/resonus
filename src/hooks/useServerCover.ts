@@ -1,14 +1,15 @@
 /**
- * Change/remove a playlist cover using an image from the device. Combines both
- * paths (native Navidrome API ≥ 0.61 for server profiles; local copy for the
- * offline profile) and the password dialog for older profiles that don't have
- * it saved. Shared by the playlist edit sheet and the cover viewer.
+ * Change/remove the cover of a playlist or a radio station using an image from
+ * the device. Combines both paths (Navidrome's native API for server profiles;
+ * local copy for the offline profile, playlists only) and the password dialog
+ * for older profiles that don't have it saved. Shared by the playlist and
+ * radio edit sheets and the cover viewer.
  */
 import { useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useState } from 'react';
 
-import { deletePlaylistImage, NavidromeError, uploadPlaylistImage } from '@/api/navidrome';
+import { deleteCoverImage, NavidromeError, uploadCoverImage, type CoverKind } from '@/api/navidrome';
 import { useT } from '@/i18n';
 import { removeLocalPlaylistCover, setLocalPlaylistCover } from '@/lib/localQueries';
 import { useAuthStore } from '@/store/auth';
@@ -18,10 +19,13 @@ type PickedImage = { uri: string; name: string; type: string };
 /** Cover action pending a password (older profiles). */
 type CoverAction = { kind: 'upload'; image: PickedImage } | { kind: 'remove' };
 
-export function usePlaylistCover({
+export function useServerCover({
+  kind = 'playlist',
   coverUploadId,
   localCoverId,
 }: {
+  /** What the cover belongs to; picks the endpoint and what to invalidate. */
+  kind?: CoverKind;
   /** Server id (Navidrome profiles only): uploads via its native API. */
   coverUploadId?: string;
   /** Playlist id for the local profile: copies the image to app storage. */
@@ -109,21 +113,29 @@ export function usePlaylistCover({
     setUploading(true);
     try {
       if (action.kind === 'upload') {
-        await uploadPlaylistImage(authToUse, coverUploadId, action.image);
+        await uploadCoverImage(authToUse, kind, coverUploadId, action.image);
         setPickedUri(action.image.uri);
       } else {
-        await deletePlaylistImage(authToUse, coverUploadId);
+        await deleteCoverImage(authToUse, kind, coverUploadId);
         setPickedUri(null);
       }
-      void queryClient.invalidateQueries({ queryKey: ['playlist', coverUploadId] });
-      void queryClient.invalidateQueries({ queryKey: ['playlists'] });
+      if (kind === 'radio') {
+        void queryClient.invalidateQueries({ queryKey: ['radioStations'] });
+      } else {
+        void queryClient.invalidateQueries({ queryKey: ['playlist', coverUploadId] });
+        void queryClient.invalidateQueries({ queryKey: ['playlists'] });
+      }
     } catch (e) {
       if (e instanceof NavidromeError && e.kind === 'auth') {
         // Bad saved password: forget it so it will be asked again.
         void saveNativePassword('');
         setError(t('Wrong password'));
       } else if (e instanceof NavidromeError && e.kind === 'unsupported') {
-        setError(t("Your server doesn't support playlist covers"));
+        setError(
+          kind === 'radio'
+            ? t("Your server doesn't support radio covers")
+            : t("Your server doesn't support playlist covers"),
+        );
       } else if (e instanceof NavidromeError && e.kind === 'forbidden') {
         setError(t('Artwork upload is disabled on the server'));
       } else {

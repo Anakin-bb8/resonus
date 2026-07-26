@@ -48,7 +48,6 @@ import { haptic } from '@/lib/haptics';
 import { useArtistPicker } from '@/store/artistPicker';
 import { useAuthStore } from '@/store/auth';
 import { currentSong, SOURCE_FAVORITES, SOURCE_HISTORY, usePlayerStore } from '@/store/player';
-import { useRadioCovers } from '@/store/radioCovers';
 import { useSettings } from '@/store/settings';
 import { useSongMenu } from '@/store/songMenu';
 import { useToast } from '@/store/toast';
@@ -173,13 +172,11 @@ export default function PlayerScreen() {
 
   // The data layer resolves the cover: from the server (online) or from the
   // local index by album (offline). Base64 is no longer stored per song.
-  // Radio stations: own cover stored on the device (Subsonic has no cover
-  // for radios). Resolved by song/station id.
-  const radioCovers = useRadioCovers((s) => s.covers);
-  const radioCoverOf = (s?: Song) => (s?.url ? radioCovers[s.id] : undefined);
-  const cover = song
-    ? (song.url ? radioCoverOf(song) : coverArtUrl(song.coverArt ?? song.albumId, 600))
-    : undefined;
+  // A radio has no album, but the station may carry its own image (the server
+  // holds it, so it's the same one every client shows).
+  const coverOf = (s?: Song | null) =>
+    s ? coverArtUrl(s.coverArt ?? (s.url ? undefined : s.albumId), 600) : undefined;
+  const cover = coverOf(song);
   // Spotify-style background: gradient from the cover's dominant color
   // (toggle in Settings → Theme). The color transitions smoothly on song
   // change: a flat color is animated and the gradient toward the background is
@@ -272,12 +269,8 @@ export default function PlayerScreen() {
     if (s.index < s.queue.length - 1) return s.queue[s.index + 1];
     return s.repeat === 'all' ? s.queue[0] : undefined;
   });
-  const prevCover = prevSong
-    ? (prevSong.url ? radioCoverOf(prevSong) : coverArtUrl(prevSong.coverArt ?? prevSong.albumId, 600))
-    : undefined;
-  const nextCover = nextSong
-    ? (nextSong.url ? radioCoverOf(nextSong) : coverArtUrl(nextSong.coverArt ?? nextSong.albumId, 600))
-    : undefined;
+  const prevCover = coverOf(prevSong);
+  const nextCover = coverOf(nextSong);
   const goNext = () => {
     const { queue, index: i, repeat: r } = usePlayerStore.getState();
     if (i < queue.length - 1) jumpTo(i + 1);

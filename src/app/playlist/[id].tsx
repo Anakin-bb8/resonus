@@ -27,7 +27,7 @@ import { TrackListSkeleton } from '@/components/TrackListSkeleton';
 import { TrackListView } from '@/components/TrackListView';
 import { useCanShare } from '@/hooks/useCanShare';
 import { useDownloadMessage } from '@/hooks/useDownloadMessage';
-import { usePlaylistCover } from '@/hooks/usePlaylistCover';
+import { useServerCover } from '@/hooks/useServerCover';
 import { useSongSort } from '@/hooks/useSongSort';
 import { songsLabel, useT } from '@/i18n';
 import { formatTotalDuration } from '@/lib/format';
@@ -69,7 +69,7 @@ export default function PlaylistScreen() {
 
   // Change cover from the expanded viewer (Spotify-style). Same conditions as
   // in the edit sheet: Navidrome on server, or local profile.
-  const coverChange = usePlaylistCover({
+  const coverChange = useServerCover({
     coverUploadId: !offline && auth?.serverType === 'navidrome' ? id : undefined,
     localCoverId: offline ? id : undefined,
   });

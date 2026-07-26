@@ -18,7 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Cover } from '@/components/Cover';
 import { Dialog } from '@/components/Dialog';
-import { usePlaylistCover } from '@/hooks/usePlaylistCover';
+import { useServerCover } from '@/hooks/useServerCover';
 import { useT } from '@/i18n';
 import { colors, fontSize, radius, spacing } from '@/theme';
 
@@ -65,7 +65,7 @@ export function PlaylistEditSheet({
   // Cover change (upload/copy, inline error, and password dialog): logic
   // shared with the cover viewer. Error is inline because a toast would be
   // hidden under this Modal.
-  const cover = usePlaylistCover({ coverUploadId, localCoverId });
+  const cover = useServerCover({ coverUploadId, localCoverId });
   const { reset: resetCover } = cover;
 
   // Resets fields every time it opens.

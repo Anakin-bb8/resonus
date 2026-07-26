@@ -17,8 +17,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Cover } from '@/components/Cover';
+import { Dialog } from '@/components/Dialog';
+import { useServerCover } from '@/hooks/useServerCover';
 import { useT } from '@/i18n';
-import { useRadioCovers } from '@/store/radioCovers';
 import { colors, fontSize, radius, spacing } from '@/theme';
 
 export interface RadioEdit {
@@ -34,33 +35,54 @@ interface Props {
   /** true if editing an existing station (changes the title). */
   editing: boolean;
   /**
-   * Server station ID (editing only): the chosen cover is saved immediately.
-   * When creating there's no ID yet, so the image stays "pending" and is
-   * applied in `onSave` when the server assigns the ID.
+   * Station id, when it already exists and the profile can upload covers
+   * (Navidrome): the chosen image goes straight to the server. When creating
+   * there's no id yet, so it stays "pending" and the parent uploads it once
+   * the server assigns one.
    */
   coverId?: string;
+  /** The station's current image on the server. */
+  serverCoverUri?: string;
+  /** The profile can change station covers (Navidrome only). When it can't,
+   *  the image is still shown, just not editable. */
+  coverEditable?: boolean;
   onCancel: () => void;
   onSave: (changes: RadioEdit, pendingCoverUri?: string) => void;
 }
 
-export function RadioEditSheet({ visible, initial, editing, coverId, onCancel, onSave }: Props) {
+export function RadioEditSheet({
+  visible,
+  initial,
+  editing,
+  coverId,
+  serverCoverUri,
+  coverEditable,
+  onCancel,
+  onSave,
+}: Props) {
   const t = useT();
   const [name, setName] = useState(initial.name);
   const [streamUrl, setStreamUrl] = useState(initial.streamUrl);
   const [homePageUrl, setHomePageUrl] = useState(initial.homePageUrl);
 
-  // Local cover. When editing it's saved immediately (same idea as the
-  // playlist sheet). When creating there's no ID yet: the image stays
-  // "pending" in local state and is uploaded after creation (see parent's
-  // onSave).
-  const storedCover = useRadioCovers((s) => (coverId ? s.covers[coverId] : undefined));
-  const setCover = useRadioCovers((s) => s.setCover);
-  const removeCover = useRadioCovers((s) => s.removeCover);
+  // The cover lives on the server, so it's the same for every client and for
+  // Navidrome's own web UI. Editing an existing station uploads right away;
+  // while creating there's no id yet, so the pick waits in `pendingCover` and
+  // the parent uploads it once the server hands out the id.
+  const cover = useServerCover({ kind: 'radio', coverUploadId: coverId });
+  const { reset: resetCover } = cover;
   const [pendingCover, setPendingCover] = useState<string | null>(null);
-  const [coverBusy, setCoverBusy] = useState(false);
-  const coverUri = coverId ? storedCover : (pendingCover ?? undefined);
+  const coverBusy = cover.uploading;
+  // `pickedUri` is the image just uploaded: shown right away instead of
+  // waiting for the server to re-serve it under the same URL.
+  const shownCover = cover.pickedUri ?? (coverId ? serverCoverUri : (pendingCover ?? undefined));
+  const canRemove = !!coverEditable && (coverId ? !!shownCover : !!pendingCover);
 
   async function pickCover() {
+    if (coverId) {
+      await cover.pickAndUpload();
+      return;
+    }
     const res = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
@@ -69,16 +91,7 @@ export function RadioEditSheet({ visible, initial, editing, coverId, onCancel, o
     });
     const asset = res.assets?.[0];
     if (res.canceled || !asset) return;
-    if (!coverId) {
-      setPendingCover(asset.uri);
-      return;
-    }
-    setCoverBusy(true);
-    try {
-      await setCover(coverId, asset.uri);
-    } finally {
-      setCoverBusy(false);
-    }
+    setPendingCover(asset.uri);
   }
 
   async function clearCover() {
@@ -86,12 +99,7 @@ export function RadioEditSheet({ visible, initial, editing, coverId, onCancel, o
       setPendingCover(null);
       return;
     }
-    setCoverBusy(true);
-    try {
-      await removeCover(coverId);
-    } finally {
-      setCoverBusy(false);
-    }
+    await cover.removeCover();
   }
 
   // Resets fields every time it opens.
@@ -101,8 +109,9 @@ export function RadioEditSheet({ visible, initial, editing, coverId, onCancel, o
       setStreamUrl(initial.streamUrl);
       setHomePageUrl(initial.homePageUrl);
       setPendingCover(null);
+      resetCover();
     }
-  }, [visible, initial.name, initial.streamUrl, initial.homePageUrl]);
+  }, [visible, initial.name, initial.streamUrl, initial.homePageUrl, resetCover]);
 
   const urlOk = /^https?:\/\//i.test(streamUrl.trim());
   const showUrlError = streamUrl.trim().length > 0 && !urlOk;
@@ -148,25 +157,27 @@ export function RadioEditSheet({ visible, initial, editing, coverId, onCancel, o
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+            {/* Nothing to show and no way to add one: skip it entirely. */}
+            {coverEditable || shownCover ? (
             <View style={styles.coverWrap}>
               <Pressable
                 onPress={() => void pickCover()}
-                disabled={coverBusy}
+                disabled={coverBusy || !coverEditable}
                 accessibilityRole="button"
                 accessibilityLabel={t('Change cover')}
                 style={({ pressed }) => pressed && { opacity: 0.7 }}
               >
-                <Cover uri={coverUri} size={160} placeholderIcon="radio" />
+                <Cover uri={shownCover} size={160} placeholderIcon="radio" />
                 {coverBusy ? (
                   <View style={styles.coverOverlay}>
                     <ActivityIndicator color={colors.text} />
                   </View>
-                ) : (
+                ) : !coverEditable ? null : (
                   <View style={styles.coverBadges}>
                     <View style={styles.coverBadge}>
                       <Ionicons name="camera" size={16} color={colors.text} />
                     </View>
-                    {coverUri ? (
+                    {canRemove ? (
                       <Pressable
                         hitSlop={6}
                         accessibilityRole="button"
@@ -180,7 +191,9 @@ export function RadioEditSheet({ visible, initial, editing, coverId, onCancel, o
                   </View>
                 )}
               </Pressable>
+              {cover.error ? <Text style={styles.coverError}>{cover.error}</Text> : null}
             </View>
+            ) : null}
 
             <Text style={styles.label}>{t('Name')}</Text>
             <TextInput
@@ -225,6 +238,18 @@ export function RadioEditSheet({ visible, initial, editing, coverId, onCancel, o
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
+
+      {/* Profiles created before the password was stored: uploading needs
+          Navidrome's own API, which asks for it. */}
+      <Dialog
+        visible={cover.askPassword}
+        title={t('Confirm your password')}
+        message={t('Your password is needed to upload images and will be stored securely.')}
+        input={{ placeholder: t('Password'), secure: true }}
+        confirmLabel={t('Save')}
+        onCancel={cover.cancelPassword}
+        onConfirm={(value) => void cover.confirmPassword(value)}
+      />
     </Modal>
   );
 }
@@ -243,6 +268,13 @@ const styles = StyleSheet.create({
   disabled: { color: colors.textMuted },
   content: { padding: spacing.lg, gap: spacing.sm },
   coverWrap: { alignItems: 'center', marginBottom: spacing.sm },
+  // Inline, not a toast: a toast would be hidden under this Modal.
+  coverError: {
+    color: colors.danger,
+    fontSize: fontSize.sm,
+    marginTop: spacing.sm,
+    textAlign: 'center',
+  },
   coverOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',

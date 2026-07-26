@@ -34,7 +34,6 @@ import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { useAuthStore } from '@/store/auth';
 import { useMediaMenu } from '@/store/mediaMenu';
-import { useRadioCovers } from '@/store/radioCovers';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useRecentSearches, type RecentItem } from '@/store/recentSearches';
 import { useSettings } from '@/store/settings';
@@ -115,7 +114,6 @@ export default function SearchScreen() {
     queryFn: () => getRadioStations(auth!),
     enabled: !!auth && auth.serverType !== 'jellyfin' && debouncedQuery.length > 1,
   });
-  const radioCovers = useRadioCovers((s) => s.covers);
   const stationMatches =
     debouncedQuery.length > 1
       ? (stations ?? []).filter((r) =>
@@ -367,14 +365,27 @@ export default function SearchScreen() {
                 style={styles.recentRow}
                 onPress={() =>
                   playQueue(
-                    [{ id: r.id, title: r.name, url: r.streamUrl, artist: t('Radio') }],
+                    [
+                      {
+                        id: r.id,
+                        title: r.name,
+                        url: r.streamUrl,
+                        artist: t('Radio'),
+                        coverArt: r.coverArt,
+                      },
+                    ],
                     0,
                     r.name,
                     '/radio',
                   )
                 }
               >
-                <Cover uri={radioCovers[r.id]} size={48} rounded placeholderIcon="radio" />
+                <Cover
+                  uri={coverArtUrl(r.coverArt, 100)}
+                  size={48}
+                  rounded
+                  placeholderIcon="radio"
+                />
                 <View style={styles.recentInfo}>
                   <Text
                     style={[styles.recentTitle, playing?.id === r.id && { color: colors.accent }]}

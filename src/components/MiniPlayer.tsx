@@ -24,7 +24,6 @@ import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { useAuthStore } from '@/store/auth';
 import { currentSong, usePlayerStore } from '@/store/player';
-import { useRadioCovers } from '@/store/radioCovers';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
 import { colors, fontSize, radius, spacing } from '@/theme';
@@ -117,11 +116,8 @@ export function MiniPlayer() {
     translateY.value = 0;
   }, [song?.id, translateX, translateY]);
 
-  // Radio station: device-local cover art (Subsonic doesn't provide it).
-  const radioCover = useRadioCovers((s) => (song?.url ? s.covers[song.id] : undefined));
-  const cover = song
-    ? (song.url ? radioCover : coverArtUrl(song.coverArt ?? song.albumId, 100))
-    : undefined;
+  // A radio has no album, but the station may carry its own image.
+  const cover = song ? coverArtUrl(song.coverArt ?? (song.url ? undefined : song.albumId), 100) : undefined;
   // Dominant color from the cover art, if the setting is active; otherwise neutral surface.
   const miniColor = useSettings((s) => s.miniPlayerColorBackground);
   const marqueeTitles = useSettings((s) => s.marqueeTitles);
@@ -129,7 +125,7 @@ export function MiniPlayer() {
   // with different sizes the quantization picks different colors and the mini
   // ended up one color and the player screen another for the same song.
   const colorSource = song
-    ? (song.url ? radioCover : coverArtUrl(song.coverArt ?? song.albumId, 600))
+    ? coverArtUrl(song.coverArt ?? (song.url ? undefined : song.albumId), 600)
     : undefined;
   const dominant = useDominantColor(miniColor ? colorSource : undefined);
   const bg = miniColor ? dominant : colors.surfaceHighlight;

@@ -393,8 +393,12 @@ function seekActive(sec: number) {
 
 /** Cover art URL for lock screen (server only for now). */
 function artworkUrlFor(song: Song): string | undefined {
-  if (song.url || song.localUri) return undefined; // radio/local: TODO on-disk cover art
-  const auth = useAuthStore.getState().auth!;
+  if (song.localUri) return undefined; // local file: TODO on-disk cover art
+  const auth = useAuthStore.getState().auth;
+  if (!auth) return undefined;
+  // A radio has no album, but the server may hold an image for the station.
+  // The one picked on the device is a file:// path, which is not offered here.
+  if (song.url) return song.coverArt ? coverArtUrl(auth, song.coverArt, 500) : undefined;
   return coverArtUrl(auth, song.coverArt ?? song.albumId, 500);
 }
 
