@@ -26,11 +26,13 @@ import { PlaylistReorder } from '@/components/PlaylistReorder';
 import { SheetModal } from '@/components/SheetModal';
 import { TrackListSkeleton } from '@/components/TrackListSkeleton';
 import { TrackListView } from '@/components/TrackListView';
+import { useCanShare } from '@/hooks/useCanShare';
 import { useDownloadMessage } from '@/hooks/useDownloadMessage';
 import { useServerCover } from '@/hooks/useServerCover';
 import { useSongSort } from '@/hooks/useSongSort';
 import { songsLabel, useT } from '@/i18n';
 import { formatTotalDuration } from '@/lib/format';
+import { shareItem } from '@/lib/share';
 import { useAuthStore } from '@/store/auth';
 import { useAutoDownloads } from '@/store/autoDownloads';
 import { groupDownloadState, useDownloads } from '@/store/downloads';
@@ -49,6 +51,7 @@ export default function PlaylistScreen() {
   const showListArtwork = useSettings((s) => s.showListArtwork);
   const queryClient = useQueryClient();
   const toast = useToast((s) => s.show);
+  const canShare = useCanShare();
   const playing = usePlayerStore(currentSong);
   const playQueue = usePlayerStore((s) => s.playQueue);
   const addToQueue = usePlayerStore((s) => s.addToQueue);
@@ -59,6 +62,7 @@ export default function PlaylistScreen() {
   const [deleting, setDeleting] = useState(false);
   const [confirmDownload, setConfirmDownload] = useState(false);
   const [confirmAuto, setConfirmAuto] = useState(false);
+  const [confirmDeleteDl, setConfirmDeleteDl] = useState(false);
   const [confirmRemoveDl, setConfirmRemoveDl] = useState(false);
   const [confirmStop, setConfirmStop] = useState(false);
   const [coverOpen, setCoverOpen] = useState(false);
@@ -79,7 +83,12 @@ export default function PlaylistScreen() {
     enabled: (!!auth || offline) && !!id,
   });
 
+  const dlFiles = useDownloads((s) => s.files);
   const songIds = (data?.songs ?? []).map((s) => s.id);
+  // Exact, unlike the album menu's guess: the songs are right here, so the
+  // option only shows when some of them are actually on the device.
+  const downloadedIds = songIds.filter((sid) => dlFiles[sid]);
+  const hasDownloads = downloadedIds.length > 0;
   const downloadMsg = useDownloadMessage(data?.songs ?? []);
   const download = useDownloads(
     useShallow((s) => groupDownloadState(s, `playlist:${id}`, songIds)),
@@ -466,6 +475,35 @@ export default function PlaylistScreen() {
                 <Text style={styles.actionText}>{t('Refresh')}</Text>
               </Pressable>
             ) : null}
+            {canShare ? (
+              <Pressable
+                style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+                onPress={() => {
+                  close();
+                  void shareItem(id, data.playlist.name).then((ok) => {
+                    if (!ok) toast(t('Couldn’t create the link'));
+                  });
+                }}
+              >
+                <Ionicons name="share-social-outline" size={24} color={colors.text} />
+                <Text style={styles.actionText}>{t('Share')}</Text>
+              </Pressable>
+            ) : null}
+            {/* The album's menu has had this since #47; this one is a screen of
+                its own, so it never got it. Same action: clears whatever of
+                these songs is on the device, half-downloaded lists included. */}
+            {hasDownloads ? (
+              <Pressable
+                style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+                onPress={() => {
+                  close();
+                  setConfirmDeleteDl(true);
+                }}
+              >
+                <Ionicons name="trash-outline" size={24} color={colors.text} />
+                <Text style={styles.actionText}>{t('Delete downloads')}</Text>
+              </Pressable>
+            ) : null}
             <View style={styles.actionDivider} />
             <Pressable
               style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
@@ -494,6 +532,20 @@ export default function PlaylistScreen() {
         localCoverId={offline ? id : undefined}
         onCancel={() => setEditing(false)}
         onSave={onSaveEdit}
+      />
+
+      <Dialog
+        visible={confirmDeleteDl}
+        title={t('Remove download?')}
+        message={t('“{name}” will no longer be available offline.', { name: data.playlist.name })}
+        confirmLabel={t('Remove')}
+        destructive
+        onCancel={() => setConfirmDeleteDl(false)}
+        onConfirm={() => {
+          setConfirmDeleteDl(false);
+          void deleteSongs(downloadedIds);
+          toast(t('{n} songs deleted', { n: downloadedIds.length }));
+        }}
       />
 
       <Dialog
