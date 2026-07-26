@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { coverArtUrl, getAlbum, getPlaylist, star, unstar, type Song } from '@/api/data';
 import { useBottomSheetAnim } from '@/hooks/useBottomSheetAnim';
+import { useDownloadMessage } from '@/hooks/useDownloadMessage';
 import { queryClient } from '@/lib/query';
 import { songsLabel, useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
@@ -77,6 +78,9 @@ export function MediaMenuSheet() {
   const playQueue = usePlayerStore((s) => s.playQueue);
   const addToQueue = usePlayerStore((s) => s.addToQueue);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  /** Songs gathered for the download dialog (its size needs them). */
+  const [pending, setPending] = useState<Song[] | null>(null);
+  const downloadMsg = useDownloadMessage(pending ?? []);
   const downloadAlbum = useDownloads((s) => s.downloadAlbum);
   const downloadPlaylist = useDownloads((s) => s.downloadPlaylist);
   const deleteSongs = useDownloads((s) => s.deleteSongs);
@@ -94,6 +98,17 @@ export function MediaMenuSheet() {
   const href = album ? `/album/${album.id}` : `/playlist/${playlist!.id}`;
   const pinKey = album ? `album:${album.id}` : `playlist:${playlist!.id}`;
   const pinned = !!pins[pinKey];
+
+  /** Fetches the songs WITHOUT closing, so the dialog has a size to show.
+   *  They usually come from the cache: same query key the screens use. */
+  async function askDownload() {
+    try {
+      const songs = await fetchSongs(item!);
+      if (songs.length > 0) setPending(songs);
+    } catch {
+      toast(t("Couldn't complete the action"));
+    }
+  }
 
   /** Closes, fetches the songs, and runs the action (with toast on failure). */
   async function withSongs(fn: (songs: Song[]) => void) {
@@ -187,13 +202,9 @@ export function MediaMenuSheet() {
           <Action
             icon="download-outline"
             label={t('Download')}
-            onPress={() =>
-              withSongs((songs) => {
-                if (album) void downloadAlbum(album, songs);
-                else void downloadPlaylist(playlist!, songs);
-                toast(t('Downloading…'));
-              })
-            }
+            // Asks with the size, like the button on the album's own screen:
+            // the same action shouldn't warn down one path and not the other.
+            onPress={() => void askDownload()}
           />
         ) : null}
         {/* The header button only turns into "delete" once EVERYTHING is
@@ -242,6 +253,22 @@ export function MediaMenuSheet() {
       {/* Over the sheet, which stays open behind it: closing it would take the
           dialog with it. How many of these songs are actually downloaded takes
           fetching them, so the question is asked before, not after. */}
+      <Dialog
+        visible={!!pending}
+        title={t('Download “{name}”?', { name })}
+        message={downloadMsg.message}
+        confirmLabel={t('Download')}
+        onCancel={() => setPending(null)}
+        onConfirm={() => {
+          const songs = pending ?? [];
+          setPending(null);
+          close();
+          if (album) void downloadAlbum(album, songs);
+          else void downloadPlaylist(playlist!, songs);
+          toast(t('Downloading…'));
+        }}
+      />
+
       <Dialog
         visible={confirmDelete}
         title={t('Remove download?')}
