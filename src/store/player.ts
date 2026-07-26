@@ -29,6 +29,7 @@ import { create } from 'zustand';
 import {
   coverArtUrl,
   getAlbum,
+  getArtistInfo,
   getOpenSubsonicExtensions,
   getPlayQueue,
   getRandomSongs,
@@ -740,6 +741,52 @@ async function warmStream(url: string) {
 // without repeating request for the same last song.
 let autoplayFetchedFor: string | null = null;
 
+/** Songs by the same artist that fit in one batch: what keeps a mix from
+ *  turning into that artist's discography. */
+const MAX_PER_ARTIST = 2;
+/** Similar artists explored per batch, and songs taken from each. */
+const SIMILAR_ARTISTS = 4;
+const SONGS_PER_SIMILAR_ARTIST = 5;
+/** Songs a batch aims for (the queue is then extended by up to 10). */
+const BATCH_SIZE = 12;
+
+/** Shuffles a copy (Fisher-Yates). */
+function shuffled<T>(items: T[]): T[] {
+  const a = items.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/**
+ * Top songs by artists similar to the seed's. This is the tier that actually
+ * gives a mix its range: everything else either stays on the seed's artist or
+ * falls back to a whole genre.
+ *
+ * The similar-artist list is cached per seed because with a fixed seed (see
+ * `radioSeed`) it's the same every batch and it costs a request. Servers
+ * without a Last.fm agent answer nothing here, which is why the mix still needs
+ * the fallback tiers below.
+ */
+let similarArtistsCache: { seedId: string; names: string[] } | null = null;
+
+async function similarArtistCandidates(auth: SubsonicAuth, seed: Song): Promise<Song[]> {
+  if (!seed.artistId) return [];
+  if (similarArtistsCache?.seedId !== seed.id) {
+    const info = await getArtistInfo(auth, seed.artistId);
+    similarArtistsCache = { seedId: seed.id, names: info.similarArtists.map((a) => a.name) };
+  }
+  // Shuffled, not the top N: over a long mix this walks the whole list instead
+  // of hammering the same four artists batch after batch.
+  const names = shuffled(similarArtistsCache.names).slice(0, SIMILAR_ARTISTS);
+  const lists = await Promise.all(
+    names.map((n) => getTopSongs(auth, n, SONGS_PER_SIMILAR_ARTIST).catch(() => [] as Song[])),
+  );
+  return lists.flat();
+}
+
 /**
  * Random songs from the seed's genre. When the track carries no genre tag, the
  * one its album siblings carry: tags live per file, so an untagged track can
@@ -755,38 +802,61 @@ async function genreCandidates(auth: SubsonicAuth, seed: Song): Promise<Song[]> 
 }
 
 /**
- * Songs to extend a radio from `seed`, in order of affinity: similar → artist's
- * most played → random from its genre → random from the library.
+ * Songs to extend a radio from `seed`.
  *
- * Drops to the next tier when the previous yields NONE not already in the queue,
- * not when it yields few. The difference matters: `getSimilarSongs` needs Last.fm
- * on the server, and without it the radio would fall to artist, exhaust its ~20
- * tracks and then all candidates were already in the queue → zero new → the radio
- * silently died after a while.
+ * The three affinity sources (similar songs, similar artists' top songs, the
+ * seed artist's own top songs) are asked at once and go into a SINGLE pool that
+ * is shuffled and capped at `MAX_PER_ARTIST`. Taking the first non-empty tier
+ * whole, as this used to, meant a single request for the artist's top 20 could
+ * fill the batch with twenty consecutive tracks by the same artist.
  *
- * The last tier is there because every other one CAN come up empty at the same
- * time: on Navidrome both similar and top songs go through Last.fm, and a track
- * with no genre anywhere left the mix returning nothing at all. Random from the
- * whole library is a poor mix, but it is a mix.
+ * Genre and plain random only top up what affinity couldn't fill. They're the
+ * safety net: on Navidrome both similar songs and top songs go through Last.fm,
+ * so without the agent every affinity tier answers nothing at all.
  */
 async function radioCandidates(auth: SubsonicAuth, seed: Song, have: Set<string>): Promise<Song[]> {
-  const tiers: (() => Promise<Song[]>)[] = [
-    () => getSimilarSongs(auth, seed.id, 20),
-    () => (seed.artist ? getTopSongs(auth, seed.artist, 20) : Promise.resolve([])),
-    () => genreCandidates(auth, seed),
-    () => getRandomSongs(auth, 50),
-  ];
-  for (const tier of tiers) {
-    let songs: Song[];
+  const picked: Song[] = [];
+  const seen = new Set(have);
+  const perArtist = new Map<string, number>();
+
+  /** Adds what fits from a pool, in random order and respecting the cap. */
+  const take = (songs: Song[]) => {
+    for (const s of shuffled(songs)) {
+      if (picked.length >= BATCH_SIZE) return;
+      if (s.url || seen.has(s.id)) continue;
+      const artist = s.artistId ?? s.artist ?? '';
+      const n = perArtist.get(artist) ?? 0;
+      if (n >= MAX_PER_ARTIST) continue;
+      perArtist.set(artist, n + 1);
+      seen.add(s.id);
+      picked.push(s);
+    }
+  };
+
+  const affinity = await Promise.all([
+    getSimilarSongs(auth, seed.id, 30).catch(() => [] as Song[]),
+    similarArtistCandidates(auth, seed).catch(() => [] as Song[]),
+    seed.artist
+      ? getTopSongs(auth, seed.artist, 20).catch(() => [] as Song[])
+      : Promise.resolve([] as Song[]),
+  ]);
+  take(affinity.flat());
+
+  for (const tier of [() => genreCandidates(auth, seed), () => getRandomSongs(auth, 50)]) {
+    if (picked.length >= BATCH_SIZE) break;
     try {
-      songs = await tier();
+      take(await tier());
     } catch {
       continue; // this tier failed; the next one might work
     }
-    const fresh = songs.filter((s) => !have.has(s.id) && !s.url);
-    if (fresh.length > 0) return fresh;
   }
-  return [];
+  if (picked.length > 0) return picked;
+
+  // Nothing at all: on a library small or homogeneous enough, the per-artist
+  // cap can eat every candidate there was. A batch by one artist beats the mix
+  // going silent.
+  const anything = await getRandomSongs(auth, 50).catch(() => [] as Song[]);
+  return anything.filter((s) => !s.url && !have.has(s.id)).slice(0, BATCH_SIZE);
 }
 
 async function maybeQueueAutoplay() {
@@ -2274,6 +2344,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   reset: async () => {
     get().cancelSleepTimer();
     autoplayFetchedFor = null;
+    similarArtistsCache = null;
     stopPeriodicSync();
     if (syncTimer) {
       clearTimeout(syncTimer);
