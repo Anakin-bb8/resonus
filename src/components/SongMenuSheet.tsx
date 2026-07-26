@@ -155,6 +155,8 @@ export function SongMenuSheet() {
   const [atTop, setAtTop] = useState(true);
   // "Already in the playlist" prompt pending confirmation (Spotify style).
   const [dupPrompt, setDupPrompt] = useState<{ playlistId: string; name: string } | null>(null);
+  // Removing a download asks first, like albums and playlists do.
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   // When opening the menu for a song, always go back to the actions view.
   useEffect(() => {
@@ -508,16 +510,9 @@ export function SongMenuSheet() {
                     <Action
                       icon="arrow-down-circle"
                       label={t('Remove download')}
-                      onPress={() => {
-                        // The file is deleted right away; «Undo» downloads it again
-                        // (offline not offered: there'd be nowhere to download from).
-                        void deleteDownloads([song.id]);
-                        toast(
-                          t('Download removed'),
-                          offline ? undefined : { label: t('Undo'), run: () => void downloadSong(song) },
-                        );
-                        close();
-                      }}
+                      // Asks first, like albums and playlists do: this one used
+                      // to delete on the spot (#48).
+                      onPress={() => setConfirmDelete(true)}
                     />
                   ) : menu.download && !offline && !song.url ? (
                     <Action
@@ -600,6 +595,26 @@ export function SongMenuSheet() {
           </GestureDetector>
         </Animated.View>
       </GestureHandlerRootView>
+
+      <Dialog
+        visible={confirmDelete}
+        title={t('Remove download?')}
+        message={t('“{name}” will no longer be available offline.', { name: song.title })}
+        confirmLabel={t('Remove')}
+        destructive
+        onCancel={() => setConfirmDelete(false)}
+        onConfirm={() => {
+          setConfirmDelete(false);
+          void deleteDownloads([song.id]);
+          // «Undo» still there: confirming by mistake is a tap away from
+          // getting it back (offline there'd be nowhere to download from).
+          toast(
+            t('Download removed'),
+            offline ? undefined : { label: t('Undo'), run: () => void downloadSong(song) },
+          );
+          close();
+        }}
+      />
 
       <Dialog
         visible={creating}
