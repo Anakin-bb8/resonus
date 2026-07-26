@@ -1,4 +1,7 @@
 {
+  "Delete downloads": "Elimina les descàrregues",
+  "Nothing downloaded here": "Aquí no hi ha res descarregat",
+  "{n} songs deleted": "{n} cançons eliminades",
   "Battery optimization is on": "L'optimització de bateria està activada",
   "Android may stop playback in the background, interrupt downloads or delay the sleep timer. Allowing unrestricted battery use fixes it.": "Android pot tallar la reproducció en segon pla, interrompre descàrregues o endarrerir el temporitzador. Permetre l'ús de bateria sense restriccions ho soluciona.",
   "Open settings": "Obre els ajustos",

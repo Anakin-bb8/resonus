@@ -1,4 +1,7 @@
 {
+  "Delete downloads": "Delete downloads",
+  "Nothing downloaded here": "Nothing downloaded here",
+  "{n} songs deleted": "{n} songs deleted",
   "Battery optimization is on": "Battery optimization is on",
   "Android may stop playback in the background, interrupt downloads or delay the sleep timer. Allowing unrestricted battery use fixes it.": "Android may stop playback in the background, interrupt downloads or delay the sleep timer. Allowing unrestricted battery use fixes it.",
   "Open settings": "Open settings",

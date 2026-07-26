@@ -80,6 +80,9 @@ export default function ArtistScreen() {
   const download = useDownloads(useShallow((s) => groupDownloadState(s, `artist:${id}`, [])));
   const downloadArtist = useDownloads((s) => s.downloadArtist);
   const cancelDownload = useDownloads((s) => s.cancelDownload);
+  const deleteSongs = useDownloads((s) => s.deleteSongs);
+  const files = useDownloads((s) => s.files);
+  const hasDownloads = Object.keys(files).length > 0;
   const [confirmDownload, setConfirmDownload] = useState(false);
   const [confirmStop, setConfirmStop] = useState(false);
   /** While fetching each album's songs, before downloading anything. */
@@ -261,6 +264,20 @@ export default function ArtistScreen() {
    * tucked-away way to hear the catalogue in order (#36). Only reachable when
    * there are albums (the ⋯ button itself is gated on that).
    */
+  /** Removes every downloaded song of the discography. The songs come from the
+   *  same fetch the download uses, which offline reads the local catalog. */
+  async function deleteDiscography() {
+    const songs = await gatherSongs();
+    if (!songs) return;
+    const ids = songs.filter((s) => files[s.id]).map((s) => s.id);
+    if (ids.length === 0) {
+      toast(t('Nothing downloaded here'));
+      return;
+    }
+    await deleteSongs(ids);
+    toast(t('{n} songs deleted', { n: ids.length }));
+  }
+
   async function playDiscography() {
     const chrono = [...albums].sort((a, b) => (a.year ?? Infinity) - (b.year ?? Infinity));
     const songs = await gatherSongs(chrono);
@@ -574,6 +591,22 @@ export default function ArtistScreen() {
               <Ionicons name="add" size={24} color={colors.text} />
               <Text style={styles.actionText}>{t('Add to a playlist')}</Text>
             </Pressable>
+            {/* Clearing a whole discography had no path at all offline, where
+                the download button isn't there — nor online for a partially
+                downloaded artist, since that button only offers to delete once
+                everything is in (#47). */}
+            {hasDownloads ? (
+              <Pressable
+                style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+                onPress={() => {
+                  close();
+                  void deleteDiscography();
+                }}
+              >
+                <Ionicons name="trash-outline" size={24} color={colors.text} />
+                <Text style={styles.actionText}>{t('Delete downloads')}</Text>
+              </Pressable>
+            ) : null}
           </>
         )}
       </SheetModal>

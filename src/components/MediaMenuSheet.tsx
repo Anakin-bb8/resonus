@@ -76,6 +76,9 @@ export function MediaMenuSheet() {
   const addToQueue = usePlayerStore((s) => s.addToQueue);
   const downloadAlbum = useDownloads((s) => s.downloadAlbum);
   const downloadPlaylist = useDownloads((s) => s.downloadPlaylist);
+  const deleteSongs = useDownloads((s) => s.deleteSongs);
+  const files = useDownloads((s) => s.files);
+  const hasDownloads = Object.keys(files).length > 0;
 
   if (!item) return null;
 
@@ -186,6 +189,28 @@ export function MediaMenuSheet() {
                 if (album) void downloadAlbum(album, songs);
                 else void downloadPlaylist(playlist!, songs);
                 toast(t('Downloading…'));
+              })
+            }
+          />
+        ) : null}
+        {/* The header button only turns into "delete" once EVERYTHING is
+            downloaded, and offline there is no header button at all — so a
+            half-downloaded album could only be cleared song by song (#47).
+            Shown whenever this profile has downloads; whether these songs are
+            among them takes fetching them, which is what the press does. */}
+        {hasDownloads ? (
+          <Action
+            icon="trash-outline"
+            label={t('Delete downloads')}
+            onPress={() =>
+              withSongs((songs) => {
+                const ids = songs.filter((s) => files[s.id]).map((s) => s.id);
+                if (ids.length === 0) {
+                  toast(t('Nothing downloaded here'));
+                  return;
+                }
+                void deleteSongs(ids);
+                toast(t('{n} songs deleted', { n: ids.length }));
               })
             }
           />
