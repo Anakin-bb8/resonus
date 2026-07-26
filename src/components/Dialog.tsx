@@ -23,6 +23,9 @@ interface Props {
   /** If provided, shows a text field initialized with `initialValue`. */
   input?: { placeholder?: string; initialValue?: string; secure?: boolean };
   confirmLabel: string;
+  /** Optional third choice, neither confirm nor cancel (e.g. «Don't remind
+   *  me»). Goes on its own line so three labels never crowd one row. */
+  neutral?: { label: string; onPress: () => void };
   destructive?: boolean;
   onCancel: () => void;
   onConfirm: (value: string) => void;
@@ -34,6 +37,7 @@ export function Dialog({
   message,
   input,
   confirmLabel,
+  neutral,
   destructive,
   onCancel,
   onConfirm,
@@ -65,6 +69,11 @@ export function Dialog({
               secureTextEntry={input.secure}
               autoFocus
             />
+          ) : null}
+          {neutral ? (
+            <Pressable hitSlop={8} style={styles.neutral} onPress={neutral.onPress}>
+              <Text style={styles.cancel}>{neutral.label}</Text>
+            </Pressable>
           ) : null}
           <View style={styles.actions}>
             <Pressable hitSlop={8} onPress={onCancel}>
@@ -119,6 +128,7 @@ const styles = StyleSheet.create({
     gap: spacing.xl,
     marginTop: spacing.sm,
   },
+  neutral: { alignSelf: 'flex-start', marginTop: spacing.sm },
   cancel: { color: colors.textSecondary, fontSize: fontSize.md, fontWeight: '600' },
   confirm: { color: colors.accent, fontSize: fontSize.md, fontWeight: '700' },
 });

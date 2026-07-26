@@ -464,6 +464,13 @@ interface SettingsState {
    * better off with one less row on it.
    */
   showGenreChips: boolean;
+  /**
+   * Warn on startup when Android's battery optimization is restricting the app.
+   * Only «Don't remind me» turns it off, so a warning dismissed with «Later»
+   * comes back — and the system can re-restrict the app at any time, which is
+   * exactly when it needs saying again.
+   */
+  batteryWarning: boolean;
   /** Player background: flat, cover color, or blurred cover art. */
   playerBackground: ScreenBackground;
   /**
@@ -571,6 +578,7 @@ interface SettingsState {
   setShowArtistPhoto: (value: boolean) => void;
   setShowDiscHeaders: (value: boolean) => void;
   setShowGenreChips: (value: boolean) => void;
+  setBatteryWarning: (value: boolean) => void;
   setPlayerBackground: (value: ScreenBackground) => void;
   setFitCoverArt: (value: boolean) => void;
   setMiniPlayerColorBackground: (value: boolean) => void;
@@ -612,6 +620,9 @@ interface SettingsState {
   setAppFont: (value: AppFont) => void;
   /** Resets to factory defaults (language is preserved). */
   resetToDefaults: () => void;
+  /** The saved settings have been read from disk. Until then everything is at
+   *  its default, so anything that acts ON a setting must wait for this. */
+  hydrated: boolean;
   hydrate: () => Promise<void>;
 }
 
@@ -658,6 +669,7 @@ function snapshot(get: () => SettingsState) {
     showArtistPhoto: s.showArtistPhoto,
     showDiscHeaders: s.showDiscHeaders,
     showGenreChips: s.showGenreChips,
+    batteryWarning: s.batteryWarning,
     playerBackground: s.playerBackground,
     fitCoverArt: s.fitCoverArt,
     miniPlayerColorBackground: s.miniPlayerColorBackground,
@@ -726,6 +738,7 @@ const DEFAULTS = {
   showArtistPhoto: true,
   showDiscHeaders: true,
   showGenreChips: false,
+  batteryWarning: true,
   playerBackground: 'cover' as ScreenBackground,
   fitCoverArt: false,
   miniPlayerColorBackground: true,
@@ -774,6 +787,7 @@ const DEFAULTS = {
 
 export const useSettings = create<SettingsState>((set, get) => ({
   ...DEFAULTS,
+  hydrated: false,
 
   setMaxBitRate: (maxBitRate) => {
     set({ maxBitRate });
@@ -915,6 +929,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
 
   setShowGenreChips: (showGenreChips) => {
     set({ showGenreChips });
+    persist(snapshot(get));
+  },
+
+  setBatteryWarning: (batteryWarning) => {
+    set({ batteryWarning });
     persist(snapshot(get));
   },
 
@@ -1172,6 +1191,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           showArtistPhoto: boolean;
           showDiscHeaders: boolean;
           showGenreChips: boolean;
+          batteryWarning: boolean;
           playerBackground: ScreenBackground;
           fitCoverArt: boolean;
           playerColorBackground: boolean;
@@ -1324,6 +1344,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (typeof parsed.showGenreChips === 'boolean') {
           set({ showGenreChips: parsed.showGenreChips });
+        }
+        if (typeof parsed.batteryWarning === 'boolean') {
+          set({ batteryWarning: parsed.batteryWarning });
         }
         if (typeof parsed.showDiscHeaders === 'boolean') {
           set({ showDiscHeaders: parsed.showDiscHeaders });
@@ -1510,6 +1533,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
         set({ ...DEFAULTS, language: get().language });
         applyAccent(DEFAULT_ACCENT);
       }
+    } finally {
+      // Read or failed, what's in memory is now what this profile gets.
+      set({ hydrated: true });
     }
   },
 }));

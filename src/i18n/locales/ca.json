@@ -1,4 +1,10 @@
 {
+  "Battery optimization is on": "L'optimització de bateria està activada",
+  "Android may stop playback in the background, interrupt downloads or delay the sleep timer. Allowing unrestricted battery use fixes it.": "Android pot tallar la reproducció en segon pla, interrompre descàrregues o endarrerir el temporitzador. Permetre l'ús de bateria sense restriccions ho soluciona.",
+  "Open settings": "Obre els ajustos",
+  "Don’t remind me": "No m'ho tornis a recordar",
+  "Warn about battery optimization": "Avisa de l'optimització de bateria",
+  "Check on startup whether Android is restricting the app, which is what usually stops playback in the background.": "Comprova en iniciar si Android està restringint l'app, que és el que sol tallar la reproducció en segon pla.",
   "A-Z": "A-Z",
   "About": "Quant a",
   "Accent color": "Color d'accent",

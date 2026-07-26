@@ -38,6 +38,8 @@ export default function PlaybackSettings() {
   const replayGain = useSettings((s) => s.replayGain);
   const setReplayGain = useSettings((s) => s.setReplayGain);
   const keepScreenAwake = useSettings((s) => s.keepScreenAwake);
+  const batteryWarning = useSettings((s) => s.batteryWarning);
+  const setBatteryWarning = useSettings((s) => s.setBatteryWarning);
   const setKeepScreenAwake = useSettings((s) => s.setKeepScreenAwake);
 
   const bitrateOptions = BITRATE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }));
@@ -135,6 +137,12 @@ export default function PlaybackSettings() {
               description: t('The screen never turns off while the app is visible.'),
               value: keepScreenAwake,
               onChange: setKeepScreenAwake,
+            },
+            {
+              label: t('Warn about battery optimization'),
+              description: t('Check on startup whether Android is restricting the app, which is what usually stops playback in the background.'),
+              value: batteryWarning,
+              onChange: setBatteryWarning,
             },
           ]}
         />

@@ -17,6 +17,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { GlobalMiniPlayer } from '@/components/GlobalMiniPlayer';
 import { MediaMenuSheet } from '@/components/MediaMenuSheet';
 import { GlobalPlaylistPicker } from '@/components/PlaylistPickerSheet';
+import { BatteryWarning } from '@/components/BatteryWarning';
 import { SongMenuSheet } from '@/components/SongMenuSheet';
 import { Toast } from '@/components/Toast';
 import { installAppFont, setAppFont } from '@/lib/appFont';
@@ -230,6 +231,7 @@ export default function RootLayout() {
             {auth || offline ? <MediaMenuSheet /> : null}
             {auth || offline ? <GlobalPlaylistPicker /> : null}
             {auth || offline ? <CarAutoSync /> : null}
+            {auth || offline ? <BatteryWarning /> : null}
             <Toast />
           </View>
           </ErrorBoundary>

@@ -1,4 +1,10 @@
 {
+  "Battery optimization is on": "Battery optimization is on",
+  "Android may stop playback in the background, interrupt downloads or delay the sleep timer. Allowing unrestricted battery use fixes it.": "Android may stop playback in the background, interrupt downloads or delay the sleep timer. Allowing unrestricted battery use fixes it.",
+  "Open settings": "Open settings",
+  "Don’t remind me": "Don’t remind me",
+  "Warn about battery optimization": "Warn about battery optimization",
+  "Check on startup whether Android is restricting the app, which is what usually stops playback in the background.": "Check on startup whether Android is restricting the app, which is what usually stops playback in the background.",
   "A-Z": "A-Z",
   "About": "About",
   "Accent color": "Accent color",
