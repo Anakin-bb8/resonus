@@ -8,7 +8,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -21,6 +21,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { getAlbumsByGenre, getSongsByGenre } from '@/api/data';
+import { type Song } from '@/api/subsonic';
 import { playShuffle } from '@/lib/playShuffle';
 import { AlbumCard } from '@/components/AlbumCard';
 import { AlbumCardsSkeleton } from '@/components/AlbumCardsSkeleton';
@@ -28,13 +29,17 @@ import { AlbumRow } from '@/components/AlbumRow';
 import { AlbumRowsSkeleton } from '@/components/AlbumRowsSkeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { Message } from '@/components/Message';
+import { SelectionBar } from '@/components/SelectionBar';
 import { TrackRow } from '@/components/TrackRow';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
+import { useDownloads } from '@/store/downloads';
+import { usePlaylistPicker } from '@/store/playlistPicker';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
 import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
+import { haptic } from '@/lib/haptics';
 import { listPerf } from '@/lib/listPerf';
 
 const PAGE = 30;
@@ -63,6 +68,36 @@ export default function GenreScreen() {
   const [tab, setTab] = useState<'albums' | 'songs'>('albums');
   // Without this, tapping and hearing nothing for half a second feels broken.
   const [starting, setStarting] = useState(false);
+  const offline = useAuthStore((s) => s.offline);
+  const downloadSongs = useDownloads((s) => s.downloadSongs);
+  const addToQueue = usePlayerStore((s) => s.addToQueue);
+  // The picker is mounted once in the root layout; screens just hand it songs.
+  const openPlaylistPicker = usePlaylistPicker((s) => s.open);
+
+  // ── Multi-select ────────────────────────────────────────────────────────
+  // Same as the album and playlist lists: null = normal, a Set (even empty) =
+  // selecting. See `TrackListView`, which does this over its own list.
+  const [selectedIds, setSelectedIds] = useState<Set<string> | null>(null);
+  const selecting = selectedIds !== null;
+  // Id that just entered selection via long-press: the `onPress` of that same
+  // gesture arrives with selection already on and would undo it.
+  const justLongPressed = useRef<string | null>(null);
+
+  function toggleSelect(id: string) {
+    setSelectedIds((cur) => {
+      const next = new Set(cur ?? []);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  /** Runs an action with the marked songs and leaves selection mode. */
+  function runSelection(fn: (sel: Song[]) => void) {
+    const sel = songs.filter((s) => selectedIds?.has(s.id));
+    setSelectedIds(null);
+    if (sel.length > 0) fn(sel);
+  }
 
   const href = `/genre/${encodeURIComponent(genre)}`;
 
@@ -119,16 +154,42 @@ export default function GenreScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
+      {/* While selecting, the header turns into ✕ + counter + select all, the
+          same swap the album and playlist lists do. */}
       <View style={styles.header}>
-        <Pressable hitSlop={10} onPress={() => router.back()} accessibilityLabel={t('Back')}>
-          <Ionicons name="chevron-back" size={26} color={colors.text} />
+        <Pressable
+          hitSlop={10}
+          onPress={() => (selecting ? setSelectedIds(null) : router.back())}
+          accessibilityLabel={selecting ? t('Close') : t('Back')}
+        >
+          <Ionicons name={selecting ? 'close' : 'chevron-back'} size={26} color={colors.text} />
         </Pressable>
         <Text style={styles.title} numberOfLines={1}>
-          {genre}
+          {selecting ? t('{n} selected', { n: selectedIds.size }) : genre}
         </Text>
+        {selecting ? (
+          <Pressable
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={t('Select all')}
+            onPress={() =>
+              setSelectedIds(
+                selectedIds.size === songs.length ? new Set() : new Set(songs.map((s) => s.id)),
+              )
+            }
+          >
+            <Ionicons
+              name="checkmark-done"
+              size={24}
+              color={
+                songs.length > 0 && selectedIds.size === songs.length ? colors.accent : colors.text
+              }
+            />
+          </Pressable>
+        ) : null}
         {/* Only for the albums: the song list is a list, there's no other way
             to draw it. */}
-        {tab === 'albums' ? (
+        {!selecting && tab === 'albums' ? (
           <Pressable
             hitSlop={10}
             accessibilityRole="button"
@@ -149,7 +210,10 @@ export default function GenreScreen() {
             <Pressable
               key={key}
               style={[styles.chip, tab === key && { backgroundColor: colors.accent }]}
-              onPress={() => setTab(key)}
+              onPress={() => {
+                setTab(key);
+                setSelectedIds(null);
+              }}
             >
               <Text style={[styles.chipText, tab === key && styles.chipTextActive]}>
                 {key === 'albums' ? t('Albums') : t('Songs')}
@@ -193,12 +257,33 @@ export default function GenreScreen() {
           data={songs}
           keyExtractor={(item, i) => `${item.id}-${i}`}
           contentContainerStyle={styles.songList}
+          extraData={selectedIds}
           renderItem={({ item, index }) => (
             <TrackRow
               song={item}
               isCurrent={playing?.id === item.id}
               showArtwork={showListArtwork}
-              onPress={() => playQueue(songs, index, genre, href)}
+              selecting={selecting}
+              selected={!!selectedIds?.has(item.id)}
+              onPressIn={() => {
+                justLongPressed.current = null;
+              }}
+              onLongPress={
+                selecting
+                  ? undefined
+                  : () => {
+                      haptic('medium');
+                      setSelectedIds(new Set([item.id]));
+                      justLongPressed.current = item.id;
+                    }
+              }
+              onPress={() => {
+                // Discards the onPress that closes the long-press: it would
+                // deselect the very song you entered selection with.
+                if (justLongPressed.current === item.id) return;
+                if (selecting) toggleSelect(item.id);
+                else void playQueue(songs, index, genre, href);
+              }}
             />
           )}
           onEndReached={() => songsQuery.hasNextPage && songsQuery.fetchNextPage()}
@@ -250,6 +335,43 @@ export default function GenreScreen() {
           }
         />
       )}
+
+      {selecting ? (
+        <SelectionBar
+          count={selectedIds.size}
+          actions={[
+            {
+              icon: 'add-circle-outline',
+              label: t('Add to a playlist'),
+              onPress: () => runSelection(openPlaylistPicker),
+            },
+            {
+              icon: 'list',
+              label: t('Add to queue'),
+              onPress: () =>
+                runSelection((sel) => {
+                  // In reverse: each one goes right after the current song, so
+                  // queueing them backwards leaves them in the order you see.
+                  [...sel].reverse().forEach(addToQueue);
+                  toast(t('Added to queue'));
+                }),
+            },
+            ...(offline
+              ? []
+              : [
+                  {
+                    icon: 'download-outline' as const,
+                    label: t('Download'),
+                    onPress: () =>
+                      runSelection((sel) => {
+                        void downloadSongs(sel);
+                        toast(t('Downloading…'));
+                      }),
+                  },
+                ]),
+          ]}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }

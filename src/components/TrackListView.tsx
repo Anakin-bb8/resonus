@@ -43,6 +43,7 @@ import { colors, fontSize, radius, spacing } from '@/theme';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { Cover } from './Cover';
 import { FavoriteButton } from './FavoriteButton';
+import { SelectionBar } from './SelectionBar';
 import { TrackRow } from './TrackRow';
 
 const COVER = Math.min(Dimensions.get('window').width * 0.58, 250);
@@ -738,35 +739,39 @@ export function TrackListView({
         )}
       </View>
 
-      {/* Selection mode floating action bar (above the mini player, at
-          toast height). */}
       {selecting ? (
-        <View style={[styles.selectionBar, { bottom: insets.bottom + 96 }]}>
-          {selection?.onAddTo ? (
-            <SelectionAction
-              icon="add-circle-outline"
-              label={t('Add to a playlist')}
-              enabled={selectedIds.size > 0}
-              onPress={() => runSelectionAction((sel) => selection.onAddTo!(sel))}
-            />
-          ) : null}
-          {selection?.onDownload ? (
-            <SelectionAction
-              icon="download-outline"
-              label={t('Download')}
-              enabled={selectedIds.size > 0}
-              onPress={() => runSelectionAction((sel) => selection.onDownload!(sel))}
-            />
-          ) : null}
-          {selection?.onRemove ? (
-            <SelectionAction
-              icon="remove-circle-outline"
-              label={t('Remove')}
-              enabled={selectedIds.size > 0}
-              onPress={() => runSelectionAction((sel, idx) => selection.onRemove!(sel, idx))}
-            />
-          ) : null}
-        </View>
+        <SelectionBar
+          count={selectedIds.size}
+          actions={[
+            ...(selection?.onAddTo
+              ? [
+                  {
+                    icon: 'add-circle-outline' as const,
+                    label: t('Add to a playlist'),
+                    onPress: () => runSelectionAction((sel) => selection.onAddTo!(sel)),
+                  },
+                ]
+              : []),
+            ...(selection?.onDownload
+              ? [
+                  {
+                    icon: 'download-outline' as const,
+                    label: t('Download'),
+                    onPress: () => runSelectionAction((sel) => selection.onDownload!(sel)),
+                  },
+                ]
+              : []),
+            ...(selection?.onRemove
+              ? [
+                  {
+                    icon: 'remove-circle-outline' as const,
+                    label: t('Remove'),
+                    onPress: () => runSelectionAction((sel, idx) => selection.onRemove!(sel, idx)),
+                  },
+                ]
+              : []),
+          ]}
+        />
       ) : null}
     </View>
   );
@@ -780,37 +785,6 @@ function DiscHeader({ label }: { label: string }) {
         {label}
       </Text>
     </View>
-  );
-}
-
-/** Floating selection mode bar button (icon + label). */
-function SelectionAction({
-  icon,
-  label,
-  enabled,
-  onPress,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  enabled: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.selectionAction,
-        (pressed || !enabled) && { opacity: 0.5 },
-      ]}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      disabled={!enabled}
-      onPress={onPress}
-    >
-      <Ionicons name={icon} size={22} color={colors.text} />
-      <Text style={styles.selectionLabel} numberOfLines={1}>
-        {label}
-      </Text>
-    </Pressable>
   );
 }
 
@@ -1001,25 +975,5 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: fontSize.md,
     fontWeight: '700',
-  },
-  selectionBar: {
-    position: 'absolute',
-    left: spacing.xl,
-    right: spacing.xl,
-    flexDirection: 'row',
-    backgroundColor: '#2E2E2E',
-    borderRadius: 16,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
-  },
-  selectionAction: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 4,
-  },
-  selectionLabel: {
-    color: colors.text,
-    fontSize: fontSize.xs,
-    fontWeight: '600',
   },
 });
