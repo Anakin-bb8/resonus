@@ -1,4 +1,10 @@
-/** Albums of a genre, with infinite scroll. */
+/**
+ * A genre: its albums (grid or list) and its songs, with infinite scroll.
+ *
+ * Both views matter because genre tags live per FILE: an album tagged "Rock"
+ * can hold songs tagged otherwise, and a song of this genre can sit inside an
+ * album that isn't. Albums alone would only ever show half the picture.
+ */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -14,21 +20,32 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { getAlbumsByGenre } from '@/api/data';
+import { getAlbumsByGenre, getSongsByGenre } from '@/api/data';
 import { playShuffle } from '@/lib/playShuffle';
 import { AlbumCard } from '@/components/AlbumCard';
 import { AlbumCardsSkeleton } from '@/components/AlbumCardsSkeleton';
+import { AlbumRow } from '@/components/AlbumRow';
+import { AlbumRowsSkeleton } from '@/components/AlbumRowsSkeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { Message } from '@/components/Message';
+import { TrackRow } from '@/components/TrackRow';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
-import { colors, fontSize, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
+import { currentSong, usePlayerStore } from '@/store/player';
+import { useSettings } from '@/store/settings';
+import { useToast } from '@/store/toast';
+import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
 import { listPerf } from '@/lib/listPerf';
 
 const PAGE = 30;
+const SONG_PAGE = 50;
 const COLUMNS = 2;
 const GAP = spacing.sm;
 const CARD = (Dimensions.get('window').width - spacing.lg * 2 - GAP * (COLUMNS - 1)) / COLUMNS;
+
+/** Songs fetched when pressing play: the same cap as the library shuffle, for
+ *  the same reason (a queue of thousands is unusable). */
+const PLAY_SIZE = 200;
 
 export default function GenreScreen() {
   const { name } = useLocalSearchParams<{ name: string }>();
@@ -36,29 +53,69 @@ export default function GenreScreen() {
   const router = useRouter();
   const t = useT();
   const auth = useAuthStore((s) => s.auth);
+  const toast = useToast((s) => s.show);
+  const playing = usePlayerStore(currentSong);
+  const playQueue = usePlayerStore((s) => s.playQueue);
+  const showListArtwork = useSettings((s) => s.showListArtwork);
+  const layout = useSettings((s) => s.genreLayout);
+  const setLayout = useSettings((s) => s.setGenreLayout);
+  const grid = layout === 'grid';
+  const [tab, setTab] = useState<'albums' | 'songs'>('albums');
   // Without this, tapping and hearing nothing for half a second feels broken.
-  const [shuffling, setShuffling] = useState(false);
+  const [starting, setStarting] = useState(false);
 
-  async function onShuffle() {
-    if (shuffling) return;
-    setShuffling(true);
+  const href = `/genre/${encodeURIComponent(genre)}`;
+
+  /** Play and shuffle draw from the SAME pool (the genre's songs), one in the
+   *  server's order and the other at random, so both mean the same thing in
+   *  either tab and neither has to expand album by album. */
+  async function onPlay() {
+    if (starting) return;
+    setStarting(true);
     try {
-      await playShuffle(genre);
+      const songs = await getSongsByGenre(genre, PLAY_SIZE, 0);
+      if (songs.length === 0) {
+        toast(t('Nothing to shuffle yet'));
+        return;
+      }
+      await playQueue(songs, 0, genre, href);
+    } catch {
+      toast(t("Couldn't load songs."));
     } finally {
-      setShuffling(false);
+      setStarting(false);
     }
   }
 
-  const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useInfiniteQuery({
-      queryKey: ['genreAlbums', genre],
-      queryFn: ({ pageParam }) => getAlbumsByGenre(genre, PAGE, pageParam),
-      initialPageParam: 0,
-      getNextPageParam: (last, pages) => (last.length === PAGE ? pages.length * PAGE : undefined),
-      enabled: !!auth && !!genre,
-    });
+  async function onShuffle() {
+    if (starting) return;
+    setStarting(true);
+    try {
+      await playShuffle(genre);
+    } finally {
+      setStarting(false);
+    }
+  }
 
-  const albums = data?.pages.flat() ?? [];
+  const albumsQuery = useInfiniteQuery({
+    queryKey: ['genreAlbums', genre],
+    queryFn: ({ pageParam }) => getAlbumsByGenre(genre, PAGE, pageParam),
+    initialPageParam: 0,
+    getNextPageParam: (last, pages) => (last.length === PAGE ? pages.length * PAGE : undefined),
+    enabled: !!auth && !!genre && tab === 'albums',
+  });
+
+  const songsQuery = useInfiniteQuery({
+    queryKey: ['genreSongs', genre],
+    queryFn: ({ pageParam }) => getSongsByGenre(genre, SONG_PAGE, pageParam),
+    initialPageParam: 0,
+    getNextPageParam: (last, pages) =>
+      last.length === SONG_PAGE ? pages.length * SONG_PAGE : undefined,
+    enabled: !!auth && !!genre && tab === 'songs',
+  });
+
+  const albums = albumsQuery.data?.pages.flat() ?? [];
+  const songs = songsQuery.data?.pages.flat() ?? [];
+  const query = tab === 'albums' ? albumsQuery : songsQuery;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -66,35 +123,121 @@ export default function GenreScreen() {
         <Pressable hitSlop={10} onPress={() => router.back()} accessibilityLabel={t('Back')}>
           <Ionicons name="chevron-back" size={26} color={colors.text} />
         </Pressable>
-        <Text style={styles.title} numberOfLines={1}>{genre}</Text>
-        {/* Takes the slot that balances the title. Hear the genre right away:
-            listening without going album by album is what this button is about. */}
-        <Pressable hitSlop={10} onPress={onShuffle} accessibilityLabel={t('Shuffle')}>
-          {shuffling ? (
-            <ActivityIndicator color={colors.text} />
-          ) : (
-            <Ionicons name="shuffle" size={26} color={colors.text} />
-          )}
-        </Pressable>
+        <Text style={styles.title} numberOfLines={1}>
+          {genre}
+        </Text>
+        {/* Only for the albums: the song list is a list, there's no other way
+            to draw it. */}
+        {tab === 'albums' ? (
+          <Pressable
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={grid ? t('List view') : t('Grid view')}
+            onPress={() => setLayout(grid ? 'list' : 'grid')}
+          >
+            <Ionicons name={grid ? 'list' : 'grid-outline'} size={20} color={colors.textSecondary} />
+          </Pressable>
+        ) : null}
       </View>
 
-      {isLoading ? (
-        <AlbumCardsSkeleton width={CARD} count={8} />
-      ) : isError ? (
-        <Message text={t("Couldn't load albums.")} onRetry={() => refetch()} />
-      ) : (
+      {/* What you're looking at on the left, what it does on the right. The
+          play button used to be a bare icon in the corner, which said nothing
+          about what it would play. */}
+      <View style={styles.toolbar}>
+        <View style={styles.tabs}>
+          {(['albums', 'songs'] as const).map((key) => (
+            <Pressable
+              key={key}
+              style={[styles.chip, tab === key && { backgroundColor: colors.accent }]}
+              onPress={() => setTab(key)}
+            >
+              <Text style={[styles.chipText, tab === key && styles.chipTextActive]}>
+                {key === 'albums' ? t('Albums') : t('Songs')}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+        <View style={styles.playRow}>
+          <Pressable hitSlop={10} onPress={onShuffle} accessibilityLabel={t('Shuffle')}>
+            <Ionicons name="shuffle" size={24} color={colors.textSecondary} />
+          </Pressable>
+          <Pressable
+            style={styles.playButton}
+            onPress={onPlay}
+            accessibilityRole="button"
+            accessibilityLabel={t('Play')}
+          >
+            {starting ? (
+              <ActivityIndicator color="#000" />
+            ) : (
+              <Ionicons name="play" size={22} color="#000" />
+            )}
+          </Pressable>
+        </View>
+      </View>
+
+      {query.isLoading ? (
+        tab === 'songs' || !grid ? (
+          <AlbumRowsSkeleton />
+        ) : (
+          <AlbumCardsSkeleton width={CARD} count={8} />
+        )
+      ) : query.isError ? (
+        <Message
+          text={tab === 'albums' ? t("Couldn't load albums.") : t("Couldn't load songs.")}
+          onRetry={() => query.refetch()}
+        />
+      ) : tab === 'songs' ? (
         <FlatList
-        {...listPerf}
-          data={albums}
+          {...listPerf}
+          data={songs}
           keyExtractor={(item, i) => `${item.id}-${i}`}
-          numColumns={COLUMNS}
-          columnWrapperStyle={{ gap: GAP }}
-          contentContainerStyle={styles.list}
-          renderItem={({ item }) => <AlbumCard album={item} width={CARD} />}
-          onEndReached={() => hasNextPage && fetchNextPage()}
+          contentContainerStyle={styles.songList}
+          renderItem={({ item, index }) => (
+            <TrackRow
+              song={item}
+              isCurrent={playing?.id === item.id}
+              showArtwork={showListArtwork}
+              onPress={() => playQueue(songs, index, genre, href)}
+            />
+          )}
+          onEndReached={() => songsQuery.hasNextPage && songsQuery.fetchNextPage()}
           onEndReachedThreshold={0.5}
           ListFooterComponent={
-            isFetchingNextPage ? (
+            songsQuery.isFetchingNextPage ? (
+              <ActivityIndicator style={{ marginVertical: spacing.lg }} color={colors.accent} />
+            ) : null
+          }
+          ListEmptyComponent={
+            <EmptyState
+              icon="musical-notes-outline"
+              title={t('No songs in this genre')}
+              subtitle={t('Try exploring another genre.')}
+            />
+          }
+        />
+      ) : (
+        <FlatList
+          {...listPerf}
+          data={albums}
+          // Remount on layout change: FlatList reuses rows and gets stuck with
+          // stale ones, and `numColumns` can't be hot-swapped either.
+          key={layout}
+          keyExtractor={(item, i) => `${item.id}-${i}`}
+          {...(grid
+            ? {
+                numColumns: COLUMNS,
+                columnWrapperStyle: { gap: GAP },
+                contentContainerStyle: styles.list,
+              }
+            : { contentContainerStyle: styles.rowList })}
+          renderItem={({ item }) =>
+            grid ? <AlbumCard album={item} width={CARD} /> : <AlbumRow album={item} />
+          }
+          onEndReached={() => albumsQuery.hasNextPage && albumsQuery.fetchNextPage()}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            albumsQuery.isFetchingNextPage ? (
               <ActivityIndicator style={{ marginVertical: spacing.lg }} color={colors.accent} />
             ) : null
           }
@@ -116,10 +259,52 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: spacing.md,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  title: { flex: 1, textAlign: 'center', color: colors.text, fontSize: fontSize.lg, fontWeight: '800' },
+  title: { flex: 1, color: colors.text, fontSize: fontSize.lg, fontWeight: '800' },
+  toolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+  },
+  tabs: { flexDirection: 'row', gap: spacing.sm },
+  chip: {
+    // Asymmetric padding on purpose: even without includeFontPadding, glyphs
+    // end up ~1dp low relative to the pill center (same as the browse chips).
+    paddingTop: spacing.xs - 1,
+    paddingBottom: spacing.xs + 1,
+    paddingHorizontal: spacing.md,
+    borderRadius: 999,
+    backgroundColor: colors.surfaceHighlight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chipText: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+  chipTextActive: { color: '#000' },
+  playRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  playButton: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   list: { paddingHorizontal: spacing.lg, paddingBottom: SCREEN_BOTTOM_PADDING, gap: GAP },
+  rowList: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: SCREEN_BOTTOM_PADDING,
+    gap: spacing.lg,
+  },
+  songList: { paddingBottom: SCREEN_BOTTOM_PADDING },
 });

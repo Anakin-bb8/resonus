@@ -475,6 +475,26 @@ export async function getAlbumsByGenre(
   return res.albumList2?.album ?? [];
 }
 
+/**
+ * Songs tagged with a genre. Not the same as the albums of that genre: tags
+ * live per file, so a genre's songs can sit inside albums tagged as something
+ * else, and vice versa.
+ */
+export async function getSongsByGenre(
+  auth: SubsonicAuth,
+  genre: string,
+  count = 50,
+  offset = 0,
+  musicFolderId?: string,
+): Promise<Song[]> {
+  const res = await request<{ songsByGenre?: { song?: Song[] } }>(
+    auth,
+    'getSongsByGenre.view',
+    { genre, count, offset, ...(musicFolderId ? { musicFolderId } : {}) },
+  );
+  return res.songsByGenre?.song ?? [];
+}
+
 export async function getAlbum(
   auth: SubsonicAuth,
   id: string,

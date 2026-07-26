@@ -209,6 +209,24 @@ export function getAlbumsByGenre(genre: string, size?: number, offset?: number):
   );
 }
 
+/**
+ * Songs tagged with a genre. Not the same list as its albums: tags live per
+ * file, so a genre's songs can sit inside albums tagged as something else.
+ *
+ * With several libraries each is asked for the same page and the results are
+ * concatenated: this list has no meaningful global order to merge by (the
+ * server returns them however it stores them), so there's nothing to sort.
+ */
+export function getSongsByGenre(genre: string, count = 50, offset = 0): Promise<Subsonic.Song[]> {
+  const a = auth();
+  const ids = enabledFolderIds(a);
+  if (!ids) return Subsonic.getSongsByGenre(a, genre, count, offset);
+  if (ids.length === 1) return Subsonic.getSongsByGenre(a, genre, count, offset, ids[0]);
+  return Promise.all(ids.map((id) => Subsonic.getSongsByGenre(a, genre, count, offset, id))).then(
+    (lists) => dedupeById(lists.flat()).slice(0, count),
+  );
+}
+
 // ── Folder navigation (Subsonic servers only; the UI hides it on
 // Jellyfin and offline) ───────────────────────────────────────────────────
 export function getMusicFolders(): Promise<Subsonic.MusicFolder[]> {

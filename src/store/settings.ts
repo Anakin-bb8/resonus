@@ -536,6 +536,8 @@ interface SettingsState {
   /** List or grid in an artist's full discography. Its own key, again for the
    *  same reason: it's one artist's albums, not the whole library. */
   discographyLayout: ListLayout;
+  /** List or grid on a genre's albums. Its own key, same reasoning. */
+  genreLayout: ListLayout;
   /** Accent color (hex). */
   accentColor: string;
   /** UI font (system font family; `system` = default). */
@@ -605,6 +607,7 @@ interface SettingsState {
   setBrowseArtistsLayout: (value: ListLayout) => void;
   setBrowseAlbumsLayout: (value: ListLayout) => void;
   setDiscographyLayout: (value: ListLayout) => void;
+  setGenreLayout: (value: ListLayout) => void;
   setAccentColor: (value: string) => void;
   setAppFont: (value: AppFont) => void;
   /** Resets to factory defaults (language is preserved). */
@@ -686,6 +689,7 @@ function snapshot(get: () => SettingsState) {
     browseArtistsLayout: s.browseArtistsLayout,
     browseAlbumsLayout: s.browseAlbumsLayout,
     discographyLayout: s.discographyLayout,
+    genreLayout: s.genreLayout,
     accentColor: s.accentColor,
     appFont: s.appFont,
   };
@@ -762,6 +766,8 @@ const DEFAULTS = {
   // List by default: that's how the discography has always been shown, and the
   // toggle is right there for whoever prefers blocks.
   discographyLayout: 'list' as ListLayout,
+  // Grid, like browsing albums: a genre is browsed by cover, not read by name.
+  genreLayout: 'grid' as ListLayout,
   accentColor: DEFAULT_ACCENT,
   appFont: 'system' as AppFont,
 };
@@ -1081,6 +1087,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setGenreLayout: (genreLayout) => {
+    set({ genreLayout });
+    persist(snapshot(get));
+  },
+
   setAccentColor: (accentColor) => {
     applyAccent(accentColor);
     set({ accentColor });
@@ -1196,6 +1207,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           browseArtistsLayout: ListLayout;
           browseAlbumsLayout: ListLayout;
           discographyLayout: ListLayout;
+          genreLayout: ListLayout;
           accentColor: string;
           appFont: AppFont;
         }>;
@@ -1443,6 +1455,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (parsed.discographyLayout === 'list' || parsed.discographyLayout === 'grid') {
           set({ discographyLayout: parsed.discographyLayout });
+        }
+        if (parsed.genreLayout === 'list' || parsed.genreLayout === 'grid') {
+          set({ genreLayout: parsed.genreLayout });
         }
         if (typeof parsed.accentColor === 'string' && /^#[0-9a-f]{6}$/i.test(parsed.accentColor)) {
           set({ accentColor: parsed.accentColor });

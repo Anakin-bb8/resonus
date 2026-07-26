@@ -357,6 +357,26 @@ export async function getAlbumsByGenre(
   return (res.Items ?? []).map(toAlbum);
 }
 
+/** Songs tagged with a genre (Jellyfin filters items by genre directly). */
+export async function getSongsByGenre(
+  auth: SubsonicAuth,
+  genre: string,
+  count = 50,
+  offset = 0,
+  _musicFolderId?: string,
+): Promise<Song[]> {
+  const res = await request<JfItems>(auth, `/Users/${auth.jfUserId}/Items`, {
+    IncludeItemTypes: 'Audio',
+    Recursive: true,
+    Genres: genre,
+    Limit: count,
+    StartIndex: offset,
+    SortBy: 'Album,ParentIndexNumber,IndexNumber',
+    Fields: SONG_FIELDS,
+  });
+  return (res.Items ?? []).map(toSong);
+}
+
 export async function getAlbum(
   auth: SubsonicAuth,
   id: string,

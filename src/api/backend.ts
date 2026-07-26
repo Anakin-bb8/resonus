@@ -105,6 +105,14 @@ export const getAlbumsByGenre = (
   musicFolderId?: string,
 ) => api(auth).getAlbumsByGenre(auth, genre, size, offset, musicFolderId);
 
+export const getSongsByGenre = (
+  auth: SubsonicAuth,
+  genre: string,
+  count?: number,
+  offset?: number,
+  musicFolderId?: string,
+) => api(auth).getSongsByGenre(auth, genre, count, offset, musicFolderId);
+
 export const getAlbum = (auth: SubsonicAuth, id: string) => api(auth).getAlbum(auth, id);
 
 export const getArtists = (auth: SubsonicAuth, musicFolderId?: string) =>
