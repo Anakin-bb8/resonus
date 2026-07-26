@@ -70,7 +70,7 @@ interface JfItem {
   Genres?: string[];
   ImageTags?: { Primary?: string };
   AlbumPrimaryImageTag?: string;
-  UserData?: { IsFavorite?: boolean };
+  UserData?: { IsFavorite?: boolean; LastPlayedDate?: string; PlayCount?: number };
   /** Normalization gain in dB (server LUFS analysis, 10.9+). */
   NormalizationGain?: number;
   MediaSources?: {
@@ -265,6 +265,9 @@ function toAlbum(it: JfItem): Album {
     songCount: it.ChildCount,
     year: it.ProductionYear,
     starred: favDate(it),
+    created: it.DateCreated,
+    played: it.UserData?.LastPlayedDate,
+    playCount: it.UserData?.PlayCount,
   };
 }
 

@@ -147,6 +147,16 @@ export interface Album {
   songCount?: number;
   year?: number;
   starred?: string;
+  /**
+   * When it was added to the server. Standard Subsonic; it's what "recently
+   * added" is really sorted by, so merging several libraries into one list
+   * needs it (see `mergeAlbums` in data.ts).
+   */
+  created?: string;
+  /** Last time this user played it (OpenSubsonic; Navidrome sends it). */
+  played?: string;
+  /** Times this user has played it (OpenSubsonic). */
+  playCount?: number;
   /** Record labels (OpenSubsonic extension; Navidrome sends them). */
   recordLabels?: { name: string }[];
   /**

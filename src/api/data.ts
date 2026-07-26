@@ -824,12 +824,40 @@ async function fetchAllAlbums(
   return out;
 }
 
+/** Album field each list type is really ordered by, when the server sends it. */
+const ALBUM_SORT_FIELD: Partial<
+  Record<Subsonic.AlbumListType, 'created' | 'played' | 'playCount'>
+> = {
+  newest: 'created',
+  recent: 'played',
+  frequent: 'playCount',
+};
+
+/** The field as a number (dates become timestamps) to sort descending by.
+ *  Missing sinks to the bottom instead of jumping to the top. */
+function albumSortValue(
+  album: Subsonic.Album,
+  field: 'created' | 'played' | 'playCount',
+): number {
+  const v = album[field];
+  if (v == null) return -Infinity;
+  return typeof v === 'number' ? v : (Date.parse(v) || -Infinity);
+}
+
 /**
  * Merges per-library lists (each already sorted by the server according to
- * `type`). When a sort key is available on the album (name, artist,
- * starred) the list is truly re-sorted; for the rest (recent/added/frequent,
- * whose fields aren't on the album) they are interleaved round-robin to
- * avoid piling up one library ahead of another.
+ * `type`) into ONE list ordered as if the libraries didn't exist.
+ *
+ * This used to interleave round-robin whenever the album carried no sort key,
+ * which is what "recently added" and friends fell into. With libraries of very
+ * different sizes that is badly wrong: a tiny library that hasn't changed in a
+ * year still takes every other slot, so it crowds out a big one and the same
+ * old albums come back forever (issue #39). Albums do carry `created`, and
+ * `played`/`playCount` on OpenSubsonic servers, so the merge sorts by those.
+ *
+ * Round-robin stays as the fallback for a server that sends none of it: with
+ * nothing to order by, alternating is still fairer than piling one library
+ * ahead of the rest.
  */
 function mergeAlbums(perFolder: Subsonic.Album[][], type: Subsonic.AlbumListType): Subsonic.Album[] {
   if (type === 'alphabeticalByName') {
@@ -842,6 +870,19 @@ function mergeAlbums(perFolder: Subsonic.Album[][], type: Subsonic.AlbumListType
   }
   if (type === 'starred') {
     return dedupeById(perFolder.flat()).sort((a, b) => (b.starred ?? '').localeCompare(a.starred ?? ''));
+  }
+  const all = dedupeById(perFolder.flat());
+  // Random has no order to respect: one shuffle over everything. Interleaving
+  // per-library shuffles would still hand out one turn each.
+  if (type === 'random') return shuffled(all);
+  const field = ALBUM_SORT_FIELD[type];
+  if (field && all.some((al) => al[field] != null)) {
+    return all.sort((a, b) => {
+      const diff = albumSortValue(b, field) - albumSortValue(a, field);
+      // Two albums with nothing to compare: -Infinity minus itself is NaN,
+      // which would leave the sort undefined.
+      return Number.isNaN(diff) ? 0 : diff;
+    });
   }
   // Round-robin interleaving, preserving each library's internal order.
   const interleaved: Subsonic.Album[] = [];
