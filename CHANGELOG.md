@@ -9,6 +9,75 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Added
+
+- Share a song, album or playlist as a link, on servers that allow it.
+- Genre screens now have a Songs tab next to the albums, with play and shuffle
+  for the whole genre, a grid/list switch and multi-select on the songs.
+- Genre chips on album screens; tap one to browse it. Off by default, under
+  Appearance.
+- Search finds radio stations too.
+- Search your playlists, albums and artists from the Library.
+- Radio stations show the image the server holds for them, and changing it in
+  Resonus uploads it, so every client and Navidrome itself show the same one.
+- Delete the downloads of an album, a playlist or a whole discography from its
+  ⋯ menu — offline included, and half-downloaded ones too.
+- A warning when Android's battery optimization is restricting the app, which
+  is what usually stops playback in the background. Switch under Playback.
+- Grid or list in an artist's full discography, remembered.
+- "Play discography" in chronological order, from the artist's ⋯ menu.
+- "Good night" as a greeting in the small hours.
+
+### Changed
+
+- The song ⋯ menu opens showing the actions most used and grows when pulled up;
+  its grabber closes it from anywhere in the list.
+- Search asks what you want to listen to instead of listing what it can find —
+  it finds more than it used to say.
+- The search bar in Browse albums and artists is simply there, instead of
+  appearing when you pull the grid down.
+- Removing a download, turning on auto-download and clearing an album's
+  downloads ask first. Downloading from a ⋯ menu now says how much space it
+  will take, as the album's own screen already did.
+- The player's background is blurred cover art by default.
+- Shuffle sits next to play on the artist screen and lights up when it's on.
+- «Rate» shows in the song menu by default.
+- "Help translate" opens the translation guide.
+
+### Fixed
+
+- Downloading no longer rewrites the entire download catalog for every single
+  song, which froze the app on large libraries and left deletions looking like
+  they had done nothing until a restart.
+- With more than one library active, album lists no longer read every library
+  whole just to show twenty albums.
+- Finishing a download no longer sends the app off to re-fetch everything from
+  the server.
+- Cover art is no longer downloaded twice, once to show and once for the colour.
+- A mix stays anchored to the song it started from instead of drifting further
+  from it with every batch.
+- Mixes range across artists instead of turning into one artist's discography.
+- A mix that finds nothing says so instead of announcing it started.
+- Home shelves order across libraries instead of taking turns, so a small
+  library no longer crowds out a big one.
+- The saved library filter no longer arrives too late to be applied, which
+  showed libraries you had disabled for the rest of the session.
+- "Recently played" no longer pads itself with albums you have never played.
+- Offline search ranks by what actually matched: an artist by name comes before
+  one that merely has a song with that word in the title.
+- One search history per account instead of one per mode, so the same artist no
+  longer shows up twice with only one of them opening.
+- Album, artist and playlist screens keep a way back while they load or fail.
+- Playback survives the screen turning off.
+- Seeking works on streams the server transcodes on its own.
+- A profile's settings, pins and downloads are no longer wiped by another
+  profile's.
+- Multi-disc albums keep their order and disc subtitles offline.
+- The cover swipe no longer wraps past the ends of the queue.
+- The cover and controls no longer jump when the player opens.
+- The progress bar recovers after a track changes with the app in the
+  background.
+
 ## [0.5.4] - 2026-07-24
 
 ### Added
