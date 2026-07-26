@@ -254,7 +254,13 @@ export async function upnpLoad(song: Song, autoplay: boolean, startTimeSec = 0):
     if (!ok && mp3Url && mp3Url !== url) {
       ok = (await native.load(mp3Url, title, startTimeSec * 1000)) as boolean;
     }
-    // The renderer always starts playing; if not wanted, it gets paused on the fly.
+    // Not every renderer starts on its own after being handed a URI: Sonos
+    // waits for an explicit Play and otherwise sits silent while the app
+    // believes it's playing. Sending it always is harmless — one that already
+    // started ignores it — and skipping it left whole devices mute.
+    if (ok && autoplay) void native.play();
+    // The ones that DO start on their own have to be stopped when we didn't
+    // want playback yet.
     if (ok && !autoplay) void native.pause();
     if (!ok) loading = false;
     return ok;
