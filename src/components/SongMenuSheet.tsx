@@ -54,6 +54,22 @@ import { StarRating } from './StarRating';
  *  doesn't look cramped on large phones (previously a fixed 360). */
 const PLAYLISTS_MAX_H = Math.round(Dimensions.get('window').height * 0.6);
 
+/** Height of one action row: its vertical padding plus the icon, the tallest
+ *  thing in it (`styles.action`). */
+const ACTION_H = spacing.md * 2 + 24;
+
+/**
+ * How much of the action list opens without scrolling.
+ *
+ * The half row is the point: a row cut by the bottom edge is what tells you
+ * there's more below, which a clean cut wouldn't (Spotify does the same). The
+ * screen fraction caps it so the sheet doesn't swallow a short phone whole.
+ */
+const ACTIONS_MAX_H = Math.min(
+  ACTION_H * 7.5,
+  Math.round(Dimensions.get('window').height * 0.45),
+);
+
 /**
  * Minutes remaining until expiration, minimum 1.
  *
@@ -132,6 +148,9 @@ export function SongMenuSheet() {
 
   const [mode, setMode] = useState<'actions' | 'playlists' | 'sleep' | 'rating'>('actions');
   const [creating, setCreating] = useState(false);
+  // The action list is scrolled to the top: only then does a downward drag
+  // belong to the sheet (see the `pan` below).
+  const [atTop, setAtTop] = useState(true);
   // "Already in the playlist" prompt pending confirmation (Spotify style).
   const [dupPrompt, setDupPrompt] = useState<{ playlistId: string; name: string } | null>(null);
 
@@ -139,6 +158,12 @@ export function SongMenuSheet() {
   useEffect(() => {
     if (song) setMode('actions');
   }, [song]);
+
+  // Every new song or view starts the list scrolled to the top; the sheet
+  // stays mounted between openings, so the flag would otherwise survive.
+  useEffect(() => {
+    setAtTop(true);
+  }, [song, mode]);
 
   const { data: playlists, isLoading: loadingPlaylists } = useQuery({
     queryKey: ['playlists'],
@@ -253,7 +278,7 @@ export function SongMenuSheet() {
         <Animated.View style={[styles.backdrop, backdropStyle]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={close} />
         </Animated.View>
-        <GestureDetector gesture={pan.enabled(mode !== 'playlists')}>
+        <GestureDetector gesture={pan.enabled(mode !== 'playlists' && atTop)}>
           <Animated.View
             style={[styles.sheet, { paddingBottom: insets.bottom + spacing.md }, sheetStyle]}
             onLayout={onSheetLayout}
@@ -376,7 +401,15 @@ export function SongMenuSheet() {
                 </View>
               </View>
             ) : (
-              <>
+              // Scrolls: with every action enabled the list is taller than
+              // the room a sheet should take. `onScroll` hands the drag back
+              // to the sheet only at the top, so pulling down mid-list scrolls
+              // instead of dismissing.
+              <ScrollView
+                style={{ maxHeight: ACTIONS_MAX_H }}
+                scrollEventThrottle={16}
+                onScroll={(e) => setAtTop(e.nativeEvent.contentOffset.y <= 0)}
+              >
                 {menu.playlist ? (
                   <Action
                     icon="add-circle-outline"
@@ -389,70 +422,6 @@ export function SongMenuSheet() {
                     icon="remove-circle-outline"
                     label={t('Remove from playlist')}
                     onPress={removeFromList}
-                  />
-                ) : null}
-                {menu.artist && (song.artistId || song.artist) ? (
-                  <Action
-                    icon="person"
-                    label={t('Go to artist')}
-                    onPress={() => {
-                      const targets = artistTargets(song);
-                      if (targets.length > 1) {
-                        // We close the sheet and, after its exit animation, open the
-                        // picker (avoids two visible Modals at once).
-                        dismiss(() => {
-                          closeNow();
-                          openArtistPicker(targets);
-                        });
-                        return;
-                      }
-                      const id = targets[0]?.id ?? (song.artist ? normKey(song.artist) : '');
-                      if (id) go(`/artist/${id}`);
-                    }}
-                  />
-                ) : null}
-                {menu.album && (song.albumId || song.album) ? (
-                  <Action
-                    icon="disc"
-                    label={t('Go to album')}
-                    onPress={() => {
-                      if (song.albumId) { go(`/album/${song.albumId}`); return; }
-                      if (song.album) {
-                        const key = normKey(song.album) + '|' + normKey(song.artist || '');
-                        go(`/album/${key}`);
-                      }
-                    }}
-                  />
-                ) : null}
-                {menu.lyrics && showLyrics ? (
-                  <Action
-                    icon="mic-outline"
-                    label={t('Lyrics')}
-                    onPress={() => go('/lyrics')}
-                  />
-                ) : null}
-                {/* With playback actions, not organization ones: this changes the
-                    queue and starts playing. Online only (similar songs are found by
-                    the server) and not for stations (`url`), which have no "similar". */}
-                {menu.mix && !offline && !song.url ? (
-                  <Action
-                    icon="sparkles-outline"
-                    label={t('Start mix')}
-                    onPress={() => {
-                      close();
-                      // The queue changes underneath without the song restarting, so
-                      // without this nothing on screen says the mix actually began.
-                      // And it's only said once tracks have arrived: announcing a
-                      // mix that came up empty is how the failure stayed invisible.
-                      void startRadio(song, t('Mix of “{name}”', { name: song.title })).then(
-                        (started) =>
-                          toast(
-                            started
-                              ? t('Mix started')
-                              : t('Couldn’t find anything to mix with this song'),
-                          ),
-                      );
-                    }}
                   />
                 ) : null}
                 {menu.playNext ? (
@@ -490,11 +459,38 @@ export function SongMenuSheet() {
                     }}
                   />
                 ) : null}
-                {/* Rate (Subsonic setRating): non-Jellyfin server account and not
-                    radio. Offline is recorded and uploaded on reconnect (the local
-                    profile has no account, so it doesn't appear there). */}
-                {menu.rating && !!auth && serverType !== 'jellyfin' && !song.url ? (
-                  <Action icon="star-outline" label={t('Rate')} onPress={() => setMode('rating')} />
+                {menu.album && (song.albumId || song.album) ? (
+                  <Action
+                    icon="disc"
+                    label={t('Go to album')}
+                    onPress={() => {
+                      if (song.albumId) { go(`/album/${song.albumId}`); return; }
+                      if (song.album) {
+                        const key = normKey(song.album) + '|' + normKey(song.artist || '');
+                        go(`/album/${key}`);
+                      }
+                    }}
+                  />
+                ) : null}
+                {menu.artist && (song.artistId || song.artist) ? (
+                  <Action
+                    icon="person"
+                    label={t('Go to artist')}
+                    onPress={() => {
+                      const targets = artistTargets(song);
+                      if (targets.length > 1) {
+                        // We close the sheet and, after its exit animation, open the
+                        // picker (avoids two visible Modals at once).
+                        dismiss(() => {
+                          closeNow();
+                          openArtistPicker(targets);
+                        });
+                        return;
+                      }
+                      const id = targets[0]?.id ?? (song.artist ? normKey(song.artist) : '');
+                      if (id) go(`/artist/${id}`);
+                    }}
+                  />
                 ) : null}
                 {menu.download && downloaded ? (
                   <Action
@@ -521,6 +517,42 @@ export function SongMenuSheet() {
                       close();
                     }}
                   />
+                ) : null}
+                {menu.lyrics && showLyrics ? (
+                  <Action
+                    icon="mic-outline"
+                    label={t('Lyrics')}
+                    onPress={() => go('/lyrics')}
+                  />
+                ) : null}
+                {/* Online only (similar songs are found by the server) and not for
+                    stations (`url`), which have no "similar". */}
+                {menu.mix && !offline && !song.url ? (
+                  <Action
+                    icon="sparkles-outline"
+                    label={t('Start mix')}
+                    onPress={() => {
+                      close();
+                      // The queue changes underneath without the song restarting, so
+                      // without this nothing on screen says the mix actually began.
+                      // And it's only said once tracks have arrived: announcing a
+                      // mix that came up empty is how the failure stayed invisible.
+                      void startRadio(song, t('Mix of “{name}”', { name: song.title })).then(
+                        (started) =>
+                          toast(
+                            started
+                              ? t('Mix started')
+                              : t('Couldn’t find anything to mix with this song'),
+                          ),
+                      );
+                    }}
+                  />
+                ) : null}
+                {/* Rate (Subsonic setRating): non-Jellyfin server account and not
+                    radio. Offline is recorded and uploaded on reconnect (the local
+                    profile has no account, so it doesn't appear there). */}
+                {menu.rating && !!auth && serverType !== 'jellyfin' && !song.url ? (
+                  <Action icon="star-outline" label={t('Rate')} onPress={() => setMode('rating')} />
                 ) : null}
                 {/* Only with a server that mints share links (`useCanShare`),
                     and never for a station: its `url` is not the server's to
@@ -550,7 +582,7 @@ export function SongMenuSheet() {
                     onPress={() => setMode('sleep')}
                   />
                 ) : null}
-              </>
+              </ScrollView>
             )}
           </Animated.View>
         </GestureDetector>

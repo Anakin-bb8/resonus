@@ -32,18 +32,22 @@ const LABEL: Record<SongMenuActionKey, string> = {
   sleepTimer: 'Sleep timer',
 };
 
-/** Toggle order = actual menu order, to recognize it at a glance. */
+/**
+ * Toggle order = actual menu order, to recognize it at a glance. The menu opens
+ * showing about the first eight and the rest come with a scroll, so this list
+ * also says which ones need a scroll to reach.
+ */
 const ORDER: SongMenuActionKey[] = [
   'playlist',
-  'artist',
-  'album',
-  'lyrics',
-  'mix',
   'playNext',
   'queue',
   'favorite',
-  'rating',
+  'album',
+  'artist',
   'download',
+  'lyrics',
+  'mix',
+  'rating',
   'share',
   'sleepTimer',
 ];
