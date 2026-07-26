@@ -45,7 +45,7 @@ const TICKS_PER_SECOND = 10_000_000;
 const TICKS_PER_MS = 10_000;
 
 /** Extra fields that must be requested explicitly for each item type. */
-const ALBUM_FIELDS = 'ChildCount,DateCreated';
+const ALBUM_FIELDS = 'ChildCount,DateCreated,Genres';
 const SONG_FIELDS = 'MediaSources,DateCreated,NormalizationGain,Genres';
 const PLAYLIST_FIELDS = 'ChildCount,DateCreated,DateLastMediaAdded';
 
@@ -268,6 +268,7 @@ function toAlbum(it: JfItem): Album {
     created: it.DateCreated,
     played: it.UserData?.LastPlayedDate,
     playCount: it.UserData?.PlayCount,
+    genres: it.Genres?.map((name) => ({ name })),
   };
 }
 

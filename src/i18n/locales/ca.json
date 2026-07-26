@@ -298,6 +298,8 @@
   "Show a star rating bar to rate the current song.": "Mostra una barra d'estrelles per valorar la cançó actual.",
   "Show all": "Mostra-ho tot",
   "Show artist photo": "Mostra la foto de l'artista",
+  "Show genres": "Mostra els gèneres",
+  "Show the album’s genres as chips; tap one to browse it.": "Mostra els gèneres de l'àlbum com a xips; toca'n un per explorar-lo.",
   "Show artwork": "Mostra la caràtula",
   "Show devices button": "Mostra el botó de dispositius",
   "Show format, bitrate and Lossless / Hi-Res in the player.": "Mostra el format, el bitrate i Lossless / Hi-Res al reproductor.",

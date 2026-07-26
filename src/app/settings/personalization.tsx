@@ -38,7 +38,9 @@ export default function AppearanceSettings() {
   const showArtistPhoto = useSettings((s) => s.showArtistPhoto);
   const setShowArtistPhoto = useSettings((s) => s.setShowArtistPhoto);
   const showDiscHeaders = useSettings((s) => s.showDiscHeaders);
+  const showGenreChips = useSettings((s) => s.showGenreChips);
   const setShowDiscHeaders = useSettings((s) => s.setShowDiscHeaders);
+  const setShowGenreChips = useSettings((s) => s.setShowGenreChips);
   const showHistoryButton = useSettings((s) => s.showHistoryButton);
   const setShowHistoryButton = useSettings((s) => s.setShowHistoryButton);
   const showProfileButton = useSettings((s) => s.showProfileButton);
@@ -108,6 +110,12 @@ export default function AppearanceSettings() {
               description: t('Separate discs with a header on multi-disc albums.'),
               value: showDiscHeaders,
               onChange: setShowDiscHeaders,
+            },
+            {
+              label: t('Show genres'),
+              description: t('Show the album’s genres as chips; tap one to browse it.'),
+              value: showGenreChips,
+              onChange: setShowGenreChips,
             },
           ]}
         />

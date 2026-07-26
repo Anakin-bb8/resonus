@@ -5,7 +5,7 @@
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
@@ -13,6 +13,7 @@ import {
   Dimensions,
   Keyboard,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -66,6 +67,9 @@ interface Props {
   artistImageUri?: string;
   /** Metadata line (e.g. "Album · 2021 · 12 songs · 48 min"). */
   meta?: string;
+  /** Genres of the album, as a scrollable row of chips that browse each one.
+   *  Empty or absent shows nothing at all, not an empty row. */
+  genres?: string[];
   coverUri?: string;
   /** Custom cover art (e.g. Favorites artwork); replaces coverUri. */
   renderCover?: (size: number) => ReactNode;
@@ -146,6 +150,7 @@ export function TrackListView({
   artists,
   artistImageUri,
   meta,
+  genres,
   coverUri,
   renderCover,
   onCoverPress,
@@ -475,6 +480,26 @@ export function TrackListView({
               )
             ) : null}
             {meta ? <Text style={styles.meta}>{meta}</Text> : null}
+            {/* Deliberately quiet: same weight as the metadata line above, so
+                it reads as one more piece of album info and not as a control.
+                Horizontal because an album with eight tags shouldn't push the
+                play button down the screen. */}
+            {genres && genres.length > 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.genres}
+                contentContainerStyle={styles.genresContent}
+              >
+                {genres.map((g) => (
+                  <Link key={g} href={`/genre/${encodeURIComponent(g)}`} asChild>
+                    <Pressable style={styles.genreChip}>
+                      <Text style={styles.genreText}>{g}</Text>
+                    </Pressable>
+                  </Link>
+                ))}
+              </ScrollView>
+            ) : null}
 
             <View style={styles.actions}>
               <View style={styles.actionsLeft}>
@@ -916,6 +941,16 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     marginTop: spacing.xs,
   },
+  // `flexGrow: 0` or the row would stretch to fill the header column.
+  genres: { flexGrow: 0, marginTop: spacing.sm },
+  genresContent: { gap: spacing.sm, paddingRight: spacing.lg },
+  genreChip: {
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: 999,
+    backgroundColor: colors.surfaceHighlight,
+  },
+  genreText: { color: colors.textSecondary, fontSize: fontSize.xs },
   actions: {
     flexDirection: 'row',
     alignItems: 'center',

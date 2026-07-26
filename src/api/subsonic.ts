@@ -157,6 +157,10 @@ export interface Album {
   played?: string;
   /** Times this user has played it (OpenSubsonic). */
   playCount?: number;
+  /** Main genre (standard Subsonic: only one). */
+  genre?: string;
+  /** Every genre of the album (OpenSubsonic; Navidrome sends them). */
+  genres?: { name: string }[];
   /** Record labels (OpenSubsonic extension; Navidrome sends them). */
   recordLabels?: { name: string }[];
   /**

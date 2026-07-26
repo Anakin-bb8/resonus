@@ -6,7 +6,7 @@ import { Text, View } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
 
 import { coverArtUrl, getAlbum } from '@/api/data';
-import { type Song } from '@/api/subsonic';
+import { type Album, type Song } from '@/api/subsonic';
 import { CoverViewer } from '@/components/CoverViewer';
 import { Dialog } from '@/components/Dialog';
 import { Message } from '@/components/Message';
@@ -82,6 +82,36 @@ function discHeadersFor(
   return headers;
 }
 
+/**
+ * Genres of the album: the server's list when it sends one (OpenSubsonic
+ * `genres`, or the single Subsonic `genre`), and otherwise gathered from the
+ * songs, which is where the tags really live — an album can perfectly well
+ * carry two genres across its tracks.
+ *
+ * Deduped ignoring case and trimmed, so "Rock" on one track and "rock " on
+ * another are one chip. Capped because the row is meant to be a hint, not a
+ * tag cloud.
+ */
+const MAX_GENRES = 6;
+
+function albumGenres(album: Album, songs: Song[]): string[] {
+  const raw = [
+    ...(album.genres ?? []).map((g) => g.name),
+    ...(album.genre ? [album.genre] : []),
+    ...songs.map((s) => s.genre ?? ''),
+  ];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const name of raw) {
+    const clean = name.trim();
+    if (!clean || seen.has(clean.toLowerCase())) continue;
+    seen.add(clean.toLowerCase());
+    out.push(clean);
+    if (out.length === MAX_GENRES) break;
+  }
+  return out;
+}
+
 export default function AlbumScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -91,6 +121,7 @@ export default function AlbumScreen() {
   const lang = useSettings((s) => s.language);
   const showArtistPhoto = useSettings((s) => s.showArtistPhoto);
   const showDiscHeaders = useSettings((s) => s.showDiscHeaders);
+  const showGenreChips = useSettings((s) => s.showGenreChips);
   const playing = usePlayerStore(currentSong);
   const playQueue = usePlayerStore((s) => s.playQueue);
   const openMediaMenu = useMediaMenu((s) => s.open);
@@ -174,6 +205,12 @@ export default function AlbumScreen() {
     ? `℗ ${data.album.year ? `${data.album.year} ` : ''}${labels.join(' · ')}`
     : null;
 
+  // What the server says about the album first (OpenSubsonic sends the full
+  // list); otherwise gathered from its songs, which is where the tags actually
+  // live and works on any server. Deduped case-insensitively so "Rock" and
+  // "rock" on different tracks don't both show up.
+  const genres = showGenreChips ? albumGenres(data.album, data.songs) : [];
+
   const totalSec = data.songs.reduce((acc, s) => acc + (s.duration ?? 0), 0);
   const metaParts = [t('Album')];
   if (data.album.year) metaParts.push(String(data.album.year));
@@ -193,6 +230,7 @@ export default function AlbumScreen() {
             : undefined
         }
         meta={metaParts.join(' · ')}
+        genres={genres}
         coverUri={coverArtUrl(data.album.coverArt ?? data.album.id, 500)}
         onCoverPress={() => setCoverOpen(true)}
         // Same sheet as the long-press on cards: play, queue, download,

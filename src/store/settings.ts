@@ -457,6 +457,13 @@ interface SettingsState {
    * if untitled). On by default.
    */
   showDiscHeaders: boolean;
+  /**
+   * Genre chips on the album screen (tap one to browse that genre). Read from
+   * the album's tags, so an untagged album simply shows none. Off by default:
+   * whoever wants them will go and find them, and a first-time album screen is
+   * better off with one less row on it.
+   */
+  showGenreChips: boolean;
   /** Player background: flat, cover color, or blurred cover art. */
   playerBackground: ScreenBackground;
   /**
@@ -561,6 +568,7 @@ interface SettingsState {
   setLyricsSource: (value: LyricsSource) => void;
   setShowArtistPhoto: (value: boolean) => void;
   setShowDiscHeaders: (value: boolean) => void;
+  setShowGenreChips: (value: boolean) => void;
   setPlayerBackground: (value: ScreenBackground) => void;
   setFitCoverArt: (value: boolean) => void;
   setMiniPlayerColorBackground: (value: boolean) => void;
@@ -646,6 +654,7 @@ function snapshot(get: () => SettingsState) {
     lyricsSource: s.lyricsSource,
     showArtistPhoto: s.showArtistPhoto,
     showDiscHeaders: s.showDiscHeaders,
+    showGenreChips: s.showGenreChips,
     playerBackground: s.playerBackground,
     fitCoverArt: s.fitCoverArt,
     miniPlayerColorBackground: s.miniPlayerColorBackground,
@@ -712,6 +721,7 @@ const DEFAULTS = {
   lyricsSource: 'local' as LyricsSource,
   showArtistPhoto: true,
   showDiscHeaders: true,
+  showGenreChips: false,
   playerBackground: 'cover' as ScreenBackground,
   fitCoverArt: false,
   miniPlayerColorBackground: true,
@@ -894,6 +904,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
 
   setShowDiscHeaders: (showDiscHeaders) => {
     set({ showDiscHeaders });
+    persist(snapshot(get));
+  },
+
+  setShowGenreChips: (showGenreChips) => {
+    set({ showGenreChips });
     persist(snapshot(get));
   },
 
@@ -1145,6 +1160,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           lyricsOnlineFallback?: boolean;
           showArtistPhoto: boolean;
           showDiscHeaders: boolean;
+          showGenreChips: boolean;
           playerBackground: ScreenBackground;
           fitCoverArt: boolean;
           playerColorBackground: boolean;
@@ -1293,6 +1309,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (typeof parsed.showArtistPhoto === 'boolean') {
           set({ showArtistPhoto: parsed.showArtistPhoto });
+        }
+        if (typeof parsed.showGenreChips === 'boolean') {
+          set({ showGenreChips: parsed.showGenreChips });
         }
         if (typeof parsed.showDiscHeaders === 'boolean') {
           set({ showDiscHeaders: parsed.showDiscHeaders });
