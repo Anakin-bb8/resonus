@@ -571,7 +571,7 @@ export function SongMenuSheet() {
                       onPress={() => {
                         close();
                         void shareItem(song.id, song.title).then((ok) => {
-                          if (!ok) toast(t("Couldn't create the link"));
+                          if (!ok) toast(t('Couldn’t create the link'));
                         });
                       }}
                     />

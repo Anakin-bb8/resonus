@@ -274,7 +274,7 @@ export default function ArtistScreen() {
     if (!songs) return;
     const ids = songs.filter((s) => files[s.id]).map((s) => s.id);
     if (ids.length === 0) {
-      toast(t('Nothing downloaded here'));
+      toast(t('Nothing here is downloaded'));
       return;
     }
     await deleteSongs(ids);

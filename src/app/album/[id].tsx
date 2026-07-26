@@ -252,7 +252,7 @@ export default function AlbumScreen() {
           canShare
             ? () => {
                 void shareItem(data.album.id, data.album.name).then((ok) => {
-                  if (!ok) toast(t("Couldn't create the link"));
+                  if (!ok) toast(t('Couldn’t create the link'));
                 });
               }
             : undefined

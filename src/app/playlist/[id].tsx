@@ -325,7 +325,7 @@ export default function PlaylistScreen() {
           canShare && data.songs.length > 0
             ? () => {
                 void shareItem(id, data.playlist.name).then((ok) => {
-                  if (!ok) toast(t("Couldn't create the link"));
+                  if (!ok) toast(t('Couldn’t create the link'));
                 });
               }
             : undefined

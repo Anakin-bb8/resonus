@@ -281,7 +281,7 @@ export function MediaMenuSheet() {
           void withSongs((songs) => {
             const ids = songs.filter((s) => files[s.id]).map((s) => s.id);
             if (ids.length === 0) {
-              toast(t('Nothing downloaded here'));
+              toast(t('Nothing here is downloaded'));
               return;
             }
             void deleteSongs(ids);
