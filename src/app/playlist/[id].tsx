@@ -61,6 +61,7 @@ export default function PlaylistScreen() {
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDownload, setConfirmDownload] = useState(false);
+  const [confirmAuto, setConfirmAuto] = useState(false);
   const [confirmRemoveDl, setConfirmRemoveDl] = useState(false);
   const [confirmStop, setConfirmStop] = useState(false);
   const [coverOpen, setCoverOpen] = useState(false);
@@ -443,20 +444,15 @@ export default function PlaylistScreen() {
                 style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
                 onPress={() => {
                   close();
-                  const wasOn = !!useAutoDownloads.getState().ids[id];
-                  useAutoDownloads.getState().toggle(id);
-                  if (wasOn) {
+                  // Turning it ON downloads the whole list right away and keeps
+                  // doing so as it changes, so it asks first — with the size,
+                  // like any other download. Turning it off deletes nothing and
+                  // is instant, so there's nothing to confirm there.
+                  if (useAutoDownloads.getState().ids[id]) {
+                    useAutoDownloads.getState().toggle(id);
                     toast(t('Auto-download off'));
                   } else {
-                    toast(t('Auto-download on'));
-                    // Download now with data in hand (not in background: if
-                    // Wi-Fi is required and there's cell data, the flow warns
-                    // with its own toast).
-                    if (data) {
-                      void useAutoDownloads
-                        .getState()
-                        .reconcileKnown(data.playlist, data.songs, false);
-                    }
+                    setConfirmAuto(true);
                   }
                 }}
               >
@@ -510,6 +506,24 @@ export default function PlaylistScreen() {
         localCoverId={offline ? id : undefined}
         onCancel={() => setEditing(false)}
         onSave={onSaveEdit}
+      />
+
+      <Dialog
+        visible={confirmAuto}
+        title={t('Turn on auto-download?')}
+        message={t('{msg} It will keep downloading songs added to this playlist later.', { msg: downloadMsg.message })}
+        confirmLabel={t('Turn on')}
+        onCancel={() => setConfirmAuto(false)}
+        onConfirm={() => {
+          setConfirmAuto(false);
+          useAutoDownloads.getState().toggle(id);
+          toast(t('Auto-download on'));
+          // With the data in hand, not in the background: if Wi-Fi is required
+          // and there's only cell data, that flow warns with its own toast.
+          if (data) {
+            void useAutoDownloads.getState().reconcileKnown(data.playlist, data.songs, false);
+          }
+        }}
       />
 
       <Dialog

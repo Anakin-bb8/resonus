@@ -86,6 +86,7 @@ export default function ArtistScreen() {
   const hasDownloads = Object.keys(files).length > 0;
   const [confirmDownload, setConfirmDownload] = useState(false);
   const [confirmStop, setConfirmStop] = useState(false);
+  const [confirmDeleteDl, setConfirmDeleteDl] = useState(false);
   /** While fetching each album's songs, before downloading anything. */
   const [gathering, setGathering] = useState(false);
   const [shuffling, setShuffling] = useState(false);
@@ -558,6 +559,18 @@ export default function ArtistScreen() {
         }}
       />
       <Dialog
+        visible={confirmDeleteDl}
+        title={t('Remove download?')}
+        message={t('“{name}” will no longer be available offline.', { name: data.artist.name })}
+        confirmLabel={t('Remove')}
+        destructive
+        onCancel={() => setConfirmDeleteDl(false)}
+        onConfirm={() => {
+          setConfirmDeleteDl(false);
+          void deleteDiscography();
+        }}
+      />
+      <Dialog
         visible={confirmStop}
         title={t('Stop download?')}
         message={t('Songs already downloaded will be kept.')}
@@ -602,7 +615,7 @@ export default function ArtistScreen() {
                 style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
                 onPress={() => {
                   close();
-                  void deleteDiscography();
+                  setConfirmDeleteDl(true);
                 }}
               >
                 <Ionicons name="trash-outline" size={24} color={colors.text} />

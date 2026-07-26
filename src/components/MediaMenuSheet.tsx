@@ -6,6 +6,7 @@
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,6 +25,7 @@ import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
 import { colors, fontSize, radius, spacing } from '@/theme';
 import { Cover } from './Cover';
+import { Dialog } from './Dialog';
 
 function Action({
   icon,
@@ -74,6 +76,7 @@ export function MediaMenuSheet() {
   const togglePin = usePins((s) => s.toggle);
   const playQueue = usePlayerStore((s) => s.playQueue);
   const addToQueue = usePlayerStore((s) => s.addToQueue);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const downloadAlbum = useDownloads((s) => s.downloadAlbum);
   const downloadPlaylist = useDownloads((s) => s.downloadPlaylist);
   const deleteSongs = useDownloads((s) => s.deleteSongs);
@@ -202,17 +205,7 @@ export function MediaMenuSheet() {
           <Action
             icon="trash-outline"
             label={t('Delete downloads')}
-            onPress={() =>
-              withSongs((songs) => {
-                const ids = songs.filter((s) => files[s.id]).map((s) => s.id);
-                if (ids.length === 0) {
-                  toast(t('Nothing downloaded here'));
-                  return;
-                }
-                void deleteSongs(ids);
-                toast(t('{n} songs deleted', { n: ids.length }));
-              })
-            }
+            onPress={() => setConfirmDelete(true)}
           />
         ) : null}
         {album ? (
@@ -245,6 +238,30 @@ export function MediaMenuSheet() {
           </Pressable>
         ) : null}
       </Animated.View>
+
+      {/* Over the sheet, which stays open behind it: closing it would take the
+          dialog with it. How many of these songs are actually downloaded takes
+          fetching them, so the question is asked before, not after. */}
+      <Dialog
+        visible={confirmDelete}
+        title={t('Remove download?')}
+        message={t('“{name}” will no longer be available offline.', { name })}
+        confirmLabel={t('Remove')}
+        destructive
+        onCancel={() => setConfirmDelete(false)}
+        onConfirm={() => {
+          setConfirmDelete(false);
+          void withSongs((songs) => {
+            const ids = songs.filter((s) => files[s.id]).map((s) => s.id);
+            if (ids.length === 0) {
+              toast(t('Nothing downloaded here'));
+              return;
+            }
+            void deleteSongs(ids);
+            toast(t('{n} songs deleted', { n: ids.length }));
+          });
+        }}
+      />
     </Modal>
   );
 }

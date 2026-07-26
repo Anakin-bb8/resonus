@@ -1,4 +1,7 @@
 {
+  "Turn on auto-download?": "¿Activar la descarga automática?",
+  "{msg} It will keep downloading songs added to this playlist later.": "{msg} Seguirá descargando las canciones que añadas a esta lista más adelante.",
+  "Turn on": "Activar",
   "Delete downloads": "Eliminar descargas",
   "Nothing downloaded here": "Aquí no hay nada descargado",
   "{n} songs deleted": "{n} canciones eliminadas",
