@@ -5,7 +5,6 @@ import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Animated,
   Dimensions,
   Keyboard,
   Pressable,
@@ -14,15 +13,8 @@ import {
   Text,
   TextInput,
   View,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
 } from 'react-native';
-import {
-  FlatList as GHFlatList,
-  Gesture,
-  GestureDetector,
-  type GestureType,
-} from 'react-native-gesture-handler';
+import { FlatList as GHFlatList } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { getAlbumList, searchAlbums, type Album, type AlbumListType } from '@/api/data';
@@ -36,7 +28,6 @@ import { useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
 import { useSettings } from '@/store/settings';
 import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
-import { haptic } from '@/lib/haptics';
 import { listPerf } from '@/lib/listPerf';
 
 const PAGE = 30;
@@ -44,7 +35,7 @@ const COLUMNS = 2;
 const GAP = spacing.sm;
 const CARD = (Dimensions.get('window').width - spacing.lg * 2 - GAP * (COLUMNS - 1)) / COLUMNS;
 
-/** Height of the expanded bar: the box (44) plus its gap to the chips. */
+/** Bar height: the box (44) plus its gap to the chips below. */
 const SEARCH_H = 44 + spacing.md;
 
 /**
@@ -101,10 +92,6 @@ export default function BrowseAlbumsScreen() {
   const listRef = useRef<GHFlatList<Album>>(null);
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
-  const [revealed, setRevealed] = useState(false);
-  /** Last real scroll offset (the gesture only reveals when at the top). */
-  const lastOffsetY = useRef(0);
-  const searchH = useRef(new Animated.Value(0)).current;
 
   // The text is ahead of what's being queried: you type letter by letter and
   // each one would fire a request.
@@ -125,39 +112,12 @@ export default function BrowseAlbumsScreen() {
     enabled: canFetch && debounced.length > 0,
   });
 
-  function revealSearchBar() {
-    haptic('light');
-    setRevealed(true);
-    Animated.timing(searchH, { toValue: SEARCH_H, duration: 200, useNativeDriver: false }).start();
-  }
-
-  function collapseSearchBar() {
-    setRevealed(false);
-    Animated.timing(searchH, { toValue: 0, duration: 200, useNativeDriver: false }).start();
-  }
-
   function cancelSearch() {
     Keyboard.dismiss();
     setQuery('');
     setSearching(false);
-    collapseSearchBar();
     listRef.current?.scrollToOffset({ offset: 0, animated: false });
   }
-
-  // Simultaneous pan with the scroll: doesn't steal the gesture, only observes.
-  // Android doesn't emit overscroll events (the list locks offset at 0), so
-  // "pull down while at the top" must be detected separately.
-  const revealPanRef = useRef<GestureType | undefined>(undefined);
-  const revealPan = Gesture.Pan()
-    .withRef(revealPanRef)
-    .runOnJS(true)
-    // Only downward swipes: upward swipes (normal scroll) cancel it.
-    .activeOffsetY(10)
-    .failOffsetY(-10)
-    .onChange((e) => {
-      if (searching || revealed) return;
-      if (lastOffsetY.current <= 1 && e.translationY > 60) revealSearchBar();
-    });
 
   // When searching, the search results rule: the typed text, not the debounce,
   // so the full list doesn't flash back for an instant between keystrokes.
@@ -193,11 +153,9 @@ export default function BrowseAlbumsScreen() {
         </View>
       </View>
 
-      {/* Collapsed = height 0 (invisible). Clipping goes in a container without
-          padding: any padding would impose a minimum height and show a sliver
-          with the bar closed. */}
-      <Animated.View style={[styles.searchClip, { height: searchH }]}>
-        <View style={styles.searchRow}>
+      {/* Always visible: finding an album is what this screen is for, so the
+          bar is not worth hiding behind a gesture nobody discovers. */}
+      <View style={styles.searchRow}>
           <View style={styles.searchBar}>
             <Ionicons name="search" size={18} color={colors.textMuted} />
             <TextInput
@@ -227,8 +185,7 @@ export default function BrowseAlbumsScreen() {
               <Text style={styles.searchCancel}>{t('Cancel')}</Text>
             </Pressable>
           ) : null}
-        </View>
-      </Animated.View>
+      </View>
 
       {/* The chips hide when searching: the server returns by relevance, so
           ordering results isn't in its hands and a marked pill would lie about
@@ -268,11 +225,9 @@ export default function BrowseAlbumsScreen() {
       ) : isError ? (
         <Message text={t("Couldn't load albums.")} onRetry={() => refetch()} />
       ) : (
-        <GestureDetector gesture={revealPan}>
         <GHFlatList
         {...listPerf}
           ref={listRef}
-          simultaneousHandlers={revealPanRef}
           data={albums}
           // Remount the list when changing sort or layout: otherwise FlatList
           // reuses rows and gets stuck with stale ones (numColumns also doesn't
@@ -284,14 +239,6 @@ export default function BrowseAlbumsScreen() {
             : { contentContainerStyle: styles.rowList })}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
-          scrollEventThrottle={16}
-          onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
-            const y = e.nativeEvent.contentOffset.y;
-            lastOffsetY.current = y;
-            // Scrolling down with the bar open collapses it again; with focus
-            // set it doesn't, or an active search would be hidden.
-            if (revealed && !searching && y > 30) collapseSearchBar();
-          }}
           renderItem={({ item }: { item: Album }) =>
             grid ? <AlbumCard album={item} width={CARD} /> : <AlbumRow album={item} />
           }
@@ -330,7 +277,6 @@ export default function BrowseAlbumsScreen() {
             )
           }
         />
-        </GestureDetector>
       )}
     </SafeAreaView>
   );
@@ -347,15 +293,13 @@ const styles = StyleSheet.create({
   },
   title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800' },
   headerAction: { width: 26, alignItems: 'flex-end' },
-  searchClip: { overflow: 'hidden' },
   searchRow: {
     height: SEARCH_H,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     paddingHorizontal: spacing.lg,
-    // The gap to the chips goes inside the animated height: this way it
-    // collapses with the bar (an outer margin would remain visible).
+    // The gap to the chips is part of the height, not an outer margin.
     paddingBottom: spacing.md,
   },
   searchBar: {

@@ -4,7 +4,6 @@ import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
 import {
-  Animated,
   Dimensions,
   Keyboard,
   Pressable,
@@ -13,15 +12,8 @@ import {
   Text,
   TextInput,
   View,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
 } from 'react-native';
-import {
-  FlatList as GHFlatList,
-  Gesture,
-  GestureDetector,
-  type GestureType,
-} from 'react-native-gesture-handler';
+import { FlatList as GHFlatList } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { getAlbumList, getArtists, type Album, type Artist } from '@/api/data';
@@ -33,7 +25,6 @@ import { useHistoryTimes } from '@/hooks/useHistoryTimes';
 import { EmptyState } from '@/components/EmptyState';
 import { Message } from '@/components/Message';
 import { useT } from '@/i18n';
-import { haptic } from '@/lib/haptics';
 import { useAuthStore } from '@/store/auth';
 import { useLastPlayed } from '@/store/lastPlayed';
 import { useSettings } from '@/store/settings';
@@ -70,7 +61,7 @@ const SORTS: { key: ArtistSort; label: string }[] = [
 /** How many albums are checked to infer frequent / recently added artists. */
 const FREQUENT_POOL = 50;
 
-/** Height of the expanded bar: the box (44) plus its gap to the chips. */
+/** Bar height: the box (44) plus its gap to the chips below. */
 const SEARCH_H = 44 + spacing.md;
 
 export default function BrowseArtistsScreen() {
@@ -94,55 +85,17 @@ export default function BrowseArtistsScreen() {
     enabled: canFetch,
   });
 
-  // ── Pull-down search ───────────────────────────────────────────────────
-  // Same gesture as the song lists (TrackListView): the bar is painted
-  // collapsed (height 0) above the chips and pulling the grid while at the
-  // top reveals it. Here it's a sibling of the list, not its header: the
-  // chips are in the middle and must stay fixed, so the bar can't live inside
-  // the scroll. Growing pushes chips and grid equally, which is the desired
-  // effect.
+  // The filter bar sits above the chips, outside the scroll: the chips stay
+  // fixed in the middle, so it can't live inside the list.
   const listRef = useRef<GHFlatList<Artist>>(null);
   const [searching, setSearching] = useState(false);
-  const [revealed, setRevealed] = useState(false);
-  /** Last real scroll offset (the gesture only reveals when at the top). */
-  const lastOffsetY = useRef(0);
-  const searchH = useRef(new Animated.Value(0)).current;
-
-  function revealSearchBar() {
-    haptic('light');
-    setRevealed(true);
-    Animated.timing(searchH, { toValue: SEARCH_H, duration: 200, useNativeDriver: false }).start();
-  }
-
-  function collapseSearchBar() {
-    setRevealed(false);
-    Animated.timing(searchH, { toValue: 0, duration: 200, useNativeDriver: false }).start();
-  }
 
   function cancelSearch() {
     Keyboard.dismiss();
     setQuery('');
     setSearching(false);
-    collapseSearchBar();
     listRef.current?.scrollToOffset({ offset: 0, animated: false });
   }
-
-  // Simultaneous pan with the scroll: doesn't steal the gesture, only observes.
-  // Android doesn't emit overscroll events (the list locks offset at 0), so
-  // "pull down while at the top" must be detected separately.
-  const revealPanRef = useRef<GestureType | undefined>(undefined);
-  const revealPan = Gesture.Pan()
-    .withRef(revealPanRef)
-    .runOnJS(true)
-    // Only downward swipes: upward swipes (normal scroll) cancel it.
-    .activeOffsetY(10)
-    .failOffsetY(-10)
-    .onChange((e) => {
-      // No artists means nothing to filter; with focus set or already deployed
-      // there's nothing to reveal.
-      if (searching || revealed || (data?.length ?? 0) === 0) return;
-      if (lastOffsetY.current <= 1 && e.translationY > 60) revealSearchBar();
-    });
 
   /**
    * "Most played" is deduced from your most played albums: Subsonic doesn't
@@ -241,11 +194,9 @@ export default function BrowseArtistsScreen() {
         </View>
       </View>
 
-      {/* Collapsed = height 0 (invisible). Clipping goes in a container without
-          padding: any padding would impose a minimum height and show a sliver
-          with the bar closed. */}
-      <Animated.View style={[styles.searchClip, { height: searchH }]}>
-        <View style={styles.searchRow}>
+      {/* Always visible: filtering is what you come to this screen to do, so
+          the bar is not worth hiding behind a gesture nobody discovers. */}
+      <View style={styles.searchRow}>
           <View style={styles.searchBar}>
             <Ionicons name="search" size={18} color={colors.textMuted} />
             <TextInput
@@ -275,8 +226,7 @@ export default function BrowseArtistsScreen() {
               <Text style={styles.searchCancel}>{t('Cancel')}</Text>
             </Pressable>
           ) : null}
-        </View>
-      </Animated.View>
+      </View>
 
       <ScrollView
         horizontal
@@ -307,11 +257,9 @@ export default function BrowseArtistsScreen() {
       ) : isError ? (
         <Message text={t("Couldn't load artists.")} onRetry={() => refetch()} />
       ) : (
-        <GestureDetector gesture={revealPan}>
         <GHFlatList
         {...listPerf}
           ref={listRef}
-          simultaneousHandlers={revealPanRef}
           data={artists}
           // Remount the list when changing sort or layout: otherwise FlatList
           // reuses rows and gets stuck with stale ones (numColumns also doesn't
@@ -323,14 +271,6 @@ export default function BrowseArtistsScreen() {
             : { contentContainerStyle: styles.rowList })}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
-          scrollEventThrottle={16}
-          onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
-            const y = e.nativeEvent.contentOffset.y;
-            lastOffsetY.current = y;
-            // Scrolling down with the bar open collapses it again; with focus
-            // set it doesn't, or an active filter would be hidden.
-            if (revealed && !searching && y > 30) collapseSearchBar();
-          }}
           renderItem={({ item }: { item: Artist }) =>
             grid ? <ArtistCard artist={item} width={CARD} /> : <ArtistRow artist={item} />
           }
@@ -350,7 +290,6 @@ export default function BrowseArtistsScreen() {
             )
           }
         />
-        </GestureDetector>
       )}
     </SafeAreaView>
   );
@@ -366,15 +305,13 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800' },
-  searchClip: { overflow: 'hidden' },
   searchRow: {
     height: SEARCH_H,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     paddingHorizontal: spacing.lg,
-    // The gap to the chips goes inside the animated height: this way it
-    // collapses with the bar (an outer margin would remain visible).
+    // The gap to the chips is part of the height, not an outer margin.
     paddingBottom: spacing.md,
   },
   searchBar: {
