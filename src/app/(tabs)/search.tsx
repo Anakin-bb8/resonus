@@ -20,7 +20,7 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { coverArtUrl, getPlaylists, search } from '@/api/data';
-import { getGenres } from '@/api/backend';
+import { getGenres, getRadioStations } from '@/api/backend';
 import { AlbumCard } from '@/components/AlbumCard';
 import { Cover } from '@/components/Cover';
 import { EmptyState } from '@/components/EmptyState';
@@ -34,6 +34,7 @@ import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { useAuthStore } from '@/store/auth';
 import { useMediaMenu } from '@/store/mediaMenu';
+import { useRadioCovers } from '@/store/radioCovers';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useRecentSearches, type RecentItem } from '@/store/recentSearches';
 import { useSettings } from '@/store/settings';
@@ -107,6 +108,20 @@ export default function SearchScreen() {
           p.name.toLowerCase().includes(debouncedQuery.toLowerCase()),
         )
       : [];
+  // Stations, filtered the same way and for the same reason. Server only:
+  // Jellyfin doesn't manage them and offline there's nothing to stream.
+  const { data: stations } = useQuery({
+    queryKey: ['radioStations'],
+    queryFn: () => getRadioStations(auth!),
+    enabled: !!auth && auth.serverType !== 'jellyfin' && debouncedQuery.length > 1,
+  });
+  const radioCovers = useRadioCovers((s) => s.covers);
+  const stationMatches =
+    debouncedQuery.length > 1
+      ? (stations ?? []).filter((r) =>
+          r.name.toLowerCase().includes(debouncedQuery.toLowerCase()),
+        )
+      : [];
 
   const isEmpty = query.trim().length === 0;
   const showRecent = focused && isEmpty && recent.length > 0;
@@ -127,7 +142,7 @@ export default function SearchScreen() {
         <TextInput
           ref={inputRef}
           style={styles.input}
-          placeholder={t('Songs, albums, artists')}
+          placeholder={t('What are you looking for?')}
           placeholderTextColor={colors.textMuted}
           autoCapitalize="none"
           autoCorrect={false}
@@ -216,7 +231,8 @@ export default function SearchScreen() {
           data.artists.length === 0 &&
           data.albums.length === 0 &&
           data.songs.length === 0 &&
-          playlistMatches.length === 0 ? (
+          playlistMatches.length === 0 &&
+          stationMatches.length === 0 ? (
           <EmptyState
             icon="search-outline"
             title={t('No results')}
@@ -338,6 +354,41 @@ export default function SearchScreen() {
                   </View>
                 </Pressable>
               </Link>
+            ))}
+          </View>
+        ) : null}
+
+        {stationMatches.length > 0 ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{t('Radio')}</Text>
+            {stationMatches.map((r) => (
+              <Pressable
+                key={r.id}
+                style={styles.recentRow}
+                onPress={() =>
+                  playQueue(
+                    [{ id: r.id, title: r.name, url: r.streamUrl, artist: t('Radio') }],
+                    0,
+                    r.name,
+                    '/radio',
+                  )
+                }
+              >
+                <Cover uri={radioCovers[r.id]} size={48} rounded placeholderIcon="radio" />
+                <View style={styles.recentInfo}>
+                  <Text
+                    style={[styles.recentTitle, playing?.id === r.id && { color: colors.accent }]}
+                    numberOfLines={1}
+                  >
+                    {r.name}
+                  </Text>
+                  {r.homePageUrl ? (
+                    <Text style={styles.recentSub} numberOfLines={1}>
+                      {r.homePageUrl}
+                    </Text>
+                  ) : null}
+                </View>
+              </Pressable>
             ))}
           </View>
         ) : null}
