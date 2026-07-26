@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { coverArtUrl, getAlbum, getPlaylist, star, unstar, type Song } from '@/api/data';
 import { useBottomSheetAnim } from '@/hooks/useBottomSheetAnim';
+import { useAlbumDownloads } from '@/hooks/useAlbumDownloads';
 import { useCanShare } from '@/hooks/useCanShare';
 import { useDownloadMessage } from '@/hooks/useDownloadMessage';
 import { queryClient } from '@/lib/query';
@@ -88,7 +89,15 @@ export function MediaMenuSheet() {
   const deleteSongs = useDownloads((s) => s.deleteSongs);
   const files = useDownloads((s) => s.files);
   const canShare = useCanShare();
-  const hasDownloads = Object.keys(files).length > 0;
+  // Before the early return: hooks can't be conditional. For an album this is
+  // exact; a playlist can't be answered without fetching its songs, so there
+  // it stays on "the profile has downloads" and its own screen, which does
+  // have the songs, decides properly.
+  const albumHasDownloads = useAlbumDownloads(
+    item?.kind === 'album' ? item.album.id : undefined,
+  );
+  const hasDownloads =
+    item?.kind === 'album' ? albumHasDownloads : Object.keys(files).length > 0;
 
   if (!item) return null;
 
