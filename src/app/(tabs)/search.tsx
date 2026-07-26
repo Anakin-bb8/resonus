@@ -142,7 +142,7 @@ export default function SearchScreen() {
         <TextInput
           ref={inputRef}
           style={styles.input}
-          placeholder={t('What are you looking for?')}
+          placeholder={t('What do you want to listen to?')}
           placeholderTextColor={colors.textMuted}
           autoCapitalize="none"
           autoCorrect={false}
