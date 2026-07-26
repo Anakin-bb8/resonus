@@ -65,8 +65,14 @@ export function useBottomSheetAnim(open: boolean, onClose?: () => void) {
    * fades along with it; on release it either finishes closing or springs back
    * to fully open. Without `onClose` it can be dragged but never closes, so
    * whoever wants the gesture must pass it.
+   *
+   * A factory because one gesture instance can only be attached to one
+   * detector, and a sheet may need several: the song menu puts one on its
+   * grabber and another on the list below, so the grabber still closes it when
+   * the list is scrolled and owns the drag. Whichever one the finger lands on,
+   * they all drive the same `progress`.
    */
-  const pan = Gesture.Pan()
+  const makePan = () => Gesture.Pan()
     // Downward only and after 10 px, so taps on the actions still get through
     // and an upward drag never lifts the sheet above its place.
     .activeOffsetY(10)
@@ -86,5 +92,5 @@ export function useBottomSheetAnim(open: boolean, onClose?: () => void) {
       }
     });
 
-  return { dismiss, pan, backdropStyle, sheetStyle, onSheetLayout };
+  return { dismiss, pan: makePan(), makePan, backdropStyle, sheetStyle, onSheetLayout };
 }

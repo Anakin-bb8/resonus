@@ -116,10 +116,12 @@ export function SongMenuSheet() {
   const context = useSongMenu((s) => s.context);
   const showLyrics = useSongMenu((s) => s.showLyrics);
   const closeNow = useSongMenu((s) => s.close);
-  const { dismiss, pan, backdropStyle, sheetStyle, onSheetLayout } = useBottomSheetAnim(
+  const { dismiss, pan, makePan, backdropStyle, sheetStyle, onSheetLayout } = useBottomSheetAnim(
     !!song,
     closeNow,
   );
+  // Second drag, for the grabber and the header (see the JSX below).
+  const headerPan = makePan();
   // Animated dismiss: the sheet slides down and then the Modal is unmounted.
   // All actions close through here.
   const close = () => dismiss(closeNow);
@@ -278,314 +280,325 @@ export function SongMenuSheet() {
         <Animated.View style={[styles.backdrop, backdropStyle]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={close} />
         </Animated.View>
-        <GestureDetector gesture={pan.enabled(mode !== 'playlists' && atTop)}>
-          <Animated.View
-            style={[styles.sheet, { paddingBottom: insets.bottom + spacing.md }, sheetStyle]}
-            onLayout={onSheetLayout}
-          >
-            {/* Spotify-style grabber: the visual cue that the sheet can be
-                dragged down to dismiss. */}
-            <View style={styles.grabber} />
-            <View style={styles.headerRow}>
-              <Cover uri={coverArtUrl( song.coverArt ?? song.albumId, 100)} size={48} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.title} numberOfLines={1}>
-                  {song.title}
-                </Text>
-                {song.artist ? (
-                  <Text style={styles.artist} numberOfLines={1}>
-                    {song.artist}
+        <Animated.View
+          style={[styles.sheet, { paddingBottom: insets.bottom + spacing.md }, sheetStyle]}
+          onLayout={onSheetLayout}
+        >
+          {/* The header has its own drag, always enabled: it's the way out
+              when the list below is scrolled and keeps the gesture for itself
+              (and the only one in the playlist view, where the list owns it
+              entirely). Two detectors instead of one around everything so both
+              can never fire at once. */}
+          <GestureDetector gesture={headerPan}>
+            <View>
+              {/* Spotify-style grabber: the visual cue that the sheet can be
+                  dragged down to dismiss. */}
+              <View style={styles.grabber} />
+              <View style={styles.headerRow}>
+                <Cover uri={coverArtUrl( song.coverArt ?? song.albumId, 100)} size={48} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.title} numberOfLines={1}>
+                    {song.title}
                   </Text>
-                ) : null}
-              </View>
-            </View>
-            <View style={styles.divider} />
-
-            {mode === 'playlists' ? (
-              <View style={{ maxHeight: PLAYLISTS_MAX_H }}>
-                <Pressable
-                  style={styles.action}
-                  onPress={() => setMode('actions')}
-                >
-                  <Ionicons name="chevron-back" size={24} color={colors.text} />
-                  <Text style={styles.actionText}>{t('Add to a playlist')}</Text>
-                </Pressable>
-                <Pressable
-                  style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
-                  onPress={() => setCreating(true)}
-                >
-                  <View style={styles.newPlaylistIcon}>
-                    <Ionicons name="add" size={24} color={colors.text} />
-                  </View>
-                  <Text style={styles.actionText}>{t('New playlist')}</Text>
-                </Pressable>
-                {loadingPlaylists ? (
-                  <ActivityIndicator style={{ marginVertical: spacing.lg }} color={colors.accent} />
-                ) : (
-                  <ScrollView>
-                    {(playlists ?? []).map((p) => (
-                      <Pressable
-                        key={p.id}
-                        style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
-                        onPress={() => addTo(p.id, p.name)}
-                      >
-                        <Cover uri={coverArtUrl( p.coverArt ?? p.id, 100)} size={40} />
-                        <Text style={styles.actionText} numberOfLines={1}>
-                          {p.name}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </ScrollView>
-                )}
-              </View>
-            ) : mode === 'sleep' ? (
-              <View>
-                <Pressable style={styles.action} onPress={() => setMode('actions')}>
-                  <Ionicons name="chevron-back" size={24} color={colors.text} />
-                  <Text style={styles.actionText}>{t('Sleep timer')}</Text>
-                </Pressable>
-                {[15, 30, 45, 60].map((m) => (
-                  <Pressable
-                    key={m}
-                    style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
-                    onPress={() => {
-                      setSleepTimer(m);
-                      toast(t('Will pause in {n} min', { n: m }));
-                      close();
-                    }}
-                  >
-                    <Ionicons name="time-outline" size={24} color={colors.text} />
-                    <Text style={styles.actionText}>{t('{n} minutes', { n: m })}</Text>
-                  </Pressable>
-                ))}
-                <Pressable
-                  style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
-                  onPress={() => {
-                    setSleepAtSongEnd();
-                    toast(t('Will pause when the song ends'));
-                    close();
-                  }}
-                >
-                  <Ionicons name="musical-note-outline" size={24} color={colors.text} />
-                  <Text style={styles.actionText}>{t('When the song ends')}</Text>
-                </Pressable>
-                {sleepEndsAt || sleepAtSongEnd ? (
-                  <Pressable
-                    style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
-                    onPress={() => {
-                      cancelSleepTimer();
-                      toast(t('Sleep timer off'));
-                      close();
-                    }}
-                  >
-                    <Ionicons name="close-circle-outline" size={24} color={colors.danger} />
-                    <Text style={[styles.actionText, { color: colors.danger }]}>
-                      {t('Turn off')}
+                  {song.artist ? (
+                    <Text style={styles.artist} numberOfLines={1}>
+                      {song.artist}
                     </Text>
-                  </Pressable>
-                ) : null}
-              </View>
-            ) : mode === 'rating' ? (
-              <View>
-                <Pressable style={styles.action} onPress={() => setMode('actions')}>
-                  <Ionicons name="chevron-back" size={24} color={colors.text} />
-                  <Text style={styles.actionText}>{t('Rate')}</Text>
-                </Pressable>
-                <View style={styles.ratingRow}>
-                  <StarRating
-                    id={song.id}
-                    rating={song.userRating}
-                    size={34}
-                    onRated={(r) => rateSong(song.id, r)}
-                  />
+                  ) : null}
                 </View>
               </View>
-            ) : (
-              // Scrolls: with every action enabled the list is taller than
-              // the room a sheet should take. `onScroll` hands the drag back
-              // to the sheet only at the top, so pulling down mid-list scrolls
-              // instead of dismissing.
-              <ScrollView
-                style={{ maxHeight: ACTIONS_MAX_H }}
-                scrollEventThrottle={16}
-                onScroll={(e) => setAtTop(e.nativeEvent.contentOffset.y <= 0)}
-              >
-                {menu.playlist ? (
-                  <Action
-                    icon="add-circle-outline"
-                    label={t('Add to a playlist')}
-                    onPress={() => setMode('playlists')}
-                  />
-                ) : null}
-                {context ? (
-                  <Action
-                    icon="remove-circle-outline"
-                    label={t('Remove from playlist')}
-                    onPress={removeFromList}
-                  />
-                ) : null}
-                {menu.playNext ? (
-                  <Action
-                    icon="play-forward"
-                    label={t('Play next')}
+              <View style={styles.divider} />
+            </View>
+          </GestureDetector>
+
+          <GestureDetector gesture={pan.enabled(mode !== 'playlists' && atTop)}>
+            <View>
+              {mode === 'playlists' ? (
+                <View style={{ maxHeight: PLAYLISTS_MAX_H }}>
+                  <Pressable
+                    style={styles.action}
+                    onPress={() => setMode('actions')}
+                  >
+                    <Ionicons name="chevron-back" size={24} color={colors.text} />
+                    <Text style={styles.actionText}>{t('Add to a playlist')}</Text>
+                  </Pressable>
+                  <Pressable
+                    style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+                    onPress={() => setCreating(true)}
+                  >
+                    <View style={styles.newPlaylistIcon}>
+                      <Ionicons name="add" size={24} color={colors.text} />
+                    </View>
+                    <Text style={styles.actionText}>{t('New playlist')}</Text>
+                  </Pressable>
+                  {loadingPlaylists ? (
+                    <ActivityIndicator style={{ marginVertical: spacing.lg }} color={colors.accent} />
+                  ) : (
+                    <ScrollView>
+                      {(playlists ?? []).map((p) => (
+                        <Pressable
+                          key={p.id}
+                          style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+                          onPress={() => addTo(p.id, p.name)}
+                        >
+                          <Cover uri={coverArtUrl( p.coverArt ?? p.id, 100)} size={40} />
+                          <Text style={styles.actionText} numberOfLines={1}>
+                            {p.name}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  )}
+                </View>
+              ) : mode === 'sleep' ? (
+                <View>
+                  <Pressable style={styles.action} onPress={() => setMode('actions')}>
+                    <Ionicons name="chevron-back" size={24} color={colors.text} />
+                    <Text style={styles.actionText}>{t('Sleep timer')}</Text>
+                  </Pressable>
+                  {[15, 30, 45, 60].map((m) => (
+                    <Pressable
+                      key={m}
+                      style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+                      onPress={() => {
+                        setSleepTimer(m);
+                        toast(t('Will pause in {n} min', { n: m }));
+                        close();
+                      }}
+                    >
+                      <Ionicons name="time-outline" size={24} color={colors.text} />
+                      <Text style={styles.actionText}>{t('{n} minutes', { n: m })}</Text>
+                    </Pressable>
+                  ))}
+                  <Pressable
+                    style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
                     onPress={() => {
-                      playNext(song);
-                      toast(t('Playing next'));
+                      setSleepAtSongEnd();
+                      toast(t('Will pause when the song ends'));
                       close();
                     }}
-                  />
-                ) : null}
-                {menu.queue ? (
-                  <Action
-                    icon="list"
-                    label={t('Add to queue')}
-                    onPress={() => {
-                      addToQueue(song);
-                      toast(t('Added to queue'));
-                      close();
-                    }}
-                  />
-                ) : null}
-                {menu.favorite ? (
-                  <Action
-                    icon={favorited ? 'heart' : 'heart-outline'}
-                    label={favorited ? t('Remove from favorites') : t('Add to favorites')}
-                    onPress={() => {
-                      (favorited ? unstar(song.id) : star(song.id)).then(() =>
-                        queryClient.invalidateQueries({ queryKey: ['starred'] }),
-                      );
-                      toast(favorited ? t('Removed from favorites') : t('Added to favorites'));
-                      close();
-                    }}
-                  />
-                ) : null}
-                {menu.album && (song.albumId || song.album) ? (
-                  <Action
-                    icon="disc"
-                    label={t('Go to album')}
-                    onPress={() => {
-                      if (song.albumId) { go(`/album/${song.albumId}`); return; }
-                      if (song.album) {
-                        const key = normKey(song.album) + '|' + normKey(song.artist || '');
-                        go(`/album/${key}`);
-                      }
-                    }}
-                  />
-                ) : null}
-                {menu.artist && (song.artistId || song.artist) ? (
-                  <Action
-                    icon="person"
-                    label={t('Go to artist')}
-                    onPress={() => {
-                      const targets = artistTargets(song);
-                      if (targets.length > 1) {
-                        // We close the sheet and, after its exit animation, open the
-                        // picker (avoids two visible Modals at once).
-                        dismiss(() => {
-                          closeNow();
-                          openArtistPicker(targets);
+                  >
+                    <Ionicons name="musical-note-outline" size={24} color={colors.text} />
+                    <Text style={styles.actionText}>{t('When the song ends')}</Text>
+                  </Pressable>
+                  {sleepEndsAt || sleepAtSongEnd ? (
+                    <Pressable
+                      style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+                      onPress={() => {
+                        cancelSleepTimer();
+                        toast(t('Sleep timer off'));
+                        close();
+                      }}
+                    >
+                      <Ionicons name="close-circle-outline" size={24} color={colors.danger} />
+                      <Text style={[styles.actionText, { color: colors.danger }]}>
+                        {t('Turn off')}
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              ) : mode === 'rating' ? (
+                <View>
+                  <Pressable style={styles.action} onPress={() => setMode('actions')}>
+                    <Ionicons name="chevron-back" size={24} color={colors.text} />
+                    <Text style={styles.actionText}>{t('Rate')}</Text>
+                  </Pressable>
+                  <View style={styles.ratingRow}>
+                    <StarRating
+                      id={song.id}
+                      rating={song.userRating}
+                      size={34}
+                      onRated={(r) => rateSong(song.id, r)}
+                    />
+                  </View>
+                </View>
+              ) : (
+                // Scrolls: with every action enabled the list is taller than
+                // the room a sheet should take. `onScroll` hands the drag back
+                // to the sheet only at the top, so pulling down mid-list scrolls
+                // instead of dismissing.
+                <ScrollView
+                  style={{ maxHeight: ACTIONS_MAX_H }}
+                  scrollEventThrottle={16}
+                  onScroll={(e) => setAtTop(e.nativeEvent.contentOffset.y <= 0)}
+                >
+                  {menu.playlist ? (
+                    <Action
+                      icon="add-circle-outline"
+                      label={t('Add to a playlist')}
+                      onPress={() => setMode('playlists')}
+                    />
+                  ) : null}
+                  {context ? (
+                    <Action
+                      icon="remove-circle-outline"
+                      label={t('Remove from playlist')}
+                      onPress={removeFromList}
+                    />
+                  ) : null}
+                  {menu.playNext ? (
+                    <Action
+                      icon="play-forward"
+                      label={t('Play next')}
+                      onPress={() => {
+                        playNext(song);
+                        toast(t('Playing next'));
+                        close();
+                      }}
+                    />
+                  ) : null}
+                  {menu.queue ? (
+                    <Action
+                      icon="list"
+                      label={t('Add to queue')}
+                      onPress={() => {
+                        addToQueue(song);
+                        toast(t('Added to queue'));
+                        close();
+                      }}
+                    />
+                  ) : null}
+                  {menu.favorite ? (
+                    <Action
+                      icon={favorited ? 'heart' : 'heart-outline'}
+                      label={favorited ? t('Remove from favorites') : t('Add to favorites')}
+                      onPress={() => {
+                        (favorited ? unstar(song.id) : star(song.id)).then(() =>
+                          queryClient.invalidateQueries({ queryKey: ['starred'] }),
+                        );
+                        toast(favorited ? t('Removed from favorites') : t('Added to favorites'));
+                        close();
+                      }}
+                    />
+                  ) : null}
+                  {menu.album && (song.albumId || song.album) ? (
+                    <Action
+                      icon="disc"
+                      label={t('Go to album')}
+                      onPress={() => {
+                        if (song.albumId) { go(`/album/${song.albumId}`); return; }
+                        if (song.album) {
+                          const key = normKey(song.album) + '|' + normKey(song.artist || '');
+                          go(`/album/${key}`);
+                        }
+                      }}
+                    />
+                  ) : null}
+                  {menu.artist && (song.artistId || song.artist) ? (
+                    <Action
+                      icon="person"
+                      label={t('Go to artist')}
+                      onPress={() => {
+                        const targets = artistTargets(song);
+                        if (targets.length > 1) {
+                          // We close the sheet and, after its exit animation, open the
+                          // picker (avoids two visible Modals at once).
+                          dismiss(() => {
+                            closeNow();
+                            openArtistPicker(targets);
+                          });
+                          return;
+                        }
+                        const id = targets[0]?.id ?? (song.artist ? normKey(song.artist) : '');
+                        if (id) go(`/artist/${id}`);
+                      }}
+                    />
+                  ) : null}
+                  {menu.download && downloaded ? (
+                    <Action
+                      icon="arrow-down-circle"
+                      label={t('Remove download')}
+                      onPress={() => {
+                        // The file is deleted right away; «Undo» downloads it again
+                        // (offline not offered: there'd be nowhere to download from).
+                        void deleteDownloads([song.id]);
+                        toast(
+                          t('Download removed'),
+                          offline ? undefined : { label: t('Undo'), run: () => void downloadSong(song) },
+                        );
+                        close();
+                      }}
+                    />
+                  ) : menu.download && !offline && !song.url ? (
+                    <Action
+                      icon="download-outline"
+                      label={t('Download')}
+                      onPress={() => {
+                        void downloadSong(song);
+                        toast(t('Downloading…'));
+                        close();
+                      }}
+                    />
+                  ) : null}
+                  {menu.lyrics && showLyrics ? (
+                    <Action
+                      icon="mic-outline"
+                      label={t('Lyrics')}
+                      onPress={() => go('/lyrics')}
+                    />
+                  ) : null}
+                  {/* Online only (similar songs are found by the server) and not for
+                      stations (`url`), which have no "similar". */}
+                  {menu.mix && !offline && !song.url ? (
+                    <Action
+                      icon="sparkles-outline"
+                      label={t('Start mix')}
+                      onPress={() => {
+                        close();
+                        // The queue changes underneath without the song restarting, so
+                        // without this nothing on screen says the mix actually began.
+                        // And it's only said once tracks have arrived: announcing a
+                        // mix that came up empty is how the failure stayed invisible.
+                        void startRadio(song, t('Mix of “{name}”', { name: song.title })).then(
+                          (started) =>
+                            toast(
+                              started
+                                ? t('Mix started')
+                                : t('Couldn’t find anything to mix with this song'),
+                            ),
+                        );
+                      }}
+                    />
+                  ) : null}
+                  {/* Rate (Subsonic setRating): non-Jellyfin server account and not
+                      radio. Offline is recorded and uploaded on reconnect (the local
+                      profile has no account, so it doesn't appear there). */}
+                  {menu.rating && !!auth && serverType !== 'jellyfin' && !song.url ? (
+                    <Action icon="star-outline" label={t('Rate')} onPress={() => setMode('rating')} />
+                  ) : null}
+                  {/* Only with a server that mints share links (`useCanShare`),
+                      and never for a station: its `url` is not the server's to
+                      share. */}
+                  {menu.share && canShare && !song.url ? (
+                    <Action
+                      icon="share-social-outline"
+                      label={t('Share')}
+                      onPress={() => {
+                        close();
+                        void shareItem(song.id, song.title).then((ok) => {
+                          if (!ok) toast(t("Couldn't create the link"));
                         });
-                        return;
+                      }}
+                    />
+                  ) : null}
+                  {menu.sleepTimer ? (
+                    <Action
+                      icon="moon-outline"
+                      label={
+                        sleepEndsAt
+                          ? t('Sleep timer ({n} min left)', { n: minutesLeft(sleepEndsAt) })
+                          : sleepAtSongEnd
+                            ? t('Sleep timer (end of song)')
+                            : t('Sleep timer')
                       }
-                      const id = targets[0]?.id ?? (song.artist ? normKey(song.artist) : '');
-                      if (id) go(`/artist/${id}`);
-                    }}
-                  />
-                ) : null}
-                {menu.download && downloaded ? (
-                  <Action
-                    icon="arrow-down-circle"
-                    label={t('Remove download')}
-                    onPress={() => {
-                      // The file is deleted right away; «Undo» downloads it again
-                      // (offline not offered: there'd be nowhere to download from).
-                      void deleteDownloads([song.id]);
-                      toast(
-                        t('Download removed'),
-                        offline ? undefined : { label: t('Undo'), run: () => void downloadSong(song) },
-                      );
-                      close();
-                    }}
-                  />
-                ) : menu.download && !offline && !song.url ? (
-                  <Action
-                    icon="download-outline"
-                    label={t('Download')}
-                    onPress={() => {
-                      void downloadSong(song);
-                      toast(t('Downloading…'));
-                      close();
-                    }}
-                  />
-                ) : null}
-                {menu.lyrics && showLyrics ? (
-                  <Action
-                    icon="mic-outline"
-                    label={t('Lyrics')}
-                    onPress={() => go('/lyrics')}
-                  />
-                ) : null}
-                {/* Online only (similar songs are found by the server) and not for
-                    stations (`url`), which have no "similar". */}
-                {menu.mix && !offline && !song.url ? (
-                  <Action
-                    icon="sparkles-outline"
-                    label={t('Start mix')}
-                    onPress={() => {
-                      close();
-                      // The queue changes underneath without the song restarting, so
-                      // without this nothing on screen says the mix actually began.
-                      // And it's only said once tracks have arrived: announcing a
-                      // mix that came up empty is how the failure stayed invisible.
-                      void startRadio(song, t('Mix of “{name}”', { name: song.title })).then(
-                        (started) =>
-                          toast(
-                            started
-                              ? t('Mix started')
-                              : t('Couldn’t find anything to mix with this song'),
-                          ),
-                      );
-                    }}
-                  />
-                ) : null}
-                {/* Rate (Subsonic setRating): non-Jellyfin server account and not
-                    radio. Offline is recorded and uploaded on reconnect (the local
-                    profile has no account, so it doesn't appear there). */}
-                {menu.rating && !!auth && serverType !== 'jellyfin' && !song.url ? (
-                  <Action icon="star-outline" label={t('Rate')} onPress={() => setMode('rating')} />
-                ) : null}
-                {/* Only with a server that mints share links (`useCanShare`),
-                    and never for a station: its `url` is not the server's to
-                    share. */}
-                {menu.share && canShare && !song.url ? (
-                  <Action
-                    icon="share-social-outline"
-                    label={t('Share')}
-                    onPress={() => {
-                      close();
-                      void shareItem(song.id, song.title).then((ok) => {
-                        if (!ok) toast(t("Couldn't create the link"));
-                      });
-                    }}
-                  />
-                ) : null}
-                {menu.sleepTimer ? (
-                  <Action
-                    icon="moon-outline"
-                    label={
-                      sleepEndsAt
-                        ? t('Sleep timer ({n} min left)', { n: minutesLeft(sleepEndsAt) })
-                        : sleepAtSongEnd
-                          ? t('Sleep timer (end of song)')
-                          : t('Sleep timer')
-                    }
-                    onPress={() => setMode('sleep')}
-                  />
-                ) : null}
-              </ScrollView>
-            )}
-          </Animated.View>
-        </GestureDetector>
+                      onPress={() => setMode('sleep')}
+                    />
+                  ) : null}
+                </ScrollView>
+              )}
+            </View>
+          </GestureDetector>
+        </Animated.View>
       </GestureHandlerRootView>
 
       <Dialog
