@@ -138,6 +138,29 @@ function onNativeState(e: NativeState) {
  * session; a re-answer refreshes the entry. Truly-gone devices just fail to
  * connect (handled gracefully). Use `upnpClearDevices` to start a fresh list.
  */
+/** A name the library made up out of the address, not the device's own. */
+function looksRaw(name: string): boolean {
+  return /^\d{1,3}(\.\d{1,3}){3}\b/.test(name.trim());
+}
+
+/**
+ * One row per address, keeping the friendliest name.
+ *
+ * Sonos answers discovery more than once and the library names each answer
+ * differently: the room ("Schlafzimmer") in one, "<ip> - Sonos Play:1 -
+ * RINCON…" in another. That's two rows for one speaker, and the unreadable one
+ * is as likely to be tapped as the good one.
+ */
+function dedupeDevices(devices: UpnpDevice[]): UpnpDevice[] {
+  const byAddress = new Map<string, UpnpDevice>();
+  for (const d of devices) {
+    const key = d.address || d.id;
+    const kept = byAddress.get(key);
+    if (!kept || (looksRaw(kept.name) && !looksRaw(d.name))) byAddress.set(key, d);
+  }
+  return Array.from(byAddress.values());
+}
+
 export async function upnpSearch(): Promise<void> {
   if (!native || useUpnp.getState().scanning) return;
   useUpnp.setState({ scanning: true });
@@ -146,7 +169,7 @@ export async function upnpSearch(): Promise<void> {
     useUpnp.setState((s) => {
       const byId = new Map(s.devices.map((d) => [d.id, d]));
       for (const d of found) byId.set(d.id, d);
-      return { devices: Array.from(byId.values()) };
+      return { devices: dedupeDevices(Array.from(byId.values())) };
     });
   } catch {
     // keep the previous list
@@ -188,6 +211,10 @@ export async function upnpDisconnect(silent = false): Promise<void> {
   if (!silent) events?.onDisconnected(lastPositionSec);
 }
 
+/** Bitrate for the MP3 fallback below when streaming at original quality: a
+ *  lossless track has no bitrate to inherit, and 320 is as good as MP3 gets. */
+const CAST_MP3_BITRATE = 320;
+
 /**
  * Loads a track on the renderer. Returns false if there is no session or the song
  * is not castable (local files: the renderer cannot reach them).
@@ -199,10 +226,17 @@ export async function upnpLoad(song: Song, autoplay: boolean, startTimeSec = 0):
   if (song.url) url = song.url;
   // Wi-Fi quality on purpose: casting via UPnP requires being on the same LAN.
   else if (!song.localUri && auth) {
-    const s = useSettings.getState();
-    url = streamUrl(auth, song.id, s.maxBitRate, 0, s.streamFormat);
+    const st = useSettings.getState();
+    url = streamUrl(auth, song.id, st.maxBitRate, 0, st.streamFormat);
   }
   if (!url) return false;
+  // Fallback for renderers that turn the original down (see below); only makes
+  // sense for songs the server streams.
+  const s = useSettings.getState();
+  const mp3Url =
+    auth && !song.url && !song.localUri
+      ? streamUrl(auth, song.id, s.maxBitRate > 0 ? s.maxBitRate : CAST_MP3_BITRATE, 0, 'mp3')
+      : undefined;
   loading = true;
   finishedFired = false;
   wasPlaying = false;
@@ -211,7 +245,15 @@ export async function upnpLoad(song: Song, autoplay: boolean, startTimeSec = 0):
   lastDurationSec = song.duration ?? 0;
   const title = [song.title, song.artist].filter(Boolean).join(' — ');
   try {
-    const ok = (await native.load(url, title, startTimeSec * 1000)) as boolean;
+    let ok = (await native.load(url, title, startTimeSec * 1000)) as boolean;
+    // Some renderers enforce the MIME type announced in the cast metadata, and
+    // that metadata says MP3 — Sonos is the strict one, so a FLAC is refused
+    // outright and every lossless track "can't be cast". Rather than transcode
+    // for everyone, ask the server for MP3 only once the original was turned
+    // down: renderers that do take FLAC keep getting it.
+    if (!ok && mp3Url && mp3Url !== url) {
+      ok = (await native.load(mp3Url, title, startTimeSec * 1000)) as boolean;
+    }
     // The renderer always starts playing; if not wanted, it gets paused on the fly.
     if (ok && !autoplay) void native.pause();
     if (!ok) loading = false;
