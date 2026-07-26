@@ -62,6 +62,17 @@ export const useLibraries = create<LibrariesState>((set, get) => ({
           folders: parsed.folders ?? {},
           disabled: parsed.disabled ?? {},
         });
+        // Reading from disk is async, so the screens are already up and their
+        // queries went out with no filter at all — showing libraries the user
+        // had disabled, and keeping them for the whole session because nothing
+        // asked again. If the restored filter hides anything, that data is
+        // wrong: drop it. Checked across profiles because `hydrate` doesn't
+        // know which one is active, and paying one refetch at startup only
+        // affects users who actually disabled a library.
+        if (Object.values(parsed.disabled ?? {}).some((ids) => ids.length > 0)) {
+          clearAlbumCache();
+          void queryClient.invalidateQueries();
+        }
       }
     } catch {
       // will stay with default values (everything visible)
@@ -82,6 +93,10 @@ export const useLibraries = create<LibrariesState>((set, get) => ({
       const cleaned = cur.filter((id) => ids.has(id));
       if (cleaned.length !== cur.length) {
         set((s) => ({ disabled: { ...s.disabled, [key]: cleaned } }));
+        // The filter just changed (a disabled library is gone from the server),
+        // so whatever is on screen was filtered by the old one.
+        clearAlbumCache();
+        void queryClient.invalidateQueries();
       }
       persist(get);
     } catch {
