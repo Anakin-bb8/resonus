@@ -437,10 +437,18 @@ export function SongMenuSheet() {
                     label={t('Start mix')}
                     onPress={() => {
                       close();
-                      void startRadio(song, t('Mix of “{name}”', { name: song.title }));
                       // The queue changes underneath without the song restarting, so
                       // without this nothing on screen says the mix actually began.
-                      toast(t('Mix started'));
+                      // And it's only said once tracks have arrived: announcing a
+                      // mix that came up empty is how the failure stayed invisible.
+                      void startRadio(song, t('Mix of “{name}”', { name: song.title })).then(
+                        (started) =>
+                          toast(
+                            started
+                              ? t('Mix started')
+                              : t('Couldn’t find anything to mix with this song'),
+                          ),
+                      );
                     }}
                   />
                 ) : null}

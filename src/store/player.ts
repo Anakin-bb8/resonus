@@ -28,6 +28,7 @@ import { create } from 'zustand';
 
 import {
   coverArtUrl,
+  getAlbum,
   getOpenSubsonicExtensions,
   getPlayQueue,
   getRandomSongs,
@@ -740,21 +741,40 @@ async function warmStream(url: string) {
 let autoplayFetchedFor: string | null = null;
 
 /**
- * Songs to extend a radio from `seed`, in order of
- * affinity: similar → artist's most played → random from its genre.
+ * Random songs from the seed's genre. When the track carries no genre tag, the
+ * one its album siblings carry: tags live per file, so an untagged track can
+ * perfectly well sit inside an otherwise tagged album. Empty if neither has one.
+ */
+async function genreCandidates(auth: SubsonicAuth, seed: Song): Promise<Song[]> {
+  let genre = seed.genre;
+  if (!genre && seed.albumId) {
+    const { songs } = await getAlbum(auth, seed.albumId);
+    genre = songs.find((s) => s.genre)?.genre;
+  }
+  return genre ? getRandomSongs(auth, 20, genre) : [];
+}
+
+/**
+ * Songs to extend a radio from `seed`, in order of affinity: similar → artist's
+ * most played → random from its genre → random from the library.
  *
  * Drops to the next tier when the previous yields NONE not already in the queue,
  * not when it yields few. The difference matters: `getSimilarSongs` needs Last.fm
  * on the server, and without it the radio would fall to artist, exhaust its ~20
  * tracks and then all candidates were already in the queue → zero new → the radio
- * silently died after a while. Genre comes from tags and doesn't depend on
- * anything external, so there's always something to draw from.
+ * silently died after a while.
+ *
+ * The last tier is there because every other one CAN come up empty at the same
+ * time: on Navidrome both similar and top songs go through Last.fm, and a track
+ * with no genre anywhere left the mix returning nothing at all. Random from the
+ * whole library is a poor mix, but it is a mix.
  */
 async function radioCandidates(auth: SubsonicAuth, seed: Song, have: Set<string>): Promise<Song[]> {
   const tiers: (() => Promise<Song[]>)[] = [
     () => getSimilarSongs(auth, seed.id, 20),
     () => (seed.artist ? getTopSongs(auth, seed.artist, 20) : Promise.resolve([])),
-    () => (seed.genre ? getRandomSongs(auth, 20, seed.genre) : Promise.resolve([])),
+    () => genreCandidates(auth, seed),
+    () => getRandomSongs(auth, 50),
   ];
   for (const tier of tiers) {
     let songs: Song[];
@@ -1615,8 +1635,12 @@ interface PlayerState {
   /**
    * Starts a radio from a song: plays it immediately and the queue keeps
    * filling itself with similar tracks, endlessly.
+   *
+   * Resolves once the first batch has been asked for, to whether the mix
+   * actually got tracks: a mix that found nothing must not be announced as
+   * started.
    */
-  startRadio: (seed: Song, source: string) => Promise<void>;
+  startRadio: (seed: Song, source: string) => Promise<boolean>;
   /** Stops extending the queue. Doesn't touch it: finishes when it finishes. */
   stopRadio: () => void;
   addToQueue: (song: Song) => void;
@@ -1748,15 +1772,17 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       });
       // `loadIndex` isn't running, so nothing else is going to persist this.
       scheduleSync();
-      void maybeQueueAutoplay();
-      return;
+      await maybeQueueAutoplay();
+      return get().queue.length > 1;
     }
     // Play the seed immediately and similar tracks are requested later: waiting
     // for the server to respond before pressing play would make "start mix" feel
-    // broken. `maybeQueueAutoplay` fills the queue in the background.
+    // broken. Awaiting `maybeQueueAutoplay` afterwards doesn't delay playback,
+    // only the answer of whether the mix found anything.
     await get().playQueue([seed], 0, source);
     set({ radioMode: true, radioSeed: seed });
-    void maybeQueueAutoplay();
+    await maybeQueueAutoplay();
+    return get().queue.length > 1;
   },
 
   stopRadio: () => {
