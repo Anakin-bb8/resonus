@@ -22,8 +22,17 @@ export interface RecentItem {
   href: string;
 }
 
+/**
+ * Identity of an entry, for de-duplicating.
+ *
+ * By NAME, not by id: the same artist has one id on the server and another in
+ * the local catalog, so searching them online and offline used to leave two
+ * rows for the same person — one of which failed to open, because its id only
+ * means something in the other mode (issue #51). The newest one wins, so
+ * whichever mode you last used is the one that opens.
+ */
 function itemKey(i: RecentItem): string {
-  return `${i.kind}:${i.id}`;
+  return `${i.kind}:${i.title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`;
 }
 
 // SecureStore only accepts keys with [A-Za-z0-9._-]; sanitize serverUrl/username
@@ -32,10 +41,17 @@ function safe(s: string): string {
   return s.replace(/[^A-Za-z0-9._-]/g, '_');
 }
 
+/**
+ * One history per PROFILE, not per mode. A server account that goes offline is
+ * the same account with the same history; keying it by mode meant the list in
+ * memory (loaded for one mode) got written under the other one's key on the
+ * next search, which is how entries from offline ended up in the online list.
+ * The bare 'offline' key is for the local-files profile, which has no account.
+ */
 function storageKey(): string {
   const { auth, offline } = useAuthStore.getState();
-  if (offline) return 'resonus.recentSearches.offline';
   if (auth) return `resonus.recentSearches.server.${safe(primaryUrl(auth))}.${safe(auth.username)}`;
+  if (offline) return 'resonus.recentSearches.offline';
   return 'resonus.recentSearches';
 }
 

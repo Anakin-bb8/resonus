@@ -32,6 +32,7 @@ import { AlbumCard } from '@/components/AlbumCard';
 import { Cover } from '@/components/Cover';
 import { Dialog } from '@/components/Dialog';
 import { FavoriteButton } from '@/components/FavoriteButton';
+import { BackButton } from '@/components/BackButton';
 import { Message } from '@/components/Message';
 import { SheetModal } from '@/components/SheetModal';
 import { TrackRow } from '@/components/TrackRow';
@@ -156,6 +157,7 @@ export default function ArtistScreen() {
   if (isError || !data) {
     return (
       <View style={styles.center}>
+        <BackButton />
         <Message text={t("Couldn't load the artist.")} onRetry={() => refetch()} />
       </View>
     );

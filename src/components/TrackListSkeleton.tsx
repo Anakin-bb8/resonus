@@ -14,6 +14,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, radius, spacing } from '@/theme';
+import { BackButton } from './BackButton';
 
 // Same cover art and top bar as TrackListView so the skeleton → content
 // transition doesn't jump.
@@ -30,6 +31,9 @@ export function TrackListSkeleton() {
 
   return (
     <View style={styles.root}>
+      {/* Outside the pulse: if the screen never finishes loading — a stale
+          link, a server that doesn't answer — this is the way out. */}
+      <BackButton />
       <Animated.View
         style={[styles.content, { paddingTop: insets.top + TOPBAR_H + spacing.md }, pulseStyle]}
       >

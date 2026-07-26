@@ -18,6 +18,7 @@ import { type Song } from '@/api/subsonic';
 import { CoverViewer } from '@/components/CoverViewer';
 import { Dialog } from '@/components/Dialog';
 import { EmptyState } from '@/components/EmptyState';
+import { BackButton } from '@/components/BackButton';
 import { Message } from '@/components/Message';
 import { PlaylistEditSheet, type PlaylistEdit } from '@/components/PlaylistEditSheet';
 import { PlaylistPickerSheet } from '@/components/PlaylistPickerSheet';
@@ -271,6 +272,7 @@ export default function PlaylistScreen() {
   if (!data) {
     return (
       <View style={styles.center}>
+        <BackButton />
         <Message
           text={offline ? t('Playlists are not available in offline mode.') : t("Couldn't load the playlist.")}
           onRetry={offline ? undefined : () => refetch()}

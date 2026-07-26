@@ -9,6 +9,7 @@ import { coverArtUrl, getAlbum } from '@/api/data';
 import { type Album, type Song } from '@/api/subsonic';
 import { CoverViewer } from '@/components/CoverViewer';
 import { Dialog } from '@/components/Dialog';
+import { BackButton } from '@/components/BackButton';
 import { Message } from '@/components/Message';
 import { MoreFromArtist } from '@/components/MoreFromArtist';
 import { PlaylistPickerSheet } from '@/components/PlaylistPickerSheet';
@@ -195,6 +196,7 @@ export default function AlbumScreen() {
   if (isError || !data) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center' }}>
+        <BackButton />
         <Message text={t("Couldn't load the album.")} onRetry={() => refetch()} />
       </View>
     );
