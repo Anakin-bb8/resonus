@@ -73,6 +73,27 @@ function normalize(hex: string): string {
   return hslToHex(h, Math.min(s, 0.55), Math.min(Math.max(l, 0.2), 0.32));
 }
 
+/**
+ * Size asked for when the image is only going to be reduced to one colour.
+ *
+ * `getColors` downloads on its own — it doesn't share expo-image's cache — so
+ * asking for the same 500 or 600 px the screen is already showing meant
+ * fetching every cover twice at full size. A small copy quantizes to the same
+ * colour for a fraction of the bytes.
+ *
+ * It's also one single size across the app: the player and the mini player had
+ * to agree on one already, or the same song came out two different colours on
+ * two screens. Now everything reads the same pixels.
+ */
+const PALETTE_SIZE = 200;
+
+/** The same cover, small, when it's a server cover URL — Subsonic asks for
+ *  `size`, Jellyfin for `fillWidth`/`fillHeight`. Anything else (local files,
+ *  radio art) is left exactly as it is. */
+function paletteUri(uri: string): string {
+  return uri.replace(/([?&](?:size|fillWidth|fillHeight)=)\d+/g, `$1${PALETTE_SIZE}`);
+}
+
 export function useDominantColor(uri?: string): string {
   const [color, setColor] = useState<string>(theme.surfaceHighlight);
 
@@ -82,7 +103,10 @@ export function useDominantColor(uri?: string): string {
       setColor(theme.surfaceHighlight);
       return;
     }
-    getColors(uri, { fallback: theme.surfaceHighlight, cache: true, key: uri })
+    const src = paletteUri(uri);
+    // Keyed by the small URL: two screens showing the same cover at different
+    // sizes now share one cached palette.
+    getColors(src, { fallback: theme.surfaceHighlight, cache: true, key: src })
       .then((res) => {
         if (!active) return;
         let c: string = theme.surfaceHighlight;

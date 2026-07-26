@@ -264,8 +264,13 @@ export async function hasDownloads(): Promise<boolean> {
 function invalidate() {
   cachedCatalog = null;
   cachedForDir = null;
-  // Screens cache lists with react-query; the catalog just changed.
-  void queryClient.invalidateQueries();
+  // Offline the whole library IS this catalog, so every list has to be asked
+  // again. Online none of it comes from here — the server answers those, and
+  // the "downloaded" mark on a row reads this store directly, which is already
+  // reactive. Invalidating everything there meant that finishing a download
+  // sent the app off to re-fetch its entire visible state from the server, for
+  // nothing (#50).
+  if (useAuthStore.getState().offline) void queryClient.invalidateQueries();
 }
 
 // ── File download ─────────────────────────────────────────────────────────
