@@ -770,7 +770,7 @@ async function radioCandidates(auth: SubsonicAuth, seed: Song, have: Set<string>
 }
 
 async function maybeQueueAutoplay() {
-  const { queue, index, repeat, radioMode } = usePlayerStore.getState();
+  const { queue, index, repeat, radioMode, radioSeed } = usePlayerStore.getState();
   // With repeat the queue never "runs out"; and if 2+ songs remain, not yet.
   if (repeat !== 'off' || index < queue.length - 2) return;
   const { auth, offline } = useAuthStore.getState();
@@ -780,12 +780,17 @@ async function maybeQueueAutoplay() {
   const last = queue[queue.length - 1];
   if (!last || last.url || autoplayFetchedFor === last.id) return;
   autoplayFetchedFor = last.id;
+  // A mix always extends from the track it was started on. Seeding off the tail
+  // (which is what plain autoplay does, and rightly so) made every batch reseed
+  // on the previous batch's last track, so the mix drifted arbitrarily far from
+  // the song whose name the player was still showing.
+  const seed = radioMode ? (radioSeed ?? last) : last;
   let similar: Song[];
   try {
     // The backup tiers (artist, genre) only in radio: normal autoplay
     // behaves as before.
     similar = radioMode
-      ? await radioCandidates(auth, last, new Set(queue.map((s) => s.id)))
+      ? await radioCandidates(auth, seed, new Set([seed.id, ...queue.map((s) => s.id)]))
       : await getSimilarSongs(auth, last.id, 20);
   } catch {
     return; // without autoplay: playback will stop at the end, as before
@@ -1365,6 +1370,10 @@ interface StoredQueue {
   positionSec: number;
   /** The queue was a radio: when restoring it must keep extending itself. */
   radioMode?: boolean;
+  /** Track the radio was started from, so it keeps extending from the same
+   *  place after a restart. Absent in queues saved by older versions: those
+   *  fall back to seeding off the tail. */
+  radioSeed?: Song | null;
   /** Where the queue came from, for the player's "playing from" header. */
   source?: string | null;
   /** Route of that origin, so tapping the header still navigates there. */
@@ -1374,7 +1383,7 @@ interface StoredQueue {
 function saveQueueLocal() {
   const key = queueStorageKey();
   if (!key) return;
-  const { queue, index, positionSec, radioMode, source, sourceHref } =
+  const { queue, index, positionSec, radioMode, radioSeed, source, sourceHref } =
     usePlayerStore.getState();
   if (queue.length === 0) return;
   // Size cap as a precaution for SecureStore; 500 songs is more than enough.
@@ -1383,6 +1392,7 @@ function saveQueueLocal() {
     index: Math.min(index, 499),
     positionSec,
     radioMode,
+    radioSeed,
     source,
     sourceHref,
   };
@@ -1589,6 +1599,13 @@ interface PlayerState {
    * `startRadio`; any other queue (album, playlist…) turns it off.
    */
   radioMode: boolean;
+  /**
+   * The track the current mix was started from. Every extension is seeded from
+   * it, so the mix stays about that song instead of drifting batch by batch.
+   * Null when there's no mix (and on queues restored from the server, which has
+   * nowhere to carry it).
+   */
+  radioSeed: Song | null;
   playQueue: (
     songs: Song[],
     startIndex?: number,
@@ -1667,6 +1684,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   source: null,
   sourceHref: null,
   radioMode: false,
+  radioSeed: null,
 
   playQueue: async (songs, startIndex = 0, source, sourceHref) => {
     if (songs.length === 0) return;
@@ -1700,6 +1718,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       sourceHref: sourceHref ?? null,
       // Any normal queue turns off the radio; `startRadio` turns it back on.
       radioMode: false,
+      radioSeed: null,
     });
     await loadIndex(startIndex, true);
   },
@@ -1725,6 +1744,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         source,
         sourceHref: null,
         radioMode: true,
+        radioSeed: cur,
       });
       // `loadIndex` isn't running, so nothing else is going to persist this.
       scheduleSync();
@@ -1735,12 +1755,12 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     // for the server to respond before pressing play would make "start mix" feel
     // broken. `maybeQueueAutoplay` fills the queue in the background.
     await get().playQueue([seed], 0, source);
-    set({ radioMode: true });
+    set({ radioMode: true, radioSeed: seed });
     void maybeQueueAutoplay();
   },
 
   stopRadio: () => {
-    set({ radioMode: false });
+    set({ radioMode: false, radioSeed: null });
     saveQueueLocal();
   },
 
@@ -1933,19 +1953,26 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   clearQueue: () => {
-    const { queue, index, queuedCount, originalQueue, radioMode } = get();
+    const { queue, index, queuedCount, originalQueue, radioMode, radioSeed } = get();
     const current = queue[index];
     if (!current) return undefined;
     // Clearing also turns off the radio. Otherwise it'd be zombie: autoplay only
     // triggers when STARTING a song, and after clearing none starts, so the icon
     // would say "radio active" on a radio that would never extend.
-    set({ queue: [current], index: 0, queuedCount: 0, originalQueue: null, radioMode: false });
+    set({
+      queue: [current],
+      index: 0,
+      queuedCount: 0,
+      originalQueue: null,
+      radioMode: false,
+      radioSeed: null,
+    });
     scheduleSync();
     return () => {
       // Only if the queue is still as the clear left it (nothing new was put on).
       const st = get();
       if (st.queue.length !== 1 || st.queue[0]?.id !== current.id) return;
-      set({ queue, index, queuedCount, originalQueue, radioMode });
+      set({ queue, index, queuedCount, originalQueue, radioMode, radioSeed });
       scheduleSync();
     };
   },
@@ -1961,6 +1988,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       source,
       sourceHref,
       radioMode,
+      radioSeed,
     } = get();
     if (queue.length === 0) return undefined;
     // Deliberate stop: also forget the saved copy, so the queue doesn't
@@ -1984,6 +2012,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
           source,
           sourceHref,
           radioMode,
+          radioSeed,
         });
         // Like restoring the saved queue: track loaded, paused.
         await loadIndex(index, false);
@@ -2142,6 +2171,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       // a radio recovered from there stops being one. The local copy does save
       // it, and it's tried first (see `restoreQueue`).
       radioMode: false,
+      radioSeed: null,
     });
     // Load the track (without playing) and leave the position ready.
     await loadIndex(index, false);
@@ -2185,6 +2215,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       // If it was a radio, it still is: closing the app should not leave it
       // silent when reaching the end of what was already queued.
       radioMode: saved.radioMode === true,
+      radioSeed: saved.radioSeed ?? null,
     });
     await loadIndex(index, false);
     if (positionSec > 0) seekActive(positionSec);
@@ -2252,6 +2283,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       source: null,
       sourceHref: null,
       radioMode: false,
+      radioSeed: null,
     });
   },
 }));
