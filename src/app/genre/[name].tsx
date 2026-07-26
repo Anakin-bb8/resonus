@@ -306,5 +306,8 @@ const styles = StyleSheet.create({
     paddingBottom: SCREEN_BOTTOM_PADDING,
     gap: spacing.lg,
   },
-  songList: { paddingBottom: SCREEN_BOTTOM_PADDING },
+  // Same side margin as the album and playlist song lists: `TrackRow` brings
+  // no horizontal padding of its own, so without this the covers sit against
+  // the left edge and the ⋯ against the right one.
+  songList: { paddingHorizontal: spacing.lg, paddingBottom: SCREEN_BOTTOM_PADDING },
 });
