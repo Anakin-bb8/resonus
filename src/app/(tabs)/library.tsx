@@ -3,17 +3,19 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useRouter } from 'expo-router';
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
   FlatList,
+  Keyboard,
   Modal,
   Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -111,6 +113,20 @@ function sortItems<T>(
   const byName = (a: T, b: T) => compare(name(a), name(b));
   if (sort === 'alpha') return arr.sort(byName);
   return arr.sort((a, b) => score(b) - score(a) || byName(a, b));
+}
+
+/**
+ * Normalizes for filtering: lowercase and without accents, so "Nino" finds
+ * "Niño" and "cafe" finds "Café".
+ */
+function normQ(str: string): string {
+  return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+/** Does any of the fields contain the (already normalized) query? */
+function matches(query: string, ...fields: (string | undefined)[]): boolean {
+  if (!query) return true;
+  return fields.some((f) => f && normQ(f).includes(query));
 }
 
 /** "⇅ Recent" row under the segments; opens the sort sheet. */
@@ -212,7 +228,7 @@ function FavoritesEntry({ grid }: { grid?: boolean }) {
   );
 }
 
-function PlaylistsTab({ onNew }: { onNew?: () => void }) {
+function PlaylistsTab({ onNew, query }: { onNew?: () => void; query: string }) {
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
   const t = useT();
   const lang = useSettings((s) => s.language);
@@ -231,7 +247,7 @@ function PlaylistsTab({ onNew }: { onNew?: () => void }) {
   if (isError) return <Message text={t("Couldn't load playlists.")} onRetry={() => refetch()} />;
   const playlists = withPins(
     sortItems(
-      data ?? [],
+      (data ?? []).filter((p) => matches(query, p.name)),
       sort,
       (p) => p.name,
       sort === 'recent'
@@ -258,12 +274,16 @@ function PlaylistsTab({ onNew }: { onNew?: () => void }) {
       }
       ListHeaderComponent={grid ? undefined : <FavoritesEntry />}
       ListEmptyComponent={
-        <EmptyState
-          icon="list-outline"
-          title={t('No playlists yet')}
-          subtitle={t('Create your first playlist to get started.')}
-          action={onNew ? { label: t('New playlist'), onPress: onNew } : undefined}
-        />
+        query ? (
+          <NoResults query={query} />
+        ) : (
+          <EmptyState
+            icon="list-outline"
+            title={t('No playlists yet')}
+            subtitle={t('Create your first playlist to get started.')}
+            action={onNew ? { label: t('New playlist'), onPress: onNew } : undefined}
+          />
+        )
       }
       renderItem={({ item }: { item: Playlist }) =>
         item.id === FAVORITES_ID ? (
@@ -303,7 +323,7 @@ function PlaylistsTab({ onNew }: { onNew?: () => void }) {
   );
 }
 
-function ArtistsTab() {
+function ArtistsTab({ query }: { query: string }) {
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
   const t = useT();
   const lang = useSettings((s) => s.language);
@@ -321,7 +341,7 @@ function ArtistsTab() {
   if (isLoading) return <Loader />;
   if (isError) return <Message text={t("Couldn't load artists.")} onRetry={() => refetch()} />;
   const artists = sortItems(
-    data?.artists ?? [],
+    (data?.artists ?? []).filter((a) => matches(query, a.name)),
     sort,
     (a) => a.name,
     sort === 'recent'
@@ -352,17 +372,33 @@ function ArtistsTab() {
         )
       }
       ListEmptyComponent={
-        <EmptyState
-          icon="people-outline"
-          title={t('No favorite artists')}
-          subtitle={t('Star artists to see them here.')}
-        />
+        query ? (
+          <NoResults query={query} />
+        ) : (
+          <EmptyState
+            icon="people-outline"
+            title={t('No favorite artists')}
+            subtitle={t('Star artists to see them here.')}
+          />
+        )
       }
     />
   );
 }
 
 /** "Folders" segment: lists libraries and opens their directory browser. */
+/** Nothing matched the filter (as opposed to "you have none yet"). */
+function NoResults({ query }: { query: string }) {
+  const t = useT();
+  return (
+    <EmptyState
+      icon="search-outline"
+      title={t('No results')}
+      subtitle={t('No results for “{q}”', { q: query })}
+    />
+  );
+}
+
 function FoldersTab() {
   const t = useT();
   const router = useRouter();
@@ -406,7 +442,7 @@ function FoldersTab() {
   );
 }
 
-function AlbumsTab() {
+function AlbumsTab({ query }: { query: string }) {
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
   const t = useT();
   const sort = useSettings((s) => s.librarySort);
@@ -426,7 +462,9 @@ function AlbumsTab() {
   if (isError) return <Message text={t("Couldn't load albums.")} onRetry={() => refetch()} />;
   const albums = withPins(
     sortItems(
-      data?.albums ?? [],
+      // Albums also match by artist: looking for "radiohead" in your favourites
+      // should find their records, not just an album literally called that.
+      (data?.albums ?? []).filter((a) => matches(query, a.name, a.artist)),
       sort,
       (a) => a.name,
       sort === 'recent'
@@ -461,11 +499,15 @@ function AlbumsTab() {
         )
       }
       ListEmptyComponent={
-        <EmptyState
-          icon="albums-outline"
-          title={t('No favorite albums')}
-          subtitle={t('Star albums to see them here.')}
-        />
+        query ? (
+          <NoResults query={query} />
+        ) : (
+          <EmptyState
+            icon="albums-outline"
+            title={t('No favorite albums')}
+            subtitle={t('Star albums to see them here.')}
+          />
+        )
       }
     />
   );
@@ -565,6 +607,24 @@ export default function LibraryScreen() {
   const [segment, setSegment] = useState<Segment>('playlists');
   const [creating, setCreating] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
+  // Filter over what the Library already has in memory (your favourites and
+  // your lists): no server round-trip, unlike browsing the whole collection.
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const searchRef = useRef<TextInput>(null);
+  const filter = normQ(query.trim());
+
+  function toggleSearch() {
+    if (searchOpen) {
+      Keyboard.dismiss();
+      setQuery('');
+      setSearchOpen(false);
+    } else {
+      setSearchOpen(true);
+      // The input mounts with this render; focusing it right away saves a tap.
+      setTimeout(() => searchRef.current?.focus(), 0);
+    }
+  }
 
   // "Folders" only with a Subsonic server (Jellyfin doesn't browse directories;
   // offline doesn't apply) and with the setting enabled (hidden by default).
@@ -592,6 +652,21 @@ export default function LibraryScreen() {
         <Text style={styles.heading}>{t('Library')}</Text>
         <View style={styles.headerActions}>
           <OfflineIndicator />
+          {/* Folders are a handful of server roots: nothing to filter there. */}
+          {activeSegment === 'folders' ? null : (
+            <Pressable
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel={searchOpen ? t('Close') : t('Search')}
+              onPress={toggleSearch}
+            >
+              <Ionicons
+                name={searchOpen ? 'close' : 'search'}
+                size={24}
+                color={searchOpen ? colors.accent : colors.text}
+              />
+            </Pressable>
+          )}
           <Pressable
             hitSlop={12}
             accessibilityRole="button"
@@ -602,6 +677,38 @@ export default function LibraryScreen() {
           </Pressable>
         </View>
       </View>
+
+      {/* Hidden on Folders along with its button, so the bar can't be left
+          open with no way to close it. Its text survives: coming back to the
+          other tabs finds the filter as you left it. */}
+      {searchOpen && activeSegment !== 'folders' ? (
+        <View style={styles.searchRow}>
+          <View style={styles.searchBar}>
+            <Ionicons name="search" size={18} color={colors.textMuted} />
+            <TextInput
+              ref={searchRef}
+              style={styles.searchInput}
+              placeholder={t('Search')}
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="none"
+              autoCorrect={false}
+              value={query}
+              onChangeText={setQuery}
+              returnKeyType="search"
+            />
+            {query.length > 0 ? (
+              <Pressable
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel={t('Clear')}
+                onPress={() => setQuery('')}
+              >
+                <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+              </Pressable>
+            ) : null}
+          </View>
+        </View>
+      ) : null}
 
       <Dialog
         visible={creating}
@@ -647,11 +754,11 @@ export default function LibraryScreen() {
 
       <View style={{ flex: 1 }}>
         {activeSegment === 'playlists' ? (
-          <PlaylistsTab onNew={() => setCreating(true)} />
+          <PlaylistsTab onNew={() => setCreating(true)} query={filter} />
         ) : activeSegment === 'albums' ? (
-          <AlbumsTab />
+          <AlbumsTab query={filter} />
         ) : activeSegment === 'artists' ? (
-          <ArtistsTab />
+          <ArtistsTab query={filter} />
         ) : (
           <FoldersTab />
         )}
@@ -688,6 +795,20 @@ const styles = StyleSheet.create({
   },
   segmentText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '600' },
   segmentTextActive: { color: '#000' },
+  searchRow: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    height: 44,
+    backgroundColor: colors.surfaceHighlight,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+  },
+  searchInput: { flex: 1, color: colors.text, fontSize: fontSize.md, paddingVertical: 0 },
   list: {
     paddingHorizontal: spacing.lg,
     gap: spacing.md,
