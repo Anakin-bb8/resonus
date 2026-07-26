@@ -117,15 +117,32 @@ export function coverArtUrl(id: string | undefined, _size?: number): string | un
   return Subsonic.coverArtUrl(auth(), id, _size);
 }
 
+/**
+ * "Recently played" with only what was actually played. Servers order that list
+ * by play date and let the albums with no play date trail along, so once your
+ * history runs out the list is padded with albums you never opened. With
+ * several libraries it was blatant: one you had never played still filled its
+ * share of the shelf.
+ *
+ * Only when the server marks plays at all (OpenSubsonic `played`); otherwise
+ * there's nothing to tell apart and the list is left exactly as it came.
+ */
+function onlyPlayed(albums: Subsonic.Album[]): Subsonic.Album[] {
+  return albums.some((al) => al.played) ? albums.filter((al) => al.played) : albums;
+}
+
 export function getAlbumList(type: Subsonic.AlbumListType = 'newest', size?: number, offset?: number): Promise<Subsonic.Album[]> {
   if (isOffline()) return Local.getAlbumList(type, size, offset);
   const a = auth();
   const ids = enabledFolderIds(a);
-  if (!ids) return Subsonic.getAlbumList(a, type, size, offset);
-  if (ids.length === 1) return Subsonic.getAlbumList(a, type, size, offset, ids[0]);
-  return mergedAlbumPage(a, `albums|${type}`, type, ids, size ?? 20, offset ?? 0, (id, s, o) =>
-    Subsonic.getAlbumList(a, type, s, o, id),
-  );
+  const page = !ids
+    ? Subsonic.getAlbumList(a, type, size, offset)
+    : ids.length === 1
+      ? Subsonic.getAlbumList(a, type, size, offset, ids[0])
+      : mergedAlbumPage(a, `albums|${type}`, type, ids, size ?? 20, offset ?? 0, (id, s, o) =>
+          Subsonic.getAlbumList(a, type, s, o, id),
+        );
+  return type === 'recent' ? page.then(onlyPlayed) : page;
 }
 
 export function getAlbum(id: string): Promise<{ album: Subsonic.Album; songs: Subsonic.Song[] }> {
