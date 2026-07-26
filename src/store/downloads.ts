@@ -14,6 +14,7 @@
  * another quality. The artist id is normalized to the local key (`normKey(name)`)
  * so artists merge with those from scanning.
  */
+import { AppState } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Network from 'expo-network';
 import { create } from 'zustand';
@@ -102,8 +103,8 @@ async function writeServerCatalog(dir: string, catalog: ServerDownloads): Promis
 }
 
 /**
- * Serializes read-modify-write on catalog.json: multiple groups can
- * download at once and without this the last write would overwrite the others.
+ * Serializes changes to a catalog: several groups download at once, and
+ * without this two of them could interleave their read-modify-write.
  */
 let catalogLock: Promise<unknown> = Promise.resolve();
 function locked<T>(fn: () => Promise<T>): Promise<T> {
@@ -112,13 +113,72 @@ function locked<T>(fn: () => Promise<T>): Promise<T> {
   return run;
 }
 
+// ── Catalogs in memory, written in batches ────────────────────────────────
+//
+// The whole catalog used to be read, parsed, mutated, serialised and written
+// again for EVERY downloaded song. On a library of thousands of tracks that's
+// megabytes of JSON per song on the JS thread, so downloading froze the app —
+// and a delete, which queues behind all of it, looked like it did nothing at
+// all until you restarted (issues #47, #48, #50). Now the catalog is read once
+// and the disk sees it on a debounce.
+
+const catalogs = new Map<string, ServerDownloads>();
+const dirtyDirs = new Set<string>();
+let flushTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** Quiet time before writing. Short on purpose: what a crash in that window
+ *  costs is the record of the last song or two (its file is then orphaned
+ *  until a "clear all", same as before this existed). */
+const FLUSH_MS = 1500;
+
+async function loadCatalog(dir: string): Promise<ServerDownloads> {
+  const hit = catalogs.get(dir);
+  if (hit) return hit;
+  const read = (await readServerCatalog(dir)) ?? { songs: [], albums: [] };
+  // Someone may have loaded it while this was reading: theirs wins, or the
+  // changes made in the meantime would be dropped on the floor.
+  const now = catalogs.get(dir);
+  if (now) return now;
+  catalogs.set(dir, read);
+  return read;
+}
+
+function markDirty(dir: string): void {
+  dirtyDirs.add(dir);
+  if (flushTimer) return;
+  flushTimer = setTimeout(() => {
+    flushTimer = null;
+    void flushCatalogs();
+  }, FLUSH_MS);
+}
+
+/** Writes what's pending. On its own timer, when a download group ends, and
+ *  when the app goes to the background. */
+export async function flushCatalogs(): Promise<void> {
+  if (flushTimer) {
+    clearTimeout(flushTimer);
+    flushTimer = null;
+  }
+  const dirs = [...dirtyDirs];
+  dirtyDirs.clear();
+  for (const dir of dirs) {
+    const catalog = catalogs.get(dir);
+    if (catalog) await writeServerCatalog(dir, catalog);
+  }
+}
+
+// Leaving the app is the moment to make sure nothing pending is lost.
+AppState.addEventListener('change', (state) => {
+  if (state !== 'active') void flushCatalogs();
+});
+
 /** Adds a song/albums to a server's catalog (under the lock). */
 function commitToCatalog(
   dir: string,
   changes: { songs?: Song[]; albums?: DlAlbum[] },
 ): Promise<void> {
   return locked(async () => {
-    const catalog = (await readServerCatalog(dir)) ?? { songs: [], albums: [] };
+    const catalog = await loadCatalog(dir);
     for (const al of changes.albums ?? []) {
       if (!catalog.albums.some((a) => a.id === al.id)) catalog.albums.push(al);
     }
@@ -129,7 +189,7 @@ function commitToCatalog(
     for (const a of catalog.albums) {
       a.songCount = catalog.songs.filter((s) => s.albumId === a.id).length;
     }
-    await writeServerCatalog(dir, catalog);
+    markDirty(dir);
   });
 }
 
@@ -179,9 +239,14 @@ export async function getDownloadsCatalog(): Promise<DownloadsCatalog> {
   const dir = activeServerDir();
   if (!dir) return { songs: [], albums: [], artists: [] };
   if (!cachedCatalog || cachedForDir !== dir) {
-    const cat = await readServerCatalog(dir);
-    const albums = cat?.albums ?? [];
-    cachedCatalog = { songs: cat?.songs ?? [], albums, artists: deriveArtists(albums) };
+    const cat = await loadCatalog(dir);
+    // A copy: this view is handed out to screens, and the catalog underneath
+    // keeps being mutated by downloads and deletions.
+    cachedCatalog = {
+      songs: [...cat.songs],
+      albums: [...cat.albums],
+      artists: deriveArtists(cat.albums),
+    };
     cachedForDir = dir;
   }
   // Always (not just on build): clearLocalCatalog() empties the global cover
@@ -541,6 +606,9 @@ export const useDownloads = create<DownloadsState>((set, get) => {
     } finally {
       cancelling.delete(groupKey);
       activeTasks.delete(groupKey);
+      // Nothing more is coming for this group: persist without waiting for the
+      // timer, so what was downloaded survives a crash right afterwards.
+      void flushCatalogs();
       set((st) => {
         const active = { ...st.active };
         delete active[groupKey];
@@ -558,8 +626,8 @@ export const useDownloads = create<DownloadsState>((set, get) => {
       const files: Record<string, string> = {};
       const dlBitRates: Record<string, number> = {};
       for (const dir of await serverDirs()) {
-        const cat = await readServerCatalog(dir);
-        for (const s of cat?.songs ?? []) {
+        const cat = await loadCatalog(dir);
+        for (const s of cat.songs) {
           if (s.localUri) files[s.id] = s.localUri;
           if (s.dlBitRate) dlBitRates[s.id] = s.dlBitRate;
         }
@@ -631,10 +699,24 @@ export const useDownloads = create<DownloadsState>((set, get) => {
 
     deleteSongs: async (songIds) => {
       const ids = new Set(songIds);
+      // The state goes first, before touching the disk: deleting used to show
+      // nothing at all until the files were gone, and behind an ongoing
+      // download that could be a very long while — long enough to look broken
+      // and be retried (#48).
+      set((st) => {
+        const files = { ...st.files };
+        const dlBitRates = { ...st.dlBitRates };
+        for (const id of songIds) {
+          delete files[id];
+          delete dlBitRates[id];
+        }
+        return { files, dlBitRates };
+      });
+      invalidate();
       await locked(async () => {
         for (const dir of await serverDirs()) {
-          const catalog = await readServerCatalog(dir);
-          if (!catalog || !catalog.songs.some((s) => ids.has(s.id))) continue;
+          const catalog = await loadCatalog(dir);
+          if (!catalog.songs.some((s) => ids.has(s.id))) continue;
           for (const s of catalog.songs) {
             if (ids.has(s.id) && s.localUri) {
               await FileSystem.deleteAsync(s.localUri, { idempotent: true }).catch(() => {});
@@ -655,23 +737,20 @@ export const useDownloads = create<DownloadsState>((set, get) => {
           for (const a of catalog.albums) {
             a.songCount = catalog.songs.filter((s) => s.albumId === a.id).length;
           }
-          await writeServerCatalog(dir, catalog);
+          markDirty(dir);
         }
       });
-      set((st) => {
-        const files = { ...st.files };
-        const dlBitRates = { ...st.dlBitRates };
-        for (const id of songIds) {
-          delete files[id];
-          delete dlBitRates[id];
-        }
-        return { files, dlBitRates };
-      });
+      // The catalog on disk must not outlive the files it points at.
+      await flushCatalogs();
       invalidate();
     },
 
     clearAll: async () => {
-      await locked(() => FileSystem.deleteAsync(ROOT_DIR, { idempotent: true }).catch(() => {}));
+      await locked(async () => {
+        catalogs.clear();
+        dirtyDirs.clear();
+        await FileSystem.deleteAsync(ROOT_DIR, { idempotent: true }).catch(() => {});
+      });
       // Local playlists created by downloads no longer resolve songs;
       // they are removed to avoid leaving empty lists.
       // eslint-disable-next-line @typescript-eslint/no-require-imports
