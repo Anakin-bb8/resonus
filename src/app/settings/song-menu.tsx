@@ -34,7 +34,7 @@ const LABEL: Record<SongMenuActionKey, string> = {
 
 /**
  * Toggle order = actual menu order, to recognize it at a glance. The menu opens
- * showing about the first eight and the rest come with a scroll, so this list
+ * showing about the first nine and the rest come with a scroll, so this list
  * also says which ones need a scroll to reach.
  */
 const ORDER: SongMenuActionKey[] = [

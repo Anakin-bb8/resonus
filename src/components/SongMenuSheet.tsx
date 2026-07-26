@@ -66,8 +66,8 @@ const ACTION_H = spacing.md * 2 + 24;
  * screen fraction caps it so the sheet doesn't swallow a short phone whole.
  */
 const ACTIONS_MAX_H = Math.min(
-  ACTION_H * 7.5,
-  Math.round(Dimensions.get('window').height * 0.45),
+  ACTION_H * 8.5,
+  Math.round(Dimensions.get('window').height * 0.52),
 );
 
 /**
