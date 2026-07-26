@@ -523,6 +523,9 @@ interface SettingsState {
   browseArtistsLayout: ListLayout;
   /** List or grid when browsing albums. Separate for the same reason as above. */
   browseAlbumsLayout: ListLayout;
+  /** List or grid in an artist's full discography. Its own key, again for the
+   *  same reason: it's one artist's albums, not the whole library. */
+  discographyLayout: ListLayout;
   /** Accent color (hex). */
   accentColor: string;
   /** UI font (system font family; `system` = default). */
@@ -590,6 +593,7 @@ interface SettingsState {
   setLibraryLayout: (value: ListLayout) => void;
   setBrowseArtistsLayout: (value: ListLayout) => void;
   setBrowseAlbumsLayout: (value: ListLayout) => void;
+  setDiscographyLayout: (value: ListLayout) => void;
   setAccentColor: (value: string) => void;
   setAppFont: (value: AppFont) => void;
   /** Resets to factory defaults (language is preserved). */
@@ -669,6 +673,7 @@ function snapshot(get: () => SettingsState) {
     libraryLayout: s.libraryLayout,
     browseArtistsLayout: s.browseArtistsLayout,
     browseAlbumsLayout: s.browseAlbumsLayout,
+    discographyLayout: s.discographyLayout,
     accentColor: s.accentColor,
     appFont: s.appFont,
   };
@@ -741,6 +746,9 @@ const DEFAULTS = {
   // Grid by default: the cover is what identifies an album, and that's how the
   // screen is already rendered.
   browseAlbumsLayout: 'grid' as ListLayout,
+  // List by default: that's how the discography has always been shown, and the
+  // toggle is right there for whoever prefers blocks.
+  discographyLayout: 'list' as ListLayout,
   accentColor: DEFAULT_ACCENT,
   appFont: 'system' as AppFont,
 };
@@ -1050,6 +1058,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setDiscographyLayout: (discographyLayout) => {
+    set({ discographyLayout });
+    persist(snapshot(get));
+  },
+
   setAccentColor: (accentColor) => {
     applyAccent(accentColor);
     set({ accentColor });
@@ -1163,6 +1176,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           libraryLayout: ListLayout;
           browseArtistsLayout: ListLayout;
           browseAlbumsLayout: ListLayout;
+          discographyLayout: ListLayout;
           accentColor: string;
           appFont: AppFont;
         }>;
@@ -1404,6 +1418,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (parsed.browseAlbumsLayout === 'list' || parsed.browseAlbumsLayout === 'grid') {
           set({ browseAlbumsLayout: parsed.browseAlbumsLayout });
+        }
+        if (parsed.discographyLayout === 'list' || parsed.discographyLayout === 'grid') {
+          set({ discographyLayout: parsed.discographyLayout });
         }
         if (typeof parsed.accentColor === 'string' && /^#[0-9a-f]{6}$/i.test(parsed.accentColor)) {
           set({ accentColor: parsed.accentColor });
