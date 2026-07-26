@@ -614,21 +614,86 @@ export async function getStarred(): Promise<Starred> {
   };
 }
 
+/** Lowercase and without accents, so "nino" finds "Niño". */
+function norm(str: string): string {
+  return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+/**
+ * How well a name matches, lower is better: 0 starts with the query, 1 contains
+ * it, null doesn't match. Deeper tiers (2, 3…) are for things that only match
+ * through something they contain.
+ */
+function rank(name: string | undefined, q: string): number | null {
+  const n = norm(name ?? '');
+  if (!n) return null;
+  const at = n.indexOf(q);
+  return at < 0 ? null : at === 0 ? 0 : 1;
+}
+
+/** How many of each kind come back, like the server's own caps. */
+const SEARCH_MAX = 20;
+
+/** Keeps what matched, best first, then alphabetically within a tier. */
+function ranked<T>(items: T[], score: (x: T) => number | null, name: (x: T) => string): T[] {
+  return items
+    .map((item) => ({ item, score: score(item) }))
+    .filter((x): x is { item: T; score: number } => x.score !== null)
+    .sort((a, b) => a.score - b.score || name(a.item).localeCompare(name(b.item)))
+    .map((x) => x.item)
+    .slice(0, SEARCH_MAX);
+}
+
+/**
+ * Local search, the twin of the server's `search3`.
+ *
+ * Each row is ranked by ITS OWN name first: an artist called "Artificial Brain"
+ * must come before an artist who merely has a song with "artificial" in the
+ * title. This used to derive artists and albums from whatever songs matched, so
+ * a song title decided who showed up in the artists row and in what order —
+ * nothing like what the server returns for the same query (issue #55).
+ */
 export async function search(query: string): Promise<SearchResult> {
   const c = await ensureCatalog();
-  if (!c) return { artists: [], albums: [], songs: [] };
-  const q = query.toLowerCase();
-  const songs = c.songs.filter(
-    (s) =>
-      s.title.toLowerCase().includes(q) ||
-      (s.artist?.toLowerCase() ?? '').includes(q) ||
-      (s.album?.toLowerCase() ?? '').includes(q),
+  const q = norm(query.trim());
+  if (!c || !q) return { artists: [], albums: [], songs: [] };
+
+  // Songs: by title, then the ones reached through their artist or album.
+  const songs = ranked(
+    c.songs,
+    (s) => rank(s.title, q) ?? (rank(s.artist, q) !== null || rank(s.album, q) !== null ? 2 : null),
+    (s) => s.title,
   );
-  const albumIds = new Set(songs.map((s) => s.albumId).filter(Boolean));
-  const albums = c.albums.filter((a) => a.id && albumIds.has(a.id)).map(toAlbum);
-  const artistIds = new Set(songs.map((s) => normKey(s.artist || '')));
-  const artists = c.artists.filter((a) => artistIds.has(a.id)).map(toArtist);
-  return { artists, albums: albums.slice(0, 20), songs: songs.slice(0, 20) };
+  const titleHits = c.songs.filter((s) => rank(s.title, q) !== null);
+  const albumsWithHit = new Set(titleHits.map((s) => s.albumId).filter(Boolean));
+  const artistsWithSongHit = new Set(titleHits.map((s) => normKey(s.artist || '')));
+
+  // Albums: by name, then by their artist, then by holding a matching song.
+  const albums = ranked(
+    c.albums,
+    (a) =>
+      rank(a.name, q) ??
+      (rank(a.artist, q) !== null ? 2 : a.id && albumsWithHit.has(a.id) ? 3 : null),
+    (a) => a.name,
+  );
+  const artistsWithAlbumHit = new Set(
+    c.albums.filter((a) => rank(a.name, q) !== null).map((a) => normKey(a.artist || '')),
+  );
+
+  // Artists: by name, then by having a matching album, then a matching song.
+  const artists = ranked(
+    c.artists,
+    (a) =>
+      rank(a.name, q) ??
+      (artistsWithAlbumHit.has(a.id) ? 2 : artistsWithSongHit.has(a.id) ? 3 : null),
+    (a) => a.name,
+  );
+
+  return {
+    artists: artists.map(toArtist),
+    albums: albums.map(toAlbum),
+    songs,
+  };
 }
 
 /**
