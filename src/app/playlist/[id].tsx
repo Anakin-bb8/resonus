@@ -26,13 +26,11 @@ import { PlaylistReorder } from '@/components/PlaylistReorder';
 import { SheetModal } from '@/components/SheetModal';
 import { TrackListSkeleton } from '@/components/TrackListSkeleton';
 import { TrackListView } from '@/components/TrackListView';
-import { useCanShare } from '@/hooks/useCanShare';
 import { useDownloadMessage } from '@/hooks/useDownloadMessage';
 import { useServerCover } from '@/hooks/useServerCover';
 import { useSongSort } from '@/hooks/useSongSort';
 import { songsLabel, useT } from '@/i18n';
 import { formatTotalDuration } from '@/lib/format';
-import { shareItem } from '@/lib/share';
 import { useAuthStore } from '@/store/auth';
 import { useAutoDownloads } from '@/store/autoDownloads';
 import { groupDownloadState, useDownloads } from '@/store/downloads';
@@ -51,7 +49,6 @@ export default function PlaylistScreen() {
   const showListArtwork = useSettings((s) => s.showListArtwork);
   const queryClient = useQueryClient();
   const toast = useToast((s) => s.show);
-  const canShare = useCanShare();
   const playing = usePlayerStore(currentSong);
   const playQueue = usePlayerStore((s) => s.playQueue);
   const addToQueue = usePlayerStore((s) => s.addToQueue);
@@ -319,15 +316,6 @@ export default function PlaylistScreen() {
         download={
           !offline && data.songs.length > 0
             ? { ...download, onPress: onDownloadPress }
-            : undefined
-        }
-        onShare={
-          canShare && data.songs.length > 0
-            ? () => {
-                void shareItem(id, data.playlist.name).then((ok) => {
-                  if (!ok) toast(t('Couldn’t create the link'));
-                });
-              }
             : undefined
         }
         emptyState={

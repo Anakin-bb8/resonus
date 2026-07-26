@@ -13,8 +13,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { coverArtUrl, getAlbum, getPlaylist, star, unstar, type Song } from '@/api/data';
 import { useBottomSheetAnim } from '@/hooks/useBottomSheetAnim';
+import { useCanShare } from '@/hooks/useCanShare';
 import { useDownloadMessage } from '@/hooks/useDownloadMessage';
 import { queryClient } from '@/lib/query';
+import { shareItem } from '@/lib/share';
 import { songsLabel, useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
 import { useDownloads } from '@/store/downloads';
@@ -85,6 +87,7 @@ export function MediaMenuSheet() {
   const downloadPlaylist = useDownloads((s) => s.downloadPlaylist);
   const deleteSongs = useDownloads((s) => s.deleteSongs);
   const files = useDownloads((s) => s.files);
+  const canShare = useCanShare();
   const hasDownloads = Object.keys(files).length > 0;
 
   if (!item) return null;
@@ -217,6 +220,21 @@ export function MediaMenuSheet() {
             icon="trash-outline"
             label={t('Delete downloads')}
             onPress={() => setConfirmDelete(true)}
+          />
+        ) : null}
+        {/* Moved here from the header row, which had grown to four icons for
+            something used now and then. Covers the long press on a card too,
+            which never had it. */}
+        {canShare ? (
+          <Action
+            icon="share-social-outline"
+            label={t('Share')}
+            onPress={() => {
+              close();
+              void shareItem(album ? album.id : playlist!.id, name).then((ok) => {
+                if (!ok) toast(t('Couldn’t create the link'));
+              });
+            }}
           />
         ) : null}
         {album ? (

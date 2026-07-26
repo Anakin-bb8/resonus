@@ -99,8 +99,6 @@ interface Props {
     progress: number;
     onPress: () => void;
   };
-  /** If provided, shows a button to share the album/playlist as a link. */
-  onShare?: () => void;
   /** If provided, shows a ⋯ button. */
   onMenu?: () => void;
   /** If provided, each song's menu allows removing it from this playlist. */
@@ -163,7 +161,6 @@ export function TrackListView({
   discHeaders,
   favorite,
   download,
-  onShare,
   onMenu,
   playlistId,
   playlistIndices,
@@ -540,16 +537,6 @@ export function TrackListView({
                         color={download.status === 'done' ? colors.accent : colors.textSecondary}
                       />
                     )}
-                  </Pressable>
-                ) : null}
-                {onShare ? (
-                  <Pressable
-                    hitSlop={10}
-                    accessibilityRole="button"
-                    accessibilityLabel={t('Share')}
-                    onPress={onShare}
-                  >
-                    <Ionicons name="share-social-outline" size={24} color={colors.textSecondary} />
                   </Pressable>
                 ) : null}
                 {onSort ? (

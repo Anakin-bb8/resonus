@@ -15,12 +15,10 @@ import { MoreFromArtist } from '@/components/MoreFromArtist';
 import { PlaylistPickerSheet } from '@/components/PlaylistPickerSheet';
 import { TrackListSkeleton } from '@/components/TrackListSkeleton';
 import { TrackListView } from '@/components/TrackListView';
-import { useCanShare } from '@/hooks/useCanShare';
 import { useDownloadMessage } from '@/hooks/useDownloadMessage';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { songsLabel, useT } from '@/i18n';
 import { formatTotalDuration } from '@/lib/format';
-import { shareItem } from '@/lib/share';
 import { useAuthStore } from '@/store/auth';
 import { groupDownloadState, useDownloads } from '@/store/downloads';
 import { useMediaMenu } from '@/store/mediaMenu';
@@ -136,7 +134,6 @@ export default function AlbumScreen() {
   // The heart reads from the central favorites list (refreshes on starring);
   // `data.album.starred` from the detail becomes stale after star/unstar.
   const favAlbumIds = useFavoriteIds(canFetch, 'album');
-  const canShare = useCanShare();
 
   const { data: fresh, isLoading, isError, refetch } = useQuery({
     queryKey: ['album', id],
@@ -248,15 +245,6 @@ export default function AlbumScreen() {
           starred: favAlbumIds ? favAlbumIds.has(data.album.id) : !!data.album.starred,
         }}
         download={!offline ? { ...download, onPress: onDownloadPress } : undefined}
-        onShare={
-          canShare
-            ? () => {
-                void shareItem(data.album.id, data.album.name).then((ok) => {
-                  if (!ok) toast(t('Couldn’t create the link'));
-                });
-              }
-            : undefined
-        }
         footer={
           data.album.artistId || labelText ? (
             <>
