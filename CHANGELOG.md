@@ -9,6 +9,8 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.5.5] - 2026-07-26
+
 ### Added
 
 - Share a song, album or playlist as a link, on servers that allow it.
@@ -27,6 +29,7 @@ Releases before 0.2.1 are only listed on the
 - Grid or list in an artist's full discography, remembered.
 - "Play discography" in chronological order, from the artist's ⋯ menu.
 - "Good night" as a greeting in the small hours.
+- The Russian translation is complete again.
 
 ### Changed
 
@@ -77,6 +80,11 @@ Releases before 0.2.1 are only listed on the
 - The cover and controls no longer jump when the player opens.
 - The progress bar recovers after a track changes with the app in the
   background.
+- Casting a lossless track to a speaker that only takes MP3 — Sonos among
+  them — no longer fails outright, and a speaker that waits to be told to
+  play is now told, instead of sitting silent while the app showed it
+  playing.
+- The same speaker no longer appears twice in the cast list.
 
 ## [0.5.4] - 2026-07-24
 
