@@ -1199,3 +1199,44 @@ export async function hasJukeboxRole(auth: SubsonicAuth): Promise<boolean> {
     return false;
   }
 }
+
+// ── Sharing ─────────────────────────────────────────────────────────────────
+
+/**
+ * Public link to a song, album or playlist, created on the server.
+ *
+ * How long it lives and whether it can be reached from outside is the server's
+ * business (Navidrome: `ND_ENABLESHARING` and `ND_DEFAULTSHAREEXPIRATION`), so
+ * no expiry is sent: whoever runs the server already decided.
+ */
+export async function createShare(
+  auth: SubsonicAuth,
+  id: string,
+  description?: string,
+): Promise<string> {
+  const res = await request<{ shares?: { share?: { id: string; url?: string }[] } }>(
+    auth,
+    'createShare.view',
+    { id, description },
+  );
+  const url = res.shares?.share?.[0]?.url;
+  if (!url) throw new SubsonicRequestError('The server did not return a link', false);
+  return url;
+}
+
+/**
+ * Can this user create shares? From the `shareRole` of `getUser`, the same way
+ * jukebox is detected. Any failure (endpoint missing, sharing disabled on the
+ * server, no permission) counts as "no": better no button than a button that
+ * always fails.
+ */
+export async function hasShareRole(auth: SubsonicAuth): Promise<boolean> {
+  try {
+    const res = await request<{ user?: { shareRole?: boolean } }>(auth, 'getUser.view', {
+      username: auth.username,
+    });
+    return res.user?.shareRole === true;
+  } catch {
+    return false;
+  }
+}

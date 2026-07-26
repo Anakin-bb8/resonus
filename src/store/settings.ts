@@ -290,6 +290,7 @@ export type SongMenuActionKey =
   | 'favorite'
   | 'rating'
   | 'download'
+  | 'share'
   | 'sleepTimer';
 
 /**
@@ -310,6 +311,7 @@ const SONG_MENU_ACTION_KEYS: SongMenuActionKey[] = [
   'favorite',
   'rating',
   'download',
+  'share',
   'sleepTimer',
 ];
 
@@ -330,6 +332,7 @@ export const DEFAULT_SONG_MENU_ACTIONS: SongMenuActions = {
   favorite: true,
   rating: true,
   download: true,
+  share: true,
   sleepTimer: true,
 };
 

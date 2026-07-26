@@ -31,8 +31,10 @@ import {
   unstar,
   type Song,
 } from '@/api/data';
+import { useCanShare } from '@/hooks/useCanShare';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { artistTargets } from '@/lib/artistNav';
+import { shareItem } from '@/lib/share';
 import { normKey } from '@/lib/localLibrary';
 import { useArtistPicker } from '@/store/artistPicker';
 import { useAuthStore } from '@/store/auth';
@@ -111,6 +113,7 @@ export function SongMenuSheet() {
   // Visible actions (Settings → Appearance → Song menu). Added to each one's
   // conditions: hiding it doesn't re-enable what already didn't apply.
   const menu = useSettings((s) => s.songMenuActions);
+  const canShare = useCanShare();
   const serverType = useAuthStore((s) => s.auth?.serverType);
   const rateSong = usePlayerStore((s) => s.rateSong);
   const setSleepTimer = usePlayerStore((s) => s.setSleepTimer);
@@ -516,6 +519,21 @@ export function SongMenuSheet() {
                       void downloadSong(song);
                       toast(t('Downloading…'));
                       close();
+                    }}
+                  />
+                ) : null}
+                {/* Only with a server that mints share links (`useCanShare`),
+                    and never for a station: its `url` is not the server's to
+                    share. */}
+                {menu.share && canShare && !song.url ? (
+                  <Action
+                    icon="share-social-outline"
+                    label={t('Share')}
+                    onPress={() => {
+                      close();
+                      void shareItem(song.id, song.title).then((ok) => {
+                        if (!ok) toast(t("Couldn't create the link"));
+                      });
                     }}
                   />
                 ) : null}

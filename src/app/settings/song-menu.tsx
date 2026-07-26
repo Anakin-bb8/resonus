@@ -11,6 +11,7 @@
 import { ScrollView } from 'react-native';
 
 import { SettingsPage, settingsStyles, SwitchList } from '@/components/SettingsUI';
+import { useCanShare } from '@/hooks/useCanShare';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
 import { useSettings, type SongMenuActionKey } from '@/store/settings';
@@ -27,6 +28,7 @@ const LABEL: Record<SongMenuActionKey, string> = {
   favorite: 'Add to favorites',
   rating: 'Rate',
   download: 'Download',
+  share: 'Share',
   sleepTimer: 'Sleep timer',
 };
 
@@ -42,6 +44,7 @@ const ORDER: SongMenuActionKey[] = [
   'favorite',
   'rating',
   'download',
+  'share',
   'sleepTimer',
 ];
 
@@ -50,10 +53,16 @@ export default function SongMenuSettings() {
   const offline = useAuthStore((s) => s.offline);
   const songMenuActions = useSettings((s) => s.songMenuActions);
   const setSongMenuAction = useSettings((s) => s.setSongMenuAction);
+  const canShare = useCanShare();
   // «Start mix» and «Rate» don't exist locally (similar tracks and rating are
   // server-side): their toggles would promise actions the menu never shows.
-  // «Download» stays: locally it controls «Remove download».
-  const order = offline ? ORDER.filter((k) => k !== 'mix' && k !== 'rating') : ORDER;
+  // «Download» stays: locally it controls «Remove download». «Share» goes for
+  // the same reason whenever the server doesn't offer sharing at all.
+  const order = ORDER.filter((key) => {
+    if (offline && (key === 'mix' || key === 'rating')) return false;
+    if (key === 'share' && !canShare) return false;
+    return true;
+  });
 
   return (
     <SettingsPage title={t('Song menu')}>
