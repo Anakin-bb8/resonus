@@ -845,14 +845,21 @@ function dedupeById<T extends { id: string }>(items: T[]): T[] {
   return out;
 }
 
-/** Fetches the full list of albums by paginating to the end. */
-async function fetchAllAlbums(
+/**
+ * How deep into each library a page is served from, rounded up so the pages of
+ * an infinite scroll share one fetch instead of triggering one each.
+ */
+const MERGE_DEPTH = 100;
+
+/** First `depth` albums of one library, in chunks the endpoint accepts. */
+async function fetchTopAlbums(
+  depth: number,
   fetchPage: (size: number, offset: number) => Promise<Subsonic.Album[]>,
 ): Promise<Subsonic.Album[]> {
-  const PAGE = 500;
+  const PAGE = 500; // the endpoint's own cap
   const out: Subsonic.Album[] = [];
-  for (let offset = 0; offset <= 20000; offset += PAGE) {
-    const chunk = await fetchPage(PAGE, offset);
+  for (let offset = 0; offset < depth; offset += PAGE) {
+    const chunk = await fetchPage(Math.min(PAGE, depth - offset), offset);
     out.push(...chunk);
     if (chunk.length < PAGE) break;
   }
@@ -944,10 +951,18 @@ async function mergedAlbumPage(
   offset: number,
   fetchOne: (id: string, size: number, offset: number) => Promise<Subsonic.Album[]>,
 ): Promise<Subsonic.Album[]> {
-  const cacheKey = `${cacheBase}|${profileKeyOf(a)}|${ids.join(',')}`;
+  // Only as deep as the page needs. Every library comes back sorted the same
+  // way, so the first N of each is guaranteed to contain the first N of the
+  // merge — there is no need to walk them whole, which is what this did: to
+  // show twenty albums on Home it paginated every library to its end, one
+  // request per 500 albums, per library, on every shelf (#50).
+  const depth = Math.ceil((offset + size) / MERGE_DEPTH) * MERGE_DEPTH;
+  const cacheKey = `${cacheBase}|${profileKeyOf(a)}|${ids.join(',')}|${depth}`;
   let all = readAlbumCache<Subsonic.Album>(cacheKey);
   if (!all) {
-    const perFolder = await Promise.all(ids.map((id) => fetchAllAlbums((s, o) => fetchOne(id, s, o))));
+    const perFolder = await Promise.all(
+      ids.map((id) => fetchTopAlbums(depth, (s, o) => fetchOne(id, s, o))),
+    );
     all = mergeAlbums(perFolder, type);
     writeAlbumCache(cacheKey, all);
   }
