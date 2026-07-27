@@ -1,11 +1,8 @@
 {
-  "Albums kept": "Àlbums desats",
+  "{n} playlists": "{n} llistes",
   "Cleaned up from {size}.": "S'ha netejat des de {size}.",
   "Library copy": "Còpia de la biblioteca",
-  "Offline data": "Dades sense connexió",
-  "Playlists kept": "Llistes desades",
   "Turn on auto-download?": "Vols activar la descàrrega automàtica?",
-  "What is kept on the device so your library works without a connection. Useful when reporting a problem.": "El que es desa al dispositiu perquè la teva biblioteca funcioni sense connexió. Útil quan informes d'un problema.",
   "{msg} It will keep downloading songs added to this playlist later.": "{msg} Continuarà descarregant les cançons que afegeixis a aquesta llista més endavant.",
   "Turn on": "Activa",
   "Delete downloads": "Elimina les descàrregues",

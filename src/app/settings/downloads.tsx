@@ -17,10 +17,11 @@ import {
   settingsStyles,
   SwitchList,
 } from '@/components/SettingsUI';
-import { songsLabel, useT } from '@/i18n';
+import { albumsLabel, songsLabel, useT } from '@/i18n';
 import { formatBytes } from '@/lib/format';
 import { useAuthStore } from '@/store/auth';
 import { useDownloads } from '@/store/downloads';
+import { useLibraryMirror, type MirrorStats } from '@/store/libraryMirror';
 import { BITRATE_OPTIONS, TRANSCODE_FORMATS, useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
 import { colors, fontSize, spacing } from '@/theme';
@@ -77,12 +78,22 @@ export default function DownloadsSettings() {
   const [usage, setUsage] = useState<number | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const count = Object.keys(files).length;
+  // The other thing kept for offline use, and the one nobody can see: the copy
+  // of the library. Reported rather than managed — it is what turns "the app
+  // feels slow" into a number someone can put in an issue (#50).
+  const [mirror, setMirror] = useState<MirrorStats | null>(null);
 
   useEffect(() => {
     let active = true;
     usageBytes().then((n) => {
       if (active) setUsage(n);
     });
+    void useLibraryMirror
+      .getState()
+      .stats()
+      .then((s) => {
+        if (active) setMirror(s);
+      });
     return () => {
       active = false;
     };
@@ -183,6 +194,17 @@ export default function DownloadsSettings() {
             </>
           );
         })()}
+        <Text style={styles.mirrorLine}>
+          {t('Library copy')} ·{' '}
+          {mirror
+            ? `${formatBytes(mirror.bytes)} · ${albumsLabel(mirror.albums, lang)} · ${t('{n} playlists', { n: mirror.playlists })}`
+            : '…'}
+        </Text>
+        {mirror?.prunedFrom ? (
+          <Text style={styles.legendText}>
+            {t('Cleaned up from {size}.', { size: formatBytes(mirror.prunedFrom) })}
+          </Text>
+        ) : null}
         {count > 0 ? (
           <SettingRow
             icon="trash-outline"
@@ -228,6 +250,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  // Same muted voice as the bar legend, with air above it: it belongs to the
+  // storage section, not to the delete row it sits next to.
+  mirrorLine: { color: colors.textSecondary, fontSize: fontSize.xs, marginBottom: spacing.xs },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
   legendText: { color: colors.textSecondary, fontSize: fontSize.xs },
 });

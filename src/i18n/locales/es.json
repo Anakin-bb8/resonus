@@ -1,11 +1,8 @@
 {
-  "Albums kept": "Álbumes guardados",
+  "{n} playlists": "{n} listas",
   "Cleaned up from {size}.": "Se limpió desde {size}.",
   "Library copy": "Copia de la biblioteca",
-  "Offline data": "Datos sin conexión",
-  "Playlists kept": "Listas guardadas",
   "Turn on auto-download?": "¿Activar la descarga automática?",
-  "What is kept on the device so your library works without a connection. Useful when reporting a problem.": "Lo que se guarda en el dispositivo para que tu biblioteca funcione sin conexión. Útil al informar de un problema.",
   "{msg} It will keep downloading songs added to this playlist later.": "{msg} Seguirá descargando las canciones que añadas a esta lista más adelante.",
   "Turn on": "Activar",
   "Delete downloads": "Eliminar descargas",

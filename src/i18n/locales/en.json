@@ -1,11 +1,8 @@
 {
-  "Albums kept": "Albums kept",
+  "{n} playlists": "{n} playlists",
   "Cleaned up from {size}.": "Cleaned up from {size}.",
   "Library copy": "Library copy",
-  "Offline data": "Offline data",
-  "Playlists kept": "Playlists kept",
   "Turn on auto-download?": "Turn on auto-download?",
-  "What is kept on the device so your library works without a connection. Useful when reporting a problem.": "What is kept on the device so your library works without a connection. Useful when reporting a problem.",
   "{msg} It will keep downloading songs added to this playlist later.": "{msg} It will keep downloading songs added to this playlist later.",
   "Turn on": "Turn on",
   "Delete downloads": "Delete downloads",
