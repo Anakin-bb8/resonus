@@ -63,11 +63,13 @@ const ACTION_H = spacing.md * 2 + 24;
  *
  * The half row is the point: a row cut by the bottom edge is what tells you
  * there's more below, which a clean cut wouldn't (Spotify does the same). The
- * screen fraction caps it so the sheet doesn't swallow a short phone whole.
+ * screen fraction caps it so the sheet doesn't swallow a short phone whole; it
+ * goes up with the row count, or it would take the half row's place as the
+ * limit and cut wherever it happened to land.
  */
 const ACTIONS_MAX_H = Math.min(
-  ACTION_H * 8.5,
-  Math.round(Dimensions.get('window').height * 0.52),
+  ACTION_H * 9.5,
+  Math.round(Dimensions.get('window').height * 0.58),
 );
 
 /**
