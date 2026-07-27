@@ -12,11 +12,18 @@
 import * as data from '@/api/data';
 import { type Album, type Artist, type Song } from '@/api/subsonic';
 import { tg } from '@/i18n';
+import { queryClient } from '@/lib/query';
 import { usePlayerStore } from '@/store/player';
 import { type CarNode, type CarTree } from './carAuto';
 
 const ROOT = 'root';
 const HOME_SIZE = 15;
+
+/** An album's tracklist, shared with the album screen's own query rather than
+ *  fetched a second time for the car. */
+function albumDetail(id: string): Promise<{ songs: Song[] }> {
+  return queryClient.fetchQuery({ queryKey: ['album', id], queryFn: () => data.getAlbum(id) });
+}
 const CONCURRENCY = 4;
 /**
  * Ceilings for what gets fetched ahead of a car that may never be plugged in.
@@ -125,17 +132,25 @@ export async function buildBrowseTree(deep = true): Promise<CarTree> {
     playable: false,
     contentStyle: 'grid',
   }));
+  // Through the query cache, with the keys the screens use: Home asks for these
+  // very lists, and the car was asking again for its own copy on every launch.
+  // Whoever gets there first pays; the other reads it.
   await Promise.all(
     HOME_SECTIONS.map(async (s) => {
-      const albums = await data.getAlbumList(s.type, HOME_SIZE).catch(() => [] as Album[]);
+      const albums = await queryClient
+        .fetchQuery({
+          queryKey: ['albumList', s.type],
+          queryFn: () => data.getAlbumList(s.type, HOME_SIZE),
+        })
+        .catch(() => [] as Album[]);
       tree[s.id] = albums.map(albumNode);
       albums.forEach((a) => albumIds.add(a.id));
     }),
   );
 
   // Library → Favorites (songs) + Starred albums + Starred artists.
-  const starred = await data
-    .getStarred()
+  const starred = await queryClient
+    .fetchQuery({ queryKey: ['starred'], queryFn: () => data.getStarred() })
     .catch(() => ({ songs: [] as Song[], albums: [] as Album[], artists: [] as Artist[] }));
 
   tree['tab:library'] = [
@@ -161,7 +176,7 @@ export async function buildBrowseTree(deep = true): Promise<CarTree> {
   // each list; the rest can be empty until someone asks for it (#50).
   await mapConcurrent(Array.from(albumIds).slice(0, MAX_PREFETCH_ALBUMS), CONCURRENCY, async (id) => {
     try {
-      const { songs } = await data.getAlbum(id);
+      const { songs } = await albumDetail(id);
       const parent = `album:${id}`;
       tree[parent] = songs.map((s) => songNode(s, parent));
       parentTracks.set(parent, tree[parent].map((n) => n.id));
@@ -183,7 +198,7 @@ export async function buildBrowseTree(deep = true): Promise<CarTree> {
         const ap = `album:${a.id}`;
         if (!tree[ap]) {
           try {
-            const { songs } = await data.getAlbum(a.id);
+            const { songs } = await albumDetail(a.id);
             tree[ap] = songs.map((s) => songNode(s, ap));
             parentTracks.set(ap, tree[ap].map((n) => n.id));
           } catch {
@@ -238,7 +253,7 @@ export async function handleBrowsePlay(mediaId: string, parentId?: string): Prom
   const id = rest.join(':');
   let songs: Song[] = [];
   try {
-    if (prefix === 'album') songs = (await data.getAlbum(id)).songs;
+    if (prefix === 'album') songs = (await albumDetail(id)).songs;
     else if (prefix === 'playlist') songs = (await data.getPlaylist(id)).songs;
     else if (prefix === 'favorites') songs = (await data.getStarred()).songs;
     else if (prefix === 'artist') {
