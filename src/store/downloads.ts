@@ -447,6 +447,12 @@ interface DownloadsState {
   dlBitRates: Record<string, number>;
   /** Progress per ongoing group: `album:<id>` / `playlist:<id>` / `artist:<id>`. */
   active: Record<string, GroupProgress>;
+  /**
+   * `files` has been read from disk. Until then it is empty, which reads the
+   * same as "nothing is downloaded" — and whoever decides something by that
+   * (see the library mirror) would decide it wrong.
+   */
+  hydrated: boolean;
   hydrate: () => Promise<void>;
   downloadAlbum: (album: Album, songs: Song[]) => Promise<void>;
   downloadPlaylist: (playlist: Playlist, songs: Song[]) => Promise<void>;
@@ -626,6 +632,7 @@ export const useDownloads = create<DownloadsState>((set, get) => {
     files: {},
     dlBitRates: {},
     active: {},
+    hydrated: false,
 
     hydrate: async () => {
       const files: Record<string, string> = {};
@@ -637,7 +644,7 @@ export const useDownloads = create<DownloadsState>((set, get) => {
           if (s.dlBitRate) dlBitRates[s.id] = s.dlBitRate;
         }
       }
-      set({ files, dlBitRates });
+      set({ files, dlBitRates, hydrated: true });
     },
 
     downloadAlbum: async (album, songs) => {

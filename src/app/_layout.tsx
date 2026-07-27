@@ -78,13 +78,13 @@ export default function RootLayout() {
     void useLastPlayed.getState().hydrate();
     void usePins.getState().hydrate();
     void removeLegacyRadioCovers();
-    void useDownloads.getState().hydrate();
+    const downloadsReady = useDownloads.getState().hydrate();
     void useAutoDownloads.getState().hydrate();
     // Mirror + outbox for offline (reloaded when switching profiles). After
     // loading from disk, if we're offline we refresh the Library: covers cold
     // starts where a query could resolve before the mirror is in memory and
     // would stay empty until manually reloaded.
-    void Promise.all([
+    const mirrorReady = Promise.all([
       useLibraryMirror.getState().load(),
       useOfflineQueue.getState().load(),
     ]).then(() => {
@@ -92,6 +92,12 @@ export default function RootLayout() {
         void queryClient.invalidateQueries({ queryKey: ['playlists'] });
         void queryClient.invalidateQueries({ queryKey: ['starred'] });
       }
+    });
+    // Clearing out a mirror grown before there was a rule for what belongs in
+    // it. After the downloads, never before: an album whose songs are on disk
+    // is worth keeping, and until they're hydrated it doesn't look like it.
+    void Promise.all([downloadsReady, mirrorReady]).then(() => {
+      useLibraryMirror.getState().prune();
     });
     // Equalizer: reads device capabilities and applies saved settings.
     void useEqualizer.getState().hydrate();

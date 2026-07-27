@@ -340,6 +340,18 @@ export function getPlaylists(): Promise<Subsonic.Playlist[]> {
 
 /** Prevents overlapping prefetch runs (getPlaylists can fire multiple times). */
 let prefetchingPlaylists = false;
+/**
+ * And a cooldown between runs. `getPlaylists` fires on Home and on the Library,
+ * so this ran on every visit; it skips what hasn't changed, which is free when
+ * nothing does, but a server with smart playlists moves `changed` on its own
+ * and there the whole tracklist came down again and again (#50).
+ */
+const PREFETCH_COOLDOWN_MS = 10 * 60 * 1000;
+let lastPlaylistPrefetch = 0;
+/** Tracklists fetched per run: the rest wait for the next one. Filling the
+ *  mirror is a background convenience, not something worth a burst of requests
+ *  while the app is being used. */
+const PREFETCH_PER_RUN = 25;
 
 /**
  * In the background, caches the tracklist of server playlists for offline
@@ -349,17 +361,21 @@ let prefetchingPlaylists = false;
  */
 async function prefetchPlaylistDetails(list: Subsonic.Playlist[]): Promise<void> {
   if (prefetchingPlaylists) return;
+  if (Date.now() - lastPlaylistPrefetch < PREFETCH_COOLDOWN_MS) return;
   const a = useAuthStore.getState().auth;
   if (!a) return;
   prefetchingPlaylists = true;
+  lastPlaylistPrefetch = Date.now();
   try {
     await loadMirror();
     const cached = useLibraryMirror.getState().data.playlistTracks ?? {};
     // Only those missing or changed on the server (by `changed`).
-    const stale = list.filter((p) => {
-      const prev = cached[p.id]?.playlist;
-      return !prev || (p.changed != null && prev.changed !== p.changed);
-    });
+    const stale = list
+      .filter((p) => {
+        const prev = cached[p.id]?.playlist;
+        return !prev || (p.changed != null && prev.changed !== p.changed);
+      })
+      .slice(0, PREFETCH_PER_RUN);
     const results: { id: string; playlist: Subsonic.Playlist; songs: Subsonic.Song[] }[] = [];
     const CONCURRENCY = 4;
     for (let i = 0; i < stale.length; i += CONCURRENCY) {

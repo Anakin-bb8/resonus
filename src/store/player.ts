@@ -1619,12 +1619,27 @@ interface StoredQueue {
   sourceHref?: string | null;
 }
 
-function saveQueueLocal() {
+/**
+ * Something other than the position changed since the last write. Set by the
+ * store subscription at the end of this file.
+ *
+ * The periodic sync runs every twenty seconds while playing, and rewriting up
+ * to 500 whole songs into SecureStore, which encrypts them, to move one number
+ * is exactly the kind of work that shows up as a dropped tap (#50). In the
+ * foreground it now writes only when the queue itself moved; in the background
+ * it writes as before, since the position does keep advancing there and nobody
+ * is waiting on the JS thread.
+ */
+let queueDirty = true;
+
+function saveQueueLocal(force = false) {
   const key = queueStorageKey();
   if (!key) return;
   const { queue, index, positionSec, radioMode, radioSeed, source, sourceHref } =
     usePlayerStore.getState();
   if (queue.length === 0) return;
+  if (!force && !queueDirty && AppState.currentState === 'active') return;
+  queueDirty = false;
   // Size cap as a precaution for SecureStore; 500 songs is more than enough.
   const payload: StoredQueue = {
     queue: queue.slice(0, 500),
@@ -1657,8 +1672,8 @@ let syncInterval: ReturnType<typeof setInterval> | null = null;
 let appStateAttached = false;
 
 /** Saves the queue on this device and, if there is a session, on the server. */
-function syncQueueNow() {
-  saveQueueLocal();
+function syncQueueNow(force = false) {
+  saveQueueLocal(force);
   const auth = useAuthStore.getState().auth;
   if (!auth) return;
   const { queue, index, positionSec } = usePlayerStore.getState();
@@ -1690,7 +1705,9 @@ function attachAppState() {
   appStateAttached = true;
   AppState.addEventListener('change', (st) => {
     if (st !== 'active') {
-      syncQueueNow();
+      // Leaving the foreground is the last chance to write down where playback
+      // was, so this one is not up for skipping.
+      syncQueueNow(true);
       return;
     }
     // Back to foreground. The native `playbackStatusUpdate` heartbeat that feeds
@@ -2546,5 +2563,16 @@ usePlayerStore.subscribe((st, prev) => {
     st.sleepAtSongEnd !== prev.sleepAtSongEnd
   ) {
     scheduleNextSource();
+  }
+  // What the saved queue holds, position aside (see `queueDirty`).
+  if (
+    st.queue !== prev.queue ||
+    st.index !== prev.index ||
+    st.source !== prev.source ||
+    st.sourceHref !== prev.sourceHref ||
+    st.radioMode !== prev.radioMode ||
+    st.radioSeed !== prev.radioSeed
+  ) {
+    queueDirty = true;
   }
 });
