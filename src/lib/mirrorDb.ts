@@ -42,27 +42,46 @@ CREATE TABLE IF NOT EXISTS songs (
 );
 `;
 
-const DB_NAME = 'mirror.db';
+/**
+ * One database per profile, named after it.
+ *
+ * The JSON was one file per profile and this has to be too: they all live in
+ * the same folder, so a single `mirror.db` would have been every account's
+ * library in one place, and whichever migrated first would have been the one
+ * everybody saw.
+ */
+function dbName(profile: string): string {
+  return `mirror-${profile}.db`;
+}
+
+/** The JSON this profile is coming from, if it hasn't been migrated yet. */
+function jsonFile(dir: string, profile: string): string {
+  return `${dir}${profile}.json`;
+}
 
 let handle: Promise<SQLite.SQLiteDatabase> | null = null;
 let handleFor = '';
 
 /**
- * Opens the profile's mirror, migrating its JSON the first time.
+ * Opens a profile's mirror, migrating its JSON the first time.
  *
- * `dir` is the folder that holds it and `file` the old JSON, both decided by
- * the caller, which is the one that knows how a profile maps to a file.
+ * `dir` is the folder they all share and `profile` the name that tells them
+ * apart, which is what the caller knows.
  */
-export function mirrorDb(dir: string, file: string): Promise<SQLite.SQLiteDatabase> {
-  if (handle && handleFor === file) return handle;
-  handleFor = file;
+export function mirrorDb(dir: string, profile: string): Promise<SQLite.SQLiteDatabase> {
+  if (handle && handleFor === profile) return handle;
+  handleFor = profile;
   handle = (async () => {
     await FileSystem.makeDirectoryAsync(dir, { intermediates: true }).catch(() => {});
     // SQLite joins directory and name as plain text: the `file://` that the
     // file system module speaks means nothing to it.
-    const db = await SQLite.openDatabaseAsync(DB_NAME, {}, dir.replace(/^file:\/\//, ''));
+    const db = await SQLite.openDatabaseAsync(
+      dbName(profile),
+      {},
+      dir.replace(/^file:\/\//, ''),
+    );
     await db.execAsync(SCHEMA);
-    await migrateFromJson(db, file);
+    await migrateFromJson(db, jsonFile(dir, profile));
     return db;
   })();
   return handle;
@@ -150,23 +169,23 @@ async function putEntry(
 
 export async function saveEntry(
   dir: string,
-  file: string,
+  profile: string,
   kind: Kind,
   id: string,
   value: unknown,
   songs?: Song[],
 ): Promise<void> {
-  const db = await mirrorDb(dir, file);
+  const db = await mirrorDb(dir, profile);
   await db.withTransactionAsync(() => putEntry(db, kind, id, value, songs));
 }
 
 export async function dropEntry(
   dir: string,
-  file: string,
+  profile: string,
   kind: Kind,
   id: string,
 ): Promise<void> {
-  const db = await mirrorDb(dir, file);
+  const db = await mirrorDb(dir, profile);
   await db.runAsync('DELETE FROM entries WHERE kind = ? AND id = ?', [kind, id]);
 }
 
@@ -174,11 +193,11 @@ export async function dropEntry(
 
 async function getEntry<T>(
   dir: string,
-  file: string,
+  profile: string,
   kind: Kind,
   id: string,
 ): Promise<T | undefined> {
-  const db = await mirrorDb(dir, file);
+  const db = await mirrorDb(dir, profile);
   const row = await db.getFirstAsync<{ data: string }>(
     'SELECT data FROM entries WHERE kind = ? AND id = ?',
     [kind, id],
@@ -186,48 +205,48 @@ async function getEntry<T>(
   return row ? (JSON.parse(row.data) as T) : undefined;
 }
 
-export function getStarred(dir: string, file: string): Promise<Starred | undefined> {
-  return getEntry<Starred>(dir, file, 'starred', '');
+export function getStarred(dir: string, profile: string): Promise<Starred | undefined> {
+  return getEntry<Starred>(dir, profile, 'starred', '');
 }
 
-export function getPlaylists(dir: string, file: string): Promise<Playlist[] | undefined> {
-  return getEntry<Playlist[]>(dir, file, 'playlists', '');
+export function getPlaylists(dir: string, profile: string): Promise<Playlist[] | undefined> {
+  return getEntry<Playlist[]>(dir, profile, 'playlists', '');
 }
 
 export function getPlaylistDetail(
   dir: string,
-  file: string,
+  profile: string,
   id: string,
 ): Promise<PlaylistDetail | undefined> {
-  return getEntry<PlaylistDetail>(dir, file, 'playlist', id);
+  return getEntry<PlaylistDetail>(dir, profile, 'playlist', id);
 }
 
 export function getAlbumDetail(
   dir: string,
-  file: string,
+  profile: string,
   id: string,
 ): Promise<AlbumDetail | undefined> {
-  return getEntry<AlbumDetail>(dir, file, 'album', id);
+  return getEntry<AlbumDetail>(dir, profile, 'album', id);
 }
 
 export function getArtistDetail(
   dir: string,
-  file: string,
+  profile: string,
   id: string,
 ): Promise<ArtistDetail | undefined> {
-  return getEntry<ArtistDetail>(dir, file, 'artist', id);
+  return getEntry<ArtistDetail>(dir, profile, 'artist', id);
 }
 
 /** Songs by id, from whatever tracklist they arrived in. In chunks, because
  *  SQLite counts placeholders and a playlist can carry thousands of ids. */
 export async function getSongs(
   dir: string,
-  file: string,
+  profile: string,
   ids: string[],
 ): Promise<Map<string, Song>> {
   const out = new Map<string, Song>();
   if (ids.length === 0) return out;
-  const db = await mirrorDb(dir, file);
+  const db = await mirrorDb(dir, profile);
   for (let i = 0; i < ids.length; i += 400) {
     const part = ids.slice(i, i + 400);
     const marks = part.map(() => '?').join(',');
@@ -241,8 +260,8 @@ export async function getSongs(
 }
 
 /** A song by id, from whatever tracklist it arrived in. */
-export async function getSong(dir: string, file: string, id: string): Promise<Song | undefined> {
-  const db = await mirrorDb(dir, file);
+export async function getSong(dir: string, profile: string, id: string): Promise<Song | undefined> {
+  const db = await mirrorDb(dir, profile);
   const row = await db.getFirstAsync<{ data: string }>('SELECT data FROM songs WHERE id = ?', [id]);
   return row ? (JSON.parse(row.data) as Song) : undefined;
 }
@@ -251,9 +270,9 @@ export async function getSong(dir: string, file: string, id: string): Promise<So
  *  the prefetch can ask only for what moved. */
 export async function playlistVersions(
   dir: string,
-  file: string,
+  profile: string,
 ): Promise<Record<string, string | undefined>> {
-  const db = await mirrorDb(dir, file);
+  const db = await mirrorDb(dir, profile);
   const rows = await db.getAllAsync<{ id: string; data: string }>(
     "SELECT id, data FROM entries WHERE kind = 'playlist'",
   );
@@ -271,16 +290,16 @@ export interface MirrorStats {
 }
 
 /** What it holds, for Settings › Downloads. */
-export async function stats(dir: string, file: string): Promise<MirrorStats> {
-  const db = await mirrorDb(dir, file);
+export async function stats(dir: string, profile: string): Promise<MirrorStats> {
+  const db = await mirrorDb(dir, profile);
   const counts = await db.getAllAsync<{ kind: string; n: number }>(
     'SELECT kind, COUNT(*) AS n FROM entries GROUP BY kind',
   );
   const by = (k: string) => counts.find((c) => c.kind === k)?.n ?? 0;
-  const starred = await getStarred(dir, file);
+  const starred = await getStarred(dir, profile);
   let bytes = 0;
   try {
-    const info = await FileSystem.getInfoAsync(`${dir}${DB_NAME}`);
+    const info = await FileSystem.getInfoAsync(`${dir}${dbName(profile)}`);
     if (info.exists) bytes = info.size ?? 0;
   } catch {
     // reported as zero

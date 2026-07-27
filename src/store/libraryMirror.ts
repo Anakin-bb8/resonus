@@ -48,14 +48,14 @@ export interface MirrorStats extends Db.MirrorStats {
 
 const DIR = FileSystem.documentDirectory + 'library-mirror/';
 
-/** Where the active profile's mirror lives, or null without a session. */
-function active(): { dir: string; file: string } | null {
+/** The folder they share and the name that tells this profile apart, or null
+ *  without a session. */
+function active(): { dir: string; profile: string } | null {
   const auth: SubsonicAuth | null = useAuthStore.getState().auth;
   if (!auth) return null;
   // PRIMARY URL (not the active one): identifies the profile even when
   // switching networks, same as the download directory.
-  const name = hashKey(`${primaryUrl(auth)}|${auth.username}`);
-  return { dir: DIR, file: `${DIR}${name}.json` };
+  return { dir: DIR, profile: hashKey(`${primaryUrl(auth)}|${auth.username}`) };
 }
 
 /**
@@ -104,13 +104,13 @@ function samePlaylists(a: Playlist[] | undefined, b: Playlist[]): boolean {
 
 /** Runs against the active profile's mirror, or gives up quietly. */
 async function withMirror<T>(
-  fn: (dir: string, file: string) => Promise<T>,
+  fn: (dir: string, profile: string) => Promise<T>,
   fallback: T,
 ): Promise<T> {
   const target = active();
   if (!target) return fallback;
   try {
-    return await fn(target.dir, target.file);
+    return await fn(target.dir, target.profile);
   } catch {
     // A mirror that can't be read or written is a degraded offline mode, not
     // a reason to take the screen down with it.
@@ -157,43 +157,43 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
       set({ profile: '' });
       return;
     }
-    if (get().profile === target.file) return;
+    if (get().profile === target.profile) return;
     if (get().profile) await Db.closeMirror(); // another profile's was open
-    await Db.mirrorDb(target.dir, target.file).catch(() => {});
-    set({ profile: target.file });
+    await Db.mirrorDb(target.dir, target.profile).catch(() => {});
+    set({ profile: target.profile });
   },
 
   saveStarred: (starred) => {
     // Favourites are fetched again and again and almost always come back
     // identical. Each of those used to dirty the file and cost a full rewrite,
     // measured at thirty seven seconds on a large mirror (#50).
-    void withMirror(async (dir, file) => {
-      if (sameLists(await Db.getStarred(dir, file), starred)) return;
-      await Db.saveEntry(dir, file, 'starred', '', starred, starred.songs);
+    void withMirror(async (dir, profile) => {
+      if (sameLists(await Db.getStarred(dir, profile), starred)) return;
+      await Db.saveEntry(dir, profile, 'starred', '', starred, starred.songs);
     }, undefined);
   },
 
   savePlaylists: (playlists) => {
-    void withMirror(async (dir, file) => {
-      if (samePlaylists(await Db.getPlaylists(dir, file), playlists)) return;
-      await Db.saveEntry(dir, file, 'playlists', '', playlists);
+    void withMirror(async (dir, profile) => {
+      if (samePlaylists(await Db.getPlaylists(dir, profile), playlists)) return;
+      await Db.saveEntry(dir, profile, 'playlists', '', playlists);
     }, undefined);
   },
 
   savePlaylistDetail: (id, playlist, songs) => {
     void withMirror(
-      (dir, file) => Db.saveEntry(dir, file, 'playlist', id, { playlist, songs }, songs),
+      (dir, profile) => Db.saveEntry(dir, profile, 'playlist', id, { playlist, songs }, songs),
       undefined,
     );
   },
 
   savePlaylistDetails: (entries) => {
     if (entries.length === 0) return;
-    void withMirror(async (dir, file) => {
+    void withMirror(async (dir, profile) => {
       for (const e of entries) {
         await Db.saveEntry(
           dir,
-          file,
+          profile,
           'playlist',
           e.id,
           { playlist: e.playlist, songs: e.songs },
@@ -204,9 +204,9 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
   },
 
   saveAlbum: (id, album, songs, dl) => {
-    void withMirror(async (dir, file) => {
+    void withMirror(async (dir, profile) => {
       if (worthKeepingAlbum(album, songs, dl.files)) {
-        await Db.saveEntry(dir, file, 'album', id, { album, songs }, songs);
+        await Db.saveEntry(dir, profile, 'album', id, { album, songs }, songs);
         return;
       }
       // Before the downloads are read from disk there is no telling a
@@ -214,31 +214,31 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
       if (!dl.hydrated) return;
       // Dropped, not merely skipped, so unfavouriting takes it out on its own
       // the next time it is looked at.
-      await Db.dropEntry(dir, file, 'album', id);
+      await Db.dropEntry(dir, profile, 'album', id);
     }, undefined);
   },
 
   saveArtist: (id, artist, albums) => {
-    void withMirror(async (dir, file) => {
+    void withMirror(async (dir, profile) => {
       if (worthKeepingArtist(artist)) {
-        await Db.saveEntry(dir, file, 'artist', id, { artist, albums });
+        await Db.saveEntry(dir, profile, 'artist', id, { artist, albums });
         return;
       }
-      await Db.dropEntry(dir, file, 'artist', id);
+      await Db.dropEntry(dir, profile, 'artist', id);
     }, undefined);
   },
 
   prune: async (dl) => {
     if (!dl.hydrated) return; // everything downloaded would look disposable
-    await withMirror(async (dir, file) => {
-      const db = await Db.mirrorDb(dir, file);
+    await withMirror(async (dir, profile) => {
+      const db = await Db.mirrorDb(dir, profile);
       const albums = await db.getAllAsync<{ id: string; data: string }>(
         "SELECT id, data FROM entries WHERE kind = 'album'",
       );
       for (const row of albums) {
         const d = JSON.parse(row.data) as Db.AlbumDetail;
         if (!worthKeepingAlbum(d.album, d.songs, dl.files)) {
-          await Db.dropEntry(dir, file, 'album', row.id);
+          await Db.dropEntry(dir, profile, 'album', row.id);
         }
       }
       const artists = await db.getAllAsync<{ id: string; data: string }>(
@@ -246,13 +246,13 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
       );
       for (const row of artists) {
         const d = JSON.parse(row.data) as Db.ArtistDetail;
-        if (!worthKeepingArtist(d.artist)) await Db.dropEntry(dir, file, 'artist', row.id);
+        if (!worthKeepingArtist(d.artist)) await Db.dropEntry(dir, profile, 'artist', row.id);
       }
     }, undefined);
   },
 
   stats: () =>
-    withMirror((dir, file) => Db.stats(dir, file), {
+    withMirror((dir, profile) => Db.stats(dir, profile), {
       bytes: 0,
       albums: 0,
       artists: 0,
@@ -260,12 +260,12 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
       starredSongs: 0,
     }),
 
-  starred: () => withMirror((d, f) => Db.getStarred(d, f), undefined),
-  playlists: () => withMirror((d, f) => Db.getPlaylists(d, f), undefined),
-  playlistDetail: (id) => withMirror((d, f) => Db.getPlaylistDetail(d, f, id), undefined),
-  albumDetail: (id) => withMirror((d, f) => Db.getAlbumDetail(d, f, id), undefined),
-  artistDetail: (id) => withMirror((d, f) => Db.getArtistDetail(d, f, id), undefined),
-  song: (id) => withMirror((d, f) => Db.getSong(d, f, id), undefined),
-  songs: (ids) => withMirror((d, f) => Db.getSongs(d, f, ids), new Map<string, Song>()),
-  playlistVersions: () => withMirror((d, f) => Db.playlistVersions(d, f), {}),
+  starred: () => withMirror((d, p) => Db.getStarred(d, p), undefined),
+  playlists: () => withMirror((d, p) => Db.getPlaylists(d, p), undefined),
+  playlistDetail: (id) => withMirror((d, p) => Db.getPlaylistDetail(d, p, id), undefined),
+  albumDetail: (id) => withMirror((d, p) => Db.getAlbumDetail(d, p, id), undefined),
+  artistDetail: (id) => withMirror((d, p) => Db.getArtistDetail(d, p, id), undefined),
+  song: (id) => withMirror((d, p) => Db.getSong(d, p, id), undefined),
+  songs: (ids) => withMirror((d, p) => Db.getSongs(d, p, ids), new Map<string, Song>()),
+  playlistVersions: () => withMirror((d, p) => Db.playlistVersions(d, p), {}),
 }));
