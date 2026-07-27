@@ -25,6 +25,9 @@ import { useAuthStore } from '@/store/auth';
 import { usePlayerStore } from '@/store/player';
 
 const REBUILD_DEBOUNCE_MS = 600;
+/** How long after opening before the tree is filled in. Long enough that the
+ *  app has finished starting; short enough to be ready for a drive. */
+const DEEP_REBUILD_MS = 45_000;
 const POSITION_PUSH_MS = 1000;
 
 function toCarTrack(song: Song): CarTrack {
@@ -45,17 +48,22 @@ export function CarAutoSync() {
     let rebuildTimer: ReturnType<typeof setTimeout> | null = null;
 
     // ── Browse tree ──
-    const rebuild = () => {
+    // Twice: the lists as soon as there is a session, and the songs of every
+    // album in them once the app is done opening. Filling it in is dozens of
+    // requests, and doing that within a second of launch competed with the
+    // start itself for anyone who was never going to plug in a car (#50).
+    const rebuild = (deep: boolean) => {
       if (rebuildTimer) clearTimeout(rebuildTimer);
       rebuildTimer = setTimeout(async () => {
         const { auth, offline } = useAuthStore.getState();
         if (!auth && !offline) return;
-        const tree = await buildBrowseTree().catch(() => null);
+        const tree = await buildBrowseTree(deep).catch(() => null);
         if (!cancelled && tree) setNodes(tree);
       }, REBUILD_DEBOUNCE_MS);
     };
-    rebuild();
-    const unsubAuth = useAuthStore.subscribe(rebuild);
+    rebuild(false);
+    const deepTimer = setTimeout(() => rebuild(true), DEEP_REBUILD_MS);
+    const unsubAuth = useAuthStore.subscribe(() => rebuild(true));
 
     // ── Mirror playback state ──
     const pushNowPlaying = () => {
@@ -136,6 +144,7 @@ export function CarAutoSync() {
     return () => {
       cancelled = true;
       if (rebuildTimer) clearTimeout(rebuildTimer);
+      clearTimeout(deepTimer);
       clearInterval(interval);
       unsubAuth();
       unsubPlayer();

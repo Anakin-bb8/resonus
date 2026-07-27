@@ -84,7 +84,20 @@ const HOME_SECTIONS: { id: string; titleKey: string; type: 'newest' | 'frequent'
   { id: 'home:random', titleKey: 'Shuffle', type: 'random' },
 ];
 
-export async function buildBrowseTree(): Promise<CarTree> {
+/**
+ * The whole browse tree, or only its lists.
+ *
+ * Filling it in means asking the server for the songs of every album on the
+ * shelves and every favourite, plus each favourite artist's albums and their
+ * songs. That was happening within a second of every launch, whether or not a
+ * car was ever going to be plugged in, and it is dozens of requests before the
+ * app has finished opening (#50). The lists themselves are nearly free: they
+ * come from the same queries the app has already made.
+ *
+ * So the lists go up straight away and the songs follow later, once the app is
+ * done starting. Browsing in the car reads whatever the last push left.
+ */
+export async function buildBrowseTree(deep = true): Promise<CarTree> {
   songById.clear();
   parentTracks.clear();
   const tree: Record<string, CarNode[]> = {};
@@ -130,6 +143,8 @@ export async function buildBrowseTree(): Promise<CarTree> {
   starred.albums.forEach((a) => albumIds.add(a.id));
 
   tree['lib:artists'] = starred.artists.map(artistNode);
+
+  if (!deep) return { nodes: tree };
 
   // Prefetch songs for each album (to browse them in the car).
   await mapConcurrent(Array.from(albumIds), CONCURRENCY, async (id) => {
