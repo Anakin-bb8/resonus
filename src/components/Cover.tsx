@@ -66,6 +66,11 @@ export function Cover({
       contentFit={contentFit}
       transition={transition}
       recyclingKey={uri}
+      // expo-image defaults to 'disk', which keeps the file but not the decoded
+      // image: scrolling a list back up decoded every cover again. Covers are
+      // small and the same handful come round constantly, which is what a
+      // memory cache is for.
+      cachePolicy="memory-disk"
       onError={() => setFailed(true)}
     />
   );
