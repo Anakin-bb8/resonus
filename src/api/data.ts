@@ -1114,7 +1114,14 @@ async function mergedAlbumPage(
   // merge — there is no need to walk them whole, which is what this did: to
   // show twenty albums on Home it paginated every library to its end, one
   // request per 500 albums, per library, on every shelf (#50).
-  const depth = Math.ceil((offset + size) / MERGE_DEPTH) * MERGE_DEPTH;
+  //
+  // The first page asks for exactly what it shows. Rounding it up to a hundred
+  // is what makes the pages of an infinite scroll share one fetch, and that is
+  // worth it once someone is scrolling — but everyone pays the first page, on
+  // every shelf, on every cold start. On Home that was six requests of a
+  // hundred albums each, per shelf, to put twenty on screen, and all of it
+  // parsed on the JS thread.
+  const depth = offset === 0 ? size : Math.ceil((offset + size) / MERGE_DEPTH) * MERGE_DEPTH;
   const cacheKey = `${cacheBase}|${profileKeyOf(a)}|${ids.join(',')}|${depth}`;
   let all = readAlbumCache<Subsonic.Album>(cacheKey);
   if (!all) {
