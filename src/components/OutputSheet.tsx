@@ -7,6 +7,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useEffect } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -39,7 +40,10 @@ export function OutputSheet({ visible, onClose }: { visible: boolean; onClose: (
   const jukeboxActive = useJukebox((s) => s.active);
   const jukeboxAvailable = useJukebox((s) => s.available);
   const phoneActive = !upnpId && !jukeboxActive;
-  const { dismiss, backdropStyle, sheetStyle, onSheetLayout } = useBottomSheetAnim(visible);
+  const { dismiss, pan, backdropStyle, sheetStyle, onSheetLayout } = useBottomSheetAnim(
+    visible,
+    onClose,
+  );
   // Animated close: the sheet slides down and then notifies the parent (which hides the Modal).
   const close = () => dismiss(onClose);
 
@@ -107,82 +111,93 @@ export function OutputSheet({ visible, onClose }: { visible: boolean; onClose: (
 
   return (
     <Modal transparent visible={visible} animationType="none" onRequestClose={close}>
-      <Animated.View style={[styles.backdrop, backdropStyle]}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={close} />
-      </Animated.View>
-      <Animated.View
-        style={[styles.sheet, { paddingBottom: insets.bottom + spacing.md }, sheetStyle]}
-        onLayout={onSheetLayout}
-      >
-        <Text style={styles.sheetTitle}>{t('Output')}</Text>
+      {/* Gestures inside an RN Modal need a root view of their own: the
+          Modal renders in a native hierarchy outside the app's. */}
+      <GestureHandlerRootView style={StyleSheet.absoluteFill}>
+        <Animated.View style={[styles.backdrop, backdropStyle]}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={close} />
+        </Animated.View>
+        {/* One drag around the whole sheet: what's in here never scrolls,
+            so nothing else competes for the gesture. */}
+        <GestureDetector gesture={pan}>
+          <Animated.View
+            style={[styles.sheet, { paddingBottom: insets.bottom + spacing.md }, sheetStyle]}
+            onLayout={onSheetLayout}
+          >
+            {/* Spotify-style grabber: the visual cue that the sheet can be
+                dragged down to dismiss. */}
+            <View style={styles.grabber} />
+            <Text style={styles.sheetTitle}>{t('Output')}</Text>
 
-        <Row
-          icon={
-            <Ionicons
-              name="phone-portrait-outline"
-              size={22}
-              color={phoneActive ? colors.accent : colors.text}
-            />
-          }
-          label={t('This phone')}
-          active={phoneActive}
-          onPress={phoneActive ? undefined : pickPhone}
-        />
-
-        {jukeboxAvailable ? (
-          <Row
-            icon={
-              <Ionicons
-                name="server-outline"
-                size={22}
-                color={jukeboxActive ? colors.accent : colors.text}
-              />
-            }
-            label={t('Server speakers (Jukebox)')}
-            active={jukeboxActive}
-            onPress={jukeboxActive ? undefined : pickJukebox}
-          />
-        ) : null}
-
-        {upnpAvailable
-          ? devices.map((d) => {
-              const active = d.id === upnpId;
-              return (
-                <Row
-                  key={d.id}
-                  icon={
-                    d.isTV ? (
-                      <Ionicons name="tv-outline" size={22} color={active ? colors.accent : colors.text} />
-                    ) : (
-                      <MaterialIcons name="speaker" size={22} color={active ? colors.accent : colors.text} />
-                    )
-                  }
-                  label={d.name}
-                  active={active}
-                  onPress={() => void pickDevice(d)}
+            <Row
+              icon={
+                <Ionicons
+                  name="phone-portrait-outline"
+                  size={22}
+                  color={phoneActive ? colors.accent : colors.text}
                 />
-              );
-            })
-          : null}
+              }
+              label={t('This phone')}
+              active={phoneActive}
+              onPress={phoneActive ? undefined : pickPhone}
+            />
 
-        {scanning ? (
-          <View style={styles.scanRow}>
-            <ActivityIndicator size="small" color={colors.textSecondary} />
-            <Text style={styles.scanText}>{t('Searching for devices…')}</Text>
-          </View>
-        ) : upnpAvailable ? (
-          <>
-            {devices.length === 0 ? <Text style={styles.scanText}>{t('No devices found')}</Text> : null}
-            <Pressable
-              style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
-              onPress={() => void upnpSearch()}
-            >
-              <Ionicons name="refresh" size={20} color={colors.textSecondary} />
-              <Text style={[styles.actionText, { color: colors.textSecondary }]}>{t('Search again')}</Text>
-            </Pressable>
-          </>
-        ) : null}
-      </Animated.View>
+            {jukeboxAvailable ? (
+              <Row
+                icon={
+                  <Ionicons
+                    name="server-outline"
+                    size={22}
+                    color={jukeboxActive ? colors.accent : colors.text}
+                  />
+                }
+                label={t('Server speakers (Jukebox)')}
+                active={jukeboxActive}
+                onPress={jukeboxActive ? undefined : pickJukebox}
+              />
+            ) : null}
+
+            {upnpAvailable
+              ? devices.map((d) => {
+                  const active = d.id === upnpId;
+                  return (
+                    <Row
+                      key={d.id}
+                      icon={
+                        d.isTV ? (
+                          <Ionicons name="tv-outline" size={22} color={active ? colors.accent : colors.text} />
+                        ) : (
+                          <MaterialIcons name="speaker" size={22} color={active ? colors.accent : colors.text} />
+                        )
+                      }
+                      label={d.name}
+                      active={active}
+                      onPress={() => void pickDevice(d)}
+                    />
+                  );
+                })
+              : null}
+
+            {scanning ? (
+              <View style={styles.scanRow}>
+                <ActivityIndicator size="small" color={colors.textSecondary} />
+                <Text style={styles.scanText}>{t('Searching for devices…')}</Text>
+              </View>
+            ) : upnpAvailable ? (
+              <>
+                {devices.length === 0 ? <Text style={styles.scanText}>{t('No devices found')}</Text> : null}
+                <Pressable
+                  style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+                  onPress={() => void upnpSearch()}
+                >
+                  <Ionicons name="refresh" size={20} color={colors.textSecondary} />
+                  <Text style={[styles.actionText, { color: colors.textSecondary }]}>{t('Search again')}</Text>
+                </Pressable>
+              </>
+            ) : null}
+          </Animated.View>
+        </GestureDetector>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
@@ -198,7 +213,20 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
+    // Smaller than the old spacing.lg because the grabber below already brings
+    // its own margin: together they add up to the same top gap as before.
+    paddingTop: spacing.sm,
+  },
+  // Spotify's little handle. Its only job is to advertise the drag gesture, so
+  // it stays discreet: it must read as an affordance, not as a control.
+  grabber: {
+    alignSelf: 'center',
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.textMuted,
+    opacity: 0.5,
+    marginBottom: spacing.md,
   },
   sheetTitle: {
     color: colors.textSecondary,

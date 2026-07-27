@@ -8,6 +8,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -75,7 +76,10 @@ export function MediaMenuSheet() {
   const offline = useAuthStore((s) => s.offline);
   const item = useMediaMenu((s) => s.item);
   const closeNow = useMediaMenu((s) => s.close);
-  const { dismiss, backdropStyle, sheetStyle, onSheetLayout } = useBottomSheetAnim(!!item);
+  const { dismiss, pan, backdropStyle, sheetStyle, onSheetLayout } = useBottomSheetAnim(
+    !!item,
+    closeNow,
+  );
   const pins = usePins((s) => s.pins);
   const togglePin = usePins((s) => s.toggle);
   const playQueue = usePlayerStore((s) => s.playQueue);
@@ -156,126 +160,137 @@ export function MediaMenuSheet() {
 
   return (
     <Modal transparent animationType="none" visible onRequestClose={close}>
-      <Animated.View style={[styles.backdrop, backdropStyle]}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={close} />
-      </Animated.View>
-      <Animated.View
-        style={[styles.sheet, { paddingBottom: insets.bottom + spacing.md }, sheetStyle]}
-        onLayout={onSheetLayout}
-      >
-        <View style={styles.headerRow}>
-          <Cover uri={coverArtUrl(coverId, 100)} size={48} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.title} numberOfLines={1}>
-              {name}
-            </Text>
-            {subtitle ? (
-              <Text style={styles.subtitle} numberOfLines={1}>
-                {subtitle}
-              </Text>
-            ) : null}
-          </View>
-        </View>
-        <View style={styles.divider} />
-
-        <Action
-          icon="play"
-          label={t('Play')}
-          onPress={() => withSongs((songs) => void playQueue(songs, 0, name, href))}
-        />
-        <Action
-          icon="shuffle"
-          label={t('Shuffle')}
-          onPress={() =>
-            withSongs((songs) => {
-              // Same as the screen buttons: random starting track and shuffle
-              // mode active (playQueue resets it, hence the order).
-              void playQueue(songs, Math.floor(Math.random() * songs.length), name, href);
-              if (!usePlayerStore.getState().shuffle) usePlayerStore.getState().toggleShuffle();
-            })
-          }
-        />
-        <Action
-          icon="list"
-          label={t('Add to queue')}
-          onPress={() =>
-            withSongs((songs) => {
-              for (const song of songs) addToQueue(song);
-              toast(t('Added to queue'));
-            })
-          }
-        />
-        <Action
-          icon="add"
-          label={t('Add to a playlist')}
-          onPress={() => withSongs((songs) => usePlaylistPicker.getState().open(songs))}
-        />
-        {!offline ? (
-          <Action
-            icon="download-outline"
-            label={t('Download')}
-            // Asks with the size, like the button on the album's own screen:
-            // the same action shouldn't warn down one path and not the other.
-            onPress={() => void askDownload()}
-          />
-        ) : null}
-        {/* The header button only turns into "delete" once EVERYTHING is
-            downloaded, and offline there is no header button at all — so a
-            half-downloaded album could only be cleared song by song (#47).
-            Shown whenever this profile has downloads; whether these songs are
-            among them takes fetching them, which is what the press does. */}
-        {hasDownloads ? (
-          <Action
-            icon="trash-outline"
-            label={t('Delete downloads')}
-            onPress={() => setConfirmDelete(true)}
-          />
-        ) : null}
-        {/* Moved here from the header row, which had grown to four icons for
-            something used now and then. Covers the long press on a card too,
-            which never had it. */}
-        {canShare ? (
-          <Action
-            icon="share-social-outline"
-            label={t('Share')}
-            onPress={() => {
-              close();
-              void shareItem(album ? album.id : playlist!.id, name).then((ok) => {
-                if (!ok) toast(t('Couldn’t create the link'));
-              });
-            }}
-          />
-        ) : null}
-        {album ? (
-          <Action
-            icon={album.starred ? 'heart' : 'heart-outline'}
-            label={album.starred ? t('Remove from favorites') : t('Add to favorites')}
-            onPress={() => void toggleFavorite()}
-          />
-        ) : null}
-        {/* Diagonal pin (MaterialCommunity), like Spotify's; the Ionicons one
-            is something else and looks weird. Only makes sense if the item can
-            appear in the Library: playlists always do, but albums only if
-            favorited (the list comes from getStarred). */}
-        {playlist || album?.starred ? (
-          <Pressable
-            style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
-            onPress={() => {
-              const ok = togglePin(pinKey);
-              close();
-              if (!ok) toast(t('You can pin up to {n} items.', { n: MAX_PINS }));
-            }}
+      {/* Gestures inside an RN Modal need a root view of their own: the
+          Modal renders in a native hierarchy outside the app's. */}
+      <GestureHandlerRootView style={StyleSheet.absoluteFill}>
+        <Animated.View style={[styles.backdrop, backdropStyle]}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={close} />
+        </Animated.View>
+        {/* One drag around the whole sheet: this list of actions never
+            scrolls, so nothing else competes for the gesture. */}
+        <GestureDetector gesture={pan}>
+          <Animated.View
+            style={[styles.sheet, { paddingBottom: insets.bottom + spacing.md }, sheetStyle]}
+            onLayout={onSheetLayout}
           >
-            <MaterialCommunityIcons
-              name={pinned ? 'pin' : 'pin-outline'}
-              size={24}
-              color={colors.text}
-              style={styles.pinIcon}
+            {/* Spotify-style grabber: the visual cue that the sheet can be
+                dragged down to dismiss. */}
+            <View style={styles.grabber} />
+            <View style={styles.headerRow}>
+              <Cover uri={coverArtUrl(coverId, 100)} size={48} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.title} numberOfLines={1}>
+                  {name}
+                </Text>
+                {subtitle ? (
+                  <Text style={styles.subtitle} numberOfLines={1}>
+                    {subtitle}
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+            <View style={styles.divider} />
+
+            <Action
+              icon="play"
+              label={t('Play')}
+              onPress={() => withSongs((songs) => void playQueue(songs, 0, name, href))}
             />
-            <Text style={styles.actionText}>{pinned ? t('Unpin') : t('Pin to top')}</Text>
-          </Pressable>
-        ) : null}
-      </Animated.View>
+            <Action
+              icon="shuffle"
+              label={t('Shuffle')}
+              onPress={() =>
+                withSongs((songs) => {
+                  // Same as the screen buttons: random starting track and shuffle
+                  // mode active (playQueue resets it, hence the order).
+                  void playQueue(songs, Math.floor(Math.random() * songs.length), name, href);
+                  if (!usePlayerStore.getState().shuffle) usePlayerStore.getState().toggleShuffle();
+                })
+              }
+            />
+            <Action
+              icon="list"
+              label={t('Add to queue')}
+              onPress={() =>
+                withSongs((songs) => {
+                  for (const song of songs) addToQueue(song);
+                  toast(t('Added to queue'));
+                })
+              }
+            />
+            <Action
+              icon="add"
+              label={t('Add to a playlist')}
+              onPress={() => withSongs((songs) => usePlaylistPicker.getState().open(songs))}
+            />
+            {!offline ? (
+              <Action
+                icon="download-outline"
+                label={t('Download')}
+                // Asks with the size, like the button on the album's own screen:
+                // the same action shouldn't warn down one path and not the other.
+                onPress={() => void askDownload()}
+              />
+            ) : null}
+            {/* The header button only turns into "delete" once EVERYTHING is
+                downloaded, and offline there is no header button at all — so a
+                half-downloaded album could only be cleared song by song (#47).
+                Shown whenever this profile has downloads; whether these songs are
+                among them takes fetching them, which is what the press does. */}
+            {hasDownloads ? (
+              <Action
+                icon="trash-outline"
+                label={t('Delete downloads')}
+                onPress={() => setConfirmDelete(true)}
+              />
+            ) : null}
+            {/* Moved here from the header row, which had grown to four icons for
+                something used now and then. Covers the long press on a card too,
+                which never had it. */}
+            {canShare ? (
+              <Action
+                icon="share-social-outline"
+                label={t('Share')}
+                onPress={() => {
+                  close();
+                  void shareItem(album ? album.id : playlist!.id, name).then((ok) => {
+                    if (!ok) toast(t('Couldn’t create the link'));
+                  });
+                }}
+              />
+            ) : null}
+            {album ? (
+              <Action
+                icon={album.starred ? 'heart' : 'heart-outline'}
+                label={album.starred ? t('Remove from favorites') : t('Add to favorites')}
+                onPress={() => void toggleFavorite()}
+              />
+            ) : null}
+            {/* Diagonal pin (MaterialCommunity), like Spotify's; the Ionicons one
+                is something else and looks weird. Only makes sense if the item can
+                appear in the Library: playlists always do, but albums only if
+                favorited (the list comes from getStarred). */}
+            {playlist || album?.starred ? (
+              <Pressable
+                style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+                onPress={() => {
+                  const ok = togglePin(pinKey);
+                  close();
+                  if (!ok) toast(t('You can pin up to {n} items.', { n: MAX_PINS }));
+                }}
+              >
+                <MaterialCommunityIcons
+                  name={pinned ? 'pin' : 'pin-outline'}
+                  size={24}
+                  color={colors.text}
+                  style={styles.pinIcon}
+                />
+                <Text style={styles.actionText}>{pinned ? t('Unpin') : t('Pin to top')}</Text>
+              </Pressable>
+            ) : null}
+          </Animated.View>
+        </GestureDetector>
+      </GestureHandlerRootView>
 
       {/* Over the sheet, which stays open behind it: closing it would take the
           dialog with it. How many of these songs are actually downloaded takes
@@ -331,7 +346,20 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
+    // Smaller than the old spacing.lg because the grabber below already brings
+    // its own margin: together they add up to the same top gap as before.
+    paddingTop: spacing.sm,
+  },
+  // Spotify's little handle. Its only job is to advertise the drag gesture, so
+  // it stays discreet: it must read as an affordance, not as a control.
+  grabber: {
+    alignSelf: 'center',
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.textMuted,
+    opacity: 0.5,
+    marginBottom: spacing.md,
   },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   title: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },

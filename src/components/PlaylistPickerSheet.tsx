@@ -7,6 +7,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { ActivityIndicator, Dimensions, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -51,7 +52,15 @@ export function PlaylistPickerSheet({
   const toast = useToast((s) => s.show);
   const t = useT();
   const visible = !!songs && songs.length > 0;
-  const { dismiss, backdropStyle, sheetStyle, onSheetLayout } = useBottomSheetAnim(visible);
+  const { dismiss, pan, makePan, backdropStyle, sheetStyle, onSheetLayout } = useBottomSheetAnim(
+    visible,
+    onClose,
+  );
+  // Second drag, for the grabber and the title (see the JSX below).
+  const headerPan = makePan();
+  // The list is scrolled to the top: only then does a downward drag belong to
+  // the sheet, so pulling down mid-list scrolls instead of dismissing.
+  const [atTop, setAtTop] = useState(true);
   const close = () => dismiss(onClose);
   const [creating, setCreating] = useState(false);
   // "Already in the playlist" prompt pending confirmation (Spotify style).
@@ -123,47 +132,67 @@ export function PlaylistPickerSheet({
 
   return (
     <Modal transparent animationType="none" visible onRequestClose={close}>
-      <Animated.View style={[styles.backdrop, backdropStyle]}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={close} />
-      </Animated.View>
-      <Animated.View
-        style={[styles.sheet, { paddingBottom: insets.bottom + spacing.md }, sheetStyle]}
-        onLayout={onSheetLayout}
-      >
-        <Text style={styles.title}>{t('Add to a playlist')}</Text>
-        <View style={styles.divider} />
-        <View style={{ maxHeight: PLAYLISTS_MAX_H }}>
-          <Pressable
-            style={({ pressed }) => [styles.row, pressed && { opacity: 0.6 }]}
-            onPress={() => setCreating(true)}
-          >
-            <View style={styles.newPlaylistIcon}>
-              <Ionicons name="add" size={24} color={colors.text} />
+      {/* Gestures inside an RN Modal need a root view of their own: the Modal
+          renders in a native hierarchy outside the app's. */}
+      <GestureHandlerRootView style={StyleSheet.absoluteFill}>
+        <Animated.View style={[styles.backdrop, backdropStyle]}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={close} />
+        </Animated.View>
+        <Animated.View
+          style={[styles.sheet, { paddingBottom: insets.bottom + spacing.md }, sheetStyle]}
+          onLayout={onSheetLayout}
+        >
+          {/* The header has its own drag, always enabled: it's the way out when
+              the list below is scrolled and keeps the gesture for itself. Two
+              detectors instead of one around everything so both can never fire
+              at once. */}
+          <GestureDetector gesture={headerPan}>
+            <View>
+              {/* Spotify-style grabber: the visual cue that the sheet can be
+                  dragged down to dismiss. */}
+              <View style={styles.grabber} />
+              <Text style={styles.title}>{t('Add to a playlist')}</Text>
+              <View style={styles.divider} />
             </View>
-            <Text style={styles.rowText}>{t('New playlist')}</Text>
-          </Pressable>
-          {isLoading ? (
-            <ActivityIndicator style={{ marginVertical: spacing.lg }} color={colors.accent} />
-          ) : (
-            <ScrollView>
-              {(playlists ?? [])
-                .filter((p) => p.id !== excludeId)
-                .map((p) => (
-                  <Pressable
-                    key={p.id}
-                    style={({ pressed }) => [styles.row, pressed && { opacity: 0.6 }]}
-                    onPress={() => addAllTo(p.id, p.name)}
-                  >
-                    <Cover uri={coverArtUrl(p.coverArt ?? p.id, 100)} size={40} />
-                    <Text style={styles.rowText} numberOfLines={1}>
-                      {p.name}
-                    </Text>
-                  </Pressable>
-                ))}
-            </ScrollView>
-          )}
-        </View>
-      </Animated.View>
+          </GestureDetector>
+          <GestureDetector gesture={pan.enabled(atTop)}>
+            <View style={{ maxHeight: PLAYLISTS_MAX_H }}>
+              <Pressable
+                style={({ pressed }) => [styles.row, pressed && { opacity: 0.6 }]}
+                onPress={() => setCreating(true)}
+              >
+                <View style={styles.newPlaylistIcon}>
+                  <Ionicons name="add" size={24} color={colors.text} />
+                </View>
+                <Text style={styles.rowText}>{t('New playlist')}</Text>
+              </Pressable>
+              {isLoading ? (
+                <ActivityIndicator style={{ marginVertical: spacing.lg }} color={colors.accent} />
+              ) : (
+                <ScrollView
+                  scrollEventThrottle={16}
+                  onScroll={(e) => setAtTop(e.nativeEvent.contentOffset.y <= 0)}
+                >
+                  {(playlists ?? [])
+                    .filter((p) => p.id !== excludeId)
+                    .map((p) => (
+                      <Pressable
+                        key={p.id}
+                        style={({ pressed }) => [styles.row, pressed && { opacity: 0.6 }]}
+                        onPress={() => addAllTo(p.id, p.name)}
+                      >
+                        <Cover uri={coverArtUrl(p.coverArt ?? p.id, 100)} size={40} />
+                        <Text style={styles.rowText} numberOfLines={1}>
+                          {p.name}
+                        </Text>
+                      </Pressable>
+                    ))}
+                </ScrollView>
+              )}
+            </View>
+          </GestureDetector>
+        </Animated.View>
+      </GestureHandlerRootView>
 
       <Dialog
         visible={creating}
@@ -207,7 +236,20 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
+    // Smaller than the old spacing.lg because the grabber below already brings
+    // its own margin: together they add up to the same top gap as before.
+    paddingTop: spacing.sm,
+  },
+  // Spotify's little handle. Its only job is to advertise the drag gesture, so
+  // it stays discreet: it must read as an affordance, not as a control.
+  grabber: {
+    alignSelf: 'center',
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.textMuted,
+    opacity: 0.5,
+    marginBottom: spacing.md,
   },
   title: { color: colors.text, fontSize: fontSize.md, fontWeight: '700', paddingBottom: spacing.md },
   divider: { height: 1, backgroundColor: colors.border, marginBottom: spacing.sm },
