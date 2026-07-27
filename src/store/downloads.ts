@@ -130,7 +130,14 @@ export async function getDownloadsCatalog(): Promise<DownloadsCatalog> {
     // The whole library, which is what the offline Library screen is. Kept in
     // memory afterwards, as before; what changed is that building it no longer
     // means parsing a file of everything, and that nothing else has to.
-    const [songs, albums] = await Promise.all([Db.allSongs(dir), Db.allAlbums(dir)]);
+    //
+    // Timed because it is the one thing left that reads everything at once, and
+    // the question is how long the database takes to hand a whole library over.
+    // If that turns out to cost, the offline screens should ask for what they
+    // show instead, which is a bigger change than it is worth guessing at.
+    const [songs, albums] = await timed('offline catalog', () =>
+      Promise.all([Db.allSongs(dir), Db.allAlbums(dir)]),
+    );
     cachedCatalog = { songs, albums, artists: deriveArtists(albums) };
     cachedForDir = dir;
   }
