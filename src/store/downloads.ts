@@ -718,7 +718,14 @@ export const useDownloads = create<DownloadsState>((set, get) => {
     hydrate: async () => {
       const files: Record<string, string> = {};
       const dlBitRates: Record<string, number> = {};
-      for (const dir of await serverDirs()) {
+      // The active profile's catalog, or every one of them while there isn't
+      // one yet (this runs before the session is restored, and runs again once
+      // it is). Reading them all was three files and thirty three seconds on an
+      // install that had been signed in more than once, for songs belonging to
+      // accounts that aren't playing (#50).
+      const active = activeServerDir();
+      const dirs = active ? [active] : await serverDirs();
+      for (const dir of dirs) {
         const cat = await loadCatalog(dir);
         for (const s of cat.songs) {
           if (s.localUri) files[s.id] = s.localUri;
