@@ -351,6 +351,15 @@ async function request<T>(
   // Apart from the request: this is the part that runs on the JS thread, and
   // it grows with the size of the answer.
   const json = await timed(`json ${endpoint}`, () => res.json());
+  if (__DEV__) {
+    // Size of what just had to be parsed on the JS thread. Only in
+    // development: it means reading the body twice.
+    void res
+      .clone?.()
+      ?.text()
+      .then((t) => console.log(`[perf] size ${endpoint} · ${Math.round(t.length / 1024)} KB`))
+      .catch(() => {});
+  }
   const sub = json['subsonic-response'];
   if (!sub) throw new SubsonicRequestError('Unexpected server response', false);
   if (sub.status === 'failed') {

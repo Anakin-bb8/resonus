@@ -14,7 +14,7 @@ import {
 import { hashKey } from '@/lib/localLibrary';
 import { queryClient } from '@/lib/query';
 import { getItem, setItem } from '@/lib/storage';
-import { useLibraryMirror } from '@/store/libraryMirror';
+import { MAX_PLAYLIST_SONGS, useLibraryMirror } from '@/store/libraryMirror';
 import { useOfflineQueue, type QueuePlaylist } from '@/store/offlineQueue';
 import { useSettings } from '@/store/settings';
 import * as Subsonic from './backend';
@@ -376,10 +376,18 @@ let prefetchingPlaylists = false;
  */
 const PREFETCH_COOLDOWN_MS = 10 * 60 * 1000;
 let lastPlaylistPrefetch = 0;
-/** Tracklists fetched per run: the rest wait for the next one. Filling the
- *  mirror is a background convenience, not something worth a burst of requests
- *  while the app is being used. */
-const PREFETCH_PER_RUN = 25;
+/**
+ * Tracklists fetched per run: the rest wait for the next one.
+ *
+ * On a real server this went and got all twenty five at once, 37 MB of JSON
+ * downloaded and parsed on the JS thread, during the cold start, for an offline
+ * mode that may never be used that session. Now it is a trickle.
+ */
+const PREFETCH_PER_RUN = 5;
+/** And not while the app is still opening, which is when it can least afford
+ *  it: Home is fetching its shelves and the mirror is being read. */
+const PREFETCH_QUIET_MS = 20 * 1000;
+const appStartedAt = Date.now();
 
 /**
  * In the background, caches the tracklist of server playlists for offline
@@ -389,6 +397,7 @@ const PREFETCH_PER_RUN = 25;
  */
 async function prefetchPlaylistDetails(list: Subsonic.Playlist[]): Promise<void> {
   if (prefetchingPlaylists) return;
+  if (Date.now() - appStartedAt < PREFETCH_QUIET_MS) return;
   if (Date.now() - lastPlaylistPrefetch < PREFETCH_COOLDOWN_MS) return;
   const a = useAuthStore.getState().auth;
   if (!a) return;
@@ -397,8 +406,11 @@ async function prefetchPlaylistDetails(list: Subsonic.Playlist[]): Promise<void>
   try {
     await loadMirror();
     const cached = useLibraryMirror.getState().data.playlistTracks ?? {};
-    // Only those missing or changed on the server (by `changed`).
+    // Only those missing or changed on the server (by `changed`), and only the
+    // ones the mirror would keep: asking for a playlist of thousands of songs
+    // to then throw it away is the worst of both.
     const stale = list
+      .filter((p) => (p.songCount ?? 0) <= MAX_PLAYLIST_SONGS)
       .filter((p) => {
         const prev = cached[p.id]?.playlist;
         return !prev || (p.changed != null && prev.changed !== p.changed);

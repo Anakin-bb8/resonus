@@ -52,6 +52,9 @@ export function startPerfLog(): void {
     lastTick = now;
     if (late < BLOCK_MS) return;
     const block: Block = { at: now, ms: late, during: running[running.length - 1] ?? '—' };
+    // In development it also goes to the console, where whoever is driving the
+    // app can see it land on the screen that caused it.
+    if (__DEV__) console.log(`[perf] BLOCK ${late} ms · during ${block.during}`);
     // The worst ones are kept, not the last ones: a single two second freeze
     // matters more than the twenty small ones that came after it.
     if (blocks.length < MAX_BLOCKS) {
@@ -66,7 +69,11 @@ export function startPerfLog(): void {
   }, TICK_MS);
 }
 
+/** Anything slower than this gets its own line in the development console. */
+const LOUD_MS = 100;
+
 function record(tag: string, ms: number): void {
+  if (__DEV__ && ms >= LOUD_MS) console.log(`[perf] ${tag} · ${ms} ms`);
   const cur = ops.get(tag);
   if (cur) {
     cur.count++;

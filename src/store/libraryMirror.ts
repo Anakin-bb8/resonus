@@ -125,6 +125,17 @@ function worthKeepingAlbum(
   return downloaded < songs.length;
 }
 
+/**
+ * Longest tracklist the mirror will hold for one playlist.
+ *
+ * Measured against a real server: twenty five playlists came to 37 MB of JSON,
+ * one of them 6.5 MB on its own, and all of it ended up in this file, which is
+ * read whole on startup and written whole on every flush. A playlist of
+ * thousands of songs is not something anyone browses offline; what is
+ * downloaded from it plays either way, through the catalog.
+ */
+export const MAX_PLAYLIST_SONGS = 500;
+
 /** Artists with downloads are rebuilt offline from the download catalog, so
  *  only the favourited ones need to be here. */
 function worthKeepingArtist(artist: Artist): boolean {
@@ -245,6 +256,7 @@ export const useLibraryMirror = create<MirrorState>((set, get) => {
       persist();
     },
     savePlaylistDetail: (id, playlist, songs) => {
+      if (songs.length > MAX_PLAYLIST_SONGS) return;
       set({
         data: {
           ...get().data,
@@ -254,9 +266,10 @@ export const useLibraryMirror = create<MirrorState>((set, get) => {
       persist();
     },
     savePlaylistDetails: (entries) => {
-      if (entries.length === 0) return;
+      const kept = entries.filter((e) => e.songs.length <= MAX_PLAYLIST_SONGS);
+      if (kept.length === 0) return;
       const next = { ...get().data.playlistTracks };
-      for (const e of entries) next[e.id] = { playlist: e.playlist, songs: e.songs };
+      for (const e of kept) next[e.id] = { playlist: e.playlist, songs: e.songs };
       set({ data: { ...get().data, playlistTracks: next } });
       persist();
     },
@@ -303,9 +316,14 @@ export const useLibraryMirror = create<MirrorState>((set, get) => {
       for (const [id, e] of Object.entries(data.artists ?? {})) {
         if (worthKeepingArtist(e.artist)) artists[id] = e;
       }
+      const playlistTracks: NonNullable<MirrorData['playlistTracks']> = {};
+      for (const [id, e] of Object.entries(data.playlistTracks ?? {})) {
+        if (e.songs.length <= MAX_PLAYLIST_SONGS) playlistTracks[id] = e;
+      }
       const dropped =
         Object.keys(albums).length !== Object.keys(data.albums ?? {}).length ||
-        Object.keys(artists).length !== Object.keys(data.artists ?? {}).length;
+        Object.keys(artists).length !== Object.keys(data.artists ?? {}).length ||
+        Object.keys(playlistTracks).length !== Object.keys(data.playlistTracks ?? {}).length;
       if (!dropped) return;
       set({
         data: {
@@ -315,6 +333,7 @@ export const useLibraryMirror = create<MirrorState>((set, get) => {
           prunedFrom: data.prunedFrom ?? loadedBytes,
           albums,
           artists,
+          playlistTracks,
         },
       });
       persist();
