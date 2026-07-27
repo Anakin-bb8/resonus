@@ -17,7 +17,7 @@ import {
   settingsStyles,
   SwitchList,
 } from '@/components/SettingsUI';
-import { albumsLabel, songsLabel, useT } from '@/i18n';
+import { albumsLabel, playlistsLabel, songsLabel, useT } from '@/i18n';
 import { formatBytes } from '@/lib/format';
 import { useAuthStore } from '@/store/auth';
 import { useDownloads } from '@/store/downloads';
@@ -204,7 +204,7 @@ export default function DownloadsSettings() {
         <Text style={styles.mirrorLine}>
           {t('Library copy')} ·{' '}
           {mirror
-            ? `${formatBytes(mirror.bytes)} · ${albumsLabel(mirror.albums, lang)} · ${t('{n} playlists', { n: mirror.playlists })}`
+            ? `${formatBytes(mirror.bytes)} · ${albumsLabel(mirror.albums, lang)} · ${playlistsLabel(mirror.playlists, lang)}`
             : '…'}
         </Text>
         {mirror?.prunedFrom ? (
