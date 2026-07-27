@@ -366,6 +366,48 @@ export function getPlaylists(): Promise<Subsonic.Playlist[]> {
   });
 }
 
+/**
+ * Caches the tracklist of favourited albums for offline, a few at a time.
+ *
+ * Favouriting an album put it in the offline Library but not its songs: only
+ * albums that had been opened online were stored, so a favourite you had never
+ * looked at opened empty and the screen bailed. Keeping them all was out of
+ * the question while the mirror was one file rewritten in full; now an album
+ * is a row of its own.
+ *
+ * Same manners as the playlists: nothing while the app is opening, a handful
+ * per run, and a long wait in between. It is a convenience for a mode that may
+ * never be used, so it never competes with what somebody is waiting for.
+ */
+let prefetchingAlbums = false;
+let lastAlbumPrefetch = 0;
+const ALBUM_PREFETCH_PER_RUN = 8;
+
+async function prefetchStarredAlbums(albums: Subsonic.Album[]): Promise<void> {
+  if (prefetchingAlbums) return;
+  if (Date.now() - appStartedAt < PREFETCH_QUIET_MS) return;
+  if (Date.now() - lastAlbumPrefetch < PREFETCH_COOLDOWN_MS) return;
+  const a = useAuthStore.getState().auth;
+  if (!a || albums.length === 0) return;
+  prefetchingAlbums = true;
+  lastAlbumPrefetch = Date.now();
+  try {
+    const stored = await useLibraryMirror.getState().albumIds();
+    const missing = albums.filter((al) => !stored.has(al.id)).slice(0, ALBUM_PREFETCH_PER_RUN);
+    const dl = useDownloads.getState();
+    for (const al of missing) {
+      try {
+        const res = await Subsonic.getAlbum(a, al.id);
+        useLibraryMirror.getState().saveAlbum(al.id, res.album, res.songs, dl);
+      } catch {
+        // Best effort: whatever fails is tried again on the next run.
+      }
+    }
+  } finally {
+    prefetchingAlbums = false;
+  }
+}
+
 /** Prevents overlapping prefetch runs (getPlaylists can fire multiple times). */
 let prefetchingPlaylists = false;
 /**
@@ -532,6 +574,9 @@ export function getStarred(): Promise<Subsonic.Starred> {
   // Copy for offline mode (Library as server mirror).
   return p.then((s) => {
     useLibraryMirror.getState().saveStarred(s);
+    // And, in the background, the tracklists of the favourited albums, so they
+    // open offline instead of being listed and then coming up empty.
+    void prefetchStarredAlbums(s.albums ?? []);
     return s;
   });
 }

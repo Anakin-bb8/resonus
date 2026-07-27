@@ -145,6 +145,7 @@ interface MirrorState {
   song: (id: string) => Promise<Song | undefined>;
   songs: (ids: string[]) => Promise<Map<string, Song>>;
   playlistVersions: () => Promise<Record<string, string | undefined>>;
+  albumIds: () => Promise<Set<string>>;
 }
 
 export const useLibraryMirror = create<MirrorState>((set, get) => ({
@@ -268,4 +269,5 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
   song: (id) => withMirror((d, p) => Db.getSong(d, p, id), undefined),
   songs: (ids) => withMirror((d, p) => Db.getSongs(d, p, ids), new Map<string, Song>()),
   playlistVersions: () => withMirror((d, p) => Db.playlistVersions(d, p), {}),
+  albumIds: () => withMirror((d, p) => Db.albumIds(d, p), new Set<string>()),
 }));

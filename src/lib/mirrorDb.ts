@@ -266,6 +266,15 @@ export async function getSong(dir: string, profile: string, id: string): Promise
   return row ? (JSON.parse(row.data) as Song) : undefined;
 }
 
+/** Which albums are already stored, to know which ones are missing. */
+export async function albumIds(dir: string, profile: string): Promise<Set<string>> {
+  const db = await mirrorDb(dir, profile);
+  const rows = await db.getAllAsync<{ id: string }>(
+    "SELECT id FROM entries WHERE kind = 'album'",
+  );
+  return new Set(rows.map((r) => r.id));
+}
+
 /** Which of these playlists are already stored, and with which `changed`, so
  *  the prefetch can ask only for what moved. */
 export async function playlistVersions(
