@@ -851,6 +851,60 @@ function dedupeById<T extends { id: string }>(items: T[]): T[] {
  */
 const MERGE_DEPTH = 100;
 
+// ── Library sizes (for the random pool) ──
+//
+// The API has no count of its own, but `getArtists` carries `albumCount` per
+// artist and takes a library, so one request per library adds up to how many
+// albums it holds. Cached well beyond the album lists: this only moves when the
+// server scans, not between one shelf and the next.
+
+const LIBRARY_SIZE_TTL_MS = 30 * 60 * 1000;
+const librarySizes = new Map<string, { at: number; count: number }>();
+
+/**
+ * Albums in one library, 0 if the server doesn't say.
+ *
+ * An approximation: a server may report an artist's albums across the whole
+ * collection rather than within the asked library, so an artist present in two
+ * gets counted twice. It's a weight, not a figure anyone is shown.
+ */
+async function libraryAlbumCount(a: Subsonic.SubsonicAuth, folderId: string): Promise<number> {
+  const key = `${profileKeyOf(a)}|${folderId}`;
+  const hit = librarySizes.get(key);
+  if (hit && Date.now() - hit.at < LIBRARY_SIZE_TTL_MS) return hit.count;
+  try {
+    const artists = await Subsonic.getArtists(a, folderId);
+    const count = artists.reduce((n, ar) => n + (ar.albumCount ?? 0), 0);
+    librarySizes.set(key, { at: Date.now(), count });
+    return count;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * How much of the random pool each library contributes.
+ *
+ * Asking every library for the same amount and shuffling the result is still
+ * one turn each, only disguised: the pool itself is what's biased, so no
+ * shuffle over it can fix the proportions (issue #39). A library holding a
+ * twentieth of the music has to bring a twentieth of the pool.
+ *
+ * Their share of the total, then, with a floor of one so a small library still
+ * turns up now and then, and an equal split as the fallback for a server that
+ * doesn't report album counts.
+ */
+async function randomDepths(
+  a: Subsonic.SubsonicAuth,
+  ids: string[],
+  pool: number,
+): Promise<number[]> {
+  const counts = await Promise.all(ids.map((id) => libraryAlbumCount(a, id)));
+  const total = counts.reduce((n, c) => n + c, 0);
+  if (total <= 0) return ids.map(() => Math.ceil(pool / ids.length));
+  return counts.map((c) => Math.max(1, Math.round(pool * (c / total))));
+}
+
 /** First `depth` albums of one library, in chunks the endpoint accepts. */
 async function fetchTopAlbums(
   depth: number,
@@ -915,7 +969,9 @@ function mergeAlbums(perFolder: Subsonic.Album[][], type: Subsonic.AlbumListType
   }
   const all = dedupeById(perFolder.flat());
   // Random has no order to respect: one shuffle over everything. Interleaving
-  // per-library shuffles would still hand out one turn each.
+  // per-library shuffles would still hand out one turn each — and so would
+  // shuffling a pool built with the same amount from each, which is why the
+  // pool comes weighted by library size (see `randomDepths`).
   if (type === 'random') return shuffled(all);
   const field = ALBUM_SORT_FIELD[type];
   if (field && all.some((al) => al[field] != null)) {
@@ -960,8 +1016,15 @@ async function mergedAlbumPage(
   const cacheKey = `${cacheBase}|${profileKeyOf(a)}|${ids.join(',')}|${depth}`;
   let all = readAlbumCache<Subsonic.Album>(cacheKey);
   if (!all) {
+    // Same total as the flat depth, split by size instead of equally: for the
+    // sorted lists the field decides and taking the first N of each is enough,
+    // but a shuffle can only be as fair as the pool it shuffles.
+    const depths =
+      type === 'random'
+        ? await randomDepths(a, ids, depth * ids.length)
+        : ids.map(() => depth);
     const perFolder = await Promise.all(
-      ids.map((id) => fetchTopAlbums(depth, (s, o) => fetchOne(id, s, o))),
+      ids.map((id, i) => fetchTopAlbums(depths[i], (s, o) => fetchOne(id, s, o))),
     );
     all = mergeAlbums(perFolder, type);
     writeAlbumCache(cacheKey, all);
