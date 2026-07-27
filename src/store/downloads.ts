@@ -401,7 +401,7 @@ async function mirrorAlbumTracklists(auth: SubsonicAuth, songs: Song[]): Promise
     if (have[id]) continue;
     try {
       const res = await getAlbum(auth, id);
-      mirror.saveAlbum(id, res.album, res.songs);
+      mirror.saveAlbum(id, res.album, res.songs, useDownloads.getState());
     } catch {
       // best-effort: if the album can't be requested, it stays unmirrored.
     }

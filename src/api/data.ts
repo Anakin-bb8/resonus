@@ -179,7 +179,7 @@ export function getAlbum(id: string): Promise<{ album: Subsonic.Album; songs: Su
     return Local.getAlbum(id);
   }
   return Subsonic.getAlbum(auth(), id).then((res) => {
-    useLibraryMirror.getState().saveAlbum(id, res.album, res.songs);
+    useLibraryMirror.getState().saveAlbum(id, res.album, res.songs, useDownloads.getState());
     return res;
   });
 }
@@ -688,7 +688,7 @@ export function snapshotCachesToMirror(): void {
   }>({ queryKey: ['album'] })) {
     const id = key[1];
     if (typeof id === 'string' && data?.album && Array.isArray(data.songs)) {
-      mirror.saveAlbum(id, data.album, data.songs);
+      mirror.saveAlbum(id, data.album, data.songs, useDownloads.getState());
     }
   }
   // Going offline is a deliberate moment: persist now (a single write,

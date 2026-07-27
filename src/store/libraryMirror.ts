@@ -20,10 +20,20 @@ import { hashKey } from '@/lib/localLibrary';
 import { timed, timedSync } from '@/lib/perfLog';
 import { primaryUrl } from '@/lib/serverUrls';
 import { useAuthStore } from './auth';
-// Cycle with `downloads`, which mirrors the tracklist of what it downloads.
-// Both sides only reach for the other inside functions, never while the module
-// is being evaluated, so neither sees the other half-built.
-import { useDownloads } from './downloads';
+
+/**
+ * What the mirror needs to know about the downloads to decide what to keep.
+ *
+ * Handed in by the caller rather than imported: `downloads` already imports
+ * this module to mirror the tracklists of what it downloads, and reaching back
+ * for it would be a require cycle. `hydrated` is not optional — before the
+ * files are read from disk they all look absent, and something downloaded
+ * would look disposable.
+ */
+export interface DownloadsView {
+  files: Record<string, string>;
+  hydrated: boolean;
+}
 
 /** What the mirror is holding, for Settings › About. */
 export interface MirrorStats {
@@ -76,11 +86,11 @@ interface MirrorState {
   /** Saves multiple details at once (single disk write). */
   savePlaylistDetails: (entries: { id: string; playlist: Playlist; songs: Song[] }[]) => void;
   /** Applies the "worth keeping" rule to what was already on disk. Needs the
-   *  downloads to be hydrated, so it's called after them. */
-  prune: () => void;
+   *  downloads hydrated, so it's called after them. */
+  prune: (downloads: DownloadsView) => void;
   /** Size on disk and what's in it, for Settings › About. */
   stats: () => Promise<MirrorStats>;
-  saveAlbum: (id: string, album: Album, songs: Song[]) => void;
+  saveAlbum: (id: string, album: Album, songs: Song[], downloads: DownloadsView) => void;
   saveArtist: (id: string, artist: Artist, albums: Album[]) => void;
   /** Forces pending writes to disk immediately (on background/offline). */
   flush: () => void;
@@ -240,9 +250,8 @@ export const useLibraryMirror = create<MirrorState>((set, get) => {
       set({ data: { ...get().data, playlistTracks: next } });
       persist();
     },
-    saveAlbum: (id, album, songs) => {
+    saveAlbum: (id, album, songs, dl) => {
       const data = get().data;
-      const dl = useDownloads.getState();
       if (!worthKeepingAlbum(album, songs, dl.files)) {
         // Before the downloads are read from disk there is no telling a
         // downloaded album from a disposable one, so nothing is thrown away:
@@ -271,10 +280,9 @@ export const useLibraryMirror = create<MirrorState>((set, get) => {
       set({ data: { ...data, artists: { ...data.artists, [id]: { artist, albums } } } });
       persist();
     },
-    prune: () => {
+    prune: (dl) => {
       const data = get().data;
       if (!get().loadedFile) return;
-      const dl = useDownloads.getState();
       if (!dl.hydrated) return; // everything downloaded would look disposable
       const files = dl.files;
       const albums: NonNullable<MirrorData['albums']> = {};

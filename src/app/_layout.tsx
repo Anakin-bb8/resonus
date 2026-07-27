@@ -100,7 +100,7 @@ export default function RootLayout() {
     // it. After the downloads, never before: an album whose songs are on disk
     // is worth keeping, and until they're hydrated it doesn't look like it.
     void Promise.all([downloadsReady, mirrorReady]).then(() => {
-      useLibraryMirror.getState().prune();
+      useLibraryMirror.getState().prune(useDownloads.getState());
     });
     // Equalizer: reads device capabilities and applies saved settings.
     void useEqualizer.getState().hydrate();
