@@ -47,8 +47,9 @@ import { useToast } from './toast';
 const ROOT_DIR = FileSystem.documentDirectory + 'downloads/';
 const CONCURRENCY = 3;
 
-/** Downloaded album: the server's + local cover and download date. */
-type DlAlbum = Album & { coverUri?: string; addedAt?: number };
+/** Downloaded album: the server's + local cover and download date. `dlBytes`
+ *  is the size of that cover, so Storage used never has to go and measure. */
+type DlAlbum = Album & { coverUri?: string; addedAt?: number; dlBytes?: number };
 
 /** Persisted catalog per server (songs with `localUri` + albums). */
 interface ServerDownloads {
@@ -349,10 +350,13 @@ function songFileUrl(
 }
 
 /** Song as it enters the local catalog: server id + local file. */
-function toLocalSong(song: Song, fileUri: string, dlBitRate?: number): Song {
+function toLocalSong(song: Song, fileUri: string, dlBitRate?: number, dlBytes?: number): Song {
   return {
     ...song,
     localUri: fileUri,
+    // Written down now, while the file is right here: adding these up is what
+    // Storage used reads, instead of asking the file system once per file.
+    dlBytes,
     // Transcode bitrate at download time (if any): the file on disk doesn't
     // carry it, so the quality label can show it offline.
     dlBitRate,
@@ -367,13 +371,14 @@ function toLocalSong(song: Song, fileUri: string, dlBitRate?: number): Song {
   };
 }
 
-function toLocalAlbum(album: Album, coverUri?: string): DlAlbum {
+function toLocalAlbum(album: Album, coverUri?: string, dlBytes?: number): DlAlbum {
   return {
     ...album,
     artistId: normKey(album.artist || 'Artista desconocido'),
     artists: album.artists?.map((a) => ({ id: normKey(a.name), name: a.name })),
     coverArt: album.id,
     coverUri,
+    dlBytes,
     addedAt: Date.now(),
   };
 }
@@ -434,13 +439,56 @@ async function cacheLyricsForDownload(auth: SubsonicAuth, song: Song, audioFile:
   }
 }
 
-async function downloadCover(auth: SubsonicAuth, dir: string, album: Album): Promise<string | undefined> {
+/**
+ * Sizes for downloads made before they were written down, filled in once.
+ *
+ * In parallel batches rather than one file after another, and saved into the
+ * catalog, so a library downloaded with an older version pays this once and
+ * never again.
+ */
+async function measureMissing(
+  dir: string,
+  entries: { localUri?: string; coverUri?: string; dlBytes?: number }[],
+): Promise<number> {
+  const BATCH = 24;
+  let total = 0;
+  for (let i = 0; i < entries.length; i += BATCH) {
+    const batch = entries.slice(i, i + BATCH);
+    const sizes = await Promise.all(batch.map((e) => fileSize(e.localUri ?? e.coverUri ?? '')));
+    batch.forEach((e, j) => {
+      e.dlBytes = sizes[j];
+      total += sizes[j];
+    });
+  }
+  markDirty(dir);
+  return total;
+}
+
+/** Size of a file, 0 if it can't be read. */
+async function fileSize(uri: string): Promise<number> {
+  try {
+    const info = await FileSystem.getInfoAsync(uri);
+    return info.exists ? ((info as { size?: number }).size ?? 0) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/** The cover, with what it takes on disk: measured here, once per album, so
+ *  Storage used never has to measure anything. */
+async function downloadCover(
+  auth: SubsonicAuth,
+  dir: string,
+  album: Album,
+): Promise<{ uri: string; bytes: number } | undefined> {
   const url = coverArtUrl(auth, album.coverArt ?? album.id, 500);
   if (!url) return undefined;
   const file = `${dir}covers/${hashKey(album.id)}.jpg`;
   try {
     const existing = await FileSystem.getInfoAsync(file);
-    if (existing.exists) return file;
+    if (existing.exists) {
+      return { uri: file, bytes: (existing as { size?: number }).size ?? 0 };
+    }
     await FileSystem.makeDirectoryAsync(`${dir}covers/`, { intermediates: true }).catch(() => {});
     const res = await FileSystem.downloadAsync(url, file);
     // Same care as with audio, and we also need to delete: the download writes
@@ -450,7 +498,7 @@ async function downloadCover(auth: SubsonicAuth, dir: string, album: Album): Pro
       await FileSystem.deleteAsync(file, { idempotent: true }).catch(() => {});
       return undefined;
     }
-    return file;
+    return { uri: file, bytes: Number(header(res.headers, 'content-length')) || (await fileSize(file)) };
   } catch {
     return undefined;
   }
@@ -553,8 +601,10 @@ export const useDownloads = create<DownloadsState>((set, get) => {
         const album = song.albumId ? albumById.get(song.albumId) : undefined;
         if (!album || albumDone.has(album.id)) return;
         albumDone.add(album.id); // mark before await: so another worker won't repeat it
-        const coverUri = await downloadCover(auth, dir, album);
-        await commitToCatalog(dir, { albums: [toLocalAlbum(album, coverUri)] });
+        const cover = await downloadCover(auth, dir, album);
+        await commitToCatalog(dir, {
+          albums: [toLocalAlbum(album, cover?.uri, cover?.bytes)],
+        });
       };
 
       // Ongoing tasks, aborted on stop (instant stop).
@@ -589,9 +639,15 @@ export const useDownloads = create<DownloadsState>((set, get) => {
             if (!res || res.status !== 200) throw new Error(`HTTP ${res?.status}`);
             if (isErrorBody(res.headers)) throw new Error('error body, not audio');
             await cacheLyricsForDownload(auth, song, file);
+            // The size comes from the response, which already counted it. Only
+            // ask the file system when the server sent no length.
+            const bytes =
+              Number(header(res.headers, 'content-length')) || (await fileSize(file));
             // Each song is persisted on completion: if the app dies mid-album,
             // already downloaded items survive a restart.
-            await commitToCatalog(dir, { songs: [toLocalSong(song, file, dlBitRate)] });
+            await commitToCatalog(dir, {
+              songs: [toLocalSong(song, file, dlBitRate, bytes)],
+            });
             set((st) => {
               const cur = st.active[groupKey];
               return {
@@ -797,17 +853,24 @@ export const useDownloads = create<DownloadsState>((set, get) => {
 
     usageBytes: async () => {
       let total = 0;
+      // From the catalog, which knows what each file took when it was written.
+      // This used to ask the file system for the size of every single file, one
+      // after another: eleven thousand round trips on a large library, each one
+      // resolving a promise on the JS thread, so opening this screen made the
+      // whole app stutter for as long as it took, and leaving the screen didn't
+      // even stop it (#50).
       for (const dir of await serverDirs()) {
-        for (const sub of ['files/', 'covers/']) {
-          try {
-            const entries = await FileSystem.readDirectoryAsync(dir + sub);
-            for (const e of entries) {
-              const info = await FileSystem.getInfoAsync(dir + sub + e);
-              if (info.exists) total += ((info as any).size as number) || 0;
-            }
-          } catch {
-            // nonexistent subfolder
-          }
+        const catalog = await loadCatalog(dir);
+        for (const s of catalog.songs) total += s.dlBytes ?? 0;
+        for (const a of catalog.albums) total += a.dlBytes ?? 0;
+        // Downloaded before sizes were recorded: measured once, written down,
+        // and never measured again.
+        const missing = [
+          ...catalog.songs.filter((s) => s.localUri && s.dlBytes == null),
+          ...catalog.albums.filter((a) => a.coverUri && a.dlBytes == null),
+        ];
+        if (missing.length > 0) {
+          total += await measureMissing(dir, missing);
         }
       }
       return total;

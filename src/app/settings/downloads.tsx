@@ -83,21 +83,28 @@ export default function DownloadsSettings() {
   // feels slow" into a number someone can put in an issue (#50).
   const [mirror, setMirror] = useState<MirrorStats | null>(null);
 
+  // Measured on entering the screen and after deleting, not on every change of
+  // `count`: while something downloads that changes with each song, and it used
+  // to restart the whole measurement each time, so with auto-download on it
+  // never finished (#50).
   useEffect(() => {
     let active = true;
-    usageBytes().then((n) => {
-      if (active) setUsage(n);
-    });
+    // The mirror first, on purpose. File system calls are served by one native
+    // queue, so asking for it after the downloads meant this line waiting
+    // behind them, and it is the cheap one.
     void useLibraryMirror
       .getState()
       .stats()
       .then((s) => {
         if (active) setMirror(s);
       });
+    usageBytes().then((n) => {
+      if (active) setUsage(n);
+    });
     return () => {
       active = false;
     };
-  }, [usageBytes, count]);
+  }, [usageBytes]);
 
   return (
     <SettingsPage title={t('Downloads')}>

@@ -114,6 +114,9 @@ export interface Song {
   hasCover?: boolean;
   /** Local file URI (offline mode); if present, playback happens without server. */
   localUri?: string;
+  /** Size on disk of that file, written when it is downloaded. Storage used
+   *  adds these up instead of asking the file system once per file. */
+  dlBytes?: number;
   /**
    * Marked as unavailable offline: appears in the list (mirror of the server
    * library) but is not downloaded, so it is shown grayed out and cannot be
