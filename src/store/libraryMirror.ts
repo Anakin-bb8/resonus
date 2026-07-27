@@ -100,23 +100,29 @@ interface MirrorState {
  * Is this album worth keeping offline?
  *
  * The mirror used to keep every album ever opened online, so it grew without
- * end: after months of use it was megabytes that got parsed whole on startup
- * and written whole on every flush, and since that write is a `JSON.stringify`
- * on the JS thread, the app got slower the longer it had been used — and only
- * while online, which is where the writing happens (#50).
+ * end: parsed whole on startup and written whole on every flush, both on the JS
+ * thread, so the app got slower the longer it had been used (#50).
  *
- * What it's for, as the module says at the top, is what the Library shows
- * offline: favourites and playlists. Plus whatever has downloads, and that one
- * matters more than it looks: on a half-downloaded album this is the only thing
- * that keeps the full tracklist, with the missing songs greyed out instead of
- * simply gone. An album merely looked at online is none of that.
+ * There are exactly three cases, and only one of them needs this file:
+ *
+ * - Some songs downloaded and some not. Kept: this is the ONLY place the full
+ *   tracklist lives, and without it the missing songs don't even appear greyed
+ *   out, the album just looks shorter than it is.
+ * - Every song downloaded. Dropped. The download catalog already holds all of
+ *   them and `mirrorAlbum` falls back to it, so a copy here is the same
+ *   tracklist written twice. This is what a mostly-downloaded library turned
+ *   into tens of MB of JSON.
+ * - Nothing downloaded. Kept only if favourited, which is what the Library
+ *   offers to open offline. Anything else was merely looked at once.
  */
 function worthKeepingAlbum(
   album: Album,
   songs: Song[],
   files: Record<string, string>,
 ): boolean {
-  return !!album.starred || songs.some((s) => !!files[s.id]);
+  const downloaded = songs.reduce((n, s) => (files[s.id] ? n + 1 : n), 0);
+  if (downloaded === 0) return !!album.starred;
+  return downloaded < songs.length;
 }
 
 /** Artists with downloads are rebuilt offline from the download catalog, so
@@ -213,7 +219,11 @@ export const useLibraryMirror = create<MirrorState>((set, get) => {
           const info = await FileSystem.getInfoAsync(file);
           if (info.exists) {
             loadedBytes = info.size ?? 0;
-            data = JSON.parse(await FileSystem.readAsStringAsync(file)) as MirrorData;
+            const raw = await timed('mirror read', () =>
+              FileSystem.readAsStringAsync(file),
+            );
+            // Timed apart: this one is the JS thread, and it is the whole file.
+            data = timedSync('mirror parse', () => JSON.parse(raw) as MirrorData);
           }
         } catch {
           // Corrupt or missing file: empty mirror.
