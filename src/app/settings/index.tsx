@@ -31,7 +31,11 @@ export default function SettingsScreen() {
   const goOffline = useAuthStore((s) => s.goOffline);
   const offline = useAuthStore((s) => s.offline);
   // Only offer "go offline" manually if there's something downloaded to listen to.
-  const hasDownloads = useDownloads((s) => Object.keys(s.files).length > 0);
+  // Until the catalog has been read, an empty map means "not known yet", not
+  // "nothing downloaded". Hiding the switch on that basis is what made it
+  // disappear for the first seconds on a large library, which is exactly the
+  // library that needs it.
+  const hasDownloads = useDownloads((s) => !s.hydrated || Object.keys(s.files).length > 0);
   const toast = useToast((s) => s.show);
   // Restore defaults: affects all settings, that's why it lives here (in the
   // index) and not inside a specific category.

@@ -46,6 +46,10 @@ import { colors } from '@/theme';
 // Patches Text/TextInput once, before the first render.
 installAppFont();
 
+/** How long the offline copy of the library waits before being read, when the
+ *  app has a server and nothing is going to ask for it yet. */
+const MIRROR_DELAY_MS = 15_000;
+
 export default function RootLayout() {
   // The selected font is applied on every render (and after hydrating settings):
   // so everything that gets repainted picks up the current family.
@@ -83,19 +87,25 @@ export default function RootLayout() {
     void removeLegacyRadioCovers();
     const downloadsReady = useDownloads.getState().hydrate();
     void useAutoDownloads.getState().hydrate();
-    // Mirror + outbox for offline (reloaded when switching profiles). After
-    // loading from disk, if we're offline we refresh the Library: covers cold
-    // starts where a query could resolve before the mirror is in memory and
-    // would stay empty until manually reloaded.
-    const mirrorReady = Promise.all([
-      useLibraryMirror.getState().load(),
-      useOfflineQueue.getState().load(),
-    ]).then(() => {
-      if (useAuthStore.getState().offline) {
-        void queryClient.invalidateQueries({ queryKey: ['playlists'] });
-        void queryClient.invalidateQueries({ queryKey: ['starred'] });
-      }
-    });
+    // Mirror + outbox for offline. Offline it is the library, so it is read
+    // right away: a query could otherwise resolve before it is in memory and
+    // stay empty until manually reloaded. Online nothing reads it, only writes
+    // to it, and reading it is a JSON parse of the whole file on the JS thread
+    // — tens of MB on a heavy install, in the middle of the cold start, which
+    // is where the app was left showing placeholders (#50). There it waits.
+    const startMirror = () =>
+      Promise.all([
+        useLibraryMirror.getState().load(),
+        useOfflineQueue.getState().load(),
+      ]).then(() => {
+        if (useAuthStore.getState().offline) {
+          void queryClient.invalidateQueries({ queryKey: ['playlists'] });
+          void queryClient.invalidateQueries({ queryKey: ['starred'] });
+        }
+      });
+    const mirrorReady = useAuthStore.getState().offline
+      ? startMirror()
+      : new Promise<void>((resolve) => setTimeout(() => resolve(startMirror()), MIRROR_DELAY_MS));
     // Clearing out a mirror grown before there was a rule for what belongs in
     // it. After the downloads, never before: an album whose songs are on disk
     // is worth keeping, and until they're hydrated it doesn't look like it.
