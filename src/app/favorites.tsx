@@ -51,6 +51,7 @@ export default function FavoritesScreen() {
   const menuRef = useRef<() => void>(() => {});
 
   const [confirmDownload, setConfirmDownload] = useState(false);
+  const [confirmDeleteDl, setConfirmDeleteDl] = useState(false);
   const [confirmRemoveDl, setConfirmRemoveDl] = useState(false);
   const [confirmStop, setConfirmStop] = useState(false);
   // Songs selected in selection mode pending "add to another playlist".
@@ -63,6 +64,11 @@ export default function FavoritesScreen() {
   });
 
   const songIds = (data?.songs ?? []).map((s) => s.id);
+  // Exact, like the playlist screen's: the songs are here, so the option only
+  // shows when some of them are on the device, and it says how many it removed.
+  const dlFiles = useDownloads((s) => s.files);
+  const downloadedIds = songIds.filter((sid) => dlFiles[sid]);
+  const hasDownloads = downloadedIds.length > 0;
   const download = useDownloads(useShallow((s) => groupDownloadState(s, 'favorites', songIds)));
   const downloadFavorites = useDownloads((s) => s.downloadFavorites);
   const cancelDownload = useDownloads((s) => s.cancelDownload);
@@ -249,9 +255,37 @@ export default function FavoritesScreen() {
                 </Text>
               </Pressable>
             ) : null}
+            {/* Same bulk delete albums and playlists have: clears whatever of
+                these songs is on the device, half-downloaded lists included. */}
+            {hasDownloads ? (
+              <Pressable
+                style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+                onPress={() => {
+                  close();
+                  setConfirmDeleteDl(true);
+                }}
+              >
+                <Ionicons name="trash-outline" size={24} color={colors.text} />
+                <Text style={styles.actionText}>{t('Delete downloads')}</Text>
+              </Pressable>
+            ) : null}
           </>
         )}
       </SheetModal>
+
+      <Dialog
+        visible={confirmDeleteDl}
+        title={t('Remove download?')}
+        message={t('“{name}” will no longer be available offline.', { name: t('Favorites') })}
+        confirmLabel={t('Remove')}
+        destructive
+        onCancel={() => setConfirmDeleteDl(false)}
+        onConfirm={() => {
+          setConfirmDeleteDl(false);
+          void deleteSongs(downloadedIds);
+          toast(t('{n} songs deleted', { n: downloadedIds.length }));
+        }}
+      />
 
       <Dialog
         visible={confirmDownload}
