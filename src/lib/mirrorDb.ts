@@ -59,8 +59,16 @@ function jsonFile(dir: string, profile: string): string {
   return `${dir}${profile}.json`;
 }
 
-let handle: Promise<SQLite.SQLiteDatabase> | null = null;
-let handleFor = '';
+/**
+ * One handle per profile, kept open.
+ *
+ * A single handle that closed on switching profiles looked tidier and was a
+ * race: reads are in flight while the switch happens, so the close could land
+ * on the database that had just been opened, and every read after it failed
+ * quietly and left the app looking like it had no offline library at all.
+ * Handles are cheap; keeping them costs nothing and there is nothing to time.
+ */
+const open = new Map<string, Promise<SQLite.SQLiteDatabase>>();
 
 /**
  * Opens a profile's mirror, migrating its JSON the first time.
@@ -69,9 +77,9 @@ let handleFor = '';
  * apart, which is what the caller knows.
  */
 export function mirrorDb(dir: string, profile: string): Promise<SQLite.SQLiteDatabase> {
-  if (handle && handleFor === profile) return handle;
-  handleFor = profile;
-  handle = (async () => {
+  const existing = open.get(profile);
+  if (existing) return existing;
+  const handle = (async () => {
     await FileSystem.makeDirectoryAsync(dir, { intermediates: true }).catch(() => {});
     // SQLite joins directory and name as plain text: the `file://` that the
     // file system module speaks means nothing to it.
@@ -84,14 +92,17 @@ export function mirrorDb(dir: string, profile: string): Promise<SQLite.SQLiteDat
     await migrateFromJson(db, jsonFile(dir, profile));
     return db;
   })();
+  open.set(profile, handle);
   return handle;
 }
 
+/** Closes them all. For clearing everything out, not for switching profiles. */
 export async function closeMirror(): Promise<void> {
-  const open = handle;
-  handle = null;
-  handleFor = '';
-  await open?.then((db) => db.closeAsync()).catch(() => {});
+  const handles = [...open.values()];
+  open.clear();
+  for (const h of handles) {
+    await h.then((db) => db.closeAsync()).catch(() => {});
+  }
 }
 
 // ── Coming from the JSON ────────────────────────────────────────────────────

@@ -111,9 +111,12 @@ async function withMirror<T>(
   if (!target) return fallback;
   try {
     return await fn(target.dir, target.profile);
-  } catch {
+  } catch (e) {
     // A mirror that can't be read or written is a degraded offline mode, not
-    // a reason to take the screen down with it.
+    // a reason to take the screen down with it. It is not something to hide
+    // either: swallowing it is what made a broken read look like an empty
+    // library, with the app quietly falling back to local files.
+    if (__DEV__) console.log('[mirror] failed:', e);
     return fallback;
   }
 }
@@ -154,12 +157,12 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
   load: async () => {
     const target = active();
     if (!target) {
-      await Db.closeMirror();
       set({ profile: '' });
       return;
     }
     if (get().profile === target.profile) return;
-    if (get().profile) await Db.closeMirror(); // another profile's was open
+    // The previous profile's handle stays open on purpose: closing it here
+    // raced with reads that were still in flight (see `mirrorDb`).
     await Db.mirrorDb(target.dir, target.profile).catch(() => {});
     set({ profile: target.profile });
   },
