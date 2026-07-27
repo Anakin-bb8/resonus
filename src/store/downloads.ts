@@ -261,10 +261,10 @@ function toLocalAlbum(album: Album, coverUri?: string, dlBytes?: number): DlAlbu
  */
 async function mirrorAlbumTracklists(auth: SubsonicAuth, songs: Song[]): Promise<void> {
   const mirror = useLibraryMirror.getState();
-  const have = mirror.data.albums ?? {};
   const ids = [...new Set(songs.map((s) => s.albumId).filter((id): id is string => !!id))];
   for (const id of ids) {
-    if (have[id]) continue;
+    // Already mirrored: asked one at a time, which is a row lookup.
+    if (await mirror.albumDetail(id)) continue;
     try {
       const res = await getAlbum(auth, id);
       mirror.saveAlbum(id, res.album, res.songs, useDownloads.getState());
