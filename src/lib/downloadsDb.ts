@@ -128,10 +128,12 @@ async function migrateFromJson(dir: string, db: SQLite.SQLiteDatabase): Promise<
   if (songs.length === 0 && albums.length === 0) return;
 
   await timed('catalog migrate write', async () => {
-    await db.withTransactionAsync(async () => {
-      for (const s of songs) await insertSong(db, s);
-      for (const a of albums) await insertAlbum(db, a);
-    });
+    await serialized(() =>
+      db.withTransactionAsync(async () => {
+        for (const s of songs) await insertSong(db, s);
+        for (const a of albums) await insertAlbum(db, a);
+      }),
+    );
   });
 
   const after = await db.getFirstAsync<{ n: number }>('SELECT COUNT(*) AS n FROM songs');
@@ -140,6 +142,23 @@ async function migrateFromJson(dir: string, db: SQLite.SQLiteDatabase): Promise<
 }
 
 // ── Writing ─────────────────────────────────────────────────────────────────
+
+/**
+ * Writes go one at a time.
+ *
+ * Two transactions at once on the same connection is an error, not a wait, and
+ * downloads commit from several workers in parallel: "cannot start a
+ * transaction within a transaction" is what that looks like. The JSON had a
+ * lock for the same reason; this is that lock, kept where the writes are.
+ */
+let writeQueue: Promise<unknown> = Promise.resolve();
+
+function serialized<T>(fn: () => Promise<T>): Promise<T> {
+  const run = writeQueue.then(fn, fn);
+  writeQueue = run.catch(() => {});
+  return run;
+}
+
 
 async function insertSong(db: SQLite.SQLiteDatabase, s: Song): Promise<void> {
   await db.runAsync(
@@ -187,10 +206,12 @@ export async function addToCatalog(
   const { songs = [], albums = [] } = changes;
   if (songs.length === 0 && albums.length === 0) return;
   const db = await catalogDb(dir);
-  await db.withTransactionAsync(async () => {
-    for (const s of songs) await insertSong(db, s);
-    for (const a of albums) await insertAlbum(db, a);
-  });
+  await serialized(() =>
+    db.withTransactionAsync(async () => {
+      for (const s of songs) await insertSong(db, s);
+      for (const a of albums) await insertAlbum(db, a);
+    }),
+  );
 }
 
 /**
@@ -228,12 +249,14 @@ export async function removeFromCatalog(
   }
   if (songs.length === 0) return { songs: [], albums: [] };
 
-  await db.withTransactionAsync(async () => {
-    for (const part of chunked(ids)) {
-      const marks = part.map(() => '?').join(',');
-      await db.runAsync(`DELETE FROM songs WHERE id IN (${marks})`, part);
-    }
-  });
+  await serialized(() =>
+    db.withTransactionAsync(async () => {
+      for (const part of chunked(ids)) {
+        const marks = part.map(() => '?').join(',');
+        await db.runAsync(`DELETE FROM songs WHERE id IN (${marks})`, part);
+      }
+    }),
+  );
 
   // Now that they are gone, whichever albums are left with nothing. Asked
   // after the fact rather than predicted, so it needs no parameters at all.
@@ -242,9 +265,11 @@ export async function removeFromCatalog(
        (SELECT DISTINCT album_id FROM songs WHERE album_id IS NOT NULL)`,
   );
   if (empty.length > 0) {
-    await db.runAsync(
+    await serialized(() =>
+      db.runAsync(
       `DELETE FROM albums WHERE id NOT IN
          (SELECT DISTINCT album_id FROM songs WHERE album_id IS NOT NULL)`,
+      ),
     );
   }
   return { songs, albums: empty.map((r) => JSON.parse(r.data) as DlAlbum) };
@@ -352,9 +377,11 @@ export async function setSongBytes(
 ): Promise<void> {
   if (sizes.length === 0) return;
   const db = await catalogDb(dir);
-  await db.withTransactionAsync(async () => {
-    for (const s of sizes) {
-      await db.runAsync('UPDATE songs SET dl_bytes = ? WHERE id = ?', [s.bytes, s.id]);
-    }
-  });
+  await serialized(() =>
+    db.withTransactionAsync(async () => {
+      for (const s of sizes) {
+        await db.runAsync('UPDATE songs SET dl_bytes = ? WHERE id = ?', [s.bytes, s.id]);
+      }
+    }),
+  );
 }

@@ -125,25 +125,44 @@ async function migrateFromJson(db: SQLite.SQLiteDatabase, file: string): Promise
   }
 
   await timed('mirror migrate write', async () => {
-    await db.withTransactionAsync(async () => {
-      if (old.starred) await putEntry(db, 'starred', '', old.starred, old.starred.songs);
-      if (old.playlists) await putEntry(db, 'playlists', '', old.playlists);
-      for (const [id, d] of Object.entries(old.playlistTracks ?? {})) {
-        await putEntry(db, 'playlist', id, d, d.songs);
-      }
-      for (const [id, d] of Object.entries(old.albums ?? {})) {
-        await putEntry(db, 'album', id, d, d.songs);
-      }
-      for (const [id, d] of Object.entries(old.artists ?? {})) {
-        await putEntry(db, 'artist', id, d);
-      }
-    });
+    await serialized(() =>
+      db.withTransactionAsync(async () => {
+        if (old.starred) await putEntry(db, 'starred', '', old.starred, old.starred.songs);
+        if (old.playlists) await putEntry(db, 'playlists', '', old.playlists);
+        for (const [id, d] of Object.entries(old.playlistTracks ?? {})) {
+          await putEntry(db, 'playlist', id, d, d.songs);
+        }
+        for (const [id, d] of Object.entries(old.albums ?? {})) {
+          await putEntry(db, 'album', id, d, d.songs);
+        }
+        for (const [id, d] of Object.entries(old.artists ?? {})) {
+          await putEntry(db, 'artist', id, d);
+        }
+      }),
+    );
   });
 
   await FileSystem.moveAsync({ from: file, to: `${file}.bak` }).catch(() => {});
 }
 
 // ── Writing ─────────────────────────────────────────────────────────────────
+
+/**
+ * Writes go one at a time.
+ *
+ * Two transactions at once on the same connection is an error, not a wait, and
+ * downloads commit from several workers in parallel: "cannot start a
+ * transaction within a transaction" is what that looks like. The JSON had a
+ * lock for the same reason; this is that lock, kept where the writes are.
+ */
+let writeQueue: Promise<unknown> = Promise.resolve();
+
+function serialized<T>(fn: () => Promise<T>): Promise<T> {
+  const run = writeQueue.then(fn, fn);
+  writeQueue = run.catch(() => {});
+  return run;
+}
+
 
 async function putEntry(
   db: SQLite.SQLiteDatabase,
@@ -176,7 +195,7 @@ export async function saveEntry(
   songs?: Song[],
 ): Promise<void> {
   const db = await mirrorDb(dir, profile);
-  await db.withTransactionAsync(() => putEntry(db, kind, id, value, songs));
+  await serialized(() => db.withTransactionAsync(() => putEntry(db, kind, id, value, songs)));
 }
 
 export async function dropEntry(
@@ -186,7 +205,9 @@ export async function dropEntry(
   id: string,
 ): Promise<void> {
   const db = await mirrorDb(dir, profile);
-  await db.runAsync('DELETE FROM entries WHERE kind = ? AND id = ?', [kind, id]);
+  await serialized(() =>
+    db.runAsync('DELETE FROM entries WHERE kind = ? AND id = ?', [kind, id]),
+  );
 }
 
 // ── Reading ─────────────────────────────────────────────────────────────────
