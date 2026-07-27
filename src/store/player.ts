@@ -666,6 +666,10 @@ function maybeScrobbleThreshold(positionSec: number) {
   else if (auth) scrobble(auth, song.id, true);
 }
 
+/** Waiting to warm the next song's lyrics (see `onTrackChanged`). */
+let nextLyricsTimer: ReturnType<typeof setTimeout> | null = null;
+const NEXT_LYRICS_DELAY_MS = 5000;
+
 /** Now playing / history + syncs the queue on track change. */
 function onTrackChanged(song: Song) {
   const { auth, offline } = useAuthStore.getState();
@@ -673,11 +677,18 @@ function onTrackChanged(song: Song) {
   // Offline not sent (server account without connection: no one to send to).
   if (auth && !offline) scrobble(auth, song.id, false);
   usePlayHistory.getState().record(song);
-  // Warm up lyrics now (and the next ones, so swiping in the
-  // player also shows its card instantly).
+  // Warm up lyrics for what is playing. The next song's are warmed too, so
+  // swiping in the player shows its card instantly, but a few seconds later:
+  // a track change is the busiest moment there is, and the phone only holds a
+  // handful of connections to the server at once, so speculative requests sent
+  // right then put themselves in front of what the screens are waiting for
+  // (#50). Nobody swipes to the next lyrics in the first five seconds.
   prefetchLyrics(song);
-  const { queue, index } = usePlayerStore.getState();
-  if (queue.length > 1) prefetchLyrics(queue[(index + 1) % queue.length]);
+  if (nextLyricsTimer) clearTimeout(nextLyricsTimer);
+  nextLyricsTimer = setTimeout(() => {
+    const { queue, index } = usePlayerStore.getState();
+    if (queue.length > 1) prefetchLyrics(queue[(index + 1) % queue.length]);
+  }, NEXT_LYRICS_DELAY_MS);
   scheduleSync();
   warmUpcoming();
   void maybeQueueAutoplay();

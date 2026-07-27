@@ -47,6 +47,13 @@ function lyricsQueryOptions(song: Song, auth: SubsonicAuth | null, source: Lyric
         try {
           const structured = await getLyricsBySongId(auth!, song.id);
           if (structured) return structured;
+          // It answered, and it has nothing. The classic endpoint reads the
+          // same place, so asking it as well was a second request per song for
+          // an answer already given: seventy of them in a twenty three minute
+          // session, queued in front of what the screens were waiting for
+          // (#50). Only a server that rejects the modern one, which throws,
+          // gets the old question.
+          return allowOnline && !preferOnline ? getOnlineLyrics(song) : null;
         } catch {
           // Server without the songLyrics extension: try the classic endpoint.
         }
