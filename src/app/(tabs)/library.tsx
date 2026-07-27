@@ -3,7 +3,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useRouter } from 'expo-router';
-import { useRef, useState, type ReactNode } from 'react';
+import { useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -110,10 +110,19 @@ function sortItems<T>(
   score: (x: T) => number,
   compare: (a: string, b: string) => number = byLocale,
 ): T[] {
-  const arr = items.slice();
-  const byName = (a: T, b: T) => compare(name(a), name(b));
-  if (sort === 'alpha') return arr.sort(byName);
-  return arr.sort((a, b) => score(b) - score(a) || byName(a, b));
+  // Keys computed once per item, not inside the comparator. A sort asks for
+  // them about `2·n·log n` times, and `score` here parses a date or walks the
+  // play history, so a couple of thousand favourites meant tens of thousands
+  // of date parses on every render of the tab (#50).
+  const keyed = items.map((item) => ({
+    item,
+    name: name(item),
+    score: sort === 'alpha' ? 0 : score(item),
+  }));
+  const byName = (a: (typeof keyed)[number], b: (typeof keyed)[number]) =>
+    compare(a.name, b.name);
+  keyed.sort(sort === 'alpha' ? byName : (a, b) => b.score - a.score || byName(a, b));
+  return keyed.map((k) => k.item);
 }
 
 /**
@@ -258,22 +267,30 @@ function PlaylistsTab({ onNew, query }: { onNew?: () => void; query: string }) {
     queryFn: () => getPlaylists(),
     enabled: canFetch,
   });
+  // Filtering and sorting are memoised, and the hook goes before the early
+  // returns below because hooks cannot be conditional. Without this the whole
+  // list was filtered and sorted again on every render of the tab, which
+  // includes every keystroke in its search box (#50).
+  const playlists = useMemo(
+    () =>
+      withPins(
+        sortItems(
+          (data ?? []).filter((p) => matches(query, p.name)),
+          sort,
+          (p) => p.name,
+          sort === 'recent'
+            ? (p) => times[`/playlist/${p.id}`] ?? 0
+            : (p) => Date.parse(p.created ?? '') || 0,
+          // Code point so "+"-prefixed playlists pin to the top like on the server.
+          byCodepoint,
+        ),
+        (p) => `playlist:${p.id}`,
+        pins,
+      ),
+    [data, query, sort, times, pins],
+  );
   if (isLoading) return <Loader />;
   if (isError) return <Message text={t("Couldn't load playlists.")} onRetry={() => refetch()} />;
-  const playlists = withPins(
-    sortItems(
-      (data ?? []).filter((p) => matches(query, p.name)),
-      sort,
-      (p) => p.name,
-      sort === 'recent'
-        ? (p) => times[`/playlist/${p.id}`] ?? 0
-        : (p) => Date.parse(p.created ?? '') || 0,
-      // Code point so "+"-prefixed playlists pin to the top like on the server.
-      byCodepoint,
-    ),
-    (p) => `playlist:${p.id}`,
-    pins,
-  );
   // In grid, Favorites goes in as the first card (sentinel); in list it
   // remains the full-width header.
   const listData: Playlist[] = grid ? [{ id: FAVORITES_ID, name: '' }, ...playlists] : playlists;
@@ -353,16 +370,21 @@ function ArtistsTab({ query }: { query: string }) {
     queryFn: () => getStarred(),
     enabled: canFetch,
   });
+  // See PlaylistsTab: memoised, and before the early returns.
+  const artists = useMemo(
+    () =>
+      sortItems(
+        (data?.artists ?? []).filter((a) => matches(query, a.name)),
+        sort,
+        (a) => a.name,
+        sort === 'recent'
+          ? (a) => Math.max(times[`/artist/${a.id}`] ?? 0, byArtist.get(a.id) ?? 0)
+          : (a) => Date.parse(a.starred ?? '') || 0,
+      ),
+    [data, query, sort, times, byArtist],
+  );
   if (isLoading) return <Loader />;
   if (isError) return <Message text={t("Couldn't load artists.")} onRetry={() => refetch()} />;
-  const artists = sortItems(
-    (data?.artists ?? []).filter((a) => matches(query, a.name)),
-    sort,
-    (a) => a.name,
-    sort === 'recent'
-      ? (a) => Math.max(times[`/artist/${a.id}`] ?? 0, byArtist.get(a.id) ?? 0)
-      : (a) => Date.parse(a.starred ?? '') || 0,
-  );
   return (
     <FlatList
       key={grid ? 'grid' : 'list'}
@@ -473,22 +495,28 @@ function AlbumsTab({ query }: { query: string }) {
     queryFn: () => getStarred(),
     enabled: canFetch,
   });
+  // See PlaylistsTab: memoised, and before the early returns.
+  const albums = useMemo(
+    () =>
+      withPins(
+        sortItems(
+          // Albums also match by artist: looking for "radiohead" in your
+          // favourites should find their records, not just an album literally
+          // called that.
+          (data?.albums ?? []).filter((a) => matches(query, a.name, a.artist)),
+          sort,
+          (a) => a.name,
+          sort === 'recent'
+            ? (a) => Math.max(times[`/album/${a.id}`] ?? 0, byAlbum.get(a.id) ?? 0)
+            : (a) => Date.parse(a.starred ?? '') || 0,
+        ),
+        (a) => `album:${a.id}`,
+        pins,
+      ),
+    [data, query, sort, times, byAlbum, pins],
+  );
   if (isLoading) return <Loader />;
   if (isError) return <Message text={t("Couldn't load albums.")} onRetry={() => refetch()} />;
-  const albums = withPins(
-    sortItems(
-      // Albums also match by artist: looking for "radiohead" in your favourites
-      // should find their records, not just an album literally called that.
-      (data?.albums ?? []).filter((a) => matches(query, a.name, a.artist)),
-      sort,
-      (a) => a.name,
-      sort === 'recent'
-        ? (a) => Math.max(times[`/album/${a.id}`] ?? 0, byAlbum.get(a.id) ?? 0)
-        : (a) => Date.parse(a.starred ?? '') || 0,
-    ),
-    (a) => `album:${a.id}`,
-    pins,
-  );
   return (
     <FlatList
       key={grid ? 'grid' : 'list'}
