@@ -1,4 +1,13 @@
 {
+  "Diagnostics": "Diagnóstico",
+  "Measured over the last {n} min of use.": "Medido durante los últimos {n} min de uso.",
+  "Interface freezes": "Bloqueos de la interfaz",
+  "Moments when the app stopped responding, longest first.": "Momentos en los que la app dejó de responder, de mayor a menor.",
+  "None over 120 ms.": "Ninguno de más de 120 ms.",
+  "Time spent": "Tiempo empleado",
+  "Nothing measured yet.": "Aún no hay nada medido.",
+  "Share report": "Compartir informe",
+  "Start over": "Empezar de nuevo",
   "{n} playlists": "{n} listas",
   "Cleaned up from {size}.": "Se limpió desde {size}.",
   "Library copy": "Copia de la biblioteca",

@@ -1,4 +1,13 @@
 {
+  "Diagnostics": "Diagnòstic",
+  "Measured over the last {n} min of use.": "Mesurat durant els últims {n} min d'ús.",
+  "Interface freezes": "Bloquejos de la interfície",
+  "Moments when the app stopped responding, longest first.": "Moments en què l'app va deixar de respondre, de major a menor.",
+  "None over 120 ms.": "Cap de més de 120 ms.",
+  "Time spent": "Temps emprat",
+  "Nothing measured yet.": "Encara no hi ha res mesurat.",
+  "Share report": "Comparteix l'informe",
+  "Start over": "Comença de nou",
   "{n} playlists": "{n} llistes",
   "Cleaned up from {size}.": "S'ha netejat des de {size}.",
   "Library copy": "Còpia de la biblioteca",

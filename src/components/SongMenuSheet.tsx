@@ -33,6 +33,7 @@ import {
 } from '@/api/data';
 import { useCanShare } from '@/hooks/useCanShare';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
+import { applyStarChange, resyncFavorites } from '@/lib/favoritesCache';
 import { artistTargets } from '@/lib/artistNav';
 import { shareItem } from '@/lib/share';
 import { normKey } from '@/lib/localLibrary';
@@ -467,9 +468,9 @@ export function SongMenuSheet() {
                       icon={favorited ? 'heart' : 'heart-outline'}
                       label={favorited ? t('Remove from favorites') : t('Add to favorites')}
                       onPress={() => {
-                        (favorited ? unstar(song.id) : star(song.id)).then(() =>
-                          queryClient.invalidateQueries({ queryKey: ['starred'] }),
-                        );
+                        (favorited ? unstar(song.id) : star(song.id))
+                          .then(() => applyStarChange('song', song.id, !favorited, song))
+                          .catch(resyncFavorites);
                         toast(favorited ? t('Removed from favorites') : t('Added to favorites'));
                         close();
                       }}

@@ -1,6 +1,5 @@
 /** Song row inside a list (album, playlist, search results). */
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useQueryClient } from '@tanstack/react-query';
 import { memo, useRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import ReanimatedSwipeable, {
@@ -13,6 +12,7 @@ import { coverArtUrl, star, unstar } from '@/api/data';
 import { type Song } from '@/api/subsonic';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { formatDuration } from '@/lib/format';
+import { applyStarChange, resyncFavorites } from '@/lib/favoritesCache';
 import { useDownloads } from '@/store/downloads';
 import { usePlayerStore } from '@/store/player';
 import { useSongMenu, type SongMenuContext } from '@/store/songMenu';
@@ -114,7 +114,6 @@ function TrackRowBase({
   const swipeLeftAction = useSettings((s) => s.swipeLeftAction);
   const addToQueue = usePlayerStore((s) => s.addToQueue);
   const playNext = usePlayerStore((s) => s.playNext);
-  const queryClient = useQueryClient();
   const toast = useToast((s) => s.show);
   const swipeRef = useRef<SwipeableMethods>(null);
 
@@ -138,9 +137,11 @@ function TrackRowBase({
     try {
       if (next) await star(song.id, 'song');
       else await unstar(song.id, 'song');
-      queryClient.invalidateQueries({ queryKey: ['starred'] });
+      // The cached list is patched, not thrown away: see `favoritesCache`.
+      applyStarChange('song', song.id, next, song);
       toast(next ? t('Added to favorites') : t('Removed from favorites'));
     } catch {
+      resyncFavorites();
       toast(t("Couldn't complete the action"));
     }
   }

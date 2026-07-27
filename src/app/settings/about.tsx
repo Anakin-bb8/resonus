@@ -1,6 +1,8 @@
 /** Settings › About: version, repository, report bugs and community. */
 import Constants from 'expo-constants';
-import { Linking, ScrollView } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useRef } from 'react';
+import { Linking, Pressable, ScrollView } from 'react-native';
 
 import { Field, SettingRow, SettingsPage, settingsStyles } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
@@ -10,13 +12,28 @@ const DISCORD_URL = 'https://discord.gg/hpDfszr8r';
 
 export default function AboutSettings() {
   const t = useT();
+  const router = useRouter();
+  // Five taps on the version open Diagnostics. It exists for chasing a report
+  // with someone, so it is not worth a row of its own that everybody else has
+  // to scroll past.
+  const taps = useRef(0);
+
   return (
     <SettingsPage title={t('About::app')}>
       <ScrollView contentContainerStyle={settingsStyles.content}>
-        <Field
-          label={t('Version')}
-          value={`Resonus v${Constants.expoConfig?.version ?? '?'}`}
-        />
+        <Pressable
+          onPress={() => {
+            taps.current += 1;
+            if (taps.current < 5) return;
+            taps.current = 0;
+            router.push('/settings/diagnostics');
+          }}
+        >
+          <Field
+            label={t('Version')}
+            value={`Resonus v${Constants.expoConfig?.version ?? '?'}`}
+          />
+        </Pressable>
         <SettingRow
           icon="logo-github"
           label="GitHub"

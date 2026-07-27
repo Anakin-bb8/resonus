@@ -37,6 +37,7 @@ import { tg } from '@/i18n';
 import { hashKey, normKey, registerCover } from '@/lib/localLibrary';
 import { serializeLrc } from '@/lib/lrc';
 import { siblingLrcUri } from '@/lib/localLyrics';
+import { timed, timedSync } from '@/lib/perfLog';
 import { queryClient } from '@/lib/query';
 import { primaryUrl } from '@/lib/serverUrls';
 import { useAuthStore } from './auth';
@@ -86,8 +87,10 @@ async function readServerCatalog(dir: string): Promise<ServerDownloads | null> {
   try {
     const info = await FileSystem.getInfoAsync(catalogFile(dir));
     if (!info.exists) return null;
-    const raw = await FileSystem.readAsStringAsync(catalogFile(dir));
-    return JSON.parse(raw) as ServerDownloads;
+    const raw = await timed('catalog read', () =>
+      FileSystem.readAsStringAsync(catalogFile(dir)),
+    );
+    return timedSync('catalog parse', () => JSON.parse(raw) as ServerDownloads);
   } catch {
     return null;
   }
@@ -96,7 +99,8 @@ async function readServerCatalog(dir: string): Promise<ServerDownloads | null> {
 async function writeServerCatalog(dir: string, catalog: ServerDownloads): Promise<void> {
   try {
     await FileSystem.makeDirectoryAsync(dir, { intermediates: true }).catch(() => {});
-    await FileSystem.writeAsStringAsync(catalogFile(dir), JSON.stringify(catalog));
+    const json = timedSync('catalog stringify', () => JSON.stringify(catalog));
+    await timed('catalog write', () => FileSystem.writeAsStringAsync(catalogFile(dir), json));
   } catch {
     // If it can't be persisted, this session's downloads are lost on
     // restart (files become orphaned until a "clear all").
@@ -851,7 +855,7 @@ export const useDownloads = create<DownloadsState>((set, get) => {
       invalidate();
     },
 
-    usageBytes: async () => {
+    usageBytes: async () => timed('storage used', async () => {
       let total = 0;
       // From the catalog, which knows what each file took when it was written.
       // This used to ask the file system for the size of every single file, one
@@ -874,7 +878,7 @@ export const useDownloads = create<DownloadsState>((set, get) => {
         }
       }
       return total;
-    },
+    }),
   };
 });
 

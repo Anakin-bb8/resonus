@@ -17,6 +17,7 @@ import { create } from 'zustand';
 
 import type { Album, Artist, Playlist, Song, Starred, SubsonicAuth } from '@/api/subsonic';
 import { hashKey } from '@/lib/localLibrary';
+import { timed, timedSync } from '@/lib/perfLog';
 import { primaryUrl } from '@/lib/serverUrls';
 import { useAuthStore } from './auth';
 // Cycle with `downloads`, which mirrors the tracklist of what it downloads.
@@ -158,7 +159,8 @@ export const useLibraryMirror = create<MirrorState>((set, get) => {
     writeLock = writeLock.then(async () => {
       try {
         await FileSystem.makeDirectoryAsync(DIR, { intermediates: true }).catch(() => {});
-        await FileSystem.writeAsStringAsync(file, JSON.stringify(data));
+        const json = timedSync('mirror stringify', () => JSON.stringify(data));
+        await timed('mirror write', () => FileSystem.writeAsStringAsync(file, json));
       } catch {
         // If it can't be persisted, this session's mirror is lost on exit.
       }

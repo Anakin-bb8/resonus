@@ -1,10 +1,10 @@
 /** Heart to mark/unmark favorites (Subsonic star/unstar). */
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Pressable, type GestureResponderEvent } from 'react-native';
 
 import { star, unstar, type StarType } from '@/api/data';
+import { applyStarChange, resyncFavorites } from '@/lib/favoritesCache';
 import { haptic } from '@/lib/haptics';
 import { useAuthStore } from '@/store/auth';
 import { useT } from '@/i18n';
@@ -20,7 +20,6 @@ interface Props {
 export function FavoriteButton({ id, type = 'song', starred, size = 22 }: Props) {
   const auth = useAuthStore((s) => s.auth);
   const offline = useAuthStore((s) => s.offline);
-  const queryClient = useQueryClient();
   const t = useT();
   const [fav, setFav] = useState(!!starred);
   const [busy, setBusy] = useState(false);
@@ -42,10 +41,12 @@ export function FavoriteButton({ id, type = 'song', starred, size = 22 }: Props)
     try {
       if (nextFav) await star(id, type);
       else await unstar(id, type);
-      // Refresh the favorites list if it's open.
-      queryClient.invalidateQueries({ queryKey: ['starred'] });
+      // Only the id is known here, so removing is exact and adding leaves the
+      // list to refresh when something needs it (see `favoritesCache`).
+      applyStarChange(type, id, nextFav);
     } catch {
       setFav(!nextFav); // revert on failure
+      resyncFavorites();
     } finally {
       setBusy(false);
     }

@@ -1,4 +1,13 @@
 {
+  "Diagnostics": "Diagnostics",
+  "Measured over the last {n} min of use.": "Measured over the last {n} min of use.",
+  "Interface freezes": "Interface freezes",
+  "Moments when the app stopped responding, longest first.": "Moments when the app stopped responding, longest first.",
+  "None over 120 ms.": "None over 120 ms.",
+  "Time spent": "Time spent",
+  "Nothing measured yet.": "Nothing measured yet.",
+  "Share report": "Share report",
+  "Start over": "Start over",
   "{n} playlists": "{n} playlists",
   "Cleaned up from {size}.": "Cleaned up from {size}.",
   "Library copy": "Library copy",

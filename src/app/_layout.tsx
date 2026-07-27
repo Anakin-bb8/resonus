@@ -21,6 +21,7 @@ import { BatteryWarning } from '@/components/BatteryWarning';
 import { SongMenuSheet } from '@/components/SongMenuSheet';
 import { Toast } from '@/components/Toast';
 import { installAppFont, setAppFont } from '@/lib/appFont';
+import { startPerfLog } from '@/lib/perfLog';
 import { queryClient } from '@/lib/query';
 import { useAuthStore } from '@/store/auth';
 import { useAutoDownloads } from '@/store/autoDownloads';
@@ -70,6 +71,8 @@ export default function RootLayout() {
 
   useEffect(() => {
     hydrate();
+    // Before anything else, so the first seconds count too.
+    startPerfLog();
     useSettings.getState().hydrate();
     useRecentSearches.getState().hydrate();
     usePlayCounts.getState().hydrate();

@@ -7,6 +7,8 @@
  */
 import * as Crypto from 'expo-crypto';
 
+import { timed } from '@/lib/perfLog';
+
 export const CLIENT_NAME = 'Resonus';
 const API_VERSION = '1.16.1';
 
@@ -333,9 +335,9 @@ async function request<T>(
 
   let res: Response;
   try {
-    res = await fetch(buildUrl(auth, endpoint, extra), {
-      signal: controller.signal,
-    });
+    res = await timed(`net ${endpoint}`, () =>
+      fetch(buildUrl(auth, endpoint, extra), { signal: controller.signal }),
+    );
   } catch {
     if (controller.signal.aborted) {
       throw new SubsonicRequestError('Server took too long to respond', true);
@@ -346,7 +348,9 @@ async function request<T>(
   }
 
   if (!res.ok) throw new SubsonicRequestError(`Network error (${res.status})`, false);
-  const json = await res.json();
+  // Apart from the request: this is the part that runs on the JS thread, and
+  // it grows with the size of the answer.
+  const json = await timed(`json ${endpoint}`, () => res.json());
   const sub = json['subsonic-response'];
   if (!sub) throw new SubsonicRequestError('Unexpected server response', false);
   if (sub.status === 'failed') {
