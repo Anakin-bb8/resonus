@@ -83,12 +83,14 @@ export default function PlaylistScreen() {
     enabled: (!!auth || offline) && !!id,
   });
 
-  const dlFiles = useDownloads((s) => s.files);
   const songIds = (data?.songs ?? []).map((s) => s.id);
   // Exact, unlike the album menu's guess: the songs are right here, so the
-  // option only shows when some of them are actually on the device.
-  const downloadedIds = songIds.filter((sid) => dlFiles[sid]);
-  const hasDownloads = downloadedIds.length > 0;
+  // option only shows when some of them are actually on the device. Only
+  // whether there are any, though: the map itself is replaced with every song
+  // that finishes downloading, and subscribing to it re-rendered the screen on
+  // each one (#50). Which ones they are is settled when the delete is
+  // confirmed, where it is asked once.
+  const hasDownloads = useDownloads((s) => songIds.some((sid) => !!s.files[sid]));
   const downloadMsg = useDownloadMessage(data?.songs ?? []);
   const download = useDownloads(
     useShallow((s) => groupDownloadState(s, `playlist:${id}`, songIds)),
@@ -543,8 +545,10 @@ export default function PlaylistScreen() {
         onCancel={() => setConfirmDeleteDl(false)}
         onConfirm={() => {
           setConfirmDeleteDl(false);
-          void deleteSongs(downloadedIds);
-          toast(t('{n} songs deleted', { n: downloadedIds.length }));
+          const files = useDownloads.getState().files;
+          const ids = songIds.filter((sid) => !!files[sid]);
+          void deleteSongs(ids);
+          toast(t('{n} songs deleted', { n: ids.length }));
         }}
       />
 

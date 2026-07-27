@@ -141,6 +141,10 @@ const SortSheet = memo(function SortSheet({
   );
 });
 
+/** Stable stand-in for the downloads map when the sort doesn't look at it: a
+ *  fresh `{}` each time would defeat the whole point. */
+const NO_FILES: Record<string, string> = {};
+
 export function useSongSort(
   source: Song[],
   persistKey?: string,
@@ -154,8 +158,14 @@ export function useSongSort(
   const openRef = useRef<() => void>(() => {});
 
   const { field, dir } = persistKey ? (stored ?? fallback) : local;
-  // For the 'downloaded' sort (group downloaded songs together).
-  const files = useDownloads((s) => s.files);
+  // For the 'downloaded' sort (group downloaded songs together), and ONLY for
+  // it. The map is replaced with every song that finishes downloading, and it
+  // feeds the memo below, so subscribing to it always meant re-mapping and
+  // re-sorting the whole list on each one, on every screen that sorts, plus new
+  // array identities for the FlatList to chew on. On a long list with
+  // auto-download on that is thousands of full sorts (#50). Sorting BY
+  // downloads does have to follow them, and there the re-sort is the point.
+  const files = useDownloads((s) => (field === 'downloaded' ? s.files : NO_FILES));
   function update(next: SortPref) {
     if (persistKey) setPref(persistKey, next, fallback);
     else setLocal(next);

@@ -66,9 +66,9 @@ export default function FavoritesScreen() {
   const songIds = (data?.songs ?? []).map((s) => s.id);
   // Exact, like the playlist screen's: the songs are here, so the option only
   // shows when some of them are on the device, and it says how many it removed.
-  const dlFiles = useDownloads((s) => s.files);
-  const downloadedIds = songIds.filter((sid) => dlFiles[sid]);
-  const hasDownloads = downloadedIds.length > 0;
+  // Only whether there are any: subscribing to the map would re-render the
+  // screen with every song that finishes downloading (#50).
+  const hasDownloads = useDownloads((s) => songIds.some((sid) => !!s.files[sid]));
   const download = useDownloads(useShallow((s) => groupDownloadState(s, 'favorites', songIds)));
   const downloadFavorites = useDownloads((s) => s.downloadFavorites);
   const cancelDownload = useDownloads((s) => s.cancelDownload);
@@ -282,8 +282,10 @@ export default function FavoritesScreen() {
         onCancel={() => setConfirmDeleteDl(false)}
         onConfirm={() => {
           setConfirmDeleteDl(false);
-          void deleteSongs(downloadedIds);
-          toast(t('{n} songs deleted', { n: downloadedIds.length }));
+          const files = useDownloads.getState().files;
+          const ids = songIds.filter((sid) => !!files[sid]);
+          void deleteSongs(ids);
+          toast(t('{n} songs deleted', { n: ids.length }));
         }}
       />
 

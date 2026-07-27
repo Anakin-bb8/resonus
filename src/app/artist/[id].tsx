@@ -82,8 +82,9 @@ export default function ArtistScreen() {
   const downloadArtist = useDownloads((s) => s.downloadArtist);
   const cancelDownload = useDownloads((s) => s.cancelDownload);
   const deleteSongs = useDownloads((s) => s.deleteSongs);
-  const files = useDownloads((s) => s.files);
-  const hasDownloads = Object.keys(files).length > 0;
+  // The boolean, not the map: it is replaced with every song that finishes
+  // downloading, so subscribing to it re-rendered the screen on each one (#50).
+  const hasDownloads = useDownloads((s) => Object.keys(s.files).length > 0);
   const [confirmDownload, setConfirmDownload] = useState(false);
   const [confirmStop, setConfirmStop] = useState(false);
   const [confirmDeleteDl, setConfirmDeleteDl] = useState(false);
@@ -272,6 +273,7 @@ export default function ArtistScreen() {
   async function deleteDiscography() {
     const songs = await gatherSongs();
     if (!songs) return;
+    const files = useDownloads.getState().files;
     const ids = songs.filter((s) => files[s.id]).map((s) => s.id);
     if (ids.length === 0) {
       toast(t('Nothing here is downloaded'));
