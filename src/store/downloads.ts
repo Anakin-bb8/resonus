@@ -301,10 +301,14 @@ async function cacheLyricsForDownload(auth: SubsonicAuth, song: Song, audioFile:
     let lyrics: SongLyrics | null = null;
     try {
       lyrics = await getLyricsBySongId(auth, song.id);
+      // It answered, and it has nothing. The classic endpoint reads the same
+      // place, so asking it too is a second request per song for an answer
+      // already given, and downloading a library makes thousands of them queue
+      // in front of what the screens are waiting for (#50). Playback stopped
+      // doing this; the download path had been left behind.
+      if (!lyrics) return;
     } catch {
       // Server without the songLyrics extension: try the classic endpoint.
-    }
-    if (!lyrics) {
       const plain = await getLyrics(auth, song.artist ?? '', song.title);
       if (plain) lyrics = { synced: false, lines: plain.split('\n').map((value) => ({ value })) };
     }
