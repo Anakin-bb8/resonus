@@ -680,7 +680,10 @@ export const useDownloads = create<DownloadsState>((set, get) => {
       // one at the end, once the songs are actually gone, is the real one.
       resetCatalogCache();
       await locked(async () => {
-        for (const dir of await serverDirs()) {
+        // The signed in profile's, or all of them if there isn't one: opening
+        // another account's database has a cost and nothing to find.
+        const active = activeServerDir();
+        for (const dir of active ? [active] : await serverDirs()) {
           // The rows go first and tell us what they pointed at, so the files
           // are deleted knowing the catalog no longer claims to have them.
           const gone = await Db.removeFromCatalog(dir, songIds);

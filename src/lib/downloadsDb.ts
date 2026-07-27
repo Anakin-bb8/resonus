@@ -193,6 +193,21 @@ export async function addToCatalog(
   });
 }
 
+/**
+ * The most a single statement gets asked about at once.
+ *
+ * SQLite counts placeholders, not rows, and refuses past a limit that a
+ * discography can reach on its own. Deleting an artist's downloads would have
+ * failed on exactly the libraries this is meant to help.
+ */
+const PARAM_CHUNK = 400;
+
+function chunked<T>(items: T[], size = PARAM_CHUNK): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
+}
+
 /** Removes songs, and any album left without them. Returns what was removed,
  *  so the caller can delete the files those rows pointed at. */
 export async function removeFromCatalog(
@@ -201,29 +216,38 @@ export async function removeFromCatalog(
 ): Promise<{ songs: Song[]; albums: DlAlbum[] }> {
   if (ids.length === 0) return { songs: [], albums: [] };
   const db = await catalogDb(dir);
-  const marks = ids.map(() => '?').join(',');
-  const songs = await db.getAllAsync<{ data: string }>(
-    `SELECT data FROM songs WHERE id IN (${marks})`,
-    ids,
-  );
+
+  const songs: Song[] = [];
+  for (const part of chunked(ids)) {
+    const marks = part.map(() => '?').join(',');
+    const rows = await db.getAllAsync<{ data: string }>(
+      `SELECT data FROM songs WHERE id IN (${marks})`,
+      part,
+    );
+    for (const r of rows) songs.push(JSON.parse(r.data) as Song);
+  }
   if (songs.length === 0) return { songs: [], albums: [] };
-  // Albums that will be left with nothing once those songs are gone.
-  const albums = await db.getAllAsync<{ data: string }>(
-    `SELECT data FROM albums WHERE id NOT IN
-       (SELECT DISTINCT album_id FROM songs WHERE album_id IS NOT NULL AND id NOT IN (${marks}))`,
-    ids,
-  );
+
   await db.withTransactionAsync(async () => {
-    await db.runAsync(`DELETE FROM songs WHERE id IN (${marks})`, ids);
+    for (const part of chunked(ids)) {
+      const marks = part.map(() => '?').join(',');
+      await db.runAsync(`DELETE FROM songs WHERE id IN (${marks})`, part);
+    }
+  });
+
+  // Now that they are gone, whichever albums are left with nothing. Asked
+  // after the fact rather than predicted, so it needs no parameters at all.
+  const empty = await db.getAllAsync<{ data: string }>(
+    `SELECT data FROM albums WHERE id NOT IN
+       (SELECT DISTINCT album_id FROM songs WHERE album_id IS NOT NULL)`,
+  );
+  if (empty.length > 0) {
     await db.runAsync(
       `DELETE FROM albums WHERE id NOT IN
          (SELECT DISTINCT album_id FROM songs WHERE album_id IS NOT NULL)`,
     );
-  });
-  return {
-    songs: songs.map((r) => JSON.parse(r.data) as Song),
-    albums: albums.map((r) => JSON.parse(r.data) as DlAlbum),
-  };
+  }
+  return { songs, albums: empty.map((r) => JSON.parse(r.data) as DlAlbum) };
 }
 
 // ── Reading ─────────────────────────────────────────────────────────────────
