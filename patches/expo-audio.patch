@@ -13,7 +13,7 @@ index 4bf0f847760cd005ec81db876683f751704f48c3..e98b9cf8758dbb6b56af520237e4e9d5
 +  <uses-permission android:name="android.permission.WAKE_LOCK" />
  </manifest>
 diff --git a/android/src/main/java/expo/modules/audio/AudioModule.kt b/android/src/main/java/expo/modules/audio/AudioModule.kt
-index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..cbc7c04fee051fb1caa9ac1bee6214fed3f6f102 100644
+index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..2e60864d82e7e733ceb1cf15b73aaacaa855dfd5 100644
 --- a/android/src/main/java/expo/modules/audio/AudioModule.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioModule.kt
 @@ -332,6 +332,15 @@ class AudioModule : Module() {
@@ -32,8 +32,36 @@ index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..cbc7c04fee051fb1caa9ac1bee6214fe
        Property("isBuffering") { player ->
          runOnMain {
            player.ref.playbackState == Player.STATE_BUFFERING
+@@ -457,6 +466,27 @@ class AudioModule : Module() {
+         }
+       }
+ 
++      // Gapless: same source resolution as `replace`, but the track is queued
++      // behind the one playing instead of taking its place, so ExoPlayer
++      // buffers it in advance and joins them with no gap.
++      Function("setNextSource") { player: AudioPlayer, source: AudioSource ->
++        runOnMain {
++          if (player.ref.availableCommands.contains(Player.COMMAND_CHANGE_MEDIA_ITEMS)) {
++            createMediaItem(source)?.let {
++              player.setNextSource(it)
++            }
++          }
++        }
++      }
++
++      Function("clearNextSource") { player: AudioPlayer ->
++        runOnMain {
++          if (player.ref.availableCommands.contains(Player.COMMAND_CHANGE_MEDIA_ITEMS)) {
++            player.clearNextSource()
++          }
++        }
++      }
++
+       Function("setActiveForLockScreen") { ref: AudioPlayer, active: Boolean, metadata: Metadata?, options: AudioLockScreenOptions? ->
+         runOnMain {
+           ref.setActiveForLockScreen(active, metadata, options)
 diff --git a/android/src/main/java/expo/modules/audio/AudioPlayer.kt b/android/src/main/java/expo/modules/audio/AudioPlayer.kt
-index f7c43641fc12b627c70759fb49bbe65e746c4c1d..aa96a2b6899dacdaa5fc419e1ecf6d0235038ebd 100644
+index f7c43641fc12b627c70759fb49bbe65e746c4c1d..f01071628a1e316782818592d7b44b9c799b1ddc 100644
 --- a/android/src/main/java/expo/modules/audio/AudioPlayer.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioPlayer.kt
 @@ -7,6 +7,7 @@ import android.media.audiofx.Visualizer
@@ -44,16 +72,17 @@ index f7c43641fc12b627c70759fb49bbe65e746c4c1d..aa96a2b6899dacdaa5fc419e1ecf6d02
  import androidx.media3.common.MediaItem
  import androidx.media3.common.PlaybackParameters
  import androidx.media3.common.Player
-@@ -37,6 +38,8 @@ import java.util.UUID
+@@ -37,6 +38,9 @@ import java.util.UUID
  
  private const val PLAYBACK_STATUS_UPDATE = "playbackStatusUpdate"
  private const val AUDIO_SAMPLE_UPDATE = "audioSampleUpdate"
 +private const val REMOTE_PREVIOUS = "remotePrevious"
 +private const val REMOTE_NEXT = "remoteNext"
++private const val TRACK_TRANSITION = "trackTransition"
  private const val SEEK_JUMP_INTERVAL_MS: Long = 10_000
  
  @UnstableApi
-@@ -50,6 +53,19 @@ class AudioPlayer(
+@@ -50,6 +54,19 @@ class AudioPlayer(
    ExoPlayer.Builder(context)
      .setLooper(context.mainLooper)
      .setAudioAttributes(AudioAttributes.DEFAULT, false)
@@ -73,16 +102,63 @@ index f7c43641fc12b627c70759fb49bbe65e746c4c1d..aa96a2b6899dacdaa5fc419e1ecf6d02
      .setSeekForwardIncrementMs(SEEK_JUMP_INTERVAL_MS)
      .setSeekBackIncrementMs(SEEK_JUMP_INTERVAL_MS)
      .apply {
-@@ -114,6 +130,9 @@ class AudioPlayer(
+@@ -114,6 +131,42 @@ class AudioPlayer(
      startUpdating()
    }
  
 +  fun emitRemotePrevious() = emit(REMOTE_PREVIOUS)
 +  fun emitRemoteNext() = emit(REMOTE_NEXT)
 +
++  /**
++   * Gapless: queues the track that comes after the current one, so ExoPlayer
++   * buffers and joins it by itself instead of the queue (which lives in JS)
++   * only asking for it once the previous one has ended.
++   *
++   * The playlist is kept at two items at most. Whatever already played is
++   * dropped first, so the current item is always index 0 and the queued one
++   * index 1, and a "next" queued earlier is replaced (the queue can change
++   * while a song plays).
++   */
++  fun setNextSource(source: MediaSource) {
++    // Nothing playing: there is nothing to queue BEHIND, and the track would
++    // become the current one without anyone having asked for it.
++    if (ref.mediaItemCount == 0) {
++      return
++    }
++    trimToCurrent()
++    ref.addMediaSource(source)
++  }
++
++  /** Drops the queued track, if any, leaving only the one playing. */
++  fun clearNextSource() = trimToCurrent()
++
++  private fun trimToCurrent() {
++    val current = ref.currentMediaItemIndex
++    if (current > 0) {
++      ref.removeMediaItems(0, current)
++    }
++    if (ref.mediaItemCount > 1) {
++      ref.removeMediaItems(1, ref.mediaItemCount)
++    }
++  }
++
    fun setActiveForLockScreen(active: Boolean, metadata: Metadata? = null, options: AudioLockScreenOptions? = null) {
      if (active) {
        this.metadata = metadata
+@@ -222,6 +275,13 @@ class AudioPlayer(
+       }
+ 
+       override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
++        // Gapless: the player moved to the track queued by `setNextSource` on
++        // its own. There is no `didJustFinish` for this (it needs STATE_ENDED,
++        // which never happens with another item waiting), so JS is told here
++        // to advance its index without touching playback.
++        if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) {
++          emit(TRACK_TRANSITION)
++        }
+         sendPlayerUpdate()
+       }
+ 
 diff --git a/android/src/main/java/expo/modules/audio/AudioRecords.kt b/android/src/main/java/expo/modules/audio/AudioRecords.kt
 index 1d9541e2ff3eabc621143892b0fc35e7cd728f18..7a0138412758079b7ef00b3a9a96d1b62dc17540 100644
 --- a/android/src/main/java/expo/modules/audio/AudioRecords.kt
@@ -351,7 +427,7 @@ index a290f9aed8224d89cca6361c102d26b24feaa2ce..7008466705ffdacc2d8ab113d334b822
  //# sourceMappingURL=AudioConstants.d.ts.map
 \ No newline at end of file
 diff --git a/build/AudioModule.types.d.ts b/build/AudioModule.types.d.ts
-index 93b69010ae4cef81c18761ca4fedca8b4089f16f..da9d15434dd0393835bca178f8da2154f8ca6c00 100644
+index 93b69010ae4cef81c18761ca4fedca8b4089f16f..334fe5561b4ed16e1b093d9764aa94f4e9556618 100644
 --- a/build/AudioModule.types.d.ts
 +++ b/build/AudioModule.types.d.ts
 @@ -28,6 +28,11 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
@@ -366,7 +442,22 @@ index 93b69010ae4cef81c18761ca4fedca8b4089f16f..da9d15434dd0393835bca178f8da2154
      /**
       * Boolean value indicating whether the player is currently playing.
       */
-@@ -219,6 +224,10 @@ export type AudioEvents = {
+@@ -138,6 +143,14 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
+      * Replaces the current audio source with a new one.
+      */
+     replace(source: AudioSource): void;
++    /**
++     * Queues a source behind the one playing so the player joins them with no
++     * gap, and emits `trackTransition` when it moves on to it. Replaces a
++     * previously queued one. Android only.
++     */
++    setNextSource(source: AudioSource): void;
++    /** Drops the source queued by `setNextSource`, if any. Android only. */
++    clearNextSource(): void;
+     /**
+      * Seeks the playback by the given number of seconds.
+      * @param seconds The number of seconds to seek by.
+@@ -219,6 +232,13 @@ export type AudioEvents = {
      playbackStatusUpdate(status: AudioStatus): void;
      /** Fired when audio sampling is enabled and new sample data is available. */
      audioSampleUpdate(data: AudioSample): void;
@@ -374,6 +465,9 @@ index 93b69010ae4cef81c18761ca4fedca8b4089f16f..da9d15434dd0393835bca178f8da2154
 +    remotePrevious(): void;
 +    /** Fired when the user taps skip-next on the lock screen / notification. */
 +    remoteNext(): void;
++    /** Fired when the player moves on by itself to the source queued with
++     *  `setNextSource` (gapless advance). */
++    trackTransition(): void;
  };
  export declare class AudioRecorder extends SharedObject<RecordingEvents> {
      /**

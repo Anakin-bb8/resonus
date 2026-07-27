@@ -6,9 +6,12 @@
  * (`setActiveForLockScreen`); the other is kept as a reserve for crossfade (the
  * incoming track starts on it at volume 0 and becomes the active one). Without
  * crossfade only one works, with `replace()` of the source on track change.
- * Auto-advance is detected via `playbackStatusUpdate`
- * (`didJustFinish`); if a crossfade is in progress, the change already happened
- * earlier.
+ *
+ * Auto-advance has three paths, and each one leaves the other two with nothing
+ * to do: gapless (the next track is queued in the player itself and it jumps on
+ * its own, reported by `trackTransition`), crossfade (the change happens early,
+ * on the reserve player), and, when neither applies, the end of the track via
+ * `playbackStatusUpdate` (`didJustFinish`) with a `loadIndex`.
  *
  * (Migrated from react-native-track-player to have a SINGLE
  * MediaSession and thus support Android Auto with the `modules/car-auto` module.
@@ -214,6 +217,10 @@ function ensurePlayer(idx: number): AudioPlayer {
   // Only the session owner emits these events; there are no double skips.
   p.addListener('remotePrevious', () => usePlayerStore.getState().previous());
   p.addListener('remoteNext', () => usePlayerStore.getState().next());
+  // Gapless: the player jumped by itself to the track queued behind this one.
+  p.addListener('trackTransition', () => {
+    if (activePlayer() === p) onTrackTransition();
+  });
   // Equalizer: the native effect attaches to the audio session of THIS player.
   // Since they are singletons (two alternating for crossfade), it's enough to
   // do it on creation; the saved state is applied automatically.
@@ -377,9 +384,12 @@ function seekActive(sec: number) {
     if (supported) {
       streamOffsetSec = sec;
       try {
-        p.replace(sourceFor(song, sec));
+        replaceSource(p, sourceFor(song, sec));
         p.volume = effectiveVolume(song);
         if (usePlayerStore.getState().isPlaying) p.play();
+        // The new source came with an empty tail: re-queue what comes next.
+        // Nothing in the store changed here, so nobody else would.
+        scheduleNextSource();
       } catch {
         // ignore
       }
@@ -579,7 +589,7 @@ async function loadIndex(index: number, autoplay: boolean) {
   // so it's cheap to ensure it here.
   useEqualizer.getState().attach(p.audioSessionId);
   try {
-    p.replace(sourceFor(song));
+    replaceSource(p, sourceFor(song));
     p.loop = repeat === 'one';
     // Effective volume of THIS song (user × ReplayGain).
     p.volume = effectiveVolume(song);
@@ -920,6 +930,141 @@ function nextIndex(_manual: boolean): number | null {
   return null;
 }
 
+// ── Gapless ─────────────────────────────────────────────────────────────────
+// Advancing with `didJustFinish` → `loadIndex` → `replace()` means the next
+// track only starts being fetched once the previous one has ENDED: connection,
+// headers and initial buffer all land in the silence between songs, and that
+// silence is the gap (#8).
+//
+// Instead the next track is queued INSIDE the native player (`setNextSource`,
+// added in patches/expo-audio.patch), which buffers it while the current one
+// plays and joins them by itself. The jump arrives as `trackTransition` and JS
+// only follows: no `replace()` and no reload. `didJustFinish` doesn't fire on
+// these, since it needs the player to run out of things to play.
+//
+// The join is as tight as the format allows: with no transcoding, or
+// transcoding to Opus, the encoder padding is described in the file and gets
+// trimmed; an MP3 or AAC generated on the fly carries no such metadata, so a
+// few tens of milliseconds of encoder silence stay. The buffer gap, which is
+// the audible one, goes either way.
+
+/** Track queued in the native player, or null. The id travels along: the queue
+ *  can be reordered between queueing it and getting there. */
+let queuedNext: { index: number; id: string } | null = null;
+
+/**
+ * Point of entry for every source change. `replace()` installs a new media
+ * source and drops whatever was queued behind it, so the memo can't outlive it.
+ */
+function replaceSource(p: AudioPlayer, source: { uri: string }) {
+  queuedNext = null;
+  p.replace(source);
+}
+
+/** Does queueing the next track make sense right now? */
+function gaplessReady(): boolean {
+  const settings = useSettings.getState();
+  if (!settings.gapless) return false;
+  // Crossfade drives the advance itself, starting the next track early on the
+  // reserve player. Both cannot own the change.
+  if (settings.crossfadeSec > 0) return false;
+  if (remoteKind()) return false;
+  const st = usePlayerStore.getState();
+  // 'one' repeats through the native `loop`, and "stop at end of song" needs
+  // the track to end for real so its `didJustFinish` arrives.
+  if (st.repeat === 'one' || st.sleepAtSongEnd) return false;
+  const current = st.queue[st.index];
+  // A radio has no end to join anything to.
+  return !!current && !current.url;
+}
+
+/**
+ * Queues the track that comes next in the native player, or drops the queued
+ * one when it no longer applies. `force` re-queues even if it's the same track
+ * (its URL changed: bitrate, format).
+ */
+function scheduleNextSource(force = false) {
+  const p = activePlayer();
+  if (!p) return;
+  const ni = gaplessReady() ? nextIndex(false) : null;
+  const next = ni == null ? null : usePlayerStore.getState().queue[ni];
+  if (ni == null || !next || next.url) {
+    if (queuedNext) {
+      queuedNext = null;
+      try {
+        p.clearNextSource();
+      } catch {
+        // ignore
+      }
+    }
+    return;
+  }
+  // `force` re-queues the same track anyway: same song, different URL.
+  if (!force && queuedNext && queuedNext.index === ni && queuedNext.id === next.id) return;
+  try {
+    p.setNextSource(sourceFor(next));
+    queuedNext = { index: ni, id: next.id };
+  } catch {
+    queuedNext = null;
+  }
+}
+
+/**
+ * The player moved on by itself to the queued track. Nothing is loaded here:
+ * it's already playing. This is the same bookkeeping `loadIndex` does around
+ * its `replace()`, without the replace.
+ */
+function onTrackTransition() {
+  const queued = queuedNext;
+  queuedNext = null;
+  const p = activePlayer();
+  if (!queued || !p) return;
+  const st = usePlayerStore.getState();
+  // Follow the song, not the position: the queue may have been reordered while
+  // it was waiting its turn.
+  let index = queued.index;
+  if (st.queue[index]?.id !== queued.id) {
+    index = st.queue.findIndex((s) => s.id === queued.id);
+    // It was removed from the queue while playing: there's no index to move to,
+    // so the state stays put and the track end takes the normal path.
+    if (index === -1) return;
+  }
+  const song = st.queue[index];
+  pushHistory();
+  consumeQueuedOnIndexChange(index);
+  pendingSeek = null;
+  streamOffsetSec = 0;
+  sourceHasLength = null; // another source: unknown until it reports
+  scrobbledThisTrack = false;
+  // ReplayGain is per song. Not mid-ramp (sleep fade, pause fade): setting the
+  // volume here would undo it.
+  if (!sleepFadeTimer && !pauseFadeTimer) p.volume = effectiveVolume(song);
+  usePlayerStore.setState({
+    index,
+    positionSec: 0,
+    durationSec: song.duration ?? 0,
+    isPlaying: true,
+    isBuffering: false,
+  });
+  applyLockScreen(p, song);
+  onTrackChanged(song);
+  if (!song.url && !song.localUri && !downloadedUri(song)) void ensureTranscodeOffsetSupport();
+  scheduleNextSource();
+}
+
+// Crossfade on/off decides who owns the advance, and the stream URL of the
+// queued track depends on format and bitrate: all of them have to re-evaluate
+// what is (or is no longer) waiting behind the current track.
+const gaplessSettingsKey = (s: ReturnType<typeof useSettings.getState>) =>
+  `${s.gapless}|${s.crossfadeSec}|${s.streamFormat}|${s.maxBitRate}|${s.maxBitRateCellular}`;
+let lastGaplessSettings = gaplessSettingsKey(useSettings.getState());
+useSettings.subscribe((s) => {
+  const key = gaplessSettingsKey(s);
+  if (key === lastGaplessSettings) return;
+  lastGaplessSettings = key;
+  scheduleNextSource(true);
+});
+
 // ── ReplayGain (volume normalization) ────────────────────────────────────────
 // A player's effective volume is always `volume` (the user's) times the
 // ReplayGain factor of ITS song. Tags come from the server (and are
@@ -1095,7 +1240,7 @@ function handoffToNewSource(index: number, song: Song, sec: number) {
   const token = ++handoffToken;
   handoffReserve = r;
   try {
-    r.replace(sourceFor(song, startAt));
+    replaceSource(r, sourceFor(song, startAt));
     r.loop = usePlayerStore.getState().repeat === 'one';
     r.volume = 0; // inaudible until the switch; the old one keeps playing from its buffer
     r.play();
@@ -1188,7 +1333,7 @@ function startCrossfade(index: number, fadeSec: number) {
   const out = activePlayer();
   const p = ensurePlayer(1 - activeIdx);
   try {
-    p.replace(sourceFor(song));
+    replaceSource(p, sourceFor(song));
     p.loop = false;
     p.volume = 0;
     p.play();
@@ -2388,3 +2533,18 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     });
   },
 }));
+
+// Gapless: what comes next changes with the queue, the position in it, the
+// repeat mode and the "stop at end of song" timer. Watching the store beats
+// hooking every action that touches them (add to queue, reorder, remove,
+// shuffle, autoplay…), where the queued track would go stale by omission.
+usePlayerStore.subscribe((st, prev) => {
+  if (
+    st.queue !== prev.queue ||
+    st.index !== prev.index ||
+    st.repeat !== prev.repeat ||
+    st.sleepAtSongEnd !== prev.sleepAtSongEnd
+  ) {
+    scheduleNextSource();
+  }
+});
