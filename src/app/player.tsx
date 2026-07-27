@@ -118,6 +118,43 @@ function usePaneStyle(offset: SharedValue<number>, k: number) {
   });
 }
 
+/**
+ * Slider and times, kept apart on purpose.
+ *
+ * `positionSec` moves twice a second while music plays, and this screen is one
+ * large component: cover, gradient, quality badge, controls, queue sheet. It
+ * was repainting all of it on every tick, which is the one thing the mini
+ * player has always been careful not to do (#50). The seek buttons read the
+ * position when they are pressed instead of subscribing to it.
+ */
+function PlayerProgress({
+  duration,
+  onSeek,
+}: {
+  duration: number;
+  onSeek: (sec: number) => void;
+}) {
+  const positionSec = usePlayerStore((s) => s.positionSec);
+  return (
+    <View style={styles.progress}>
+      <Slider
+        style={styles.slider}
+        minimumValue={0}
+        maximumValue={duration}
+        value={positionSec}
+        onSlidingComplete={onSeek}
+        minimumTrackTintColor={colors.text}
+        maximumTrackTintColor="rgba(255,255,255,0.35)"
+        thumbTintColor={colors.text}
+      />
+      <View style={styles.times}>
+        <Text style={styles.time}>{formatDuration(positionSec)}</Text>
+        <Text style={styles.time}>{formatDuration(duration)}</Text>
+      </View>
+    </View>
+  );
+}
+
 export default function PlayerScreen() {
   useSettings((s) => s.accentColor); // re-render when accent changes
   useSettings((s) => s.appFont); // re-render when font changes
@@ -128,7 +165,6 @@ export default function PlayerScreen() {
   const sourceHref = usePlayerStore((s) => s.sourceHref);
   const isPlaying = usePlayerStore((s) => s.isPlaying);
   const isBuffering = usePlayerStore((s) => s.isBuffering);
-  const positionSec = usePlayerStore((s) => s.positionSec);
   const durationSec = usePlayerStore((s) => s.durationSec);
   const shuffle = usePlayerStore((s) => s.shuffle);
   const repeat = usePlayerStore((s) => s.repeat);
@@ -652,22 +688,7 @@ export default function PlayerScreen() {
             </View>
           ) : null}
 
-          <View style={styles.progress}>
-            <Slider
-              style={styles.slider}
-              minimumValue={0}
-              maximumValue={duration}
-              value={positionSec}
-              onSlidingComplete={seekTo}
-              minimumTrackTintColor={colors.text}
-              maximumTrackTintColor="rgba(255,255,255,0.35)"
-              thumbTintColor={colors.text}
-            />
-            <View style={styles.times}>
-              <Text style={styles.time}>{formatDuration(positionSec)}</Text>
-              <Text style={styles.time}>{formatDuration(duration)}</Text>
-            </View>
-          </View>
+          <PlayerProgress duration={duration} onSeek={seekTo} />
 
           <View style={styles.controls}>
             <Pressable
@@ -695,7 +716,11 @@ export default function PlayerScreen() {
                 hitSlop={10}
                 accessibilityRole="button"
                 accessibilityLabel={t('Back {n} seconds', { n: seekButtonsSec })}
-                onPress={() => seekTo(Math.max(0, positionSec - seekButtonsSec))}
+                onPress={() =>
+                  seekTo(
+                    Math.max(0, usePlayerStore.getState().positionSec - seekButtonsSec),
+                  )
+                }
               >
                 <MaterialIcons
                   name={`replay-${seekButtonsSec}` as 'replay-10'}
@@ -743,7 +768,11 @@ export default function PlayerScreen() {
                 onPress={() =>
                   // Cap before the end: skipping past didJustFinish manually
                   // would leave auto-advance without triggering.
-                  seekTo(duration > 0 ? Math.min(duration - 1, positionSec + seekButtonsSec) : positionSec + seekButtonsSec)
+                  seekTo(
+                    duration > 0
+                      ? Math.min(duration - 1, usePlayerStore.getState().positionSec + seekButtonsSec)
+                      : usePlayerStore.getState().positionSec + seekButtonsSec,
+                  )
                 }
               >
                 <MaterialIcons
