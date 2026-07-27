@@ -18,6 +18,14 @@ import { type CarNode, type CarTree } from './carAuto';
 const ROOT = 'root';
 const HOME_SIZE = 15;
 const CONCURRENCY = 4;
+/**
+ * Ceilings for what gets fetched ahead of a car that may never be plugged in.
+ * Everything above them still appears in the browse tree; what it doesn't have
+ * yet is the list of songs inside, which arrives on the next rebuild.
+ */
+const MAX_PREFETCH_ALBUMS = 40;
+const MAX_PREFETCH_ARTISTS = 15;
+const MAX_ARTIST_ALBUMS = 5;
 
 // ── Snapshot to resolve taps without refetching data ─────────────────────────
 const songById = new Map<string, Song>();
@@ -146,8 +154,12 @@ export async function buildBrowseTree(deep = true): Promise<CarTree> {
 
   if (!deep) return { nodes: tree };
 
-  // Prefetch songs for each album (to browse them in the car).
-  await mapConcurrent(Array.from(albumIds), CONCURRENCY, async (id) => {
+  // Prefetch songs for each album (to browse them in the car), up to a point.
+  // Measured on a real account: fifty eight favourite artists meant six
+  // hundred and forty four album requests in a single minute, plus their top
+  // songs, every time the app opened. What a car needs at hand is the top of
+  // each list; the rest can be empty until someone asks for it (#50).
+  await mapConcurrent(Array.from(albumIds).slice(0, MAX_PREFETCH_ALBUMS), CONCURRENCY, async (id) => {
     try {
       const { songs } = await data.getAlbum(id);
       const parent = `album:${id}`;
@@ -159,7 +171,7 @@ export async function buildBrowseTree(deep = true): Promise<CarTree> {
   });
 
   // Prefetch for starred artists: top songs + albums (and their tracks).
-  await mapConcurrent(starred.artists.map((a) => a.id), CONCURRENCY, async (id) => {
+  await mapConcurrent(starred.artists.slice(0, MAX_PREFETCH_ARTISTS).map((a) => a.id), CONCURRENCY, async (id) => {
     try {
       const { artist, albums } = await data.getArtist(id);
       const top = artist.name ? await data.getTopSongs(artist.name, 10).catch(() => [] as Song[]) : [];
@@ -167,7 +179,7 @@ export async function buildBrowseTree(deep = true): Promise<CarTree> {
       const children: CarNode[] = [...top.map((s) => songNode(s, parent)), ...albums.map(albumNode)];
       tree[parent] = children;
       parentTracks.set(parent, children.filter((n) => n.playable).map((n) => n.id));
-      for (const a of albums) {
+      for (const a of albums.slice(0, MAX_ARTIST_ALBUMS)) {
         const ap = `album:${a.id}`;
         if (!tree[ap]) {
           try {

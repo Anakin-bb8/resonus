@@ -142,6 +142,27 @@ function worthKeepingArtist(artist: Artist): boolean {
   return !!artist.starred;
 }
 
+/** Same list, as far as anything here cares: same length and same ends. Cheap
+ *  on purpose, since the alternative is comparing thousands of songs. */
+function sameEnds<T extends { id: string }>(a: T[] | undefined, b: T[] | undefined): boolean {
+  if (!a || !b || a.length !== b.length) return false;
+  if (a.length === 0) return true;
+  return a[0].id === b[0].id && a[a.length - 1].id === b[b.length - 1].id;
+}
+
+function sameLists(a: Starred | undefined, b: Starred): boolean {
+  return (
+    !!a && sameEnds(a.songs, b.songs) && sameEnds(a.albums, b.albums) && sameEnds(a.artists, b.artists)
+  );
+}
+
+function samePlaylists(a: Playlist[] | undefined, b: Playlist[]): boolean {
+  if (!sameEnds(a, b)) return false;
+  // A playlist can change without the list changing, and `changed` is what
+  // says so.
+  return (a ?? []).every((p, i) => p.changed === b[i].changed);
+}
+
 /** The map without `id`, or the same map if it wasn't there. */
 function without<T>(map: Record<string, T> | undefined, id: string): Record<string, T> | undefined {
   if (!map || !(id in map)) return map;
@@ -248,10 +269,17 @@ export const useLibraryMirror = create<MirrorState>((set, get) => {
     },
 
     saveStarred: (starred) => {
+      // Favourites are fetched again and again, and almost always come back
+      // identical. Each of those used to dirty the file and cost a full
+      // rewrite, which on a large mirror was measured at thirty seven seconds
+      // and blocked the interface for eleven of them (#50). Compared cheaply:
+      // how many of each, and the ends of each list.
+      if (sameLists(get().data.starred, starred)) return;
       set({ data: { ...get().data, starred } });
       persist();
     },
     savePlaylists: (playlists) => {
+      if (samePlaylists(get().data.playlists, playlists)) return;
       set({ data: { ...get().data, playlists } });
       persist();
     },
