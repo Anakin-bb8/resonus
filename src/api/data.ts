@@ -11,7 +11,9 @@ import {
   readAlbumCache,
   writeAlbumCache,
 } from '@/store/libraries';
+import { hashKey } from '@/lib/localLibrary';
 import { queryClient } from '@/lib/query';
+import { getItem, setItem } from '@/lib/storage';
 import { useLibraryMirror } from '@/store/libraryMirror';
 import { useOfflineQueue, type QueuePlaylist } from '@/store/offlineQueue';
 import { useSettings } from '@/store/settings';
@@ -900,8 +902,59 @@ const MERGE_DEPTH = 100;
 // albums it holds. Cached well beyond the album lists: this only moves when the
 // server scans, not between one shelf and the next.
 
-const LIBRARY_SIZE_TTL_MS = 30 * 60 * 1000;
-const librarySizes = new Map<string, { at: number; count: number }>();
+const LIBRARY_SIZE_TTL_MS = 24 * 60 * 60 * 1000;
+/** Sizes of the active profile's libraries, by folder id. */
+const librarySizes = new Map<string, LibrarySize>();
+/** Storage key whose sizes are the ones in the map ('' = none read yet). */
+let sizesLoadedFor = '';
+let sizesLoading: Promise<void> | null = null;
+
+interface LibrarySize {
+  at: number;
+  count: number;
+}
+
+function sizesKey(a: Subsonic.SubsonicAuth): string {
+  // Hashed: SecureStore only takes [A-Za-z0-9._-] and a profile key is a URL.
+  // Without one (Jellyfin) there is no subset mode either, so the name is only
+  // there to keep the map honest.
+  return `resonus.librarySizes.${hashKey(profileKeyOf(a) ?? 'none')}`;
+}
+
+/** Brings the profile's saved sizes into memory, once. */
+async function loadLibrarySizes(a: Subsonic.SubsonicAuth): Promise<void> {
+  const key = sizesKey(a);
+  if (sizesLoadedFor === key) return;
+  if (sizesLoading) {
+    await sizesLoading;
+    if (sizesLoadedFor === key) return;
+  }
+  sizesLoading = (async () => {
+    let saved: Record<string, LibrarySize> = {};
+    try {
+      const raw = await getItem(key);
+      if (raw) saved = JSON.parse(raw) as Record<string, LibrarySize>;
+    } catch {
+      // Unreadable or from another version: start over rather than retry.
+    }
+    librarySizes.clear();
+    for (const [id, e] of Object.entries(saved)) {
+      if (typeof e?.count === 'number' && typeof e?.at === 'number') librarySizes.set(id, e);
+    }
+    sizesLoadedFor = key;
+  })();
+  try {
+    await sizesLoading;
+  } finally {
+    sizesLoading = null;
+  }
+}
+
+function saveLibrarySizes(a: Subsonic.SubsonicAuth): void {
+  const out: Record<string, LibrarySize> = {};
+  for (const [id, e] of librarySizes) out[id] = e;
+  void setItem(sizesKey(a), JSON.stringify(out));
+}
 
 /**
  * Albums in one library, 0 if the server doesn't say.
@@ -909,15 +962,20 @@ const librarySizes = new Map<string, { at: number; count: number }>();
  * An approximation: a server may report an artist's albums across the whole
  * collection rather than within the asked library, so an artist present in two
  * gets counted twice. It's a weight, not a figure anyone is shown.
+ *
+ * Kept for a day AND across restarts. `getArtists` returns every artist of the
+ * library, which on a big one is not a small answer, and the count only moves
+ * when the server scans. In memory alone it was asked again on every cold
+ * start, once per library, which is the moment it is least welcome.
  */
 async function libraryAlbumCount(a: Subsonic.SubsonicAuth, folderId: string): Promise<number> {
-  const key = `${profileKeyOf(a)}|${folderId}`;
-  const hit = librarySizes.get(key);
+  await loadLibrarySizes(a);
+  const hit = librarySizes.get(folderId);
   if (hit && Date.now() - hit.at < LIBRARY_SIZE_TTL_MS) return hit.count;
   try {
     const artists = await Subsonic.getArtists(a, folderId);
     const count = artists.reduce((n, ar) => n + (ar.albumCount ?? 0), 0);
-    librarySizes.set(key, { at: Date.now(), count });
+    librarySizes.set(folderId, { at: Date.now(), count });
     return count;
   } catch {
     return 0;
@@ -942,6 +1000,8 @@ async function randomDepths(
   pool: number,
 ): Promise<number[]> {
   const counts = await Promise.all(ids.map((id) => libraryAlbumCount(a, id)));
+  // One write for the whole round, not one per library.
+  saveLibrarySizes(a);
   const total = counts.reduce((n, c) => n + c, 0);
   if (total <= 0) return ids.map(() => Math.ceil(pool / ids.length));
   return counts.map((c) => Math.max(1, Math.round(pool * (c / total))));
