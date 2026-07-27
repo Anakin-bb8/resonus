@@ -61,9 +61,20 @@ export function CarAutoSync() {
         if (!cancelled && tree) setNodes(tree);
       }, REBUILD_DEBOUNCE_MS);
     };
+    // The lists now, the songs once the app has settled. `scheduleDeep` is also
+    // what any later change restarts: the session store emits several times
+    // while hydrating, and each of those used to mean the full fetch again.
+    let deepTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleDeep = (delay = DEEP_REBUILD_MS) => {
+      if (deepTimer) clearTimeout(deepTimer);
+      deepTimer = setTimeout(() => rebuild(true), delay);
+    };
     rebuild(false);
-    const deepTimer = setTimeout(() => rebuild(true), DEEP_REBUILD_MS);
-    const unsubAuth = useAuthStore.subscribe(() => rebuild(true));
+    scheduleDeep();
+    const unsubAuth = useAuthStore.subscribe(() => {
+      rebuild(false);
+      scheduleDeep();
+    });
 
     // ── Mirror playback state ──
     const pushNowPlaying = () => {
@@ -105,6 +116,9 @@ export function CarAutoSync() {
 
     // ── Events from the car ──
     const playSub = onPlay((e) => {
+      // Something is playing from the car, so the wait no longer applies: fill
+      // the tree in now rather than at the end of the delay.
+      scheduleDeep(0);
       void handleBrowsePlay(e.mediaId, e.parentId);
     });
     const transportSub = onTransport((e) => {
@@ -144,7 +158,7 @@ export function CarAutoSync() {
     return () => {
       cancelled = true;
       if (rebuildTimer) clearTimeout(rebuildTimer);
-      clearTimeout(deepTimer);
+      if (deepTimer) clearTimeout(deepTimer);
       clearInterval(interval);
       unsubAuth();
       unsubPlayer();
