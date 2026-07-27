@@ -67,23 +67,49 @@ async function loadMirror(): Promise<void> {
   ]);
 }
 
+/**
+ * Every song the mirror knows, by id, in the order sources take precedence:
+ * playlist tracklists, then albums, then favourites (first one in wins).
+ *
+ * Built once per version of the mirror and reused. Resolving used to walk every
+ * playlist and every album looking for one id, which is fine for one song and
+ * quadratic for a tracklist: opening a 500 song playlist offline against a
+ * sizeable mirror meant millions of comparisons before anything was drawn.
+ */
+let mirrorIndex: { source: unknown; byId: Map<string, Song> } | null = null;
+
+function mirrorSongs(): Map<string, Song> {
+  const data = useLibraryMirror.getState().data;
+  if (mirrorIndex?.source === data) return mirrorIndex.byId;
+  const byId = new Map<string, Song>();
+  const add = (songs: Song[] | undefined) => {
+    for (const s of songs ?? []) if (!byId.has(s.id)) byId.set(s.id, s);
+  };
+  for (const d of Object.values(data.playlistTracks ?? {})) add(d.songs);
+  for (const d of Object.values(data.albums ?? {})) add(d.songs);
+  add(data.starred?.songs);
+  mirrorIndex = { source: data, byId };
+  return byId;
+}
+
+/** Same idea for the downloads, which is the other list walked once per id.
+ *  Keyed on the catalog object, which is rebuilt whenever it changes. */
+let catalogIndex: { source: unknown; byId: Map<string, Song> } | null = null;
+
+function catalogSongs(catalog: { songs: Song[] }): Map<string, Song> {
+  if (catalogIndex?.source === catalog) return catalogIndex.byId;
+  const byId = new Map<string, Song>();
+  for (const s of catalog.songs) if (!byId.has(s.id)) byId.set(s.id, s);
+  catalogIndex = { source: catalog, byId };
+  return byId;
+}
+
 /** Looks up a song's metadata by id from available offline sources: outbox
  *  (songs added to playlists), mirror (playlists/albums/favorites), and downloads. */
 function resolveSong(id: string, catalog: { songs: Song[] }): Song | undefined {
   const meta = useOfflineQueue.getState().data.songMeta?.[id];
   if (meta) return meta;
-  const mirror = useLibraryMirror.getState().data;
-  for (const d of Object.values(mirror.playlistTracks ?? {})) {
-    const f = d.songs.find((s) => s.id === id);
-    if (f) return f;
-  }
-  for (const d of Object.values(mirror.albums ?? {})) {
-    const f = d.songs.find((s) => s.id === id);
-    if (f) return f;
-  }
-  const st = mirror.starred?.songs?.find((s) => s.id === id);
-  if (st) return st;
-  return catalog.songs.find((s) => s.id === id);
+  return mirrorSongs().get(id) ?? catalogSongs(catalog).get(id);
 }
 
 /** Final desired tracklist for an offline playlist: the outbox edit if any,

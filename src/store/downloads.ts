@@ -185,12 +185,28 @@ function commitToCatalog(
     for (const s of changes.songs ?? []) {
       if (!catalog.songs.some((x) => x.id === s.id)) catalog.songs.push(s);
     }
-    // Albums reflect how many songs are actually downloaded.
-    for (const a of catalog.albums) {
-      a.songCount = catalog.songs.filter((s) => s.albumId === a.id).length;
-    }
+    setSongCounts(catalog);
     markDirty(dir);
   });
+}
+
+/**
+ * Albums reflect how many songs are actually downloaded, counted in ONE pass.
+ *
+ * This used to scan every song once per album, and it runs on each song that
+ * finishes downloading: on a catalog of ten thousand songs and eight hundred
+ * albums that is eight million comparisons per song, on the JS thread, which
+ * is the thread taps arrive on. It was the single biggest reason downloading
+ * made the whole app worse (#50), and it only showed on big libraries, which
+ * is why it went unnoticed for so long.
+ */
+function setSongCounts(catalog: ServerDownloads): void {
+  const counts = new Map<string, number>();
+  for (const s of catalog.songs) {
+    if (!s.albumId) continue;
+    counts.set(s.albumId, (counts.get(s.albumId) ?? 0) + 1);
+  }
+  for (const a of catalog.albums) a.songCount = counts.get(a.id) ?? 0;
 }
 
 /** All server directories with downloads. */
@@ -261,9 +277,14 @@ export async function hasDownloads(): Promise<boolean> {
   return (await getDownloadsCatalog()).songs.length > 0;
 }
 
-function invalidate() {
+/** Drops the in-memory view of the catalog, without asking anyone to re-read. */
+function resetCatalogCache() {
   cachedCatalog = null;
   cachedForDir = null;
+}
+
+function invalidate() {
+  resetCatalogCache();
   // Offline the whole library IS this catalog, so every list has to be asked
   // again. Online none of it comes from here — the server answers those, and
   // the "downloaded" mark on a row reads this store directly, which is already
@@ -724,7 +745,11 @@ export const useDownloads = create<DownloadsState>((set, get) => {
         }
         return { files, dlBitRates };
       });
-      invalidate();
+      // Only the catalog view: the rows already follow `files`, and offline the
+      // lists come from a catalog that hasn't changed yet, so asking every
+      // screen to re-read here was a full refresh to show the same thing. The
+      // one at the end, once the songs are actually gone, is the real one.
+      resetCatalogCache();
       await locked(async () => {
         for (const dir of await serverDirs()) {
           const catalog = await loadCatalog(dir);
@@ -738,17 +763,16 @@ export const useDownloads = create<DownloadsState>((set, get) => {
             }
           }
           catalog.songs = catalog.songs.filter((s) => !ids.has(s.id));
-          // Albums left with no songs: removed (and their covers).
-          const emptyAlbums = catalog.albums.filter(
-            (a) => !catalog.songs.some((s) => s.albumId === a.id),
-          );
+          // Albums left with no songs: removed (and their covers). Which ones
+          // still have any comes from one pass over what's left, not from
+          // scanning every song for every album (see `setSongCounts`).
+          const survivors = new Set(catalog.songs.map((s) => s.albumId).filter(Boolean));
+          const emptyAlbums = catalog.albums.filter((a) => !survivors.has(a.id));
           for (const a of emptyAlbums) {
             if (a.coverUri) await FileSystem.deleteAsync(a.coverUri, { idempotent: true }).catch(() => {});
           }
-          catalog.albums = catalog.albums.filter((a) => !emptyAlbums.includes(a));
-          for (const a of catalog.albums) {
-            a.songCount = catalog.songs.filter((s) => s.albumId === a.id).length;
-          }
+          catalog.albums = catalog.albums.filter((a) => survivors.has(a.id));
+          setSongCounts(catalog);
           markDirty(dir);
         }
       });
