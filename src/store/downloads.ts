@@ -14,7 +14,6 @@
  * another quality. The artist id is normalized to the local key (`normKey(name)`)
  * so artists merge with those from scanning.
  */
-import { AppState } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Network from 'expo-network';
 import { create } from 'zustand';
@@ -37,7 +36,9 @@ import { tg } from '@/i18n';
 import { hashKey, normKey, registerCover } from '@/lib/localLibrary';
 import { serializeLrc } from '@/lib/lrc';
 import { siblingLrcUri } from '@/lib/localLyrics';
-import { timed, timedSync } from '@/lib/perfLog';
+import * as Db from '@/lib/downloadsDb';
+import type { DlAlbum } from '@/lib/downloadsDb';
+import { timed } from '@/lib/perfLog';
 import { queryClient } from '@/lib/query';
 import { primaryUrl } from '@/lib/serverUrls';
 import { useAuthStore } from './auth';
@@ -47,16 +48,6 @@ import { useToast } from './toast';
 
 const ROOT_DIR = FileSystem.documentDirectory + 'downloads/';
 const CONCURRENCY = 3;
-
-/** Downloaded album: the server's + local cover and download date. `dlBytes`
- *  is the size of that cover, so Storage used never has to go and measure. */
-type DlAlbum = Album & { coverUri?: string; addedAt?: number; dlBytes?: number };
-
-/** Persisted catalog per server (songs with `localUri` + albums). */
-interface ServerDownloads {
-  songs: Song[];
-  albums: DlAlbum[];
-}
 
 interface GroupProgress {
   done: number;
@@ -79,139 +70,15 @@ function serverDir(auth: SubsonicAuth): string {
   return `${ROOT_DIR}${hashKey(`${primaryUrl(auth)}|${auth.username}`)}/`;
 }
 
-function catalogFile(dir: string): string {
-  return `${dir}catalog.json`;
-}
-
-async function readServerCatalog(dir: string): Promise<ServerDownloads | null> {
-  try {
-    const info = await FileSystem.getInfoAsync(catalogFile(dir));
-    if (!info.exists) return null;
-    const raw = await timed('catalog read', () =>
-      FileSystem.readAsStringAsync(catalogFile(dir)),
-    );
-    return timedSync('catalog parse', () => JSON.parse(raw) as ServerDownloads);
-  } catch {
-    return null;
-  }
-}
-
-async function writeServerCatalog(dir: string, catalog: ServerDownloads): Promise<void> {
-  try {
-    await FileSystem.makeDirectoryAsync(dir, { intermediates: true }).catch(() => {});
-    const json = timedSync('catalog stringify', () => JSON.stringify(catalog));
-    await timed('catalog write', () => FileSystem.writeAsStringAsync(catalogFile(dir), json));
-  } catch {
-    // If it can't be persisted, this session's downloads are lost on
-    // restart (files become orphaned until a "clear all").
-  }
-}
-
 /**
- * Serializes changes to a catalog: several groups download at once, and
- * without this two of them could interleave their read-modify-write.
+ * Serializes deletes and clears against each other. The catalog itself no
+ * longer needs it: SQLite is the one keeping writes consistent.
  */
 let catalogLock: Promise<unknown> = Promise.resolve();
 function locked<T>(fn: () => Promise<T>): Promise<T> {
   const run = catalogLock.then(fn);
   catalogLock = run.catch(() => {});
   return run;
-}
-
-// ── Catalogs in memory, written in batches ────────────────────────────────
-//
-// The whole catalog used to be read, parsed, mutated, serialised and written
-// again for EVERY downloaded song. On a library of thousands of tracks that's
-// megabytes of JSON per song on the JS thread, so downloading froze the app —
-// and a delete, which queues behind all of it, looked like it did nothing at
-// all until you restarted (issues #47, #48, #50). Now the catalog is read once
-// and the disk sees it on a debounce.
-
-const catalogs = new Map<string, ServerDownloads>();
-const dirtyDirs = new Set<string>();
-let flushTimer: ReturnType<typeof setTimeout> | null = null;
-
-/** Quiet time before writing. Short on purpose: what a crash in that window
- *  costs is the record of the last song or two (its file is then orphaned
- *  until a "clear all", same as before this existed). */
-const FLUSH_MS = 1500;
-
-async function loadCatalog(dir: string): Promise<ServerDownloads> {
-  const hit = catalogs.get(dir);
-  if (hit) return hit;
-  const read = (await readServerCatalog(dir)) ?? { songs: [], albums: [] };
-  // Someone may have loaded it while this was reading: theirs wins, or the
-  // changes made in the meantime would be dropped on the floor.
-  const now = catalogs.get(dir);
-  if (now) return now;
-  catalogs.set(dir, read);
-  return read;
-}
-
-function markDirty(dir: string): void {
-  dirtyDirs.add(dir);
-  if (flushTimer) return;
-  flushTimer = setTimeout(() => {
-    flushTimer = null;
-    void flushCatalogs();
-  }, FLUSH_MS);
-}
-
-/** Writes what's pending. On its own timer, when a download group ends, and
- *  when the app goes to the background. */
-export async function flushCatalogs(): Promise<void> {
-  if (flushTimer) {
-    clearTimeout(flushTimer);
-    flushTimer = null;
-  }
-  const dirs = [...dirtyDirs];
-  dirtyDirs.clear();
-  for (const dir of dirs) {
-    const catalog = catalogs.get(dir);
-    if (catalog) await writeServerCatalog(dir, catalog);
-  }
-}
-
-// Leaving the app is the moment to make sure nothing pending is lost.
-AppState.addEventListener('change', (state) => {
-  if (state !== 'active') void flushCatalogs();
-});
-
-/** Adds a song/albums to a server's catalog (under the lock). */
-function commitToCatalog(
-  dir: string,
-  changes: { songs?: Song[]; albums?: DlAlbum[] },
-): Promise<void> {
-  return locked(async () => {
-    const catalog = await loadCatalog(dir);
-    for (const al of changes.albums ?? []) {
-      if (!catalog.albums.some((a) => a.id === al.id)) catalog.albums.push(al);
-    }
-    for (const s of changes.songs ?? []) {
-      if (!catalog.songs.some((x) => x.id === s.id)) catalog.songs.push(s);
-    }
-    setSongCounts(catalog);
-    markDirty(dir);
-  });
-}
-
-/**
- * Albums reflect how many songs are actually downloaded, counted in ONE pass.
- *
- * This used to scan every song once per album, and it runs on each song that
- * finishes downloading: on a catalog of ten thousand songs and eight hundred
- * albums that is eight million comparisons per song, on the JS thread, which
- * is the thread taps arrive on. It was the single biggest reason downloading
- * made the whole app worse (#50), and it only showed on big libraries, which
- * is why it went unnoticed for so long.
- */
-function setSongCounts(catalog: ServerDownloads): void {
-  const counts = new Map<string, number>();
-  for (const s of catalog.songs) {
-    if (!s.albumId) continue;
-    counts.set(s.albumId, (counts.get(s.albumId) ?? 0) + 1);
-  }
-  for (const a of catalog.albums) a.songCount = counts.get(a.id) ?? 0;
 }
 
 /** All server directories with downloads. */
@@ -260,14 +127,11 @@ export async function getDownloadsCatalog(): Promise<DownloadsCatalog> {
   const dir = activeServerDir();
   if (!dir) return { songs: [], albums: [], artists: [] };
   if (!cachedCatalog || cachedForDir !== dir) {
-    const cat = await loadCatalog(dir);
-    // A copy: this view is handed out to screens, and the catalog underneath
-    // keeps being mutated by downloads and deletions.
-    cachedCatalog = {
-      songs: [...cat.songs],
-      albums: [...cat.albums],
-      artists: deriveArtists(cat.albums),
-    };
+    // The whole library, which is what the offline Library screen is. Kept in
+    // memory afterwards, as before; what changed is that building it no longer
+    // means parsing a file of everything, and that nothing else has to.
+    const [songs, albums] = await Promise.all([Db.allSongs(dir), Db.allAlbums(dir)]);
+    cachedCatalog = { songs, albums, artists: deriveArtists(albums) };
     cachedForDir = dir;
   }
   // Always (not just on build): clearLocalCatalog() empties the global cover
@@ -277,9 +141,11 @@ export async function getDownloadsCatalog(): Promise<DownloadsCatalog> {
   return cachedCatalog;
 }
 
-/** Does the active account have downloads? Cheap: uses the cached catalog. */
+/** Does the active account have downloads? A count, not the catalog. */
 export async function hasDownloads(): Promise<boolean> {
-  return (await getDownloadsCatalog()).songs.length > 0;
+  const dir = activeServerDir();
+  if (!dir) return false;
+  return (await Db.songCount(dir)) > 0;
 }
 
 /** Drops the in-memory view of the catalog, without asking anyone to re-read. */
@@ -395,10 +261,10 @@ function toLocalAlbum(album: Album, coverUri?: string, dlBytes?: number): DlAlbu
  */
 async function mirrorAlbumTracklists(auth: SubsonicAuth, songs: Song[]): Promise<void> {
   const mirror = useLibraryMirror.getState();
-  const have = mirror.data.albums ?? {};
   const ids = [...new Set(songs.map((s) => s.albumId).filter((id): id is string => !!id))];
   for (const id of ids) {
-    if (have[id]) continue;
+    // Already mirrored: asked one at a time, which is a row lookup.
+    if (await mirror.albumDetail(id)) continue;
     try {
       const res = await getAlbum(auth, id);
       mirror.saveAlbum(id, res.album, res.songs, useDownloads.getState());
@@ -452,19 +318,20 @@ async function cacheLyricsForDownload(auth: SubsonicAuth, song: Song, audioFile:
  */
 async function measureMissing(
   dir: string,
-  entries: { localUri?: string; coverUri?: string; dlBytes?: number }[],
+  entries: { id: string; uri: string }[],
 ): Promise<number> {
   const BATCH = 24;
   let total = 0;
+  const measured: { id: string; bytes: number }[] = [];
   for (let i = 0; i < entries.length; i += BATCH) {
     const batch = entries.slice(i, i + BATCH);
-    const sizes = await Promise.all(batch.map((e) => fileSize(e.localUri ?? e.coverUri ?? '')));
+    const sizes = await Promise.all(batch.map((e) => fileSize(e.uri)));
     batch.forEach((e, j) => {
-      e.dlBytes = sizes[j];
+      measured.push({ id: e.id, bytes: sizes[j] });
       total += sizes[j];
     });
   }
-  markDirty(dir);
+  await Db.setSongBytes(dir, measured);
   return total;
 }
 
@@ -606,7 +473,7 @@ export const useDownloads = create<DownloadsState>((set, get) => {
         if (!album || albumDone.has(album.id)) return;
         albumDone.add(album.id); // mark before await: so another worker won't repeat it
         const cover = await downloadCover(auth, dir, album);
-        await commitToCatalog(dir, {
+        await Db.addToCatalog(dir, {
           albums: [toLocalAlbum(album, cover?.uri, cover?.bytes)],
         });
       };
@@ -649,7 +516,7 @@ export const useDownloads = create<DownloadsState>((set, get) => {
               Number(header(res.headers, 'content-length')) || (await fileSize(file));
             // Each song is persisted on completion: if the app dies mid-album,
             // already downloaded items survive a restart.
-            await commitToCatalog(dir, {
+            await Db.addToCatalog(dir, {
               songs: [toLocalSong(song, file, dlBitRate, bytes)],
             });
             set((st) => {
@@ -698,9 +565,6 @@ export const useDownloads = create<DownloadsState>((set, get) => {
     } finally {
       cancelling.delete(groupKey);
       activeTasks.delete(groupKey);
-      // Nothing more is coming for this group: persist without waiting for the
-      // timer, so what was downloaded survives a crash right afterwards.
-      void flushCatalogs();
       set((st) => {
         const active = { ...st.active };
         delete active[groupKey];
@@ -726,11 +590,10 @@ export const useDownloads = create<DownloadsState>((set, get) => {
       const active = activeServerDir();
       const dirs = active ? [active] : await serverDirs();
       for (const dir of dirs) {
-        const cat = await loadCatalog(dir);
-        for (const s of cat.songs) {
-          if (s.localUri) files[s.id] = s.localUri;
-          if (s.dlBitRate) dlBitRates[s.id] = s.dlBitRate;
-        }
+        // Two columns out of the database, not every song parsed out of a file.
+        const part = await Db.downloadedFiles(dir);
+        Object.assign(files, part.files);
+        Object.assign(dlBitRates, part.bitRates);
       }
       set({ files, dlBitRates, hydrated: true });
     },
@@ -798,7 +661,6 @@ export const useDownloads = create<DownloadsState>((set, get) => {
     },
 
     deleteSongs: async (songIds) => {
-      const ids = new Set(songIds);
       // The state goes first, before touching the disk: deleting used to show
       // nothing at all until the files were gone, and behind an ongoing
       // download that could be a very long while — long enough to look broken
@@ -818,40 +680,34 @@ export const useDownloads = create<DownloadsState>((set, get) => {
       // one at the end, once the songs are actually gone, is the real one.
       resetCatalogCache();
       await locked(async () => {
-        for (const dir of await serverDirs()) {
-          const catalog = await loadCatalog(dir);
-          if (!catalog.songs.some((s) => ids.has(s.id))) continue;
-          for (const s of catalog.songs) {
-            if (ids.has(s.id) && s.localUri) {
-              await FileSystem.deleteAsync(s.localUri, { idempotent: true }).catch(() => {});
-              // Also the cached lyrics alongside the file, if any.
-              const lrc = siblingLrcUri(s.localUri);
-              if (lrc) await FileSystem.deleteAsync(lrc, { idempotent: true }).catch(() => {});
-            }
+        // The signed in profile's, or all of them if there isn't one: opening
+        // another account's database has a cost and nothing to find.
+        const active = activeServerDir();
+        for (const dir of active ? [active] : await serverDirs()) {
+          // The rows go first and tell us what they pointed at, so the files
+          // are deleted knowing the catalog no longer claims to have them.
+          const gone = await Db.removeFromCatalog(dir, songIds);
+          for (const s of gone.songs) {
+            if (!s.localUri) continue;
+            await FileSystem.deleteAsync(s.localUri, { idempotent: true }).catch(() => {});
+            // Also the cached lyrics alongside the file, if any.
+            const lrc = siblingLrcUri(s.localUri);
+            if (lrc) await FileSystem.deleteAsync(lrc, { idempotent: true }).catch(() => {});
           }
-          catalog.songs = catalog.songs.filter((s) => !ids.has(s.id));
-          // Albums left with no songs: removed (and their covers). Which ones
-          // still have any comes from one pass over what's left, not from
-          // scanning every song for every album (see `setSongCounts`).
-          const survivors = new Set(catalog.songs.map((s) => s.albumId).filter(Boolean));
-          const emptyAlbums = catalog.albums.filter((a) => !survivors.has(a.id));
-          for (const a of emptyAlbums) {
+          // Albums left with nothing: their cover goes too.
+          for (const a of gone.albums) {
             if (a.coverUri) await FileSystem.deleteAsync(a.coverUri, { idempotent: true }).catch(() => {});
           }
-          catalog.albums = catalog.albums.filter((a) => survivors.has(a.id));
-          setSongCounts(catalog);
-          markDirty(dir);
         }
       });
-      // The catalog on disk must not outlive the files it points at.
-      await flushCatalogs();
       invalidate();
     },
 
     clearAll: async () => {
       await locked(async () => {
-        catalogs.clear();
-        dirtyDirs.clear();
+        // The databases are closed before their directory goes, or the handles
+        // would outlive the files they are pointing at.
+        await Db.closeCatalogs();
         await FileSystem.deleteAsync(ROOT_DIR, { idempotent: true }).catch(() => {});
       });
       // Local playlists created by downloads no longer resolve songs;
@@ -871,18 +727,12 @@ export const useDownloads = create<DownloadsState>((set, get) => {
       // whole app stutter for as long as it took, and leaving the screen didn't
       // even stop it (#50).
       for (const dir of await serverDirs()) {
-        const catalog = await loadCatalog(dir);
-        for (const s of catalog.songs) total += s.dlBytes ?? 0;
-        for (const a of catalog.albums) total += a.dlBytes ?? 0;
+        // Added up by the database, which is what a database is for.
+        const { known, missing } = await Db.usageBytes(dir);
+        total += known;
         // Downloaded before sizes were recorded: measured once, written down,
         // and never measured again.
-        const missing = [
-          ...catalog.songs.filter((s) => s.localUri && s.dlBytes == null),
-          ...catalog.albums.filter((a) => a.coverUri && a.dlBytes == null),
-        ];
-        if (missing.length > 0) {
-          total += await measureMissing(dir, missing);
-        }
+        if (missing.length > 0) total += await measureMissing(dir, missing);
       }
       return total;
     }),

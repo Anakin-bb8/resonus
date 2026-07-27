@@ -14,7 +14,7 @@ import {
 import { hashKey } from '@/lib/localLibrary';
 import { queryClient } from '@/lib/query';
 import { getItem, setItem } from '@/lib/storage';
-import { MAX_PLAYLIST_SONGS, useLibraryMirror } from '@/store/libraryMirror';
+import { useLibraryMirror } from '@/store/libraryMirror';
 import { useOfflineQueue, type QueuePlaylist } from '@/store/offlineQueue';
 import { useSettings } from '@/store/settings';
 import * as Subsonic from './backend';
@@ -69,31 +69,6 @@ async function loadMirror(): Promise<void> {
   ]);
 }
 
-/**
- * Every song the mirror knows, by id, in the order sources take precedence:
- * playlist tracklists, then albums, then favourites (first one in wins).
- *
- * Built once per version of the mirror and reused. Resolving used to walk every
- * playlist and every album looking for one id, which is fine for one song and
- * quadratic for a tracklist: opening a 500 song playlist offline against a
- * sizeable mirror meant millions of comparisons before anything was drawn.
- */
-let mirrorIndex: { source: unknown; byId: Map<string, Song> } | null = null;
-
-function mirrorSongs(): Map<string, Song> {
-  const data = useLibraryMirror.getState().data;
-  if (mirrorIndex?.source === data) return mirrorIndex.byId;
-  const byId = new Map<string, Song>();
-  const add = (songs: Song[] | undefined) => {
-    for (const s of songs ?? []) if (!byId.has(s.id)) byId.set(s.id, s);
-  };
-  for (const d of Object.values(data.playlistTracks ?? {})) add(d.songs);
-  for (const d of Object.values(data.albums ?? {})) add(d.songs);
-  add(data.starred?.songs);
-  mirrorIndex = { source: data, byId };
-  return byId;
-}
-
 /** Same idea for the downloads, which is the other list walked once per id.
  *  Keyed on the catalog object, which is rebuilt whenever it changes. */
 let catalogIndex: { source: unknown; byId: Map<string, Song> } | null = null;
@@ -106,12 +81,37 @@ function catalogSongs(catalog: { songs: Song[] }): Map<string, Song> {
   return byId;
 }
 
-/** Looks up a song's metadata by id from available offline sources: outbox
- *  (songs added to playlists), mirror (playlists/albums/favorites), and downloads. */
-function resolveSong(id: string, catalog: { songs: Song[] }): Song | undefined {
-  const meta = useOfflineQueue.getState().data.songMeta?.[id];
-  if (meta) return meta;
-  return mirrorSongs().get(id) ?? catalogSongs(catalog).get(id);
+/**
+ * Metadata for these song ids, from whatever offline source knows them: the
+ * outbox (songs added to a playlist offline), the mirror, and the downloads.
+ *
+ * By the batch, because that is how they are needed: a playlist asks about all
+ * of its songs at once. The mirror answers with one query for the lot, which
+ * is what its own table of songs is for.
+ */
+async function resolveSongs(ids: string[], catalog: { songs: Song[] }): Promise<Map<string, Song>> {
+  const out = new Map<string, Song>();
+  const meta = useOfflineQueue.getState().data.songMeta ?? {};
+  const pending: string[] = [];
+  for (const id of ids) {
+    const m = meta[id];
+    if (m) out.set(id, m);
+    else pending.push(id);
+  }
+  if (pending.length > 0) {
+    const fromMirror = await useLibraryMirror.getState().songs(pending);
+    const local = catalogSongs(catalog);
+    for (const id of pending) {
+      const s = fromMirror.get(id) ?? local.get(id);
+      if (s) out.set(id, s);
+    }
+  }
+  return out;
+}
+
+/** One song, for the places that only need one. */
+async function resolveSong(id: string, catalog: { songs: Song[] }): Promise<Song | undefined> {
+  return (await resolveSongs([id], catalog)).get(id);
 }
 
 /** Final desired tracklist for an offline playlist: the outbox edit if any,
@@ -120,7 +120,7 @@ async function currentPlaylistSongIds(id: string): Promise<string[]> {
   await loadMirror();
   const edited = useOfflineQueue.getState().data.playlists?.[id]?.songIds;
   if (edited) return edited;
-  const d = useLibraryMirror.getState().data.playlistTracks?.[id];
+  const d = await useLibraryMirror.getState().playlistDetail(id);
   return (d?.songs ?? []).map((s) => s.id);
 }
 
@@ -188,7 +188,7 @@ async function mirrorAlbum(
   id: string,
 ): Promise<{ album: Subsonic.Album; songs: Subsonic.Song[] }> {
   await loadMirror();
-  const d = useLibraryMirror.getState().data.albums?.[id];
+  const d = await useLibraryMirror.getState().albumDetail(id);
   if (!d) return Local.getAlbum(id);
   return { album: { ...d.album, coverArt: d.album.id }, songs: annotate(d.songs) };
 }
@@ -286,7 +286,7 @@ async function mirrorArtist(
   id: string,
 ): Promise<{ artist: Subsonic.Artist; albums: Subsonic.Album[] }> {
   await loadMirror();
-  const d = useLibraryMirror.getState().data.artists?.[id];
+  const d = await useLibraryMirror.getState().artistDetail(id);
   if (!d) return Local.getArtist(id);
   // Album art resolved by their id (so they work offline).
   return { artist: d.artist, albums: d.albums.map((al) => ({ ...al, coverArt: al.id })) };
@@ -366,6 +366,48 @@ export function getPlaylists(): Promise<Subsonic.Playlist[]> {
   });
 }
 
+/**
+ * Caches the tracklist of favourited albums for offline, a few at a time.
+ *
+ * Favouriting an album put it in the offline Library but not its songs: only
+ * albums that had been opened online were stored, so a favourite you had never
+ * looked at opened empty and the screen bailed. Keeping them all was out of
+ * the question while the mirror was one file rewritten in full; now an album
+ * is a row of its own.
+ *
+ * Same manners as the playlists: nothing while the app is opening, a handful
+ * per run, and a long wait in between. It is a convenience for a mode that may
+ * never be used, so it never competes with what somebody is waiting for.
+ */
+let prefetchingAlbums = false;
+let lastAlbumPrefetch = 0;
+const ALBUM_PREFETCH_PER_RUN = 8;
+
+async function prefetchStarredAlbums(albums: Subsonic.Album[]): Promise<void> {
+  if (prefetchingAlbums) return;
+  if (Date.now() - appStartedAt < PREFETCH_QUIET_MS) return;
+  if (Date.now() - lastAlbumPrefetch < PREFETCH_COOLDOWN_MS) return;
+  const a = useAuthStore.getState().auth;
+  if (!a || albums.length === 0) return;
+  prefetchingAlbums = true;
+  lastAlbumPrefetch = Date.now();
+  try {
+    const stored = await useLibraryMirror.getState().albumIds();
+    const missing = albums.filter((al) => !stored.has(al.id)).slice(0, ALBUM_PREFETCH_PER_RUN);
+    const dl = useDownloads.getState();
+    for (const al of missing) {
+      try {
+        const res = await Subsonic.getAlbum(a, al.id);
+        useLibraryMirror.getState().saveAlbum(al.id, res.album, res.songs, dl);
+      } catch {
+        // Best effort: whatever fails is tried again on the next run.
+      }
+    }
+  } finally {
+    prefetchingAlbums = false;
+  }
+}
+
 /** Prevents overlapping prefetch runs (getPlaylists can fire multiple times). */
 let prefetchingPlaylists = false;
 /**
@@ -405,15 +447,15 @@ async function prefetchPlaylistDetails(list: Subsonic.Playlist[]): Promise<void>
   lastPlaylistPrefetch = Date.now();
   try {
     await loadMirror();
-    const cached = useLibraryMirror.getState().data.playlistTracks ?? {};
-    // Only those missing or changed on the server (by `changed`), and only the
-    // ones the mirror would keep: asking for a playlist of thousands of songs
-    // to then throw it away is the worst of both.
+    // Which ones are stored and at which version, in one query rather than
+    // the whole mirror in memory. No size limit any more: a long playlist is
+    // now one row of its own instead of a rewrite of everything.
+    const cached = await useLibraryMirror.getState().playlistVersions();
+    // Only those missing or changed on the server (by `changed`).
     const stale = list
-      .filter((p) => (p.songCount ?? 0) <= MAX_PLAYLIST_SONGS)
       .filter((p) => {
-        const prev = cached[p.id]?.playlist;
-        return !prev || (p.changed != null && prev.changed !== p.changed);
+        const prev = cached[p.id];
+        return !(p.id in cached) || (p.changed != null && prev !== p.changed);
       })
       .slice(0, PREFETCH_PER_RUN);
     const results: { id: string; playlist: Subsonic.Playlist; songs: Subsonic.Song[] }[] = [];
@@ -441,34 +483,60 @@ async function prefetchPlaylistDetails(list: Subsonic.Playlist[]): Promise<void>
  *  the playlist's own. Without a mirror copy yet, falls back to local behavior. */
 async function mirrorPlaylists(): Promise<Subsonic.Playlist[]> {
   await loadMirror();
-  const mirror = useLibraryMirror.getState().data;
+  const mirror = useLibraryMirror.getState();
+  const stored = await mirror.playlists();
   const qpls = useOfflineQueue.getState().data.playlists ?? {};
   const catalog = await getDownloadsCatalog();
   const files = useDownloads.getState().files;
-  if (!mirror.playlists && Object.keys(qpls).length === 0) return Local.getPlaylists();
+  if (!stored && Object.keys(qpls).length === 0) return Local.getPlaylists();
+
+  // The tracklists of the ones being listed, asked for together.
+  const details = new Map<string, Subsonic.Song[]>();
+  for (const p of stored ?? []) {
+    const d = await mirror.playlistDetail(p.id);
+    if (d) details.set(p.id, d.songs);
+  }
+
+  // The cover of a playlist without one is the album art of its first
+  // downloaded track, so those ids are resolved in one go rather than one at
+  // a time inside the loop.
+  const firstDownloaded = (songIds: string[]) => songIds.find((sid) => files[sid]);
+  const wanted: string[] = [];
+  for (const edit of Object.values(qpls)) {
+    if (!edit.created || edit.deleted) continue;
+    const f = firstDownloaded(edit.songIds ?? []);
+    if (f) wanted.push(f);
+  }
+  for (const p of stored ?? []) {
+    if (p.coverArt) continue;
+    const songIds = qpls[p.id]?.songIds ?? details.get(p.id)?.map((s) => s.id) ?? [];
+    const f = firstDownloaded(songIds);
+    if (f) wanted.push(f);
+  }
+  const covers = await resolveSongs(wanted, catalog);
 
   const out: Subsonic.Playlist[] = [];
   // Playlists created offline (still with a temporary id).
   for (const [id, edit] of Object.entries(qpls)) {
     if (!edit.created || edit.deleted) continue;
     const songIds = edit.songIds ?? [];
-    const firstDl = songIds.find((sid) => files[sid]);
+    const firstDl = firstDownloaded(songIds);
     out.push({
       id,
       name: edit.name ?? '',
       songCount: songIds.length,
-      coverArt: firstDl ? resolveSong(firstDl, catalog)?.albumId : undefined,
+      coverArt: firstDl ? covers.get(firstDl)?.albumId : undefined,
       comment: edit.comment,
       public: edit.public,
     });
   }
   // Server playlists with overlay (rename/tracklist), minus deleted ones.
-  for (const p of mirror.playlists ?? []) {
+  for (const p of stored ?? []) {
     const edit = qpls[p.id];
     if (edit?.deleted) continue;
-    const detailIds = mirror.playlistTracks?.[p.id]?.songs.map((s) => s.id);
+    const detailIds = details.get(p.id)?.map((s) => s.id);
     const songIds = edit?.songIds ?? detailIds ?? [];
-    const firstDl = songIds.find((sid) => files[sid]);
+    const firstDl = firstDownloaded(songIds);
     // With known tracklist (cached details or offline edit) the real count;
     // otherwise, the count provided by the server playlist.
     const haveTracks = edit?.songIds != null || detailIds != null;
@@ -481,7 +549,7 @@ async function mirrorPlaylists(): Promise<Subsonic.Playlist[]> {
       // happened to be downloaded looked like a random cover offline. The
       // downloaded album art is only a fallback for playlists without one,
       // where it's better than nothing.
-      coverArt: p.coverArt ?? (firstDl ? resolveSong(firstDl, catalog)?.albumId : undefined),
+      coverArt: p.coverArt ?? (firstDl ? covers.get(firstDl)?.albumId : undefined),
     });
   }
   return out;
@@ -506,6 +574,9 @@ export function getStarred(): Promise<Subsonic.Starred> {
   // Copy for offline mode (Library as server mirror).
   return p.then((s) => {
     useLibraryMirror.getState().saveStarred(s);
+    // And, in the background, the tracklists of the favourited albums, so they
+    // open offline instead of being listed and then coming up empty.
+    void prefetchStarredAlbums(s.albums ?? []);
     return s;
   });
 }
@@ -518,7 +589,7 @@ export function getStarred(): Promise<Subsonic.Starred> {
  *  open gray/empty, like the rest of non-downloaded content). */
 async function mirrorStarred(): Promise<Subsonic.Starred> {
   await loadMirror();
-  const mirror = useLibraryMirror.getState().data;
+  const mirror = useLibraryMirror.getState();
   const catalog = await getDownloadsCatalog();
   await useOfflineQueue.getState().load();
   const favs = useOfflineQueue.getState().data.favs ?? {};
@@ -526,12 +597,16 @@ async function mirrorStarred(): Promise<Subsonic.Starred> {
 
   // Base: the server snapshot. If no copy yet but there are offline changes,
   // we start from local to avoid losing favorites made offline.
-  const base = mirror.starred ?? (hasQueue ? await Local.getStarred() : null);
+  const base = (await mirror.starred()) ?? (hasQueue ? await Local.getStarred() : null);
   if (!base) return Local.getStarred();
 
   let songs = base.songs ?? [];
   let albums = base.albums ?? [];
   let artists = base.artists ?? [];
+
+  // The downloaded albums by id, so the loop below asks a map rather than
+  // walking the catalog once per favourite added offline.
+  const catalogAlbums = new Map(catalog.albums.map((a) => [a.id, a]));
 
   // Outbox overlay: remove unstarred ones and add those starred offline.
   const unstarred = new Set(
@@ -545,16 +620,16 @@ async function mirrorStarred(): Promise<Subsonic.Starred> {
     if (!v.starred) continue;
     if (v.type === 'album') {
       if (!albums.some((x) => x.id === id)) {
-        const a = mirror.albums?.[id]?.album ?? catalog.albums.find((x) => x.id === id);
+        const a = (await mirror.albumDetail(id))?.album ?? catalogAlbums.get(id);
         if (a) albums = [a, ...albums];
       }
     } else if (v.type === 'artist') {
       if (!artists.some((x) => x.id === id)) {
-        const a = mirror.artists?.[id]?.artist;
+        const a = (await mirror.artistDetail(id))?.artist;
         if (a) artists = [a, ...artists];
       }
     } else if (!songs.some((x) => x.id === id)) {
-      const song = resolveSong(id, catalog);
+      const song = await resolveSong(id, catalog);
       if (song) songs = [song, ...songs];
     }
   }
@@ -703,9 +778,8 @@ export function snapshotCachesToMirror(): void {
       mirror.saveAlbum(id, data.album, data.songs, useDownloads.getState());
     }
   }
-  // Going offline is a deliberate moment: persist now (a single write,
-  // thanks to the debounce) instead of waiting for the timer.
-  mirror.flush();
+  // Nothing to flush any more: every save above is its own transaction and is
+  // already on disk by the time it returns.
 }
 
 /** Rate a song (1-5; 0 removes the rating). */
@@ -759,7 +833,7 @@ export async function addToPlaylist(playlistId: string, songId: string): Promise
     useOfflineQueue.getState().setPlaylist(playlistId, { songIds: [...ids, songId] });
     // Save the song's metadata so it can be displayed in the offline playlist.
     const catalog = await getDownloadsCatalog();
-    const song = resolveSong(songId, catalog);
+    const song = await resolveSong(songId, catalog);
     if (song) useOfflineQueue.getState().rememberSongs([song]);
     return;
   }
@@ -806,10 +880,10 @@ async function mirrorPlaylist(
   id: string,
 ): Promise<{ playlist: Subsonic.Playlist; songs: Subsonic.Song[] }> {
   await loadMirror();
-  const mirror = useLibraryMirror.getState().data;
+  const mirror = useLibraryMirror.getState();
   const catalog = await getDownloadsCatalog();
   const edit = useOfflineQueue.getState().data.playlists?.[id];
-  const detail = mirror.playlistTracks?.[id];
+  const detail = await mirror.playlistDetail(id);
 
   // Playlist metadata: created offline / mirror / at least its name.
   let playlist: Subsonic.Playlist;
@@ -818,7 +892,7 @@ async function mirrorPlaylist(
   } else if (detail) {
     playlist = { ...detail.playlist };
   } else {
-    playlist = mirror.playlists?.find((p) => p.id === id) ?? { id, name: id };
+    playlist = (await mirror.playlists())?.find((p) => p.id === id) ?? { id, name: id };
   }
   if (edit?.name !== undefined) playlist = { ...playlist, name: edit.name };
   if (edit?.comment !== undefined) playlist = { ...playlist, comment: edit.comment };
@@ -830,8 +904,10 @@ async function mirrorPlaylist(
     // No saved tracklist nor edit: no songs offline.
     return { playlist: { ...playlist, songCount: 0 }, songs: [] };
   }
+  // Every id at once: one query for the playlist instead of one per song.
+  const found = await resolveSongs(songIds, catalog);
   const songs = songIds
-    .map((sid) => resolveSong(sid, catalog))
+    .map((sid) => found.get(sid))
     .filter((s): s is Subsonic.Song => !!s);
   // The count reflects what is actually shown (annotate may hide non-downloaded ones).
   const annotated = annotate(songs);
