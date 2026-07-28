@@ -78,11 +78,18 @@ async function openDb(dir: string): Promise<SQLite.SQLiteDatabase> {
 }
 
 export function catalogDb(dir: string): Promise<SQLite.SQLiteDatabase> {
-  let handle = open.get(dir);
-  if (!handle) {
-    handle = openDb(dir);
-    open.set(dir, handle);
-  }
+  const existing = open.get(dir);
+  if (existing) return existing;
+  // A failure is not remembered. Leaving the rejected promise in the map hands
+  // it to every later caller, so one bad moment — no room on disk, a file that
+  // wasn't ready — turns into a catalog that stays broken for the rest of the
+  // session: nothing downloaded shows, nothing new is written down, deleting
+  // fails. Forgetting it means the next caller simply tries again.
+  const handle: Promise<SQLite.SQLiteDatabase> = openDb(dir).catch((e) => {
+    if (open.get(dir) === handle) open.delete(dir);
+    throw e;
+  });
+  open.set(dir, handle);
   return handle;
 }
 

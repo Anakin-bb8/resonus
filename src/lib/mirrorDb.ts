@@ -89,7 +89,10 @@ const open = new Map<string, Promise<SQLite.SQLiteDatabase>>();
 export function mirrorDb(dir: string, profile: string): Promise<SQLite.SQLiteDatabase> {
   const existing = open.get(profile);
   if (existing) return existing;
-  const handle = (async () => {
+  // See downloadsDb: a rejected promise left in here would be handed to every
+  // later caller, and the offline library would stay unreadable until the app
+  // was restarted. Forgetting a failed open lets the next caller retry.
+  const handle: Promise<SQLite.SQLiteDatabase> = (async () => {
     await FileSystem.makeDirectoryAsync(dir, { intermediates: true }).catch(() => {});
     // SQLite joins directory and name as plain text: the `file://` that the
     // file system module speaks means nothing to it.
@@ -102,7 +105,10 @@ export function mirrorDb(dir: string, profile: string): Promise<SQLite.SQLiteDat
     await addSummaryColumns(db);
     await migrateFromJson(db, jsonFile(dir, profile));
     return db;
-  })();
+  })().catch((e) => {
+    if (open.get(profile) === handle) open.delete(profile);
+    throw e;
+  });
   open.set(profile, handle);
   return handle;
 }
@@ -115,6 +121,9 @@ export async function closeMirror(): Promise<void> {
     await h.then((db) => db.closeAsync()).catch(() => {});
   }
 }
+
+/** Songs written per statement. Two placeholders each, under the limit. */
+const SONGS_PER_INSERT = 200;
 
 /** What an entry answers without being read: the three summary columns. */
 interface Summary {
@@ -273,11 +282,20 @@ async function putEntry(
   );
   // Every song that goes past leaves its metadata behind, which is what makes
   // resolving one by id a lookup instead of a walk through every tracklist.
-  for (const s of songs ?? []) {
-    await db.runAsync('INSERT OR REPLACE INTO songs (id, data) VALUES (?, ?)', [
-      s.id,
-      JSON.stringify(s),
-    ]);
+  //
+  // In batches: one statement per song meant a thousand and forty crossings
+  // into native code to store one playlist, and the prefetch stores five of
+  // them a run. Two placeholders each, so a chunk of the parameter limit
+  // carries two hundred songs.
+  const all = songs ?? [];
+  for (let i = 0; i < all.length; i += SONGS_PER_INSERT) {
+    const part = all.slice(i, i + SONGS_PER_INSERT);
+    const rows = part.map(() => '(?, ?)').join(',');
+    const params: string[] = [];
+    for (const s of part) {
+      params.push(s.id, JSON.stringify(s));
+    }
+    await db.runAsync(`INSERT OR REPLACE INTO songs (id, data) VALUES ${rows}`, params);
   }
 }
 
