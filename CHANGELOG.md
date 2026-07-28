@@ -9,6 +9,38 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+Your downloads and your offline library move out of the JSON files they lived
+in and into a database. Nothing is lost in the move: the old files are kept,
+renamed, and only after everything they held has arrived.
+
+Note that this is a one way trip. Going back to 0.5.6 or earlier after
+installing this will show no downloads at all, because the files those versions
+read have been renamed.
+
+### Added
+
+- Favourited albums and artists open offline even if you have never downloaded
+  a song from them.
+- German and Italian are complete, thanks to @Psychotoxical and @Anakin-bb8.
+
+### Changed
+
+- The offline copy of your library no longer has size limits. Playlists over
+  five hundred songs used to be dropped, as were albums you had downloaded in
+  full; both are kept now. Saving one playlist writes one playlist instead of
+  rewriting the whole copy.
+- Only the profile you are using has its downloads read when the app starts,
+  instead of every profile you have ever added.
+
+### Fixed
+
+- Downloading a library asked the server twice for the lyrics of every song
+  that has none, doubling the requests queued in front of the screens.
+- Switching profiles could leave the offline library unreadable, showing
+  playlists with names like `dl_obp32J49` and no favourites.
+- Deleting a discography could fail on a large one.
+- Counted playlists read "1 playlists" in every language.
+
 ## [0.5.6] - 2026-07-27
 
 Mostly a performance release. On large libraries the app was doing a great deal

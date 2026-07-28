@@ -40,7 +40,7 @@ Also available on [Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtai
 - **Synced lyrics**: karaoke view with tap-to-seek, full-screen mode, optional LRCLIB lookup
 - **Internet radio**: browse and manage your stations
 - **Cast to speakers**: UPnP/DLNA renderers
-- **Playback**: gapless, crossfade, built-in equalizer, ReplayGain normalization, sleep timer, queue with undo, shuffle, repeat, background & lock-screen controls
+- **Playback**: crossfade, built-in equalizer, ReplayGain normalization, sleep timer, queue with undo, shuffle, repeat, background & lock-screen controls
 - **Autoplay & mixes**: keep the music going with similar songs, or start a mix from any track
 - **Organize**: multi-select (queue, playlist or download in batch), star ratings, pinned items, play history
 - **Make it yours**: reorder and show/hide Home sections and explore chips, accent colors, app fonts, configurable swipe and ⋯ menu actions
