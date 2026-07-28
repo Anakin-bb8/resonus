@@ -155,6 +155,13 @@ export async function hasDownloads(): Promise<boolean> {
   return (await Db.songCount(dir)) > 0;
 }
 
+/** Has this album got anything downloaded? One row, not the whole library. */
+export async function albumHasDownloads(albumId: string): Promise<boolean> {
+  const dir = activeServerDir();
+  if (!dir) return false;
+  return Db.albumHasSongs(dir, albumId);
+}
+
 /** Drops the in-memory view of the catalog, without asking anyone to re-read. */
 function resetCatalogCache() {
   cachedCatalog = null;

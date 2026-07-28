@@ -319,6 +319,22 @@ export async function songsOfAlbum(dir: string, albumId: string): Promise<Song[]
   return rows.map((r) => JSON.parse(r.data) as Song);
 }
 
+/**
+ * Has this album got anything downloaded? Asked without reading any of it.
+ *
+ * The album screen asks this every time it opens, and it used to be answered by
+ * building the whole catalog in memory and searching it, which is the cost this
+ * table exists to avoid.
+ */
+export async function albumHasSongs(dir: string, albumId: string): Promise<boolean> {
+  const db = await catalogDb(dir);
+  const row = await db.getFirstAsync<{ n: number }>(
+    'SELECT 1 AS n FROM songs WHERE album_id = ? LIMIT 1',
+    [albumId],
+  );
+  return !!row;
+}
+
 export async function allSongs(dir: string): Promise<Song[]> {
   const db = await catalogDb(dir);
   const rows = await db.getAllAsync<{ data: string }>('SELECT data FROM songs');

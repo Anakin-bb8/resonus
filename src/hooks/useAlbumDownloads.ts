@@ -1,9 +1,12 @@
 /**
  * Has this album got anything downloaded?
  *
- * Asked of the downloads catalog, which is already in memory, and answered by
- * album id: a downloaded song keeps the album it came from, unlike its artist,
- * which gets re-pegged to a local id built from the name.
+ * Answered by album id: a downloaded song keeps the album it came from, unlike
+ * its artist, which gets re-pegged to a local id built from the name.
+ *
+ * It used to build the entire downloads catalog, every song and every album,
+ * and search it. Opening an album screen did that, online or offline, and on a
+ * large library it was the better part of a quarter second each time.
  *
  * Only albums. A playlist is whatever songs it happens to hold, so the same
  * question can't be answered without fetching it, and the playlist screen
@@ -11,7 +14,7 @@
  */
 import { useEffect, useState } from 'react';
 
-import { getDownloadsCatalog, useDownloads } from '@/store/downloads';
+import { albumHasDownloads, useDownloads } from '@/store/downloads';
 
 export function useAlbumDownloads(albumId: string | undefined): boolean {
   // Re-checked when downloads change, so deleting the last song of an album
@@ -25,9 +28,9 @@ export function useAlbumDownloads(albumId: string | undefined): boolean {
       setHas(false);
       return;
     }
-    void getDownloadsCatalog()
-      .then((catalog) => {
-        if (alive) setHas(catalog.songs.some((s) => s.albumId === albumId));
+    void albumHasDownloads(albumId)
+      .then((found) => {
+        if (alive) setHas(found);
       })
       .catch(() => {
         // Catalog unreadable: better an option that reports nothing to delete
