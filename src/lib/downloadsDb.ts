@@ -29,6 +29,11 @@ export type DlAlbum = Album & { coverUri?: string; addedAt?: number; dlBytes?: n
 
 const SCHEMA = `
 PRAGMA journal_mode = WAL;
+-- The write-ahead log is only truncated back down when a checkpoint is told
+-- what size to leave behind; without this it stays at its high water mark for
+-- as long as the connection lives, which here is the whole session. Measured
+-- at 4 MB of log for 356 KB of database after an afternoon of downloading.
+PRAGMA journal_size_limit = 524288;
 CREATE TABLE IF NOT EXISTS songs (
   id TEXT PRIMARY KEY NOT NULL,
   album_id TEXT,

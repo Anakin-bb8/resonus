@@ -30,6 +30,9 @@ type Kind = 'starred' | 'playlists' | 'playlist' | 'album' | 'artist';
 
 const SCHEMA = `
 PRAGMA journal_mode = WAL;
+-- See downloadsDb: without a size limit the log keeps whatever it grew to,
+-- and this one grew larger than the database it belongs to.
+PRAGMA journal_size_limit = 524288;
 CREATE TABLE IF NOT EXISTS entries (
   kind TEXT NOT NULL,
   id TEXT NOT NULL,
@@ -339,11 +342,16 @@ export async function stats(dir: string, profile: string): Promise<MirrorStats> 
   const by = (k: string) => counts.find((c) => c.kind === k)?.n ?? 0;
   const starred = await getStarred(dir, profile);
   let bytes = 0;
-  try {
-    const info = await FileSystem.getInfoAsync(`${dir}${dbName(profile)}`);
-    if (info.exists) bytes = info.size ?? 0;
-  } catch {
-    // reported as zero
+  // The database is three files on disk, and the log is not the small one: it
+  // was measured larger than the database itself. Reporting only the database
+  // told the user less than half of what the copy was taking.
+  for (const suffix of ['', '-wal', '-shm']) {
+    try {
+      const info = await FileSystem.getInfoAsync(`${dir}${dbName(profile)}${suffix}`);
+      if (info.exists) bytes += info.size ?? 0;
+    } catch {
+      // counted as zero
+    }
   }
   return {
     bytes,
