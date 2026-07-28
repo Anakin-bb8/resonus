@@ -526,9 +526,12 @@
   "Recent albums": "Recent albums",
   "Pin favorites": "Pin favorites",
   "{n} cards": "{n} cards",
+  "Its downloads and its offline copy of the library will be deleted from this device.": "Its downloads and its offline copy of the library will be deleted from this device.",
   "Keep the Favorites tile first.": "Keep the Favorites tile first.",
   "Show, personalize and size the shortcut cards on Home.": "Show, personalize and size the shortcut cards on Home.",
   "Open the app on": "Open the app on",
   "Which tab opens on launch, and after a while in the background.": "Which tab opens on launch, and after a while in the background.",
-  "Not available offline": "Not available offline"
+  "Not available offline": "Not available offline",
+  "Remove profile?": "Remove profile?",
+  "The music on your device is not touched.": "The music on your device is not touched."
 }

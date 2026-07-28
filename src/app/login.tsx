@@ -23,6 +23,7 @@ import {
   type ServerProfile,
   useAuthStore,
 } from '@/store/auth';
+import { Dialog } from '@/components/Dialog';
 import { ensureAudioPermission, pickFolder } from '@/lib/localLibrary';
 import { useToast } from '@/store/toast';
 import { useT } from '@/i18n';
@@ -200,8 +201,12 @@ export default function LoginScreen() {
     }
   }
 
+  // Asked first: the button that does this is a small × beside the one that
+  // signs in, and it now takes the account's downloads with it.
+  const [removing, setRemoving] = useState<Profile | null>(null);
+
   function onProfileRemove(p: Profile) {
-    removeProfile(p);
+    setRemoving(p);
   }
 
   return (
@@ -474,6 +479,26 @@ export default function LoginScreen() {
           </ScrollView>
         </SafeAreaView>
       </Modal>
+
+      <Dialog
+        visible={!!removing}
+        title={t('Remove profile?')}
+        // The local profile owns no downloads: it points at music that was
+        // already on the phone and stays there.
+        message={
+          removing && !isOffline(removing)
+            ? t('Its downloads and its offline copy of the library will be deleted from this device.')
+            : t('The music on your device is not touched.')
+        }
+        confirmLabel={t('Remove')}
+        destructive
+        onCancel={() => setRemoving(null)}
+        onConfirm={() => {
+          const p = removing;
+          setRemoving(null);
+          if (p) void removeProfile(p);
+        }}
+      />
     </SafeAreaView>
   );
 }

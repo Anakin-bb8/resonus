@@ -93,6 +93,15 @@ export function catalogDb(dir: string): Promise<SQLite.SQLiteDatabase> {
   return handle;
 }
 
+/** Closes and forgets one profile's catalog, for when its files are about to
+ *  go: a handle left open would outlive the file it points at. */
+export async function closeCatalog(dir: string): Promise<void> {
+  const handle = open.get(dir);
+  if (!handle) return;
+  open.delete(dir);
+  await handle.then((db) => db.closeAsync()).catch(() => {});
+}
+
 /** Closes and forgets every open database (profile change, clear all). */
 export async function closeCatalogs(): Promise<void> {
   const handles = [...open.values()];

@@ -113,6 +113,15 @@ export function mirrorDb(dir: string, profile: string): Promise<SQLite.SQLiteDat
   return handle;
 }
 
+/** Closes and forgets one profile's mirror, for when its files are about to
+ *  go. Not for switching profiles: that was the bug this comment warns about. */
+export async function closeMirrorFor(profile: string): Promise<void> {
+  const handle = open.get(profile);
+  if (!handle) return;
+  open.delete(profile);
+  await handle.then((db) => db.closeAsync()).catch(() => {});
+}
+
 /** Closes them all. For clearing everything out, not for switching profiles. */
 export async function closeMirror(): Promise<void> {
   const handles = [...open.values()];

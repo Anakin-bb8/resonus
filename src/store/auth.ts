@@ -19,6 +19,7 @@ import {
 } from '@/api/backend';
 import { primaryUrl } from '@/lib/serverUrls';
 import { clearLocalCatalog } from '@/lib/localLibrary';
+import { deleteProfileData } from '@/lib/profileData';
 import { queryClient } from '@/lib/query';
 import { deleteItem, getItem, setItem } from '@/lib/storage';
 
@@ -41,6 +42,13 @@ export type Profile = ServerProfile | OfflineProfile;
 function withUrls(a: SubsonicAuth): SubsonicAuth {
   if (a.urls && a.urls.length > 0) return a;
   return { ...a, urls: [a.serverUrl] };
+}
+
+/** Is this the account currently signed in? Compared the same way profiles
+ *  are, so an alternative URL of the same account still counts as itself. */
+function sameAccount(auth: SubsonicAuth | null, profile: ServerProfile): boolean {
+  if (!auth) return false;
+  return same({ ...auth, _type: 'server' }, profile);
 }
 
 function same(a: Profile, b: Profile): boolean {
@@ -294,9 +302,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   removeProfile: async (profile) => {
+    // Signed into the one being removed: leave it first, or its music would be
+    // deleted from under a session still playing it.
+    if (profile._type === 'server' && sameAccount(get().auth, profile)) {
+      await get().logout();
+    }
     const profiles = get().profiles.filter((p) => !same(p, profile));
     await setItem(PROFILES_KEY, JSON.stringify(profiles));
     set({ profiles });
+    // Its downloads and its offline library go with it. The local profile owns
+    // none of that: it is the phone's own music.
+    if (profile._type === 'server') await deleteProfileData(profile);
   },
 
   setActiveUrl: async (url) => {

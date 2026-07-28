@@ -527,9 +527,12 @@
   "Recent albums": "Álbumes recientes",
   "Pin favorites": "Fijar favoritos",
   "{n} cards": "{n} tarjetas",
+  "Its downloads and its offline copy of the library will be deleted from this device.": "Se borrarán de este dispositivo sus descargas y su copia de la biblioteca.",
   "Keep the Favorites tile first.": "Mantén el mosaico de Favoritos el primero.",
   "Show, personalize and size the shortcut cards on Home.": "Muestra, personaliza y ajusta el tamaño de las tarjetas de acceso rápido de Inicio.",
   "Open the app on": "Abrir la app en",
   "Which tab opens on launch, and after a while in the background.": "Qué pestaña se abre al arrancar, y al volver tras un rato en segundo plano.",
-  "Not available offline": "No disponible sin conexión"
+  "Not available offline": "No disponible sin conexión",
+  "Remove profile?": "¿Quitar el perfil?",
+  "The music on your device is not touched.": "La música de tu dispositivo no se toca."
 }

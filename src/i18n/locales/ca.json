@@ -519,9 +519,12 @@
   "Recent albums": "Àlbums recents",
   "Pin favorites": "Fixar preferits",
   "{n} cards": "{n} targetes",
+  "Its downloads and its offline copy of the library will be deleted from this device.": "Se n'esborraran d'aquest dispositiu les descàrregues i la còpia de la biblioteca.",
   "Keep the Favorites tile first.": "Mantén el mosaic de Preferits al davant.",
   "Show, personalize and size the shortcut cards on Home.": "Mostra, personalitza i ajusta la mida de les targetes d’accés ràpid d’Inici.",
   "Open the app on": "Obre l’app a",
   "Which tab opens on launch, and after a while in the background.": "Quina pestanya s’obre en iniciar, i en tornar després d’una estona en segon pla.",
-  "Not available offline": "No disponible sense connexió"
+  "Not available offline": "No disponible sense connexió",
+  "Remove profile?": "Vols treure el perfil?",
+  "The music on your device is not touched.": "La música del teu dispositiu no es toca."
 }
