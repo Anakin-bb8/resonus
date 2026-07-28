@@ -37,6 +37,9 @@ CREATE TABLE IF NOT EXISTS entries (
   kind TEXT NOT NULL,
   id TEXT NOT NULL,
   data TEXT NOT NULL,
+  -- A playlist's server version, kept out of the JSON because the prefetch
+  -- asks every playlist for it and nothing else. Null for everything else.
+  changed TEXT,
   PRIMARY KEY (kind, id)
 );
 CREATE TABLE IF NOT EXISTS songs (
@@ -92,6 +95,7 @@ export function mirrorDb(dir: string, profile: string): Promise<SQLite.SQLiteDat
       dir.replace(/^file:\/\//, ''),
     );
     await db.execAsync(SCHEMA);
+    await addChangedColumn(db);
     await migrateFromJson(db, jsonFile(dir, profile));
     return db;
   })();
@@ -106,6 +110,38 @@ export async function closeMirror(): Promise<void> {
   for (const h of handles) {
     await h.then((db) => db.closeAsync()).catch(() => {});
   }
+}
+
+/**
+ * Adds `changed` to a database created before it existed, and fills it in.
+ *
+ * The backfill parses each playlist once, here, so that the prefetch never has
+ * to: leaving them null would have worked too, but every playlist would have
+ * looked out of date and been downloaded again for nothing.
+ */
+async function addChangedColumn(db: SQLite.SQLiteDatabase): Promise<void> {
+  const cols = await db.getAllAsync<{ name: string }>('PRAGMA table_info(entries)');
+  if (cols.some((c) => c.name === 'changed')) return;
+  await db.execAsync('ALTER TABLE entries ADD COLUMN changed TEXT');
+  const rows = await db.getAllAsync<{ id: string; data: string }>(
+    "SELECT id, data FROM entries WHERE kind = 'playlist'",
+  );
+  await serialized(() =>
+    db.withTransactionAsync(async () => {
+      for (const r of rows) {
+        let changed: string | undefined;
+        try {
+          changed = (JSON.parse(r.data) as PlaylistDetail).playlist.changed;
+        } catch {
+          continue; // unreadable row: it will be refreshed like a missing one
+        }
+        await db.runAsync("UPDATE entries SET changed = ? WHERE kind = 'playlist' AND id = ?", [
+          changed ?? null,
+          r.id,
+        ]);
+      }
+    }),
+  );
 }
 
 // ── Coming from the JSON ────────────────────────────────────────────────────
@@ -185,11 +221,12 @@ async function putEntry(
   value: unknown,
   songs?: Song[],
 ): Promise<void> {
-  await db.runAsync('INSERT OR REPLACE INTO entries (kind, id, data) VALUES (?, ?, ?)', [
-    kind,
-    id,
-    JSON.stringify(value),
-  ]);
+  const changed =
+    kind === 'playlist' ? ((value as PlaylistDetail).playlist?.changed ?? null) : null;
+  await db.runAsync(
+    'INSERT OR REPLACE INTO entries (kind, id, data, changed) VALUES (?, ?, ?, ?)',
+    [kind, id, JSON.stringify(value), changed],
+  );
   // Every song that goes past leaves its metadata behind, which is what makes
   // resolving one by id a lookup instead of a walk through every tracklist.
   for (const s of songs ?? []) {
@@ -317,11 +354,14 @@ export async function playlistVersions(
   profile: string,
 ): Promise<Record<string, string | undefined>> {
   const db = await mirrorDb(dir, profile);
-  const rows = await db.getAllAsync<{ id: string; data: string }>(
-    "SELECT id, data FROM entries WHERE kind = 'playlist'",
+  // The version column, not the entries: reading `data` here meant hauling
+  // every stored tracklist across to the JS thread and parsing it to get one
+  // date each. Measured at 1.7 MB for twenty two playlists, every prefetch run.
+  const rows = await db.getAllAsync<{ id: string; changed: string | null }>(
+    "SELECT id, changed FROM entries WHERE kind = 'playlist'",
   );
   const out: Record<string, string | undefined> = {};
-  for (const r of rows) out[r.id] = (JSON.parse(r.data) as PlaylistDetail).playlist.changed;
+  for (const r of rows) out[r.id] = r.changed ?? undefined;
   return out;
 }
 
