@@ -234,13 +234,32 @@ function shuffled<T>(arr: T[]): T[] {
 
 const ARTIST_SIZE = 130;
 
+/**
+ * How long this shelf waits before asking.
+ *
+ * Subsonic has no way to ask for a few artists, so showing ten means fetching
+ * the index of every artist there is: half a megabyte and a second and a half
+ * on a large library over a slow connection. Worth it for the shelf, not worth
+ * it in the middle of a cold start, where it sits in the queue in front of the
+ * screens someone is actually waiting for.
+ */
+const ARTISTS_DELAY_MS = 4000;
+
 /** Row of random artists (rediscovery). */
 function ArtistSection({ title, reshuffleKey }: { title: string; reshuffleKey: number }) {
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
+  // Offline the list comes off the device, so there is nothing to keep out of
+  // the way of and no reason to wait.
+  const [ready, setReady] = useState(() => useAuthStore.getState().offline);
+  useEffect(() => {
+    if (ready) return;
+    const timer = setTimeout(() => setReady(true), ARTISTS_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [ready]);
   const { data, isLoading } = useQuery({
     queryKey: ['artists'],
     queryFn: () => getArtists(),
-    enabled: canFetch,
+    enabled: canFetch && ready,
   });
   // Reshuffles when the list changes or on pull-to-refresh (`reshuffleKey`).
   // Without that key, when the list doesn't change react-query keeps the same
@@ -251,7 +270,9 @@ function ArtistSection({ title, reshuffleKey }: { title: string; reshuffleKey: n
     [data, reshuffleKey],
   );
 
-  if (isLoading) {
+  // The skeleton covers the wait as well as the request, so the shelf holds
+  // its place instead of appearing from nowhere four seconds in.
+  if (isLoading || (canFetch && !ready)) {
     return (
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{title}</Text>
