@@ -96,6 +96,9 @@ async function serverDirs(): Promise<string[]> {
 let cachedCatalog: DownloadsCatalog | null = null;
 let cachedForDir: string | null = null;
 
+/** Counts hydrations, so a slower earlier one can't overwrite a later one. */
+let hydrateRun = 0;
+
 /** Download directory for the active server account (null if none). */
 function activeServerDir(): string | null {
   const auth = useAuthStore.getState().auth;
@@ -598,6 +601,12 @@ export const useDownloads = create<DownloadsState>((set, get) => {
     hydrated: false,
 
     hydrate: async () => {
+      // Which run this is. Restoring the session re-runs this while the first
+      // one is still going, and that first one, having no account yet, reads
+      // every profile and so finishes last: it used to land on top of the
+      // right answer and leave the store holding every account's downloads at
+      // once. A later run always wins.
+      const run = ++hydrateRun;
       const files: Record<string, string> = {};
       const dlBitRates: Record<string, number> = {};
       // The active profile's catalog, or every one of them while there isn't
@@ -613,6 +622,7 @@ export const useDownloads = create<DownloadsState>((set, get) => {
         Object.assign(files, part.files);
         Object.assign(dlBitRates, part.bitRates);
       }
+      if (run !== hydrateRun) return;
       set({ files, dlBitRates, hydrated: true });
     },
 

@@ -74,7 +74,7 @@ export default function RootLayout() {
       : '';
 
   useEffect(() => {
-    hydrate();
+    const authReady = hydrate();
     // Before anything else, so the first seconds count too.
     startPerfLog();
     useSettings.getState().hydrate();
@@ -85,7 +85,10 @@ export default function RootLayout() {
     void useLastPlayed.getState().hydrate();
     void usePins.getState().hydrate();
     void removeLegacyRadioCovers();
-    const downloadsReady = useDownloads.getState().hydrate();
+    // After the session is restored, never before: the downloads store reads
+    // the account's own catalog, and with no account yet it falls back to
+    // reading every one of them, which is both slow and wrong (#50).
+    const downloadsReady = authReady.then(() => useDownloads.getState().hydrate());
     void useAutoDownloads.getState().hydrate();
     // Mirror + outbox for offline. Offline it is the library, so it is read
     // right away: a query could otherwise resolve before it is in memory and
