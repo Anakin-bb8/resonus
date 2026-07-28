@@ -35,7 +35,6 @@ import {
   getArtistInfo,
   getOpenSubsonicExtensions,
   getPlayQueue,
-  getRandomSongs,
   getSimilarSongs,
   getTopSongs,
   savePlayQueue,
@@ -44,6 +43,9 @@ import {
   type Song,
   type SubsonicAuth,
 } from '@/api/backend';
+// Not the backend's: this one honours the library filter and asks each library
+// for its share. The rest of the mix cannot be filtered, see `radioCandidates`.
+import { getRandomSongs } from '@/api/data';
 import { prefetchLyrics } from '@/hooks/useLyrics';
 import { queryClient } from '@/lib/query';
 import { getItem, setItem } from '@/lib/storage';
@@ -823,7 +825,7 @@ async function genreCandidates(auth: SubsonicAuth, seed: Song): Promise<Song[]> 
     const { songs } = await getAlbum(auth, seed.albumId);
     genre = songs.find((s) => s.genre)?.genre;
   }
-  return genre ? getRandomSongs(auth, 20, genre) : [];
+  return genre ? getRandomSongs(20, genre) : [];
 }
 
 /**
@@ -838,6 +840,13 @@ async function genreCandidates(auth: SubsonicAuth, seed: Song): Promise<Song[]> 
  * Genre and plain random only top up what affinity couldn't fill. They're the
  * safety net: on Navidrome both similar songs and top songs go through Last.fm,
  * so without the agent every affinity tier answers nothing at all.
+ *
+ * Only the random tiers honour the library filter, because only they can. The
+ * API takes a music folder on `getRandomSongs` and on neither of the other two,
+ * and a song doesn't say which library it came from, so there is nothing to
+ * filter by afterwards either. What that leaves is a disabled library still
+ * reachable through affinity, which at least is music related to the track that
+ * was playing rather than a handful pulled out of it at random (issue #39).
  */
 async function radioCandidates(auth: SubsonicAuth, seed: Song, have: Set<string>): Promise<Song[]> {
   const picked: Song[] = [];
@@ -867,7 +876,7 @@ async function radioCandidates(auth: SubsonicAuth, seed: Song, have: Set<string>
   ]);
   take(affinity.flat());
 
-  for (const tier of [() => genreCandidates(auth, seed), () => getRandomSongs(auth, 50)]) {
+  for (const tier of [() => genreCandidates(auth, seed), () => getRandomSongs(50)]) {
     if (picked.length >= BATCH_SIZE) break;
     try {
       take(await tier());
@@ -880,7 +889,7 @@ async function radioCandidates(auth: SubsonicAuth, seed: Song, have: Set<string>
   // Nothing at all: on a library small or homogeneous enough, the per-artist
   // cap can eat every candidate there was. A batch by one artist beats the mix
   // going silent.
-  const anything = await getRandomSongs(auth, 50).catch(() => [] as Song[]);
+  const anything = await getRandomSongs(50).catch(() => [] as Song[]);
   return anything.filter((s) => !s.url && !have.has(s.id)).slice(0, BATCH_SIZE);
 }
 
