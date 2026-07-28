@@ -337,19 +337,30 @@ export function getMostPlayedSongs(size = 50): Promise<Subsonic.Song[]> {
 /**
  * Random songs from the library (the Home mix).
  *
- * With multiple active libraries, each one is queried and the result set
- * is re-shuffled: otherwise they'd be grouped by library, which isn't very
- * random.
+ * With several libraries active each one is asked separately, since the API
+ * filters by one at a time, and the merged result is shuffled so they don't
+ * come out grouped.
+ *
+ * How much each one is asked for is the whole question. Asking them all for
+ * the same amount and shuffling afterwards is one turn each in disguise: the
+ * pool is already biased and no shuffle over it can undo that (issue #39). So
+ * each brings its share, by the same weights the random album shelf uses.
+ *
+ * A genre is left alone: those weights say how much music a library holds, not
+ * how much of a given genre, and a library that happens to own most of it would
+ * be asked for a fraction of what it could give.
  */
-export function getRandomSongs(size = 200, genre?: string): Promise<Subsonic.Song[]> {
+export async function getRandomSongs(size = 200, genre?: string): Promise<Subsonic.Song[]> {
   if (isOffline()) return Local.getRandomSongs(size);
   const a = auth();
   const ids = enabledFolderIds(a);
   if (!ids) return Subsonic.getRandomSongs(a, size, genre);
   if (ids.length === 1) return Subsonic.getRandomSongs(a, size, genre, ids[0]);
-  return Promise.all(ids.map((fid) => Subsonic.getRandomSongs(a, size, genre, fid))).then((lists) =>
-    shuffled(dedupeById(lists.flat())).slice(0, size),
+  const depths = genre ? ids.map(() => size) : await randomDepths(a, ids, size);
+  const lists = await Promise.all(
+    ids.map((fid, i) => Subsonic.getRandomSongs(a, depths[i], genre, fid)),
   );
+  return shuffled(dedupeById(lists.flat())).slice(0, size);
 }
 
 export function getPlaylists(): Promise<Subsonic.Playlist[]> {
