@@ -40,6 +40,13 @@ read have been renamed.
   playlists with names like `dl_obp32J49` and no favourites.
 - Deleting a discography could fail on a large one.
 - Counted playlists read "1 playlists" in every language.
+- With Android's "Bold text" turned on, the last letter of a word was dropped
+  all over the app: "MP3" read "MP", "2.6 GB" read "2.6". The app no longer
+  takes that setting, so it renders at its usual weight instead.
+- Removing a profile now asks first, and takes its downloads and its offline
+  copy of the library with it instead of leaving them on disk for good.
+- Random songs and the mix took the same amount from every library whatever
+  its size, and the mix could still draw on a library you had disabled.
 
 ## [0.5.6] - 2026-07-27
 

@@ -37,6 +37,7 @@
     },
     "plugins": [
       "./plugins/withReleaseSigning",
+      "./plugins/withoutFontWeightAdjustment",
       "expo-router",
       [
         "expo-splash-screen",
