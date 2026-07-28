@@ -37,9 +37,13 @@ CREATE TABLE IF NOT EXISTS entries (
   kind TEXT NOT NULL,
   id TEXT NOT NULL,
   data TEXT NOT NULL,
-  -- A playlist's server version, kept out of the JSON because the prefetch
-  -- asks every playlist for it and nothing else. Null for everything else.
+  -- Three things asked of every entry at once, kept out of the JSON so that
+  -- asking does not mean reading the tracklists: the playlist version the
+  -- prefetch compares, and what deciding whether to keep an album or an
+  -- artist needs, which is whether it is a favourite and which songs it holds.
   changed TEXT,
+  starred INTEGER,
+  song_ids TEXT,
   PRIMARY KEY (kind, id)
 );
 CREATE TABLE IF NOT EXISTS songs (
@@ -95,7 +99,7 @@ export function mirrorDb(dir: string, profile: string): Promise<SQLite.SQLiteDat
       dir.replace(/^file:\/\//, ''),
     );
     await db.execAsync(SCHEMA);
-    await addChangedColumn(db);
+    await addSummaryColumns(db);
     await migrateFromJson(db, jsonFile(dir, profile));
     return db;
   })();
@@ -112,33 +116,73 @@ export async function closeMirror(): Promise<void> {
   }
 }
 
+/** What an entry answers without being read: the three summary columns. */
+interface Summary {
+  changed: string | null;
+  starred: number | null;
+  songIds: string | null;
+}
+
+const NO_SUMMARY: Summary = { changed: null, starred: null, songIds: null };
+
 /**
- * Adds `changed` to a database created before it existed, and fills it in.
+ * Pulls out of an entry the few things that get asked of all of them at once.
  *
- * The backfill parses each playlist once, here, so that the prefetch never has
- * to: leaving them null would have worked too, but every playlist would have
- * looked out of date and been downloaded again for nothing.
+ * An album keeps the ids of its songs and nothing else about them: deciding
+ * whether to keep it asks whether any of them is downloaded, and a list of ids
+ * is a fraction of a tracklist.
  */
-async function addChangedColumn(db: SQLite.SQLiteDatabase): Promise<void> {
+function summarize(kind: Kind, value: unknown, songs?: Song[]): Summary {
+  if (kind === 'playlist') {
+    return { ...NO_SUMMARY, changed: (value as PlaylistDetail).playlist?.changed ?? null };
+  }
+  if (kind === 'album') {
+    const d = value as AlbumDetail;
+    const ids = (d.songs ?? songs ?? []).map((s) => s.id);
+    return { changed: null, starred: d.album?.starred ? 1 : 0, songIds: JSON.stringify(ids) };
+  }
+  if (kind === 'artist') {
+    return { ...NO_SUMMARY, starred: (value as ArtistDetail).artist?.starred ? 1 : 0 };
+  }
+  return NO_SUMMARY;
+}
+
+/**
+ * Adds the summary columns to a database made before they existed.
+ *
+ * The backfill parses each entry once, here, so that nothing else ever has to.
+ * Leaving them empty would have worked for the playlists, at the price of every
+ * one of them looking out of date and being fetched again, and would have been
+ * wrong for the albums, which would all have looked disposable.
+ */
+async function addSummaryColumns(db: SQLite.SQLiteDatabase): Promise<void> {
   const cols = await db.getAllAsync<{ name: string }>('PRAGMA table_info(entries)');
-  if (cols.some((c) => c.name === 'changed')) return;
-  await db.execAsync('ALTER TABLE entries ADD COLUMN changed TEXT');
-  const rows = await db.getAllAsync<{ id: string; data: string }>(
-    "SELECT id, data FROM entries WHERE kind = 'playlist'",
+  const have = new Set(cols.map((c) => c.name));
+  const missing = ([
+    ['changed', 'TEXT'],
+    ['starred', 'INTEGER'],
+    ['song_ids', 'TEXT'],
+  ] as const).filter(([name]) => !have.has(name));
+  if (missing.length === 0) return;
+  for (const [name, type] of missing) {
+    await db.execAsync(`ALTER TABLE entries ADD COLUMN ${name} ${type}`);
+  }
+  const rows = await db.getAllAsync<{ kind: Kind; id: string; data: string }>(
+    "SELECT kind, id, data FROM entries WHERE kind IN ('playlist', 'album', 'artist')",
   );
   await serialized(() =>
     db.withTransactionAsync(async () => {
       for (const r of rows) {
-        let changed: string | undefined;
+        let s: Summary;
         try {
-          changed = (JSON.parse(r.data) as PlaylistDetail).playlist.changed;
+          s = summarize(r.kind, JSON.parse(r.data));
         } catch {
-          continue; // unreadable row: it will be refreshed like a missing one
+          continue; // unreadable row: treated like a missing one from here on
         }
-        await db.runAsync("UPDATE entries SET changed = ? WHERE kind = 'playlist' AND id = ?", [
-          changed ?? null,
-          r.id,
-        ]);
+        await db.runAsync(
+          'UPDATE entries SET changed = ?, starred = ?, song_ids = ? WHERE kind = ? AND id = ?',
+          [s.changed, s.starred, s.songIds, r.kind, r.id],
+        );
       }
     }),
   );
@@ -221,11 +265,11 @@ async function putEntry(
   value: unknown,
   songs?: Song[],
 ): Promise<void> {
-  const changed =
-    kind === 'playlist' ? ((value as PlaylistDetail).playlist?.changed ?? null) : null;
+  const s = summarize(kind, value, songs);
   await db.runAsync(
-    'INSERT OR REPLACE INTO entries (kind, id, data, changed) VALUES (?, ?, ?, ?)',
-    [kind, id, JSON.stringify(value), changed],
+    `INSERT OR REPLACE INTO entries (kind, id, data, changed, starred, song_ids)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [kind, id, JSON.stringify(value), s.changed, s.starred, s.songIds],
   );
   // Every song that goes past leaves its metadata behind, which is what makes
   // resolving one by id a lookup instead of a walk through every tracklist.
@@ -336,6 +380,57 @@ export async function getSong(dir: string, profile: string, id: string): Promise
   const db = await mirrorDb(dir, profile);
   const row = await db.getFirstAsync<{ data: string }>('SELECT data FROM songs WHERE id = ?', [id]);
   return row ? (JSON.parse(row.data) as Song) : undefined;
+}
+
+/** An album as pruning sees it: whether it is a favourite and what it holds. */
+export interface AlbumSummary {
+  id: string;
+  starred: boolean;
+  songIds: string[];
+}
+
+/** Every stored album, without their tracklists. */
+export async function albumSummaries(dir: string, profile: string): Promise<AlbumSummary[]> {
+  const db = await mirrorDb(dir, profile);
+  const rows = await db.getAllAsync<{ id: string; starred: number | null; song_ids: string | null }>(
+    "SELECT id, starred, song_ids FROM entries WHERE kind = 'album'",
+  );
+  return rows.map((r) => {
+    let songIds: string[] = [];
+    try {
+      songIds = r.song_ids ? (JSON.parse(r.song_ids) as string[]) : [];
+    } catch {
+      // no ids: kept only if it is a favourite
+    }
+    return { id: r.id, starred: !!r.starred, songIds };
+  });
+}
+
+/** Drops the artists that aren't favourites. Nothing to read: they are kept
+ *  for that reason alone, and downloads rebuild the rest from the catalog. */
+export async function dropUnstarredArtists(dir: string, profile: string): Promise<void> {
+  const db = await mirrorDb(dir, profile);
+  await serialized(() =>
+    db.runAsync("DELETE FROM entries WHERE kind = 'artist' AND (starred IS NULL OR starred = 0)"),
+  );
+}
+
+/** Drops these entries, in chunks: SQLite counts placeholders. */
+export async function dropEntries(
+  dir: string,
+  profile: string,
+  kind: Kind,
+  ids: string[],
+): Promise<void> {
+  if (ids.length === 0) return;
+  const db = await mirrorDb(dir, profile);
+  for (let i = 0; i < ids.length; i += 400) {
+    const part = ids.slice(i, i + 400);
+    const marks = part.map(() => '?').join(',');
+    await serialized(() =>
+      db.runAsync(`DELETE FROM entries WHERE kind = ? AND id IN (${marks})`, [kind, ...part]),
+    );
+  }
 }
 
 /** Which albums are already stored, to know which ones are missing. */

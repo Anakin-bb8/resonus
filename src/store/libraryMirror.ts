@@ -68,12 +68,16 @@ function active(): { dir: string; profile: string } | null {
  * lives: without it the missing songs don't appear greyed out, the album just
  * looks shorter than it is.
  */
-function worthKeepingAlbum(
-  album: Album,
-  songs: Song[],
-  files: Record<string, string>,
-): boolean {
-  return !!album.starred || songs.some((s) => !!files[s.id]);
+function worthKeepingAlbum(album: Db.AlbumSummary, files: Record<string, string>): boolean {
+  return album.starred || album.songIds.some((id) => !!files[id]);
+}
+
+/** The same question where the album itself is at hand, on the way in. */
+function worthKeepingAlbumOf(album: Album, songs: Song[], files: Record<string, string>): boolean {
+  return worthKeepingAlbum(
+    { id: album.id, starred: !!album.starred, songIds: songs.map((s) => s.id) },
+    files,
+  );
 }
 
 /** Artists with downloads are rebuilt offline from the download catalog, so
@@ -209,7 +213,7 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
 
   saveAlbum: (id, album, songs, dl) => {
     void withMirror(async (dir, profile) => {
-      if (worthKeepingAlbum(album, songs, dl.files)) {
+      if (worthKeepingAlbumOf(album, songs, dl.files)) {
         await Db.saveEntry(dir, profile, 'album', id, { album, songs }, songs);
         return;
       }
@@ -235,23 +239,16 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
   prune: async (dl) => {
     if (!dl.hydrated) return; // everything downloaded would look disposable
     await withMirror(async (dir, profile) => {
-      const db = await Db.mirrorDb(dir, profile);
-      const albums = await db.getAllAsync<{ id: string; data: string }>(
-        "SELECT id, data FROM entries WHERE kind = 'album'",
-      );
-      for (const row of albums) {
-        const d = JSON.parse(row.data) as Db.AlbumDetail;
-        if (!worthKeepingAlbum(d.album, d.songs, dl.files)) {
-          await Db.dropEntry(dir, profile, 'album', row.id);
-        }
-      }
-      const artists = await db.getAllAsync<{ id: string; data: string }>(
-        "SELECT id, data FROM entries WHERE kind = 'artist'",
-      );
-      for (const row of artists) {
-        const d = JSON.parse(row.data) as Db.ArtistDetail;
-        if (!worthKeepingArtist(d.artist)) await Db.dropEntry(dir, profile, 'artist', row.id);
-      }
+      // Summaries, not entries. This runs on every cold start, which is the
+      // worst moment to read anything: asking for the albums themselves meant
+      // hauling every stored tracklist onto the JS thread and parsing it to
+      // look at two fields. Measured at 783 KB on a small library.
+      const albums = await Db.albumSummaries(dir, profile);
+      const drop = albums.filter((a) => !worthKeepingAlbum(a, dl.files)).map((a) => a.id);
+      await Db.dropEntries(dir, profile, 'album', drop);
+      // Artists are kept only for being favourites, so the database decides
+      // that one on its own.
+      await Db.dropUnstarredArtists(dir, profile);
     }, undefined);
   },
 
