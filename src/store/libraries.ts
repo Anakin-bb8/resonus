@@ -85,7 +85,15 @@ export const useLibraries = create<LibrariesState>((set, get) => ({
     const key = profileKeyOf(auth);
     if (!key) return;
     try {
-      const list = await getMusicFolders(auth);
+      // Through the query cache, under the key the Library screen uses. Both
+      // ask for the folders as the app opens, and being a store on one side
+      // and a query on the other they shared nothing: two identical requests,
+      // a second each on a distant server. Nothing is held any staler by this
+      // — a request already in flight is simply joined rather than repeated.
+      const list = await queryClient.fetchQuery({
+        queryKey: ['musicFolders'],
+        queryFn: () => getMusicFolders(auth),
+      });
       set((s) => ({ folders: { ...s.folders, [key]: list } }));
       // Purge disabled ones that no longer exist on the server.
       const ids = new Set(list.map((f) => f.id));
