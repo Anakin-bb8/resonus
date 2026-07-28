@@ -8,7 +8,7 @@ import { Field, SettingRow, SettingsPage, settingsStyles } from '@/components/Se
 import { useT } from '@/i18n';
 
 const REPO_URL = 'https://github.com/juananzzz/resonus';
-const DISCORD_URL = 'https://discord.gg/hpDfszr8r';
+const DISCORD_URL = 'https://discord.gg/pecE8MTPVr';
 
 export default function AboutSettings() {
   const t = useT();
