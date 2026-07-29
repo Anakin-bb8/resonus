@@ -1,7 +1,7 @@
 /**
- * Pinned Library items (Spotify style): up to 4, always at the very top
- * regardless of the chosen sort order. Key = 'playlist:<id>' or
- * 'album:<id>'; the value is when it was pinned (pins keep that order).
+ * Pinned items, always at the very top of their list whatever the sort order.
+ * Key = 'playlist:<id>', 'album:<id>' or 'radio:<id>'; the value is when it was
+ * pinned, which is the order they keep among themselves.
  */
 import { create } from 'zustand';
 
@@ -19,7 +19,17 @@ const KEY = 'resonus.pins';
 function pinsKey(): string {
   return `${KEY}.${hashKey(profileScopeId())}`;
 }
-export const MAX_PINS = 4;
+/**
+ * A ceiling rather than a rule of thumb.
+ *
+ * Pinning only sorts an item to the top of a list that is scrolled anyway, so
+ * nothing here costs more as the number grows. Four was a guess at how many
+ * favourites somebody keeps, and it turned out to be somebody else's guess.
+ * This is high enough that reaching it means wanting the whole library
+ * reordered, which is a different thing, and low enough that "pinned" still
+ * tells the eye something.
+ */
+export const MAX_PINS = 25;
 
 interface PinsState {
   pins: Record<string, number>;

@@ -1,8 +1,9 @@
 /** Server radio stations (browsing from Home). */
 import Ionicons from '@expo/vector-icons/Ionicons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -11,6 +12,7 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -32,11 +34,15 @@ import { RadioEditSheet, type RadioEdit } from '@/components/RadioEditSheet';
 import { useT } from '@/i18n';
 import { queryClient } from '@/lib/query';
 import { useAuthStore } from '@/store/auth';
+import { MAX_PINS, usePins } from '@/store/pins';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useToast } from '@/store/toast';
 import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
 
 const EMPTY_EDIT: RadioEdit = { name: '', streamUrl: '', homePageUrl: '' };
+
+/** Stations from which the list stops being read at a glance. */
+const SEARCH_FROM = 8;
 
 export default function RadioScreen() {
   const router = useRouter();
@@ -58,6 +64,9 @@ export default function RadioScreen() {
   const [editForm, setEditForm] = useState<{ station: RadioStation | null } | null>(null);
   const [menu, setMenu] = useState<RadioStation | null>(null);
   const [deleting, setDeleting] = useState<RadioStation | null>(null);
+  const [query, setQuery] = useState('');
+  const pins = usePins((s) => s.pins);
+  const togglePin = usePins((s) => s.toggle);
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['radioStations'],
@@ -66,6 +75,27 @@ export default function RadioScreen() {
   });
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['radioStations'] });
+
+  /**
+   * Pinned first, then whatever the search leaves.
+   *
+   * Pinning is ours, not the server's, so it works on any server and offline;
+   * editing a station is what needs Navidrome behind it.
+   */
+  const stations = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const matches = q
+      ? (data ?? []).filter((s) => s.name.toLowerCase().includes(q))
+      : (data ?? []);
+    const pinnedFirst = matches
+      .filter((s) => pins[`radio:${s.id}`])
+      .sort((a, b) => pins[`radio:${a.id}`] - pins[`radio:${b.id}`]);
+    return [...pinnedFirst, ...matches.filter((s) => !pins[`radio:${s.id}`])];
+  }, [data, query, pins]);
+
+  // A handful of stations is read at a glance, and a search box over three rows
+  // is furniture. It appears once the list is long enough to be scanned.
+  const showSearch = (data?.length ?? 0) > SEARCH_FROM;
 
   async function saveStation(changes: RadioEdit, pendingCoverUri?: string) {
     const station = editForm?.station ?? null;
@@ -134,13 +164,33 @@ export default function RadioScreen() {
         )}
       </View>
 
+      {showSearch ? (
+        <View style={styles.searchBar}>
+          <Ionicons name="search" size={18} color={colors.textMuted} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder={t('Find a station')}
+            placeholderTextColor={colors.textMuted}
+            autoCapitalize="none"
+            autoCorrect={false}
+            value={query}
+            onChangeText={setQuery}
+          />
+          {query ? (
+            <Pressable hitSlop={8} onPress={() => setQuery('')} accessibilityLabel={t('Clear')}>
+              <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
+
       {isLoading ? (
         <ActivityIndicator style={{ marginTop: spacing.xl }} color={colors.accent} />
       ) : isError ? (
         <Message text={t("Couldn't load radio stations.")} onRetry={() => refetch()} />
       ) : (
         <FlatList
-          data={data ?? []}
+          data={stations}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           refreshControl={
@@ -167,7 +217,7 @@ export default function RadioScreen() {
                     '/radio',
                   )
                 }
-                onLongPress={canManage ? () => setMenu(item) : undefined}
+                onLongPress={() => setMenu(item)}
               >
                 <Cover
                   uri={coverArtUrl(item.coverArt, 100)}
@@ -176,27 +226,31 @@ export default function RadioScreen() {
                   placeholderIcon="radio"
                 />
                 <View style={{ flex: 1 }}>
-                  <Text
-                    style={[styles.rowTitle, playing && { color: colors.accent }]}
-                    numberOfLines={1}
-                  >
-                    {item.name}
-                  </Text>
+                  <View style={styles.rowTitleLine}>
+                    {pins[`radio:${item.id}`] ? (
+                      <MaterialCommunityIcons
+                        name="pin"
+                        size={13}
+                        color={colors.accent}
+                        style={styles.pinIcon}
+                      />
+                    ) : null}
+                    <Text
+                      style={[styles.rowTitle, playing && { color: colors.accent }]}
+                      numberOfLines={1}
+                    >
+                      {item.name}
+                    </Text>
+                  </View>
                   {item.homePageUrl ? (
                     <Text style={styles.rowSub} numberOfLines={1}>{item.homePageUrl}</Text>
                   ) : null}
                 </View>
-                {canManage ? (
-                  <Pressable
-                    hitSlop={8}
-                    onPress={() => setMenu(item)}
-                    accessibilityLabel={t('More')}
-                  >
-                    <Ionicons name="ellipsis-horizontal" size={22} color={colors.textSecondary} />
-                  </Pressable>
-                ) : (
-                  <Ionicons name="play-circle" size={28} color={colors.accent} />
-                )}
+                {/* Always: pinning is ours and works on any server, so there is
+                    always something in the menu even where editing is not. */}
+                <Pressable hitSlop={8} onPress={() => setMenu(item)} accessibilityLabel={t('More')}>
+                  <Ionicons name="ellipsis-horizontal" size={22} color={colors.textSecondary} />
+                </Pressable>
               </Pressable>
             );
           }}
@@ -247,23 +301,49 @@ export default function RadioScreen() {
             onPress={() => {
               const station = menu;
               setMenu(null);
-              setEditForm({ station });
+              if (!station) return;
+              if (!togglePin(`radio:${station.id}`)) {
+                toast(t('You can pin up to {n} items.', { n: MAX_PINS }));
+              }
             }}
           >
-            <Ionicons name="create-outline" size={24} color={colors.text} />
-            <Text style={styles.actionText}>{t('Edit station')}</Text>
+            <MaterialCommunityIcons
+              name={menu && pins[`radio:${menu.id}`] ? 'pin' : 'pin-outline'}
+              size={24}
+              color={colors.text}
+            />
+            <Text style={styles.actionText}>
+              {menu && pins[`radio:${menu.id}`] ? t('Unpin') : t('Pin to top')}
+            </Text>
           </Pressable>
-          <Pressable
-            style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
-            onPress={() => {
-              const station = menu;
-              setMenu(null);
-              setDeleting(station);
-            }}
-          >
-            <Ionicons name="trash-outline" size={24} color={colors.danger} />
-            <Text style={[styles.actionText, { color: colors.danger }]}>{t('Delete station')}</Text>
-          </Pressable>
+          {canManage ? (
+            <>
+              <Pressable
+                style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+                onPress={() => {
+                  const station = menu;
+                  setMenu(null);
+                  setEditForm({ station });
+                }}
+              >
+                <Ionicons name="create-outline" size={24} color={colors.text} />
+                <Text style={styles.actionText}>{t('Edit station')}</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+                onPress={() => {
+                  const station = menu;
+                  setMenu(null);
+                  setDeleting(station);
+                }}
+              >
+                <Ionicons name="trash-outline" size={24} color={colors.danger} />
+                <Text style={[styles.actionText, { color: colors.danger }]}>
+                  {t('Delete station')}
+                </Text>
+              </Pressable>
+            </>
+          ) : null}
         </View>
       </Modal>
 
@@ -292,8 +372,22 @@ const styles = StyleSheet.create({
   title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800' },
   list: { paddingHorizontal: spacing.lg, paddingBottom: SCREEN_BOTTOM_PADDING, gap: spacing.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  rowTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '600' },
+  rowTitleLine: { flexDirection: 'row', alignItems: 'center' },
+  rowTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '600', flexShrink: 1 },
+  pinIcon: { marginRight: spacing.xs },
   rowSub: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2 },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceHighlight,
+  },
+  searchInput: { flex: 1, color: colors.text, fontSize: fontSize.md, padding: 0 },
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
   sheet: {
     position: 'absolute',
