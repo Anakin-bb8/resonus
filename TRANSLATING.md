@@ -1,7 +1,7 @@
 # Translating Resonus
 
 Thanks for helping translate Resonus! If anything here is unclear, open an issue
-or ask on [Discord](https://discord.gg/hpDfszr8r).
+or ask on [Discord](https://discord.gg/pecE8MTPVr).
 
 ## How translations work
 
