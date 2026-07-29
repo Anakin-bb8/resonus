@@ -19,6 +19,10 @@ read have been renamed.
 
 ### Added
 
+- Gapless playback, for real this time and with no setting to find: an album
+  that was recorded to run without pauses now plays that way. Thanks to
+  @haccersmakker, who tracked down the gap that was left on the first change of
+  track and, along the way, made Original quality reach the output untouched.
 - Favourited albums and artists open offline even if you have never downloaded
   a song from them.
 - German and Italian are complete, thanks to @Psychotoxical and @Anakin-bb8.
