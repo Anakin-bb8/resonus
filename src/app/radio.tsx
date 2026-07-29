@@ -372,9 +372,11 @@ const styles = StyleSheet.create({
   title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800' },
   list: { paddingHorizontal: spacing.lg, paddingBottom: SCREEN_BOTTOM_PADDING, gap: spacing.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  rowTitleLine: { flexDirection: 'row', alignItems: 'center' },
+  rowTitleLine: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   rowTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '600', flexShrink: 1 },
-  pinIcon: { marginRight: spacing.xs },
+  // The MCI pin comes vertical; rotated 45° it looks like Spotify's, which is
+  // how it is drawn everywhere else in the app.
+  pinIcon: { transform: [{ rotate: '45deg' }] },
   rowSub: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2 },
   searchBar: {
     flexDirection: 'row',
