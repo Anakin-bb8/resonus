@@ -987,10 +987,15 @@ function replaceSource(p: AudioPlayer, source: { uri: string }) {
   p.replace(source);
 }
 
-/** Does queueing the next track make sense right now? */
+/**
+ * Does queueing the next track make sense right now?
+ *
+ * Not a preference: nobody asks to have silence put back between their songs,
+ * so there is no setting for it. Crossfade is the one that turns it off, by
+ * taking the change over.
+ */
 function gaplessReady(): boolean {
   const settings = useSettings.getState();
-  if (!settings.gapless) return false;
   // Crossfade drives the advance itself, starting the next track early on the
   // reserve player. Both cannot own the change.
   if (settings.crossfadeSec > 0) return false;
@@ -1082,7 +1087,7 @@ function onTrackTransition() {
 // queued track depends on format and bitrate: all of them have to re-evaluate
 // what is (or is no longer) waiting behind the current track.
 const gaplessSettingsKey = (s: ReturnType<typeof useSettings.getState>) =>
-  `${s.gapless}|${s.crossfadeSec}|${s.streamFormat}|${s.maxBitRate}|${s.maxBitRateCellular}`;
+  `${s.crossfadeSec}|${s.streamFormat}|${s.maxBitRate}|${s.maxBitRateCellular}`;
 let lastGaplessSettings = gaplessSettingsKey(useSettings.getState());
 useSettings.subscribe((s) => {
   const key = gaplessSettingsKey(s);

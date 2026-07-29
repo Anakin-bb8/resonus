@@ -415,14 +415,6 @@ interface SettingsState {
   /** Crossfade seconds between songs (0 = disabled). */
   crossfadeSec: number;
   /**
-   * Join one track to the next with no silence: the next one is queued in the
-   * player itself, which buffers it in advance. On by default (nobody asks for
-   * the gap), but it can be turned off, since it means fetching the next track
-   * while the current one plays. Crossfade, when set, takes over the change and
-   * this steps aside.
-   */
-  gapless: boolean;
-  /**
    * Pre-warm the stream for upcoming tracks in the queue. Designed for proxies
    * like Octo Fiesta or slow origins that serve the track on the fly: requests
    * the URL ahead of time so the server has it ready when needed. Off by
@@ -574,7 +566,6 @@ interface SettingsState {
   setShowListRating: (value: boolean) => void;
   setAutoplaySimilar: (value: boolean) => void;
   setCrossfadeSec: (value: number) => void;
-  setGapless: (value: boolean) => void;
   setPreloadUpcoming: (value: boolean) => void;
   setAutoOfflineSwitch: (value: boolean) => void;
   setHideUnavailableOffline: (value: boolean) => void;
@@ -666,7 +657,6 @@ function snapshot(get: () => SettingsState) {
     showListRating: s.showListRating,
     autoplaySimilar: s.autoplaySimilar,
     crossfadeSec: s.crossfadeSec,
-    gapless: s.gapless,
     preloadUpcoming: s.preloadUpcoming,
     autoOfflineSwitch: s.autoOfflineSwitch,
     hideUnavailableOffline: s.hideUnavailableOffline,
@@ -736,7 +726,6 @@ const DEFAULTS = {
   showListRating: false,
   autoplaySimilar: true,
   crossfadeSec: 0,
-  gapless: true,
   preloadUpcoming: false,
   autoOfflineSwitch: true,
   hideUnavailableOffline: false,
@@ -882,11 +871,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
 
   setCrossfadeSec: (crossfadeSec) => {
     set({ crossfadeSec });
-    persist(snapshot(get));
-  },
-
-  setGapless: (gapless) => {
-    set({ gapless });
     persist(snapshot(get));
   },
 
@@ -1193,7 +1177,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
           showListRating: boolean;
           autoplaySimilar: boolean;
           crossfadeSec: number;
-          gapless: boolean;
           preloadUpcoming: boolean;
           autoOfflineSwitch: boolean;
           hideUnavailableOffline: boolean;
@@ -1307,9 +1290,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (typeof parsed.crossfadeSec === 'number' && parsed.crossfadeSec >= 0) {
           set({ crossfadeSec: parsed.crossfadeSec });
-        }
-        if (typeof parsed.gapless === 'boolean') {
-          set({ gapless: parsed.gapless });
         }
         if (typeof parsed.preloadUpcoming === 'boolean') {
           set({ preloadUpcoming: parsed.preloadUpcoming });
