@@ -86,7 +86,11 @@ const SortSheet = memo(function SortSheet({
 
   return (
     <SheetModal openRef={openRef}>
-      {() => (
+      {/* Choosing closes it. Both halves are a finished answer on their own, and
+          leaving it up afterwards asked for a second gesture to dismiss what had
+          already been decided. Changing the field AND the direction takes two
+          openings now, which is the rarer errand of the two. */}
+      {(close) => (
         <>
         <Text style={styles.sheetTitle}>{t('Sort by')}</Text>
         {fields.map((f) => {
@@ -95,7 +99,10 @@ const SortSheet = memo(function SortSheet({
             <Pressable
               key={f}
               style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
-              onPress={() => update({ field: f, dir })}
+              onPress={() => {
+                update({ field: f, dir });
+                close();
+              }}
             >
               <Text style={[styles.actionText, active && { color: colors.accent }]}>
                 {labelFor(f)}
@@ -121,7 +128,10 @@ const SortSheet = memo(function SortSheet({
               <Pressable
                 key={d}
                 style={[styles.dirChip, active && { backgroundColor: colors.accent }]}
-                onPress={() => update({ field, dir: d })}
+                onPress={() => {
+                  update({ field, dir: d });
+                  close();
+                }}
               >
                 <Ionicons
                   name={d === 'asc' ? 'arrow-up' : 'arrow-down'}
