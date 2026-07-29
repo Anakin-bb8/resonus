@@ -311,6 +311,7 @@ export default function RadioScreen() {
               name={menu && pins[`radio:${menu.id}`] ? 'pin' : 'pin-outline'}
               size={24}
               color={colors.text}
+              style={styles.pinIcon}
             />
             <Text style={styles.actionText}>
               {menu && pins[`radio:${menu.id}`] ? t('Unpin') : t('Pin to top')}
