@@ -212,26 +212,37 @@ tripped you up and isn't here, tell us.
 
 **Diagnostics** (Settings → About, tapping the version five times)
 
-The screen is hidden, but it is a **normal user screen**: someone reads it and
-taps its buttons, so translate it like any other. Only the parts listed at the
-end of this section stay in English, and none of them are in your file.
+This screen exists so that somebody with a slow phone can send us numbers. It is
+**split in two**, and only one half is translated.
+
+**Translate these**, because they are what a person reads and taps:
 
 | String | Where / what it is |
 | --- | --- |
 | `Diagnostics` | The screen's title, and the row in About that opens it |
-| `Interface freezes` / `Time spent` | Its two section titles: moments the app stopped responding, and where the time went |
-| `Measured over the last {n} min of use.` | Subtitle: the numbers only cover this run of the app |
-| `Moments when the app stopped responding, longest first.` | Description under **Interface freezes** |
-| `None over 120 ms.` / `Nothing measured yet.` | Empty states for those two sections, meaning nothing was worth reporting |
-| `Share report` | Button: hands the same numbers over as plain text, to paste into an issue |
+| `Share report` | Button: hands the numbers over as plain text, to paste into an issue |
 | `Start over` | Button: **clears the measurements** and starts counting again. Not "start playback" |
 
-What is **not** translated, on purpose: the report the share button produces, and
-the operation names listed under **Time spent** (`offline catalog`, `storage
-used`, `net getAlbum`…). Those
-are read by maintainers in a GitHub issue rather than by the person using the
-app, so they are generated in English and never go through the locale files. You
-will not find them in your `.json`, and that is not something missing.
+**Leave these in English**, they are the measurements themselves:
+
+```
+Measured over the last {n} min of use.
+Interface freezes
+Moments when the app stopped responding, longest first.
+None over 120 ms.
+Time spent
+Nothing measured yet.
+```
+
+The reason is that these end up in a GitHub issue, often as a screenshot rather
+than as the shared text, and whoever reads them there does not speak every
+language we ship. Keeping them in English is what makes a report from any phone
+readable. The report the share button produces, and the operation names under
+**Time spent** (`offline catalog`, `storage used`, `net getAlbum`…), are written
+in English for the same reason and never reach the locale files at all.
+
+`pnpm i18n:status` has no way of knowing this, so it will keep counting those six
+as missing. That is expected: **leave them out and ignore the count.**
 
 **Other**
 
