@@ -202,7 +202,7 @@ export default function DownloadsSettings() {
           );
         })()}
         <Text style={styles.mirrorLine}>
-          {t('Library copy')} ·{' '}
+          {t('Library metadata copy')} ·{' '}
           {mirror
             ? `${formatBytes(mirror.bytes)} · ${albumsLabel(mirror.albums, lang)} · ${playlistsLabel(mirror.playlists, lang)}`
             : '…'}
