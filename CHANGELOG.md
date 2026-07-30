@@ -24,7 +24,7 @@ read have been renamed.
 - Gapless playback, for real this time and with no setting to find: an album
   that was recorded to run without pauses now plays that way. Thanks to
   @haccersmakker, who tracked down the gap that was left on the first change of
-  track and, along the way, made Original quality reach the output untouched.
+  track.
 - Favourited albums and artists open offline even if you have never downloaded
   a song from them.
 - Radio stations can be pinned to the top like playlists and albums, and once
@@ -45,6 +45,10 @@ read have been renamed.
 
 ### Fixed
 
+- Original quality played lossless files at double speed and an octave up,
+  with heavy clipping, on phones whose decoder answers a request for 32-bit
+  audio without saying that it did. It reached the 0.6.0 pre-release only, and
+  transcoding is no longer needed to get around it.
 - Downloading a library asked the server twice for the lyrics of every song
   that has none, doubling the requests queued in front of the screens.
 - Switching profiles could leave the offline library unreadable, showing
