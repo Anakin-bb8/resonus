@@ -250,6 +250,8 @@ as missing. That is expected: **leave them out and ignore the count.**
 | --- | --- |
 | `Free` | **Free disk space** in the storage bar (Other / Downloads / Free). Not "free of charge" |
 | `Other` | In that same bar: space used by **things other than** downloads |
+| `Library copy` | Settings → Downloads: the **offline copy of the library** (the album, artist and playlist lists kept so the app works with no connection). Not the songs themselves, which are the downloads. Its size and contents follow on the same line |
+| `Cleaned up from {size}.` | The line under that one: how large that copy **had grown to** before the app first trimmed it. A past-tense note that space was recovered, not a button and not an action you can take |
 | `Nothing here is downloaded` | Toast when playing something not downloaded (offline) |
 | `Try exploring another genre.` | Empty-state subtitle on a genre screen |
 | `Unknown` | Fallback for a missing artist / album / title |
