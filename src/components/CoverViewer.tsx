@@ -16,6 +16,7 @@ export function CoverViewer({
   onClose,
   footer,
   children,
+  square = true,
 }: {
   uri?: string;
   visible: boolean;
@@ -24,10 +25,15 @@ export function CoverViewer({
   footer?: ReactNode;
   /** Extra content inside the Modal (e.g. a password Dialog). */
   children?: ReactNode;
+  /** Covers are square and fill a square box. Artist photos arrive in any
+   *  shape, so they get the whole area and keep their own proportions. */
+  square?: boolean;
 }) {
   const { width, height } = useWindowDimensions();
-  // Square and as large as possible without touching the edges.
-  const size = Math.min(width - spacing.lg * 2, height * 0.72);
+  // As large as possible without touching the edges.
+  const maxW = width - spacing.lg * 2;
+  const maxH = height * 0.72;
+  const size = Math.min(maxW, maxH);
 
   return (
     <Modal
@@ -40,7 +46,14 @@ export function CoverViewer({
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityRole="button">
         <Image
           source={uri ? { uri } : undefined}
-          style={{ width: size, height: size, borderRadius: radius.lg }}
+          // Not square: the box is the whole area and `contain` fits the image
+          // inside it, so nothing is cropped whatever its shape. No radius
+          // there — the corners would be the box's, not the image's.
+          style={
+            square
+              ? { width: size, height: size, borderRadius: radius.lg }
+              : { width: maxW, height: maxH }
+          }
           contentFit="contain"
           transition={150}
         />

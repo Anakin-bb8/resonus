@@ -184,6 +184,7 @@ tripped you up and isn't here, tell us.
 | `Change cover` | Replace the **cover image** of a playlist / station |
 | `Name` | The **Name** field when editing a playlist or station |
 | `Website (optional)` / `Stream URL` | Fields when adding a **radio station** |
+| `View image` | Artist screen: opens the artist **photo** full-screen, since the header crops it. `View cover` is the same thing for album and playlist artwork |
 
 **Home & personalization**
 

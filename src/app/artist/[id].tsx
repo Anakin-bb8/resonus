@@ -30,6 +30,7 @@ import {
 import { type Song } from '@/api/subsonic';
 import { AlbumCard } from '@/components/AlbumCard';
 import { Cover } from '@/components/Cover';
+import { CoverViewer } from '@/components/CoverViewer';
 import { Dialog } from '@/components/Dialog';
 import { FavoriteButton } from '@/components/FavoriteButton';
 import { BackButton } from '@/components/BackButton';
@@ -68,6 +69,7 @@ export default function ArtistScreen() {
   const playerShuffle = usePlayerStore((s) => s.shuffle);
   const [bioExpanded, setBioExpanded] = useState(false);
   const [songsExpanded, setSongsExpanded] = useState(false);
+  const [photoOpen, setPhotoOpen] = useState(false);
   // ⋯ menu (imperative: opening/closing doesn't re-render the screen).
   const menuRef = useRef<() => void>(() => {});
   const dominant = useDominantColor(canFetch ? coverArtUrl(id, 400) : undefined);
@@ -328,16 +330,33 @@ export default function ArtistScreen() {
         })}
       >
         <View style={styles.headerWrap}>
-          <Animated.Image
-            source={{ uri: headerUri }}
-            style={[styles.headerImg, { transform: [{ translateY: imgTranslate }] }]}
-            resizeMode="cover"
-          />
+          {/* The header fills its space, so a photo that isn't the shape of
+              the header loses its edges. Rather than trying to hold every
+              shape up there, tapping it opens the whole thing, like a cover. */}
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            accessibilityRole="imagebutton"
+            accessibilityLabel={t('View image')}
+            onPress={() => setPhotoOpen(true)}
+          >
+            <Animated.Image
+              source={{ uri: headerUri }}
+              style={[styles.headerImg, { transform: [{ translateY: imgTranslate }] }]}
+              resizeMode="cover"
+            />
+          </Pressable>
+          {/* Both sit on top of the photo and neither is there to be touched:
+              without this they take the tap and it never reaches the image. */}
           <LinearGradient
+            pointerEvents="none"
             colors={['transparent', 'transparent', colors.background] as const}
             style={StyleSheet.absoluteFill}
           />
-          <Animated.Text style={[styles.name, { opacity: nameOpacity }]} numberOfLines={2}>
+          <Animated.Text
+            pointerEvents="none"
+            style={[styles.name, { opacity: nameOpacity }]}
+            numberOfLines={2}
+          >
             {data.artist.name}
           </Animated.Text>
         </View>
@@ -549,6 +568,14 @@ export default function ArtistScreen() {
         </Animated.Text>
       </View>
 
+      {/* The same URL as the header, not a larger one: it is already on the
+          device, so it opens at once instead of downloading the photo twice. */}
+      <CoverViewer
+        visible={photoOpen}
+        uri={headerUri}
+        square={false}
+        onClose={() => setPhotoOpen(false)}
+      />
       <Dialog
         visible={confirmDownload}
         title={t('Download “{name}”?', { name: data.artist.name })}
