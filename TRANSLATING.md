@@ -210,6 +210,29 @@ tripped you up and isn't here, tell us.
 | `Start mix` | Start an auto-generated **radio mix** from this song |
 | `More options` / `More` | The **⋯** button and a **"More" (see more)** action |
 
+**Diagnostics** (Settings → About, tapping the version five times)
+
+The screen is hidden, but it is a **normal user screen**: someone reads it and
+taps its buttons, so translate it like any other. Only the parts listed at the
+end of this section stay in English, and none of them are in your file.
+
+| String | Where / what it is |
+| --- | --- |
+| `Diagnostics` | The screen's title, and the row in About that opens it |
+| `Interface freezes` / `Time spent` | Its two section titles: moments the app stopped responding, and where the time went |
+| `Measured over the last {n} min of use.` | Subtitle: the numbers only cover this run of the app |
+| `Moments when the app stopped responding, longest first.` | Description under **Interface freezes** |
+| `None over 120 ms.` / `Nothing measured yet.` | Empty states for those two sections, meaning nothing was worth reporting |
+| `Share report` | Button: hands the same numbers over as plain text, to paste into an issue |
+| `Start over` | Button: **clears the measurements** and starts counting again. Not "start playback" |
+
+What is **not** translated, on purpose: the report the share button produces, and
+the operation names listed under **Time spent** (`offline catalog`, `storage
+used`, `net getAlbum`…). Those
+are read by maintainers in a GitHub issue rather than by the person using the
+app, so they are generated in English and never go through the locale files. You
+will not find them in your `.json`, and that is not something missing.
+
 **Other**
 
 | String | Where / what it is |
