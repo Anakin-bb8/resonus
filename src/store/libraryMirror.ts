@@ -41,10 +41,7 @@ export interface DownloadsView {
   hydrated: boolean;
 }
 
-export interface MirrorStats extends Db.MirrorStats {
-  /** Only set when a cleanup happened, for the settings screen to mention it. */
-  prunedFrom?: number;
-}
+export type MirrorStats = Db.MirrorStats;
 
 const DIR = FileSystem.documentDirectory + 'library-mirror/';
 

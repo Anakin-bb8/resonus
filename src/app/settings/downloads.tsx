@@ -207,11 +207,6 @@ export default function DownloadsSettings() {
             ? `${formatBytes(mirror.bytes)} · ${albumsLabel(mirror.albums, lang)} · ${playlistsLabel(mirror.playlists, lang)}`
             : '…'}
         </Text>
-        {mirror?.prunedFrom ? (
-          <Text style={styles.legendText}>
-            {t('Cleaned up from {size}.', { size: formatBytes(mirror.prunedFrom) })}
-          </Text>
-        ) : null}
         {count > 0 ? (
           <SettingRow
             icon="trash-outline"
