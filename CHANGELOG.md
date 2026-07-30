@@ -9,6 +9,8 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-07-30
+
 Your downloads and your offline library move out of the JSON files they lived
 in and into a database. Nothing is lost in the move: the old files are kept,
 renamed, and only after everything they held has arrived.
@@ -25,6 +27,8 @@ read have been renamed.
   track and, along the way, made Original quality reach the output untouched.
 - Favourited albums and artists open offline even if you have never downloaded
   a song from them.
+- Radio stations can be pinned to the top like playlists and albums, and once
+  there are enough of them the screen offers a search box.
 - German and Italian are complete, thanks to @Psychotoxical and @Anakin-bb8.
 
 ### Changed
@@ -35,6 +39,9 @@ read have been renamed.
   rewriting the whole copy.
 - Only the profile you are using has its downloads read when the app starts,
   instead of every profile you have ever added.
+- Up to twenty five things can be pinned, rather than four.
+- Choosing an order in the sort menu closes it, the way the one in the Library
+  already did.
 
 ### Fixed
 
