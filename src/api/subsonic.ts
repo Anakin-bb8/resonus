@@ -93,6 +93,27 @@ export interface Song {
   /** Song genre (sent by Subsonic and Jellyfin). Used by radio so it doesn't
    *  die when similar artist tracks run out. */
   genre?: string;
+  /**
+   * The file's comment tag (OpenSubsonic; Navidrome sends it). Nothing in the
+   * app reads it except the song information sheet, and people keep real notes
+   * in there: where a recording came from, why this rip and not the other one.
+   * Locally it is read off the file (`id3.ts`), which is the only source a
+   * profile with no server has. Asked for in #59.
+   */
+  comment?: string;
+  /** Every genre of the song, where `genre` only carries the first one
+   *  (OpenSubsonic; the album has had this for a while). */
+  genres?: { name: string }[];
+  /** Beats per minute, if the file says so (OpenSubsonic). */
+  bpm?: number;
+  /** 1 mono, 2 stereo… (OpenSubsonic). */
+  channelCount?: number;
+  /** MusicBrainz recording id (OpenSubsonic). */
+  musicBrainzId?: string;
+  /** Recording identifier, the one the industry uses (OpenSubsonic). */
+  isrc?: string[];
+  /** Moods the server has tagged it with (OpenSubsonic). */
+  moods?: string[];
   /** File format (mp3, flac, aac…). */
   suffix?: string;
   /** Bitrate in kbps. */

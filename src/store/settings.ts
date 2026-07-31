@@ -305,7 +305,8 @@ export type SongMenuActionKey =
   | 'rating'
   | 'download'
   | 'share'
-  | 'sleepTimer';
+  | 'sleepTimer'
+  | 'info';
 
 /**
  * Visibility of each action. Map instead of list (unlike chips and Home
@@ -327,6 +328,7 @@ const SONG_MENU_ACTION_KEYS: SongMenuActionKey[] = [
   'download',
   'share',
   'sleepTimer',
+  'info',
 ];
 
 /**
@@ -348,6 +350,7 @@ export const DEFAULT_SONG_MENU_ACTIONS: SongMenuActions = {
   download: true,
   share: true,
   sleepTimer: true,
+  info: true,
 };
 
 /**

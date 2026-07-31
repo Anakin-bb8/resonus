@@ -531,5 +531,19 @@
   "Which tab opens on launch, and after a while in the background.": "Quina pestanya s’obre en iniciar, i en tornar després d’una estona en segon pla.",
   "Not available offline": "No disponible sense connexió",
   "Remove profile?": "Vols treure el perfil?",
-  "The music on your device is not touched.": "La música del teu dispositiu no es toca."
+  "The music on your device is not touched.": "La música del teu dispositiu no es toca.",
+  "Song information": "Informació de la cançó",
+  "Year": "Any",
+  "Track": "Pista",
+  "Genre": "Gènere",
+  "Duration": "Durada",
+  "Format": "Format",
+  "Sample rate": "Mostreig",
+  "Channels": "Canals",
+  "Comment": "Comentari",
+  "BPM": "BPM",
+  "Moods": "Estats d'ànim",
+  "Plays": "Reproduccions",
+  "Rating": "Valoració",
+  "This song carries no information.": "Aquesta cançó no porta informació."
 }

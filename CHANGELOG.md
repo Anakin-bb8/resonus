@@ -25,6 +25,16 @@ Releases before 0.2.1 are only listed on the
   already fine, and something smaller on mobile data. Asked for by
   @ztx-lyghters.
 
+- "Song information" in a song's ⋯ menu: what the server knows about the track,
+  and where there is no server, what its own tags say. Album, year, track,
+  genre, format and sample rate, size on disk, plays, rating, and the comment
+  tag, which people use for notes about a recording and which nothing in the
+  app showed until now. The format reads exactly as it does on the player,
+  arrow and all, so a downloaded transcode says the same thing in both places.
+  Only the fields the song actually has are listed. It can be hidden like every
+  other action, in Settings › Appearance › Song menu. Asked for by
+  @ztx-lyghters.
+
 ### Changed
 
 - The play button on an artist always has something to play. With no popular

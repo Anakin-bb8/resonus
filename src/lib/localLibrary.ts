@@ -444,6 +444,9 @@ function applyTags(base: Record<string, unknown>, fallbackTitle: string, tags: I
     base.hasCover = true;
   }
   if (tags?.year) base.year = tags.year;
+  // El comentario del fichero: aquí no hay servidor que lo cuente, así que esta
+  // es la única forma de que la hoja de información lo enseñe (#59).
+  if (tags?.comment) base.comment = tags.comment;
   // IDs derivados (componen las claves del catálogo) para poder navegar al
   // álbum / artista desde una canción, igual que en modo servidor.
   const album = (base.album as string) || 'Álbum desconocido';

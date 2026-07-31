@@ -18,6 +18,7 @@ import { GlobalMiniPlayer } from '@/components/GlobalMiniPlayer';
 import { MediaMenuSheet } from '@/components/MediaMenuSheet';
 import { GlobalPlaylistPicker } from '@/components/PlaylistPickerSheet';
 import { BatteryWarning } from '@/components/BatteryWarning';
+import { SongInfoSheet } from '@/components/SongInfoSheet';
 import { SongMenuSheet } from '@/components/SongMenuSheet';
 import { Toast } from '@/components/Toast';
 import { installAppFont, setAppFont } from '@/lib/appFont';
@@ -249,6 +250,7 @@ export default function RootLayout() {
             {auth || offline ? <AppStartupTab /> : null}
             {auth || offline ? <GlobalMiniPlayer /> : null}
             {auth || offline ? <SongMenuSheet /> : null}
+            {auth || offline ? <SongInfoSheet /> : null}
             {auth || offline ? <ArtistPickerSheet /> : null}
             {auth || offline ? <MediaMenuSheet /> : null}
             {auth || offline ? <GlobalPlaylistPicker /> : null}

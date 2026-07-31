@@ -80,6 +80,27 @@ function nullTerminatedIndex(b: Uint8Array, start: number, max: number): number 
   return max;
 }
 
+/**
+ * Decodes the frames shaped `<encoding(1)> <language(3)> <null-terminated
+ * description> <text>`: the lyrics (USLT) and the comment (COMM) are laid out
+ * the same, so skipping past the description is the same walk in both.
+ */
+function decodeDescribedText(data: Uint8Array): string | undefined {
+  if (data.length < 5) return undefined;
+  const enc = data[0];
+  const wide = enc === 0x01 || enc === 0x02; // UTF-16: two-byte null
+  let p = 4;
+  if (wide) {
+    while (p + 1 < data.length && (data[p] !== 0 || data[p + 1] !== 0)) p += 2;
+    p += 2;
+  } else {
+    p = nullTerminatedIndex(data, p, data.length) + 1;
+  }
+  if (p >= data.length) return undefined;
+  const text = decodeWithEncoding(enc, data.subarray(p)).replace(/\0+$/, '').trim();
+  return text || undefined;
+}
+
 export interface ID3Tags {
   title?: string;
   artist?: string;
@@ -92,6 +113,8 @@ export interface ID3Tags {
   coverBase64?: string;
   /** Embedded lyrics (USLT frame); may come in LRC format with timestamps. */
   lyrics?: string;
+  /** Comment tag (COMM frame). The only source of it without a server (#59). */
+  comment?: string;
   /**
    * Frame id that didn't fit fully in the buffer: the tag was truncated and
    * nothing beyond this point was read. `undefined` if the full tag was parsed.
@@ -165,21 +188,14 @@ function parseID3v2(buffer: Uint8Array): ID3Tags {
         break;
       }
       case 'USLT': {
-        // <encoding(1)> <idioma(3)> <descriptor terminado en nulo> <letra>.
-        if (data.length < 5) break;
-        const enc = data[0];
-        const wide = enc === 0x01 || enc === 0x02; // UTF-16: nulo de 2 bytes
-        let p = 4;
-        if (wide) {
-          while (p + 1 < data.length && (data[p] !== 0 || data[p + 1] !== 0)) p += 2;
-          p += 2;
-        } else {
-          p = nullTerminatedIndex(data, p, data.length) + 1;
-        }
-        if (p < data.length) {
-          const text = decodeWithEncoding(enc, data.subarray(p)).replace(/\0+$/, '').trim();
-          if (text) tags.lyrics = text;
-        }
+        tags.lyrics = decodeDescribedText(data) ?? tags.lyrics;
+        break;
+      }
+      case 'COMM': {
+        // A file can carry several, one per language, and some encoders leave
+        // their own behind ("Created by…"). The first non-empty one is the one
+        // a person typed, and the one they expect to read back (#59).
+        if (!tags.comment) tags.comment = decodeDescribedText(data);
         break;
       }
       case 'APIC': {

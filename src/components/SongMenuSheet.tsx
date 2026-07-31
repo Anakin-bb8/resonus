@@ -43,6 +43,7 @@ import { useAutoDownloads } from '@/store/autoDownloads';
 import { useDownloads } from '@/store/downloads';
 import { usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
+import { useSongInfo } from '@/store/songInfo';
 import { useSongMenu } from '@/store/songMenu';
 import { showUndoToast, useToast } from '@/store/toast';
 import { useT } from '@/i18n';
@@ -590,6 +591,19 @@ export function SongMenuSheet() {
                             : t('Sleep timer')
                       }
                       onPress={() => setMode('sleep')}
+                    />
+                  ) : null}
+                  {menu.info ? (
+                    <Action
+                      icon="information-circle-outline"
+                      label={t('Song information')}
+                      onPress={() => {
+                        // The song travels with the action: the sheet is not
+                        // going to ask the server for it again, and offline
+                        // there would be nobody to ask.
+                        useSongInfo.getState().open(song);
+                        close();
+                      }}
                     />
                   ) : null}
                 </ScrollView>

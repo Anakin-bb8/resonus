@@ -30,6 +30,7 @@ const LABEL: Record<SongMenuActionKey, string> = {
   download: 'Download',
   share: 'Share',
   sleepTimer: 'Sleep timer',
+  info: 'Song information',
 };
 
 /**
@@ -50,6 +51,7 @@ const ORDER: SongMenuActionKey[] = [
   'rating',
   'share',
   'sleepTimer',
+  'info',
 ];
 
 export default function SongMenuSettings() {
