@@ -37,7 +37,7 @@ Releases before 0.2.1 are only listed on the
 
 ### Changed
 
-- An artist's album rows hold twenty covers instead of ten, and "Appears on"
+- An artist's album rows hold fifty covers instead of ten, and "Appears on"
   got the same "Show all" the discography already had, with its own screen for
   the whole list. Asked for by @ztx-lyghters.
 - The play button on an artist always has something to play. With no popular

@@ -61,7 +61,7 @@ const CARD_W = 140;
  * regular discographies didn't fit (#69). The row is virtualized, so what this
  * really caps is how far you can swipe before being sent to the full list.
  */
-const ROW_LIMIT = 20;
+const ROW_LIMIT = 50;
 
 export default function ArtistScreen() {
   useSettings((s) => s.accentColor); // re-render when accent changes
