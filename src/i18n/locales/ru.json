@@ -124,7 +124,9 @@
   "Streaming codec (Wi-Fi)": "Формат потока (Wi-Fi)",
   "Streaming codec (mobile data)": "Формат потока (мобильная сеть)",
   "Server default": "Задаётся сервером",
-  "Codec to transcode to. Only used at a set bitrate (not “Original”), and your server must support it.": "Формат для перекодирования. Применяется только при качестве, отличном от “Оригинального” (убедитесь, что сервер поддерживает выбранный кодек).",
+  "Codec to transcode to. Your server must support it.": "Транскодирование потока в другой формат. Убедитесь, что Ваш сервер поддерживает выбранный Вами кодек.",
+  "Codec to transcode to. At “Original” quality nothing is transcoded.": "Транскодирование потока в другой формат. При оригинальном качестве транскодирование недоступно.",
+  "Not used": "Не используется",
   "Download removed": "Скачанный файл удалён",
   "Download “{name}”?": "Скачать “{name}”?",
   "Downloading": "Скачивание файлов",
@@ -270,7 +272,7 @@
   "Remove “{name}” from your server?": "Удалить “{name}” с сервера?",
   "The stream URL must start with http:// or https://": "Ссылка на поток вещания должна начинаться с http:// или https://",
   "Rate {n} stars": "Оценить в {n} звёзд",
-  "Recent": "Недавно добавленное",
+  "Recent": "Недавно прослушанное",
   "Recent searches": "Недавние запросы",
   "Drag to reorder, toggle to show or hide.": "Зажмите и перетащите, чтобы изменить порядок.",
   "Show, hide and reorder the album rows on Home.": "Изменить видимость или порядок секций на домашнем экране.",
@@ -531,4 +533,6 @@
   "Its downloads and its offline copy of the library will be deleted from this device.": "Все скачанные файлы и метаданные, относящиеся к данному серверу, будут удалены с устройства.",
   "Remove profile?": "Удалить профиль?",
   "The music on your device is not touched.": "Музыка с Вашего устройства не будет удалена.",
+  "Simultaneous downloads": "Параллельное скачивание файлов",
+  "Songs fetched at the same time. Fewer is gentler on the server, network and your phone.": "Максимальное количество файлов, скачиваемых одновременно. Меньшее количество ведёт к меньшей нагрузке на сервер, сеть и Ваше устройство."
 }
