@@ -475,16 +475,17 @@ export default function PlayerScreen() {
         <Animated.View style={[StyleSheet.absoluteFill, bgStyle]} />
         {background === 'cover' && cover ? (
           <>
-            {/* The artwork itself, blurred, filling the screen. `recyclingKey`
-                so switching songs swaps the image instead of reusing the old
-                one, and the transition crossfades between them. */}
+            {/* The artwork itself, blurred, filling the screen. No
+                `recyclingKey`: it blanks the view the moment the song changes,
+                which is what put a black frame between one cover and the next.
+                Left alone, the previous one stays up until the new one has
+                decoded and the transition dissolves between the two. */}
             <Image
               source={{ uri: cover }}
               style={StyleSheet.absoluteFill}
               contentFit="cover"
               blurRadius={60}
               transition={600}
-              recyclingKey={cover}
             />
             {/* Scrim: blurring alone doesn't guarantee contrast — a bright or
                 busy cover would swallow the white text. */}

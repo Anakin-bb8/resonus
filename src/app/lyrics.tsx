@@ -48,13 +48,14 @@ export default function LyricsScreen() {
     <View style={[styles.root, { backgroundColor: bg }]}>
       {background === 'cover' && cover ? (
         <>
+          {/* Same as the player: no `recyclingKey`, or the change of song
+              blanks this to black before the next cover arrives. */}
           <Image
             source={{ uri: cover }}
             style={StyleSheet.absoluteFill}
             contentFit="cover"
             blurRadius={60}
             transition={600}
-            recyclingKey={cover}
           />
           {/* Same scrim as the player: blur alone doesn't guarantee the lyrics
               stay readable over a bright cover. */}
