@@ -32,6 +32,7 @@ import { ArtistCard } from '@/components/ArtistCard';
 import { Cover } from '@/components/Cover';
 import { FavoritesArt } from '@/components/FavoritesArt';
 import { Message } from '@/components/Message';
+import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
 import { checkAutoUrlNow } from '@/store/autoUrl';
@@ -576,6 +577,10 @@ export default function HomeScreen() {
             ) : null}
           </View>
           <View style={styles.headerRight}>
+            {/* Before the buttons, and dimmer than them, so it reads as a state
+                and not as something to press. Only the cloud: the word was
+                taking the end of the greeting. */}
+            <OfflineIndicator iconOnly />
             {showHistoryButton ? (
               <Link href="/history" asChild>
                 <Pressable hitSlop={10} accessibilityLabel={t('History')}>
