@@ -93,6 +93,8 @@ export default function ArtistScreen() {
   /** While fetching each album's songs, before downloading anything. */
   const [gathering, setGathering] = useState(false);
   const [shuffling, setShuffling] = useState(false);
+  /** Gathering the discography for a play button that has no popular tracks. */
+  const [starting, setStarting] = useState(false);
   /** Songs already gathered, awaiting dialog confirmation. */
   const [pending, setPending] = useState<Song[] | null>(null);
   const downloadMsg = useDownloadMessage(pending ?? []);
@@ -425,15 +427,28 @@ export default function ArtistScreen() {
             onPress={() => {
               if (isCurrentArtistQueue) togglePlay();
               else if (top.length > 0) playQueue(top, 0, data.artist.name, `/artist/${id}`);
+              // Nothing popular to play: rather than the button doing nothing at
+              // all (#79), it falls back to what the ⋯ menu offers, the
+              // discography from the earliest album on. A server that tracks no
+              // plays has no popular tracks for anybody, so on those this is the
+              // button's normal behaviour and not a corner case.
+              else if (albums.length > 0 && !starting) {
+                setStarting(true);
+                void playDiscography().finally(() => setStarting(false));
+              }
             }}
           >
-            <Ionicons
-              name={showPause ? 'pause' : 'play'}
-              size={28}
-              color="#000"
-              // Optical centring only for the play triangle; pause is symmetric.
-              style={showPause ? undefined : { marginLeft: 2 }}
-            />
+            {starting ? (
+              <ActivityIndicator size="small" color="#000" />
+            ) : (
+              <Ionicons
+                name={showPause ? 'pause' : 'play'}
+                size={28}
+                color="#000"
+                // Optical centring only for the play triangle; pause is symmetric.
+                style={showPause ? undefined : { marginLeft: 2 }}
+              />
+            )}
           </Pressable>
         </View>
 

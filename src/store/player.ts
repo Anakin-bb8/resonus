@@ -32,6 +32,7 @@ import { create } from 'zustand';
 
 import {
   getAlbum,
+  getArtist,
   getArtistInfo,
   getOpenSubsonicExtensions,
   getPlayQueue,
@@ -40,6 +41,7 @@ import {
   savePlayQueue,
   scrobble,
   streamUrl,
+  type Album,
   type Song,
   type SubsonicAuth,
 } from '@/api/backend';
@@ -993,12 +995,79 @@ async function radioCandidates(auth: SubsonicAuth, seed: Song, have: Set<string>
   return anything.filter((s) => !s.url && !have.has(s.id)).slice(0, BATCH_SIZE);
 }
 
+// ── The rest of the artist ─────────────────────────────────────────────────
+// A queue started from an artist screen holds their popular tracks, and those
+// run out. What follows used to be either silence or a mix of other people,
+// neither of which is what someone pressing play on an artist asked for (#79),
+// so their own catalogue goes first: album by album, oldest on, and only once
+// that is exhausted does the mix get its turn.
+
+/** Albums still to be handed over, for the artist queue being played. */
+let artistFill: { href: string; albums: Album[]; next: number } | null = null;
+
+/** The artist a queue came from, or null if it came from anywhere else. */
+function artistOfQueue(sourceHref: string | null): string | null {
+  const match = sourceHref?.match(/^\/artist\/([^/]+)$/);
+  return match ? match[1] : null;
+}
+
+/**
+ * Adds the artist's next album to the queue. True if it added anything, which
+ * is the caller's cue to leave the mix alone for now.
+ *
+ * One album per turn on purpose: this runs when the queue is two songs from
+ * the end, so an album buys another twenty minutes and the next one is fetched
+ * in that time. Pulling the whole discography at once is dozens of requests for
+ * someone who may well stop after the popular tracks (#50).
+ */
+async function extendWithArtistCatalog(auth: SubsonicAuth, artistId: string, href: string) {
+  if (artistFill?.href !== href) {
+    const { albums } = await getArtist(auth, artistId);
+    // Oldest first, like "Play discography": once the popular tracks are done,
+    // what follows is the artist's story in order.
+    artistFill = {
+      href,
+      albums: [...albums].sort((a, b) => (a.year ?? Infinity) - (b.year ?? Infinity)),
+      next: 0,
+    };
+  }
+  const fill = artistFill;
+  while (fill.next < fill.albums.length) {
+    const album = fill.albums[fill.next];
+    fill.next += 1;
+    const { songs } = await getAlbum(auth, album.id);
+    const st = usePlayerStore.getState();
+    // The queue may have moved on while the server answered.
+    if (st.sourceHref !== href) return false;
+    const have = new Set(st.queue.map((s) => s.id));
+    const fresh = songs.filter((s) => !have.has(s.id) && !s.url);
+    // Nothing new: the album was already in the queue (it came from "Play
+    // discography", or its songs are the popular ones). On to the next.
+    if (fresh.length === 0) continue;
+    usePlayerStore.setState({ queue: [...st.queue, ...fresh] });
+    scheduleSync();
+    return true;
+  }
+  return false;
+}
+
 async function maybeQueueAutoplay() {
-  const { queue, index, repeat, radioMode, radioSeed } = usePlayerStore.getState();
+  const { queue, index, repeat, radioMode, radioSeed, sourceHref } = usePlayerStore.getState();
   // With repeat the queue never "runs out"; and if 2+ songs remain, not yet.
   if (repeat !== 'off' || index < queue.length - 2) return;
   const { auth, offline } = useAuthStore.getState();
   if (!auth || offline) return;
+  // Before the mix, and before the autoplay setting has a say: this is not
+  // similar music, it is the artist that was asked for. A mix is left alone,
+  // since there the drift is the whole point.
+  const artistId = radioMode ? null : artistOfQueue(sourceHref);
+  if (artistId) {
+    try {
+      if (await extendWithArtistCatalog(auth, artistId, sourceHref!)) return;
+    } catch {
+      // The catalogue is unreachable; the mix below is still worth a try.
+    }
+  }
   // Radio extends even if autoplay is off: you started it manually.
   if (!useSettings.getState().autoplaySimilar && !radioMode) return;
   const last = queue[queue.length - 1];
@@ -2109,6 +2178,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     }
     attachAppState();
     autoplayFetchedFor = null;
+    // A new queue starts the artist's catalogue over, even the same artist's:
+    // what was handed over before is not in this queue.
+    artistFill = null;
     resetWarmed();
     // Before jumping to another list/album, save the current song in the
     // "back" history so we can return to it (Spotify-style).
@@ -2143,6 +2215,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       // the object the player is already loaded with.
       pushHistory();
       autoplayFetchedFor = null;
+      artistFill = null;
       resetWarmed();
       set({
         queue: [cur],
@@ -2659,6 +2732,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   reset: async () => {
     get().cancelSleepTimer();
     autoplayFetchedFor = null;
+    artistFill = null;
     similarArtistsCache = null;
     stopPeriodicSync();
     if (syncTimer) {
