@@ -10,6 +10,9 @@ import { requireOptionalNativeModule } from 'expo-modules-core';
 import { create } from 'zustand';
 
 import { streamUrl, type Song } from '@/api/backend';
+// The data layer's: it resolves a downloaded cover to the file on disk, which
+// is filtered out below since only this phone can reach it.
+import { coverArtUrl } from '@/api/data';
 import { useAuthStore } from './auth';
 import { castStop } from './castMedia';
 import { useSettings } from './settings';
@@ -216,6 +219,45 @@ export async function upnpDisconnect(silent = false): Promise<void> {
 const CAST_MP3_BITRATE = 320;
 
 /**
+ * What to tell the renderer this track is.
+ *
+ * A DLNA renderer decides whether it can play something from the type it is
+ * handed, and a speaker refuses anything that isn't audio. The stream URL says
+ * nothing about the file (`/rest/stream.view?…`), so the type has to come from
+ * what we know about the song: what the server was asked to transcode to, or
+ * failing that the file's own format.
+ */
+function castMime(song: Song, transcodedTo?: string): string {
+  const suffix = (transcodedTo || song.suffix || '').toLowerCase();
+  switch (suffix) {
+    case 'mp3':
+      return 'audio/mpeg';
+    case 'flac':
+      return 'audio/flac';
+    case 'ogg':
+    case 'oga':
+    case 'opus':
+      return 'audio/ogg';
+    case 'm4a':
+    case 'mp4':
+    case 'aac':
+      return 'audio/mp4';
+    case 'wav':
+      return 'audio/wav';
+    case 'wma':
+      return 'audio/x-ms-wma';
+    case 'aif':
+    case 'aiff':
+      return 'audio/aiff';
+    default:
+      // Unknown is still audio, and saying so beats letting it be guessed:
+      // guessing is what announced every song as a video and left speakers
+      // refusing all of them (#70).
+      return 'audio/mpeg';
+  }
+}
+
+/**
  * Loads a track on the renderer. Returns false if there is no session or the song
  * is not castable (local files: the renderer cannot reach them).
  */
@@ -243,16 +285,33 @@ export async function upnpLoad(song: Song, autoplay: boolean, startTimeSec = 0):
   pausedByUs = false;
   lastPositionSec = startTimeSec;
   lastDurationSec = song.duration ?? 0;
-  const title = [song.title, song.artist].filter(Boolean).join(' — ');
+  // Two of them: the one line the fallback path can show, and the fields for
+  // the metadata we send ourselves, where each has its own place.
+  const oneLine = [song.title, song.artist].filter(Boolean).join(' — ');
+  const info = {
+    title: song.title,
+    artist: song.artist ?? undefined,
+    album: song.album ?? undefined,
+    // The renderer gets the same picture the lock screen gets, as long as it is
+    // an address it can reach: a downloaded cover lives on this phone only.
+    artworkUrl: coverArtUrl(song.coverArt ?? (song.url ? undefined : song.albumId), 500),
+    durationSec: song.duration ?? 0,
+  };
   try {
-    let ok = (await native.load(url, title, startTimeSec * 1000)) as boolean;
-    // Some renderers enforce the MIME type announced in the cast metadata, and
-    // that metadata says MP3 — Sonos is the strict one, so a FLAC is refused
-    // outright and every lossless track "can't be cast". Rather than transcode
-    // for everyone, ask the server for MP3 only once the original was turned
-    // down: renderers that do take FLAC keep getting it.
+    let ok = (await native.load(url, oneLine, startTimeSec * 1000, {
+      ...info,
+      // Original quality: the file arrives as it is, unless the server was
+      // asked for something else.
+      mime: castMime(song, s.maxBitRate > 0 ? s.streamFormat : undefined),
+    })) as boolean;
+    // A renderer that won't take the format says so, and the answer to that is
+    // to ask the server for the one nothing refuses. Only after being turned
+    // down: the ones that do take FLAC keep getting it.
     if (!ok && mp3Url && mp3Url !== url) {
-      ok = (await native.load(mp3Url, title, startTimeSec * 1000)) as boolean;
+      ok = (await native.load(mp3Url, oneLine, startTimeSec * 1000, {
+        ...info,
+        mime: 'audio/mpeg',
+      })) as boolean;
     }
     // Not every renderer starts on its own after being handed a URI: Sonos
     // waits for an explicit Play and otherwise sits silent while the app

@@ -4,6 +4,8 @@ import com.yinnho.upnpcast.DLNACast
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
+import expo.modules.kotlin.records.Field
+import expo.modules.kotlin.records.Record
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -12,6 +14,21 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+
+/** Lo que se le cuenta al renderer sobre la pista que va a sonar. */
+class TrackInfo(
+  /** Tipo MIME real (audio/flac, audio/mpeg…). Sin él, un altavoz rechaza la
+   *  pista porque la librería la anuncia como vídeo (ver AvTransport). */
+  @Field val mime: String? = null,
+  /** El título a secas; el que va como argumento lleva además el artista, que
+   *  es lo único que sabe enseñar el respaldo. */
+  @Field val title: String? = null,
+  @Field val artist: String? = null,
+  @Field val album: String? = null,
+  /** Carátula, solo si es una URL que el aparato pueda alcanzar. */
+  @Field val artworkUrl: String? = null,
+  @Field val durationSec: Double? = null
+) : Record
 
 /**
  * Puente Expo ↔ UPnPCast (DLNA/UPnP). Descubre renderers en la red local y
@@ -69,15 +86,35 @@ class UpnpCastModule : Module() {
     /**
      * Carga una URL en el renderer conectado. El renderer siempre arranca
      * reproduciendo; con startMs > 0 se busca esa posición nada más empezar.
+     *
+     * La entrega la hace `AvTransport`, que le cuenta al aparato qué es lo que
+     * suena; la librería queda de respaldo por si no logramos hablar con él
+     * (ver #70).
      */
-    AsyncFunction("load") { url: String, title: String, startMs: Double, promise: Promise ->
+    AsyncFunction("load") { url: String, title: String, startMs: Double, track: TrackInfo?, promise: Promise ->
       val device = current
       if (device == null) {
         promise.resolve(false)
         return@AsyncFunction
       }
       scope.launch {
-        val ok = runCatching { DLNACast.castToDevice(device, url, title) }.getOrDefault(false)
+        val ours = track?.let {
+          runCatching {
+            AvTransport.play(
+              device.address,
+              AvTransport.Track(
+                url = url,
+                mime = it.mime ?: "audio/mpeg",
+                title = it.title ?: title,
+                artist = it.artist,
+                album = it.album,
+                artworkUrl = it.artworkUrl,
+                durationSec = (it.durationSec ?: 0.0).toInt()
+              )
+            )
+          }.getOrDefault(false)
+        } ?: false
+        val ok = ours || runCatching { DLNACast.castToDevice(device, url, title) }.getOrDefault(false)
         if (ok && startMs > 0) {
           delay(800)
           runCatching { DLNACast.seek(startMs.toLong()) }
@@ -111,6 +148,7 @@ class UpnpCastModule : Module() {
       pollJob?.cancel()
       pollJob = null
       current = null
+      AvTransport.forget()
       scope.launch {
         runCatching { DLNACast.stop() }
         promise.resolve(true)
