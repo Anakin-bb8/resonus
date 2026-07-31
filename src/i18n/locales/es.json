@@ -129,7 +129,7 @@
   "Download over Wi-Fi only": "Descargar solo con Wi-Fi",
   "Download quality": "Calidad de descarga",
   "Simultaneous downloads": "Descargas simultáneas",
-  "Songs fetched at the same time. Fewer is gentler on a server that has to transcode each one.": "Canciones que se descargan a la vez. Menos es más suave para un servidor que tiene que transcodificar cada una.",
+  "Songs fetched at the same time. Fewer is gentler on the server, network and your phone.": "Canciones que se descargan a la vez. Menos es más suave para el servidor, la red y tu teléfono.",
   "Download codec": "Códec de descarga",
   "Streaming codec (Wi-Fi)": "Códec de streaming (Wi-Fi)",
   "Streaming codec (mobile data)": "Códec de streaming (datos móviles)",

@@ -150,7 +150,7 @@ export default function DownloadsSettings() {
             />
             <SelectList
               label={t('Simultaneous downloads')}
-              description={t('Songs fetched at the same time. Fewer is gentler on a server that has to transcode each one.')}
+              description={t('Songs fetched at the same time. Fewer is gentler on the server, network and your phone.')}
               options={DOWNLOAD_CONCURRENCY_OPTIONS.map((n) => ({ value: n, label: String(n) }))}
               value={downloadConcurrency}
               onChange={setDownloadConcurrency}

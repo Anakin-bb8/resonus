@@ -129,7 +129,7 @@
   "Download over Wi-Fi only": "Download over Wi-Fi only",
   "Download quality": "Download quality",
   "Simultaneous downloads": "Simultaneous downloads",
-  "Songs fetched at the same time. Fewer is gentler on a server that has to transcode each one.": "Songs fetched at the same time. Fewer is gentler on a server that has to transcode each one.",
+  "Songs fetched at the same time. Fewer is gentler on the server, network and your phone.": "Songs fetched at the same time. Fewer is gentler on the server, network and your phone.",
   "Download codec": "Download codec",
   "Streaming codec (Wi-Fi)": "Streaming codec (Wi-Fi)",
   "Streaming codec (mobile data)": "Streaming codec (mobile data)",
