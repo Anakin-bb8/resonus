@@ -34,6 +34,9 @@ Releases before 0.2.1 are only listed on the
   effect used to be attached to every song either way, which keeps Android from
   handing playback to the low power path: battery and heat spent on something
   most people never turn on.
+- Home says when you are offline, with the same quiet cloud the other tabs
+  already had in their headers. It was the one screen that showed you a shorter
+  library without a word about why.
 - "Library copy", in Settings › Downloads, is now "Library metadata copy". It
   sits under the bar that counts your downloads and read as a second copy of
   the music, which it is not.
