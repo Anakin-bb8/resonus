@@ -145,12 +145,19 @@ tripped you up and isn't here, tell us.
 | String | Where / what it is |
 | --- | --- |
 | `Advanced` | Login screen: link that expands the advanced connection options |
-| `Local` / `Local profile` / `This phone` | The **on-device / offline profile** (no server account) |
+| `Local profile` / `This phone` | The **on-device / offline profile** (no server account). `Local music` is its library screen |
 | `Media server` | Login: the type subtitle under **Jellyfin** |
 | `Subsonic-compatible` | Login: the subtitle under **OpenSubsonic / Ampache** |
-| `Primary` / `Remote` | A server's **primary vs remote address** (profiles with several URLs) |
-| `Server default` | Codec/quality option meaning **"let the server decide"** |
+| `Local` / `Remote` / `Primary` | Settings → Network: what kind of **address** a server URL is. `Local` here means **on the same network (LAN)**, nothing to do with the local profile above; `Primary` is the address the profile is identified by |
 | `Offline · your downloads` | Settings subtitle shown in offline mode |
+
+**Streaming & download quality** (Settings → Quality & playback, Settings → Downloads)
+
+| String | Where / what it is |
+| --- | --- |
+| `Original` | Quality option: the file **exactly as it is on the server**, nothing transcoded. It also appears in quotes inside two descriptions on those screens, so use the same wording in all three |
+| `Server default` | Codec option meaning **"let the server decide"** what to transcode to |
+| `Not used` | Replaces the codec's value when that network's quality is `Original`. Nothing is transcoded then, so the codec setting has nothing to do and the row is greyed out |
 
 **Playback, audio & equalizer**
 
