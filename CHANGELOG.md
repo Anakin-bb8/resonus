@@ -44,6 +44,14 @@ Releases before 0.2.1 are only listed on the
 - "Library copy", in Settings › Downloads, is now "Library metadata copy". It
   sits under the bar that counts your downloads and read as a second copy of
   the music, which it is not.
+- The transcode codec is greyed out while its quality is "Original". At that
+  quality the file arrives exactly as it is on the server, so the codec had
+  nothing to do and was ignored without saying so: picking Opus there looked
+  like a setting that did nothing. It now says as much instead of showing a
+  codec that is not being used, and stays in view so it can still be found. In
+  Settings › Downloads the two have also swapped places, quality first and the
+  codec under it, which is the order they already had for streaming. Raised by
+  @ztx-lyghters and @CraftoHohenvels.
 
 ### Fixed
 
