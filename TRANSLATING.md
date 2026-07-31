@@ -92,6 +92,27 @@ lists the overrides available to you and what each one falls back to if you skip
 it. If a base key needs a context that doesn't exist yet, tell us and we'll add
 it.
 
+## When the greetings change over
+
+Home greets you with one of four strings depending on the time: `Good morning`,
+`Good afternoon`, `Good evening` and `Good night`. Translating the words is only
+half of it, because **the hours they change at are part of the language too**. At
+six in the evening English is well into the evening and Spanish is still in the
+afternoon.
+
+By default the morning starts at 5, the afternoon at noon and the evening at 6pm,
+with anything before the morning being the night. Spanish and Catalan run later
+(6, 13 and 21) because midday there is not the afternoon yet.
+
+You cannot set this from your `.json`, since it is three numbers rather than
+text. **If those hours are wrong for your language, tell us in your PR or an
+issue** and give us yours: when the morning, the afternoon and the evening begin.
+It is one line for us to add.
+
+If your language uses the same word for two consecutive slots (Spanish says
+"Buenas noches" for both the evening and the small hours), just translate both
+keys the same way. Nothing else is needed.
+
 ## Checking what's left to translate
 
 Run the status script to see, per language, how much is done and exactly which

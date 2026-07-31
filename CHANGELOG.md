@@ -52,6 +52,13 @@ Releases before 0.2.1 are only listed on the
   Settings › Downloads the two have also swapped places, quality first and the
   codec under it, which is the order they already had for streaming. Raised by
   @ztx-lyghters and @CraftoHohenvels.
+- Home's greeting changes over at the hours the language actually uses. The four
+  greetings were translated but the clock behind them was Spanish for everybody,
+  so English, German, Italian and Russian were told good afternoon at eight in
+  the evening. They now switch at midday and at six, which is what those
+  languages are closer to, and Spanish and Catalan keep the later hours they had.
+  The greeting also changes while the screen is open, which it did not before.
+  Translators can ask for their own hours, see TRANSLATING.md.
 - Two strings that could not be translated properly. The row that creates a
   local profile said "Local", an adjective with no noun behind it, and now says
   "Local profile", the name that profile carries on every other screen; and
