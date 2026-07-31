@@ -20,6 +20,10 @@ Releases before 0.2.1 are only listed on the
   covers already did. The header has to crop photos to fill its space, and
   faces were ending up outside it. Asked for by @ztx-lyghters.
 - 256 kbps, for streaming and for downloads, asked for by @CraftoHohenvels.
+- The streaming codec can be chosen per network, as the quality already was:
+  the file as it is over Wi-Fi, so the server is not re-encoding what was
+  already fine, and something smaller on mobile data. Asked for by
+  @ztx-lyghters.
 
 ### Changed
 
