@@ -9,6 +9,56 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Added
+
+- Internet radio shows what is playing. Stations that announce their tracks put
+  the song and the artist where the station's name used to sit, on the player,
+  the mini player, the notification, the lock screen and in the car, and they
+  update as the broadcast moves on. One that announces nothing looks exactly as
+  it did. Asked for by @ztx-lyghters.
+- Tapping an artist's photo opens it full screen, uncropped, the way album
+  covers already did. The header has to crop photos to fill its space, and
+  faces were ending up outside it. Asked for by @ztx-lyghters.
+- 256 kbps, for streaming and for downloads, asked for by @CraftoHohenvels.
+
+### Changed
+
+- The play button on an artist always has something to play. With no popular
+  tracks it plays the discography from the earliest album on, which is what a
+  server that keeps no play counts leaves you with, and until now the button
+  did nothing at all. Raised by @ztx-lyghters.
+- When an artist's popular tracks run out the queue carries on with the rest of
+  that artist, album by album, and only then does the mix of other people get
+  its turn.
+- The equalizer no longer touches the audio while it is switched off. Its
+  effect used to be attached to every song either way, which keeps Android from
+  handing playback to the low power path: battery and heat spent on something
+  most people never turn on.
+- "Library copy", in Settings › Downloads, is now "Library metadata copy". It
+  sits under the bar that counts your downloads and read as a second copy of
+  the music, which it is not.
+
+### Fixed
+
+- Cover art reached the notification and nothing else. What a car shows over
+  Bluetooth, what Android Auto shows and what the system's own controls show
+  all come from the track, and nothing was ever attached to it, so all they had
+  were the tags inside the file: an original FLAC carried its cover, a
+  transcode arrived stripped of it, and downloads in Opus had none at all. The
+  cover also comes off the disk when the album is downloaded, so it is there
+  with no connection. Reported by @jaredm4 and @ztx-lyghters.
+- Casting to a UPnP or DLNA speaker answered "this song can't be cast", every
+  song and every device. Tracks went out announced as video, which a TV plays
+  anyway and a speaker refuses. They now say what they are, and the cover, the
+  artist and the album go with them. Reported by @kebbob.
+- On Jellyfin every transcode came out as mp3 whatever the codec setting said,
+  and downloads were saved under the name of the codec that had been asked for.
+  Files downloaded before this are still mp3 and have to be downloaded again.
+  Reported by @jaredm4.
+- The blurred background went black for an instant between one song and the
+  next, on the player and on the lyrics screen. The previous cover now stays up
+  until the next one is ready and they dissolve into each other.
+
 ## [0.6.0] - 2026-07-30
 
 Your downloads and your offline library move out of the JSON files they lived
