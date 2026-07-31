@@ -379,8 +379,10 @@ interface SettingsState {
   maxBitRateCellular: number;
   /** Download quality: 0 = original file; rest, transcoded bitrate. */
   downloadBitRate: number;
-  /** Streaming transcode codec ('' = server default). */
+  /** Streaming transcode codec over Wi-Fi ('' = server default). */
   streamFormat: TranscodeFormat;
+  /** Streaming transcode codec over cellular ('' = server default). */
+  streamFormatCellular: TranscodeFormat;
   /** Download transcode codec ('' = server default). */
   downloadFormat: TranscodeFormat;
   /** Download only over Wi-Fi (blocks downloads on cellular). */
@@ -554,6 +556,7 @@ interface SettingsState {
   setMaxBitRateCellular: (value: number) => void;
   setDownloadBitRate: (value: number) => void;
   setStreamFormat: (value: TranscodeFormat) => void;
+  setStreamFormatCellular: (value: TranscodeFormat) => void;
   setDownloadFormat: (value: TranscodeFormat) => void;
   setDownloadWifiOnly: (value: boolean) => void;
   setLanguage: (language: Language) => void;
@@ -645,6 +648,7 @@ function snapshot(get: () => SettingsState) {
     maxBitRateCellular: s.maxBitRateCellular,
     downloadBitRate: s.downloadBitRate,
     streamFormat: s.streamFormat,
+    streamFormatCellular: s.streamFormatCellular,
     downloadFormat: s.downloadFormat,
     downloadWifiOnly: s.downloadWifiOnly,
     // `language` is not in the profile blob: it's global (see LANG_KEY).
@@ -714,6 +718,7 @@ const DEFAULTS = {
   maxBitRateCellular: 0,
   downloadBitRate: 0,
   streamFormat: '' as TranscodeFormat,
+  streamFormatCellular: '' as TranscodeFormat,
   downloadFormat: '' as TranscodeFormat,
   downloadWifiOnly: false,
   language: 'en' as Language,
@@ -802,6 +807,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
 
   setStreamFormat: (streamFormat) => {
     set({ streamFormat });
+    persist(snapshot(get));
+  },
+
+  setStreamFormatCellular: (streamFormatCellular) => {
+    set({ streamFormatCellular });
     persist(snapshot(get));
   },
 
@@ -1165,6 +1175,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           maxBitRateCellular: number;
           downloadBitRate: number;
           streamFormat: TranscodeFormat;
+          streamFormatCellular: TranscodeFormat;
           downloadFormat: TranscodeFormat;
           downloadWifiOnly: boolean;
           language: Language;
@@ -1248,6 +1259,13 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (TRANSCODE_FORMATS.includes(parsed.streamFormat as TranscodeFormat)) {
           set({ streamFormat: parsed.streamFormat as TranscodeFormat });
+        }
+        if (TRANSCODE_FORMATS.includes(parsed.streamFormatCellular as TranscodeFormat)) {
+          set({ streamFormatCellular: parsed.streamFormatCellular as TranscodeFormat });
+        } else if (TRANSCODE_FORMATS.includes(parsed.streamFormat as TranscodeFormat)) {
+          // Previously there was a single streaming codec: whoever had it set
+          // keeps it on both networks until they touch the new setting.
+          set({ streamFormatCellular: parsed.streamFormat as TranscodeFormat });
         }
         if (TRANSCODE_FORMATS.includes(parsed.downloadFormat as TranscodeFormat)) {
           set({ downloadFormat: parsed.downloadFormat as TranscodeFormat });

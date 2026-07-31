@@ -83,7 +83,7 @@ import { useDownloads } from './downloads';
 import { useNetworkType } from './networkType';
 import { usePlayCounts } from './playCounts';
 import { usePlayHistory } from './playHistory';
-import { useSettings } from './settings';
+import { useSettings, type TranscodeFormat } from './settings';
 import { useToast } from './toast';
 import { tg } from '@/i18n';
 
@@ -278,6 +278,12 @@ export function effectiveMaxBitRate(): number {
   return useNetworkType.getState().cellular ? s.maxBitRateCellular : s.maxBitRate;
 }
 
+/** Codec to transcode to, by network, like the bitrate above it. */
+export function effectiveStreamFormat(): TranscodeFormat {
+  const s = useSettings.getState();
+  return useNetworkType.getState().cellular ? s.streamFormatCellular : s.streamFormat;
+}
+
 /** Source for expo-audio: radio (url), local (file/content) or Subsonic stream. */
 function sourceFor(song: Song, timeOffsetSec = 0): AudioSource {
   const metadata = itemMetadataFor(song);
@@ -288,7 +294,7 @@ function sourceFor(song: Song, timeOffsetSec = 0): AudioSource {
   const dl = downloadedUri(song);
   if (dl) return { uri: dl, metadata };
   const auth = useAuthStore.getState().auth!;
-  const format = useSettings.getState().streamFormat;
+  const format = effectiveStreamFormat();
   return {
     uri: streamUrl(auth, song.id, effectiveMaxBitRate(), timeOffsetSec, format),
     metadata,
@@ -335,7 +341,7 @@ function isTranscoded(song: Song): boolean {
   // Transcodes if the original exceeds the bitrate OR if an output codec is
   // forced (the server re-encodes even if the bitrate already fit). In both
   // cases the stream loses random access and native seek would restart.
-  return useSettings.getState().streamFormat !== '' || (song.bitRate != null && song.bitRate > max);
+  return effectiveStreamFormat() !== '' || (song.bitRate != null && song.bitRate > max);
 }
 
 /** Does seeking this song need a `timeOffset` re-request instead of a native seek? */
@@ -1250,7 +1256,7 @@ function onTrackTransition() {
 // queued track depends on format and bitrate: all of them have to re-evaluate
 // what is (or is no longer) waiting behind the current track.
 const gaplessSettingsKey = (s: ReturnType<typeof useSettings.getState>) =>
-  `${s.crossfadeSec}|${s.streamFormat}|${s.maxBitRate}|${s.maxBitRateCellular}`;
+  `${s.crossfadeSec}|${s.streamFormat}|${s.streamFormatCellular}|${s.maxBitRate}|${s.maxBitRateCellular}`;
 let lastGaplessSettings = gaplessSettingsKey(useSettings.getState());
 useSettings.subscribe((s) => {
   const key = gaplessSettingsKey(s);

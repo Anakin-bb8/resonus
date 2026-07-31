@@ -266,7 +266,8 @@ export async function upnpLoad(song: Song, autoplay: boolean, startTimeSec = 0):
   const auth = useAuthStore.getState().auth;
   let url: string | undefined;
   if (song.url) url = song.url;
-  // Wi-Fi quality on purpose: casting via UPnP requires being on the same LAN.
+  // The Wi-Fi settings on purpose, quality and codec both: casting over UPnP
+  // means being on the same network as the renderer.
   else if (!song.localUri && auth) {
     const st = useSettings.getState();
     url = streamUrl(auth, song.id, st.maxBitRate, 0, st.streamFormat);

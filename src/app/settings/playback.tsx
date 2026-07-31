@@ -29,6 +29,8 @@ export default function PlaybackSettings() {
   const setMaxBitRateCellular = useSettings((s) => s.setMaxBitRateCellular);
   const streamFormat = useSettings((s) => s.streamFormat);
   const setStreamFormat = useSettings((s) => s.setStreamFormat);
+  const streamFormatCellular = useSettings((s) => s.streamFormatCellular);
+  const setStreamFormatCellular = useSettings((s) => s.setStreamFormatCellular);
   const autoplaySimilar = useSettings((s) => s.autoplaySimilar);
   const setAutoplaySimilar = useSettings((s) => s.setAutoplaySimilar);
   const crossfadeSec = useSettings((s) => s.crossfadeSec);
@@ -56,24 +58,33 @@ export default function PlaybackSettings() {
             {/* The first title sticks to the header (no section margin). */}
             <Text style={[settingsStyles.sectionTitle, { marginTop: 0 }]}>{t('Streaming')}</Text>
             <SelectList
-              label={t('Streaming codec')}
-              description={t('Codec to transcode to. Only used at a set bitrate (not “Original”), and your server must support it.')}
-              options={codecOptions}
-              value={streamFormat}
-              onChange={setStreamFormat}
-            />
-            <SelectList
               label={t('Streaming quality (Wi-Fi)')}
               description={t('“Original” uses the highest quality; a lower bitrate saves data.')}
               options={bitrateOptions}
               value={maxBitRate}
               onChange={setMaxBitRate}
             />
+            {/* Each codec right under its own quality: the codec only applies
+                where a bitrate is set, and reading them as a pair is what says
+                which network each one is about. */}
+            <SelectList
+              label={t('Streaming codec (Wi-Fi)')}
+              description={t('Codec to transcode to. Only used at a set bitrate (not “Original”), and your server must support it.')}
+              options={codecOptions}
+              value={streamFormat}
+              onChange={setStreamFormat}
+            />
             <SelectList
               label={t('Streaming quality (mobile data)')}
               options={bitrateOptions}
               value={maxBitRateCellular}
               onChange={setMaxBitRateCellular}
+            />
+            <SelectList
+              label={t('Streaming codec (mobile data)')}
+              options={codecOptions}
+              value={streamFormatCellular}
+              onChange={setStreamFormatCellular}
             />
             <SwitchList
               options={[
