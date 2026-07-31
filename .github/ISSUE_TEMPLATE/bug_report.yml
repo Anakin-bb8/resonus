@@ -32,6 +32,8 @@ body:
     id: server
     attributes:
       label: Server
+      description: Pick every one you use. If it only goes wrong on one of them, say so in the description.
+      multiple: true
       options:
         - Navidrome
         - Jellyfin
