@@ -25,12 +25,12 @@ import {
   setIsAudioActiveAsync,
   type AudioMetadata,
   type AudioPlayer,
+  type AudioSource,
   type AudioStatus,
 } from 'expo-audio';
 import { create } from 'zustand';
 
 import {
-  coverArtUrl,
   getAlbum,
   getArtistInfo,
   getOpenSubsonicExtensions,
@@ -43,9 +43,11 @@ import {
   type Song,
   type SubsonicAuth,
 } from '@/api/backend';
-// Not the backend's: this one honours the library filter and asks each library
-// for its share. The rest of the mix cannot be filtered, see `radioCandidates`.
-import { getRandomSongs } from '@/api/data';
+// The data layer's, not the backend's: `getRandomSongs` honours the library
+// filter and asks each library for its share (the rest of the mix cannot be
+// filtered, see `radioCandidates`), and `coverArtUrl` hands back the file on
+// disk when the album is downloaded instead of an address on the server.
+import { coverArtUrl, getRandomSongs } from '@/api/data';
 import { prefetchLyrics } from '@/hooks/useLyrics';
 import { queryClient } from '@/lib/query';
 import { getItem, setItem } from '@/lib/storage';
@@ -275,16 +277,20 @@ export function effectiveMaxBitRate(): number {
 }
 
 /** Source for expo-audio: radio (url), local (file/content) or Subsonic stream. */
-function sourceFor(song: Song, timeOffsetSec = 0): { uri: string } {
-  if (song.url) return { uri: song.url };
-  if (song.localUri) return { uri: song.localUri };
+function sourceFor(song: Song, timeOffsetSec = 0): AudioSource {
+  const metadata = itemMetadataFor(song);
+  if (song.url) return { uri: song.url, metadata };
+  if (song.localUri) return { uri: song.localUri, metadata };
   // Downloaded → plays from disk also in server mode: works without
   // connection and with connection doesn't waste data.
   const dl = downloadedUri(song);
-  if (dl) return { uri: dl };
+  if (dl) return { uri: dl, metadata };
   const auth = useAuthStore.getState().auth!;
   const format = useSettings.getState().streamFormat;
-  return { uri: streamUrl(auth, song.id, effectiveMaxBitRate(), timeOffsetSec, format) };
+  return {
+    uri: streamUrl(auth, song.id, effectiveMaxBitRate(), timeOffsetSec, format),
+    metadata,
+  };
 }
 
 // ── Seek in transcoded streams ──────────────────────────────────────────────
@@ -407,15 +413,40 @@ function seekActive(sec: number) {
   });
 }
 
-/** Cover art URL for lock screen (server only for now). */
+/**
+ * Cover art for the notification and the media session.
+ *
+ * Resolved like every screen resolves it, which is the point: that path hands
+ * back the file on disk when the album is downloaded, and the disk is the only
+ * place a cover can come from with no connection. Asking the server for it is
+ * what left the notification, the car and the system's own controls with an
+ * empty square offline, and local music without a cover at all.
+ */
 function artworkUrlFor(song: Song): string | undefined {
-  if (song.localUri) return undefined; // local file: TODO on-disk cover art
-  const auth = useAuthStore.getState().auth;
-  if (!auth) return undefined;
-  // A radio has no album, but the server may hold an image for the station.
-  // The one picked on the device is a file:// path, which is not offered here.
-  if (song.url) return song.coverArt ? coverArtUrl(auth, song.coverArt, 500) : undefined;
-  return coverArtUrl(auth, song.coverArt ?? song.albumId, 500);
+  // A radio has no album to fall back to, but the server may hold an image for
+  // the station, and one picked on the device arrives as a file:// path.
+  return coverArtUrl(song.coverArt ?? (song.url ? undefined : song.albumId), 500);
+}
+
+/**
+ * What the media session says this track is. Bluetooth, Android Auto and the
+ * system's own controls read this and not the notification's metadata, and it
+ * beats whatever tags the stream carries — which is none of them once a server
+ * transcodes it (#78).
+ *
+ * A radio goes without title or artist on purpose: those belong to the stream,
+ * which fills them in track by track (see `onStreamMetadata`), and anything set
+ * here would win over them for as long as the station played.
+ */
+function itemMetadataFor(song: Song): AudioMetadata {
+  const artworkUrl = artworkUrlFor(song);
+  if (song.url) return { artworkUrl };
+  return {
+    title: song.title,
+    artist: song.artist ?? undefined,
+    albumTitle: song.album ?? undefined,
+    artworkUrl,
+  };
 }
 
 function metadataFor(song: Song): AudioMetadata {
@@ -1045,7 +1076,7 @@ let queuedNext: { index: number; id: string } | null = null;
  * Point of entry for every source change. `replace()` installs a new media
  * source and drops whatever was queued behind it, so the memo can't outlive it.
  */
-function replaceSource(p: AudioPlayer, source: { uri: string }) {
+function replaceSource(p: AudioPlayer, source: AudioSource) {
   queuedNext = null;
   p.replace(source);
 }

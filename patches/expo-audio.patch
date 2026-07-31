@@ -13,10 +13,18 @@ index 4bf0f847760cd005ec81db876683f751704f48c3..e98b9cf8758dbb6b56af520237e4e9d5
 +  <uses-permission android:name="android.permission.WAKE_LOCK" />
  </manifest>
 diff --git a/android/src/main/java/expo/modules/audio/AudioModule.kt b/android/src/main/java/expo/modules/audio/AudioModule.kt
-index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..2e60864d82e7e733ceb1cf15b73aaacaa855dfd5 100644
+index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..966a602b756a3acdad9e81e076705e1e86c880dc 100644
 --- a/android/src/main/java/expo/modules/audio/AudioModule.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioModule.kt
-@@ -332,6 +332,15 @@ class AudioModule : Module() {
+@@ -17,6 +17,7 @@ import androidx.media3.common.C.CONTENT_TYPE_HLS
+ import androidx.media3.common.C.CONTENT_TYPE_OTHER
+ import androidx.media3.common.C.CONTENT_TYPE_SS
+ import androidx.media3.common.MediaItem
++import androidx.media3.common.MediaMetadata
+ import androidx.media3.common.Player
+ import androidx.media3.common.util.Util
+ import androidx.media3.datasource.DataSource
+@@ -332,6 +333,15 @@ class AudioModule : Module() {
          player.id
        }
  
@@ -32,7 +40,7 @@ index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..2e60864d82e7e733ceb1cf15b73aaaca
        Property("isBuffering") { player ->
          runOnMain {
            player.ref.playbackState == Player.STATE_BUFFERING
-@@ -457,6 +466,27 @@ class AudioModule : Module() {
+@@ -457,6 +467,27 @@ class AudioModule : Module() {
          }
        }
  
@@ -60,6 +68,34 @@ index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..2e60864d82e7e733ceb1cf15b73aaaca
        Function("setActiveForLockScreen") { ref: AudioPlayer, active: Boolean, metadata: Metadata?, options: AudioLockScreenOptions? ->
          runOnMain {
            ref.setActiveForLockScreen(active, metadata, options)
+@@ -780,13 +811,26 @@ class AudioModule : Module() {
+ 
+   private fun createMediaItem(source: AudioSource?): MediaSource? = source?.uri?.let { uriString ->
+     val uri = uriString.toUri()
+-    val mediaItem = when {
++    val baseItem = when {
+       isRawResource(uri) -> {
+         val file = getResourceName(uri, uriString)
+         MediaItem.fromUri(getRawResourceURI(file))
+       }
+       else -> MediaItem.fromUri(uri)
+     }
++    // The item's own metadata wins over the tags read out of the stream, which
++    // is the point: a transcode arrives stripped of them, and the cover can be
++    // a file on disk that the stream never had.
++    val mediaItem = source.metadata?.let { meta ->
++      baseItem.buildUpon().setMediaMetadata(
++        MediaMetadata.Builder()
++          .setTitle(meta.title)
++          .setArtist(meta.artist)
++          .setAlbumTitle(meta.albumTitle)
++          .setArtworkUri(meta.artworkUrl?.toString()?.toUri())
++          .build()
++      ).build()
++    } ?: baseItem
+ 
+     val preloadedBytes = AudioPreloadManager.get(uriString)
+     val factory: DataSource.Factory = if (preloadedBytes != null) {
 diff --git a/android/src/main/java/expo/modules/audio/AudioPlayer.kt b/android/src/main/java/expo/modules/audio/AudioPlayer.kt
 index f7c43641fc12b627c70759fb49bbe65e746c4c1d..59bd4f9d344f1da0ee5b7630b70d183c4c4a20e2 100644
 --- a/android/src/main/java/expo/modules/audio/AudioPlayer.kt
@@ -184,10 +220,27 @@ index f7c43641fc12b627c70759fb49bbe65e746c4c1d..59bd4f9d344f1da0ee5b7630b70d183c
        }
  
 diff --git a/android/src/main/java/expo/modules/audio/AudioRecords.kt b/android/src/main/java/expo/modules/audio/AudioRecords.kt
-index 1d9541e2ff3eabc621143892b0fc35e7cd728f18..7a0138412758079b7ef00b3a9a96d1b62dc17540 100644
+index 1d9541e2ff3eabc621143892b0fc35e7cd728f18..717920c60e3a1f186bf7f15ff9c274d2b3f62cb6 100644
 --- a/android/src/main/java/expo/modules/audio/AudioRecords.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioRecords.kt
-@@ -101,7 +101,9 @@ enum class LockScreenButtons(val value: Int) : Enumerable {
+@@ -10,7 +10,15 @@ import java.net.URL
+ class AudioSource(
+   @Field val uri: String?,
+   @Field val headers: Map<String, String>?,
+-  @Field val name: String? = null
++  @Field val name: String? = null,
++  /**
++   * What this track is, for the media session: the lock screen session is built
++   * on the player, so what a car over Bluetooth (and the system's own controls)
++   * reads is the item's metadata, not the notification's. Left out, all they
++   * get is whatever tags the stream happens to carry — none, once a server
++   * transcodes it.
++   */
++  @Field val metadata: Metadata? = null
+ ) : Record
+ 
+ enum class LoopMode(val value: String) : Enumerable {
+@@ -101,7 +109,9 @@ enum class LockScreenButtons(val value: Int) : Enumerable {
  
  class AudioLockScreenOptions(
    @Field val showSeekForward: Boolean,
@@ -435,6 +488,24 @@ index 839aaef12d7699ea1a89037b31849775daa079f4..a1fce18411843a6aa636e83576371a07
      }
      return super.onCustomCommand(session, controller, command, args)
    }
+diff --git a/build/Audio.types.d.ts b/build/Audio.types.d.ts
+index 4aba6ad4505f98371840e3c3c9edd4a300001c49..0e33fd8c01bd9fd835c79d7b339650236f891914 100644
+--- a/build/Audio.types.d.ts
++++ b/build/Audio.types.d.ts
+@@ -34,6 +34,13 @@ export type AudioSource = string | number | null | {
+      * Useful for showing track names in a queue or playlist UI.
+      */
+     name?: string;
++    /**
++     * What this track is, for the media session (Bluetooth, Android Auto, the
++     * system's own controls). Their metadata comes from the item, not from
++     * `setActiveForLockScreen`, and the fields given here win over the tags
++     * carried by the stream — which a transcode arrives without. Android only.
++     */
++    metadata?: AudioMetadata;
+ };
+ /**
+  * Options for configuring audio player behavior.
 diff --git a/build/AudioConstants.d.ts b/build/AudioConstants.d.ts
 index a290f9aed8224d89cca6361c102d26b24feaa2ce..7008466705ffdacc2d8ab113d334b82261b5ce68 100644
 --- a/build/AudioConstants.d.ts
