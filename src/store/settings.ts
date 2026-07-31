@@ -54,6 +54,7 @@ function ratingShownKey(): string {
 export const BITRATE_OPTIONS = [
   { label: 'Original', value: 0 },
   { label: '320 kbps', value: 320 },
+  { label: '256 kbps', value: 256 },
   { label: '192 kbps', value: 192 },
   { label: '160 kbps', value: 160 },
   { label: '128 kbps', value: 128 },
