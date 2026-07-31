@@ -66,13 +66,21 @@ export default function PlaybackSettings() {
             />
             {/* Each codec right under its own quality: the codec only applies
                 where a bitrate is set, and reading them as a pair is what says
-                which network each one is about. */}
+                which network each one is about. At "Original" nothing is
+                transcoded, so the codec of that network has nothing to do and
+                is greyed out rather than silently ignored (#72). */}
             <SelectList
               label={t('Streaming codec (Wi-Fi)')}
-              description={t('Codec to transcode to. Only used at a set bitrate (not “Original”), and your server must support it.')}
+              description={
+                maxBitRate > 0
+                  ? t('Codec to transcode to. Your server must support it.')
+                  : t('Not used: at “Original” quality nothing is transcoded.')
+              }
               options={codecOptions}
               value={streamFormat}
               onChange={setStreamFormat}
+              disabled={maxBitRate === 0}
+              disabledLabel={t('Not used')}
             />
             <SelectList
               label={t('Streaming quality (mobile data)')}
@@ -82,9 +90,16 @@ export default function PlaybackSettings() {
             />
             <SelectList
               label={t('Streaming codec (mobile data)')}
+              description={
+                maxBitRateCellular > 0
+                  ? undefined
+                  : t('Not used: at “Original” quality nothing is transcoded.')
+              }
               options={codecOptions}
               value={streamFormatCellular}
               onChange={setStreamFormatCellular}
+              disabled={maxBitRateCellular === 0}
+              disabledLabel={t('Not used')}
             />
             <SwitchList
               options={[

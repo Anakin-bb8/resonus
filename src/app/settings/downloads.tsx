@@ -122,22 +122,31 @@ export default function DownloadsSettings() {
             <Text style={[settingsStyles.sectionTitle, { marginTop: 0 }]}>
               {t('Downloading')}
             </Text>
-            <SelectList
-              label={t('Download codec')}
-              description={t('Codec to transcode to. Only used at a set bitrate (not “Original”), and your server must support it.')}
-              options={TRANSCODE_FORMATS.map((v) => ({
-                value: v,
-                label: v === '' ? t('Server default') : v.toUpperCase(),
-              }))}
-              value={downloadFormat}
-              onChange={setDownloadFormat}
-            />
+            {/* Quality first and the codec under it, as in Quality & playback:
+                at "Original" the original file is downloaded and the codec has
+                nothing to do, so it reads as a pair and is greyed out (#72). */}
             <SelectList
               label={t('Download quality')}
               description={t('Applies to new downloads only.')}
               options={BITRATE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))}
               value={downloadBitRate}
               onChange={setDownloadBitRate}
+            />
+            <SelectList
+              label={t('Download codec')}
+              description={
+                downloadBitRate > 0
+                  ? t('Codec to transcode to. Your server must support it.')
+                  : t('Not used: at “Original” quality nothing is transcoded.')
+              }
+              options={TRANSCODE_FORMATS.map((v) => ({
+                value: v,
+                label: v === '' ? t('Server default') : v.toUpperCase(),
+              }))}
+              value={downloadFormat}
+              onChange={setDownloadFormat}
+              disabled={downloadBitRate === 0}
+              disabledLabel={t('Not used')}
             />
             <SelectList
               label={t('Simultaneous downloads')}

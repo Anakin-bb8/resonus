@@ -127,6 +127,12 @@ const MENU_ITEM_H = 42;
  * (Android-style dropdown) with the options; choosing one closes it. With
  * `collapsible: false` it renders as a visible radio list (e.g. Language screen).
  * Labels come already translated from the caller.
+ *
+ * `disabled` greys the row out and stops it opening: for a setting that another
+ * one above has left with nothing to do (the transcode codec when the quality
+ * is "Original"). It stays visible so it can still be found, and
+ * `disabledLabel` replaces the value, because a greyed-out "OPUS" still reads
+ * as if something were being transcoded to Opus.
  */
 export function SelectList<T extends string | number | boolean>({
   options,
@@ -135,6 +141,8 @@ export function SelectList<T extends string | number | boolean>({
   label,
   description,
   collapsible = true,
+  disabled = false,
+  disabledLabel,
 }: {
   options: { value: T; label: string }[];
   value: T;
@@ -142,6 +150,8 @@ export function SelectList<T extends string | number | boolean>({
   label?: string;
   description?: string;
   collapsible?: boolean;
+  disabled?: boolean;
+  disabledLabel?: string;
 }) {
   const accent = useAccent();
   const frame = useSafeAreaFrame();
@@ -226,18 +236,26 @@ export function SelectList<T extends string | number | boolean>({
       <Pressable
         ref={rowRef}
         accessibilityRole="button"
+        accessibilityState={{ disabled }}
+        disabled={disabled}
         style={({ pressed }) => [
           settingsStyles.cardBox,
           settingsStyles.row,
-          pressed && { opacity: 0.6 },
+          pressed && !disabled && { opacity: 0.6 },
         ]}
         onPress={openMenu}
       >
         <View style={settingsStyles.rowLabelBox}>
-          <Text style={settingsStyles.rowLabel}>{label ?? active?.label}</Text>
+          <Text style={[settingsStyles.rowLabel, disabled && { color: colors.textMuted }]}>
+            {label ?? active?.label}
+          </Text>
           {description ? <Text style={settingsStyles.rowDescription}>{description}</Text> : null}
         </View>
-        {label ? <Text style={settingsStyles.rowValue}>{active?.label}</Text> : null}
+        {label ? (
+          <Text style={[settingsStyles.rowValue, disabled && { color: colors.textMuted }]}>
+            {disabled ? (disabledLabel ?? active?.label) : active?.label}
+          </Text>
+        ) : null}
         <Ionicons name="chevron-down" size={18} color={colors.textMuted} />
       </Pressable>
 
