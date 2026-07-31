@@ -478,7 +478,7 @@
   "Tune the sound band by band.": "Ajusta el so banda a banda.",
   "{songs} will be saved to this device.": "{songs} es guardaran en aquest dispositiu.",
   "Original": "Original",
-  "“Original” uses the highest quality; a lower bitrate saves data.": "«Original» utilitza la màxima qualitat; un bitrate més baix estalvia dades.",
+  "“Original” is the file exactly as it is on the server, with nothing transcoded. A lower bitrate saves data and may cost audible quality.": "«Original» és el fitxer tal com és al servidor, sense transcodificar res. Un bitrate més baix estalvia dades i pot costar qualitat audible.",
   "“{name}” will no longer be available offline.": "«{name}» ja no estarà disponible fora de línia.",
   "Nothing to shuffle yet": "Encara no hi ha res per barrejar",
   "Couldn't load songs.": "No s'han pogut carregar les cançons.",

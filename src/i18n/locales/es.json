@@ -486,7 +486,7 @@
   "Tune the sound band by band.": "Ajusta el sonido banda a banda.",
   "{songs} will be saved to this device.": "{songs} se guardarán en este dispositivo.",
   "Original": "Original",
-  "“Original” uses the highest quality; a lower bitrate saves data.": "«Original» usa la máxima calidad; bajar el bitrate ahorra datos.",
+  "“Original” is the file exactly as it is on the server, with nothing transcoded. A lower bitrate saves data and may cost audible quality.": "«Original» es el fichero tal cual está en el servidor, sin transcodificar nada. Un bitrate más bajo ahorra datos y puede costar calidad audible.",
   "“{name}” will no longer be available offline.": "«{name}» dejará de estar disponible sin conexión.",
   "Nothing to shuffle yet": "Aún no hay nada que barajar",
   "Couldn't load songs.": "No se pudieron cargar las canciones.",

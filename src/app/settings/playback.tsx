@@ -64,7 +64,9 @@ export default function PlaybackSettings() {
             <Text style={[settingsStyles.sectionTitle, { marginTop: 0 }]}>{t('Streaming')}</Text>
             <SelectList
               label={t('Streaming quality (Wi-Fi)')}
-              description={t('“Original” uses the highest quality; a lower bitrate saves data.')}
+              description={t(
+                '“Original” is the file exactly as it is on the server, with nothing transcoded. A lower bitrate saves data and may cost audible quality.',
+              )}
               options={bitrateOptions}
               value={maxBitRate}
               onChange={setMaxBitRate}
