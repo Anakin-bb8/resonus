@@ -223,6 +223,10 @@ function ensurePlayer(idx: number): AudioPlayer {
   p.addListener('trackTransition', () => {
     if (activePlayer() === p) onTrackTransition();
   });
+  // What the source says it is playing. Only radio has anything to say here.
+  p.addListener('streamMetadata', (info) => {
+    if (activePlayer() === p) onStreamMetadata(info);
+  });
   // Equalizer: the native effect attaches to the audio session of THIS player.
   // Since they are singletons (two alternating for crossfade), it's enough to
   // do it on creation; the saved state is applied automatically.
@@ -415,9 +419,13 @@ function artworkUrlFor(song: Song): string | undefined {
 }
 
 function metadataFor(song: Song): AudioMetadata {
+  // A radio that says what it is playing says it here too. Only in the two
+  // lines every song has: the station is not an album and does not go in the
+  // album's place.
+  const live = liveInfo(song);
   return {
-    title: song.title,
-    artist: song.artist ?? undefined,
+    title: live?.title ?? song.title,
+    artist: live?.artist ?? song.artist ?? undefined,
     albumTitle: song.album ?? undefined,
     artworkUrl: artworkUrlFor(song),
   };
@@ -442,6 +450,52 @@ function applyLockScreen(p: AudioPlayer, song: Song) {
     showSkipPrevious: true,
     showSkipNext: true,
   });
+}
+
+// ── What a radio says it is playing ─────────────────────────────────────────
+// A station is one item in the queue and stays there for hours, so the queue
+// cannot say what is on. The stream can: it announces every track as it starts
+// (ICY metadata, which ExoPlayer asks for by itself and hands over as it
+// arrives). Not every stream sends it, and the one that does keeps sending it
+// while the same station plays.
+
+/** What the stream playing `song` says is on, or null if it says nothing. */
+function liveInfo(song: Song | null | undefined): StreamInfo | null {
+  return song?.url ? usePlayerStore.getState().streamInfo : null;
+}
+
+/**
+ * ICY carries a single line, and what everyone puts in it is "Artist - Title".
+ * It is a habit rather than a rule, so a stream that fills the artist in on its
+ * own is believed over the split. Nothing to show gives null.
+ */
+function parseStreamInfo(info: { title?: string; artist?: string }): StreamInfo | null {
+  const raw = info.title?.trim();
+  if (!raw) return null;
+  const artist = info.artist?.trim();
+  if (artist) return { title: raw, artist };
+  const sep = raw.indexOf(' - ');
+  if (sep <= 0) return { title: raw };
+  return { title: raw.slice(sep + 3).trim(), artist: raw.slice(0, sep).trim() };
+}
+
+/**
+ * Reads what the source announced. Only radio uses it: everything else comes
+ * with the server's tags, which beat whatever the decoder scrapes out of a
+ * file, and a download would suddenly rename itself to whatever is inside it.
+ */
+function onStreamMetadata(info: { title?: string; artist?: string }) {
+  const song = currentSong(usePlayerStore.getState());
+  // Between two tracks a stream can go quiet, and that is not a reason to keep
+  // showing the one before, so an empty announcement is applied like any other.
+  const next = song?.url ? parseStreamInfo(info) : null;
+  const prev = usePlayerStore.getState().streamInfo;
+  if (prev?.title === next?.title && prev?.artist === next?.artist) return;
+  usePlayerStore.setState({ streamInfo: next });
+  // The notification and the car read the same thing, and this is the only
+  // moment they get to hear about it.
+  const p = activePlayer();
+  if (song && p && lockOwner === p) applyLockScreen(p, song);
 }
 
 /** Removes lock screen controls (profile change or remote output). */
@@ -680,6 +734,15 @@ const NEXT_LYRICS_DELAY_MS = 5000;
 
 /** Now playing / history + syncs the queue on track change. */
 function onTrackChanged(song: Song) {
+  // Whatever the last stream announced was about the last stream. The
+  // notification was built from it moments ago (this runs right after
+  // `applyLockScreen`), so it has to be told again, or a station with nothing
+  // to say would keep showing the previous one's track.
+  if (usePlayerStore.getState().streamInfo) {
+    usePlayerStore.setState({ streamInfo: null });
+    const p = activePlayer();
+    if (p && lockOwner === p) applyLockScreen(p, song);
+  }
   const { auth, offline } = useAuthStore.getState();
   // Only "I'm listening to this"; playback counts only when crossing the threshold.
   // Offline not sent (server account without connection: no one to send to).
@@ -1893,6 +1956,12 @@ interface PlayerState {
    * nowhere to carry it).
    */
   radioSeed: Song | null;
+  /**
+   * Track the internet radio playing right now says it is on, or null when
+   * there is no radio or the stream doesn't say. It changes on its own, without
+   * the queue changing (see `onStreamMetadata`).
+   */
+  streamInfo: StreamInfo | null;
   playQueue: (
     songs: Song[],
     startIndex?: number,
@@ -1953,9 +2022,26 @@ interface PlayerState {
   reset: () => Promise<void>;
 }
 
+/** What a stream announced it is playing. Its artist is often folded into the
+ *  title by the station, in which case it comes out of the split. */
+export interface StreamInfo {
+  title: string;
+  artist?: string;
+}
+
 /** Song currently playing, or null if the queue is empty. */
 export function currentSong(state: PlayerState): Song | null {
   return state.queue[state.index] ?? null;
+}
+
+/**
+ * What `song`'s stream says it is playing, for the screens that show it. Null
+ * for anything that isn't a radio broadcasting metadata, and then the song's
+ * own title and artist are the whole story.
+ */
+export function useLiveInfo(song: Song | null | undefined): StreamInfo | null {
+  const info = usePlayerStore((s) => s.streamInfo);
+  return song?.url ? info : null;
 }
 
 export const usePlayerStore = create<PlayerState>((set, get) => ({
@@ -1976,6 +2062,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   sourceHref: null,
   radioMode: false,
   radioSeed: null,
+  streamInfo: null,
 
   playQueue: async (songs, startIndex = 0, source, sourceHref) => {
     if (songs.length === 0) return;

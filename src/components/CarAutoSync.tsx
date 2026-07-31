@@ -22,7 +22,7 @@ import {
 } from '@/lib/carAuto';
 import { buildBrowseTree, handleBrowsePlay } from '@/lib/carAutoTree';
 import { useAuthStore } from '@/store/auth';
-import { usePlayerStore } from '@/store/player';
+import { usePlayerStore, type StreamInfo } from '@/store/player';
 
 const REBUILD_DEBOUNCE_MS = 600;
 /** How long after opening before the tree is filled in. Long enough that the
@@ -30,11 +30,13 @@ const REBUILD_DEBOUNCE_MS = 600;
 const DEEP_REBUILD_MS = 45_000;
 const POSITION_PUSH_MS = 1000;
 
-function toCarTrack(song: Song): CarTrack {
+/** `live` is what a radio says it is playing, which replaces the title and the
+ *  artist and nothing else: the station is not an album. */
+function toCarTrack(song: Song, live?: StreamInfo | null): CarTrack {
   return {
     id: song.id,
-    title: song.title || undefined,
-    artist: song.artist || undefined,
+    title: live?.title ?? song.title ?? undefined,
+    artist: live?.artist ?? song.artist ?? undefined,
     album: song.album || undefined,
     artworkUrl: coverArtUrl(song.coverArt ?? song.albumId, 300) || undefined,
     durationMs: Math.round((song.duration ?? 0) * 1000),
@@ -78,13 +80,17 @@ export function CarAutoSync() {
 
     // ── Mirror playback state ──
     const pushNowPlaying = () => {
-      const { queue, index } = usePlayerStore.getState();
+      const { queue, index, streamInfo } = usePlayerStore.getState();
       const current = queue[index] ?? null;
-      setNowPlaying(current ? toCarTrack(current) : null);
+      setNowPlaying(current ? toCarTrack(current, current.url ? streamInfo : null) : null);
     };
     const pushQueue = () => {
       const { queue, index } = usePlayerStore.getState();
-      setQueue(queue.map(toCarTrack), index);
+      // The queue holds the station, not what it happens to be playing.
+      setQueue(
+        queue.map((s) => toCarTrack(s)),
+        index,
+      );
     };
     const pushState = () => {
       const { isPlaying, positionSec, shuffle, repeat } = usePlayerStore.getState();
@@ -104,6 +110,9 @@ export function CarAutoSync() {
         pushNowPlaying();
         pushQueue();
       }
+      // A radio changes track without the queue moving: it is one item for the
+      // whole broadcast, and only the stream knows when a song ends.
+      if (state.streamInfo !== prev.streamInfo) pushNowPlaying();
       if (
         state.isPlaying !== prev.isPlaying ||
         state.shuffle !== prev.shuffle ||

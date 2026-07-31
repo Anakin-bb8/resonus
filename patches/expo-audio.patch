@@ -61,31 +61,31 @@ index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..2e60864d82e7e733ceb1cf15b73aaaca
          runOnMain {
            ref.setActiveForLockScreen(active, metadata, options)
 diff --git a/android/src/main/java/expo/modules/audio/AudioPlayer.kt b/android/src/main/java/expo/modules/audio/AudioPlayer.kt
-index f7c43641fc12b627c70759fb49bbe65e746c4c1d..3919105 100644
+index f7c43641fc12b627c70759fb49bbe65e746c4c1d..59bd4f9d344f1da0ee5b7630b70d183c4c4a20e2 100644
 --- a/android/src/main/java/expo/modules/audio/AudioPlayer.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioPlayer.kt
-@@ -7,6 +7,7 @@ import android.media.audiofx.Visualizer
+@@ -7,7 +7,9 @@ import android.media.audiofx.Visualizer
  import android.util.Log
  import androidx.core.content.ContextCompat
  import androidx.media3.common.AudioAttributes
 +import androidx.media3.common.C
  import androidx.media3.common.MediaItem
++import androidx.media3.common.MediaMetadata
  import androidx.media3.common.PlaybackParameters
  import androidx.media3.common.Player
-@@ -37,6 +38,9 @@ import java.util.UUID
+ import androidx.media3.common.util.UnstableApi
+@@ -37,6 +39,10 @@ import java.util.UUID
  
  private const val PLAYBACK_STATUS_UPDATE = "playbackStatusUpdate"
  private const val AUDIO_SAMPLE_UPDATE = "audioSampleUpdate"
 +private const val REMOTE_PREVIOUS = "remotePrevious"
 +private const val REMOTE_NEXT = "remoteNext"
 +private const val TRACK_TRANSITION = "trackTransition"
++private const val STREAM_METADATA = "streamMetadata"
  private const val SEEK_JUMP_INTERVAL_MS: Long = 10_000
  
  @UnstableApi
-@@ -47,9 +51,22 @@ class AudioPlayer(
-   private val updateInterval: Double,
-   bufferDurationMs: Long = 0
- ) : SharedRef<ExoPlayer>(
+@@ -50,6 +56,19 @@ class AudioPlayer(
    ExoPlayer.Builder(context)
      .setLooper(context.mainLooper)
      .setAudioAttributes(AudioAttributes.DEFAULT, false)
@@ -105,7 +105,7 @@ index f7c43641fc12b627c70759fb49bbe65e746c4c1d..3919105 100644
      .setSeekForwardIncrementMs(SEEK_JUMP_INTERVAL_MS)
      .setSeekBackIncrementMs(SEEK_JUMP_INTERVAL_MS)
      .apply {
-@@ -114,6 +134,42 @@ class AudioPlayer(
+@@ -114,6 +133,42 @@ class AudioPlayer(
      startUpdating()
    }
  
@@ -148,9 +148,30 @@ index f7c43641fc12b627c70759fb49bbe65e746c4c1d..3919105 100644
    fun setActiveForLockScreen(active: Boolean, metadata: Metadata? = null, options: AudioLockScreenOptions? = null) {
      if (active) {
        this.metadata = metadata
-@@ -222,6 +278,13 @@ class AudioPlayer(
+@@ -221,7 +276,34 @@ class AudioPlayer(
+         sendPlayerUpdate(updateMap)
        }
  
++      /**
++       * What the source says it is playing. On an internet radio this is the
++       * ICY metadata the stream sends at the start of every track (ExoPlayer
++       * asks for it on its own and folds it in here, along with ID3 inside the
++       * stream), so it arrives again and again while a single item plays.
++       *
++       * Whether it is worth anything is for JS to decide: on a file this is the
++       * file's own tags, and the app already knows those better than the
++       * decoder does.
++       */
++      override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
++        emit(
++          STREAM_METADATA,
++          mapOf(
++            "title" to mediaMetadata.title?.toString(),
++            "artist" to mediaMetadata.artist?.toString()
++          )
++        )
++      }
++
        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
 +        // Gapless: the player moved to the track queued by `setNextSource` on
 +        // its own. There is no `didJustFinish` for this (it needs STATE_ENDED,
@@ -430,7 +451,7 @@ index a290f9aed8224d89cca6361c102d26b24feaa2ce..7008466705ffdacc2d8ab113d334b822
  //# sourceMappingURL=AudioConstants.d.ts.map
 \ No newline at end of file
 diff --git a/build/AudioModule.types.d.ts b/build/AudioModule.types.d.ts
-index 93b69010ae4cef81c18761ca4fedca8b4089f16f..334fe5561b4ed16e1b093d9764aa94f4e9556618 100644
+index 93b69010ae4cef81c18761ca4fedca8b4089f16f..34cdfb64b61d0e80f40fc9f3ebdbc30654a9bf44 100644
 --- a/build/AudioModule.types.d.ts
 +++ b/build/AudioModule.types.d.ts
 @@ -28,6 +28,11 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
@@ -460,7 +481,7 @@ index 93b69010ae4cef81c18761ca4fedca8b4089f16f..334fe5561b4ed16e1b093d9764aa94f4
      /**
       * Seeks the playback by the given number of seconds.
       * @param seconds The number of seconds to seek by.
-@@ -219,6 +232,13 @@ export type AudioEvents = {
+@@ -219,6 +232,20 @@ export type AudioEvents = {
      playbackStatusUpdate(status: AudioStatus): void;
      /** Fired when audio sampling is enabled and new sample data is available. */
      audioSampleUpdate(data: AudioSample): void;
@@ -471,6 +492,13 @@ index 93b69010ae4cef81c18761ca4fedca8b4089f16f..334fe5561b4ed16e1b093d9764aa94f4
 +    /** Fired when the player moves on by itself to the source queued with
 +     *  `setNextSource` (gapless advance). */
 +    trackTransition(): void;
++    /** Fired when the source announces what it is playing: the ICY metadata of
++     *  an internet radio (sent again with every track) or tags inside the
++     *  stream. Fields are absent when it doesn't send them. Android only. */
++    streamMetadata(info: {
++        title?: string;
++        artist?: string;
++    }): void;
  };
  export declare class AudioRecorder extends SharedObject<RecordingEvents> {
      /**

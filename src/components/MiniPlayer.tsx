@@ -23,7 +23,7 @@ import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { useAuthStore } from '@/store/auth';
-import { currentSong, usePlayerStore } from '@/store/player';
+import { currentSong, useLiveInfo, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
 import { colors, fontSize, radius, spacing } from '@/theme';
@@ -57,6 +57,9 @@ function MiniProgress({ song }: { song: Song }) {
 export function MiniPlayer() {
   const router = useRouter();
   const song = usePlayerStore(currentSong);
+  // A radio saying what it plays says it here too: down here there is only room
+  // for the track and whoever is playing it, so the station stays in the player.
+  const live = useLiveInfo(song);
   const isPlaying = usePlayerStore((s) => s.isPlaying);
   const isBuffering = usePlayerStore((s) => s.isBuffering);
   const toggle = usePlayerStore((s) => s.toggle);
@@ -148,10 +151,14 @@ export function MiniPlayer() {
       <Animated.View style={[styles.details, detailsStyle]}>
         <Cover uri={cover} size={44} placeholderIcon={song.url ? 'radio' : 'musical-notes'} />
         <View style={styles.info}>
-          <MarqueeText text={song.title} style={styles.title} enabled={marqueeTitles} />
-          {song.artist ? (
+          <MarqueeText
+            text={live?.title ?? song.title}
+            style={styles.title}
+            enabled={marqueeTitles}
+          />
+          {live?.artist ?? song.artist ? (
             <Text style={styles.artist} numberOfLines={1}>
-              {song.artist}
+              {live?.artist ?? song.artist}
             </Text>
           ) : null}
         </View>

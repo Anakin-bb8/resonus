@@ -47,7 +47,13 @@ import { formatDuration } from '@/lib/format';
 import { haptic } from '@/lib/haptics';
 import { useArtistPicker } from '@/store/artistPicker';
 import { useAuthStore } from '@/store/auth';
-import { currentSong, SOURCE_FAVORITES, SOURCE_HISTORY, usePlayerStore } from '@/store/player';
+import {
+  currentSong,
+  SOURCE_FAVORITES,
+  SOURCE_HISTORY,
+  useLiveInfo,
+  usePlayerStore,
+} from '@/store/player';
 import { useSettings } from '@/store/settings';
 import { useSongMenu } from '@/store/songMenu';
 import { useToast } from '@/store/toast';
@@ -161,6 +167,7 @@ export default function PlayerScreen() {
   const router = useRouter();
   const isFocused = useIsFocused();
   const song = usePlayerStore(currentSong);
+  const live = useLiveInfo(song);
   const source = usePlayerStore((s) => s.source);
   const sourceHref = usePlayerStore((s) => s.sourceHref);
   const isPlaying = usePlayerStore((s) => s.isPlaying);
@@ -435,8 +442,19 @@ export default function PlayerScreen() {
   const canRate = showRating && hasAccount && serverType !== 'jellyfin' && !song.url;
   // Artist · Album · Year on a single line, but with two tap targets: the
   // artist name goes to the artist, and «Album · Year» to the album.
-  const artistName = song.artist ?? t('Unknown artist');
-  const albumInfo = showAlbumInfo ? [song.album, song.year].filter(Boolean).join(' · ') : '';
+  // A radio announcing what it plays takes over both lines, same as it does
+  // everywhere else. A stream that announces nothing leaves them as they were:
+  // the station's name and "Radio".
+  const title = live?.title ?? song.title;
+  const artistName = live?.artist ?? song.artist ?? t('Unknown artist');
+  // With the two lines above taken by the track, this one is all that is left to
+  // say which station it is, so a radio puts its name here and does it whether
+  // or not album info is on: this is not album info.
+  const albumInfo = live
+    ? song.title
+    : showAlbumInfo
+      ? [song.album, song.year].filter(Boolean).join(' · ')
+      : '';
   // Square, capped at the width: it only shrinks when the height demands it, so
   // on a tall screen with few options it looks exactly as it did before. The
   // rating row shares the slot, so it comes off the top first.
@@ -628,10 +646,10 @@ export default function PlayerScreen() {
                   hitSlop={6}
                   onPress={() => router.push(`/album/${song.albumId}` as never)}
                 >
-                  <MarqueeText text={song.title} style={styles.title} enabled={marqueeTitles} />
+                  <MarqueeText text={title} style={styles.title} enabled={marqueeTitles} />
                 </Pressable>
               ) : (
-                <MarqueeText text={song.title} style={styles.title} enabled={marqueeTitles} />
+                <MarqueeText text={title} style={styles.title} enabled={marqueeTitles} />
               )}
               {(() => {
                 const targets = artistTargets(song);
