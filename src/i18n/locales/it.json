@@ -530,7 +530,6 @@
   "Streaming codec (Wi-Fi)": "Codec di streaming (Wi-Fi)",
   "Streaming codec (mobile data)": "Codec di streaming (dati mobili)",
   "Codec to transcode to. Your server must support it.": "Codec per la transcodifica. Il tuo server deve supportarlo.",
-  "Not used: at “Original” quality nothing is transcoded.": "Non utilizzato: alla qualità “Originale” nulla viene transcodificato.",
   "Not used": "Non utilizzato",
   "View image": "Visualizza l'immagine",
   "Find a station": "Trova una stazione",
