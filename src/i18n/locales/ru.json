@@ -477,7 +477,7 @@
   "{songs} will be saved to this device.": "{songs} будет скачано на это устройство.",
   "Original": "Оригинальное",
   "“Original” is the file exactly as it is on the server, with nothing transcoded. A lower bitrate saves data and may cost audible quality.": "“Оригинальное” качество обеспечивает первоисточник без транскодирования. Меньший битрейт уменьшает потребление интернет-трафика и памяти, но так же может ухудшить качество звучания.",
-  "“{name}” will no longer be available offline.": "Элемент “{name}” перестанет быть доступен в оффлайн режиме.",
+  "“{name}” will no longer be available offline.": "Элемент “{name}” перестанет быть доступен в оффлайн-режиме.",
   "Nothing to shuffle yet": "Пока что нечего перемешивать",
   "Couldn't load songs.": "Не удалось скачать композиции.",
   "Start mix": "Начать микс",
