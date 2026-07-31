@@ -59,6 +59,13 @@ Releases before 0.2.1 are only listed on the
   languages are closer to, and Spanish and Catalan keep the later hours they had.
   The greeting also changes while the screen is open, which it did not before.
   Translators can ask for their own hours, see TRANSLATING.md.
+- "Original" streaming quality says what it actually does. It read as "uses the
+  highest quality", which describes a result rather than what happens, and left
+  room to read it as the highest the codec can manage or the highest available
+  for that track. What it means is that the file arrives exactly as it sits on
+  the server, untouched, which is the whole reason to pick it. The warning that
+  the other options can cost quality you hear was missing too. Raised by
+  @ztx-lyghters.
 - Two strings that could not be translated properly. The row that creates a
   local profile said "Local", an adjective with no noun behind it, and now says
   "Local profile", the name that profile carries on every other screen; and
