@@ -7,6 +7,7 @@ import { star, unstar, type StarType } from '@/api/data';
 import { applyStarChange, resyncFavorites } from '@/lib/favoritesCache';
 import { haptic } from '@/lib/haptics';
 import { useAuthStore } from '@/store/auth';
+import { useToast } from '@/store/toast';
 import { useT } from '@/i18n';
 import { colors } from '@/theme';
 
@@ -21,6 +22,7 @@ export function FavoriteButton({ id, type = 'song', starred, size = 22 }: Props)
   const auth = useAuthStore((s) => s.auth);
   const offline = useAuthStore((s) => s.offline);
   const t = useT();
+  const toast = useToast((s) => s.show);
   const [fav, setFav] = useState(!!starred);
   const [busy, setBusy] = useState(false);
 
@@ -44,9 +46,11 @@ export function FavoriteButton({ id, type = 'song', starred, size = 22 }: Props)
       // Only the id is known here, so removing is exact and adding leaves the
       // list to refresh when something needs it (see `favoritesCache`).
       applyStarChange(type, id, nextFav);
+      toast(nextFav ? t('Added to favorites') : t('Removed from favorites'));
     } catch {
       setFav(!nextFav); // revert on failure
       resyncFavorites();
+      toast(t("Couldn't complete the action"));
     } finally {
       setBusy(false);
     }
