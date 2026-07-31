@@ -39,4 +39,4 @@ body:
         - Other OpenSubsonic
         - Local (no server)
     validations:
-      required: false
+      required: true
