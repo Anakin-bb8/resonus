@@ -85,6 +85,10 @@ Releases before 0.2.1 are only listed on the
 - The blurred background went black for an instant between one song and the
   next, on the player and on the lyrics screen. The previous cover now stays up
   until the next one is ready and they dissolve into each other.
+- The lyrics card on the player stopped short of the bottom of the screen,
+  leaving a strip of background under it. It now runs to the edge, and the
+  controls above it keep their distance from the navigation bar on their own.
+  Found and fixed by @Anakin-bb8.
 - The heart said nothing. Marking a favourite from the swipe or from a menu
   confirmed it, but tapping the heart itself, on the player, the mini player,
   a song row or an artist, did not, and if the server refused the heart quietly
