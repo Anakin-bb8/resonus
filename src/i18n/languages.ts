@@ -18,13 +18,32 @@ import ru from './locales/ru.json';
 import it from './locales/it.json';
 
 type Dict = Record<string, string>;
-type LangDef = { code: string; name: string; dict?: Dict };
+/**
+ * When each greeting starts, as [morning, afternoon, evening] in hours of the
+ * 24h clock. What is left over, from midnight to the start of the morning, is
+ * the fourth greeting ("Good night").
+ *
+ * This is part of a language, not a setting: English calls 6pm the evening and
+ * Spanish is still in the afternoon at that hour. A language that says nothing
+ * gets `DEFAULT_GREETING_HOURS`.
+ */
+type GreetingHours = readonly [number, number, number];
+type LangDef = { code: string; name: string; dict?: Dict; greeting?: GreetingHours };
+
+/**
+ * English hours, and the fallback for any language that hasn't said otherwise:
+ * afternoon from midday and evening from six, which is what most of the
+ * languages we ship are closer to.
+ */
+export const DEFAULT_GREETING_HOURS: GreetingHours = [5, 12, 18];
 
 export const LANGUAGES = [
   { code: 'en', name: 'English' },
-  { code: 'es', name: 'Español', dict: es },
+  // Spanish and Catalan run late: midday is not the afternoon yet, and at 6pm
+  // nobody says "buenas noches". These two are why the hours are per language.
+  { code: 'es', name: 'Español', dict: es, greeting: [6, 13, 21] },
   { code: 'de', name: 'Deutsch', dict: de },
-  { code: 'ca', name: 'Català', dict: ca },
+  { code: 'ca', name: 'Català', dict: ca, greeting: [6, 13, 21] },
   { code: 'ru', name: 'Русский', dict: ru },
   { code: 'it', name: 'Italiano', dict: it },
 ] as const satisfies readonly LangDef[];
@@ -40,6 +59,12 @@ export const LANGUAGE_NAMES = Object.fromEntries(
 export const DICTIONARIES = Object.fromEntries(
   LANGUAGES.filter((l) => 'dict' in l).map((l) => [l.code, (l as { dict: Dict }).dict]),
 ) as Partial<Record<Language, Dict>>;
+
+/** When each greeting starts in this language (see `GreetingHours`). */
+export function greetingHours(lang: Language): GreetingHours {
+  const def = LANGUAGES.find((l) => l.code === lang) as LangDef | undefined;
+  return def?.greeting ?? DEFAULT_GREETING_HOURS;
+}
 
 /** ¿Es `v` un código de idioma soportado? (valida lo leído de disco). */
 export function isLanguage(v: unknown): v is Language {

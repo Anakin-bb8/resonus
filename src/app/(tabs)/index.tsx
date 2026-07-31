@@ -2,7 +2,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useReducer, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -34,6 +34,7 @@ import { FavoritesArt } from '@/components/FavoritesArt';
 import { Message } from '@/components/Message';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { useT } from '@/i18n';
+import { greetingHours } from '@/i18n/languages';
 import { useAuthStore } from '@/store/auth';
 import { checkAutoUrlNow } from '@/store/autoUrl';
 import { useLastPlayed } from '@/store/lastPlayed';
@@ -494,6 +495,7 @@ export default function HomeScreen() {
   const showQuickGrid = useSettings((s) => s.showQuickGrid);
   const showGreeting = useSettings((s) => s.showGreeting);
   const customGreeting = useSettings((s) => s.customGreeting);
+  const language = useSettings((s) => s.language);
   const homeSections = useSettings((s) => s.homeSections);
   // The avatar ring reads the store's accent (not the global constant), so it
   // always recolors when changed or after hydrating; Home is the initial screen
@@ -504,23 +506,47 @@ export default function HomeScreen() {
   // shows its initial.
   const initial = offline && !auth ? 'O' : (auth?.username ?? '?').charAt(0).toUpperCase();
 
-  // Spanish-style time slots: morning until 13, afternoon until 21, evening
-  // until midnight and night the small hours. Spanish and Catalan say the same
-  // thing for the last two ("Buenas noches" / "Bona nit"), so splitting them
-  // changes nothing there; it's English that needed it, where "Good evening"
-  // at 3 in the morning reads wrong.
+  // Four slots, and when each one starts comes from the language rather than
+  // from here: at 6pm English is in the evening and Spanish is still in the
+  // afternoon, so a single set of hours was right in one language and wrong in
+  // the others (it used to be the Spanish one for everybody). Spanish and
+  // Catalan say the same thing for the last two ("Buenas noches" / "Bona nit"),
+  // which is why splitting them costs those two nothing.
+  const [morning, afternoon, evening] = greetingHours(language);
+  const [slotTick, nextSlot] = useReducer((n: number) => n + 1, 0);
   const hour = new Date().getHours();
   const byHour =
-    hour >= 6 && hour < 13
+    hour >= morning && hour < afternoon
       ? t('Good morning')
-      : hour >= 13 && hour < 21
+      : hour >= afternoon && hour < evening
         ? t('Good afternoon')
-        : hour >= 21
+        : hour >= evening
           ? t('Good evening')
           : t('Good night');
   // Custom takes priority; leaving it blank falls back to the time-based one,
   // so clearing it is the way to undo (no need for a "reset" button).
   const greeting = customGreeting.trim() || byHour;
+
+  // The hour is only read while rendering, so a Home left open kept saying good
+  // morning into the afternoon. One timer, armed for the next slot and re-armed
+  // on each tick (a timeout that fires a moment early lands on the same hour,
+  // and this re-arms it rather than getting stuck there).
+  useEffect(() => {
+    if (!showGreeting || customGreeting.trim()) return;
+    const now = new Date();
+    const cuts = [0, morning, afternoon, evening].sort((a, b) => a - b);
+    const next = cuts.find((h) => h > now.getHours());
+    const at = new Date(now);
+    at.setMinutes(0, 0, 0);
+    if (next == null) {
+      at.setDate(at.getDate() + 1);
+      at.setHours(cuts[0]);
+    } else {
+      at.setHours(next);
+    }
+    const id = setTimeout(nextSlot, Math.max(1000, at.getTime() - now.getTime()));
+    return () => clearTimeout(id);
+  }, [slotTick, morning, afternoon, evening, showGreeting, customGreeting]);
 
   // Detects if the server is unreachable (shares cache with the "newest" section).
   // Online only: locally there is no server and the key is also used by QuickGrid.
