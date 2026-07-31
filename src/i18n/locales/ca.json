@@ -126,6 +126,8 @@
   "Download": "Baixa",
   "Download over Wi-Fi only": "Baixa només amb Wi-Fi",
   "Download quality": "Qualitat de baixada",
+  "Simultaneous downloads": "Baixades simultànies",
+  "Songs fetched at the same time. Fewer is gentler on a server that has to transcode each one.": "Cançons que es baixen alhora. Menys és més suau per a un servidor que ha de transcodificar cadascuna.",
   "Download codec": "Còdec de baixada",
   "Streaming codec (Wi-Fi)": "Còdec de streaming (Wi-Fi)",
   "Streaming codec (mobile data)": "Còdec de streaming (dades mòbils)",

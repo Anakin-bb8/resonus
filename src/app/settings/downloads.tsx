@@ -22,7 +22,12 @@ import { formatBytes } from '@/lib/format';
 import { useAuthStore } from '@/store/auth';
 import { useDownloads } from '@/store/downloads';
 import { useLibraryMirror, type MirrorStats } from '@/store/libraryMirror';
-import { BITRATE_OPTIONS, TRANSCODE_FORMATS, useSettings } from '@/store/settings';
+import {
+  BITRATE_OPTIONS,
+  DOWNLOAD_CONCURRENCY_OPTIONS,
+  TRANSCODE_FORMATS,
+  useSettings,
+} from '@/store/settings';
 import { useToast } from '@/store/toast';
 import { colors, fontSize, spacing } from '@/theme';
 
@@ -65,6 +70,8 @@ export default function DownloadsSettings() {
   const setDownloadBitRate = useSettings((s) => s.setDownloadBitRate);
   const downloadFormat = useSettings((s) => s.downloadFormat);
   const setDownloadFormat = useSettings((s) => s.setDownloadFormat);
+  const downloadConcurrency = useSettings((s) => s.downloadConcurrency);
+  const setDownloadConcurrency = useSettings((s) => s.setDownloadConcurrency);
   const downloadWifiOnly = useSettings((s) => s.downloadWifiOnly);
   const setDownloadWifiOnly = useSettings((s) => s.setDownloadWifiOnly);
   const autoOfflineSwitch = useSettings((s) => s.autoOfflineSwitch);
@@ -131,6 +138,13 @@ export default function DownloadsSettings() {
               options={BITRATE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))}
               value={downloadBitRate}
               onChange={setDownloadBitRate}
+            />
+            <SelectList
+              label={t('Simultaneous downloads')}
+              description={t('Songs fetched at the same time. Fewer is gentler on a server that has to transcode each one.')}
+              options={DOWNLOAD_CONCURRENCY_OPTIONS.map((n) => ({ value: n, label: String(n) }))}
+              value={downloadConcurrency}
+              onChange={setDownloadConcurrency}
             />
             <SwitchList
               options={[

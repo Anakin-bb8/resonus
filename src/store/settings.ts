@@ -63,6 +63,13 @@ export const BITRATE_OPTIONS = [
 ] as const;
 
 /**
+ * How many songs may be downloading at once. Three was what the app did before
+ * anybody could choose, and on a small server transcoding each one it was too
+ * much; two still overlaps one transfer with the next.
+ */
+export const DOWNLOAD_CONCURRENCY_OPTIONS = [1, 2, 3];
+
+/**
  * Codec to request for transcoding (Subsonic `format` parameter).
  * '' = the server's default transcoder (MP3 on Navidrome). Only relevant
  * when a bitrate is selected (with "Original" the raw file is served).
@@ -379,6 +386,12 @@ interface SettingsState {
   maxBitRateCellular: number;
   /** Download quality: 0 = original file; rest, transcoded bitrate. */
   downloadBitRate: number;
+  /**
+   * Songs fetched at the same time, across the whole app. Each one can be a
+   * transcode the server has to run, so this is as much a limit on the server
+   * as on the phone (#83).
+   */
+  downloadConcurrency: number;
   /** Streaming transcode codec over Wi-Fi ('' = server default). */
   streamFormat: TranscodeFormat;
   /** Streaming transcode codec over cellular ('' = server default). */
@@ -556,6 +569,7 @@ interface SettingsState {
   setMaxBitRateCellular: (value: number) => void;
   setDownloadBitRate: (value: number) => void;
   setStreamFormat: (value: TranscodeFormat) => void;
+  setDownloadConcurrency: (value: number) => void;
   setStreamFormatCellular: (value: TranscodeFormat) => void;
   setDownloadFormat: (value: TranscodeFormat) => void;
   setDownloadWifiOnly: (value: boolean) => void;
@@ -647,6 +661,7 @@ function snapshot(get: () => SettingsState) {
     maxBitRate: s.maxBitRate,
     maxBitRateCellular: s.maxBitRateCellular,
     downloadBitRate: s.downloadBitRate,
+    downloadConcurrency: s.downloadConcurrency,
     streamFormat: s.streamFormat,
     streamFormatCellular: s.streamFormatCellular,
     downloadFormat: s.downloadFormat,
@@ -718,6 +733,7 @@ const DEFAULTS = {
   maxBitRateCellular: 0,
   downloadBitRate: 0,
   streamFormat: '' as TranscodeFormat,
+  downloadConcurrency: 2,
   streamFormatCellular: '' as TranscodeFormat,
   downloadFormat: '' as TranscodeFormat,
   downloadWifiOnly: false,
@@ -807,6 +823,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
 
   setStreamFormat: (streamFormat) => {
     set({ streamFormat });
+    persist(snapshot(get));
+  },
+
+  setDownloadConcurrency: (downloadConcurrency) => {
+    set({ downloadConcurrency });
     persist(snapshot(get));
   },
 
@@ -1174,6 +1195,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           maxBitRate: number;
           maxBitRateCellular: number;
           downloadBitRate: number;
+          downloadConcurrency: number;
           streamFormat: TranscodeFormat;
           streamFormatCellular: TranscodeFormat;
           downloadFormat: TranscodeFormat;
@@ -1256,6 +1278,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (typeof parsed.downloadBitRate === 'number') {
           set({ downloadBitRate: parsed.downloadBitRate });
+        }
+        if (DOWNLOAD_CONCURRENCY_OPTIONS.includes(parsed.downloadConcurrency as number)) {
+          set({ downloadConcurrency: parsed.downloadConcurrency as number });
         }
         if (TRANSCODE_FORMATS.includes(parsed.streamFormat as TranscodeFormat)) {
           set({ streamFormat: parsed.streamFormat as TranscodeFormat });

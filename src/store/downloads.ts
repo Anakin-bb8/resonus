@@ -47,7 +47,60 @@ import { useSettings } from './settings';
 import { useToast } from './toast';
 
 const ROOT_DIR = FileSystem.documentDirectory + 'downloads/';
-const CONCURRENCY = 3;
+
+// ── How much of the server we take at once ──────────────────────────────────
+// The limit used to be three per group, and a group is not the unit anybody
+// cares about: a discography downloading while an auto-download playlist
+// reconciles was two groups, so six songs at a time, and on a server that
+// transcodes each one that is six ffmpeg processes (#83). These slots are the
+// whole app's budget, whatever is downloading and however it started.
+
+/** Transfers in flight right now, across every group. */
+let slotsInUse = 0;
+/** Workers waiting for one, woken in order. */
+const slotQueue: (() => void)[] = [];
+
+function maxSlots(): number {
+  return useSettings.getState().downloadConcurrency;
+}
+
+async function takeSlot(): Promise<void> {
+  // Re-checked after waking: the limit can have been lowered in the meantime,
+  // and waking one too many is then harmless, it just waits again.
+  while (slotsInUse >= maxSlots()) {
+    await new Promise<void>((resolve) => slotQueue.push(resolve));
+  }
+  slotsInUse++;
+}
+
+function freeSlot(): void {
+  slotsInUse = Math.max(0, slotsInUse - 1);
+  slotQueue.shift()?.();
+}
+
+/**
+ * A server saying "not now" is not a song that cannot be downloaded, and until
+ * now it was counted as one: whatever the server refused was skipped and
+ * reported as failed at the end (#83). Three attempts, backing off in between.
+ */
+const ATTEMPTS = 3;
+const RETRY_PAUSE_MS = 1500;
+
+/** Is this worth trying again, or is the answer going to be the same? */
+function worthRetrying(status: number | undefined): boolean {
+  // No response at all (the network went away mid-transfer), too many requests,
+  // or the server having a bad time. A 404 will still be a 404.
+  return status === undefined || status === 429 || status >= 500;
+}
+
+class TransferError extends Error {
+  constructor(
+    message: string,
+    readonly status?: number,
+  ) {
+    super(message);
+  }
+}
 
 interface GroupProgress {
   done: number;
@@ -503,63 +556,88 @@ export const useDownloads = create<DownloadsState>((set, get) => {
       const tasks = new Set<ReturnType<typeof FileSystem.createDownloadResumable>>();
       activeTasks.set(groupKey, tasks);
 
+      /** One attempt at one song. Throws, so the caller decides about trying again. */
+      const fetchSong = async (song: Song): Promise<void> => {
+        const { url, ext, bitRate: dlBitRate } = songFileUrl(auth, song);
+        const file = `${dir}files/${hashKey(song.id)}.${ext}`;
+        const task = FileSystem.createDownloadResumable(url, file, {}, (p) => {
+          if (p.totalBytesExpectedToWrite > 0) {
+            const fraction = p.totalBytesWritten / p.totalBytesExpectedToWrite;
+            const cur = get().active[groupKey];
+            // Updates coarsely to avoid continuous re-renders.
+            if (cur && fraction - cur.fraction > 0.05) {
+              set((st) => ({
+                active: { ...st.active, [groupKey]: { ...cur, fraction } },
+              }));
+            }
+          }
+        });
+        tasks.add(task);
+        try {
+          const res = await task.downloadAsync();
+          if (!res || res.status !== 200) throw new TransferError(`HTTP ${res?.status}`, res?.status);
+          if (isErrorBody(res.headers)) throw new TransferError('error body, not audio', 200);
+          await cacheLyricsForDownload(auth, song, file);
+          // The size comes from the response, which already counted it. Only
+          // ask the file system when the server sent no length.
+          const bytes = Number(header(res.headers, 'content-length')) || (await fileSize(file));
+          // Each song is persisted on completion: if the app dies mid-album,
+          // already downloaded items survive a restart.
+          await Db.addToCatalog(dir, {
+            songs: [toLocalSong(song, file, dlBitRate, bytes)],
+          });
+          set((st) => {
+            const cur = st.active[groupKey];
+            return {
+              files: { ...st.files, [song.id]: file },
+              dlBitRates:
+                dlBitRate != null ? { ...st.dlBitRates, [song.id]: dlBitRate } : st.dlBitRates,
+              active: cur
+                ? { ...st.active, [groupKey]: { ...cur, done: cur.done + 1, fraction: 0 } }
+                : st.active,
+            };
+          });
+        } catch (e) {
+          // Whatever arrived is not a song: half a file, or the server's excuse
+          // for not sending one.
+          await FileSystem.deleteAsync(file, { idempotent: true }).catch(() => {});
+          throw e;
+        } finally {
+          tasks.delete(task);
+        }
+      };
+
       let failed = 0;
       let next = 0;
-      const workers = Array.from({ length: Math.min(CONCURRENCY, pending.length) }, async () => {
+      // As many workers as slots at most: more would only queue up on the way in.
+      const workers = Array.from({ length: Math.min(maxSlots(), pending.length) }, async () => {
         while (next < pending.length) {
           if (cancelling.has(groupKey)) break; // stop requested by user
           const song = pending[next++];
-          await ensureAlbum(song);
-          if (cancelling.has(groupKey)) break; // may have stopped during cover download
-          const { url, ext, bitRate: dlBitRate } = songFileUrl(auth, song);
-          const file = `${dir}files/${hashKey(song.id)}.${ext}`;
-          const task = FileSystem.createDownloadResumable(url, file, {}, (p) => {
-            if (p.totalBytesExpectedToWrite > 0) {
-              const fraction = p.totalBytesWritten / p.totalBytesExpectedToWrite;
-              const cur = get().active[groupKey];
-              // Updates coarsely to avoid continuous re-renders.
-              if (cur && fraction - cur.fraction > 0.05) {
-                set((st) => ({
-                  active: { ...st.active, [groupKey]: { ...cur, fraction } },
-                }));
+          for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
+            // Held across the whole song, cover and lyrics included: they are
+            // requests to the same server as the audio.
+            await takeSlot();
+            try {
+              if (cancelling.has(groupKey)) break;
+              await ensureAlbum(song);
+              if (cancelling.has(groupKey)) break; // may have stopped during the cover
+              await fetchSong(song);
+              break; // done
+            } catch (e) {
+              // A stop is not a failure; the toast already says it stopped.
+              if (cancelling.has(groupKey)) break;
+              const status = e instanceof TransferError ? e.status : undefined;
+              if (attempt === ATTEMPTS || !worthRetrying(status)) {
+                failed++;
+                break;
               }
+            } finally {
+              // Freed before the pause, so somebody else can use the server
+              // while this one waits for it to calm down.
+              freeSlot();
             }
-          });
-          tasks.add(task);
-          try {
-            const res = await task.downloadAsync();
-            if (!res || res.status !== 200) throw new Error(`HTTP ${res?.status}`);
-            if (isErrorBody(res.headers)) throw new Error('error body, not audio');
-            await cacheLyricsForDownload(auth, song, file);
-            // The size comes from the response, which already counted it. Only
-            // ask the file system when the server sent no length.
-            const bytes =
-              Number(header(res.headers, 'content-length')) || (await fileSize(file));
-            // Each song is persisted on completion: if the app dies mid-album,
-            // already downloaded items survive a restart.
-            await Db.addToCatalog(dir, {
-              songs: [toLocalSong(song, file, dlBitRate, bytes)],
-            });
-            set((st) => {
-              const cur = st.active[groupKey];
-              return {
-                files: { ...st.files, [song.id]: file },
-                dlBitRates:
-                  dlBitRate != null
-                    ? { ...st.dlBitRates, [song.id]: dlBitRate }
-                    : st.dlBitRates,
-                active: cur
-                  ? { ...st.active, [groupKey]: { ...cur, done: cur.done + 1, fraction: 0 } }
-                  : st.active,
-              };
-            });
-          } catch {
-            // Aborted on stop or network error: discard the partially-downloaded file.
-            // If it was a stop it doesn't count as failure (the toast already says "stopped").
-            if (!cancelling.has(groupKey)) failed++;
-            await FileSystem.deleteAsync(file, { idempotent: true }).catch(() => {});
-          } finally {
-            tasks.delete(task);
+            await new Promise((r) => setTimeout(r, RETRY_PAUSE_MS * attempt));
           }
         }
       });
