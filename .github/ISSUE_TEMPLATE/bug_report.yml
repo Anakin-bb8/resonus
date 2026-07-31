@@ -3,13 +3,14 @@ description: Something isn't working
 title: "[Bug]: "
 labels: ["bug"]
 body:
-  - type: checkboxes
-    id: latest
+  - type: input
+    id: version
     attributes:
-      label: Before reporting
-      options:
-        - label: I'm on the latest [release](https://github.com/juananzzz/resonus/releases). You can check your version under Settings › About.
-          required: true
+      label: Resonus version
+      description: Under Settings › About. If it isn't the latest [release](https://github.com/juananzzz/resonus/releases), please try that one first.
+      placeholder: "0.6.0"
+    validations:
+      required: true
   - type: textarea
     id: what
     attributes:
