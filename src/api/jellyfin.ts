@@ -821,28 +821,45 @@ export function downloadUrl(auth: SubsonicAuth, id: string): string {
 }
 
 /**
+ * How Jellyfin is asked for each codec: the container it muxes into and the
+ * codec inside it. Jellyfin builds a transcoding profile out of these two, so
+ * asking for one and not the other gets you neither.
+ */
+const TRANSCODE_TO: Record<string, { container: string; codec: string }> = {
+  mp3: { container: 'mp3', codec: 'mp3' },
+  // Opus lives in an Ogg stream; that is what the .opus files are.
+  opus: { container: 'ogg', codec: 'opus' },
+  // Raw ADTS, the same thing Navidrome hands over for AAC.
+  aac: { container: 'aac', codec: 'aac' },
+};
+
+/**
  * Streaming URL (`/Audio/{id}/universal`): the server serves the file as-is
  * if the container is supported and fits within the max bitrate, otherwise
- * transcodes to mp3. `maxBitRate` in kbps, as in Subsonic.
+ * transcodes to `format`. `maxBitRate` in kbps, as in Subsonic.
+ *
+ * `format` used to be ignored here, which quietly turned every choice into mp3
+ * (#82): a download set to Opus arrived as an mp3 named `.opus`, at the right
+ * bitrate, with the app showing the codec that had been asked for rather than
+ * the one that came. Left empty it is still mp3, which is what "server
+ * default" amounts to on a server that transcodes to whatever it is told.
  */
-// `_format` (Subsonic codec) does not apply to Jellyfin: its `universal`
-// endpoint negotiates container/codec with its own parameters. Accepted for
-// signature compatibility.
 export function streamUrl(
   auth: SubsonicAuth,
   id: string,
   maxBitRate = 0,
   _timeOffset = 0,
-  _format = '',
+  format = '',
 ): string {
+  const target = TRANSCODE_TO[format] ?? TRANSCODE_TO.mp3;
   return buildUrl(auth, `/Audio/${id}/universal`, {
     UserId: auth.jfUserId,
     DeviceId: auth.jfDeviceId,
     api_key: auth.jfToken,
     Container: 'opus,webm|opus,mp3,aac,m4a|aac,m4b|aac,flac,webma,webm|webma,wav,ogg',
-    TranscodingContainer: 'mp3',
+    TranscodingContainer: target.container,
     TranscodingProtocol: 'http',
-    AudioCodec: 'mp3',
+    AudioCodec: target.codec,
     MaxStreamingBitrate: maxBitRate > 0 ? maxBitRate * 1000 : 140_000_000,
   });
 }
