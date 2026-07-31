@@ -1,4 +1,8 @@
-/** Full artist discography, as a vertical list or a grid of covers. */
+/**
+ * Full artist discography, as a vertical list or a grid of covers. With
+ * `?section=appears-on` it lists the albums the artist only appears on
+ * instead — same screen, same layout preference, only the other row's albums.
+ */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
@@ -13,11 +17,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { coverArtUrl, getArtist, type Album } from '@/api/data';
+import { coverArtUrl, getAppearsOn, getArtist, type Album } from '@/api/data';
 import { AlbumCard } from '@/components/AlbumCard';
 import { Cover } from '@/components/Cover';
 import { Message } from '@/components/Message';
 import { useT } from '@/i18n';
+import { splitArtistAlbums } from '@/lib/artistAlbums';
 import { listPerf } from '@/lib/listPerf';
 import { useAuthStore } from '@/store/auth';
 import { useSettings } from '@/store/settings';
@@ -30,7 +35,8 @@ const GAP = spacing.sm;
 const CARD = (Dimensions.get('window').width - spacing.lg * 2 - GAP * (COLUMNS - 1)) / COLUMNS;
 
 export default function DiscographyScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, section } = useLocalSearchParams<{ id: string; section?: string }>();
+  const guestsOnly = section === 'appears-on';
   const router = useRouter();
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
   const t = useT();
@@ -45,8 +51,26 @@ export default function DiscographyScreen() {
     queryFn: () => getArtist(id),
     enabled: canFetch && !!id,
   });
+  const name = data?.artist.name;
 
-  const albums = [...(data?.albums ?? [])].sort((a, b) => (b.year ?? 0) - (a.year ?? 0));
+  // Same query (and cache entry) the artist screen already filled, so arriving
+  // from its "Show all" costs nothing. It's needed for the discography too:
+  // the split is what keeps collaborations out of it, and without waiting for
+  // it this list wouldn't hold the same albums as the row it came from.
+  const {
+    data: appearsOn,
+    isLoading: loadingGuests,
+    isError: guestsError,
+    refetch: refetchGuests,
+  } = useQuery({
+    queryKey: ['appearsOn', id],
+    queryFn: () => getAppearsOn(id, name!),
+    enabled: canFetch && !!id && !!name,
+  });
+
+  const split = splitArtistAlbums(data?.albums ?? [], appearsOn ?? []);
+  const albums = guestsOnly ? split.guest : split.own;
+  const loading = isLoading || loadingGuests;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -59,9 +83,18 @@ export default function DiscographyScreen() {
         >
           <Ionicons name="chevron-back" size={26} color={colors.text} />
         </Pressable>
-        <Text style={styles.title} numberOfLines={1}>
-          {data?.artist.name ?? t('Discography')}
-        </Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.title} numberOfLines={1}>
+            {data?.artist.name ?? (guestsOnly ? t('Appears on') : t('Discography'))}
+          </Text>
+          {/* With the artist's name up there, which of the two lists this is
+              would otherwise only be told by the albums themselves. */}
+          {data ? (
+            <Text style={styles.subtitle} numberOfLines={1}>
+              {guestsOnly ? t('Appears on') : t('Discography')}
+            </Text>
+          ) : null}
+        </View>
         <Pressable
           hitSlop={10}
           accessibilityRole="button"
@@ -72,10 +105,16 @@ export default function DiscographyScreen() {
         </Pressable>
       </View>
 
-      {isLoading ? (
+      {loading ? (
         <ActivityIndicator style={{ marginTop: spacing.xl }} color={colors.accent} />
-      ) : isError || !data ? (
-        <Message text={t("Couldn't load the artist.")} onRetry={() => refetch()} />
+      ) : isError || !data || guestsError ? (
+        <Message
+          text={t("Couldn't load the artist.")}
+          onRetry={() => {
+            void refetch();
+            void refetchGuests();
+          }}
+        />
       ) : (
         <FlatList
           {...listPerf}
@@ -124,7 +163,8 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingBottom: spacing.md,
   },
-  title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '700', flex: 1 },
+  title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '700' },
+  subtitle: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: '600' },
   list: {
     paddingHorizontal: spacing.lg,
     paddingBottom: SCREEN_BOTTOM_PADDING,

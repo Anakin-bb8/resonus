@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Animated,
   Dimensions,
+  FlatList,
   Pressable,
   StyleSheet,
   Text,
@@ -27,7 +28,7 @@ import {
   getArtistInfo,
   getTopSongs,
 } from '@/api/data';
-import { type Song } from '@/api/subsonic';
+import { type Album, type Song } from '@/api/subsonic';
 import { AlbumCard } from '@/components/AlbumCard';
 import { Cover } from '@/components/Cover';
 import { CoverViewer } from '@/components/CoverViewer';
@@ -41,6 +42,8 @@ import { useDominantColor } from '@/hooks/useDominantColor';
 import { useDownloadMessage } from '@/hooks/useDownloadMessage';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { useT } from '@/i18n';
+import { splitArtistAlbums } from '@/lib/artistAlbums';
+import { listPerf } from '@/lib/listPerf';
 import { useAuthStore } from '@/store/auth';
 import { groupDownloadState, useDownloads } from '@/store/downloads';
 import { currentSong, usePlayerStore } from '@/store/player';
@@ -51,6 +54,14 @@ import { colors, fontSize, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
 
 const WIDTH = Dimensions.get('window').width;
 const HEADER_H = Math.min(WIDTH, 360);
+const CARD_W = 140;
+/**
+ * Cards per album row. The rows are for a look around, not for the whole
+ * catalogue — that's what "Show all" is for — but ten was short enough that
+ * regular discographies didn't fit (#69). The row is virtualized, so what this
+ * really caps is how far you can swipe before being sent to the full list.
+ */
+const ROW_LIMIT = 20;
 
 export default function ArtistScreen() {
   useSettings((s) => s.accentColor); // re-render when accent changes
@@ -179,22 +190,7 @@ export default function ArtistScreen() {
   // Shuffle icon lights up (accent) while this artist's queue is the one playing
   // and it's shuffled — same "reflects the live state" idea as the play button.
   const shuffleActive = isCurrentArtistQueue && playerShuffle;
-  // Some servers (Navidrome with artist participations on) list collaboration
-  // albums inside `getArtist` as well, so "already in the discography" does NOT
-  // mean "own album". When the server confirmed a participation we move the
-  // album out of the discography instead of dropping it — assuming otherwise is
-  // what made "Appears on" never show up on those servers.
-  const guests = appearsOn ?? [];
-  const confirmedIds = new Set(guests.filter((a) => a.confirmed).map((a) => a.id));
-  // Unconfirmed ones are guesses from a name search: there the discography is
-  // still the best evidence of what's the artist's own.
-  const ownAlbumIds = new Set(data.albums.map((a) => a.id));
-  const albums = data.albums
-    .filter((a) => !confirmedIds.has(a.id))
-    .sort((a, b) => (b.year ?? 0) - (a.year ?? 0));
-  const guestAlbums = guests
-    .filter((a) => a.confirmed || !ownAlbumIds.has(a.id))
-    .sort((a, b) => (b.year ?? 0) - (a.year ?? 0));
+  const { own: albums, guest: guestAlbums } = splitArtistAlbums(data.albums, appearsOn ?? []);
   const headerUri =
     info?.imageUrl ?? coverArtUrl( data.artist.coverArt ?? data.artist.id, 800);
 
@@ -484,40 +480,15 @@ export default function ArtistScreen() {
         ) : null}
 
         {albums.length > 0 ? (
-          <View style={styles.section}>
-            <Link href={`/artist/discography/${id}`} asChild>
-              <Pressable style={styles.sectionHeader}>
-                <Text style={styles.sectionHeaderTitle}>{t('Discography')}</Text>
-                {albums.length > 1 ? (
-                  <Text style={styles.showAll}>{t('Show all')}</Text>
-                ) : null}
-              </Pressable>
-            </Link>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.row}
-            >
-              {albums.slice(0, 10).map((album) => (
-                <AlbumCard key={album.id} album={album} width={140} />
-              ))}
-            </ScrollView>
-          </View>
+          <AlbumRow title={t('Discography')} albums={albums} href={`/artist/discography/${id}`} />
         ) : null}
 
         {guestAlbums.length > 0 ? (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('Appears on')}</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.row}
-            >
-              {guestAlbums.slice(0, 10).map((album) => (
-                <AlbumCard key={album.id} album={album} width={140} />
-              ))}
-            </ScrollView>
-          </View>
+          <AlbumRow
+            title={t('Appears on')}
+            albums={guestAlbums}
+            href={`/artist/discography/${id}?section=appears-on`}
+          />
         ) : null}
 
         {info?.biography ? (
@@ -669,6 +640,34 @@ export default function ArtistScreen() {
           </>
         )}
       </SheetModal>
+    </View>
+  );
+}
+
+/**
+ * One of the album rows ("Discography", "Appears on"), capped at ROW_LIMIT
+ * cards with its "Show all" header for the rest.
+ */
+function AlbumRow({ title, albums, href }: { title: string; albums: Album[]; href: string }) {
+  const t = useT();
+  const shown = albums.slice(0, ROW_LIMIT);
+  return (
+    <View style={styles.section}>
+      <Link href={href} asChild>
+        <Pressable style={styles.sectionHeader}>
+          <Text style={styles.sectionHeaderTitle}>{title}</Text>
+          {albums.length > 1 ? <Text style={styles.showAll}>{t('Show all')}</Text> : null}
+        </Pressable>
+      </Link>
+      <FlatList
+        {...listPerf}
+        horizontal
+        data={shown}
+        keyExtractor={(a: Album) => a.id}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.row}
+        renderItem={({ item }) => <AlbumCard album={item} width={CARD_W} />}
+      />
     </View>
   );
 }

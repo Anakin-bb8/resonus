@@ -37,6 +37,9 @@ Releases before 0.2.1 are only listed on the
 
 ### Changed
 
+- An artist's album rows hold twenty covers instead of ten, and "Appears on"
+  got the same "Show all" the discography already had, with its own screen for
+  the whole list. Asked for by @ztx-lyghters.
 - The play button on an artist always has something to play. With no popular
   tracks it plays the discography from the earliest album on, which is what a
   server that keeps no play counts leaves you with, and until now the button
