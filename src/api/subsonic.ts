@@ -1333,15 +1333,17 @@ export async function createShare(
   id: string,
   description?: string,
   expiresAt?: number,
-): Promise<string> {
+): Promise<{ id: string; url: string }> {
   const res = await request<{ shares?: { share?: { id: string; url?: string }[] } }>(
     auth,
     'createShare.view',
     { id, description, expires: expiresAt ? Math.round(expiresAt) : undefined },
   );
-  const url = res.shares?.share?.[0]?.url;
-  if (!url) throw new SubsonicRequestError('The server did not return a link', false);
-  return url;
+  const share = res.shares?.share?.[0];
+  if (!share?.url) throw new SubsonicRequestError('The server did not return a link', false);
+  // The id comes back too, and it is what lets Navidrome's own API be asked for
+  // the one thing Subsonic left out (see `setShareDownloadable`).
+  return { id: share.id, url: share.url };
 }
 
 /**

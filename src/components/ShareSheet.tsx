@@ -21,6 +21,7 @@ import {
   Platform,
   Pressable,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from 'react-native';
@@ -30,7 +31,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useBottomSheetAnim } from '@/hooks/useBottomSheetAnim';
 import { useT } from '@/i18n';
-import { shareItem } from '@/lib/share';
+import { canShareDownloads, shareItem } from '@/lib/share';
 import { useSettings, SHARE_EXPIRIES, type ShareExpiry } from '@/store/settings';
 import { useSharePicker } from '@/store/sharePicker';
 import { useToast } from '@/store/toast';
@@ -40,18 +41,26 @@ const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
 
 /**
+ * "Never", as a date. There is no value that means no expiry: leaving it out,
+ * a zero and a negative all read as "use your default" on the other side, so
+ * the only honest way to say never is to say a date nobody will be around for.
+ */
+const NEVER = Date.UTC(2100, 0, 1);
+
+/**
  * When a link made now should stop working, or undefined to say nothing and
  * leave it to the server. A month is 30 days: nobody sharing an album means
  * "the 31st at this exact time", and the exact date is there for whoever does.
  */
 function expiryAt(kind: ShareExpiry): number | undefined {
-  const spans: Record<Exclude<ShareExpiry, 'server'>, number> = {
+  const spans: Record<Exclude<ShareExpiry, 'server' | 'never'>, number> = {
     hour: HOUR,
     day: DAY,
     week: 7 * DAY,
     month: 30 * DAY,
   };
   if (kind === 'server') return undefined;
+  if (kind === 'never') return NEVER;
   return Date.now() + spans[kind];
 }
 
@@ -64,6 +73,11 @@ export function GlobalShareSheet() {
   const toast = useToast((s) => s.show);
   const lastUsed = useSettings((s) => s.shareExpiry);
   const setLastUsed = useSettings((s) => s.setShareExpiry);
+  const downloads = useSettings((s) => s.shareDownloadable);
+  const setDownloads = useSettings((s) => s.setShareDownloadable);
+  // Only Navidrome can be told this, and only through its own API. Elsewhere
+  // the row isn't there rather than being there and doing nothing.
+  const canDownloads = canShareDownloads();
   const { dismiss, pan, backdropStyle, sheetStyle, onSheetLayout } = useBottomSheetAnim(
     !!target,
     close,
@@ -80,6 +94,7 @@ export function GlobalShareSheet() {
     day: t('1 day'),
     week: t('1 week'),
     month: t('1 month'),
+    never: t('Never'),
     server: t("The server's default"),
   };
 
@@ -118,10 +133,13 @@ export function GlobalShareSheet() {
   async function share(expiresAt: number | undefined) {
     if (!target || sharing) return;
     setSharing(true);
-    const ok = await shareItem(target.id, target.name, expiresAt);
+    const res = await shareItem(target.id, target.name, expiresAt, canDownloads && downloads);
     setSharing(false);
     dismiss(close);
-    if (!ok) toast(t('Couldn’t create the link'));
+    if (!res.ok) toast(t('Couldn’t create the link'));
+    // The link is out and it plays; it is only the downloading part that didn't
+    // take, and saying nothing would leave whoever gets it wondering.
+    else if (res.downloadsFailed) toast(t('The link doesn’t allow downloads'));
   }
 
   return (
@@ -175,6 +193,26 @@ export function GlobalShareSheet() {
                   <Text style={styles.rowText}>{t('Pick a date…')}</Text>
                   <Ionicons name="calendar-outline" size={20} color={colors.textSecondary} />
                 </Pressable>
+                {/* Below the line because it is not one of the answers: it does
+                    not share, it decides what the link will allow. */}
+                {canDownloads ? (
+                  <>
+                    <View style={styles.divider} />
+                    <Pressable
+                      style={({ pressed }) => [styles.row, pressed && { opacity: 0.6 }]}
+                      accessibilityRole="switch"
+                      accessibilityState={{ checked: downloads }}
+                      onPress={() => setDownloads(!downloads)}
+                    >
+                      <Text style={styles.rowText}>{t('Allow downloads')}</Text>
+                      <Switch
+                        value={downloads}
+                        onValueChange={setDownloads}
+                        trackColor={{ true: colors.accent }}
+                      />
+                    </Pressable>
+                  </>
+                ) : null}
               </>
             )}
           </Animated.View>

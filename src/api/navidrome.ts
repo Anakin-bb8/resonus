@@ -57,6 +57,31 @@ async function ndFetch(auth: SubsonicAuth, path: string, init: RequestInit): Pro
   throw new NavidromeError(`Error del servidor (${res.status})`, 'other');
 }
 
+/**
+ * Lets a share be downloaded, not just listened to.
+ *
+ * Subsonic's `createShare` takes an id, a description and an expiry and nothing
+ * else, so this is the only way to reach that flag. The share is still created
+ * through Subsonic, which is what returns the public link the server wants
+ * handed out (it honours `ND_SHAREURL`, which we would have no way of guessing);
+ * this only edits the one field afterwards.
+ *
+ * The description goes along because Navidrome writes both columns from what it
+ * is sent, so leaving it out would blank the one just set.
+ */
+export async function setShareDownloadable(
+  auth: SubsonicAuth,
+  id: string,
+  downloadable: boolean,
+  description?: string,
+): Promise<void> {
+  await ndFetch(auth, `/api/share/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ downloadable, description: description ?? '' }),
+  });
+}
+
 /** What the image belongs to; both live under the same native API shape. */
 export type CoverKind = 'playlist' | 'radio';
 

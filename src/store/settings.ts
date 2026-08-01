@@ -99,15 +99,26 @@ export type ListLayout = 'list' | 'grid';
 
 /**
  * How long a shared link lives. `server` leaves it to whoever runs the server,
- * which is what every share did before the sheet existed; the rest are spans
- * from the moment the link is made. An exact date is not one of these: it is
- * picked in the sheet and belongs to that one link, so there is nothing worth
- * remembering about it.
+ * which is what every share did before the sheet existed, and on Navidrome
+ * means a year unless it was configured otherwise; the rest are spans from the
+ * moment the link is made. `never` is a date far enough away to mean it: the
+ * API has no way to say "no expiry", and every value it does understand that
+ * looks like one (nothing, zero, a negative) is read as "use your default".
+ *
+ * An exact date is not one of these: it is picked in the sheet and belongs to
+ * that one link, so there is nothing worth remembering about it.
  */
-export type ShareExpiry = 'hour' | 'day' | 'week' | 'month' | 'server';
+export type ShareExpiry = 'hour' | 'day' | 'week' | 'month' | 'never' | 'server';
 
 /** The ones above, in the order the sheet offers them. */
-export const SHARE_EXPIRIES: ShareExpiry[] = ['hour', 'day', 'week', 'month', 'server'];
+export const SHARE_EXPIRIES: ShareExpiry[] = [
+  'hour',
+  'day',
+  'week',
+  'month',
+  'never',
+  'server',
+];
 
 /**
  * Maximum length of the Home custom greeting. It easily fits in one line next
@@ -587,6 +598,8 @@ interface SettingsState {
   genreLayout: ListLayout;
   /** Last expiry chosen when sharing, offered again the next time. */
   shareExpiry: ShareExpiry;
+  /** Whether the last share allowed downloading (Navidrome only). */
+  shareDownloadable: boolean;
   /** Accent color (hex). */
   accentColor: string;
   /** UI font (system font family; `system` = default). */
@@ -661,6 +674,7 @@ interface SettingsState {
   setDiscographyLayout: (value: ListLayout) => void;
   setGenreLayout: (value: ListLayout) => void;
   setShareExpiry: (value: ShareExpiry) => void;
+  setShareDownloadable: (value: boolean) => void;
   setAccentColor: (value: string) => void;
   setAppFont: (value: AppFont) => void;
   /** Resets to factory defaults (language is preserved). */
@@ -750,6 +764,7 @@ function snapshot(get: () => SettingsState) {
     discographyLayout: s.discographyLayout,
     genreLayout: s.genreLayout,
     shareExpiry: s.shareExpiry,
+    shareDownloadable: s.shareDownloadable,
     accentColor: s.accentColor,
     appFont: s.appFont,
   };
@@ -833,6 +848,8 @@ const DEFAULTS = {
   genreLayout: 'grid' as ListLayout,
   // What every share did before there was anything to choose.
   shareExpiry: 'server' as ShareExpiry,
+  // Off: the server has its own default for this and nothing was overriding it.
+  shareDownloadable: false,
   accentColor: DEFAULT_ACCENT,
   appFont: 'system' as AppFont,
 };
@@ -1173,6 +1190,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setShareDownloadable: (shareDownloadable) => {
+    set({ shareDownloadable });
+    persist(snapshot(get));
+  },
+
   setGenreLayout: (genreLayout) => {
     set({ genreLayout });
     persist(snapshot(get));
@@ -1298,6 +1320,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           discographyLayout: ListLayout;
           genreLayout: ListLayout;
           shareExpiry: ShareExpiry;
+          shareDownloadable: boolean;
           accentColor: string;
           appFont: AppFont;
         }>;
@@ -1564,6 +1587,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (SHARE_EXPIRIES.includes(parsed.shareExpiry as ShareExpiry)) {
           set({ shareExpiry: parsed.shareExpiry as ShareExpiry });
+        }
+        if (typeof parsed.shareDownloadable === 'boolean') {
+          set({ shareDownloadable: parsed.shareDownloadable });
         }
         if (typeof parsed.accentColor === 'string' && /^#[0-9a-f]{6}$/i.test(parsed.accentColor)) {
           set({ accentColor: parsed.accentColor });
