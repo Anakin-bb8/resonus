@@ -9,9 +9,12 @@
 import { useState } from 'react';
 import { ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 
+import { songListSorts } from '@/api/data';
 import { SettingRow, SettingsPage, settingsStyles } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
 import { perfBlocks, perfOps, perfReport, perfSince, resetPerfLog } from '@/lib/perfLog';
+import { useAuthStore } from '@/store/auth';
+import { enabledFolderIds } from '@/store/libraries';
 import { colors, fontSize, spacing } from '@/theme';
 
 export default function DiagnosticsSettings() {
@@ -20,6 +23,19 @@ export default function DiagnosticsSettings() {
   // resetting, so reading it doesn't add work of its own.
   const [tick, setTick] = useState(0);
   const blocks = perfBlocks();
+  // What the profile is, in the terms the code asks about it. Half the reports
+  // that start with "this doesn't show up for me" end here.
+  const auth = useAuthStore((s) => s.auth);
+  const offline = useAuthStore((s) => s.offline);
+  const folderFilter = enabledFolderIds(auth);
+  const profileLines = [
+    `type: ${auth?.serverType ?? '—'}`,
+    `native password: ${auth?.ndPassword || auth?.password ? 'yes' : 'no'}`,
+    `plain auth: ${auth?.plainAuth ? 'yes' : 'no'}`,
+    `library filter: ${folderFilter ? folderFilter.join(', ') : 'none'}`,
+    `offline: ${offline ? 'yes' : 'no'}`,
+    `song sorts: ${(auth || offline ? songListSorts() : []).join(', ') || '—'}`,
+  ];
   const ops = perfOps();
   const minutes = Math.max(1, Math.round((Date.now() - perfSince()) / 60000));
 
@@ -33,6 +49,13 @@ export default function DiagnosticsSettings() {
         <Text style={settingsStyles.sectionDescription}>
           {t('Measured over the last {n} min of use.', { n: minutes })}
         </Text>
+
+        <Text style={settingsStyles.sectionTitle}>{t('Profile')}</Text>
+        {profileLines.map((line) => (
+          <Text key={line} style={styles.line}>
+            {line}
+          </Text>
+        ))}
 
         <Text style={settingsStyles.sectionTitle}>{t('Interface freezes')}</Text>
         <Text style={settingsStyles.sectionDescription}>
@@ -67,7 +90,7 @@ export default function DiagnosticsSettings() {
         <SettingRow
           icon="share-outline"
           label={t('Share report')}
-          onPress={() => void Share.share({ message: perfReport() })}
+          onPress={() => void Share.share({ message: `${profileLines.join('\n')}\n\n${perfReport()}` })}
         />
         <SettingRow
           icon="refresh"
