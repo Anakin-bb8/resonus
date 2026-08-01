@@ -77,7 +77,7 @@ const SEARCH_COUNT = 50;
 const DEBOUNCE_MS = 300;
 
 const SORT_LABEL: Record<SongListSort, string> = {
-  server: 'Library order',
+  server: 'Default',
   recent: 'Recent',
   alpha: 'A-Z',
   added: 'Recently added',

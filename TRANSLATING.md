@@ -303,7 +303,7 @@ as missing. That is expected: **leave them out and ignore the count.**
 
 | String | Where / what it is |
 | --- | --- |
-| `Library order` | Sorting pill: the order the **server keeps** its songs in, which is not alphabetical and usually ends up grouped by artist. Only appears where the server cannot sort songs |
+| `Default` | Sorting pill: what you get when nothing is sorted, which is the order the **server keeps** its songs in. It is not alphabetical and usually ends up grouped by artist, and it is not Resonus deciding. Only appears where the server cannot sort songs |
 | `Find a song` | The search box's placeholder on that screen |
 | `No songs yet` | Empty state when the library has no songs |
 | `Your recently played songs will show up here.` / `Your most played songs will show up here.` | Empty states for those two orders, before anything has been played |
