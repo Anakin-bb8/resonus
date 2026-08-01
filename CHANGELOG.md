@@ -87,6 +87,13 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- Resonus no longer claims the phone's call audio for itself. Starting
+  playback took over the route calls use, which the app has no reason to touch,
+  and it kept it for as long as it was open. On a car that is the kind of thing
+  that gets music treated as a phone call, which is what it sounds like: narrow,
+  crackly, nothing like the file. It also now says what it plays is music, which
+  is what lets Android send it down the low power path instead of mixing it on
+  the CPU. Raised by @CraftoHohenvels and @Anakin-bb8.
 - Cover art reached the notification and nothing else. What a car shows over
   Bluetooth, what Android Auto shows and what the system's own controls show
   all come from the track, and nothing was ever attached to it, so all they had

@@ -13,7 +13,7 @@ index 4bf0f847760cd005ec81db876683f751704f48c3..e98b9cf8758dbb6b56af520237e4e9d5
 +  <uses-permission android:name="android.permission.WAKE_LOCK" />
  </manifest>
 diff --git a/android/src/main/java/expo/modules/audio/AudioModule.kt b/android/src/main/java/expo/modules/audio/AudioModule.kt
-index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..966a602b756a3acdad9e81e076705e1e86c880dc 100644
+index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..f1424ce89ba335052a97ee5734054ae29b668b08 100644
 --- a/android/src/main/java/expo/modules/audio/AudioModule.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioModule.kt
 @@ -17,6 +17,7 @@ import androidx.media3.common.C.CONTENT_TYPE_HLS
@@ -24,7 +24,16 @@ index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..966a602b756a3acdad9e81e076705e1e
  import androidx.media3.common.Player
  import androidx.media3.common.util.Util
  import androidx.media3.datasource.DataSource
-@@ -332,6 +333,15 @@ class AudioModule : Module() {
+@@ -57,6 +58,8 @@ class AudioModule : Module() {
+   private var shouldPlayInBackground = false
+   private var audioEnabled = true
+   private var shouldRouteThroughEarpiece = false
++  /** Whether the earpiece routing below was ever actually turned on. */
++  private var routedThroughEarpiece = false
+   private var focusAcquired = false
+   private var interruptionMode: InterruptionMode? = null
+   private var allowsBackgroundRecording = false
+@@ -332,6 +335,15 @@ class AudioModule : Module() {
          player.id
        }
  
@@ -40,7 +49,7 @@ index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..966a602b756a3acdad9e81e076705e1e
        Property("isBuffering") { player ->
          runOnMain {
            player.ref.playbackState == Player.STATE_BUFFERING
-@@ -457,6 +467,27 @@ class AudioModule : Module() {
+@@ -457,6 +469,27 @@ class AudioModule : Module() {
          }
        }
  
@@ -68,7 +77,7 @@ index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..966a602b756a3acdad9e81e076705e1e
        Function("setActiveForLockScreen") { ref: AudioPlayer, active: Boolean, metadata: Metadata?, options: AudioLockScreenOptions? ->
          runOnMain {
            ref.setActiveForLockScreen(active, metadata, options)
-@@ -780,13 +811,26 @@ class AudioModule : Module() {
+@@ -780,13 +813,26 @@ class AudioModule : Module() {
  
    private fun createMediaItem(source: AudioSource?): MediaSource? = source?.uri?.let { uriString ->
      val uri = uriString.toUri()
@@ -96,8 +105,42 @@ index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..966a602b756a3acdad9e81e076705e1e
  
      val preloadedBytes = AudioPreloadManager.get(uriString)
      val factory: DataSource.Factory = if (preloadedBytes != null) {
+@@ -834,10 +880,32 @@ class AudioModule : Module() {
+     }
+   }
+ 
++  /**
++   * Only touches the routing when the earpiece is actually asked for, and only
++   * undoes it once it has been.
++   *
++   * Upstream ran this on every `setAudioModeAsync` call, so an app that never
++   * mentions the earpiece still ended up calling `setSpeakerphoneOn(true)`.
++   * Since Android 12 that is `setCommunicationDevice(built-in speaker)`: the
++   * app claims a device for *call* audio and holds it for as long as it lives.
++   * A music app has no business holding one, and it is the kind of state that
++   * makes a car treat what it is playing as call audio.
++   *
++   * Turning it back off releases the claim instead of forcing the speaker,
++   * which is what "no longer routing through the earpiece" actually means.
++   */
+   @Suppress("DEPRECATION")
+   private fun updatePlaySoundThroughEarpiece(playThroughEarpiece: Boolean) {
++    if (!playThroughEarpiece && !routedThroughEarpiece) return
++    routedThroughEarpiece = playThroughEarpiece
+     audioManager.mode = if (playThroughEarpiece) AudioManager.MODE_IN_COMMUNICATION else AudioManager.MODE_NORMAL
+-    audioManager.setSpeakerphoneOn(!playThroughEarpiece)
++    if (playThroughEarpiece) {
++      audioManager.setSpeakerphoneOn(false)
++    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
++      audioManager.clearCommunicationDevice()
++    } else {
++      audioManager.setSpeakerphoneOn(false)
++    }
+   }
+ 
+   private fun retrieveStreamType(uri: Uri): Int = Util.inferContentType(uri)
 diff --git a/android/src/main/java/expo/modules/audio/AudioPlayer.kt b/android/src/main/java/expo/modules/audio/AudioPlayer.kt
-index f7c43641fc12b627c70759fb49bbe65e746c4c1d..59bd4f9d344f1da0ee5b7630b70d183c4c4a20e2 100644
+index f7c43641fc12b627c70759fb49bbe65e746c4c1d..640ecc619014e50c8c1bd78e388ef77d6ee85c54 100644
 --- a/android/src/main/java/expo/modules/audio/AudioPlayer.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioPlayer.kt
 @@ -7,7 +7,9 @@ import android.media.audiofx.Visualizer
@@ -121,10 +164,22 @@ index f7c43641fc12b627c70759fb49bbe65e746c4c1d..59bd4f9d344f1da0ee5b7630b70d183c
  private const val SEEK_JUMP_INTERVAL_MS: Long = 10_000
  
  @UnstableApi
-@@ -50,6 +56,19 @@ class AudioPlayer(
+@@ -49,7 +55,30 @@ class AudioPlayer(
+ ) : SharedRef<ExoPlayer>(
    ExoPlayer.Builder(context)
      .setLooper(context.mainLooper)
-     .setAudioAttributes(AudioAttributes.DEFAULT, false)
+-    .setAudioAttributes(AudioAttributes.DEFAULT, false)
++    // Say what this is. AudioAttributes.DEFAULT leaves the content type as
++    // UNKNOWN, and the system reads it to decide how to treat the audio: which
++    // volume it belongs to, and whether it can go down the low power path
++    // instead of being mixed on the CPU. Music is what we always play.
++    .setAudioAttributes(
++      AudioAttributes.Builder()
++        .setUsage(C.USAGE_MEDIA)
++        .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
++        .build(),
++      false
++    )
 +    // Pause when the audio output becomes noisy (wired headphones unplugged or a
 +    // Bluetooth device disconnects), instead of blasting through the speaker.
 +    // expo-audio only handles audio-focus loss, which fires for calls/other apps
@@ -141,7 +196,7 @@ index f7c43641fc12b627c70759fb49bbe65e746c4c1d..59bd4f9d344f1da0ee5b7630b70d183c
      .setSeekForwardIncrementMs(SEEK_JUMP_INTERVAL_MS)
      .setSeekBackIncrementMs(SEEK_JUMP_INTERVAL_MS)
      .apply {
-@@ -114,6 +133,42 @@ class AudioPlayer(
+@@ -114,6 +143,42 @@ class AudioPlayer(
      startUpdating()
    }
  
@@ -184,7 +239,7 @@ index f7c43641fc12b627c70759fb49bbe65e746c4c1d..59bd4f9d344f1da0ee5b7630b70d183c
    fun setActiveForLockScreen(active: Boolean, metadata: Metadata? = null, options: AudioLockScreenOptions? = null) {
      if (active) {
        this.metadata = metadata
-@@ -221,7 +276,34 @@ class AudioPlayer(
+@@ -221,7 +286,34 @@ class AudioPlayer(
          sendPlayerUpdate(updateMap)
        }
  
