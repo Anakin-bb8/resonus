@@ -98,6 +98,18 @@ export type LibrarySort = 'recent' | 'added' | 'alpha';
 export type ListLayout = 'list' | 'grid';
 
 /**
+ * How long a shared link lives. `server` leaves it to whoever runs the server,
+ * which is what every share did before the sheet existed; the rest are spans
+ * from the moment the link is made. An exact date is not one of these: it is
+ * picked in the sheet and belongs to that one link, so there is nothing worth
+ * remembering about it.
+ */
+export type ShareExpiry = 'hour' | 'day' | 'week' | 'month' | 'server';
+
+/** The ones above, in the order the sheet offers them. */
+export const SHARE_EXPIRIES: ShareExpiry[] = ['hour', 'day', 'week', 'month', 'server'];
+
+/**
  * Maximum length of the Home custom greeting. It easily fits in one line next
  * to the right-side buttons; exceeding that would push them out. It's a sanity
  * cap, not a guarantee: the font is user-chosen and "WWWW" takes much more
@@ -570,6 +582,8 @@ interface SettingsState {
   discographyLayout: ListLayout;
   /** List or grid on a genre's albums. Its own key, same reasoning. */
   genreLayout: ListLayout;
+  /** Last expiry chosen when sharing, offered again the next time. */
+  shareExpiry: ShareExpiry;
   /** Accent color (hex). */
   accentColor: string;
   /** UI font (system font family; `system` = default). */
@@ -643,6 +657,7 @@ interface SettingsState {
   setBrowseAlbumsLayout: (value: ListLayout) => void;
   setDiscographyLayout: (value: ListLayout) => void;
   setGenreLayout: (value: ListLayout) => void;
+  setShareExpiry: (value: ShareExpiry) => void;
   setAccentColor: (value: string) => void;
   setAppFont: (value: AppFont) => void;
   /** Resets to factory defaults (language is preserved). */
@@ -731,6 +746,7 @@ function snapshot(get: () => SettingsState) {
     browseAlbumsLayout: s.browseAlbumsLayout,
     discographyLayout: s.discographyLayout,
     genreLayout: s.genreLayout,
+    shareExpiry: s.shareExpiry,
     accentColor: s.accentColor,
     appFont: s.appFont,
   };
@@ -812,6 +828,8 @@ const DEFAULTS = {
   discographyLayout: 'list' as ListLayout,
   // Grid, like browsing albums: a genre is browsed by cover, not read by name.
   genreLayout: 'grid' as ListLayout,
+  // What every share did before there was anything to choose.
+  shareExpiry: 'server' as ShareExpiry,
   accentColor: DEFAULT_ACCENT,
   appFont: 'system' as AppFont,
 };
@@ -1147,6 +1165,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setShareExpiry: (shareExpiry) => {
+    set({ shareExpiry });
+    persist(snapshot(get));
+  },
+
   setGenreLayout: (genreLayout) => {
     set({ genreLayout });
     persist(snapshot(get));
@@ -1271,6 +1294,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           browseAlbumsLayout: ListLayout;
           discographyLayout: ListLayout;
           genreLayout: ListLayout;
+          shareExpiry: ShareExpiry;
           accentColor: string;
           appFont: AppFont;
         }>;
@@ -1534,6 +1558,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (parsed.genreLayout === 'list' || parsed.genreLayout === 'grid') {
           set({ genreLayout: parsed.genreLayout });
+        }
+        if (SHARE_EXPIRIES.includes(parsed.shareExpiry as ShareExpiry)) {
+          set({ shareExpiry: parsed.shareExpiry as ShareExpiry });
         }
         if (typeof parsed.accentColor === 'string' && /^#[0-9a-f]{6}$/i.test(parsed.accentColor)) {
           set({ accentColor: parsed.accentColor });

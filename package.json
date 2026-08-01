@@ -5,6 +5,7 @@
   "license": "GPL-3.0-or-later",
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",
+    "@react-native-community/datetimepicker": "8.6.0",
     "@react-native-community/slider": "5.1.2",
     "@tanstack/react-query": "^5.101.1",
     "expo": "~55.0.27",

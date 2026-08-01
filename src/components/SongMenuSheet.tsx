@@ -35,7 +35,7 @@ import { useCanShare } from '@/hooks/useCanShare';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { applyStarChange, resyncFavorites } from '@/lib/favoritesCache';
 import { artistTargets } from '@/lib/artistNav';
-import { shareItem } from '@/lib/share';
+import { useSharePicker } from '@/store/sharePicker';
 import { normKey } from '@/lib/localLibrary';
 import { useArtistPicker } from '@/store/artistPicker';
 import { useAuthStore } from '@/store/auth';
@@ -574,9 +574,7 @@ export function SongMenuSheet() {
                       label={t('Share')}
                       onPress={() => {
                         close();
-                        void shareItem(song.id, song.title).then((ok) => {
-                          if (!ok) toast(t('Couldn’t create the link'));
-                        });
+                        useSharePicker.getState().open({ id: song.id, name: song.title });
                       }}
                     />
                   ) : null}

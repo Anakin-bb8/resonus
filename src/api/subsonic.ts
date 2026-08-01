@@ -1282,19 +1282,22 @@ export async function hasJukeboxRole(auth: SubsonicAuth): Promise<boolean> {
 /**
  * Public link to a song, album or playlist, created on the server.
  *
- * How long it lives and whether it can be reached from outside is the server's
- * business (Navidrome: `ND_ENABLESHARING` and `ND_DEFAULTSHAREEXPIRATION`), so
- * no expiry is sent: whoever runs the server already decided.
+ * `expiresAt` is a moment in time (ms since 1970), the only thing the API takes
+ * about a share's life. Without it the server decides, which is what happened
+ * for everybody until now (Navidrome: `ND_DEFAULTSHAREEXPIRATION`). Whether the
+ * link allows downloading is not in the API at all: that one stays the server's
+ * business.
  */
 export async function createShare(
   auth: SubsonicAuth,
   id: string,
   description?: string,
+  expiresAt?: number,
 ): Promise<string> {
   const res = await request<{ shares?: { share?: { id: string; url?: string }[] } }>(
     auth,
     'createShare.view',
-    { id, description },
+    { id, description, expires: expiresAt ? Math.round(expiresAt) : undefined },
   );
   const url = res.shares?.share?.[0]?.url;
   if (!url) throw new SubsonicRequestError('The server did not return a link', false);

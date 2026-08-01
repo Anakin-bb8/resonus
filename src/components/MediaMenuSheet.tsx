@@ -18,7 +18,7 @@ import { useAlbumDownloads } from '@/hooks/useAlbumDownloads';
 import { useCanShare } from '@/hooks/useCanShare';
 import { useDownloadMessage } from '@/hooks/useDownloadMessage';
 import { queryClient } from '@/lib/query';
-import { shareItem } from '@/lib/share';
+import { useSharePicker } from '@/store/sharePicker';
 import { songsLabel, useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
 import { useDownloads } from '@/store/downloads';
@@ -253,9 +253,7 @@ export function MediaMenuSheet() {
                 label={t('Share')}
                 onPress={() => {
                   close();
-                  void shareItem(album ? album.id : playlist!.id, name).then((ok) => {
-                    if (!ok) toast(t('Couldn’t create the link'));
-                  });
+                  useSharePicker.getState().open({ id: album ? album.id : playlist!.id, name });
                 }}
               />
             ) : null}

@@ -11,6 +11,12 @@ Releases before 0.2.1 are only listed on the
 
 ### Added
 
+- Sharing asks how long the link should last: an hour, a day, a week, a month,
+  a date off the calendar, or whatever the server does by default, which is what
+  every link did until now. Choosing is what creates it, so it is one tap more
+  than before, and the last answer comes back marked for the next time. Whether
+  a link allows downloading is not something the Subsonic API can say, so that
+  one is still up to the server. Asked for by @ztx-lyghters.
 - Internet radio shows what is playing. Stations that announce their tracks put
   the song and the artist where the station's name used to sit, on the player,
   the mini player, the notification, the lock screen and in the car, and they

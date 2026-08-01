@@ -14,13 +14,20 @@ import { useAuthStore } from '@/store/auth';
  * Creates the link and opens the share sheet. Returns false if the server
  * refused to create it (sharing turned off, no permission, no connection), so
  * the caller can say so; the sheet being dismissed is not a failure.
+ *
+ * `expiresAt` is when the link should stop working (ms since 1970); without it
+ * the server's own default decides, as it always did.
  */
-export async function shareItem(id: string, description?: string): Promise<boolean> {
+export async function shareItem(
+  id: string,
+  description?: string,
+  expiresAt?: number,
+): Promise<boolean> {
   const auth = useAuthStore.getState().auth;
   if (!auth) return false;
   let url: string;
   try {
-    url = await createShare(auth, id, description);
+    url = await createShare(auth, id, description, expiresAt);
   } catch {
     return false;
   }

@@ -32,7 +32,7 @@ import { useServerCover } from '@/hooks/useServerCover';
 import { useSongSort } from '@/hooks/useSongSort';
 import { songsLabel, useT } from '@/i18n';
 import { formatTotalDuration } from '@/lib/format';
-import { shareItem } from '@/lib/share';
+import { useSharePicker } from '@/store/sharePicker';
 import { useAuthStore } from '@/store/auth';
 import { useAutoDownloads } from '@/store/autoDownloads';
 import { groupDownloadState, useDownloads } from '@/store/downloads';
@@ -482,9 +482,7 @@ export default function PlaylistScreen() {
                 style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
                 onPress={() => {
                   close();
-                  void shareItem(id, data.playlist.name).then((ok) => {
-                    if (!ok) toast(t('Couldn’t create the link'));
-                  });
+                  useSharePicker.getState().open({ id, name: data.playlist.name });
                 }}
               >
                 <Ionicons name="share-social-outline" size={24} color={colors.text} />
