@@ -29,6 +29,7 @@ import { GestureDetector, GestureHandlerRootView } from 'react-native-gesture-ha
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useAccent } from '@/hooks/useAccent';
 import { useBottomSheetAnim } from '@/hooks/useBottomSheetAnim';
 import { useT } from '@/i18n';
 import { canShareDownloads, shareItem } from '@/lib/share';
@@ -70,6 +71,9 @@ export function GlobalShareSheet() {
   const close = useSharePicker((s) => s.close);
   const insets = useSafeAreaInsets();
   const t = useT();
+  // From the store, not `colors.accent`: the sheet has to re-render for the
+  // switch and the tick to follow a change of accent.
+  const accent = useAccent();
   const toast = useToast((s) => s.show);
   const lastUsed = useSettings((s) => s.shareExpiry);
   const setLastUsed = useSettings((s) => s.setShareExpiry);
@@ -164,7 +168,7 @@ export function GlobalShareSheet() {
             <Text style={styles.subtitle}>{t('The link expires in')}</Text>
             <View style={styles.divider} />
             {sharing ? (
-              <ActivityIndicator style={{ marginVertical: spacing.xl }} color={colors.accent} />
+              <ActivityIndicator style={{ marginVertical: spacing.xl }} color={accent} />
             ) : (
               <>
                 {SHARE_EXPIRIES.map((kind) => (
@@ -181,7 +185,7 @@ export function GlobalShareSheet() {
                     {/* The last one used, so sharing the same way twice is a
                         matter of tapping where the tick already is. */}
                     {kind === lastUsed ? (
-                      <Ionicons name="checkmark" size={20} color={colors.accent} />
+                      <Ionicons name="checkmark" size={20} color={accent} />
                     ) : null}
                   </Pressable>
                 ))}
@@ -208,7 +212,8 @@ export function GlobalShareSheet() {
                       <Switch
                         value={downloads}
                         onValueChange={setDownloads}
-                        trackColor={{ true: colors.accent }}
+                        trackColor={{ false: colors.border, true: accent }}
+                        thumbColor={colors.text}
                       />
                     </Pressable>
                   </>
