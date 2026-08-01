@@ -9,6 +9,20 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-08-01
+
+Songs get a place of their own: a chip on Home opens the library's songs with a
+search box, rows or covers, and the same orders browsing albums and artists
+already had. Which of those the server can actually do varies, so on Navidrome
+they are asked of its own API, which is the only way an alphabetical listing of
+a large library is possible at all.
+
+Sharing now says when a link should stop working, and on Navidrome whether it
+can be downloaded from and not only listened to.
+
+And Resonus no longer takes over the phone's call audio while it plays, which is
+what could make music arrive in the car sounding like a phone call.
+
 ### Added
 
 - A "Songs" chip on Home, next to Albums and Artists, opening the library's
