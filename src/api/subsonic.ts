@@ -403,6 +403,14 @@ export type AlbumListType =
   | 'alphabeticalByArtist'
   | 'starred';
 
+/**
+ * Ordering for the Songs screen. Not every server can do all of them, which is
+ * why the screen asks (`songListSorts`) instead of offering the lot: Subsonic
+ * has no sorted song listing at all, and a chip that quietly does nothing is
+ * worse than a chip that isn't there.
+ */
+export type SongListSort = 'server' | 'alpha' | 'added' | 'frequent' | 'random';
+
 export async function getAlbumList(
   auth: SubsonicAuth,
   type: AlbumListType = 'newest',
@@ -824,6 +832,38 @@ export async function getRandomSongs(
     { size, ...(genre ? { genre } : {}), ...(musicFolderId ? { musicFolderId } : {}) },
   );
   return res.randomSongs?.song ?? [];
+}
+
+/**
+ * The library's songs, a page at a time.
+ *
+ * Subsonic has no endpoint that lists songs, so this is `search3` with an empty
+ * query, which is the agreed way to ask for everything (OpenSubsonic says as
+ * much and Navidrome answers with all of them, paginated). What it cannot do is
+ * order them: an empty search comes back in the server's own order, whatever
+ * that is, so this is the only listing the Songs screen can offer here. Sorting
+ * would mean pulling the whole library down to sort it on the phone, which on a
+ * six-figure library is not a thing to do.
+ */
+export async function getSongList(
+  auth: SubsonicAuth,
+  sort: SongListSort = 'server',
+  count = 50,
+  offset = 0,
+  musicFolderId?: string,
+): Promise<Song[]> {
+  // The one order Subsonic does have, and it doesn't paginate: a page of new
+  // random songs is what "more" means here.
+  if (sort === 'random') return getRandomSongs(auth, count, undefined, musicFolderId);
+  const res = await request<{ searchResult3?: { song?: Song[] } }>(auth, 'search3.view', {
+    query: '',
+    songCount: count,
+    songOffset: offset,
+    albumCount: 0,
+    artistCount: 0,
+    ...(musicFolderId ? { musicFolderId } : {}),
+  });
+  return res.searchResult3?.song ?? [];
 }
 
 /** Most popular songs by an artist (by name). */

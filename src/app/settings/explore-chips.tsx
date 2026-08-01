@@ -27,6 +27,7 @@ const LABEL: Record<ExploreChipKey, string> = {
   favorites: 'Favorites',
   albums: 'Albums',
   artists: 'Artists',
+  songs: 'Songs',
   genres: 'Genres',
   radio: 'Radio',
   history: 'Recently played',

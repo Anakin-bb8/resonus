@@ -8,7 +8,7 @@ import { tg } from '@/i18n';
 import { profileScopeId, useAuthStore } from '@/store/auth';
 import { usePlayCounts } from '@/store/playCounts';
 import { usePlayHistory } from '@/store/playHistory';
-import { type Album, type Artist, type ArtistInfo, type GuestAlbum, type Playlist, type SearchResult, type Song, type StarType, type Starred } from '@/api/subsonic';
+import { type Album, type Artist, type ArtistInfo, type GuestAlbum, type Playlist, type SearchResult, type Song, type SongListSort, type StarType, type Starred } from '@/api/subsonic';
 import { queryClient } from '@/lib/query';
 import { deleteItem, getItem, setItem } from '@/lib/storage';
 import { getDownloadsCatalog } from '@/store/downloads';
@@ -356,6 +356,42 @@ export async function getAppearsOn(artistId: string): Promise<GuestAlbum[]> {
 
 export function getArtistInfo(_id: string): ArtistInfo {
   return { similarArtists: [] };
+}
+
+/**
+ * The catalog's songs, a page at a time. Here everything is already in memory,
+ * so ordering costs nothing and the screen offers what it likes: `server` is
+ * the catalog's own order (how the library was read off the device).
+ */
+export async function getSongList(
+  sort: SongListSort = 'server',
+  count = 50,
+  offset = 0,
+): Promise<Song[]> {
+  const c = await ensureCatalog();
+  if (!c) return [];
+  let songs = [...c.songs];
+  switch (sort) {
+    case 'alpha':
+      songs.sort((a, b) => a.title.localeCompare(b.title));
+      break;
+    case 'frequent': {
+      const counts = usePlayCounts.getState().counts;
+      songs = songs
+        .filter((s) => (counts[s.id] ?? 0) > 0)
+        .sort((a, b) => (counts[b.id] ?? 0) - (counts[a.id] ?? 0));
+      break;
+    }
+    case 'random':
+      for (let i = songs.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [songs[i], songs[j]] = [songs[j], songs[i]];
+      }
+      break;
+    default: // 'server': the catalog as it was read
+      break;
+  }
+  return songs.slice(offset, offset + count);
 }
 
 /** Most played songs according to the local play counter. */

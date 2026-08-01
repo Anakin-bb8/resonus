@@ -11,6 +11,15 @@ Releases before 0.2.1 are only listed on the
 
 ### Added
 
+- A "Songs" chip on Home, next to Albums and Artists, opening the library's
+  songs with a search box, multi-select for building a playlist out of loose
+  tracks, and infinite scroll. Which orders it offers depends on the server:
+  Subsonic has no endpoint that lists songs in any order, so there it is the
+  server's own order plus shuffle, while Jellyfin and a local library also get
+  A-Z, recently added and most played. Sorting the rest would mean pulling the
+  whole library onto the phone, which a large one will not survive. It can be
+  hidden or moved like every other chip, in Settings › Appearance › Explore
+  chips. Asked for by @rdnamil.
 - Sharing asks how long the link should last: an hour, a day, a week, a month,
   a date off the calendar, or whatever the server does by default, which is what
   every link did until now. Choosing is what creates it, so it is one tap more

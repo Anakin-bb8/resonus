@@ -236,6 +236,7 @@ export type ExploreChipKey =
   | 'favorites'
   | 'albums'
   | 'artists'
+  | 'songs'
   | 'genres'
   | 'radio'
   | 'history';
@@ -251,6 +252,7 @@ const EXPLORE_CHIP_KEYS: ExploreChipKey[] = [
   'favorites',
   'albums',
   'artists',
+  'songs',
   'genres',
   'radio',
   'history',
@@ -262,6 +264,7 @@ export const DEFAULT_EXPLORE_CHIPS: ExploreChip[] = [
   { key: 'favorites', enabled: false },
   { key: 'albums', enabled: true },
   { key: 'artists', enabled: true },
+  { key: 'songs', enabled: true },
   { key: 'genres', enabled: true },
   { key: 'radio', enabled: true },
   { key: 'history', enabled: false },

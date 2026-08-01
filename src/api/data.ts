@@ -245,6 +245,34 @@ export function getAlbumsByGenre(genre: string, size?: number, offset?: number):
  * concatenated: this list has no meaningful global order to merge by (the
  * server returns them however it stores them), so there's nothing to sort.
  */
+/**
+ * The library's songs, a page at a time (the Songs screen). Offline it is the
+ * local catalog, which can order itself because it is already in memory; on a
+ * server it is whatever that server can do, which `songListSorts` states.
+ */
+export function getSongList(
+  sort: Subsonic.SongListSort = 'server',
+  count = 50,
+  offset = 0,
+): Promise<Subsonic.Song[]> {
+  if (isOffline()) return Local.getSongList(sort, count, offset);
+  const a = auth();
+  const ids = enabledFolderIds(a);
+  if (!ids) return Subsonic.getSongList(a, sort, count, offset);
+  if (ids.length === 1) return Subsonic.getSongList(a, sort, count, offset, ids[0]);
+  // Several libraries: the same page from each, concatenated. Like the songs of
+  // a genre, this listing has no global order to merge by.
+  return Promise.all(ids.map((id) => Subsonic.getSongList(a, sort, count, offset, id))).then(
+    (lists) => dedupeById(lists.flat()).slice(0, count),
+  );
+}
+
+/** Orders the Songs screen can offer here. Offline the catalog does its own. */
+export function songListSorts(): Subsonic.SongListSort[] {
+  if (isOffline()) return ['server', 'alpha', 'frequent', 'random'];
+  return Subsonic.songListSorts(auth());
+}
+
 export function getSongsByGenre(genre: string, count = 50, offset = 0): Promise<Subsonic.Song[]> {
   const a = auth();
   const ids = enabledFolderIds(a);

@@ -354,13 +354,21 @@ const EXPLORE: Record<ExploreChipKey, { href?: string; icon: keyof typeof Ionico
   favorites: { href: '/favorites', icon: 'heart-outline', label: 'Favorites' },
   albums: { href: '/browse/albums', icon: 'disc-outline', label: 'Albums' },
   artists: { href: '/browse/artists', icon: 'people-outline', label: 'Artists' },
+  songs: { href: '/browse/songs', icon: 'musical-notes-outline', label: 'Songs' },
   genres: { href: '/genres', icon: 'pricetags-outline', label: 'Genres' },
   radio: { href: '/radio', icon: 'radio-outline', label: 'Radio' },
   history: { href: '/history', icon: 'time-outline', label: 'Recently played' },
 };
 
-// Locally there is shuffle, albums and artists (radio and genres are server-side).
-const OFFLINE_KEYS = new Set<ExploreChipKey>(['shuffle', 'favorites', 'albums', 'artists']);
+// Locally there is shuffle, albums, artists and songs (radio and genres are
+// server-side).
+const OFFLINE_KEYS = new Set<ExploreChipKey>([
+  'shuffle',
+  'favorites',
+  'albums',
+  'artists',
+  'songs',
+]);
 
 function ExploreChips({ offline }: { offline: boolean }) {
   const t = useT();

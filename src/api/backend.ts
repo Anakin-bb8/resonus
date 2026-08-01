@@ -8,7 +8,12 @@
  */
 import * as Jellyfin from './jellyfin';
 import * as Subsonic from './subsonic';
-import { type AlbumListType, type StarType, type SubsonicAuth } from './subsonic';
+import {
+  type AlbumListType,
+  type SongListSort,
+  type StarType,
+  type SubsonicAuth,
+} from './subsonic';
 
 export type {
   Album,
@@ -27,6 +32,7 @@ export type {
   ScanStatus,
   SearchResult,
   Song,
+  SongListSort,
   SongLyrics,
   StarType,
   Starred,
@@ -104,6 +110,28 @@ export const getAlbumsByGenre = (
   offset?: number,
   musicFolderId?: string,
 ) => api(auth).getAlbumsByGenre(auth, genre, size, offset, musicFolderId);
+
+export const getSongList = (
+  auth: SubsonicAuth,
+  sort?: SongListSort,
+  count?: number,
+  offset?: number,
+  musicFolderId?: string,
+) => api(auth).getSongList(auth, sort, count, offset, musicFolderId);
+
+/**
+ * Orders the Songs screen can offer on this server, in the order it shows them.
+ *
+ * Jellyfin sorts songs itself, so it gets the lot except its own storage order,
+ * which is not a thing there. Subsonic has no sorted song listing: an empty
+ * `search3` is the only way to list everything and it comes back however the
+ * server keeps it, so that plus random is all there is. The chips follow this
+ * rather than pretending.
+ */
+export const songListSorts = (auth: SubsonicAuth): SongListSort[] =>
+  auth.serverType === 'jellyfin'
+    ? ['alpha', 'added', 'frequent', 'random']
+    : ['server', 'random'];
 
 export const getSongsByGenre = (
   auth: SubsonicAuth,

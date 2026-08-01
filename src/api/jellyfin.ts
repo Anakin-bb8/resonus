@@ -31,6 +31,7 @@ import {
   type ScanStatus,
   type SearchResult,
   type Song,
+  type SongListSort,
   type SongLyrics,
   type StarType,
   type Starred,
@@ -358,6 +359,35 @@ export async function getAlbumsByGenre(
 }
 
 /** Songs tagged with a genre (Jellyfin filters items by genre directly). */
+const SONG_SORT: Record<SongListSort, { SortBy: string; SortOrder?: string }> = {
+  // Jellyfin has no "the order they are in" to speak of, so its own idea of
+  // order is the alphabet. It never offers this one anyway (see backend.ts).
+  server: { SortBy: 'SortName' },
+  alpha: { SortBy: 'SortName' },
+  added: { SortBy: 'DateCreated', SortOrder: 'Descending' },
+  frequent: { SortBy: 'PlayCount', SortOrder: 'Descending' },
+  random: { SortBy: 'Random' },
+};
+
+/** The library's songs, a page at a time and in the order asked for. */
+export async function getSongList(
+  auth: SubsonicAuth,
+  sort: SongListSort = 'alpha',
+  count = 50,
+  offset = 0,
+  _musicFolderId?: string,
+): Promise<Song[]> {
+  const res = await request<JfItems>(auth, `/Users/${auth.jfUserId}/Items`, {
+    IncludeItemTypes: 'Audio',
+    Recursive: true,
+    Limit: count,
+    StartIndex: offset,
+    Fields: SONG_FIELDS,
+    ...SONG_SORT[sort],
+  });
+  return (res.Items ?? []).map(toSong);
+}
+
 export async function getSongsByGenre(
   auth: SubsonicAuth,
   genre: string,
