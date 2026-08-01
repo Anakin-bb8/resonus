@@ -16,6 +16,7 @@ import { queryClient } from '@/lib/query';
 import { getItem, setItem } from '@/lib/storage';
 import { useLibraryMirror } from '@/store/libraryMirror';
 import { useOfflineQueue, type QueuePlaylist } from '@/store/offlineQueue';
+import { usePlayHistory } from '@/store/playHistory';
 import { useSettings } from '@/store/settings';
 import * as Subsonic from './backend';
 import * as Local from '@/lib/localQueries';
@@ -246,6 +247,65 @@ export function getAlbumsByGenre(genre: string, size?: number, offset?: number):
  * server returns them however it stores them), so there's nothing to sort.
  */
 /**
+ * The songs played most recently, newest first. Straight off this device's own
+ * history, which records every song as it starts and is what the "Recently
+ * played" screen shows.
+ *
+ * Not the albums: deriving this from the recently played ALBUMS puts the whole
+ * record in the list the moment one of its songs plays, which is not what
+ * anybody means by recent songs. Subsonic has no endpoint that answers this,
+ * and the history is the honest answer the device already holds.
+ */
+async function recentSongs(count: number): Promise<Subsonic.Song[]> {
+  await usePlayHistory.getState().hydrate();
+  return usePlayHistory
+    .getState()
+    .entries.slice(0, count)
+    .map((e) => e.song);
+}
+
+/**
+ * Songs of the albums the server puts first for this order, album by album and
+ * in that order: how "recently added" and "most played" songs are arrived at on
+ * a server that can only sort albums. Whole albums are the right answer for
+ * these two: an album is added at once, and playing it through is what makes it
+ * a most played one.
+ *
+ * It goes through this layer's own `getAlbumList` on purpose: that is where the
+ * several-libraries merge lives, along with the corrections a raw server list
+ * needs.
+ *
+ * The pool is deliberately small: every album is a request of its own.
+ */
+const DERIVED_POOL = 15;
+
+async function derivedSongList(
+  sort: 'added' | 'frequent',
+  count: number,
+): Promise<Subsonic.Song[]> {
+  const type = sort === 'added' ? 'newest' : 'frequent';
+  const albums = await getAlbumList(type, DERIVED_POOL);
+  const parts = await Promise.all(
+    albums.map((al) =>
+      getAlbum(al.id)
+        .then((d) => d.songs)
+        .catch(() => [] as Subsonic.Song[]),
+    ),
+  );
+  const songs = parts.flat();
+  // Most played is the one order the songs themselves can improve on, when the
+  // server counts plays per song (OpenSubsonic). Otherwise the albums' order is
+  // the best there is.
+  if (sort === 'frequent' && songs.some((s) => (s.playCount ?? 0) > 0)) {
+    return songs
+      .filter((s) => (s.playCount ?? 0) > 0)
+      .sort((a, b) => (b.playCount ?? 0) - (a.playCount ?? 0))
+      .slice(0, count);
+  }
+  return songs.slice(0, count);
+}
+
+/**
  * The library's songs, a page at a time (the Songs screen). Offline it is the
  * local catalog, which can order itself because it is already in memory; on a
  * server it is whatever that server can do, which `songListSorts` states.
@@ -257,6 +317,15 @@ export function getSongList(
 ): Promise<Subsonic.Song[]> {
   if (isOffline()) return Local.getSongList(sort, count, offset);
   const a = auth();
+  // Jellyfin sorts songs itself; the rest need the albums as a way in. Derived
+  // orders are a capped list rather than a window, so there is nothing to hand
+  // back past the first page.
+  if (a.serverType !== 'jellyfin' && sort === 'recent') {
+    return offset > 0 ? Promise.resolve([]) : recentSongs(count);
+  }
+  if (a.serverType !== 'jellyfin' && (sort === 'added' || sort === 'frequent')) {
+    return offset > 0 ? Promise.resolve([]) : derivedSongList(sort, count);
+  }
   const ids = enabledFolderIds(a);
   if (!ids) return Subsonic.getSongList(a, sort, count, offset);
   if (ids.length === 1) return Subsonic.getSongList(a, sort, count, offset, ids[0]);
@@ -267,9 +336,10 @@ export function getSongList(
   );
 }
 
-/** Orders the Songs screen can offer here. Offline the catalog does its own. */
+/** Orders the Songs screen can offer here. Offline the catalog is in memory,
+ *  so it sorts by anything without asking anyone. */
 export function songListSorts(): Subsonic.SongListSort[] {
-  if (isOffline()) return ['server', 'alpha', 'frequent', 'random'];
+  if (isOffline()) return ['recent', 'added', 'alpha', 'frequent', 'random'];
   return Subsonic.songListSorts(auth());
 }
 
@@ -843,6 +913,18 @@ export function searchAlbums(query: string, count?: number): Promise<Subsonic.Al
   if (!ids) return Subsonic.searchAlbums(a, query, count);
   if (ids.length === 1) return Subsonic.searchAlbums(a, query, count, ids[0]);
   return Promise.all(ids.map((id) => Subsonic.searchAlbums(a, query, count, id))).then((parts) =>
+    dedupeById(parts.flat()),
+  );
+}
+
+/** Songs matching the text: what browsing songs searches with. */
+export function searchSongs(query: string, count?: number): Promise<Subsonic.Song[]> {
+  if (isOffline()) return Local.searchSongs(query, count);
+  const a = auth();
+  const ids = enabledFolderIds(a);
+  if (!ids) return Subsonic.searchSongs(a, query, count);
+  if (ids.length === 1) return Subsonic.searchSongs(a, query, count, ids[0]);
+  return Promise.all(ids.map((id) => Subsonic.searchSongs(a, query, count, id))).then((parts) =>
     dedupeById(parts.flat()),
   );
 }

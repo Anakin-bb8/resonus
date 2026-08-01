@@ -363,6 +363,7 @@ const SONG_SORT: Record<SongListSort, { SortBy: string; SortOrder?: string }> = 
   // Jellyfin has no "the order they are in" to speak of, so its own idea of
   // order is the alphabet. It never offers this one anyway (see backend.ts).
   server: { SortBy: 'SortName' },
+  recent: { SortBy: 'DatePlayed', SortOrder: 'Descending' },
   alpha: { SortBy: 'SortName' },
   added: { SortBy: 'DateCreated', SortOrder: 'Descending' },
   frequent: { SortBy: 'PlayCount', SortOrder: 'Descending' },
@@ -567,6 +568,22 @@ export async function searchAlbums(
     Fields: ALBUM_FIELDS,
   });
   return (res.Items ?? []).map(toAlbum);
+}
+
+export async function searchSongs(
+  auth: SubsonicAuth,
+  query: string,
+  count = 50,
+  _musicFolderId?: string,
+): Promise<Song[]> {
+  const res = await request<JfItems>(auth, `/Users/${auth.jfUserId}/Items`, {
+    SearchTerm: query,
+    IncludeItemTypes: 'Audio',
+    Recursive: true,
+    Limit: count,
+    Fields: SONG_FIELDS,
+  });
+  return (res.Items ?? []).map(toSong);
 }
 
 export async function search(

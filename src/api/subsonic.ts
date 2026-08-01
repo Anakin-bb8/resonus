@@ -409,7 +409,13 @@ export type AlbumListType =
  * has no sorted song listing at all, and a chip that quietly does nothing is
  * worse than a chip that isn't there.
  */
-export type SongListSort = 'server' | 'alpha' | 'added' | 'frequent' | 'random';
+export type SongListSort =
+  | 'server'
+  | 'recent'
+  | 'added'
+  | 'alpha'
+  | 'frequent'
+  | 'random';
 
 export async function getAlbumList(
   auth: SubsonicAuth,
@@ -719,6 +725,24 @@ export async function searchAlbums(
   return res.searchResult3?.album ?? [];
 }
 
+/** Songs matching the text, and only songs (browsing songs searches with this). */
+export async function searchSongs(
+  auth: SubsonicAuth,
+  query: string,
+  count = 50,
+  musicFolderId?: string,
+): Promise<Song[]> {
+  const res = await request<{ searchResult3?: { song?: Song[] } }>(auth, 'search3.view', {
+    query,
+    songCount: count,
+    // Set to 0 so the server doesn't search or send what isn't rendered.
+    albumCount: 0,
+    artistCount: 0,
+    ...(musicFolderId ? { musicFolderId } : {}),
+  });
+  return res.searchResult3?.song ?? [];
+}
+
 export async function getArtists(auth: SubsonicAuth, musicFolderId?: string): Promise<Artist[]> {
   const res = await request<{
     artists?: { index?: { artist?: Artist[] }[] };
@@ -853,7 +877,8 @@ export async function getSongList(
   musicFolderId?: string,
 ): Promise<Song[]> {
   // The one order Subsonic does have, and it doesn't paginate: a page of new
-  // random songs is what "more" means here.
+  // random songs is what "more" means here. The orders it has no endpoint for
+  // are built a layer up, out of the albums it can sort (see `data.ts`).
   if (sort === 'random') return getRandomSongs(auth, count, undefined, musicFolderId);
   const res = await request<{ searchResult3?: { song?: Song[] } }>(auth, 'search3.view', {
     query: '',

@@ -591,6 +591,8 @@ interface SettingsState {
   browseArtistsLayout: ListLayout;
   /** List or grid when browsing albums. Separate for the same reason as above. */
   browseAlbumsLayout: ListLayout;
+  /** List or grid when browsing songs. Its own key, same reasoning. */
+  browseSongsLayout: ListLayout;
   /** List or grid in an artist's full discography. Its own key, again for the
    *  same reason: it's one artist's albums, not the whole library. */
   discographyLayout: ListLayout;
@@ -671,6 +673,7 @@ interface SettingsState {
   setLibraryLayout: (value: ListLayout) => void;
   setBrowseArtistsLayout: (value: ListLayout) => void;
   setBrowseAlbumsLayout: (value: ListLayout) => void;
+  setBrowseSongsLayout: (value: ListLayout) => void;
   setDiscographyLayout: (value: ListLayout) => void;
   setGenreLayout: (value: ListLayout) => void;
   setShareExpiry: (value: ShareExpiry) => void;
@@ -761,6 +764,7 @@ function snapshot(get: () => SettingsState) {
     libraryLayout: s.libraryLayout,
     browseArtistsLayout: s.browseArtistsLayout,
     browseAlbumsLayout: s.browseAlbumsLayout,
+    browseSongsLayout: s.browseSongsLayout,
     discographyLayout: s.discographyLayout,
     genreLayout: s.genreLayout,
     shareExpiry: s.shareExpiry,
@@ -841,6 +845,9 @@ const DEFAULTS = {
   // Grid by default: the cover is what identifies an album, and that's how the
   // screen is already rendered.
   browseAlbumsLayout: 'grid' as ListLayout,
+  // Rows: a song is read by its title, and twelve of the same album are twelve
+  // copies of one cover. The button is there for whoever disagrees.
+  browseSongsLayout: 'list' as ListLayout,
   // List by default: that's how the discography has always been shown, and the
   // toggle is right there for whoever prefers blocks.
   discographyLayout: 'list' as ListLayout,
@@ -1180,6 +1187,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setBrowseSongsLayout: (browseSongsLayout) => {
+    set({ browseSongsLayout });
+    persist(snapshot(get));
+  },
+
   setDiscographyLayout: (discographyLayout) => {
     set({ discographyLayout });
     persist(snapshot(get));
@@ -1317,6 +1329,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           libraryLayout: ListLayout;
           browseArtistsLayout: ListLayout;
           browseAlbumsLayout: ListLayout;
+          browseSongsLayout: ListLayout;
           discographyLayout: ListLayout;
           genreLayout: ListLayout;
           shareExpiry: ShareExpiry;
@@ -1578,6 +1591,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (parsed.browseAlbumsLayout === 'list' || parsed.browseAlbumsLayout === 'grid') {
           set({ browseAlbumsLayout: parsed.browseAlbumsLayout });
+        }
+        if (parsed.browseSongsLayout === 'list' || parsed.browseSongsLayout === 'grid') {
+          set({ browseSongsLayout: parsed.browseSongsLayout });
         }
         if (parsed.discographyLayout === 'list' || parsed.discographyLayout === 'grid') {
           set({ discographyLayout: parsed.discographyLayout });

@@ -375,6 +375,22 @@ export async function getSongList(
     case 'alpha':
       songs.sort((a, b) => a.title.localeCompare(b.title));
       break;
+    case 'added':
+      // The file's own date, which is the only "added" a folder of music has.
+      songs.sort((a, b) => (b.addedAt ?? 0) - (a.addedAt ?? 0));
+      break;
+    case 'recent': {
+      // The local history, which records in this mode too. Only what has
+      // actually played, like the server's own list.
+      const played = new Map<string, number>();
+      for (const e of usePlayHistory.getState().entries) {
+        if ((played.get(e.song.id) ?? 0) < e.playedAt) played.set(e.song.id, e.playedAt);
+      }
+      songs = songs
+        .filter((s) => played.has(s.id))
+        .sort((a, b) => (played.get(b.id) ?? 0) - (played.get(a.id) ?? 0));
+      break;
+    }
     case 'frequent': {
       const counts = usePlayCounts.getState().counts;
       songs = songs
@@ -749,6 +765,21 @@ export async function searchAlbums(query: string, count = 50): Promise<Album[]> 
     )
     .slice(0, count)
     .map(toAlbum);
+}
+
+/** Songs matching the text, over the catalog already in memory. */
+export async function searchSongs(query: string, count = 50): Promise<Song[]> {
+  const c = await ensureCatalog();
+  if (!c) return [];
+  const q = query.toLowerCase();
+  return c.songs
+    .filter(
+      (s) =>
+        s.title.toLowerCase().includes(q) ||
+        (s.artist?.toLowerCase() ?? '').includes(q) ||
+        (s.album?.toLowerCase() ?? '').includes(q),
+    )
+    .slice(0, count);
 }
 
 export { localCoverUrl as coverUrl } from './localLibrary';

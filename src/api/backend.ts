@@ -120,18 +120,28 @@ export const getSongList = (
 ) => api(auth).getSongList(auth, sort, count, offset, musicFolderId);
 
 /**
- * Orders the Songs screen can offer on this server, in the order it shows them.
+ * Orders the Songs screen can offer on this server, in the order it shows them,
+ * which is the one browsing albums and artists already use: recent, recently
+ * added, A-Z, most played, shuffle. The shared ones sit in the same place on
+ * the three screens, so the pills don't move around between them.
  *
- * Jellyfin sorts songs itself, so it gets the lot except its own storage order,
- * which is not a thing there. Subsonic has no sorted song listing: an empty
- * `search3` is the only way to list everything and it comes back however the
- * server keeps it, so that plus random is all there is. The chips follow this
- * rather than pretending.
+ * Jellyfin sorts songs itself, so it gets the lot. Subsonic gets everything but
+ * A-Z: the rest are arrived at through the albums it does know how to sort (see
+ * `songsOfAlbums`), and no such trick exists for the alphabet, which would mean
+ * pulling the whole library onto the phone. Its own order stands in that slot
+ * instead, being the only listing that really covers everything.
  */
 export const songListSorts = (auth: SubsonicAuth): SongListSort[] =>
   auth.serverType === 'jellyfin'
-    ? ['alpha', 'added', 'frequent', 'random']
-    : ['server', 'random'];
+    ? ['recent', 'added', 'alpha', 'frequent', 'random']
+    : ['recent', 'added', 'server', 'frequent', 'random'];
+
+export const searchSongs = (
+  auth: SubsonicAuth,
+  query: string,
+  count?: number,
+  musicFolderId?: string,
+) => api(auth).searchSongs(auth, query, count, musicFolderId);
 
 export const getSongsByGenre = (
   auth: SubsonicAuth,

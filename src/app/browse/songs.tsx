@@ -1,16 +1,17 @@
 /**
- * Browse the library's songs, with search, infinite scroll and multi-select.
+ * Browse the library's songs: the sibling of browsing albums and artists, with
+ * the same header, the same search, the same pills in the same order and the
+ * same choice of rows or a grid. Holding one starts selecting, which the other
+ * two have no use for and a screen made for gathering songs does (#77).
  *
- * The sibling of browsing albums and artists, and the one the server makes
- * hardest: Subsonic has no endpoint that lists songs in any order, so there the
- * screen shows them as the server keeps them (an empty `search3`) and offers
- * nothing but shuffle beside it. Jellyfin and the local catalog can sort, and
- * there the chips are the ones you would expect. `songListSorts` is what
- * decides, so no chip here ever promises an order the server won't give.
+ * Which orders it offers is `songListSorts`'s to say, because the answer is the
+ * server's: A-Z is missing on Subsonic, which has no endpoint that lists songs
+ * in any order at all. The rest are arrived at through the albums it does know
+ * how to sort. No pill here promises an order that won't come.
  *
  * Finding one song among many is the search bar's job, not the list's: a
  * six-figure library is not something anybody scrolls, and pulling it down to
- * sort it on the phone is not something a phone can do (#77).
+ * sort it on the phone is not something a phone can do.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
@@ -18,7 +19,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
+  Dimensions,
   Keyboard,
   Pressable,
   ScrollView,
@@ -27,15 +28,21 @@ import {
   TextInput,
   View,
 } from 'react-native';
+// The list must use gesture-handler so the row swipe-to-queue doesn't fight
+// the vertical scroll (with RN's FlatList the gesture is flaky).
+import { FlatList as GHFlatList } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { getSongList, search, songListSorts } from '@/api/data';
+import { getSongList, searchSongs, songListSorts } from '@/api/data';
 import { type Song, type SongListSort } from '@/api/subsonic';
+import { AlbumCardsSkeleton } from '@/components/AlbumCardsSkeleton';
 import { AlbumRowsSkeleton } from '@/components/AlbumRowsSkeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { Message } from '@/components/Message';
 import { SelectionBar } from '@/components/SelectionBar';
+import { SongCard } from '@/components/SongCard';
 import { TrackRow } from '@/components/TrackRow';
+import { useAccent } from '@/hooks/useAccent';
 import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { listPerf } from '@/lib/listPerf';
@@ -43,20 +50,34 @@ import { useAuthStore } from '@/store/auth';
 import { useDownloads } from '@/store/downloads';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { usePlaylistPicker } from '@/store/playlistPicker';
+import { usePlayHistory } from '@/store/playHistory';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
 import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
 
 const PAGE = 50;
 
+// The same measurements as browsing albums: both are full-screen grids of
+// covers and cards of different sizes between them would look like an accident.
+const COLUMNS = 2;
+const GAP = spacing.sm;
+const CARD = (Dimensions.get('window').width - spacing.lg * 2 - GAP * (COLUMNS - 1)) / COLUMNS;
+
 /** Bar height: the box (44) plus its gap to the chips below. */
 const SEARCH_H = 44 + spacing.md;
+
+/**
+ * Result limit. The normal list paginates, but search results don't: you should
+ * type more, not scroll more. The same 50 browsing albums settled on.
+ */
+const SEARCH_COUNT = 50;
 
 /** Delay before querying the server: without this it'd be one request per keystroke. */
 const DEBOUNCE_MS = 300;
 
 const SORT_LABEL: Record<SongListSort, string> = {
   server: 'Library order',
+  recent: 'Recent',
   alpha: 'A-Z',
   added: 'Recently added',
   frequent: 'Most played',
@@ -66,6 +87,9 @@ const SORT_LABEL: Record<SongListSort, string> = {
 export default function BrowseSongsScreen() {
   const router = useRouter();
   const t = useT();
+  // From the store, not `colors.accent`: styles are frozen at module load, so
+  // without this the marked pill and the card ticks keep the old accent.
+  const accent = useAccent();
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
   const offline = useAuthStore((s) => s.offline);
   const toast = useToast((s) => s.show);
@@ -75,22 +99,39 @@ export default function BrowseSongsScreen() {
   const showListArtwork = useSettings((s) => s.showListArtwork);
   const downloadSongs = useDownloads((s) => s.downloadSongs);
   const openPlaylistPicker = usePlaylistPicker((s) => s.open);
+  // Its own preference, not the one from browsing albums: the button on one
+  // screen shouldn't silently rearrange the other.
+  const layout = useSettings((s) => s.browseSongsLayout);
+  const setLayout = useSettings((s) => s.setBrowseSongsLayout);
+  const grid = layout === 'grid';
   // What this server can actually order by; the first one is what it opens on.
   const sorts = canFetch ? songListSorts() : [];
   const [sort, setSort] = useState<SongListSort>(sorts[0] ?? 'server');
 
+  // When the last song played changes, "Recent" is a different list: it is the
+  // key so the list follows along instead of sitting in the cache until
+  // something else happens to clear it (playing something used to show up here
+  // only after refreshing Home). The other orders don't move with a play, so
+  // they don't carry it.
+  const lastPlayedAt = usePlayHistory((s) => s.entries[0]?.playedAt ?? 0);
+  const recentKey = sort === 'recent' ? lastPlayedAt : 0;
+
   const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useInfiniteQuery({
-      queryKey: ['browseSongs', sort],
+      queryKey: ['browseSongs', sort, recentKey],
       queryFn: ({ pageParam }) => getSongList(sort, PAGE, pageParam),
       initialPageParam: 0,
       getNextPageParam: (last, pages) => (last.length === PAGE ? pages.length * PAGE : undefined),
       enabled: canFetch,
+      // Everything that has been played changes with every listen, and the
+      // server is the one keeping count: coming back to the screen asks again.
+      refetchOnMount: sort === 'recent' || sort === 'frequent' ? 'always' : undefined,
     });
 
   // ── Search ─────────────────────────────────────────────────────────────
   // Server-side, like browsing albums: filtering the loaded pages would look
   // like it works and quietly leave the rest of the library out.
+  const listRef = useRef<GHFlatList<Song>>(null);
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [debounced, setDebounced] = useState('');
@@ -105,8 +146,8 @@ export default function BrowseSongsScreen() {
     isError: searchError,
     refetch: refetchSearch,
   } = useQuery({
-    queryKey: ['searchSongs', debounced],
-    queryFn: () => search(debounced).then((r) => r.songs),
+    queryKey: ['searchSongs', debounced, SEARCH_COUNT],
+    queryFn: () => searchSongs(debounced, SEARCH_COUNT),
     enabled: canFetch && debounced.length > 0,
   });
 
@@ -147,12 +188,14 @@ export default function BrowseSongsScreen() {
     Keyboard.dismiss();
     setQuery('');
     setSearching(false);
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
   }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      {/* While selecting, the header turns into ✕ + counter + select all, the
-          same swap the other song lists do. */}
+      {/* Same header as browsing albums and artists: the title centred between
+          the chevron and a slot of its width. While selecting it turns into
+          ✕ + counter + select all, the swap the other song lists do. */}
       <View style={styles.header}>
         <Pressable
           hitSlop={10}
@@ -164,26 +207,39 @@ export default function BrowseSongsScreen() {
         <Text style={styles.title} numberOfLines={1}>
           {selecting ? t('{n} selected', { n: selectedIds.size }) : t('Songs')}
         </Text>
-        {selecting ? (
-          <Pressable
-            hitSlop={10}
-            accessibilityRole="button"
-            accessibilityLabel={t('Select all')}
-            onPress={() =>
-              setSelectedIds(
-                selectedIds.size === songs.length ? new Set() : new Set(songs.map((s) => s.id)),
-              )
-            }
-          >
-            <Ionicons
-              name="checkmark-done"
-              size={24}
-              color={
-                songs.length > 0 && selectedIds.size === songs.length ? colors.accent : colors.text
+        <View style={styles.headerAction}>
+          {!selecting ? (
+            <Pressable
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={grid ? t('List view') : t('Grid view')}
+              onPress={() => setLayout(grid ? 'list' : 'grid')}
+            >
+              <Ionicons
+                name={grid ? 'list' : 'grid-outline'}
+                size={20}
+                color={colors.textSecondary}
+              />
+            </Pressable>
+          ) : (
+            <Pressable
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={t('Select all')}
+              onPress={() =>
+                setSelectedIds(
+                  selectedIds.size === songs.length ? new Set() : new Set(songs.map((s) => s.id)),
+                )
               }
-            />
-          </Pressable>
-        ) : null}
+            >
+              <Ionicons
+                name="checkmark-done"
+                size={24}
+                color={songs.length > 0 && selectedIds.size === songs.length ? accent : colors.text}
+              />
+            </Pressable>
+          )}
+        </View>
       </View>
 
       <View style={styles.searchRow}>
@@ -218,9 +274,9 @@ export default function BrowseSongsScreen() {
         ) : null}
       </View>
 
-      {/* Hidden while searching: results come back by relevance, so a marked
-          pill would lie about the order on screen. With a single order there is
-          nothing to choose either. */}
+      {/* The chips hide while searching: results come back by relevance, so a
+          marked pill would lie about the order on screen. With a single order
+          there is nothing to choose either. */}
       {isSearch || sorts.length < 2 ? null : (
         <ScrollView
           horizontal
@@ -233,7 +289,7 @@ export default function BrowseSongsScreen() {
             return (
               <Pressable
                 key={key}
-                style={[styles.chip, active && { backgroundColor: colors.accent }]}
+                style={[styles.chip, active && { backgroundColor: accent }]}
                 onPress={() => {
                   setSort(key);
                   setSelectedIds(null);
@@ -249,57 +305,89 @@ export default function BrowseSongsScreen() {
       )}
 
       {(isSearch ? searchPending : isLoading) ? (
-        <AlbumRowsSkeleton />
+        grid ? (
+          <AlbumCardsSkeleton width={CARD} count={8} />
+        ) : (
+          <AlbumRowsSkeleton />
+        )
       ) : isSearch && searchError ? (
         <Message text={t("Couldn't load songs.")} onRetry={() => refetchSearch()} />
       ) : isError ? (
         <Message text={t("Couldn't load songs.")} onRetry={() => refetch()} />
       ) : (
-        <FlatList
+        <GHFlatList
           {...listPerf}
+          ref={listRef}
           data={songs}
           // The random order can hand back a song that already came in an
           // earlier page, so the index goes into the key.
           keyExtractor={(item, i) => `${item.id}-${i}`}
-          contentContainerStyle={styles.list}
+          // Remount the list when changing sort or view: otherwise FlatList
+          // reuses rows and gets stuck with stale ones (numColumns can't be
+          // hot-swapped either).
+          key={`${sort}-${layout}`}
+          {...(grid
+            ? {
+                numColumns: COLUMNS,
+                columnWrapperStyle: { gap: GAP },
+                contentContainerStyle: styles.grid,
+              }
+            : { contentContainerStyle: styles.list })}
           extraData={selectedIds}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
-          renderItem={({ item, index }: { item: Song; index: number }) => (
-            <TrackRow
-              song={item}
-              isCurrent={playing?.id === item.id}
-              showArtwork={showListArtwork}
-              selecting={selecting}
-              selected={!!selectedIds?.has(item.id)}
-              onPressIn={() => {
-                justLongPressed.current = null;
-              }}
-              onLongPress={
-                selecting
-                  ? undefined
-                  : () => {
-                      haptic('medium');
-                      setSelectedIds(new Set([item.id]));
-                      justLongPressed.current = item.id;
-                    }
-              }
-              onPress={() => {
-                // Discards the onPress that closes the long-press: it would
-                // deselect the very song you entered selection with.
-                if (justLongPressed.current === item.id) return;
-                if (selecting) toggleSelect(item.id);
-                else void playQueue(songs, index, t('Songs'), '/browse/songs');
-              }}
-            />
-          )}
+          renderItem={({ item, index }: { item: Song; index: number }) => {
+            // Both views answer to the same two gestures, so switching one for
+            // the other doesn't change what your fingers already know.
+            const onPressIn = () => {
+              justLongPressed.current = null;
+            };
+            const onLongPress = selecting
+              ? undefined
+              : () => {
+                  haptic('medium');
+                  setSelectedIds(new Set([item.id]));
+                  justLongPressed.current = item.id;
+                };
+            const onPress = () => {
+              // Discards the onPress that closes the long-press: it would
+              // deselect the very song you entered selection with.
+              if (justLongPressed.current === item.id) return;
+              if (selecting) toggleSelect(item.id);
+              else void playQueue(songs, index, t('Songs'), '/browse/songs');
+            };
+            return grid ? (
+              <SongCard
+                song={item}
+                width={CARD}
+                accent={accent}
+                isCurrent={playing?.id === item.id}
+                selecting={selecting}
+                selected={!!selectedIds?.has(item.id)}
+                onPressIn={onPressIn}
+                onLongPress={onLongPress}
+                onPress={onPress}
+              />
+            ) : (
+              <TrackRow
+                song={item}
+                isCurrent={playing?.id === item.id}
+                showArtwork={showListArtwork}
+                selecting={selecting}
+                selected={!!selectedIds?.has(item.id)}
+                onPressIn={onPressIn}
+                onLongPress={onLongPress}
+                onPress={onPress}
+              />
+            );
+          }}
           // Results are a cap, not a window: asking for more at the end would
           // bring the plain list back underneath them.
           onEndReached={() => !isSearch && hasNextPage && fetchNextPage()}
           onEndReachedThreshold={0.5}
           ListFooterComponent={
             !isSearch && isFetchingNextPage ? (
-              <ActivityIndicator style={{ marginVertical: spacing.lg }} color={colors.accent} />
+              <ActivityIndicator style={{ marginVertical: spacing.lg }} color={accent} />
             ) : null
           }
           ListEmptyComponent={
@@ -308,6 +396,18 @@ export default function BrowseSongsScreen() {
                 icon="search-outline"
                 title={t('No results')}
                 subtitle={t('No results for “{q}”', { q: query.trim() })}
+              />
+            ) : sort === 'recent' || sort === 'frequent' ? (
+              // These two only hold what has been played, so on a fresh account
+              // they are empty and that is not the library being empty.
+              <EmptyState
+                icon="play-outline"
+                title={t('Nothing played yet')}
+                subtitle={
+                  sort === 'recent'
+                    ? t('Your recently played songs will show up here.')
+                    : t('Your most played songs will show up here.')
+                }
               />
             ) : (
               <EmptyState
@@ -365,11 +465,13 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  title: { flex: 1, color: colors.text, fontSize: fontSize.lg, fontWeight: '800' },
+  title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800' },
+  // The same width as the back chevron, so the title stays centred.
+  headerAction: { width: 26, alignItems: 'flex-end' },
   searchRow: {
     height: SEARCH_H,
     flexDirection: 'row',
@@ -389,8 +491,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: radius.md,
   },
-  input: { flex: 1, color: colors.text, fontSize: fontSize.md, paddingVertical: 0 },
-  searchCancel: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
+  input: {
+    flex: 1,
+    color: colors.text,
+    fontSize: fontSize.md,
+    paddingVertical: 0,
+  },
+  searchCancel: {
+    color: colors.text,
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+  },
   // `flexShrink: 0` because the search bar adds a child to the column: without
   // it flex shrinks this row and clips the pill text.
   chipsRow: { flexGrow: 0, flexShrink: 0 },
@@ -419,4 +530,9 @@ const styles = StyleSheet.create({
   // `TrackRow` brings no horizontal padding of its own, so without this the
   // covers sit against the left edge and the ⋯ against the right one.
   list: { paddingHorizontal: spacing.lg, paddingBottom: SCREEN_BOTTOM_PADDING },
+  grid: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: SCREEN_BOTTOM_PADDING,
+    gap: GAP,
+  },
 });
