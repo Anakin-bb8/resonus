@@ -249,6 +249,7 @@ This screen exists so that somebody with a slow phone can send us numbers. It is
 | String | Where / what it is |
 | --- | --- |
 | `Diagnostics` | The screen's title, and the row in About that opens it |
+| `Profile` | Section header over what kind of server the profile is. Not a user profile |
 | `Share report` | Button: hands the numbers over as plain text, to paste into an issue |
 | `Start over` | Button: **clears the measurements** and starts counting again. Not "start playback" |
 
@@ -272,6 +273,41 @@ in English for the same reason and never reach the locale files at all.
 
 `pnpm i18n:status` has no way of knowing this, so it will keep counting those six
 as missing. That is expected: **leave them out and ignore the count.**
+
+**Song information** (a song's ⋯ menu → the sheet it opens)
+
+| String | Where / what it is |
+| --- | --- |
+| `Song information` | The menu action and the sheet's title: what is known about the track |
+| `Track` | The **track number** on its album. Not the song itself |
+| `Format` | The **file format** (FLAC, MP3…), written as the player writes it |
+| `Sample rate` / `Channels` / `BPM` | Properties of the audio: kHz, mono/stereo, beats per minute |
+| `Plays` | **How many times** the song has been played |
+| `Rating` | The **stars** given to the song. Not a bitrate, not a review |
+| `Comment` | The file's **comment tag**, where people keep notes about a recording |
+| `Moods` | Mood **tags** the server has on the song (mellow, energetic…) |
+| `This song carries no information.` | Empty state: the file and the server had nothing to say |
+
+**Sharing a link** (the sheet that opens on Share)
+
+| String | Where / what it is |
+| --- | --- |
+| `Share “{name}”` | The sheet's title, with what is being shared |
+| `The link expires in` | Heading over the choices below. They are **spans from the moment the link is made**, not times of day |
+| `Never` | The link never stops working |
+| `The server's default` | Let the server decide how long it lasts, which is what every link did before this existed |
+| `Pick a date…` | Opens the calendar to choose the day it stops working |
+| `Allow downloads` | Whether whoever gets the link can **download** the music, not only listen to it |
+| `The link doesn’t allow downloads` | Warning: the link was made, but that part could not be set |
+
+**Browsing songs** (Home → the Songs chip)
+
+| String | Where / what it is |
+| --- | --- |
+| `Library order` | Sorting pill: the order the **server keeps** its songs in, which is not alphabetical and usually ends up grouped by artist. Only appears where the server cannot sort songs |
+| `Find a song` | The search box's placeholder on that screen |
+| `No songs yet` | Empty state when the library has no songs |
+| `Your recently played songs will show up here.` / `Your most played songs will show up here.` | Empty states for those two orders, before anything has been played |
 
 **Other**
 
