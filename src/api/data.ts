@@ -18,6 +18,7 @@ import { useLibraryMirror } from '@/store/libraryMirror';
 import { useOfflineQueue, type QueuePlaylist } from '@/store/offlineQueue';
 import { usePlayHistory } from '@/store/playHistory';
 import { useSettings } from '@/store/settings';
+import * as Navidrome from './navidrome';
 import * as Subsonic from './backend';
 import * as Local from '@/lib/localQueries';
 import type { Song } from './subsonic';
@@ -247,6 +248,33 @@ export function getAlbumsByGenre(genre: string, size?: number, offset?: number):
  * server returns them however it stores them), so there's nothing to sort.
  */
 /**
+ * Can Navidrome itself be asked for a page of songs on this profile?
+ *
+ * Needs the password its own API wants, which is kept when logging in to a
+ * Navidrome server (and is the same one cleartext auth already stores). A
+ * profile that logged in before any of that existed doesn't have it, and gets
+ * what Subsonic can do until it logs in again: a box asking for a password in
+ * the middle of a music screen is worse than one pill fewer.
+ *
+ * A library filter is no obstacle: the native listing takes the libraries it
+ * should keep to, so it stays one sorted list instead of the per-folder pages
+ * the Subsonic path has to stitch together.
+ */
+function canListNative(a: Subsonic.SubsonicAuth): boolean {
+  return a.serverType === 'navidrome' && !!(a.ndPassword ?? a.password);
+}
+
+/** Our orders in Navidrome's own words. */
+const ND_SORT: Record<Subsonic.SongListSort, Navidrome.NdSongSort> = {
+  server: 'title',
+  recent: 'play_date',
+  added: 'recently_added',
+  alpha: 'title',
+  frequent: 'play_count',
+  random: 'random',
+};
+
+/**
  * The songs played most recently, newest first. Straight off this device's own
  * history, which records every song as it starts and is what the "Recently
  * played" screen shows.
@@ -317,6 +345,24 @@ export function getSongList(
 ): Promise<Subsonic.Song[]> {
   if (isOffline()) return Local.getSongList(sort, count, offset);
   const a = auth();
+  // Navidrome sorts and pages songs through its own API, which is the only way
+  // any of this is alphabetical. If it says no (an older server, a password
+  // that no longer works, anything), the Subsonic paths below still answer.
+  if (canListNative(a)) {
+    return Navidrome.listSongs(a, ND_SORT[sort], count, offset, enabledFolderIds(a)).catch(() =>
+      subsonicSongList(a, sort, count, offset),
+    );
+  }
+  return subsonicSongList(a, sort, count, offset);
+}
+
+/** What a Subsonic server can do about listing songs, orders included. */
+function subsonicSongList(
+  a: Subsonic.SubsonicAuth,
+  sort: Subsonic.SongListSort,
+  count: number,
+  offset: number,
+): Promise<Subsonic.Song[]> {
   // Jellyfin sorts songs itself; the rest need the albums as a way in. Derived
   // orders are a capped list rather than a window, so there is nothing to hand
   // back past the first page.
@@ -336,11 +382,23 @@ export function getSongList(
   );
 }
 
-/** Orders the Songs screen can offer here. Offline the catalog is in memory,
- *  so it sorts by anything without asking anyone. */
+/**
+ * Orders the Songs screen can offer here, in the order it shows them, which is
+ * the one browsing albums and artists already use.
+ *
+ * Offline the catalog is in memory, so it sorts by anything without asking
+ * anyone. Jellyfin sorts songs itself, and so does Navidrome when its own API
+ * can be reached. What is left is a Subsonic server that cannot sort songs at
+ * all: there the rest are arrived at through the albums it does sort, and its
+ * own order stands where A-Z would be, being the only listing that really
+ * covers everything.
+ */
 export function songListSorts(): Subsonic.SongListSort[] {
-  if (isOffline()) return ['recent', 'added', 'alpha', 'frequent', 'random'];
-  return Subsonic.songListSorts(auth());
+  const full: Subsonic.SongListSort[] = ['recent', 'added', 'alpha', 'frequent', 'random'];
+  if (isOffline()) return full;
+  const a = auth();
+  if (a.serverType === 'jellyfin' || canListNative(a)) return full;
+  return ['recent', 'added', 'server', 'frequent', 'random'];
 }
 
 export function getSongsByGenre(genre: string, count = 50, offset = 0): Promise<Subsonic.Song[]> {

@@ -5,9 +5,10 @@
  * two have no use for and a screen made for gathering songs does (#77).
  *
  * Which orders it offers is `songListSorts`'s to say, because the answer is the
- * server's: A-Z is missing on Subsonic, which has no endpoint that lists songs
- * in any order at all. The rest are arrived at through the albums it does know
- * how to sort. No pill here promises an order that won't come.
+ * server's: Jellyfin, Navidrome (through its own API) and a local library sort
+ * songs by anything. A plain Subsonic server sorts none: there the rest are
+ * arrived at through the albums it does know how to sort, and A-Z is the one
+ * that has no stand-in. No pill here promises an order that won't come.
  *
  * Finding one song among many is the search bar's job, not the list's: a
  * six-figure library is not something anybody scrolls, and pulling it down to

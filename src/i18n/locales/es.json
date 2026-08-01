@@ -1,5 +1,6 @@
 {
   "Diagnostics": "Diagnóstico",
+  "Profile": "Perfil",
   "Measured over the last {n} min of use.": "Medido durante los últimos {n} min de uso.",
   "Interface freezes": "Bloqueos de la interfaz",
   "Moments when the app stopped responding, longest first.": "Momentos en los que la app dejó de responder, de mayor a menor.",

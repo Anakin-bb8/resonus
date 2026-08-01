@@ -1,5 +1,6 @@
 {
   "Diagnostics": "Diagnòstic",
+  "Profile": "Perfil",
   "Measured over the last {n} min of use.": "Mesurat durant els últims {n} min d'ús.",
   "Interface freezes": "Bloquejos de la interfície",
   "Moments when the app stopped responding, longest first.": "Moments en què l'app va deixar de respondre, de major a menor.",

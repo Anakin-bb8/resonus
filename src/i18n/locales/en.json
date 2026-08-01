@@ -1,5 +1,6 @@
 {
   "Diagnostics": "Diagnostics",
+  "Profile": "Profile",
   "Measured over the last {n} min of use.": "Measured over the last {n} min of use.",
   "Interface freezes": "Interface freezes",
   "Moments when the app stopped responding, longest first.": "Moments when the app stopped responding, longest first.",

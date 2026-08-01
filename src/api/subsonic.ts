@@ -405,9 +405,10 @@ export type AlbumListType =
 
 /**
  * Ordering for the Songs screen. Not every server can do all of them, which is
- * why the screen asks (`songListSorts`) instead of offering the lot: Subsonic
- * has no sorted song listing at all, and a chip that quietly does nothing is
- * worse than a chip that isn't there.
+ * why the screen asks `songListSorts` (in `data.ts`) instead of offering the
+ * lot: a chip that quietly does nothing is worse than a chip that isn't there.
+ * `server` is "however this one keeps them", the only listing Subsonic itself
+ * can give.
  */
 export type SongListSort =
   | 'server'

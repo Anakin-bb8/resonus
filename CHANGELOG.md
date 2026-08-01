@@ -14,13 +14,14 @@ Releases before 0.2.1 are only listed on the
 - A "Songs" chip on Home, next to Albums and Artists, opening the library's
   songs the way those two open theirs: a search box, rows or a grid of covers,
   the same orders on pills, and infinite scroll. Holding one starts selecting,
-  so a playlist can be built out of loose tracks in one go. The only order
-  missing is A-Z, and only on Subsonic, which has no endpoint that lists songs
-  in any order: the others are arrived at through the albums it does know how to
-  sort, and no such trick exists for the alphabet short of pulling the whole
-  library onto the phone, which a large one would not survive. Jellyfin and a
-  local library sort by everything. The chip can be hidden or moved like every
-  other one, in Settings › Appearance › Explore chips. Asked for by @rdnamil.
+  so a playlist can be built out of loose tracks in one go. Sorting them is the
+  server's business and not every one can: Navidrome is asked through its own
+  API, which sorts and pages a six-figure library a page at a time, and Jellyfin
+  and a local library sort by everything too. A plain Subsonic server cannot
+  sort songs at all, so there recent, recently added and most played are arrived
+  at through the albums it does sort, A-Z is not offered, and its own order
+  stands in that place. The chip can be hidden or moved like every other one, in
+  Settings › Appearance › Explore chips. Asked for by @rdnamil.
 - Sharing asks how long the link should last: an hour, a day, a week, a month,
   never, a date off the calendar, or whatever the server does by default, which
   is what every link did until now and on Navidrome means a year. Choosing is
