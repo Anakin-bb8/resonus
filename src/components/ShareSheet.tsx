@@ -49,20 +49,18 @@ const DAY = 24 * HOUR;
 const NEVER = Date.UTC(2100, 0, 1);
 
 /**
- * When a link made now should stop working, or undefined to say nothing and
- * leave it to the server. A month is 30 days: nobody sharing an album means
- * "the 31st at this exact time", and the exact date is there for whoever does.
+ * When a link made now should stop working. A month is 30 days: nobody sharing
+ * an album means "the 31st at this exact time", and the exact date is there for
+ * whoever does.
  */
-function expiryAt(kind: ShareExpiry): number | undefined {
-  const spans: Record<Exclude<ShareExpiry, 'server' | 'never'>, number> = {
+function expiryAt(kind: ShareExpiry): number {
+  const spans: Record<Exclude<ShareExpiry, 'never'>, number> = {
     hour: HOUR,
     day: DAY,
     week: 7 * DAY,
     month: 30 * DAY,
   };
-  if (kind === 'server') return undefined;
-  if (kind === 'never') return NEVER;
-  return Date.now() + spans[kind];
+  return kind === 'never' ? NEVER : Date.now() + spans[kind];
 }
 
 /** Global instance: mounted once, opens from the store. */
@@ -99,7 +97,6 @@ export function GlobalShareSheet() {
     week: t('1 week'),
     month: t('1 month'),
     never: t('Never'),
-    server: t("The server's default"),
   };
 
   /** The calendar's answer: a date, or nothing if it was dismissed. */
@@ -134,7 +131,7 @@ export function GlobalShareSheet() {
   }
 
   /** Creates the link with this expiry and hands it to the system sheet. */
-  async function share(expiresAt: number | undefined) {
+  async function share(expiresAt: number) {
     if (!target || sharing) return;
     setSharing(true);
     const res = await shareItem(target.id, target.name, expiresAt, canDownloads && downloads);
@@ -143,7 +140,7 @@ export function GlobalShareSheet() {
     if (!res.ok) toast(t('Couldn’t create the link'));
     // The link is out and it plays; it is only the downloading part that didn't
     // take, and saying nothing would leave whoever gets it wondering.
-    else if (res.downloadsFailed) toast(t('The link doesn’t allow downloads'));
+    else if (res.downloadsFailed) toast(t("Server didn't allow downloads"));
   }
 
   return (

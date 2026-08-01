@@ -295,10 +295,9 @@ as missing. That is expected: **leave them out and ignore the count.**
 | `Share “{name}”` | The sheet's title, with what is being shared |
 | `The link expires in` | Heading over the choices below. They are **spans from the moment the link is made**, not times of day |
 | `Never` | The link never stops working |
-| `The server's default` | Let the server decide how long it lasts, which is what every link did before this existed |
 | `Pick a date…` | Opens the calendar to choose the day it stops working |
 | `Allow downloads` | Whether whoever gets the link can **download** the music, not only listen to it |
-| `The link doesn’t allow downloads` | Warning: the link was made, but that part could not be set |
+| `Server didn't allow downloads` | Warning after sharing: the link was made and works, but the call that turns downloading on did not go through |
 
 **Browsing songs** (Home → the Songs chip)
 

@@ -98,27 +98,23 @@ export type LibrarySort = 'recent' | 'added' | 'alpha';
 export type ListLayout = 'list' | 'grid';
 
 /**
- * How long a shared link lives. `server` leaves it to whoever runs the server,
- * which is what every share did before the sheet existed, and on Navidrome
- * means a year unless it was configured otherwise; the rest are spans from the
- * moment the link is made. `never` is a date far enough away to mean it: the
- * API has no way to say "no expiry", and every value it does understand that
- * looks like one (nothing, zero, a negative) is read as "use your default".
+ * How long a shared link lives: `never`, or a span from the moment the link is
+ * made. `never` is a date far enough away to mean it, because the API has no
+ * way to say "no expiry" and every value it does understand that looks like one
+ * (nothing, zero, a negative) is read as "use your default".
+ *
+ * Letting the server's own default through was an option here at first and is
+ * gone: nobody but the person running the server knows what it is, and they
+ * would have to remember. What the sheet offers now, it can also state.
  *
  * An exact date is not one of these: it is picked in the sheet and belongs to
  * that one link, so there is nothing worth remembering about it.
  */
-export type ShareExpiry = 'hour' | 'day' | 'week' | 'month' | 'never' | 'server';
+export type ShareExpiry = 'hour' | 'day' | 'week' | 'month' | 'never';
 
-/** The ones above, in the order the sheet offers them. */
-export const SHARE_EXPIRIES: ShareExpiry[] = [
-  'hour',
-  'day',
-  'week',
-  'month',
-  'never',
-  'server',
-];
+/** The ones above, in the order the sheet offers them: the spans shortest
+ *  first, and then the one that is not a span. */
+export const SHARE_EXPIRIES: ShareExpiry[] = ['hour', 'day', 'week', 'month', 'never'];
 
 /**
  * Maximum length of the Home custom greeting. It easily fits in one line next
@@ -853,8 +849,9 @@ const DEFAULTS = {
   discographyLayout: 'list' as ListLayout,
   // Grid, like browsing albums: a genre is browsed by cover, not read by name.
   genreLayout: 'grid' as ListLayout,
-  // What every share did before there was anything to choose.
-  shareExpiry: 'server' as ShareExpiry,
+  // Sharing a song with somebody usually means for good; the rest are there
+  // for whoever wants the link to stop working.
+  shareExpiry: 'never' as ShareExpiry,
   // Off: the server has its own default for this and nothing was overriding it.
   shareDownloadable: false,
   accentColor: DEFAULT_ACCENT,
