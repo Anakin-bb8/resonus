@@ -5,7 +5,7 @@
 <h1 align="center">Resonus</h1>
 
 <p align="center">
-  A clean Android music player for your self-hosted server — and your local files.
+  A clean Android music player for your self-hosted server, and your local files.
 </p>
 
 ---
@@ -51,7 +51,7 @@ Also available on [Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtai
 ## Translations
 
 Available in **English, Spanish, German, Catalan, Russian, and Italian**. More languages are
-welcome via pull request — see [TRANSLATING.md](./TRANSLATING.md) for how to add
+welcome via pull request. See [TRANSLATING.md](./TRANSLATING.md) for how to add
 one, plus context for the trickier strings.
 
 ## Community
