@@ -38,6 +38,7 @@
     "plugins": [
       "./plugins/withReleaseSigning",
       "./plugins/withoutFontWeightAdjustment",
+      "./plugins/withTrimmedPermissions",
       "expo-router",
       [
         "expo-splash-screen",

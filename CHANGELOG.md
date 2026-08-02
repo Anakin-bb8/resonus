@@ -70,6 +70,15 @@ Releases before 0.2.1 are only listed on the
   the same way. Elsewhere the heart is on a screen about that one song, artist
   or album, where it is not hit by accident, and it still answers at once, as
   does marking a favourite anywhere. Raised by @ztx-lyghters.
+- The app no longer asks for the microphone, the camera or drawing over other
+  apps. It never used any of the three: the recording permission came in with
+  the audio library, the camera with the image picker (both places that pick an
+  image go to the gallery), and the overlay one with the project template,
+  where it belongs to React Native's development tools. None of them was a
+  hole, since Android asks before granting any of them and the app never asked.
+  They were a reason to distrust a music player, which is worse: whoever reads
+  the permission list before installing deserves one that only holds what the
+  app does. Debug builds keep the overlay so the developer tools still work.
 
 ### Fixed
 
