@@ -66,6 +66,14 @@ interface Props {
   artists?: { id: string; name: string }[];
   /** Circular artist photo next to the subtitle (Spotify style). */
   artistImageUri?: string;
+  /**
+   * What the list says about itself (a playlist's description), whole, above
+   * the metadata. Not cut down to a line with the rest a tap away: nothing
+   * would say the tap is there, and a description nobody can finish reading is
+   * barely better than one that isn't shown. Whoever wants the header quiet
+   * turns it off in Settings › Appearance.
+   */
+  description?: string;
   /** Metadata line (e.g. "Album · 2021 · 12 songs · 48 min"). */
   meta?: string;
   /** Genres of the album, as a scrollable row of chips that browse each one.
@@ -148,6 +156,7 @@ export function TrackListView({
   artistId,
   artists,
   artistImageUri,
+  description,
   meta,
   genres,
   coverUri,
@@ -476,6 +485,9 @@ export function TrackListView({
               ) : (
                 <Text style={styles.subtitle}>{subtitle}</Text>
               )
+            ) : null}
+            {description?.trim() ? (
+              <Text style={styles.description}>{description.trim()}</Text>
             ) : null}
             {meta ? <Text style={styles.meta}>{meta}</Text> : null}
             {/* Deliberately quiet: same weight as the metadata line above, so
@@ -896,6 +908,14 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     overflow: 'hidden',
+  },
+  // Same weight and colour as the metadata under it: what the playlist says
+  // about itself belongs with the rest of what it says, not above it as a
+  // second title.
+  description: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    marginTop: spacing.xs,
   },
   meta: {
     color: colors.textSecondary,

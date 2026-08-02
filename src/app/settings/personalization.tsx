@@ -35,6 +35,8 @@ export default function AppearanceSettings() {
   const setShowSongDuration = useSettings((s) => s.setShowSongDuration);
   const showListRating = useSettings((s) => s.showListRating);
   const setShowListRating = useSettings((s) => s.setShowListRating);
+  const showPlaylistDescription = useSettings((s) => s.showPlaylistDescription);
+  const setShowPlaylistDescription = useSettings((s) => s.setShowPlaylistDescription);
   const showArtistPhoto = useSettings((s) => s.showArtistPhoto);
   const setShowArtistPhoto = useSettings((s) => s.setShowArtistPhoto);
   const showDiscHeaders = useSettings((s) => s.showDiscHeaders);
@@ -98,6 +100,12 @@ export default function AppearanceSettings() {
               description: t('Show each song’s star rating in lists.'),
               value: showListRating,
               onChange: setShowListRating,
+            },
+            {
+              label: t('Show playlist description'),
+              description: t('Show what a playlist says about itself, under its name.'),
+              value: showPlaylistDescription,
+              onChange: setShowPlaylistDescription,
             },
             {
               label: t('Show artist photo'),

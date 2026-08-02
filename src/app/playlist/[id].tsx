@@ -49,6 +49,7 @@ export default function PlaylistScreen() {
   const t = useT();
   const lang = useSettings((s) => s.language);
   const showListArtwork = useSettings((s) => s.showListArtwork);
+  const showPlaylistDescription = useSettings((s) => s.showPlaylistDescription);
   const queryClient = useQueryClient();
   const toast = useToast((s) => s.show);
   const canShare = useCanShare();
@@ -311,6 +312,7 @@ export default function PlaylistScreen() {
     <>
       <TrackListView
         title={data.playlist.name}
+        description={showPlaylistDescription ? data.playlist.comment : undefined}
         meta={metaParts.join(' · ')}
         coverUri={coverArtUrl(data.playlist.coverArt ?? data.playlist.id, 500)}
         onCoverPress={

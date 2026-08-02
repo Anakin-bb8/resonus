@@ -9,6 +9,17 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Added
+
+- A playlist shows its description, between the name and the line that counts
+  the songs and in the same quiet type: what it says about itself belongs with
+  the rest of what it says. Whole, however long it runs, because a description
+  cut short with the rest hidden behind a tap nothing announces is barely
+  better than one not shown at all; whoever prefers the header bare turns it
+  off in Settings › Appearance › Song lists. The app could already write that
+  field and never showed it. Jellyfin's, which allows markup, arrives as plain
+  text. Asked for by @ztx-lyghters.
+
 ### Changed
 
 - Taking a favourite off a song in a list can be undone. The toast that says so

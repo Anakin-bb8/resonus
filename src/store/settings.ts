@@ -453,6 +453,8 @@ interface SettingsState {
   showPlayedInQueue: boolean;
   /** Show mini album cover in lists (playlists/favorites). */
   showListArtwork: boolean;
+  /** Show a playlist's description under its name. */
+  showPlaylistDescription: boolean;
   /** Song duration in lists (Spotify doesn't show it). */
   showSongDuration: boolean;
   /** Rating stars per song in lists. */
@@ -617,6 +619,7 @@ interface SettingsState {
   setSwapPlayerButtons: (value: boolean) => void;
   setShowPlayedInQueue: (value: boolean) => void;
   setShowListArtwork: (value: boolean) => void;
+  setShowPlaylistDescription: (value: boolean) => void;
   setShowSongDuration: (value: boolean) => void;
   setShowListRating: (value: boolean) => void;
   setAutoplaySimilar: (value: boolean) => void;
@@ -713,6 +716,7 @@ function snapshot(get: () => SettingsState) {
     swapPlayerButtons: s.swapPlayerButtons,
     showPlayedInQueue: s.showPlayedInQueue,
     showListArtwork: s.showListArtwork,
+    showPlaylistDescription: s.showPlaylistDescription,
     showSongDuration: s.showSongDuration,
     showListRating: s.showListRating,
     autoplaySimilar: s.autoplaySimilar,
@@ -787,6 +791,7 @@ const DEFAULTS = {
   swapPlayerButtons: false,
   showPlayedInQueue: false,
   showListArtwork: true,
+  showPlaylistDescription: true,
   showSongDuration: false,
   showListRating: false,
   autoplaySimilar: true,
@@ -934,6 +939,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
 
   setShowListArtwork: (showListArtwork) => {
     set({ showListArtwork });
+    persist(snapshot(get));
+  },
+
+  setShowPlaylistDescription: (showPlaylistDescription) => {
+    set({ showPlaylistDescription });
     persist(snapshot(get));
   },
 
@@ -1273,6 +1283,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           swapPlayerButtons: boolean;
           showPlayedInQueue: boolean;
           showListArtwork: boolean;
+          showPlaylistDescription: boolean;
           showSongDuration: boolean;
           showListRating: boolean;
           autoplaySimilar: boolean;
@@ -1391,6 +1402,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (typeof parsed.showListArtwork === 'boolean') {
           set({ showListArtwork: parsed.showListArtwork });
+        }
+        if (typeof parsed.showPlaylistDescription === 'boolean') {
+          set({ showPlaylistDescription: parsed.showPlaylistDescription });
         }
         if (typeof parsed.showSongDuration === 'boolean') {
           set({ showSongDuration: parsed.showSongDuration });

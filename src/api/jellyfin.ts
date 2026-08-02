@@ -286,6 +286,10 @@ function toPlaylist(it: JfItem): Playlist {
   return {
     id: it.Id,
     name: it.Name ?? '',
+    // What Subsonic calls the playlist's comment. Jellyfin lets it be written
+    // with markup, and the header is one plain line: the same stripping the
+    // artist biography already gets.
+    comment: it.Overview?.replace(/<[^>]+>/g, '').trim() || undefined,
     songCount: it.ChildCount,
     coverArt: it.ImageTags?.Primary ? it.Id : undefined,
     created: it.DateCreated,
