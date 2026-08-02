@@ -10,7 +10,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { getFolderIndexes, getMusicDirectory, type Song } from '@/api/data';
+import { coverArtUrl, getFolderIndexes, getMusicDirectory, type Song } from '@/api/data';
+import { Cover } from '@/components/Cover';
 import { Message } from '@/components/Message';
 import { TrackRow } from '@/components/TrackRow';
 import { useT } from '@/i18n';
@@ -23,7 +24,7 @@ import { BackChevron } from '@/components/BackChevron';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
 type Row =
-  | { kind: 'dir'; id: string; name: string }
+  | { kind: 'dir'; id: string; name: string; year?: number; coverArt?: string }
   | { kind: 'song'; song: Song; index: number };
 
 export default function FolderBrowseScreen() {
@@ -56,7 +57,13 @@ export default function FolderBrowseScreen() {
 
   const title = data?.name || name || t('Folders');
   const rows: Row[] = [
-    ...(data?.dirs ?? []).map((d) => ({ kind: 'dir' as const, id: d.id, name: d.name })),
+    ...(data?.dirs ?? []).map((d) => ({
+      kind: 'dir' as const,
+      id: d.id,
+      name: d.name,
+      year: d.year,
+      coverArt: d.coverArt,
+    })),
     ...(data?.songs ?? []).map((song, index) => ({ kind: 'song' as const, song, index })),
   ];
   const songs = data?.songs ?? [];
@@ -94,10 +101,17 @@ export default function FolderBrowseScreen() {
                   })
                 }
               >
-                <Ionicons name="folder" size={30} color={colors.accent} />
-                <Text style={styles.dirName} numberOfLines={1}>
-                  {item.name}
-                </Text>
+                <Cover
+                  uri={showListArtwork ? coverArtUrl(item.coverArt, 100) : undefined}
+                  size={44}
+                  placeholderIcon="folder"
+                />
+                <View style={styles.dirInfo}>
+                  <Text style={styles.dirName} numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                  {item.year ? <Text style={styles.dirYear}>{item.year}</Text> : null}
+                </View>
                 <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
               </Pressable>
             ) : (
@@ -129,14 +143,20 @@ const styles = StyleSheet.create({
   },
   title: { flex: 1, color: colors.text, fontSize: fontSize.lg, fontWeight: '800', textAlign: 'center' },
   list: { paddingHorizontal: spacing.lg, paddingBottom: SCREEN_BOTTOM_PADDING },
+  // Same rhythm as TrackRow so folders and songs line up when a directory
+  // holds both.
   dirRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
   },
   pressed: { opacity: 0.6 },
-  dirName: { flex: 1, color: colors.text, fontSize: fontSize.md, fontWeight: '600' },
+  dirInfo: { flex: 1 },
+  dirName: { color: colors.text, fontSize: fontSize.md, fontWeight: '600' },
+  // The year of an album folder, under its name: the folder view sorts by it,
+  // and until now there was no way to see it (#97).
+  dirYear: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2 },
   empty: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,

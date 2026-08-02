@@ -455,6 +455,10 @@ export interface FolderEntry {
   id: string;
   name: string;
   coverArt?: string;
+  /** Only album directories carry one; artist directories don't. Shown under
+   *  the folder name, which is the one piece of an album the folder view was
+   *  sorting by without ever showing it (#97). */
+  year?: number;
 }
 
 /** Contents of a directory: subfolders and songs. */
@@ -496,7 +500,13 @@ export async function getMusicDirectory(
   const children = dir.child ?? [];
   const dirs: FolderEntry[] = children
     .filter((c) => c.isDir)
-    .map((c) => ({ id: c.id, name: c.name ?? c.title ?? '', coverArt: c.coverArt }));
+    .map((c) => ({
+      id: c.id,
+      name: c.name ?? c.title ?? '',
+      coverArt: c.coverArt,
+      // Servers send 0 when they have no year for the album.
+      year: c.year || undefined,
+    }));
   const songs = children.filter((c) => !c.isDir) as Song[];
   return { id: dir.id ?? id, name: dir.name ?? '', dirs, songs };
 }
