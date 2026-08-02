@@ -8,11 +8,11 @@ import ReanimatedSwipeable, {
 } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Reanimated, { useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
 
-import { coverArtUrl, star, unstar } from '@/api/data';
+import { coverArtUrl, star } from '@/api/data';
 import { type Song } from '@/api/subsonic';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { formatDuration } from '@/lib/format';
-import { applyStarChange, resyncFavorites } from '@/lib/favoritesCache';
+import { applyStarChange, resyncFavorites, unstarWithUndo } from '@/lib/favoritesCache';
 import { useDownloads } from '@/store/downloads';
 import { usePlayerStore } from '@/store/player';
 import { useSongMenu, type SongMenuContext } from '@/store/songMenu';
@@ -133,13 +133,17 @@ function TrackRowBase({
   // NOTE: the gesture only coexists well with scroll if the parent list uses
   // react-native-gesture-handler (FlatList/ScrollView from that library).
   async function toggleFavoriteSwipe() {
-    const next = !favorited;
+    // Removing is deferred behind «Undo»; the heart here reads from the cached
+    // list, so there is no state of its own to put back.
+    if (favorited) {
+      unstarWithUndo('song', song.id);
+      return;
+    }
     try {
-      if (next) await star(song.id, 'song');
-      else await unstar(song.id, 'song');
+      await star(song.id, 'song');
       // The cached list is patched, not thrown away: see `favoritesCache`.
-      applyStarChange('song', song.id, next, song);
-      toast(next ? t('Added to favorites') : t('Removed from favorites'));
+      applyStarChange('song', song.id, true, song);
+      toast(t('Added to favorites'));
     } catch {
       resyncFavorites();
       toast(t("Couldn't complete the action"));
@@ -251,7 +255,7 @@ function TrackRowBase({
       </View>
 
       {favorited && !selecting && !unavailable ? (
-        <FavoriteButton id={song.id} starred size={20} />
+        <FavoriteButton id={song.id} starred undo size={20} />
       ) : null}
       {showRating && song.userRating ? (
         <View style={styles.rating} accessibilityLabel={t('Rate {n} stars', { n: song.userRating })}>

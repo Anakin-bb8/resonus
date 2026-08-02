@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, type GestureResponderEvent } from 'react-native';
 
 import { star, unstar, type StarType } from '@/api/data';
-import { applyStarChange, resyncFavorites } from '@/lib/favoritesCache';
+import { applyStarChange, resyncFavorites, unstarWithUndo } from '@/lib/favoritesCache';
 import { haptic } from '@/lib/haptics';
 import { useAuthStore } from '@/store/auth';
 import { useToast } from '@/store/toast';
@@ -16,9 +16,11 @@ interface Props {
   type?: StarType;
   starred?: boolean;
   size?: number;
+  /** Song lists only: take the favourite off behind an «Undo» toast (#98). */
+  undo?: boolean;
 }
 
-export function FavoriteButton({ id, type = 'song', starred, size = 22 }: Props) {
+export function FavoriteButton({ id, type = 'song', starred, size = 22, undo }: Props) {
   const auth = useAuthStore((s) => s.auth);
   const offline = useAuthStore((s) => s.offline);
   const t = useT();
@@ -36,8 +38,17 @@ export function FavoriteButton({ id, type = 'song', starred, size = 22 }: Props)
   async function toggle(e?: GestureResponderEvent) {
     e?.stopPropagation();
     if ((!auth && !offline) || busy) return;
-    const nextFav = !fav;
     haptic('medium');
+    // In a song list the heart is small and sits where a finger scrolls, so
+    // taking a favourite off waits behind «Undo» and nothing is asked of the
+    // server until the toast goes. On the player, an artist or an album it is
+    // a deliberate tap on a screen about that one thing: it goes out at once.
+    if (fav && undo) {
+      setFav(false);
+      unstarWithUndo(type, id, () => setFav(true));
+      return;
+    }
+    const nextFav = !fav;
     setFav(nextFav); // optimistic update
     setBusy(true);
     try {

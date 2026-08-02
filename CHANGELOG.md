@@ -9,6 +9,17 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Changed
+
+- Taking a favourite off a song in a list can be undone. The toast that says so
+  carries "Undo", and until it goes nothing has been asked of the server, so
+  undoing is not a second request but the first one never leaving. In a list
+  the heart is small and sits where a finger scrolls, and a tap given by
+  accident had to be put right through the song's menu. The swipe gesture goes
+  the same way. Elsewhere the heart is on a screen about that one song, artist
+  or album, where it is not hit by accident, and it still answers at once, as
+  does marking a favourite anywhere. Raised by @ztx-lyghters.
+
 ### Fixed
 
 - "Nothing here is downloaded" greeted a cold start in offline mode. The saved

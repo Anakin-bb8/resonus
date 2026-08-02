@@ -12,7 +12,10 @@
  * doesn't, it falls back to asking again, exactly as before: nothing here is
  * allowed to leave the list less up to date than it used to be.
  */
+import { unstar } from '@/api/data';
 import type { Album, Artist, Song, StarType, Starred } from '@/api/subsonic';
+import { tg } from '@/i18n';
+import { showUndoToast, useToast } from '@/store/toast';
 import { queryClient } from './query';
 
 const KEY = ['starred'];
@@ -64,4 +67,35 @@ export function applyStarChange(
 /** After a failed star/unstar, the cache may be telling a lie: ask again. */
 export function resyncFavorites(): void {
   void queryClient.invalidateQueries({ queryKey: KEY });
+}
+
+/**
+ * Unfavouriting with the removal deferred behind an «Undo» toast. The heart in
+ * a list is small and sits where a finger scrolls, so it gets hit by accident,
+ * and getting the favourite back meant opening the song's menu (#98). Until the
+ * toast goes, the server has not been told anything: undo is not a second
+ * request, it is the first one never leaving.
+ *
+ * The list comes back from the snapshot taken here, which is exact and needs no
+ * object, unlike re-adding through `applyStarChange`. `revert` is for whatever
+ * state the caller keeps of its own (the heart in `FavoriteButton` is its own
+ * `useState`); it also runs if the deferred request ends up failing.
+ */
+export function unstarWithUndo(type: StarType, id: string, revert?: () => void): void {
+  const prev = queryClient.getQueryData<Starred>(KEY);
+  applyStarChange(type, id, false);
+  showUndoToast(tg('Removed from favorites'), tg('Undo'), {
+    commit: () => {
+      void unstar(id, type).catch(() => {
+        revert?.();
+        resyncFavorites();
+        useToast.getState().show(tg("Couldn't complete the action"));
+      });
+    },
+    undo: () => {
+      if (prev) queryClient.setQueryData<Starred>(KEY, prev);
+      else resyncFavorites();
+      revert?.();
+    },
+  });
 }
