@@ -1,7 +1,6 @@
 /** Browse all artists on the server, with quick filter. */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
@@ -30,6 +29,8 @@ import { useLastPlayed } from '@/store/lastPlayed';
 import { useSettings } from '@/store/settings';
 import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
 import { listPerf } from '@/lib/listPerf';
+import { BackChevron } from '@/components/BackChevron';
+import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
 // Three columns, like the Library grid: circles come out to ~121dp, nearly
 // the 130dp Home uses for artists. Two columns (the album grid) would go to
@@ -65,7 +66,7 @@ const FREQUENT_POOL = 50;
 const SEARCH_H = 44 + spacing.md;
 
 export default function BrowseArtistsScreen() {
-  const router = useRouter();
+  const bottomPad = useScreenBottomPadding();
   const t = useT();
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
   const [query, setQuery] = useState('');
@@ -172,9 +173,7 @@ export default function BrowseArtistsScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Pressable hitSlop={10} onPress={() => router.back()} accessibilityLabel={t('Back')}>
-          <Ionicons name="chevron-back" size={26} color={colors.text} />
-        </Pressable>
+        <BackChevron />
         <Text style={styles.title}>{t('Artists')}</Text>
         {/* Takes the same width as the back chevron so the title stays centered;
             there used to be an empty slot of the same width here. */}
@@ -267,8 +266,8 @@ export default function BrowseArtistsScreen() {
           key={`${sort}-${layout}`}
           keyExtractor={(item) => item.id}
           {...(grid
-            ? { numColumns: COLUMNS, columnWrapperStyle: { gap: GAP }, contentContainerStyle: styles.list }
-            : { contentContainerStyle: styles.rowList })}
+            ? { numColumns: COLUMNS, columnWrapperStyle: { gap: GAP }, contentContainerStyle: [styles.list, { paddingBottom: bottomPad }] }
+            : { contentContainerStyle: [styles.rowList, { paddingBottom: bottomPad }] })}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           renderItem={({ item }: { item: Artist }) =>

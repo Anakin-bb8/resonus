@@ -1,7 +1,6 @@
 /** Server genre list, in colored cards (Spotify style). */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
   Dimensions,
@@ -24,13 +23,15 @@ import { useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
 import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
 import { listPerf } from '@/lib/listPerf';
+import { BackChevron } from '@/components/BackChevron';
+import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
 // Width of each card in the 2-column grid (same as in Search), so the loading
 // skeleton matches the actual cards exactly.
 const GENRE_W = (Dimensions.get('window').width - spacing.lg * 2 - spacing.sm) / 2;
 
 export default function GenresScreen() {
-  const router = useRouter();
+  const bottomPad = useScreenBottomPadding();
   const t = useT();
   const auth = useAuthStore((s) => s.auth);
   const [query, setQuery] = useState('');
@@ -50,9 +51,7 @@ export default function GenresScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Pressable hitSlop={10} onPress={() => router.back()} accessibilityLabel={t('Back')}>
-          <Ionicons name="chevron-back" size={26} color={colors.text} />
-        </Pressable>
+        <BackChevron />
         <Text style={styles.title}>{t('Genres')}</Text>
         <View style={{ width: 26 }} />
       </View>
@@ -88,7 +87,7 @@ export default function GenresScreen() {
           keyExtractor={(item) => item.value}
           numColumns={2}
           columnWrapperStyle={{ gap: spacing.sm }}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, { paddingBottom: bottomPad }]}
           renderItem={({ item }: { item: Genre }) => <GenreCard name={item.value} />}
           ListEmptyComponent={
             <EmptyState

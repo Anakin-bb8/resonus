@@ -6,7 +6,6 @@
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Slider from '@react-native-community/slider';
-import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import {
   Modal,
@@ -22,6 +21,7 @@ import { SafeAreaView, useSafeAreaFrame, useSafeAreaInsets } from 'react-native-
 
 import { useSettings } from '@/store/settings';
 import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
+import { BackChevron } from './BackChevron';
 
 /**
  * Live accent, read from the store instead of the global constant.
@@ -37,12 +37,9 @@ function useAccent(): string {
 
 /** Header with back arrow and centered title. */
 export function ScreenHeader({ title }: { title: string }) {
-  const router = useRouter();
   return (
     <View style={settingsStyles.header}>
-      <Pressable hitSlop={12} onPress={() => router.back()}>
-        <Ionicons name="chevron-back" size={28} color={colors.text} />
-      </Pressable>
+      <BackChevron size={28} />
       <Text style={settingsStyles.headerTitle}>{title}</Text>
       <View style={{ width: 28 }} />
     </View>

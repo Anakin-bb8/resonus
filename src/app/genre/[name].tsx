@@ -41,6 +41,7 @@ import { useToast } from '@/store/toast';
 import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
 import { haptic } from '@/lib/haptics';
 import { listPerf } from '@/lib/listPerf';
+import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
 const PAGE = 30;
 const SONG_PAGE = 50;
@@ -53,6 +54,7 @@ const CARD = (Dimensions.get('window').width - spacing.lg * 2 - GAP * (COLUMNS -
 const PLAY_SIZE = 200;
 
 export default function GenreScreen() {
+  const bottomPad = useScreenBottomPadding();
   const { name } = useLocalSearchParams<{ name: string }>();
   const genre = decodeURIComponent(name ?? '');
   const router = useRouter();
@@ -256,7 +258,7 @@ export default function GenreScreen() {
           {...listPerf}
           data={songs}
           keyExtractor={(item, i) => `${item.id}-${i}`}
-          contentContainerStyle={styles.songList}
+          contentContainerStyle={[styles.songList, { paddingBottom: bottomPad }]}
           extraData={selectedIds}
           renderItem={({ item, index }) => (
             <TrackRow
@@ -313,9 +315,9 @@ export default function GenreScreen() {
             ? {
                 numColumns: COLUMNS,
                 columnWrapperStyle: { gap: GAP },
-                contentContainerStyle: styles.list,
+                contentContainerStyle: [styles.list, { paddingBottom: bottomPad }],
               }
-            : { contentContainerStyle: styles.rowList })}
+            : { contentContainerStyle: [styles.rowList, { paddingBottom: bottomPad }] })}
           renderItem={({ item }) =>
             grid ? <AlbumCard album={item} width={CARD} /> : <AlbumRow album={item} />
           }

@@ -1,7 +1,6 @@
 /** Browse all server albums, with sort, search and infinite scroll. */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -29,6 +28,8 @@ import { useAuthStore } from '@/store/auth';
 import { useSettings } from '@/store/settings';
 import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
 import { listPerf } from '@/lib/listPerf';
+import { BackChevron } from '@/components/BackChevron';
+import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
 const PAGE = 30;
 const COLUMNS = 2;
@@ -61,7 +62,7 @@ const SORTS: { key: AlbumListType; label: string }[] = [
 ];
 
 export default function BrowseAlbumsScreen() {
-  const router = useRouter();
+  const bottomPad = useScreenBottomPadding();
   const t = useT();
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
   const [sort, setSort] = useState<AlbumListType>('recent');
@@ -131,9 +132,7 @@ export default function BrowseAlbumsScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Pressable hitSlop={10} onPress={() => router.back()} accessibilityLabel={t('Back')}>
-          <Ionicons name="chevron-back" size={26} color={colors.text} />
-        </Pressable>
+        <BackChevron />
         <Text style={styles.title}>{t('Albums')}</Text>
         {/* Takes the same width as the back chevron so the title stays centered;
             there used to be an empty slot of the same width here. */}
@@ -235,8 +234,8 @@ export default function BrowseAlbumsScreen() {
           key={`${sort}-${layout}`}
           keyExtractor={(item, i) => `${item.id}-${i}`}
           {...(grid
-            ? { numColumns: COLUMNS, columnWrapperStyle: { gap: GAP }, contentContainerStyle: styles.list }
-            : { contentContainerStyle: styles.rowList })}
+            ? { numColumns: COLUMNS, columnWrapperStyle: { gap: GAP }, contentContainerStyle: [styles.list, { paddingBottom: bottomPad }] }
+            : { contentContainerStyle: [styles.rowList, { paddingBottom: bottomPad }] })}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           renderItem={({ item }: { item: Album }) =>

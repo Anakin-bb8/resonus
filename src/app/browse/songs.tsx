@@ -55,6 +55,7 @@ import { usePlayHistory } from '@/store/playHistory';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
 import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
+import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
 const PAGE = 50;
 
@@ -86,6 +87,7 @@ const SORT_LABEL: Record<SongListSort, string> = {
 };
 
 export default function BrowseSongsScreen() {
+  const bottomPad = useScreenBottomPadding();
   const router = useRouter();
   const t = useT();
   // From the store, not `colors.accent`: styles are frozen at module load, so
@@ -331,9 +333,9 @@ export default function BrowseSongsScreen() {
             ? {
                 numColumns: COLUMNS,
                 columnWrapperStyle: { gap: GAP },
-                contentContainerStyle: styles.grid,
+                contentContainerStyle: [styles.grid, { paddingBottom: bottomPad }],
               }
-            : { contentContainerStyle: styles.list })}
+            : { contentContainerStyle: [styles.list, { paddingBottom: bottomPad }] })}
           extraData={selectedIds}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"

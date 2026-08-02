@@ -17,6 +17,7 @@ import { haptic } from '@/lib/haptics';
 import { useAuthStore } from '@/store/auth';
 import { useSettings, type HomeSection, type HomeSectionKey } from '@/store/settings';
 import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
+import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
 /** Label (i18n key) of each section. */
 const LABEL: Record<HomeSectionKey, string> = {
@@ -65,6 +66,7 @@ function SectionRow({ section }: { section: HomeSection }) {
 const SERVER_ONLY: HomeSectionKey[] = ['discover'];
 
 export default function HomeSectionsSettings() {
+  const bottomPad = useScreenBottomPadding();
   const t = useT();
   const offline = useAuthStore((s) => s.offline);
   const homeSections = useSettings((s) => s.homeSections);
@@ -93,7 +95,7 @@ export default function HomeSectionsSettings() {
           );
           setHomeSections(next);
         }}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: bottomPad }]}
       />
     </SafeAreaView>
   );

@@ -11,6 +11,17 @@ Releases before 0.2.1 are only listed on the
 
 ### Added
 
+- A way out of a deep pile of screens. An artist, one of its albums, another
+  artist off a track, a genre from there: Home was four taps back, and Search
+  and the Library with it. Holding the back arrow now goes Home and drops the
+  whole pile on the way, on every screen that has one. Home, and not the tab
+  the app opens on, which may well be the Library: "back" landing on a list of
+  albums when you came from an artist is a riddle rather than a shortcut.
+  Nothing announces a long press, so for whoever wants the way out in plain
+  sight there is "Always show the navigation bar" in Settings › Appearance ›
+  Navigation, off by default, which keeps Home, Search and Library at the
+  bottom of every screen and clears the stack on the way there too. Raised by
+  @ztx-lyghters, and by justtrife in the Discord.
 - A playlist shows its description, between the name and the line that counts
   the songs and in the same quiet type: what it says about itself belongs with
   the rest of what it says. Whole, however long it runs, because a description

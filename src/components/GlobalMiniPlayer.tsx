@@ -9,6 +9,7 @@ import { useEffect, useRef } from 'react';
 import { Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useTabBarShown } from '@/hooks/useTabBar';
 import { spacing, TAB_BAR_HEIGHT } from '@/theme';
 import { MiniPlayer } from './MiniPlayer';
 
@@ -16,6 +17,9 @@ export function GlobalMiniPlayer() {
   const insets = useSafeAreaInsets();
   const segments = useSegments();
   const root = segments[0];
+  // Above the navigation bar wherever there is one, which with the setting on
+  // is nearly everywhere and not only inside the tabs (see `useTabBarShown`).
+  const withBar = useTabBarShown();
 
   // favorites-add too: its search bar lives at the bottom and the mini would cover it.
   const visible = !(
@@ -24,8 +28,7 @@ export function GlobalMiniPlayer() {
     root === 'lyrics' ||
     root === 'favorites-add'
   );
-  const inTabs = root === '(tabs)' || root === undefined;
-  const bottom = inTabs ? TAB_BAR_HEIGHT + insets.bottom : insets.bottom + spacing.sm;
+  const bottom = withBar ? TAB_BAR_HEIGHT + insets.bottom : insets.bottom + spacing.sm;
 
   // Keep the last visible position so it doesn't jump while fading out
   // when opening a full-screen modal.

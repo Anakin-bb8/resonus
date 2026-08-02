@@ -19,12 +19,15 @@ import { useAuthStore } from '@/store/auth';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
 import { colors, fontSize, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
+import { BackChevron } from '@/components/BackChevron';
+import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
 type Row =
   | { kind: 'dir'; id: string; name: string }
   | { kind: 'song'; song: Song; index: number };
 
 export default function FolderBrowseScreen() {
+  const bottomPad = useScreenBottomPadding();
   useSettings((s) => s.accentColor); // re-render when accent changes
   useSettings((s) => s.appFont); // re-render when font changes
   const router = useRouter();
@@ -61,9 +64,7 @@ export default function FolderBrowseScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Pressable hitSlop={10} onPress={() => router.back()} accessibilityLabel={t('Back')}>
-          <Ionicons name="chevron-back" size={26} color={colors.text} />
-        </Pressable>
+        <BackChevron />
         <Text style={styles.title} numberOfLines={1}>
           {title}
         </Text>
@@ -81,7 +82,7 @@ export default function FolderBrowseScreen() {
           {...listPerf}
           data={rows}
           keyExtractor={(item) => (item.kind === 'dir' ? `d:${item.id}` : `s:${item.song.id}`)}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, { paddingBottom: bottomPad }]}
           renderItem={({ item }) =>
             item.kind === 'dir' ? (
               <Pressable

@@ -15,6 +15,7 @@ import { ArtistPickerSheet } from '@/components/ArtistPickerSheet';
 import { CarAutoSync } from '@/components/CarAutoSync';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { GlobalMiniPlayer } from '@/components/GlobalMiniPlayer';
+import { GlobalTabBar } from '@/components/GlobalTabBar';
 import { MediaMenuSheet } from '@/components/MediaMenuSheet';
 import { GlobalPlaylistPicker } from '@/components/PlaylistPickerSheet';
 import { GlobalShareSheet } from '@/components/ShareSheet';
@@ -254,6 +255,7 @@ export default function RootLayout() {
             </Stack>
             {auth || offline ? <AppStartupTab /> : null}
             {auth || offline ? <GlobalMiniPlayer /> : null}
+            {auth || offline ? <GlobalTabBar /> : null}
             {auth || offline ? <SongMenuSheet /> : null}
             {auth || offline ? <SongInfoSheet /> : null}
             {auth || offline ? <ArtistPickerSheet /> : null}

@@ -5,7 +5,7 @@
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useLocalSearchParams, useRouter } from 'expo-router';
+import { Link, useLocalSearchParams } from 'expo-router';
 import {
   ActivityIndicator,
   Dimensions,
@@ -27,6 +27,8 @@ import { listPerf } from '@/lib/listPerf';
 import { useAuthStore } from '@/store/auth';
 import { useSettings } from '@/store/settings';
 import { colors, fontSize, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
+import { BackChevron } from '@/components/BackChevron';
+import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
 // Same measurements as browsing albums: both are full-screen album grids and
 // cards of different sizes between them would look like an accident.
@@ -35,9 +37,9 @@ const GAP = spacing.sm;
 const CARD = (Dimensions.get('window').width - spacing.lg * 2 - GAP * (COLUMNS - 1)) / COLUMNS;
 
 export default function DiscographyScreen() {
+  const bottomPad = useScreenBottomPadding();
   const { id, section } = useLocalSearchParams<{ id: string; section?: string }>();
   const guestsOnly = section === 'appears-on';
-  const router = useRouter();
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
   const t = useT();
   // Its own preference, not the one from browsing albums: the button on one
@@ -75,14 +77,7 @@ export default function DiscographyScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Pressable
-          hitSlop={10}
-          accessibilityRole="button"
-          accessibilityLabel={t('Close')}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="chevron-back" size={26} color={colors.text} />
-        </Pressable>
+        <BackChevron label={t('Close')} />
         <View style={{ flex: 1 }}>
           <Text style={styles.title} numberOfLines={1}>
             {data?.artist.name ?? (guestsOnly ? t('Appears on') : t('Discography'))}
@@ -127,9 +122,9 @@ export default function DiscographyScreen() {
             ? {
                 numColumns: COLUMNS,
                 columnWrapperStyle: { gap: GAP },
-                contentContainerStyle: styles.gridList,
+                contentContainerStyle: [styles.gridList, { paddingBottom: bottomPad }],
               }
-            : { contentContainerStyle: styles.list })}
+            : { contentContainerStyle: [styles.list, { paddingBottom: bottomPad }] })}
           renderItem={({ item }: { item: Album }) =>
             grid ? (
               <AlbumCard album={item} width={CARD} />

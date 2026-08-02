@@ -455,6 +455,8 @@ interface SettingsState {
   showListArtwork: boolean;
   /** Show a playlist's description under its name. */
   showPlaylistDescription: boolean;
+  /** Keep the navigation bar on every screen, not only on the tabs. */
+  alwaysShowTabs: boolean;
   /** Song duration in lists (Spotify doesn't show it). */
   showSongDuration: boolean;
   /** Rating stars per song in lists. */
@@ -620,6 +622,7 @@ interface SettingsState {
   setShowPlayedInQueue: (value: boolean) => void;
   setShowListArtwork: (value: boolean) => void;
   setShowPlaylistDescription: (value: boolean) => void;
+  setAlwaysShowTabs: (value: boolean) => void;
   setShowSongDuration: (value: boolean) => void;
   setShowListRating: (value: boolean) => void;
   setAutoplaySimilar: (value: boolean) => void;
@@ -717,6 +720,7 @@ function snapshot(get: () => SettingsState) {
     showPlayedInQueue: s.showPlayedInQueue,
     showListArtwork: s.showListArtwork,
     showPlaylistDescription: s.showPlaylistDescription,
+    alwaysShowTabs: s.alwaysShowTabs,
     showSongDuration: s.showSongDuration,
     showListRating: s.showListRating,
     autoplaySimilar: s.autoplaySimilar,
@@ -792,6 +796,7 @@ const DEFAULTS = {
   showPlayedInQueue: false,
   showListArtwork: true,
   showPlaylistDescription: true,
+  alwaysShowTabs: false,
   showSongDuration: false,
   showListRating: false,
   autoplaySimilar: true,
@@ -944,6 +949,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
 
   setShowPlaylistDescription: (showPlaylistDescription) => {
     set({ showPlaylistDescription });
+    persist(snapshot(get));
+  },
+
+  setAlwaysShowTabs: (alwaysShowTabs) => {
+    set({ alwaysShowTabs });
     persist(snapshot(get));
   },
 
@@ -1284,6 +1294,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           showPlayedInQueue: boolean;
           showListArtwork: boolean;
           showPlaylistDescription: boolean;
+          alwaysShowTabs: boolean;
           showSongDuration: boolean;
           showListRating: boolean;
           autoplaySimilar: boolean;
@@ -1405,6 +1416,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (typeof parsed.showPlaylistDescription === 'boolean') {
           set({ showPlaylistDescription: parsed.showPlaylistDescription });
+        }
+        if (typeof parsed.alwaysShowTabs === 'boolean') {
+          set({ alwaysShowTabs: parsed.alwaysShowTabs });
         }
         if (typeof parsed.showSongDuration === 'boolean') {
           set({ showSongDuration: parsed.showSongDuration });

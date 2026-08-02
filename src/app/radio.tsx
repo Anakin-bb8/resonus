@@ -2,7 +2,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useQuery } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -38,6 +37,8 @@ import { MAX_PINS, usePins } from '@/store/pins';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useToast } from '@/store/toast';
 import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
+import { BackChevron } from '@/components/BackChevron';
+import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
 const EMPTY_EDIT: RadioEdit = { name: '', streamUrl: '', homePageUrl: '' };
 
@@ -45,7 +46,7 @@ const EMPTY_EDIT: RadioEdit = { name: '', streamUrl: '', homePageUrl: '' };
 const SEARCH_FROM = 8;
 
 export default function RadioScreen() {
-  const router = useRouter();
+  const bottomPad = useScreenBottomPadding();
   const t = useT();
   const insets = useSafeAreaInsets();
   const auth = useAuthStore((s) => s.auth);
@@ -147,9 +148,7 @@ export default function RadioScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Pressable hitSlop={10} onPress={() => router.back()} accessibilityLabel={t('Back')}>
-          <Ionicons name="chevron-back" size={26} color={colors.text} />
-        </Pressable>
+        <BackChevron />
         <Text style={styles.title}>{t('Radio')}</Text>
         {canManage ? (
           <Pressable
@@ -192,7 +191,7 @@ export default function RadioScreen() {
         <FlatList
           data={stations}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, { paddingBottom: bottomPad }]}
           refreshControl={
             <RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.accent} />
           }

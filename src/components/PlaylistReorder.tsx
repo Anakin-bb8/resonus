@@ -20,6 +20,7 @@ import { haptic } from '@/lib/haptics';
 import { useSettings } from '@/store/settings';
 import { colors, fontSize, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
 import { Cover } from './Cover';
+import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
 // ReorderableList necesita las celdas montadas para animar el arrastre.
 const perf = {
@@ -65,6 +66,7 @@ export function PlaylistReorder({
   onSave: (songIds: string[]) => void;
 }) {
   const t = useT();
+  const bottomPad = useScreenBottomPadding();
   const [list, setList] = useState(songs);
   useSettings((s) => s.accentColor); // re-render al cambiar el acento
 
@@ -99,7 +101,7 @@ export function PlaylistReorder({
             return next;
           });
         }}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: bottomPad }]}
       />
     </SafeAreaView>
   );

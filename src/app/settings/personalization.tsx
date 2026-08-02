@@ -37,6 +37,8 @@ export default function AppearanceSettings() {
   const setShowListRating = useSettings((s) => s.setShowListRating);
   const showPlaylistDescription = useSettings((s) => s.showPlaylistDescription);
   const setShowPlaylistDescription = useSettings((s) => s.setShowPlaylistDescription);
+  const alwaysShowTabs = useSettings((s) => s.alwaysShowTabs);
+  const setAlwaysShowTabs = useSettings((s) => s.setAlwaysShowTabs);
   const showArtistPhoto = useSettings((s) => s.showArtistPhoto);
   const setShowArtistPhoto = useSettings((s) => s.setShowArtistPhoto);
   const showDiscHeaders = useSettings((s) => s.showDiscHeaders);
@@ -124,6 +126,20 @@ export default function AppearanceSettings() {
               description: t('Show the album’s genres as chips; tap one to browse it.'),
               value: showGenreChips,
               onChange: setShowGenreChips,
+            },
+          ]}
+        />
+
+        <Text style={settingsStyles.sectionTitle}>{t('Navigation')}</Text>
+        <SwitchList
+          options={[
+            {
+              label: t('Always show the navigation bar'),
+              description: t(
+                'Keep Home, Search and Library at the bottom of every screen. Holding the back arrow goes Home either way.',
+              ),
+              value: alwaysShowTabs,
+              onChange: setAlwaysShowTabs,
             },
           ]}
         />

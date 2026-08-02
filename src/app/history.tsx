@@ -3,7 +3,6 @@
  * (no hero header) and songs grouped by day.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
 // gesture-handler doesn't export SectionList; its ScrollView as inner scroll
@@ -21,6 +20,8 @@ import { usePlayHistory, type HistoryEntry } from '@/store/playHistory';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
 import { colors, fontSize, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
+import { BackChevron } from '@/components/BackChevron';
+import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
 interface DaySection {
   title: string;
@@ -46,8 +47,8 @@ function dayLabel(playedAt: number, t: (k: string) => string, lang: string): str
 }
 
 export default function HistoryScreen() {
+  const bottomPad = useScreenBottomPadding();
   const t = useT();
-  const router = useRouter();
   const lang = useSettings((s) => s.language);
   const showListArtwork = useSettings((s) => s.showListArtwork);
   const entries = usePlayHistory((s) => s.entries);
@@ -71,9 +72,7 @@ export default function HistoryScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.bar}>
-        <Pressable hitSlop={12} accessibilityLabel={t('Close')} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={28} color={colors.text} />
-        </Pressable>
+        <BackChevron size={28} label={t('Close')} />
         <Text style={styles.barTitle}>{t('History')}</Text>
         {songs.length > 0 ? (
           <Pressable
@@ -102,7 +101,7 @@ export default function HistoryScreen() {
           sections={sections}
           keyExtractor={(item) => item.song.id}
           stickySectionHeadersEnabled={false}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, { paddingBottom: bottomPad }]}
           renderSectionHeader={({ section }) => (
             <Text style={styles.sectionTitle}>{section.title}</Text>
           )}

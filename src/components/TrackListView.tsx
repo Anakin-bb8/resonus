@@ -45,6 +45,7 @@ import { Cover } from './Cover';
 import { FavoriteButton } from './FavoriteButton';
 import { SelectionBar } from './SelectionBar';
 import { TrackRow } from './TrackRow';
+import { BackChevron } from './BackChevron';
 
 const COVER = Math.min(Dimensions.get('window').width * 0.58, 250);
 const TOPBAR_H = 48;
@@ -720,14 +721,7 @@ export function TrackListView({
                 { backgroundColor: headerColor, opacity: barBgOpacity },
               ]}
             />
-            <Pressable
-              hitSlop={12}
-              accessibilityRole="button"
-              accessibilityLabel={t('Close')}
-              onPress={() => router.back()}
-            >
-              <Ionicons name="chevron-back" size={28} color={colors.text} />
-            </Pressable>
+            <BackChevron size={28} label={t('Close')} />
             <Animated.Text
               style={[styles.barTitle, { opacity: barContentOpacity }]}
               numberOfLines={1}

@@ -20,6 +20,7 @@ import { haptic } from '@/lib/haptics';
 import { useAuthStore } from '@/store/auth';
 import { useSettings, type ExploreChip, type ExploreChipKey } from '@/store/settings';
 import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
+import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
 /** Etiqueta (clave i18n) de cada chip. Las mismas que se pintan en Inicio. */
 const LABEL: Record<ExploreChipKey, string> = {
@@ -69,6 +70,7 @@ function ChipRow({ chip }: { chip: ExploreChip }) {
 const SERVER_ONLY: ExploreChipKey[] = ['genres', 'radio', 'history'];
 
 export default function ExploreChipsSettings() {
+  const bottomPad = useScreenBottomPadding();
   const t = useT();
   const offline = useAuthStore((s) => s.offline);
   const exploreChips = useSettings((s) => s.exploreChips);
@@ -97,7 +99,7 @@ export default function ExploreChipsSettings() {
           );
           setExploreChips(next);
         }}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: bottomPad }]}
       />
     </SafeAreaView>
   );

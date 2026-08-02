@@ -2,7 +2,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Link, useLocalSearchParams, useRouter } from 'expo-router';
+import { Link, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import {
@@ -50,7 +50,9 @@ import { currentSong, usePlayerStore } from '@/store/player';
 import { usePlaylistPicker } from '@/store/playlistPicker';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
+import { colors, fontSize, spacing } from '@/theme';
+import { BackChevron } from '@/components/BackChevron';
+import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
 const WIDTH = Dimensions.get('window').width;
 const HEADER_H = Math.min(WIDTH, 360);
@@ -64,9 +66,9 @@ const CARD_W = 140;
 const ROW_LIMIT = 50;
 
 export default function ArtistScreen() {
+  const bottomPad = useScreenBottomPadding();
   useSettings((s) => s.accentColor); // re-render when accent changes
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
   const t = useT();
@@ -321,7 +323,7 @@ export default function ArtistScreen() {
   return (
     <View style={styles.root}>
       <ScrollView
-        contentContainerStyle={{ paddingBottom: SCREEN_BOTTOM_PADDING }}
+        contentContainerStyle={{ paddingBottom: bottomPad }}
         scrollEventThrottle={16}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
           useNativeDriver: false,
@@ -540,15 +542,7 @@ export default function ArtistScreen() {
           pointerEvents="none"
           style={[StyleSheet.absoluteFill, { backgroundColor: dominant, opacity: barBgOpacity }]}
         />
-        <Pressable
-          style={styles.back}
-          hitSlop={10}
-          accessibilityRole="button"
-          accessibilityLabel={t('Close')}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="chevron-back" size={26} color={colors.text} />
-        </Pressable>
+        <BackChevron style={styles.back} label={t('Close')} />
         <Animated.Text style={[styles.barTitle, { opacity: barContentOpacity }]} numberOfLines={1}>
           {data.artist.name}
         </Animated.Text>
