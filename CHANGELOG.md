@@ -22,6 +22,16 @@ Releases before 0.2.1 are only listed on the
 
 ### Changed
 
+- "Song information" opens the cover, browses the genre, and lets itself be
+  read. The art in its header is the song's own, which on a live album or a
+  compilation need not be the album's, and there was no way to see it without
+  playing the track: tapping it opens it full screen like every other cover.
+  The genre is now the same chips the album header has, so it is somewhere to
+  go and not a line of text. And with the list long enough to scroll, pulling
+  down to get back to the top was closing the sheet instead: the drag only
+  belongs to the sheet at the top of the list now, and the header still closes
+  it from anywhere, the way the song menu already worked. Raised by
+  @ztx-lyghters.
 - Taking a favourite off a song in a list can be undone. The toast that says so
   carries "Undo", and until it goes nothing has been asked of the server, so
   undoing is not a second request but the first one never leaving. In a list
