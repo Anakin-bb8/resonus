@@ -661,7 +661,11 @@ async function loadIndex(index: number, autoplay: boolean) {
       }
       if (target === -1) {
         usePlayerStore.setState({ isPlaying: false });
-        useToast.getState().show(tg('Nothing here is downloaded'));
+        // Only when playing was actually asked for. Restoring the saved queue
+        // on a cold start also comes through here, and answering a tap nobody
+        // gave is how the toast ended up greeting people who open the app
+        // offline.
+        if (autoplay) useToast.getState().show(tg('Nothing here is downloaded'));
         return;
       }
       index = target;
@@ -2293,7 +2297,14 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       return;
     }
     const p = activePlayer();
-    if (!p) return;
+    if (!p) {
+      // No player yet: the restored queue never got as far as loading a track,
+      // which offline means none of it is on disk. Going through `loadIndex`
+      // plays what can be played, and says so when nothing can.
+      const { queue, index } = get();
+      if (queue[index]) void loadIndex(index, true);
+      return;
+    }
     // Effective volume of the current track (user × ReplayGain).
     const vol = effectiveVolume(currentSong(get()));
     if (get().isPlaying) {

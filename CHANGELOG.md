@@ -9,6 +9,15 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Fixed
+
+- "Nothing here is downloaded" greeted a cold start in offline mode. The saved
+  queue is restored as soon as the session is, which is before the list of
+  downloaded files has been read out of the database, so every song in it
+  looked like it was only on the server. The queue now waits for that list,
+  and the message is only given when playing was actually asked for, not when
+  the app is putting itself back together on its own.
+
 ## [0.6.1] - 2026-08-01
 
 Songs get a place of their own: a chip on Home opens the library's songs with a

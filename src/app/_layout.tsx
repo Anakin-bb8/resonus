@@ -65,6 +65,7 @@ export default function RootLayout() {
   const hydrate = useAuthStore((s) => s.hydrate);
   // With downloads, the local profile works without having chosen a music source.
   const hasDownloads = useDownloads((s) => Object.keys(s.files).length > 0);
+  const downloadsHydrated = useDownloads((s) => s.hydrated);
   const ready = !!auth || (offline && (!!offlineSource || hasDownloads));
   // Active profile identified to reload recent searches when switching.
   // Depends on the PRIMARY URL (not the active one): when switching networks the
@@ -137,9 +138,12 @@ export default function RootLayout() {
 
   // On entering a profile (server or local), resumes the saved queue
   // (without playing): first the device copy, then the server copy if not.
+  // Never before the downloads are in memory: a server profile is ready as
+  // soon as the session is restored, which is earlier, and offline a queue
+  // loaded against an empty map looks like nothing in it was downloaded.
   useEffect(() => {
-    if (ready) void usePlayerStore.getState().restoreQueue();
-  }, [ready, activeProfile]);
+    if (ready && downloadsHydrated) void usePlayerStore.getState().restoreQueue();
+  }, [ready, downloadsHydrated, activeProfile]);
 
   // Keep screen awake (setting). The native flag only acts with the app in
   // the foreground, so it doesn't waste extra battery in the background.

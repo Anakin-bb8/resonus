@@ -693,12 +693,18 @@ export const useDownloads = create<DownloadsState>((set, get) => {
       // install that had been signed in more than once, for songs belonging to
       // accounts that aren't playing (#50).
       const active = activeServerDir();
-      const dirs = active ? [active] : await serverDirs();
+      const dirs = active ? [active] : await serverDirs().catch(() => []);
       for (const dir of dirs) {
-        // Two columns out of the database, not every song parsed out of a file.
-        const part = await Db.downloadedFiles(dir);
-        Object.assign(files, part.files);
-        Object.assign(dlBitRates, part.bitRates);
+        try {
+          // Two columns out of the database, not every song parsed out of a file.
+          const part = await Db.downloadedFiles(dir);
+          Object.assign(files, part.files);
+          Object.assign(dlBitRates, part.bitRates);
+        } catch {
+          // A catalog that cannot be read leaves this profile without
+          // downloads, not the app without an answer: `hydrated` is what the
+          // queue waits on before restoring itself.
+        }
       }
       if (run !== hydrateRun) return;
       set({ files, dlBitRates, hydrated: true });
