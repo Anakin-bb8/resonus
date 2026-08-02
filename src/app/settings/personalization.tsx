@@ -136,7 +136,7 @@ export default function AppearanceSettings() {
             {
               label: t('Always show the navigation bar'),
               description: t(
-                'Keep Home, Search and Library at the bottom of every screen. Holding the back arrow goes Home either way.',
+                'Keep Home, Search and Library at the bottom of every screen. Holding the back arrow goes back to the one you came from either way.',
               ),
               value: alwaysShowTabs,
               onChange: setAlwaysShowTabs,

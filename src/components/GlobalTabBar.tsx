@@ -25,21 +25,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTabBarShown } from '@/hooks/useTabBar';
 import { useT } from '@/i18n';
+import { rememberTab, tabOrigin, TABS } from '@/lib/tabOrigin';
 import { useSettings } from '@/store/settings';
 import { colors, TAB_BAR_HEIGHT } from '@/theme';
 
-const TABS = [
-  { href: '/', icon: 'home', label: 'Home', segment: 'index' },
-  { href: '/search', icon: 'search', label: 'Search', segment: 'search' },
-  { href: '/library', icon: 'library', label: 'Library', segment: 'library' },
-] as const;
-
-/**
- * The tab this stack grew out of, so the bar still says where you came from.
- * Module scope on purpose: it outlives every screen that reads it, and losing
- * it on a remount would blank the bar for no reason.
- */
-let lastTab: string = 'index';
+const ICONS: Record<string, 'home' | 'search' | 'library'> = {
+  index: 'home',
+  search: 'search',
+  library: 'library',
+};
 
 export function GlobalTabBar() {
   const insets = useSafeAreaInsets();
@@ -52,8 +46,11 @@ export function GlobalTabBar() {
   const always = useSettings((s) => s.alwaysShowTabs);
   const root = segments[0];
   const inTabs = root === '(tabs)' || root === undefined;
-  if (inTabs) lastTab = segments[1] ?? 'index';
-  const current = inTabs ? lastTab : null;
+  // Where a stack opened from here would belong; the back arrow reads the same
+  // thing to know where to let you out (see `tabOrigin`).
+  if (inTabs) rememberTab(segments[1]);
+  const origin = tabOrigin();
+  const current = inTabs ? origin : null;
 
   if (!always || !shown) return null;
 
@@ -75,7 +72,7 @@ export function GlobalTabBar() {
         // nothing is current, and the tab the stack came from is only marked
         // enough to keep the bar from looking dead.
         const here = current === tab.segment;
-        const from = !inTabs && lastTab === tab.segment;
+        const from = !inTabs && origin === tab.segment;
         const color = here || from ? colors.text : colors.textSecondary;
         return (
           <Pressable
@@ -88,7 +85,7 @@ export function GlobalTabBar() {
           >
             <View style={styles.iconBox}>
               <Ionicons
-                name={here || from ? tab.icon : `${tab.icon}-outline`}
+                name={here || from ? ICONS[tab.segment] : `${ICONS[tab.segment]}-outline`}
                 size={25}
                 color={color}
               />

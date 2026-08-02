@@ -12,11 +12,11 @@ Releases before 0.2.1 are only listed on the
 ### Added
 
 - A way out of a deep pile of screens. An artist, one of its albums, another
-  artist off a track, a genre from there: Home was four taps back, and Search
-  and the Library with it. Holding the back arrow now goes Home and drops the
-  whole pile on the way, on every screen that has one. Home, and not the tab
-  the app opens on, which may well be the Library: "back" landing on a list of
-  albums when you came from an artist is a riddle rather than a shortcut.
+  artist off a track, a genre from there: getting back was four taps, and there
+  was no shorter way. Holding the back arrow now drops the whole pile at once,
+  and leaves you where you came in: screens opened from the Library end at the
+  Library, screens opened from a search end at Search. Not the tab the app
+  happens to open on, so nobody lands in a list of albums they never asked for.
   Nothing announces a long press, so for whoever wants the way out in plain
   sight there is "Always show the navigation bar" in Settings › Appearance ›
   Navigation, off by default, which keeps Home, Search and Library at the
