@@ -1276,7 +1276,8 @@ useSettings.subscribe((s) => {
 
 /** Linear ReplayGain factor for a song according to the setting mode. */
 function gainFactor(song: Song | null | undefined): number {
-  let mode = useSettings.getState().replayGain;
+  const settings = useSettings.getState();
+  let mode = settings.replayGain;
   const rg = song?.replayGain;
   if (mode === 'off' || !rg) return 1;
   if (mode === 'auto') {
@@ -1288,7 +1289,9 @@ function gainFactor(song: Song | null | undefined): number {
   // Album mode without album gain (or vice versa): use whatever is available.
   const gain = mode === 'album' ? (rg.albumGain ?? rg.trackGain) : (rg.trackGain ?? rg.albumGain);
   if (typeof gain !== 'number' || !Number.isFinite(gain)) return 1;
-  let f = Math.pow(10, gain / 20);
+  // The pre-amp rides on top of the tag: it moves the target loudness the whole
+  // library normalizes to, which is the point of having one (#93).
+  let f = Math.pow(10, (gain + settings.replayGainPreampDb) / 20);
   // With positive gain, don't exceed the file's peak (prevents clipping).
   const peak = mode === 'album' ? (rg.albumPeak ?? rg.trackPeak) : (rg.trackPeak ?? rg.albumPeak);
   if (typeof peak === 'number' && peak > 0) f = Math.min(f, 1 / peak);
@@ -1301,12 +1304,15 @@ function effectiveVolume(song: Song | null | undefined): number {
   return usePlayerStore.getState().volume * gainFactor(song);
 }
 
-// When the mode changes in Settings, re-apply the volume of the currently playing
-// track (outside ramps: an in-progress fade only converges to the new value).
-let lastReplayGainMode = useSettings.getState().replayGain;
+// When the mode or the pre-amp changes in Settings, re-apply the volume of the
+// currently playing track (outside ramps: an in-progress fade only converges to
+// the new value).
+const replayGainKey = (s: ReturnType<typeof useSettings.getState>) =>
+  `${s.replayGain}|${s.replayGainPreampDb}`;
+let lastReplayGain = replayGainKey(useSettings.getState());
 useSettings.subscribe((s) => {
-  if (s.replayGain === lastReplayGainMode) return;
-  lastReplayGainMode = s.replayGain;
+  if (replayGainKey(s) === lastReplayGain) return;
+  lastReplayGain = replayGainKey(s);
   if (fadingOut || pauseFadeTimer) return;
   const p = activePlayer();
   if (p) p.volume = effectiveVolume(currentSong(usePlayerStore.getState()));

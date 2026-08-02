@@ -30,6 +30,17 @@ Releases before 0.2.1 are only listed on the
   off in Settings › Appearance › Song lists. The app could already write that
   field and never showed it. Jellyfin's, which allows markup, arrives as plain
   text. Asked for by @ztx-lyghters.
+- Volume normalization has a pre-amp, right under it in Settings › Quality &
+  playback and only there while normalization is on. ReplayGain aims at -18
+  LUFS and the apps everyone else on the phone uses aim at -14, so turning
+  normalization on left the music noticeably quieter than everything around it,
+  and the fix was riding the system volume up and down between apps. The slider
+  moves the level the whole library normalizes to, from -10 to +10 dB in half
+  dB steps, and takes effect on the song already playing; tapping the value
+  opens a small pad with arrows that move it a tenth at a time, which is the
+  precision a finger on a slider can't reach. A song already close
+  to its peak takes less of the boost than asked, because the rest would be
+  distortion rather than volume. Asked for by @jaredm4.
 
 ### Changed
 

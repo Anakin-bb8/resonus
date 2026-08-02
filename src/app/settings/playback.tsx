@@ -17,7 +17,13 @@ import {
 } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
-import { BITRATE_OPTIONS, TRANSCODE_FORMATS, useSettings } from '@/store/settings';
+import {
+  BITRATE_OPTIONS,
+  clampReplayGainPreamp,
+  REPLAY_GAIN_PREAMP_LIMIT,
+  TRANSCODE_FORMATS,
+  useSettings,
+} from '@/store/settings';
 
 export default function PlaybackSettings() {
   const t = useT();
@@ -39,6 +45,8 @@ export default function PlaybackSettings() {
   const setPreloadUpcoming = useSettings((s) => s.setPreloadUpcoming);
   const replayGain = useSettings((s) => s.replayGain);
   const setReplayGain = useSettings((s) => s.setReplayGain);
+  const replayGainPreampDb = useSettings((s) => s.replayGainPreampDb);
+  const setReplayGainPreampDb = useSettings((s) => s.setReplayGainPreampDb);
   const keepScreenAwake = useSettings((s) => s.keepScreenAwake);
   const batteryWarning = useSettings((s) => s.batteryWarning);
   const setBatteryWarning = useSettings((s) => s.setBatteryWarning);
@@ -143,6 +151,24 @@ export default function PlaybackSettings() {
           value={replayGain}
           onChange={setReplayGain}
         />
+        {/* Only with normalization on: with nothing normalizing, there is no
+            level to move and the slider would do nothing at all. No description
+            either: it sits right under the one that explains normalizing, and a
+            paragraph that tall makes the row jump while the slider moves. */}
+        {replayGain === 'off' ? null : (
+          <SliderRow
+            label={t('Pre-amp')}
+            value={replayGainPreampDb}
+            min={-REPLAY_GAIN_PREAMP_LIMIT}
+            max={REPLAY_GAIN_PREAMP_LIMIT}
+            step={0.5}
+            formatValue={(v) => `${v > 0 ? '+' : ''}${clampReplayGainPreamp(v).toFixed(1)} dB`}
+            // The slider covers the whole range in half dB steps; the tenths
+            // that a finger can't land on are what the pad is for.
+            fineTune={{ step: 0.1, doneLabel: t('Done') }}
+            onChange={setReplayGainPreampDb}
+          />
+        )}
         <SettingRow
           label={t('Equalizer')}
           description={t('Tune the sound band by band.')}

@@ -6,7 +6,7 @@
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Slider from '@react-native-community/slider';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -342,6 +342,7 @@ export function SliderRow({
   max,
   step = 1,
   formatValue,
+  fineTune,
   onChange,
 }: {
   label: string;
@@ -352,11 +353,19 @@ export function SliderRow({
   step?: number;
   /** Text for the current value (already translated by the caller). */
   formatValue: (value: number) => string;
+  /**
+   * Makes the value tappable: it opens a pad with up/down arrows that move it
+   * by `step`, finer than the slider's own. `doneLabel` closes the pad and
+   * comes from the caller because this file translates nothing.
+   */
+  fineTune?: { step: number; doneLabel: string };
   onChange: (value: number) => void;
 }) {
   const accent = useAccent();
   const [live, setLive] = useState<number | null>(null);
+  const [tuning, setTuning] = useState(false);
   const shown = live ?? value;
+
   return (
     <View style={settingsStyles.cardBox}>
       <View style={[settingsStyles.row, { paddingBottom: 0 }]}>
@@ -364,8 +373,38 @@ export function SliderRow({
           <Text style={settingsStyles.rowLabel}>{label}</Text>
           {description ? <Text style={settingsStyles.rowDescription}>{description}</Text> : null}
         </View>
-        <Text style={settingsStyles.rowValue}>{formatValue(shown)}</Text>
+        {fineTune ? (
+          // The double chevron is the whole hint that the number opens
+          // something: same grey as the value, and the same idea as the arrow
+          // a SelectList row carries, which is where anyone reading this
+          // screen has already learnt what it means.
+          <Pressable
+            accessibilityRole="button"
+            hitSlop={12}
+            style={({ pressed }) => [settingsStyles.tunableValue, pressed && { opacity: 0.6 }]}
+            onPress={() => setTuning(true)}
+          >
+            <Text style={settingsStyles.rowValue}>{formatValue(shown)}</Text>
+            <Ionicons name="chevron-expand" size={16} color={colors.textMuted} />
+          </Pressable>
+        ) : (
+          <Text style={settingsStyles.rowValue}>{formatValue(shown)}</Text>
+        )}
       </View>
+      {fineTune ? (
+        <FineTunePad
+          visible={tuning}
+          title={label}
+          value={value}
+          min={min}
+          max={max}
+          step={fineTune.step}
+          doneLabel={fineTune.doneLabel}
+          formatValue={formatValue}
+          onChange={onChange}
+          onClose={() => setTuning(false)}
+        />
+      ) : null}
       <Slider
         style={settingsStyles.slider}
         minimumValue={min}
@@ -382,6 +421,155 @@ export function SliderRow({
         thumbTintColor={colors.text}
       />
     </View>
+  );
+}
+
+/**
+ * Little pad that opens over a slider's value to nudge it one small step at a
+ * time, for the last tenths a finger can't land on. Holding an arrow repeats,
+ * and after a moment it moves in fives so crossing the whole range is still a
+ * few seconds and not a minute.
+ *
+ * The store only hears about it when the finger lifts: while an arrow repeats
+ * this is one value per tick, and every one of them would be written to disk.
+ */
+function FineTunePad({
+  visible,
+  title,
+  value,
+  min,
+  max,
+  step,
+  doneLabel,
+  formatValue,
+  onChange,
+  onClose,
+}: {
+  visible: boolean;
+  title: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  doneLabel: string;
+  formatValue: (value: number) => string;
+  onChange: (value: number) => void;
+  onClose: () => void;
+}) {
+  const accent = useAccent();
+  const [draft, setDraft] = useState(value);
+  /** The same value, readable from inside the repeat timer. */
+  const draftRef = useRef(value);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /**
+   * Which arrow the finger is on, 0 for none. Every tick checks it before
+   * moving anything: a press repeats around ten times a second, each one a
+   * re-render inside a Modal, and that is exactly the situation where a
+   * release event goes missing and the value walks off on its own.
+   */
+  const holding = useRef(0);
+
+  /** Last value handed to the store, so the same one is never saved twice. */
+  const saved = useRef(value);
+
+  // Opens on whatever the setting is now, which may have moved on the slider.
+  useEffect(() => {
+    if (!visible) return;
+    setDraft(value);
+    draftRef.current = value;
+    saved.current = value;
+  }, [visible, value]);
+
+  useEffect(() => () => stopTimer(), []);
+
+  function stopTimer() {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+  }
+
+  /** Moves the draft and says whether it actually had anywhere to go. */
+  function nudge(direction: number, amount: number): boolean {
+    const next = Math.min(Math.max(draftRef.current + direction * amount, min), max);
+    // Tenths add up in binary to things like 4.300000000000001.
+    const clean = Math.round(next * 100) / 100;
+    if (clean === draftRef.current) return false;
+    draftRef.current = clean;
+    setDraft(clean);
+    return true;
+  }
+
+  /**
+   * One step now and the next one scheduled, over and over while the finger
+   * stays down: a chain of timeouts instead of an interval, so two ticks can
+   * never overlap and there is only ever one timer to cancel. After a couple of
+   * seconds it moves in threes, enough to cross the range without the value
+   * running away in the first instant.
+   */
+  function tick(direction: number, count: number) {
+    if (holding.current !== direction) return;
+    const moved = nudge(direction, count > 15 ? step * 3 : step);
+    // Nothing left at the end of the range, and nobody else is going to stop
+    // a timer that keeps firing under a finger that is still down.
+    if (!moved || count > 200) return;
+    timer.current = setTimeout(() => tick(direction, count + 1), count === 0 ? 400 : 110);
+  }
+
+  function hold(direction: number) {
+    stopTimer(); // a press that never got its release doesn't get to linger
+    holding.current = direction;
+    tick(direction, 0);
+  }
+
+  /** Nothing is saved until the finger lifts (or the pad closes). */
+  function release() {
+    holding.current = 0;
+    stopTimer();
+    if (draftRef.current === saved.current) return;
+    saved.current = draftRef.current;
+    onChange(draftRef.current);
+  }
+
+  function close() {
+    release();
+    onClose();
+  }
+
+  // Greyed out at the end of the range, but never `disabled`: turning that on
+  // mid-press swallows the release, and with it the only chance to save.
+  const arrow = (direction: number, icon: 'chevron-up' | 'chevron-down') => {
+    const spent = direction > 0 ? draft >= max : draft <= min;
+    return (
+      <Pressable
+        accessibilityRole="button"
+        style={({ pressed }) => [settingsStyles.padArrow, pressed && { opacity: 0.6 }]}
+        onPressIn={() => hold(direction)}
+        onPressOut={release}
+        // Belt and braces over the same release: `release` is idempotent, and
+        // the touch events land even when Pressability loses track of the
+        // gesture, which is what left the value climbing on its own.
+        onTouchEnd={release}
+        onTouchCancel={release}
+      >
+        <Ionicons name={icon} size={28} color={spent ? colors.textMuted : colors.text} />
+      </Pressable>
+    );
+  };
+
+  return (
+    <Modal transparent statusBarTranslucent visible={visible} animationType="fade" onRequestClose={close}>
+      <Pressable style={settingsStyles.padBackdrop} onPress={close} />
+      <View style={settingsStyles.padCenter} pointerEvents="box-none">
+        <View style={settingsStyles.padCard}>
+          <Text style={settingsStyles.padTitle}>{title}</Text>
+          {arrow(1, 'chevron-up')}
+          <Text style={settingsStyles.padValue}>{formatValue(draft)}</Text>
+          {arrow(-1, 'chevron-down')}
+          <Pressable hitSlop={8} style={settingsStyles.padDone} onPress={close}>
+            <Text style={[settingsStyles.padDoneLabel, { color: accent }]}>{doneLabel}</Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -553,6 +741,39 @@ export const settingsStyles = StyleSheet.create({
     marginBottom: spacing.sm,
     height: 32,
   },
+  // A slider value that opens the pad: the number keeps its own style and the
+  // chevron sits next to it, shrinking last so the number never gets clipped.
+  tunableValue: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 1 },
+  // Pad that nudges a slider's value one step at a time.
+  padBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.6)' },
+  padCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  padCard: {
+    minWidth: 200,
+    alignItems: 'center',
+    backgroundColor: colors.surfaceHighlight,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  padTitle: { color: colors.textSecondary, fontSize: fontSize.sm },
+  // Wide enough for the whole range, so the arrows don't shift as digits and
+  // signs come and go under them.
+  padValue: {
+    color: colors.text,
+    fontSize: fontSize.xl,
+    fontWeight: '800',
+    minWidth: 120,
+    textAlign: 'center',
+  },
+  padArrow: { paddingVertical: spacing.xs, paddingHorizontal: spacing.xl },
+  padDone: { alignSelf: 'flex-end', marginTop: spacing.sm },
+  padDoneLabel: { fontSize: fontSize.md, fontWeight: '700' },
   // Floating menu anchored to the right (Android-style dropdown).
   menu: {
     position: 'absolute',

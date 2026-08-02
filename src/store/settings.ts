@@ -132,6 +132,22 @@ export const GREETING_MAX = 15;
 export type ReplayGainMode = 'off' | 'auto' | 'track' | 'album';
 
 /**
+ * How far the ReplayGain pre-amp reaches, in dB either way. ReplayGain aims at
+ * -18 LUFS and other players (Spotify and company) at -14, so whoever normalizes
+ * ends up quieter than everything else on the phone; the pre-amp buys that
+ * difference back. Ten dB is well past the four or five anyone actually needs
+ * and short of the range where a slip leaves the music unusable.
+ */
+export const REPLAY_GAIN_PREAMP_LIMIT = 10;
+
+/** Pre-amp inside its range, in tenths of a dB (the finest the pad moves). */
+export function clampReplayGainPreamp(db: number): number {
+  if (!Number.isFinite(db)) return 0;
+  const step = Math.round(db * 10) / 10;
+  return Math.min(Math.max(step, -REPLAY_GAIN_PREAMP_LIMIT), REPLAY_GAIN_PREAMP_LIMIT);
+}
+
+/**
  * UI font. These are Android system font families (no packaging or download
  * cost): `system` leaves the default font (Roboto).
  */
@@ -488,6 +504,13 @@ interface SettingsState {
   hideUnavailableOffline: boolean;
   /** Volume normalization (ReplayGain): off, per track, or per album. */
   replayGain: ReplayGainMode;
+  /**
+   * Offset in dB applied on top of the ReplayGain tag, so the normalized
+   * loudness can be moved to wherever the user wants it. Only counts when
+   * normalization is on and the song carries tags: with nothing to normalize
+   * there is no reference to move away from.
+   */
+  replayGainPreampDb: number;
   /** Keep screen on while the app is in the foreground. */
   keepScreenAwake: boolean;
   /** Subtle vibration on key actions (favorite, long-press, drag…). */
@@ -631,6 +654,7 @@ interface SettingsState {
   setAutoOfflineSwitch: (value: boolean) => void;
   setHideUnavailableOffline: (value: boolean) => void;
   setReplayGain: (value: ReplayGainMode) => void;
+  setReplayGainPreampDb: (value: number) => void;
   setKeepScreenAwake: (value: boolean) => void;
   setHapticsEnabled: (value: boolean) => void;
   setLyricsBackground: (value: ScreenBackground) => void;
@@ -729,6 +753,7 @@ function snapshot(get: () => SettingsState) {
     autoOfflineSwitch: s.autoOfflineSwitch,
     hideUnavailableOffline: s.hideUnavailableOffline,
     replayGain: s.replayGain,
+    replayGainPreampDb: s.replayGainPreampDb,
     keepScreenAwake: s.keepScreenAwake,
     hapticsEnabled: s.hapticsEnabled,
     lyricsBackground: s.lyricsBackground,
@@ -805,6 +830,7 @@ const DEFAULTS = {
   autoOfflineSwitch: true,
   hideUnavailableOffline: false,
   replayGain: 'off' as ReplayGainMode,
+  replayGainPreampDb: 0,
   keepScreenAwake: false,
   hapticsEnabled: false,
   lyricsBackground: 'color' as ScreenBackground,
@@ -997,6 +1023,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
 
   setReplayGain: (replayGain) => {
     set({ replayGain });
+    persist(snapshot(get));
+  },
+
+  setReplayGainPreampDb: (value) => {
+    set({ replayGainPreampDb: clampReplayGainPreamp(value) });
     persist(snapshot(get));
   },
 
@@ -1303,6 +1334,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           autoOfflineSwitch: boolean;
           hideUnavailableOffline: boolean;
           replayGain: ReplayGainMode;
+          replayGainPreampDb: number;
           keepScreenAwake: boolean;
           hapticsEnabled: boolean;
           lyricsBackground: ScreenBackground;
@@ -1448,6 +1480,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
           parsed.replayGain === 'album'
         ) {
           set({ replayGain: parsed.replayGain });
+        }
+        if (typeof parsed.replayGainPreampDb === 'number') {
+          set({ replayGainPreampDb: clampReplayGainPreamp(parsed.replayGainPreampDb) });
         }
         if (typeof parsed.keepScreenAwake === 'boolean') {
           set({ keepScreenAwake: parsed.keepScreenAwake });
