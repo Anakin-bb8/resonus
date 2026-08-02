@@ -17,6 +17,10 @@ export async function getItem(key: string): Promise<string | null> {
       return null;
     }
   }
+  // Reads are left to throw on purpose. Turning a KeyStore failure into "there
+  // was nothing saved" reads as an empty app to whoever called, and the next
+  // write would put that emptiness on top of profiles that were fine. The
+  // callers that matter already catch (see `auth.ts` hydration).
   return SecureStore.getItemAsync(key);
 }
 
@@ -29,7 +33,16 @@ export async function setItem(key: string, value: string): Promise<void> {
     }
     return;
   }
-  await SecureStore.setItemAsync(key, value);
+  try {
+    await SecureStore.setItemAsync(key, value);
+  } catch (e) {
+    // The Android KeyStore does fail on some devices: a key invalidated by a
+    // restore or by changing the screen lock, a broken vendor implementation.
+    // Most callers persist without awaiting, so the rejection had nowhere to
+    // land and surfaced as an unhandled one. The setting is lost either way;
+    // what changes is that losing it doesn't leave a stray rejection behind.
+    if (__DEV__) console.warn('[storage] could not save', key, e);
+  }
 }
 
 export async function deleteItem(key: string): Promise<void> {
@@ -41,5 +54,9 @@ export async function deleteItem(key: string): Promise<void> {
     }
     return;
   }
-  await SecureStore.deleteItemAsync(key);
+  try {
+    await SecureStore.deleteItemAsync(key);
+  } catch (e) {
+    if (__DEV__) console.warn('[storage] could not delete', key, e);
+  }
 }
