@@ -385,7 +385,17 @@ export function SliderRow({
             onPress={() => setTuning(true)}
           >
             <Text style={settingsStyles.rowValue}>{formatValue(shown)}</Text>
-            <Ionicons name="chevron-expand" size={16} color={colors.textMuted} />
+            {/* Two separate icons rather than `chevron-expand`, whose pair sits
+                too tight to read as two directions at a glance. */}
+            <View style={settingsStyles.tunableArrows}>
+              <Ionicons name="chevron-up" size={12} color={colors.textMuted} />
+              <Ionicons
+                name="chevron-down"
+                size={12}
+                color={colors.textMuted}
+                style={{ marginTop: -1 }}
+              />
+            </View>
           </Pressable>
         ) : (
           <Text style={settingsStyles.rowValue}>{formatValue(shown)}</Text>
@@ -743,7 +753,8 @@ export const settingsStyles = StyleSheet.create({
   },
   // A slider value that opens the pad: the number keeps its own style and the
   // chevron sits next to it, shrinking last so the number never gets clipped.
-  tunableValue: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 1 },
+  tunableValue: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1 },
+  tunableArrows: { alignItems: 'center' },
   // Pad that nudges a slider's value one step at a time.
   padBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.6)' },
   padCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
