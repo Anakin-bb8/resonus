@@ -42,3 +42,14 @@ body:
         - Local (no server)
     validations:
       required: true
+  - type: dropdown
+    id: connectivity
+    attributes:
+      label: Offline mode
+      description: Optional. Whether "Offline mode" was on in Settings when it went wrong.
+      options:
+        - "Online"
+        - "Offline mode was on"
+        - "Not sure"
+    validations:
+      required: false
