@@ -80,7 +80,7 @@ export function PlaylistPickerSheet({
     close();
     try {
       for (const s of songs) await addToPlaylist(playlistId, s.id);
-      // Optimistic count in the Library ('{n} songs'): without this the
+      // Optimistic count in the Library (`songsLabel`): without this the
       // subtitle doesn't update until that screen is reloaded.
       queryClient.setQueryData<{ id: string; songCount?: number }[]>(['playlists'], (list) =>
         list?.map((p) =>

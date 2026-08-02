@@ -303,6 +303,7 @@ as missing. That is expected: **leave them out and ignore the count.**
 
 | String | Where / what it is |
 | --- | --- |
+| `Songs` | Always a **heading**, never a count, so it wants the plain plural your language uses for a list of them ("Songs", not "of songs"). It names the chip on Home, that screen's title and the queue started from it, the Songs half of the Albums/Songs switch on a genre, the Songs section of the search results, and the chip's own row in Settings → Appearance → Explore chips. Counting songs is a different thing entirely and goes through the plural forms (see [Plurals](#plurals)) |
 | `Default` | Sorting pill: what you get when nothing is sorted, which is the order the **server keeps** its songs in. It is not alphabetical and usually ends up grouped by artist, and it is not Resonus deciding. Only appears where the server cannot sort songs |
 | `Find a song` | The search box's placeholder on that screen |
 | `No songs yet` | Empty state when the library has no songs |

@@ -33,7 +33,7 @@ import { Cover } from '@/components/Cover';
 import { FavoritesArt } from '@/components/FavoritesArt';
 import { Message } from '@/components/Message';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
-import { useT } from '@/i18n';
+import { songsLabel, useT } from '@/i18n';
 import { greetingHours } from '@/i18n/languages';
 import { useAuthStore } from '@/store/auth';
 import { checkAutoUrlNow } from '@/store/autoUrl';
@@ -435,6 +435,7 @@ function ExploreChips({ offline }: { offline: boolean }) {
 
 function ScanningPanel() {
   const t = useT();
+  const lang = useSettings((s) => s.language);
   const phase = useScanProgress((s) => s.phase);
   const count = useScanProgress((s) => s.count);
   const total = useScanProgress((s) => s.total);
@@ -469,7 +470,7 @@ function ScanningPanel() {
       <Text style={styles.scanSub}>
         {total > 0
           ? `${count} / ${total} · ${Math.round(fraction * 100)}%`
-          : t('{n} songs', { n: count })}
+          : songsLabel(count, lang)}
       </Text>
     </View>
   );

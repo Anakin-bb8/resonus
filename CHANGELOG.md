@@ -33,6 +33,14 @@ Releases before 0.2.1 are only listed on the
 
 ### Changed
 
+- Counting songs is inflected properly in every language. "{n} songs" was a
+  template with the noun written into each translation, so a language whose
+  plural is not a simple two-way split could only pick one form and be wrong
+  the rest of the time: in Russian a playlist of two read as "2 композиций",
+  the form for five and up. It now goes through the same plural forms the rest
+  of the app already used, which Russian fills in with three. On a playlist
+  card, in the queue's header, under a playlist in search and while a local
+  library is being scanned. Reported by @ztx-lyghters.
 - "Song information" opens the cover, browses the genre, and lets itself be
   read. The art in its header is the song's own, which on a live album or a
   compilation need not be the album's, and there was no way to see it without

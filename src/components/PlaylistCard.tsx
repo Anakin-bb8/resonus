@@ -3,7 +3,8 @@ import { Link } from 'expo-router';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { coverArtUrl, type Playlist } from '@/api/data';
-import { useT } from '@/i18n';
+import { songsLabel } from '@/i18n';
+import { useSettings } from '@/store/settings';
 import { colors, fontSize, spacing } from '@/theme';
 import { Cover } from './Cover';
 
@@ -13,7 +14,7 @@ interface Props {
 }
 
 export function PlaylistCard({ playlist, width = 150 }: Props) {
-  const t = useT();
+  const lang = useSettings((s) => s.language);
   const cover = coverArtUrl(playlist.coverArt ?? playlist.id, 300);
 
   return (
@@ -26,7 +27,7 @@ export function PlaylistCard({ playlist, width = 150 }: Props) {
         </Text>
         {playlist.songCount !== undefined ? (
           <Text style={styles.sub} numberOfLines={1}>
-            {t('{n} songs', { n: playlist.songCount })}
+            {songsLabel(playlist.songCount, lang)}
           </Text>
         ) : null}
       </Pressable>

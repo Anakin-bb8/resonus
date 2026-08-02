@@ -29,7 +29,7 @@ import { SOURCE_FAVORITES, SOURCE_HISTORY, usePlayerStore } from '@/store/player
 import { usePlaylistPicker } from '@/store/playlistPicker';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
-import { useT } from '@/i18n';
+import { songsLabel, useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { colors, fontSize, spacing } from '@/theme';
 import { listPerf } from '@/lib/listPerf';
@@ -150,6 +150,7 @@ export default function QueueScreen() {
   useSettings((s) => s.accentColor); // re-render when accent changes
   useSettings((s) => s.appFont); // re-render when font changes
   const t = useT();
+  const lang = useSettings((s) => s.language);
   const router = useRouter();
   const queue = usePlayerStore((s) => s.queue);
   const index = usePlayerStore((s) => s.index);
@@ -228,7 +229,7 @@ export default function QueueScreen() {
           <Text style={styles.headerTitle}>{t('Queue')}</Text>
           {upcoming.length > 0 && totalSec > 0 ? (
             <Text style={styles.headerSub}>
-              {t('{n} songs', { n: upcoming.length })} · {formatTotalDuration(totalSec)}
+              {songsLabel(upcoming.length, lang)} · {formatTotalDuration(totalSec)}
             </Text>
           ) : null}
         </View>

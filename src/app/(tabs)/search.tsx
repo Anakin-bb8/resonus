@@ -30,7 +30,7 @@ import { Message } from '@/components/Message';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { TrackRow } from '@/components/TrackRow';
 import { useDebounce } from '@/hooks/useDebounce';
-import { useT } from '@/i18n';
+import { songsLabel, useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { useAuthStore } from '@/store/auth';
 import { useMediaMenu } from '@/store/mediaMenu';
@@ -48,6 +48,7 @@ export default function SearchScreen() {
   const canSearch = useAuthStore((s) => !!s.auth || s.offline);
   const auth = useAuthStore((s) => s.auth);
   const t = useT();
+  const lang = useSettings((s) => s.language);
   const bottomPad = useScreenBottomPadding();
   const [query, setQuery] = useState('');
   const [focused, setFocused] = useState(false);
@@ -346,7 +347,7 @@ export default function SearchScreen() {
                     </Text>
                     {p.songCount != null ? (
                       <Text style={styles.recentSub}>
-                        {t('{n} songs', { n: p.songCount })}
+                        {songsLabel(p.songCount, lang)}
                       </Text>
                     ) : null}
                   </View>

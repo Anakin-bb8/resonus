@@ -223,7 +223,7 @@ export default function PlaylistScreen() {
     // is deferred until the toast expires. «Undo» cancels it and restores them
     // in place.
     const prev = queryClient.getQueryData<{ playlist: unknown; songs: Song[] }>(key);
-    // Optimistic count in the Library ('{n} songs'): without this the list's
+    // Optimistic count in the Library (`songsLabel`): without this the list's
     // subtitle doesn't update until that screen is reloaded.
     const prevList = queryClient.getQueryData<{ id: string; songCount?: number }[]>(['playlists']);
     if (prev) {
