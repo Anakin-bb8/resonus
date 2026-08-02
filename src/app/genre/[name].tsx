@@ -7,7 +7,7 @@
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -42,6 +42,7 @@ import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/them
 import { haptic } from '@/lib/haptics';
 import { listPerf } from '@/lib/listPerf';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
+import { BackChevron } from '@/components/BackChevron';
 
 const PAGE = 30;
 const SONG_PAGE = 50;
@@ -57,7 +58,6 @@ export default function GenreScreen() {
   const bottomPad = useScreenBottomPadding();
   const { name } = useLocalSearchParams<{ name: string }>();
   const genre = decodeURIComponent(name ?? '');
-  const router = useRouter();
   const t = useT();
   const auth = useAuthStore((s) => s.auth);
   const toast = useToast((s) => s.show);
@@ -159,13 +159,15 @@ export default function GenreScreen() {
       {/* While selecting, the header turns into ✕ + counter + select all, the
           same swap the album and playlist lists do. */}
       <View style={styles.header}>
-        <Pressable
-          hitSlop={10}
-          onPress={() => (selecting ? setSelectedIds(null) : router.back())}
-          accessibilityLabel={selecting ? t('Close') : t('Back')}
-        >
-          <Ionicons name={selecting ? 'close' : 'chevron-back'} size={26} color={colors.text} />
-        </Pressable>
+        {/* While selecting, the ✕ cancels the selection and nothing else: the
+            long press out of here belongs to the chevron. */}
+        {selecting ? (
+          <Pressable hitSlop={10} onPress={() => setSelectedIds(null)} accessibilityLabel={t('Close')}>
+            <Ionicons name="close" size={26} color={colors.text} />
+          </Pressable>
+        ) : (
+          <BackChevron />
+        )}
         <Text style={styles.title} numberOfLines={1}>
           {selecting ? t('{n} selected', { n: selectedIds.size }) : genre}
         </Text>

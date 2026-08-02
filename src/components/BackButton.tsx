@@ -6,27 +6,20 @@
  * system's back gesture — and when the screen never settles, or the app is
  * busy enough that the gesture doesn't register, there's no way out at all
  * (issue #51). Cheap insurance: always a visible exit.
+ *
+ * The same chevron every top bar draws, so a long press leads out of the whole
+ * pile here too, which is where somebody stuck on a screen that won't load is
+ * most likely to want it.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors, spacing } from '@/theme';
+import { spacing } from '@/theme';
+import { BackChevron } from './BackChevron';
 
 export function BackButton() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
-  return (
-    <Pressable
-      style={[styles.back, { top: insets.top + spacing.sm }]}
-      hitSlop={12}
-      accessibilityRole="button"
-      onPress={() => router.back()}
-    >
-      <Ionicons name="chevron-back" size={28} color={colors.text} />
-    </Pressable>
-  );
+  return <BackChevron size={28} style={[styles.back, { top: insets.top + spacing.sm }]} />;
 }
 
 const styles = StyleSheet.create({

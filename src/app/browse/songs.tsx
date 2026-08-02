@@ -16,7 +16,6 @@
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -56,6 +55,7 @@ import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
 import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
+import { BackChevron } from '@/components/BackChevron';
 
 const PAGE = 50;
 
@@ -88,7 +88,6 @@ const SORT_LABEL: Record<SongListSort, string> = {
 
 export default function BrowseSongsScreen() {
   const bottomPad = useScreenBottomPadding();
-  const router = useRouter();
   const t = useT();
   // From the store, not `colors.accent`: styles are frozen at module load, so
   // without this the marked pill and the card ticks keep the old accent.
@@ -200,13 +199,15 @@ export default function BrowseSongsScreen() {
           the chevron and a slot of its width. While selecting it turns into
           ✕ + counter + select all, the swap the other song lists do. */}
       <View style={styles.header}>
-        <Pressable
-          hitSlop={10}
-          onPress={() => (selecting ? setSelectedIds(null) : router.back())}
-          accessibilityLabel={selecting ? t('Close') : t('Back')}
-        >
-          <Ionicons name={selecting ? 'close' : 'chevron-back'} size={26} color={colors.text} />
-        </Pressable>
+        {/* While selecting, the ✕ cancels the selection and nothing else: the
+            long press out of here belongs to the chevron. */}
+        {selecting ? (
+          <Pressable hitSlop={10} onPress={() => setSelectedIds(null)} accessibilityLabel={t('Close')}>
+            <Ionicons name="close" size={26} color={colors.text} />
+          </Pressable>
+        ) : (
+          <BackChevron />
+        )}
         <Text style={styles.title} numberOfLines={1}>
           {selecting ? t('{n} selected', { n: selectedIds.size }) : t('Songs')}
         </Text>
