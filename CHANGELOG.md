@@ -102,6 +102,16 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- The player leaves no gap under a song that has no lyrics. Room for the
+  lyrics card was kept for every song, whether or not there were any to put in
+  it, so a song without them sat pushed up with an empty strip below, and
+  turning the card off in Settings was the only way to get that space back. It
+  is now kept only once there are lyrics in hand: without them, and while they
+  are still being looked for, the player looks exactly as it does with the card
+  turned off, and the cover uses the room. Lyrics arriving while you are
+  looking at the player settle the cover a touch smaller, which is the price of
+  not leaving the gap the rest of the time; they are usually found before the
+  player is even opened.
 - Online lyrics search works again. Every lookup on Android was being turned
   away by LRCLIB with an error, so a song the server had no lyrics for simply
   showed none, whatever the setting said. The app was not saying who it was:

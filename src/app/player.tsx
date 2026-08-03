@@ -211,9 +211,10 @@ export default function PlayerScreen() {
   // only radio (direct url) is excluded. Hiding the card (setting) doesn't
   // disable lyrics: tapping cover art still opens the full screen.
   const canLyrics = !song?.url;
-  // The only reason this screen scrolls at all. Everything that makes the
-  // content taller than one page hangs off it, so they all read the same flag.
-  const hasLyricsCard = canLyrics && showLyricsCard;
+  // Whether the lyrics card is wanted for this song at all: a setting, and not
+  // a radio. Whether it is actually shown is `showsLyricsCard` below, which
+  // also needs there to be lyrics.
+  const wantsLyricsCard = canLyrics && showLyricsCard;
   const favIds = useFavoriteIds(!!song && (!song?.localUri || offline));
 
   // The data layer resolves the cover: from the server (online) or from the
@@ -244,6 +245,11 @@ export default function PlayerScreen() {
   // Same query used by the lyrics card (cached): here only to know if there
   // are lyrics and let the card peek below the first page.
   const { data: lyrics } = useLyrics(canLyrics ? (song ?? undefined) : undefined);
+  // The only reason this screen scrolls at all, and the one flag the three
+  // things that depend on it read: the room left for the card, the room left
+  // under it, and the card itself. They went out of step once and the player
+  // could be dragged for no reason (#107).
+  const showsLyricsCard = wantsLyricsCard && !!lyrics;
 
   // The player is scrollable (like Spotify): the first "page" fills the
   // screen and the lyrics card peeks below. The real height comes from the
@@ -509,7 +515,7 @@ export default function PlayerScreen() {
           // so with no card below it this padding was pure overflow and the whole
           // player scrolled by that much for nothing (#107).
           contentContainerStyle={
-            hasLyricsCard ? { paddingBottom: Math.max(insets.bottom, spacing.md) } : undefined
+            showsLyricsCard ? { paddingBottom: Math.max(insets.bottom, spacing.md) } : undefined
           }
           onLayout={(e) => {
             const h = e.nativeEvent.layout.height;
@@ -533,13 +539,20 @@ export default function PlayerScreen() {
         >
         <View
           style={{
-            // Peek is reserved from `canLyrics` (known synchronously), not from
-            // `lyrics` (resolved async): tying the first page's height to the
-            // async result shrank it by LYRICS_PEEK the moment lyrics arrived,
-            // which reflowed the cover slot and shoved the controls — the jump on
-            // songs that have lyrics (and only those). Matching the card's own
-            // render gate keeps the height stable from the first frame.
-            height: (pageH || approxPageH) - (hasLyricsCard ? LYRICS_PEEK : 0),
+            // Room is only left for the lyrics card once there are lyrics to put
+            // in it. A song without them, or one whose lookup is still out
+            // looking, gets the whole screen and looks exactly like it does with
+            // the card turned off: nothing peeking, and the cover using the room
+            // that peek would have taken.
+            //
+            // The cost is that lyrics arriving while the player is open settle
+            // the cover a little smaller, since the cover is the elastic piece
+            // here. It was the other way round before, reserved for every song,
+            // which held the layout still at the price of a gap under most of
+            // them. Warming the lyrics on the track change (see `prefetchLyrics`)
+            // is what keeps that settling rare: by the time the player is opened
+            // they are usually already in hand.
+            height: (pageH || approxPageH) - (showsLyricsCard ? LYRICS_PEEK : 0),
           }}
         >
         <View style={styles.topBar}>
@@ -879,7 +892,7 @@ export default function PlayerScreen() {
           ) : null}
         </View>
         </View>
-        {hasLyricsCard ? <LyricsCard /> : null}
+        {showsLyricsCard ? <LyricsCard /> : null}
         </ScrollView>
         </SafeAreaView>
         <OutputSheet visible={outputOpen} onClose={() => setOutputOpen(false)} />
