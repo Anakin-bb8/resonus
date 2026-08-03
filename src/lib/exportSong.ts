@@ -89,7 +89,7 @@ function extensionOf(uri: string): string {
  * From the song's metadata rather than from the server's layout, as settled in
  * #49: the file lands somewhere the user opens, and a hash is not a name.
  */
-export function exportFileName(song: Song, uri: string): string {
+function exportFileName(song: Song, uri: string): string {
   const ext = extensionOf(uri);
   const title = sanitize(song.title) || 'track';
   const artist = sanitize(song.artist ?? '');
@@ -97,7 +97,7 @@ export function exportFileName(song: Song, uri: string): string {
 }
 
 /** What the file claims to be, for the picker and for the receiving app. */
-export function mimeOf(uri: string): string {
+function mimeOf(uri: string): string {
   return MIME[extensionOf(uri)] ?? 'audio/*';
 }
 
@@ -231,6 +231,29 @@ function savedName(dest: File, requested: string): string {
   }
 }
 
+/** Where the copies handed to other apps are kept until the next one. */
+function exportCacheDir(): Directory {
+  return new Directory(Paths.cache, 'export');
+}
+
+/**
+ * Drops the copy left over from the last share.
+ *
+ * Called before every share, and by Settings › Clear cache, which until now
+ * cleared the query and image caches and left this one behind: a leftover
+ * 60 MB FLAC is exactly what somebody pressing that button means to get rid
+ * of.
+ */
+export function clearExportCache(): void {
+  try {
+    const dir = exportCacheDir();
+    if (dir.exists) dir.delete();
+  } catch {
+    // Nothing to do about it, and nothing depends on it: the next share
+    // overwrites the folder anyway.
+  }
+}
+
 /**
  * Hands a downloaded song to another app, and says whether the share sheet
  * could be opened at all.
@@ -241,10 +264,11 @@ function savedName(dest: File, requested: string): string {
  */
 export async function shareSongFile(song: Song, srcUri: string): Promise<boolean> {
   if (!(await Sharing.isAvailableAsync())) return false;
-  const dir = new Directory(Paths.cache, 'export');
-  // Emptied first: these copies exist for one share sheet each, and Android
-  // clears the cache on its own schedule, not on ours.
-  if (dir.exists) dir.delete();
+  // Emptied first: these copies exist for one share sheet each, and the last
+  // one cannot be deleted on the way out, since the app receiving it is still
+  // reading the file when the share sheet closes.
+  clearExportCache();
+  const dir = exportCacheDir();
   dir.create({ intermediates: true });
   const dest = new File(dir, exportFileName(song, srcUri));
   new File(srcUri).copy(dest);

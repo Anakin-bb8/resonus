@@ -4,8 +4,8 @@
  * The native module holds ONE MediaLibrarySession (Media3) that provides the
  * car controls and the browse tree. From JS:
  *  - `setNodes` pushes the browse tree (root → albums/artists/...).
- *  - `setNowPlaying`/`setQueue`/`setQueueIndex`/`setPlaybackState` keep the
- *    car session in sync with actual playback.
+ *  - `setNowPlaying`/`setQueue`/`setPlaybackState` keep the car session in
+ *    sync with actual playback.
  *  - `onPlay` fires when a playable leaf is tapped in the car.
  *  - `onTransport` fires with transport buttons (play/pause/next...).
  *
@@ -66,10 +66,6 @@ export function setNowPlaying(track: CarTrack | null): void {
 
 export function setQueue(tracks: CarTrack[], currentIndex: number): void {
   native?.setQueue(JSON.stringify({ tracks, currentIndex }));
-}
-
-export function setQueueIndex(index: number): void {
-  native?.setQueueIndex(index);
 }
 
 export function setPlaybackState(state: {

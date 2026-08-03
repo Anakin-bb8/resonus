@@ -102,16 +102,6 @@ export async function timed<T>(tag: string, fn: () => Promise<T>): Promise<T> {
   }
 }
 
-/** Times something synchronous, which is thread time by definition. */
-export function timedSync<T>(tag: string, fn: () => T): T {
-  const t0 = Date.now();
-  try {
-    return fn();
-  } finally {
-    record(tag, Date.now() - t0);
-  }
-}
-
 /** Worst blocks first. */
 export function perfBlocks(): Block[] {
   return [...blocks].sort((a, b) => b.ms - a.ms);

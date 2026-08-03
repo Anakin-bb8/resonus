@@ -13,12 +13,12 @@ const LOSSLESS = new Set([
 ]);
 
 /** Is this format one that keeps every bit of the original? */
-export function isLossless(suffix: string | undefined): boolean {
+function isLossless(suffix: string | undefined): boolean {
   return !!suffix && LOSSLESS.has(suffix.toLowerCase());
 }
 
 /** More than CD: either more bits per sample or more samples per second. */
-export function isHiRes(song: Song): boolean {
+function isHiRes(song: Song): boolean {
   return (
     (song.bitDepth != null && song.bitDepth > 16) ||
     (song.samplingRate != null && song.samplingRate > 48000)

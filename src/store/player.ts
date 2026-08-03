@@ -274,13 +274,13 @@ function playableOffline(song: Song | null | undefined): boolean {
 }
 
 /** Max streaming bitrate according to current network (Wi-Fi or mobile data). */
-export function effectiveMaxBitRate(): number {
+function effectiveMaxBitRate(): number {
   const s = useSettings.getState();
   return useNetworkType.getState().cellular ? s.maxBitRateCellular : s.maxBitRate;
 }
 
 /** Codec to transcode to, by network, like the bitrate above it. */
-export function effectiveStreamFormat(): TranscodeFormat {
+function effectiveStreamFormat(): TranscodeFormat {
   const s = useSettings.getState();
   return useNetworkType.getState().cellular ? s.streamFormatCellular : s.streamFormat;
 }

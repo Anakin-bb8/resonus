@@ -122,15 +122,6 @@ export async function closeMirrorFor(profile: string): Promise<void> {
   await handle.then((db) => db.closeAsync()).catch(() => {});
 }
 
-/** Closes them all. For clearing everything out, not for switching profiles. */
-export async function closeMirror(): Promise<void> {
-  const handles = [...open.values()];
-  open.clear();
-  for (const h of handles) {
-    await h.then((db) => db.closeAsync()).catch(() => {});
-  }
-}
-
 /** Songs written per statement. Two placeholders each, under the limit. */
 const SONGS_PER_INSERT = 200;
 

@@ -1350,7 +1350,6 @@ export const jukeboxStatus = (auth: SubsonicAuth) => jukeboxControl(auth, 'statu
 export const jukeboxSet = (auth: SubsonicAuth, id: string) => jukeboxControl(auth, 'set', { id });
 export const jukeboxStart = (auth: SubsonicAuth) => jukeboxControl(auth, 'start');
 export const jukeboxStop = (auth: SubsonicAuth) => jukeboxControl(auth, 'stop');
-export const jukeboxClear = (auth: SubsonicAuth) => jukeboxControl(auth, 'clear');
 /** Skips to the given index (with optional offset in seconds within the track). */
 export const jukeboxSkip = (auth: SubsonicAuth, index: number, offsetSec = 0) =>
   jukeboxControl(auth, 'skip', { index, offset: offsetSec > 0 ? Math.floor(offsetSec) : undefined });

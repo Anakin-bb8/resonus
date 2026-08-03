@@ -25,7 +25,7 @@ import { useSettings } from '@/store/settings';
  * bitrate of each song is needed; for FLAC it's variable, so the figure bounces
  * a bit.
  */
-export function estimateDownloadBytes(songs: Song[], downloadBitRate: number): number | null {
+function estimateDownloadBytes(songs: Song[], downloadBitRate: number): number | null {
   let bytes = 0;
   for (const s of songs) {
     // Radio songs and songs that are already local are not downloaded.

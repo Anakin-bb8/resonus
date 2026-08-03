@@ -247,7 +247,7 @@ export const DEFAULT_HOME_SECTIONS: HomeSection[] = [
  * keys, and appends new sections not present (so a future version with more
  * sections doesn't break existing config).
  */
-export function normalizeHomeSections(raw: unknown): HomeSection[] {
+function normalizeHomeSections(raw: unknown): HomeSection[] {
   if (!Array.isArray(raw)) return DEFAULT_HOME_SECTIONS.map((s) => ({ ...s }));
   const seen = new Set<HomeSectionKey>();
   const out: HomeSection[] = [];
@@ -309,7 +309,7 @@ export const DEFAULT_EXPLORE_CHIPS: ExploreChip[] = [
  * keys, and appends new chips not present (so a future version with more chips
  * doesn't break existing config).
  */
-export function normalizeExploreChips(raw: unknown): ExploreChip[] {
+function normalizeExploreChips(raw: unknown): ExploreChip[] {
   if (!Array.isArray(raw)) return DEFAULT_EXPLORE_CHIPS.map((c) => ({ ...c }));
   const seen = new Set<ExploreChipKey>();
   const out: ExploreChip[] = [];
@@ -409,7 +409,7 @@ export const DEFAULT_SONG_MENU_ACTIONS: SongMenuActions = {
  * Sanitizes saved data: only accepts booleans for known keys. Anything missing
  * (e.g. a new action) stays visible, which is the default.
  */
-export function normalizeSongMenuActions(raw: unknown): SongMenuActions {
+function normalizeSongMenuActions(raw: unknown): SongMenuActions {
   const out = { ...DEFAULT_SONG_MENU_ACTIONS };
   if (!raw || typeof raw !== 'object') return out;
   const obj = raw as Record<string, unknown>;

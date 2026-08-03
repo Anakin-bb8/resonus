@@ -295,6 +295,11 @@ function assignFolderAlbum(base: Record<string, unknown>, dirPath: string, hasAl
   if (!hasAlbumTag) base.album = folderNameFromUri(dirPath);
 }
 
+/** Which album a song belongs to: its own id, or its name normalised. */
+function albumKeyOf(song: Song): string {
+  return song.albumId || normKey(song.album || UNKNOWN_ALBUM);
+}
+
 /** The most frequent name in a list, which is the one worth displaying. */
 function pickBestName(names: string[]): string {
   const freq = new Map<string, number>();
@@ -665,33 +670,6 @@ export async function loadFolderSongs(treeUri: string): Promise<Song[]> {
 
 export function getLocalCatalog(sourceMode: string, uri?: string): LocalCatalog | undefined {
   return catalogCache.get(cacheKey(sourceMode, uri));
-}
-
-export function getLocalAlbums(sourceMode: string, uri?: string): LocalAlbum[] {
-  return catalogCache.get(cacheKey(sourceMode, uri))?.albums ?? [];
-}
-
-export function getLocalArtists(sourceMode: string, uri?: string): LocalArtist[] {
-  return catalogCache.get(cacheKey(sourceMode, uri))?.artists ?? [];
-}
-
-function albumKeyOf(song: Song): string {
-  return song.albumId || normKey(song.album || UNKNOWN_ALBUM);
-}
-
-export function getLocalAlbumSongs(sourceMode: string, albumId: string, uri?: string): Song[] {
-  const songs = catalogCache.get(cacheKey(sourceMode, uri))?.songs.filter((s) => albumKeyOf(s) === albumId) ?? [];
-  // By track number, with the ones that have none last, by title.
-  return songs.sort((a, b) => {
-    const ta = a.track ?? Infinity;
-    const tb = b.track ?? Infinity;
-    if (ta !== tb) return ta - tb;
-    return a.title.localeCompare(b.title);
-  });
-}
-
-export function getLocalArtistAlbums(sourceMode: string, artistName: string, uri?: string): LocalAlbum[] {
-  return catalogCache.get(cacheKey(sourceMode, uri))?.albums.filter((a) => normKey(a.artist || UNKNOWN_ARTIST) === artistName) ?? [];
 }
 
 // ── The cover index ───────────────────────────────────────────────────────

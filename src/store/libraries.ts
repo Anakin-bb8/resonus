@@ -127,13 +127,6 @@ export const useLibraries = create<LibrariesState>((set, get) => ({
 
 // ── Helpers for the data layer (no React) ──
 
-/** Known folders for the profile (empty if not yet loaded). */
-export function foldersFor(auth: SubsonicAuth | null | undefined): MusicFolder[] {
-  const key = profileKeyOf(auth);
-  if (!key) return [];
-  return useLibraries.getState().folders[key] ?? [];
-}
-
 /**
  * Library ids to query, or `undefined` when no filtering is needed
  * (Jellyfin/offline, single library, or all active).
@@ -174,6 +167,6 @@ export function writeAlbumCache<T>(cacheKey: string, albums: T[]): void {
   albumCache.set(cacheKey, { at: Date.now(), albums: albums as unknown[] });
 }
 
-export function clearAlbumCache(): void {
+function clearAlbumCache(): void {
   albumCache.clear();
 }

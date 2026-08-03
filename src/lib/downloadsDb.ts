@@ -77,7 +77,7 @@ async function openDb(dir: string): Promise<SQLite.SQLiteDatabase> {
   return db;
 }
 
-export function catalogDb(dir: string): Promise<SQLite.SQLiteDatabase> {
+function catalogDb(dir: string): Promise<SQLite.SQLiteDatabase> {
   const existing = open.get(dir);
   if (existing) return existing;
   // A failure is not remembered. Leaving the rejected promise in the map hands
@@ -323,16 +323,6 @@ export async function downloadedFiles(
     if (bit != null) bitRates[r.id] = bit;
   }
   return { files, bitRates };
-}
-
-export async function songsOfAlbum(dir: string, albumId: string): Promise<Song[]> {
-  const db = await catalogDb(dir);
-  const rows = await db.getAllAsync<{ data: string }>(
-    `SELECT data FROM songs WHERE album_id = ?
-     ORDER BY disc IS NULL, disc, track IS NULL, track, title`,
-    [albumId],
-  );
-  return rows.map((r) => JSON.parse(r.data) as Song);
 }
 
 /**

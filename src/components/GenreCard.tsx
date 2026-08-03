@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 import { colors, fontSize, radius, spacing } from '@/theme';
 
 /** Stable color derived from the genre name (dark and legible). */
-export function genreColor(name: string): string {
+function genreColor(name: string): string {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
   return `hsl(${Math.abs(h) % 360}, 50%, 32%)`;
