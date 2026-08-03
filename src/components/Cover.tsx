@@ -140,7 +140,11 @@ export function Cover({
           style as StyleProp<ViewStyle>,
         ]}
       >
-        <Ionicons name={placeholderIcon} size={size * 0.4} color={colors.textMuted} />
+        {/* The icon carries the whole placeholder: its background is the same
+            grey as a Home tile or a sheet, so on those it is the icon or
+            nothing, and dimmer than this it read as a picture that had failed
+            rather than one that was never there. */}
+        <Ionicons name={placeholderIcon} size={size * 0.4} color={colors.textSecondary} />
       </View>
     );
   }
