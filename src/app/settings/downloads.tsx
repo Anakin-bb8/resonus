@@ -18,6 +18,7 @@ import {
   SwitchList,
 } from '@/components/SettingsUI';
 import { albumsLabel, playlistsLabel, songsLabel, useT } from '@/i18n';
+import { appStorageParts, appStorageTotal, type StorageParts } from '@/lib/appStorage';
 import { formatBytes } from '@/lib/format';
 import { useAuthStore } from '@/store/auth';
 import { useDownloads } from '@/store/downloads';
@@ -60,6 +61,9 @@ const OTHER_COLOR = '#7a7a7a';
 /** The offline copy's share of the bar. Not the accent, which is the music
  *  itself, and not the grey of what belongs to other apps. */
 const OFFLINE_COLOR = '#4a6fa5';
+/** Below this, naming a folder says less than the line costs to read. It is
+ *  still counted in the bar; it just isn't worth a line of its own. */
+const LISTED_MIN = 100 * 1024;
 
 export default function DownloadsSettings() {
   const t = useT();
@@ -92,6 +96,8 @@ export default function DownloadsSettings() {
   // of the library. Reported rather than managed — it is what turns "the app
   // feels slow" into a number someone can put in an issue (#50).
   const [mirror, setMirror] = useState<MirrorStats | null>(null);
+  // Everything else the app keeps that is neither the music nor the mirror.
+  const [parts, setParts] = useState<StorageParts | null>(null);
 
   // Measured on entering the screen and after deleting, not on every change of
   // `count`: while something downloads that changes with each song, and it used
@@ -106,7 +112,12 @@ export default function DownloadsSettings() {
       .getState()
       .stats()
       .then((s) => {
-        if (active) setMirror(s);
+        if (!active) return;
+        setMirror(s);
+        // After the first numbers are on screen, not before: measuring those
+        // folders is a walk over every file in them, and it holds the JS
+        // thread while it runs (#50).
+        setParts(appStorageParts());
       });
     usageBytes().then((n) => {
       if (active) setUsage(n);
@@ -208,7 +219,9 @@ export default function DownloadsSettings() {
           // music: the copy of the library and the covers saved with it. It has
           // its own share of the bar because it grows on its own as you browse,
           // and until it was drawn nobody could see it at all.
-          const offline = mirror ? mirror.bytes + mirror.coverBytes : 0;
+          const offline =
+            (mirror ? mirror.bytes + mirror.coverBytes : 0) +
+            (parts ? appStorageTotal(parts) : 0);
           const other = Math.max(0, disk.total - disk.free - usage - offline);
           // Fractions with a visible minimum: small downloads on a large disk
           // should appear as a sliver, not disappear.
@@ -242,18 +255,38 @@ export default function DownloadsSettings() {
             </>
           );
         })()}
-        {/* What that share of the bar is made of. Two lines rather than one
-            number, because they grow for different reasons and only one of
-            them is worth worrying about. */}
+        {/* What that share of the bar is made of, item by item. They grow for
+            different reasons and at different rates, so one number for all of
+            them would say where the space went without saying why. What weighs
+            nothing is left out rather than listed as zero. */}
         <Text style={styles.mirrorLine}>
           {t('Library metadata copy')} ·{' '}
           {mirror
             ? `${formatBytes(mirror.bytes)} · ${albumsLabel(mirror.albums, lang)} · ${playlistsLabel(mirror.playlists, lang)}`
             : '…'}
         </Text>
-        <Text style={styles.mirrorLine}>
-          {t('Cover art')} · {mirror ? formatBytes(mirror.coverBytes) : '…'}
-        </Text>
+        {mirror && mirror.coverBytes > 0 ? (
+          <Text style={styles.mirrorLine}>
+            {t('Cover art')} · {formatBytes(mirror.coverBytes)}
+          </Text>
+        ) : null}
+        {parts
+          ? (
+              [
+                ['lyrics', t('Lyrics')],
+                ['localLibrary', t('Local music')],
+                ['playlistCovers', t('Playlist covers')],
+                ['legacyRadioCovers', t('Radio')],
+                ['outbox', t('Pending changes')],
+              ] as [keyof StorageParts, string][]
+            )
+              .filter(([key]) => parts[key] >= LISTED_MIN)
+              .map(([key, label]) => (
+                <Text key={key} style={styles.mirrorLine}>
+                  {label} · {formatBytes(parts[key])}
+                </Text>
+              ))
+          : null}
         {count > 0 ? (
           <SettingRow
             icon="trash-outline"

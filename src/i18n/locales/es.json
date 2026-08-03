@@ -576,5 +576,7 @@
   "Not available offline": "No disponible sin conexión",
   "Remove profile?": "¿Quitar el perfil?",
   "The music on your device is not touched.": "La música de tu dispositivo no se toca.",
-  "Offline library": "Biblioteca sin conexión"
+  "Offline library": "Biblioteca sin conexión",
+  "Playlist covers": "Carátulas de listas",
+  "Pending changes": "Cambios pendientes"
 }
