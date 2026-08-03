@@ -49,8 +49,28 @@ const SIZE = COVER.card;
  */
 const MAX = 10000;
 
+/**
+ * What a cover is wanted for: the id to ask the server with, and the ids the
+ * screens will look it up by.
+ *
+ * They are not always the same, and that is the whole reason this type exists.
+ * Subsonic gives an album a cover id of its own (`al-123` against the album's
+ * `123`), the album header asks by the first and a song row asks by the
+ * second, and a picture saved under one was a grey square under the other. A
+ * playlist row goes further: all it knows is the song, whose own cover id
+ * (`mf-…`) the server does answer, and what it will ask by is the album.
+ *
+ * So one file, fetched by `from`, found under every one of `keys`.
+ */
+export interface CoverWant {
+  from: string;
+  keys: string[];
+}
+
 /** Cover ids already on disk for the loaded profile, and what they take. */
 let known = new Set<string>();
+/** Lookup id → the id whose file it is. Only for the ones that differ. */
+let aliases = new Map<string, string>();
 let bytes = 0;
 let loaded = '';
 let saving: Promise<unknown> = Promise.resolve();
@@ -75,7 +95,7 @@ function persist(profile: string): void {
   if (writeTimer) clearTimeout(writeTimer);
   writeTimer = setTimeout(() => {
     writeTimer = null;
-    const payload = JSON.stringify({ ids: [...known], bytes });
+    const payload = JSON.stringify({ ids: [...known], aliases: Object.fromEntries(aliases), bytes });
     saving = saving.then(async () => {
       try {
         await FileSystem.makeDirectoryAsync(DIR, { intermediates: true }).catch(() => {});
@@ -88,10 +108,16 @@ function persist(profile: string): void {
 }
 
 /** The index as it is stored, and as older versions stored it (a bare list). */
-function parseIndex(raw: string): { ids: string[]; bytes: number } {
-  const data = JSON.parse(raw) as string[] | { ids?: string[]; bytes?: number };
-  if (Array.isArray(data)) return { ids: data, bytes: 0 };
-  return { ids: data.ids ?? [], bytes: data.bytes ?? 0 };
+function parseIndex(raw: string): {
+  ids: string[];
+  aliases: Record<string, string>;
+  bytes: number;
+} {
+  const data = JSON.parse(raw) as
+    | string[]
+    | { ids?: string[]; aliases?: Record<string, string>; bytes?: number };
+  if (Array.isArray(data)) return { ids: data, aliases: {}, bytes: 0 };
+  return { ids: data.ids ?? [], aliases: data.aliases ?? {}, bytes: data.bytes ?? 0 };
 }
 
 /**
@@ -103,6 +129,7 @@ export async function loadMirrorCovers(profile: string): Promise<void> {
   if (!profile || loaded === profile) return;
   loaded = profile;
   known = new Set();
+  aliases = new Map();
   bytes = 0;
   try {
     const index = parseIndex(await FileSystem.readAsStringAsync(indexFile(profile)));
@@ -111,6 +138,13 @@ export async function loadMirrorCovers(profile: string): Promise<void> {
       known.add(id);
       registerCover(id, fileFor(profile, id));
     }
+    // The other names the same file answers to. No second copy on disk: the
+    // album's cover and the one its songs ask for are one picture.
+    for (const [key, from] of Object.entries(index.aliases)) {
+      if (!known.has(from)) continue;
+      aliases.set(key, from);
+      registerCover(key, fileFor(profile, from));
+    }
   } catch {
     // No index yet, or unreadable: nothing is registered and the covers get
     // fetched again the next time their entry is written to the mirror.
@@ -118,16 +152,28 @@ export async function loadMirrorCovers(profile: string): Promise<void> {
 }
 
 /**
+ * Notes that one more id finds this file, and registers it now.
+ *
+ * The id a file is named after is not recorded as an alias of itself: the index
+ * already has it, and writing it twice would be two ways of saying one thing.
+ */
+function alias(profile: string, key: string, from: string): void {
+  if (key === from || aliases.get(key) === from) return;
+  aliases.set(key, from);
+  registerCover(key, fileFor(profile, from));
+}
+
+/**
  * Keeps the covers of what was just written to the mirror. Best-effort and in
  * the background: a cover that doesn't arrive is a placeholder, not an error.
  *
- * `ids` are cover ids as the screens ask for them (`coverArt ?? id`), which is
- * what the offline lookup will be given.
+ * A bare string is the plain case, where the id asked of the server is also the
+ * id the screens look it up by. Where those differ, see `CoverWant`.
  */
 export function keepMirrorCovers(
   profile: string,
   auth: SubsonicAuth | null,
-  ids: (string | undefined)[],
+  ids: (string | CoverWant | undefined)[],
 ): void {
   // Online only: this is a download, and it goes through the file system rather
   // than the API, so the gate that refuses requests offline cannot see it.
@@ -144,19 +190,41 @@ export function keepMirrorCovers(
       // difference between saving them on the first run and on some later one.
       await loadMirrorCovers(profile);
       if (known.size >= MAX) return;
-      // Deduplicated first: a playlist hands over the album of every one of its
-      // songs, and twenty tracks off the same record are twenty copies of one id.
-      // Without this each of them would be fetched, since none is in `known` yet
-      // when the list is drawn up.
-      const wanted = [...new Set(ids)].filter(
-        (id): id is string =>
-          !!id && !known.has(id) && !inFlight.has(id) && !localCoverUrl(id),
+      // Deduplicated by what will be fetched: a playlist hands over the album of
+      // every one of its songs, and twenty tracks off the same record are twenty
+      // copies of one want. Without this each would be fetched, since none is in
+      // `known` yet when the list is drawn up.
+      const byFrom = new Map<string, CoverWant>();
+      for (const want of ids) {
+        if (!want) continue;
+        const w = typeof want === 'string' ? { from: want, keys: [want] } : want;
+        if (!w.from) continue;
+        const seen = byFrom.get(w.from);
+        if (seen) seen.keys.push(...w.keys);
+        else byFrom.set(w.from, { from: w.from, keys: [...w.keys] });
+      }
+      // A want whose keys can all be found already is nothing to do. That is
+      // what makes running this over a whole library cheap after the first time.
+      const wanted = [...byFrom.values()].filter(
+        (w) =>
+          !inFlight.has(w.from) &&
+          w.keys.some((k) => !localCoverUrl(k)) &&
+          !(known.has(w.from) && w.keys.every((k) => localCoverUrl(k))),
       );
       const taking = wanted.slice(0, MAX - known.size);
       if (taking.length === 0) return;
-      for (const id of taking) inFlight.add(id);
+      for (const w of taking) inFlight.add(w.from);
       let added = false;
-      for (const id of taking) {
+      for (const w of taking) {
+        const id = w.from;
+        // Already on disk, and only the other names for it were missing: the
+        // picture does not need fetching twice.
+        if (known.has(id)) {
+          for (const key of w.keys) alias(profile, key, id);
+          inFlight.delete(id);
+          added = true;
+          continue;
+        }
         const url = coverArtUrl(auth, id, SIZE);
         if (!url) {
           inFlight.delete(id);
@@ -173,6 +241,7 @@ export function keepMirrorCovers(
           } else {
             known.add(id);
             registerCover(id, file);
+            for (const key of w.keys) alias(profile, key, id);
             // Counted as it is written: walking thousands of files to add up
             // what they take is not something a settings screen should do.
             const info = await FileSystem.getInfoAsync(file).catch(() => null);
@@ -185,7 +254,7 @@ export function keepMirrorCovers(
           inFlight.delete(id);
         }
       }
-        if (added) persist(profile);
+      if (added) persist(profile);
     })();
   });
 }
@@ -199,6 +268,9 @@ export function keepMirrorCovers(
  */
 export function forgetMirrorCover(profile: string, coverId: string | undefined): void {
   if (!profile || !coverId || !known.delete(coverId)) return;
+  // The other names for it go too, or the index would keep pointing them at a
+  // file that is no longer there.
+  for (const [key, from] of aliases) if (from === coverId) aliases.delete(key);
   void FileSystem.deleteAsync(fileFor(profile, coverId), { idempotent: true }).catch(() => {});
   persist(profile);
 }
@@ -218,6 +290,7 @@ export async function removeMirrorCovers(profile: string): Promise<void> {
   }
   if (loaded === profile) {
     known = new Set();
+    aliases = new Map();
     bytes = 0;
     loaded = '';
   }

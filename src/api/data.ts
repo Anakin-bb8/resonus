@@ -720,6 +720,10 @@ async function prefetchPlaylistDetails(list: Subsonic.Playlist[]): Promise<void>
       for (const r of settled) if (r) results.push(r);
     }
     useLibraryMirror.getState().savePlaylistDetails(results);
+    // And the covers of what is already stored, which no fetch would ever reach
+    // again: a playlist kept since before covers were saved at all is skipped
+    // here for ever, since the server keeps saying it has not changed.
+    useLibraryMirror.getState().keepStoredCovers();
   } finally {
     prefetchingPlaylists = false;
   }

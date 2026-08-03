@@ -331,6 +331,28 @@ export async function dropEntry(
   );
 }
 
+/**
+ * One cover per album, over every song the mirror holds.
+ *
+ * A playlist stored months ago is never written again while the server says it
+ * has not changed, so the covers of its songs' albums were never asked for
+ * either. This is how they are caught up with: the ids come out of the songs
+ * table itself, an album at a time, without a single tracklist being parsed.
+ */
+export async function songCoverIds(
+  dir: string,
+  profile: string,
+): Promise<{ album: string; cover: string | null }[]> {
+  const db = await mirrorDb(dir, profile);
+  return db.getAllAsync<{ album: string; cover: string | null }>(
+    `SELECT json_extract(data, '$.albumId') AS album,
+            MIN(json_extract(data, '$.coverArt')) AS cover
+       FROM songs
+      WHERE album IS NOT NULL
+      GROUP BY album`,
+  );
+}
+
 // ── Reading ─────────────────────────────────────────────────────────────────
 
 async function getEntry<T>(
