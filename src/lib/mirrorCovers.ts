@@ -210,11 +210,14 @@ export async function removeMirrorCovers(profile: string): Promise<void> {
   await FileSystem.deleteAsync(indexFile(profile), { idempotent: true }).catch(() => {});
 }
 
-/** What this profile's covers take on disk, for Settings › Downloads. */
-export async function mirrorCoversBytes(profile: string): Promise<number> {
-  if (!profile) return 0;
+/** How many of this profile's covers there are and what they take, for
+ *  Settings › Downloads. */
+export async function mirrorCoversInfo(
+  profile: string,
+): Promise<{ bytes: number; count: number }> {
+  if (!profile) return { bytes: 0, count: 0 };
   await loadMirrorCovers(profile);
-  if (bytes > 0 || known.size === 0) return bytes;
+  if (bytes > 0 || known.size === 0) return { bytes, count: known.size };
   // Covers saved before the size was being counted, or an index that lost it.
   // Added up once, here: this is asked by a screen about sizes, which is the
   // one place where walking the files is worth what it costs, and the answer
@@ -226,5 +229,5 @@ export async function mirrorCoversBytes(profile: string): Promise<number> {
   }
   bytes = total;
   persist(profile);
-  return bytes;
+  return { bytes, count: known.size };
 }

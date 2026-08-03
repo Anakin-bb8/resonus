@@ -22,7 +22,7 @@ import { create } from 'zustand';
 import type { Album, Artist, Playlist, Song, Starred, SubsonicAuth } from '@/api/subsonic';
 import { hashKey } from '@/lib/localLibrary';
 import * as Db from '@/lib/mirrorDb';
-import { keepMirrorCovers, loadMirrorCovers, mirrorCoversBytes } from '@/lib/mirrorCovers';
+import { keepMirrorCovers, loadMirrorCovers, mirrorCoversInfo } from '@/lib/mirrorCovers';
 import { primaryUrl } from '@/lib/serverUrls';
 import { useAuthStore } from './auth';
 
@@ -42,7 +42,12 @@ export interface DownloadsView {
   hydrated: boolean;
 }
 
-export type MirrorStats = Db.MirrorStats;
+/**
+ * What the offline copy holds. The covers are counted apart from the database
+ * because they are most of it: one line saying "the copy takes 90 MB" tells
+ * nobody which part to delete or why it grew.
+ */
+export type MirrorStats = Db.MirrorStats & { coverBytes: number; covers: number };
 
 const DIR = FileSystem.documentDirectory + 'library-mirror/';
 
@@ -277,15 +282,17 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
     withMirror(async (dir, profile) => {
       const st = await Db.stats(dir, profile);
       // The covers are files of their own, next to the database rather than in
-      // it. Left out, a screen that says what the offline copy takes would be
-      // leaving out most of it.
-      return { ...st, bytes: st.bytes + (await mirrorCoversBytes(profile)) };
+      // it, so `bytes` alone was leaving out most of what the copy takes.
+      const covers = await mirrorCoversInfo(profile);
+      return { ...st, coverBytes: covers.bytes, covers: covers.count };
     }, {
       bytes: 0,
       albums: 0,
       artists: 0,
       playlists: 0,
       starredSongs: 0,
+      coverBytes: 0,
+      covers: 0,
     }),
 
   starred: () => withMirror((d, p) => Db.getStarred(d, p), undefined),

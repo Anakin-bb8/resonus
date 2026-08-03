@@ -575,5 +575,6 @@
   "Which tab opens on launch, and after a while in the background.": "Qué pestaña se abre al arrancar, y al volver tras un rato en segundo plano.",
   "Not available offline": "No disponible sin conexión",
   "Remove profile?": "¿Quitar el perfil?",
-  "The music on your device is not touched.": "La música de tu dispositivo no se toca."
+  "The music on your device is not touched.": "La música de tu dispositivo no se toca.",
+  "Offline library": "Biblioteca sin conexión"
 }

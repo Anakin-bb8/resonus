@@ -57,6 +57,9 @@ function LegendItem({ color, label, value }: { color: string; label: string; val
 
 /** Color of the "other" segment (what the rest of the device occupies). */
 const OTHER_COLOR = '#7a7a7a';
+/** The offline copy's share of the bar. Not the accent, which is the music
+ *  itself, and not the grey of what belongs to other apps. */
+const OFFLINE_COLOR = '#4a6fa5';
 
 export default function DownloadsSettings() {
   const t = useT();
@@ -201,7 +204,12 @@ export default function DownloadsSettings() {
           if (!disk || usage == null) {
             return <Text style={styles.legendText}>{usage == null ? '…' : `${formatBytes(usage)} · ${songsLabel(count, lang)}`}</Text>;
           }
-          const other = Math.max(0, disk.total - disk.free - usage);
+          // What the app keeps to work without a connection, which is not the
+          // music: the copy of the library and the covers saved with it. It has
+          // its own share of the bar because it grows on its own as you browse,
+          // and until it was drawn nobody could see it at all.
+          const offline = mirror ? mirror.bytes + mirror.coverBytes : 0;
+          const other = Math.max(0, disk.total - disk.free - usage - offline);
           // Fractions with a visible minimum: small downloads on a large disk
           // should appear as a sliver, not disappear.
           const frac = (n: number) => Math.max(n > 0 ? 0.012 : 0, n / disk.total);
@@ -210,6 +218,7 @@ export default function DownloadsSettings() {
               <View style={styles.bar}>
                 <View style={{ flex: frac(other), backgroundColor: OTHER_COLOR }} />
                 <View style={{ flex: frac(usage), backgroundColor: accent }} />
+                <View style={{ flex: frac(offline), backgroundColor: OFFLINE_COLOR }} />
                 <View style={{ flex: frac(disk.free), backgroundColor: colors.surfaceHighlight }} />
               </View>
               <View style={styles.legend}>
@@ -220,6 +229,11 @@ export default function DownloadsSettings() {
                   value={`${formatBytes(usage)} (${songsLabel(count, lang)})`}
                 />
                 <LegendItem
+                  color={OFFLINE_COLOR}
+                  label={t('Offline library')}
+                  value={mirror ? formatBytes(offline) : '…'}
+                />
+                <LegendItem
                   color={colors.surfaceHighlight}
                   label={t('Free')}
                   value={formatBytes(disk.free)}
@@ -228,11 +242,17 @@ export default function DownloadsSettings() {
             </>
           );
         })()}
+        {/* What that share of the bar is made of. Two lines rather than one
+            number, because they grow for different reasons and only one of
+            them is worth worrying about. */}
         <Text style={styles.mirrorLine}>
           {t('Library metadata copy')} ·{' '}
           {mirror
             ? `${formatBytes(mirror.bytes)} · ${albumsLabel(mirror.albums, lang)} · ${playlistsLabel(mirror.playlists, lang)}`
             : '…'}
+        </Text>
+        <Text style={styles.mirrorLine}>
+          {t('Cover art')} · {mirror ? formatBytes(mirror.coverBytes) : '…'}
         </Text>
         {count > 0 ? (
           <SettingRow
