@@ -308,11 +308,14 @@ export async function saveEntry(
   songs?: Song[],
 ): Promise<void> {
   const db = await mirrorDb(dir, profile);
-  // Timed per kind: writing an album is one row and its tracklist, writing a
-  // playlist can be a thousand songs, and until now none of it had a name in
-  // the report, so it showed up as time nobody could account for.
-  await timed(`mirror ${kind}`, () =>
-    serialized(() => db.withTransactionAsync(() => putEntry(db, kind, id, value, songs))),
+  // Timed per kind, and INSIDE the queue on purpose. Writes are serialised, so
+  // timing the wait as well turned five albums arriving together into one that
+  // took seven hundred milliseconds, which was the queue and not the work. What
+  // this measures is the transaction.
+  await serialized(() =>
+    timed(`mirror ${kind}`, () =>
+      db.withTransactionAsync(() => putEntry(db, kind, id, value, songs)),
+    ),
   );
 }
 

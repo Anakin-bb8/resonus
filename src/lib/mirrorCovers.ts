@@ -21,10 +21,10 @@
  * is why a playlist offline was a column of grey squares.
  */
 import * as FileSystem from 'expo-file-system/legacy';
-import { InteractionManager } from 'react-native';
 
 import { COVER, coverArtUrl, type SubsonicAuth } from '@/api/backend';
 import { isOfflineMode } from '@/api/netGate';
+import { whenIdle } from '@/lib/idle';
 import { hashKey, localCoverUrl, registerCover } from '@/lib/localLibrary';
 
 const DIR = FileSystem.documentDirectory + 'library-mirror/covers/';
@@ -132,59 +132,61 @@ export function keepMirrorCovers(
   // Online only: this is a download, and it goes through the file system rather
   // than the API, so the gate that refuses requests offline cannot see it.
   if (!auth || !profile || isOfflineMode()) return;
-  // After whatever is happening on screen. This is called from the middle of
-  // opening an album or a playlist, and downloading a few hundred covers is not
-  // something to start while a transition is still running: nothing here is
-  // urgent, and a screen that arrives late is what the user actually notices.
-  void InteractionManager.runAfterInteractions(async () => {
-    // What is already on disk has to be known before deciding what is missing.
-    // Online the mirror is opened a few seconds after launch, and the first
-    // favourites arrive before that: waiting here instead of giving up is the
-    // difference between saving them on the first run and on some later one.
-    await loadMirrorCovers(profile);
-    if (known.size >= MAX) return;
-    // Deduplicated first: a playlist hands over the album of every one of its
-    // songs, and twenty tracks off the same record are twenty copies of one id.
-    // Without this each of them would be fetched, since none is in `known` yet
-    // when the list is drawn up.
-    const wanted = [...new Set(ids)].filter(
-      (id): id is string =>
-        !!id && !known.has(id) && !inFlight.has(id) && !localCoverUrl(id),
-    );
-    const taking = wanted.slice(0, MAX - known.size);
-    if (taking.length === 0) return;
-    for (const id of taking) inFlight.add(id);
-    let added = false;
-    for (const id of taking) {
-      const url = coverArtUrl(auth, id, SIZE);
-      if (!url) {
-        inFlight.delete(id);
-        continue;
-      }
-      const file = fileFor(profile, id);
-      try {
-        await FileSystem.makeDirectoryAsync(DIR, { intermediates: true }).catch(() => {});
-        const res = await FileSystem.downloadAsync(url, file);
-        // A server that answers an error writes that error to the file, and a
-        // broken file on disk would pass for a cover for good.
-        if (res.status !== 200) {
-          await FileSystem.deleteAsync(file, { idempotent: true }).catch(() => {});
-        } else {
-          known.add(id);
-          registerCover(id, file);
-          // Counted as it is written: walking thousands of files to add up
-          // what they take is not something a settings screen should do.
-          const info = await FileSystem.getInfoAsync(file).catch(() => null);
-          bytes += info?.exists ? (info.size ?? 0) : 0;
-          added = true;
+  // When the thread is free. This is called from the middle of opening an album
+  // or a playlist, and downloading a few hundred covers is not something to
+  // start while a transition is still running: nothing here is urgent, and a
+  // screen that arrives late is what the user actually notices.
+  whenIdle(() => {
+    void (async () => {
+      // What is already on disk has to be known before deciding what is missing.
+      // Online the mirror is opened a few seconds after launch, and the first
+      // favourites arrive before that: waiting here instead of giving up is the
+      // difference between saving them on the first run and on some later one.
+      await loadMirrorCovers(profile);
+      if (known.size >= MAX) return;
+      // Deduplicated first: a playlist hands over the album of every one of its
+      // songs, and twenty tracks off the same record are twenty copies of one id.
+      // Without this each of them would be fetched, since none is in `known` yet
+      // when the list is drawn up.
+      const wanted = [...new Set(ids)].filter(
+        (id): id is string =>
+          !!id && !known.has(id) && !inFlight.has(id) && !localCoverUrl(id),
+      );
+      const taking = wanted.slice(0, MAX - known.size);
+      if (taking.length === 0) return;
+      for (const id of taking) inFlight.add(id);
+      let added = false;
+      for (const id of taking) {
+        const url = coverArtUrl(auth, id, SIZE);
+        if (!url) {
+          inFlight.delete(id);
+          continue;
         }
-      } catch {
-        // Network, disk, whatever: it stays unknown and can be tried again.
-      } finally {
-        inFlight.delete(id);
+        const file = fileFor(profile, id);
+        try {
+          await FileSystem.makeDirectoryAsync(DIR, { intermediates: true }).catch(() => {});
+          const res = await FileSystem.downloadAsync(url, file);
+          // A server that answers an error writes that error to the file, and a
+          // broken file on disk would pass for a cover for good.
+          if (res.status !== 200) {
+            await FileSystem.deleteAsync(file, { idempotent: true }).catch(() => {});
+          } else {
+            known.add(id);
+            registerCover(id, file);
+            // Counted as it is written: walking thousands of files to add up
+            // what they take is not something a settings screen should do.
+            const info = await FileSystem.getInfoAsync(file).catch(() => null);
+            bytes += info?.exists ? (info.size ?? 0) : 0;
+            added = true;
+          }
+        } catch {
+          // Network, disk, whatever: it stays unknown and can be tried again.
+        } finally {
+          inFlight.delete(id);
+        }
       }
-    }
-    if (added) persist(profile);
+        if (added) persist(profile);
+    })();
   });
 }
 

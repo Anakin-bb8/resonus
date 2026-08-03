@@ -17,11 +17,11 @@
  * remains is a rule about what belongs here, which is a different thing.
  */
 import * as FileSystem from 'expo-file-system/legacy';
-import { InteractionManager } from 'react-native';
 import { create } from 'zustand';
 
 import type { Album, Artist, Playlist, Song, Starred, SubsonicAuth } from '@/api/subsonic';
 import { hashKey } from '@/lib/localLibrary';
+import { whenIdle } from '@/lib/idle';
 import * as Db from '@/lib/mirrorDb';
 import { keepMirrorCovers, loadMirrorCovers, mirrorCoversInfo } from '@/lib/mirrorCovers';
 import { primaryUrl } from '@/lib/serverUrls';
@@ -148,7 +148,7 @@ async function withMirror<T>(
  * interactions to finish costs nothing here and takes it off the way.
  */
 function writeMirror(fn: (dir: string, profile: string) => Promise<unknown>): void {
-  void InteractionManager.runAfterInteractions(() => {
+  whenIdle(() => {
     void withMirror(fn, undefined);
   });
 }
