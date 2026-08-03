@@ -4,6 +4,7 @@ import { Image, type ImageContentFit, type ImageStyle } from 'expo-image';
 import { useEffect, useState } from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 
+import { CACHED_COVER } from '@/api/data';
 import { colors, radius } from '@/theme';
 
 interface Props {
@@ -39,8 +40,32 @@ export function Cover({
   useEffect(() => {
     setFailed(false);
   }, [uri]);
+  // Offline, a cover that is not downloaded arrives marked (see `CACHED_COVER`
+  // in the data layer): it may be shown, but only if it is already in the image
+  // cache from when it was seen online, and never fetched. This is the only
+  // place that knows how to read the mark, and asking the cache is the only way
+  // it can be read, so a playlist or a favourite whose cover was never seen
+  // simply keeps its placeholder.
+  const cacheOnly = uri?.startsWith(CACHED_COVER) ?? false;
+  const [cached, setCached] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    if (!uri || !uri.startsWith(CACHED_COVER)) {
+      setCached(undefined);
+      return;
+    }
+    let alive = true;
+    void Image.getCachePathAsync(uri.slice(CACHED_COVER.length))
+      .then((path) => {
+        if (alive && path) setCached(path.startsWith('file://') ? path : `file://${path}`);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [uri]);
+  const shown = cacheOnly ? cached : uri;
   const borderRadius = rounded ? size / 2 : radius.md;
-  if (!uri || failed) {
+  if (!shown || failed) {
     return (
       <View
         style={[
@@ -61,11 +86,11 @@ export function Cover({
   }
   return (
     <Image
-      source={{ uri }}
+      source={{ uri: shown }}
       style={[{ width: size, height: size, borderRadius }, style as StyleProp<ImageStyle>]}
       contentFit={contentFit}
       transition={transition}
-      recyclingKey={uri}
+      recyclingKey={shown}
       // expo-image defaults to 'disk', which keeps the file but not the decoded
       // image: scrolling a list back up decoded every cover again. Covers are
       // small and the same handful come round constantly, which is what a

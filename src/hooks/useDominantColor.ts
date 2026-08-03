@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react';
 import { getColors } from 'react-native-image-colors';
 
+import { CACHED_COVER } from '@/api/data';
 import { colors as theme } from '@/theme';
 
 function hexToRgb(hex: string): [number, number, number] | null {
@@ -99,7 +100,11 @@ export function useDominantColor(uri?: string): string {
 
   useEffect(() => {
     let active = true;
-    if (!uri) {
+    // A cover marked as cache-only (offline, see `CACHED_COVER`) is not a URL
+    // and is not ours to fetch: `getColors` downloads on its own, so it would
+    // be exactly the request offline mode is there to avoid. The tint stays the
+    // plain one, which is what a cover nobody can see should look like.
+    if (!uri || uri.startsWith(CACHED_COVER)) {
       setColor(theme.surfaceHighlight);
       return;
     }

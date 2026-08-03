@@ -119,8 +119,10 @@ Releases before 0.2.1 are only listed on the
   rather than one that quietly uses data. Two things still go out, and both are
   asked for: checking whether the server is back, which is the only way out of
   an automatic offline, and the "test" button in Settings › Network.
-  What changes on screen: an album that is not downloaded now shows its
-  placeholder instead of its cover, since fetching that cover was the request.
+  What changes on screen: the cover of something not downloaded is only shown
+  if the phone already has it, from having seen it online, because fetching it
+  was the request. A playlist, a favourite or an album you have never opened
+  with a connection keeps its placeholder.
   Found by @ztx-lyghters with a packet capture, after @aona noticed the album
   art loading.
 - A song whose file says nothing about its album no longer files it under

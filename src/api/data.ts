@@ -130,19 +130,34 @@ async function currentPlaylistSongIds(id: string): Promise<string[]> {
 export type { Album, AlbumListType, Artist, ArtistInfo, FolderContents, FolderEntry, MusicFolder, Playlist, RadioStation, SearchResult, Song, StarType, Starred, SubsonicAuth } from './subsonic';
 export { normalizeUrl } from './subsonic';
 
+/**
+ * Marks a cover that may only be shown if it is already in the image cache.
+ * Deliberately not a URL: anything that tries to load it fails instead of
+ * reaching the network, which is the whole point (see `coverArtUrl`).
+ */
+export const CACHED_COVER = 'cached-cover:';
+
 export function coverArtUrl(id: string | undefined, _size?: number): string | undefined {
   // If the album art is downloaded (album/artist on disk), use it even
   // when in server mode: it works offline and doesn't use data, just
   // like audio plays from the downloaded file.
   const local = Local.coverUrl(id);
   if (local) return local;
-  // Offline: what is on the phone, and nothing else. This used to hand back the
-  // server's URL for anything not downloaded, so the covers of an album you
-  // could not even play were fetched one by one over the network — which is how
-  // someone noticed that offline mode was not offline (#89). A URL given to the
-  // image loader is a request like any other; it just doesn't look like one in
-  // the code. Non-downloaded items show their placeholder instead.
-  if (isOffline()) return undefined;
+  // Offline: whatever is already on the phone, and nothing fetched. Handing
+  // back the server's URL is what made offline mode fetch the covers of albums
+  // it could not even play, one by one (#89): a URL given to the image loader
+  // is a request like any other, it just doesn't look like one in the code.
+  //
+  // But most of those covers ARE on the phone, in the image cache, from when
+  // they were seen online. So what comes back is the URL wearing a prefix that
+  // makes it useless as a URL: nothing can fetch `cached-cover:https://…`, and
+  // the one thing that understands it (`Cover`) looks it up in the cache and
+  // shows it only if it is already there. Misusing it draws a placeholder,
+  // which is the failure this should have.
+  if (isOffline()) {
+    if (!serverOffline()) return undefined;
+    return CACHED_COVER + Subsonic.coverArtUrl(auth(), id, _size);
+  }
   return Subsonic.coverArtUrl(auth(), id, _size);
 }
 
