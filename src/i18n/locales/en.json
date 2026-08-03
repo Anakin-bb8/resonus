@@ -585,5 +585,18 @@
   "On mobile data only": "On mobile data only",
   "Only if it is the original file": "Only if it is the original file",
   "Always": "Always",
-  "Downloads & offline": "Downloads & offline"
+  "Downloads & offline": "Downloads & offline",
+  "Export": "Export",
+  "Save to a folder": "Save to a folder",
+  "Send to another app": "Send to another app",
+  "Exporting…": "Exporting…",
+  "Saved as “{name}”": "Saved as “{name}”",
+  "Couldn’t save the file": "Couldn’t save the file",
+  "Couldn’t share the file": "Couldn’t share the file",
+  "Sharing isn’t available here": "Sharing isn’t available here",
+  "This download is a {n} kbps copy, not the original file.": "This download is a {n} kbps copy, not the original file.",
+  "Export “{name}”?": "Export “{name}”?",
+  "{n} songs, {size}, copied into a folder of their own.": "{n} songs, {size}, copied into a folder of their own.",
+  "{n} songs exported": "{n} songs exported",
+  "{n} of {m} songs exported": "{n} of {m} songs exported"
 }

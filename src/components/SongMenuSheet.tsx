@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Dimensions,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -35,8 +36,9 @@ import { useCanShare } from '@/hooks/useCanShare';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { applyStarChange, resyncFavorites } from '@/lib/favoritesCache';
 import { artistTargets } from '@/lib/artistNav';
+import { exportToFolder, shareSongFile } from '@/lib/exportSong';
 import { useSharePicker } from '@/store/sharePicker';
-import { normKey } from '@/lib/localLibrary';
+import { normKey, pickFolder } from '@/lib/localLibrary';
 import { useArtistPicker } from '@/store/artistPicker';
 import { useAuthStore } from '@/store/auth';
 import { useAutoDownloads } from '@/store/autoDownloads';
@@ -146,13 +148,20 @@ export function SongMenuSheet() {
   const toast = useToast((s) => s.show);
   const t = useT();
   const downloaded = useDownloads((s) => !!(song && s.files[song.id]));
+  // The downloaded file itself, and what it was made at: exporting copies what
+  // is on the phone, and a transcode should not be handed over as if it were
+  // the server's original.
+  const dlUri = useDownloads((s) => (song ? s.files[song.id] : undefined));
+  const dlBitRate = useDownloads((s) => (song ? s.dlBitRates[song.id] : undefined));
   const downloadSong = useDownloads((s) => s.downloadSong);
   const deleteDownloads = useDownloads((s) => s.deleteSongs);
   const openArtistPicker = useArtistPicker((s) => s.open);
   const favIds = useFavoriteIds(!!song);
   const favorited = song ? (favIds ? favIds.has(song.id) : !!song.starred) : false;
 
-  const [mode, setMode] = useState<'actions' | 'playlists' | 'sleep' | 'rating'>('actions');
+  const [mode, setMode] = useState<'actions' | 'playlists' | 'sleep' | 'rating' | 'export'>(
+    'actions',
+  );
   const [creating, setCreating] = useState(false);
   // The action list is scrolled to the top: only then does a downward drag
   // belong to the sheet (see the `pan` below).
@@ -185,6 +194,39 @@ export function SongMenuSheet() {
     close();
     router.push(path);
   };
+
+  /**
+   * Copies the download into a folder the user picks (#57).
+   *
+   * The sheet is only closed once a folder has been chosen: cancelling the
+   * system picker leaves the menu where it was, which is what cancelling
+   * should do. The copy then runs on its own, announced by the toast, because
+   * a large file over a document provider is not instant.
+   */
+  async function saveToFolder() {
+    if (!song || !dlUri) return;
+    const folder = await pickFolder();
+    if (!folder) return;
+    close();
+    toast(t('Exporting…'));
+    try {
+      const name = await exportToFolder(song, dlUri, folder);
+      toast(t('Saved as “{name}”', { name }));
+    } catch {
+      toast(t('Couldn’t save the file'));
+    }
+  }
+
+  /** Hands the download to another app through the system share sheet (#57). */
+  async function sendToApp() {
+    if (!song || !dlUri) return;
+    close();
+    try {
+      if (!(await shareSongFile(song, dlUri))) toast(t('Sharing isn’t available here'));
+    } catch {
+      toast(t('Couldn’t share the file'));
+    }
+  }
 
   /** Actually adds (without checking duplicates) and closes with a toast. */
   async function doAdd(playlistId: string, playlistName: string) {
@@ -403,6 +445,38 @@ export function SongMenuSheet() {
                     </Pressable>
                   ) : null}
                 </View>
+              ) : mode === 'export' ? (
+                <View>
+                  <Pressable style={styles.action} onPress={() => setMode('actions')}>
+                    <Ionicons name="chevron-back" size={24} color={colors.text} />
+                    <Text style={styles.actionText}>{t('Export')}</Text>
+                  </Pressable>
+                  {/* Said before the file leaves, not after: a download made at
+                      a lower bitrate is a worse copy than the server's, and the
+                      only moment that matters is while deciding to hand it to
+                      someone. */}
+                  {dlBitRate ? (
+                    <Text style={styles.note}>
+                      {t('This download is a {n} kbps copy, not the original file.', {
+                        n: dlBitRate,
+                      })}
+                    </Text>
+                  ) : null}
+                  {/* Picking a folder is the Storage Access Framework, which is
+                      Android's. Elsewhere the share sheet is the only way out. */}
+                  {Platform.OS === 'android' ? (
+                    <Action
+                      icon="folder-outline"
+                      label={t('Save to a folder')}
+                      onPress={() => void saveToFolder()}
+                    />
+                  ) : null}
+                  <Action
+                    icon="share-outline"
+                    label={t('Send to another app')}
+                    onPress={() => void sendToApp()}
+                  />
+                </View>
               ) : mode === 'rating' ? (
                 <View>
                   <Pressable style={styles.action} onPress={() => setMode('actions')}>
@@ -527,6 +601,18 @@ export function SongMenuSheet() {
                         toast(t('Downloading…'));
                         close();
                       }}
+                    />
+                  ) : null}
+                  {/* Downloaded songs only. Exporting one that is not on the
+                      phone would be a download wearing another word: network,
+                      time, data and a size worth warning about. That one is two
+                      steps, Download and then Export, and both say what they
+                      are (#57). */}
+                  {menu.export && downloaded ? (
+                    <Action
+                      icon="save-outline"
+                      label={t('Export')}
+                      onPress={() => setMode('export')}
                     />
                   ) : null}
                   {menu.lyrics && showLyrics ? (
@@ -699,6 +785,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   actionText: { color: colors.text, fontSize: fontSize.md },
+  // Aligned with the action labels above it, so it reads as part of the list
+  // rather than as a banner dropped on top of it.
+  note: {
+    color: colors.textMuted,
+    fontSize: fontSize.sm,
+    paddingBottom: spacing.sm,
+    paddingLeft: 24 + spacing.lg,
+  },
   newPlaylistIcon: {
     width: 40,
     height: 40,

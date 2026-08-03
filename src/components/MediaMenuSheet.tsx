@@ -17,6 +17,9 @@ import { useBottomSheetAnim } from '@/hooks/useBottomSheetAnim';
 import { useAlbumDownloads } from '@/hooks/useAlbumDownloads';
 import { useCanShare } from '@/hooks/useCanShare';
 import { useDownloadMessage } from '@/hooks/useDownloadMessage';
+import { exportManyToFolder, totalBytes } from '@/lib/exportSong';
+import { formatBytes } from '@/lib/format';
+import { pickFolder } from '@/lib/localLibrary';
 import { queryClient } from '@/lib/query';
 import { useSharePicker } from '@/store/sharePicker';
 import { songsLabel, useT } from '@/i18n';
@@ -87,6 +90,10 @@ export function MediaMenuSheet() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   /** Songs gathered for the download dialog (its size needs them). */
   const [pending, setPending] = useState<Song[] | null>(null);
+  /** The downloaded songs and what they weigh, for the export question. */
+  const [pendingExport, setPendingExport] = useState<{ songs: Song[]; bytes: number } | null>(
+    null,
+  );
   const downloadMsg = useDownloadMessage(pending ?? []);
   const downloadAlbum = useDownloads((s) => s.downloadAlbum);
   const downloadPlaylist = useDownloads((s) => s.downloadPlaylist);
@@ -124,6 +131,41 @@ export function MediaMenuSheet() {
     } catch {
       toast(t("Couldn't complete the action"));
     }
+  }
+
+  /**
+   * Gathers what can actually be exported, WITHOUT closing: the question that
+   * follows needs the count and the size, and only the downloaded songs are
+   * going anywhere. What is not on the phone is not offered as if it were
+   * (#57).
+   */
+  async function askExport() {
+    try {
+      const songs = (await fetchSongs(item!)).filter((s) => files[s.id]);
+      if (songs.length === 0) {
+        toast(t('Nothing here is downloaded'));
+        close();
+        return;
+      }
+      setPendingExport({ songs, bytes: totalBytes(songs.map((s) => files[s.id])) });
+    } catch {
+      toast(t("Couldn't complete the action"));
+    }
+  }
+
+  /** Copies them into a folder of their own, and says how many made it. */
+  async function runExport(songs: Song[]) {
+    const folder = await pickFolder();
+    if (!folder) return;
+    close();
+    toast(t('Exporting…'));
+    const items = songs.map((s) => ({ song: s, uri: files[s.id] }));
+    const { saved, failed } = await exportManyToFolder(items, folder, name);
+    toast(
+      failed > 0
+        ? t('{n} of {m} songs exported', { n: saved, m: songs.length })
+        : t('{n} songs exported', { n: saved }),
+    );
   }
 
   /** Closes, fetches the songs, and runs the action (with toast on failure). */
@@ -244,6 +286,12 @@ export function MediaMenuSheet() {
                 onPress={() => setConfirmDelete(true)}
               />
             ) : null}
+            {/* Same condition as deleting: what is downloaded is what can be
+                exported, and whether these songs are among this profile's
+                downloads takes fetching them, which is what the press does. */}
+            {hasDownloads ? (
+              <Action icon="save-outline" label={t('Export')} onPress={() => void askExport()} />
+            ) : null}
             {/* Moved here from the header row, which had grown to four icons for
                 something used now and then. Covers the long press on a card too,
                 which never had it. */}
@@ -306,6 +354,28 @@ export function MediaMenuSheet() {
           if (album) void downloadAlbum(album, songs);
           else void downloadPlaylist(playlist!, songs);
           toast(t('Downloading…'));
+        }}
+      />
+
+      {/* Asked before the folder picker, not after: the size is the part worth
+          knowing while there is still nothing to undo. */}
+      <Dialog
+        visible={!!pendingExport}
+        title={t('Export “{name}”?', { name })}
+        message={
+          pendingExport
+            ? t('{n} songs, {size}, copied into a folder of their own.', {
+                n: pendingExport.songs.length,
+                size: formatBytes(pendingExport.bytes),
+              })
+            : undefined
+        }
+        confirmLabel={t('Export')}
+        onCancel={() => setPendingExport(null)}
+        onConfirm={() => {
+          const songs = pendingExport?.songs ?? [];
+          setPendingExport(null);
+          void runExport(songs);
         }}
       />
 

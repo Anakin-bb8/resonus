@@ -586,5 +586,18 @@
   "On mobile data only": "Solo con datos móviles",
   "Only if it is the original file": "Solo si es el fichero original",
   "Always": "Siempre",
-  "Downloads & offline": "Descargas y sin conexión"
+  "Downloads & offline": "Descargas y sin conexión",
+  "Export": "Exportar",
+  "Save to a folder": "Guardar en una carpeta",
+  "Send to another app": "Enviar a otra app",
+  "Exporting…": "Exportando…",
+  "Saved as “{name}”": "Guardada como «{name}»",
+  "Couldn’t save the file": "No se pudo guardar el archivo",
+  "Couldn’t share the file": "No se pudo compartir el archivo",
+  "Sharing isn’t available here": "Compartir no está disponible aquí",
+  "This download is a {n} kbps copy, not the original file.": "Esta descarga es una copia a {n} kbps, no el archivo original.",
+  "Export “{name}”?": "¿Exportar «{name}»?",
+  "{n} songs, {size}, copied into a folder of their own.": "{n} canciones, {size}, copiadas en una carpeta propia.",
+  "{n} songs exported": "{n} canciones exportadas",
+  "{n} of {m} songs exported": "{n} de {m} canciones exportadas"
 }
