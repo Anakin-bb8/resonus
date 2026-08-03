@@ -19,9 +19,9 @@
  */
 import * as FileSystem from 'expo-file-system/legacy';
 
-import { coverArtUrl } from '@/api/backend';
+import { coverArtUrl, type SubsonicAuth } from '@/api/backend';
+import { isOfflineMode } from '@/api/netGate';
 import { hashKey, localCoverUrl, registerCover } from '@/lib/localLibrary';
-import { useAuthStore } from '@/store/auth';
 
 const DIR = FileSystem.documentDirectory + 'library-mirror/covers/';
 
@@ -94,19 +94,28 @@ export async function loadMirrorCovers(profile: string): Promise<void> {
  * `ids` are cover ids as the screens ask for them (`coverArt ?? id`), which is
  * what the offline lookup will be given.
  */
-export function keepMirrorCovers(profile: string, ids: (string | undefined)[]): void {
-  const { auth, offline } = useAuthStore.getState();
+export function keepMirrorCovers(
+  profile: string,
+  auth: SubsonicAuth | null,
+  ids: (string | undefined)[],
+): void {
   // Online only: this is a download, and it goes through the file system rather
   // than the API, so the gate that refuses requests offline cannot see it.
-  if (!auth || offline || !profile || loaded !== profile) return;
-  const wanted = ids.filter(
-    (id): id is string =>
-      !!id && !known.has(id) && !inFlight.has(id) && !localCoverUrl(id),
-  );
-  if (wanted.length === 0 || known.size >= MAX) return;
-  const taking = wanted.slice(0, MAX - known.size);
-  for (const id of taking) inFlight.add(id);
+  if (!auth || !profile || isOfflineMode()) return;
   void (async () => {
+    // What is already on disk has to be known before deciding what is missing.
+    // Online the mirror is opened a few seconds after launch, and the first
+    // favourites arrive before that: waiting here instead of giving up is the
+    // difference between saving them on the first run and on some later one.
+    await loadMirrorCovers(profile);
+    if (known.size >= MAX) return;
+    const wanted = ids.filter(
+      (id): id is string =>
+        !!id && !known.has(id) && !inFlight.has(id) && !localCoverUrl(id),
+    );
+    const taking = wanted.slice(0, MAX - known.size);
+    if (taking.length === 0) return;
+    for (const id of taking) inFlight.add(id);
     let added = false;
     for (const id of taking) {
       const url = coverArtUrl(auth, id, SIZE);
