@@ -28,7 +28,7 @@ import { startPerfLog } from '@/lib/perfLog';
 import { queryClient } from '@/lib/query';
 import { useAuthStore } from '@/store/auth';
 import { useAutoDownloads } from '@/store/autoDownloads';
-import { useDownloads } from '@/store/downloads';
+import { anyDownloads, useDownloads } from '@/store/downloads';
 import { useEqualizer } from '@/store/equalizer';
 import { useLastPlayed } from '@/store/lastPlayed';
 import { useLibraries } from '@/store/libraries';
@@ -65,7 +65,7 @@ export default function RootLayout() {
   const hydrating = useAuthStore((s) => s.hydrating);
   const hydrate = useAuthStore((s) => s.hydrate);
   // With downloads, the local profile works without having chosen a music source.
-  const hasDownloads = useDownloads((s) => Object.keys(s.files).length > 0);
+  const hasDownloads = useDownloads(anyDownloads);
   const downloadsHydrated = useDownloads((s) => s.hydrated);
   const ready = !!auth || (offline && (!!offlineSource || hasDownloads));
   // Active profile identified to reload recent searches when switching.

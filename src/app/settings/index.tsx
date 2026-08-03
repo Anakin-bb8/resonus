@@ -13,7 +13,7 @@ import { Dialog } from '@/components/Dialog';
 import { ScreenHeader, settingsStyles } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
-import { useDownloads } from '@/store/downloads';
+import { anyDownloads, useDownloads } from '@/store/downloads';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
 import { colors, fontSize, radius, spacing } from '@/theme';
@@ -35,7 +35,7 @@ export default function SettingsScreen() {
   // "nothing downloaded". Hiding the switch on that basis is what made it
   // disappear for the first seconds on a large library, which is exactly the
   // library that needs it.
-  const hasDownloads = useDownloads((s) => !s.hydrated || Object.keys(s.files).length > 0);
+  const hasDownloads = useDownloads((s) => !s.hydrated || anyDownloads(s));
   const toast = useToast((s) => s.show);
   // Restore defaults: affects all settings, that's why it lives here (in the
   // index) and not inside a specific category.

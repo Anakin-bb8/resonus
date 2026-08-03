@@ -45,7 +45,7 @@ import { useT } from '@/i18n';
 import { splitArtistAlbums } from '@/lib/artistAlbums';
 import { listPerf } from '@/lib/listPerf';
 import { useAuthStore } from '@/store/auth';
-import { groupDownloadState, useDownloads } from '@/store/downloads';
+import { anyDownloads, groupDownloadState, useDownloads } from '@/store/downloads';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { usePlaylistPicker } from '@/store/playlistPicker';
 import { useSettings } from '@/store/settings';
@@ -99,7 +99,7 @@ export default function ArtistScreen() {
   const deleteSongs = useDownloads((s) => s.deleteSongs);
   // The boolean, not the map: it is replaced with every song that finishes
   // downloading, so subscribing to it re-rendered the screen on each one (#50).
-  const hasDownloads = useDownloads((s) => Object.keys(s.files).length > 0);
+  const hasDownloads = useDownloads(anyDownloads);
   const [confirmDownload, setConfirmDownload] = useState(false);
   const [confirmStop, setConfirmStop] = useState(false);
   const [confirmDeleteDl, setConfirmDeleteDl] = useState(false);

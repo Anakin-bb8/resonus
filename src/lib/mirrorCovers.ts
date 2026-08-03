@@ -21,6 +21,7 @@
  * is why a playlist offline was a column of grey squares.
  */
 import * as FileSystem from 'expo-file-system/legacy';
+import { InteractionManager } from 'react-native';
 
 import { coverArtUrl, type SubsonicAuth } from '@/api/backend';
 import { isOfflineMode } from '@/api/netGate';
@@ -131,7 +132,11 @@ export function keepMirrorCovers(
   // Online only: this is a download, and it goes through the file system rather
   // than the API, so the gate that refuses requests offline cannot see it.
   if (!auth || !profile || isOfflineMode()) return;
-  void (async () => {
+  // After whatever is happening on screen. This is called from the middle of
+  // opening an album or a playlist, and downloading a few hundred covers is not
+  // something to start while a transition is still running: nothing here is
+  // urgent, and a screen that arrives late is what the user actually notices.
+  void InteractionManager.runAfterInteractions(async () => {
     // What is already on disk has to be known before deciding what is missing.
     // Online the mirror is opened a few seconds after launch, and the first
     // favourites arrive before that: waiting here instead of giving up is the
@@ -180,7 +185,7 @@ export function keepMirrorCovers(
       }
     }
     if (added) persist(profile);
-  })();
+  });
 }
 
 /**

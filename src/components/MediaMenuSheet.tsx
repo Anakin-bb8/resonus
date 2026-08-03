@@ -24,7 +24,7 @@ import { queryClient } from '@/lib/query';
 import { useSharePicker } from '@/store/sharePicker';
 import { songsLabel, useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
-import { useDownloads } from '@/store/downloads';
+import { anyDownloads, useDownloads } from '@/store/downloads';
 import { useMediaMenu, type MediaMenuItem } from '@/store/mediaMenu';
 import { usePlaylistPicker } from '@/store/playlistPicker';
 import { MAX_PINS, usePins } from '@/store/pins';
@@ -108,7 +108,7 @@ export function MediaMenuSheet() {
     item?.kind === 'album' ? item.album.id : undefined,
   );
   const hasDownloads =
-    item?.kind === 'album' ? albumHasDownloads : Object.keys(files).length > 0;
+    item?.kind === 'album' ? albumHasDownloads : anyDownloads({ files });
 
   if (!item) return null;
 

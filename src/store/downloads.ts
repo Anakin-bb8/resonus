@@ -491,6 +491,20 @@ interface DownloadsState {
   usageBytes: () => Promise<number>;
 }
 
+/**
+ * Is anything downloaded at all? A selector, not a count.
+ *
+ * `Object.keys(files).length > 0` was the way to ask, and on a library of
+ * fifteen thousand downloads that allocates an array of fifteen thousand
+ * strings to look at the first one. It ran in the root layout, in Settings and
+ * on the artist screen, and it ran again on every change to this store, which
+ * while something is downloading is several times a second.
+ */
+export function anyDownloads(s: { files: Record<string, string> }): boolean {
+  for (const _ in s.files) return true;
+  return false;
+}
+
 /** true only if the active connection is mobile data (for "Wi-Fi only" mode). */
 async function onMobileData(): Promise<boolean> {
   try {

@@ -37,13 +37,41 @@ interface Props {
  */
 const CACHE_SIZES = [500, 300, 1200, 100] as const;
 
+/**
+ * What each marked cover was found to be, so a lookup is done once.
+ *
+ * Every one of these is a call into the image loader, and a screen is thirty
+ * rows: without this, a list asked a hundred and fifty times on the way in, and
+ * again on the way back, and again for every row scrolling recycled. On a
+ * fifteen thousand song library most of them miss, which is the expensive case.
+ *
+ * A hit is kept for good, since a file in the cache does not leave while the
+ * app is running. A miss is kept for a minute: offline nothing new arrives, but
+ * back online the mirror does save covers, and a miss remembered for ever would
+ * hold a placeholder over one that is now there.
+ */
+const MISS_TTL = 60_000;
+const memo = new Map<string, { path?: string; at: number }>();
+
 async function cachedPath(url: string): Promise<string | undefined> {
+  const seen = memo.get(url);
+  if (seen && (seen.path || Date.now() - seen.at < MISS_TTL)) return seen.path;
   const sized = (n: number) => url.replace(/([?&](?:size|fillWidth|fillHeight)=)\d+/g, `$1${n}`);
-  for (const candidate of [url, ...CACHE_SIZES.map(sized)]) {
+  const look = async (candidate: string) => {
     const path = await Image.getCachePathAsync(candidate).catch(() => null);
-    if (path) return path.startsWith('file://') ? path : `file://${path}`;
+    return path ? (path.startsWith('file://') ? path : `file://${path}`) : undefined;
+  };
+  // The size asked for first, on its own: that is the one that hits when the
+  // cover was already seen at this size, and it costs one call. Only when it
+  // misses are the other sizes worth asking for, and then all at once rather
+  // than one after another, in the order that prefers scaling down to up.
+  let found = await look(url);
+  if (!found) {
+    const others = await Promise.all(CACHE_SIZES.map((n) => look(sized(n))));
+    found = others.find(Boolean);
   }
-  return undefined;
+  memo.set(url, { path: found, at: Date.now() });
+  return found;
 }
 
 export function Cover({
