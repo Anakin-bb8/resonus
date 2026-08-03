@@ -67,7 +67,7 @@ function ChipRow({ chip }: { chip: ExploreChip }) {
 
 /** Chips that do not exist on a local profile (Home filters them out through
  * OFFLINE_KEYS): a row here would promise something that never turns up. */
-const SERVER_ONLY: ExploreChipKey[] = ['genres', 'radio', 'history'];
+const SERVER_ONLY: ExploreChipKey[] = ['genres', 'radio'];
 
 export default function ExploreChipsSettings() {
   const bottomPad = useScreenBottomPadding();

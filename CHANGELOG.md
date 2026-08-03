@@ -102,6 +102,14 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- The history is there offline, and it is the same history. It is written on
+  this phone as each song plays and needs nobody to read it back, yet it was
+  hidden from Home without a connection, so a screen that worked could not be
+  reached. It was also filed by mode rather than by account: everything played
+  offline, by any profile, went into one shared list, which is the mixing that
+  keeping them apart was for. An account's listening is its own now, connection
+  or not. Nothing has been deleted, but plays made offline before this will
+  stay where they were, which is the list a local profile shows.
 - Search no longer offers what it cannot open offline. "Browse all" laid out
   its genres, or rather the grey shapes of them, and radio stations were
   searched for too: both are the server's to answer, and offline the answer was

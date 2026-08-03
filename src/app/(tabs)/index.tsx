@@ -368,6 +368,9 @@ const OFFLINE_KEYS = new Set<ExploreChipKey>([
   'albums',
   'artists',
   'songs',
+  // The history is this phone's own: what was played on it, written down as it
+  // played. It needs nobody, so hiding it offline hid a screen that worked.
+  'history',
 ]);
 
 function ExploreChips({ offline }: { offline: boolean }) {

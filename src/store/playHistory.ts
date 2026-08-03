@@ -21,10 +21,22 @@ function safe(s: string): string {
   return s.replace(/[^A-Za-z0-9._-]/g, '_');
 }
 
+/**
+ * Whose history this is. The account first, and the mode not at all: the songs
+ * an account plays are its songs whether or not there was a connection at the
+ * time, and they play the same either way.
+ *
+ * Asking about the mode first put every account's offline listening into one
+ * shared bucket, which is the mixing this was meant to avoid, and it moved the
+ * key under the app's feet: nothing re-reads the history when the mode changes,
+ * so the next song played wrote what was already in memory into the other
+ * profile's bucket. Only a local profile, which has no account, keeps that key,
+ * and it is the one it always had.
+ */
 function storageKey(): string {
-  const { auth, offline } = useAuthStore.getState();
-  if (offline) return 'resonus.playHistory.offline';
+  const { auth } = useAuthStore.getState();
   if (auth) return `resonus.playHistory.server.${safe(primaryUrl(auth))}.${safe(auth.username)}`;
+  if (useAuthStore.getState().offline) return 'resonus.playHistory.offline';
   return LEGACY_KEY;
 }
 
@@ -60,10 +72,18 @@ export const usePlayHistory = create<PlayHistoryState>((set, get) => ({
 
   record: (song) => {
     if (!song?.id) return;
+    const key = storageKey();
+    // Whoever is in memory belongs to whoever was signed in when it was read.
+    // Writing them under another profile's key is how one profile's listening
+    // ends up in another's history, so a change of profile starts over here.
+    if (currentKey && currentKey !== key) {
+      currentKey = key;
+      set({ entries: [] });
+    }
     const rest = get().entries.filter((e) => e.song.id !== song.id);
     const entries = [{ song, playedAt: Date.now() }, ...rest].slice(0, MAX);
     set({ entries });
-    scheduleSave(storageKey(), entries);
+    scheduleSave(key, entries);
   },
 
   clear: () => {
