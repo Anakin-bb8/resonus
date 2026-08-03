@@ -170,8 +170,13 @@ async function migrateIndex(profile: string): Promise<Db.CoverRow[]> {
   // The size was kept as one number for the lot, and the table keeps it per
   // row: it is shared out so the total still adds up to what it was.
   const each = Math.round(index.bytes / index.ids.length);
+  const saved = new Set(index.ids);
   const rows: Db.CoverRow[] = index.ids.map((id) => ({ id, aliasOf: null, bytes: each }));
   for (const [id, from] of Object.entries(index.aliases)) {
+    // An id that has a file of its own is not a name for somebody else's: the
+    // table has one row per id, so letting the alias through would replace the
+    // file with a pointer and leave the file behind.
+    if (saved.has(id)) continue;
     rows.push({ id, aliasOf: from, bytes: 0 });
   }
   await Db.putCovers(BASE, profile, rows);
@@ -187,6 +192,12 @@ async function migrateIndex(profile: string): Promise<Db.CoverRow[]> {
  */
 function alias(profile: string, key: string, from: string): boolean {
   if (key === from || aliases.get(key) === from) return false;
+  // Never over a file of its own. An album whose songs carry no cover id of
+  // their own is saved under the album's, and a later song of the same album
+  // that does carry one would otherwise point that same id at its file: two
+  // rows for one picture, one of them orphaning a file, and the id counted as
+  // a name rather than as something saved.
+  if (known.has(key)) return false;
   aliases.set(key, from);
   registerCover(key, fileFor(profile, from));
   return true;
