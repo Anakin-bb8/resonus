@@ -9,17 +9,17 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
 /**
- * Estado de la optimización de batería de Android para esta app.
+ * Where this app stands with Android's battery optimisation.
  *
- * Con la optimización activa (que es lo normal, y lo que el sistema restaura
- * solo tras un tiempo sin usar la app) Android puede matar el servicio de
- * reproducción en segundo plano, cortar la descarga o retrasar el temporizador.
- * Desde JS no hay forma de consultarlo, de ahí este módulo.
+ * With it on, which is the normal state and the one the system puts back by
+ * itself after a while without opening the app, Android is free to kill the
+ * playback service in the background, cut a download short or hold the sleep
+ * timer back. There is no way to ask from JS, hence this module.
  *
- * Solo consulta y abre ajustes: NO pide la exención directamente
- * (`ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`), porque eso exige el permiso
- * `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`, que Google Play restringe. Llevar al
- * usuario a la pantalla del sistema no necesita permiso alguno.
+ * It only asks and opens settings: it does NOT request the exemption itself
+ * (`ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`), which needs the
+ * `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` permission that Google Play restricts.
+ * Taking someone to the system screen needs no permission at all.
  */
 class BatteryOptModule : Module() {
   private val context: Context
@@ -29,9 +29,9 @@ class BatteryOptModule : Module() {
     Name("BatteryOpt")
 
     /**
-     * ¿Está la app exenta de la optimización de batería? `true` = exenta (sin
-     * restricciones). En caso de duda devuelve `true`: es preferible no avisar
-     * a avisar en falso.
+     * Is the app exempt from battery optimisation? `true` means exempt, with no
+     * restrictions on it. When in doubt it answers `true`: better to say nothing
+     * than to warn about something that isn't happening.
      */
     Function("isIgnoringOptimizations") {
       runCatching {
@@ -41,9 +41,10 @@ class BatteryOptModule : Module() {
     }
 
     /**
-     * Abre la lista del sistema de optimización de batería. Si el dispositivo
-     * no la trae (fabricantes que la quitan), cae en la pantalla de detalles de
-     * la app, desde donde también se llega. Devuelve si algo se pudo abrir.
+     * Opens the system's battery optimisation list. On a device that does not
+     * have it (some manufacturers take it out) it falls back to the app's own
+     * details screen, which leads to the same place. Returns whether anything
+     * could be opened.
      */
     Function("openSettings") {
       val screens = listOf(

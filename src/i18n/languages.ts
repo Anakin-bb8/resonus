@@ -50,12 +50,12 @@ export const LANGUAGES = [
 
 export type Language = (typeof LANGUAGES)[number]['code'];
 
-/** Nombre de cada idioma en su propio idioma (para los selectores). */
+/** Each language's name in its own language, for the pickers. */
 export const LANGUAGE_NAMES = Object.fromEntries(
   LANGUAGES.map((l) => [l.code, l.name]),
 ) as Record<Language, string>;
 
-/** Diccionarios por idioma. El inglés es la clave, así que no lleva tabla. */
+/** The dictionaries, by language. English is the key itself, so it has none. */
 export const DICTIONARIES = Object.fromEntries(
   LANGUAGES.filter((l) => 'dict' in l).map((l) => [l.code, (l as { dict: Dict }).dict]),
 ) as Partial<Record<Language, Dict>>;
@@ -66,7 +66,7 @@ export function greetingHours(lang: Language): GreetingHours {
   return def?.greeting ?? DEFAULT_GREETING_HOURS;
 }
 
-/** ¿Es `v` un código de idioma soportado? (valida lo leído de disco). */
+/** Is `v` a language we support? Guards what comes back from disk. */
 export function isLanguage(v: unknown): v is Language {
   return typeof v === 'string' && LANGUAGES.some((l) => l.code === v);
 }

@@ -8,10 +8,11 @@ import expo.modules.kotlin.modules.ModuleDefinition
 import org.json.JSONObject
 
 /**
- * Puente Expo ↔ sesión de medios del casting. `start`/`update`/`setState`
- * empujan metadatos y estado al `CastMediaService` (que mantiene la notificación
- * y captura los botones de volumen), y los controles que el usuario pulsa
- * vuelven a JS por el evento "command". La API JS vive en `src/store/castMedia.ts`.
+ * Expo bridge to the media session used while casting. `start`, `update` and
+ * `setState` push metadata and state into `CastMediaService`, which keeps the
+ * notification up and catches the volume keys, and whatever is pressed there
+ * comes back to JS as a "command" event. The JS API lives in
+ * `src/store/castMedia.ts`.
  */
 class CastMediaModule : Module() {
   override fun definition() = ModuleDefinition {
@@ -27,7 +28,7 @@ class CastMediaModule : Module() {
       if (instance === this@CastMediaModule) instance = null
     }
 
-    /** Arranca la sesión con los metadatos + estado iniciales de la pista. */
+    /** Opens the session with the track's initial metadata and state. */
     Function("start") { json: String ->
       val ctx = appContext.reactContext?.applicationContext ?: return@Function
       val info = parseInfo(json)
@@ -39,36 +40,37 @@ class CastMediaModule : Module() {
       startService(ctx, info)
     }
 
-    /** Refresca metadatos + estado (cambio de pista). */
+    /** Fresh metadata and state, for a track change. */
     Function("update") { json: String ->
       val info = parseInfo(json)
       val running = CastMediaService.instance
       if (running != null) {
         running.update(info)
       } else {
-        // Aún no arrancó: reusa el flujo de start.
+        // Not running yet: go through the same path `start` takes.
         val ctx = appContext.reactContext?.applicationContext ?: return@Function
         startService(ctx, info)
       }
     }
 
-    /** Actualiza solo el estado de reproducción (play/pausa + progreso). */
+    /** Playback state only: playing or paused, and how far in. */
     Function("setState") { isPlaying: Boolean, positionMs: Double ->
       CastMediaService.instance?.setState(isPlaying, positionMs.toLong())
     }
 
-    /** Sincroniza el volumen que muestra el overlay del sistema (fracción 0..1). */
+    /** Syncs the level the system's volume overlay shows (a 0..1 fraction). */
     Function("setVolumeLevel") { fraction: Double ->
       CastMediaService.instance?.setVolumeLevel(fraction)
     }
 
-    /** Cierra la sesión y retira la notificación. */
+    /** Closes the session and takes the notification down. */
     Function("stop") {
       CastMediaService.instance?.stopEverything()
     }
   }
 
-  /** Reenvía a JS un control pulsado en la notificación/bloqueo o volumen. */
+  /** Hands JS a control pressed on the notification, the lock screen or the
+   *  volume keys. */
   fun emitCommand(action: String, value: Double?) {
     val payload = HashMap<String, Any>(2)
     payload["action"] = action
@@ -81,10 +83,10 @@ class CastMediaModule : Module() {
       private set
 
     /**
-     * Arranca el servicio foreground con el estado inicial. Envuelto en
-     * runCatching: en Android 12+ arrancar un foreground service desde segundo
-     * plano lanza excepción; el casting se inicia en primer plano, pero si el
-     * SO lo bloquea preferimos tragarlo a que la app pete.
+     * Starts the foreground service with the initial state. Wrapped in
+     * runCatching because on Android 12+ starting a foreground service from the
+     * background throws: casting is always started from the foreground, but if
+     * the system refuses anyway, swallowing it beats taking the app down.
      */
     private fun startService(ctx: Context, info: CastMediaService.Info) {
       CastMediaService.bootInfo = info

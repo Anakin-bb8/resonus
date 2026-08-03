@@ -1,3 +1,3 @@
-// La API JS vive en `src/lib/carAuto.ts` (lee el módulo nativo "CarAuto").
-// Este archivo existe para que expo-modules-autolinking detecte el módulo local.
+// The JS API lives in `src/lib/carAuto.ts` (which reads the native module "CarAuto").
+// This file only exists so expo-modules-autolinking picks the local module up.
 export {};

@@ -477,7 +477,7 @@ function ScanningPanel() {
 }
 
 /** Title (i18n key) and list type for the sections that use AlbumSection.
- *  «discover» y «randomArtists» se pintan con sus propios componentes. */
+ *  «discover» and «randomArtists» are drawn by components of their own. */
 const HOME_ALBUM_CONFIG: Record<
   Exclude<HomeSectionKey, 'randomArtists' | 'discover' | 'playlists'>,
   { title: string; type: 'newest' | 'recent' | 'frequent' | 'random' }

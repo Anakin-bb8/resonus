@@ -1,4 +1,4 @@
-/** Tarjeta de playlist para los carruseles del inicio (fila «Playlists»). */
+/** Playlist card for the carousels on Home (the «Playlists» row). */
 import { Link } from 'expo-router';
 import { Pressable, StyleSheet, Text } from 'react-native';
 

@@ -18,7 +18,7 @@ import { Cover } from './Cover';
 
 interface Props {
   album: Album;
-  /** Marca el álbum como anclado con una chincheta junto al artista. */
+  /** Marks the album as pinned, with a pin next to the artist. */
   pinned?: boolean;
 }
 

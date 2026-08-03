@@ -17,7 +17,7 @@ const native = requireOptionalNativeModule('CarAuto');
 
 export const carAutoAvailable = !!native;
 
-/** Nodo del árbol de navegación que se muestra en el coche. */
+/** A node of the browse tree shown in the car. */
 export interface CarNode {
   id: string;
   title: string;

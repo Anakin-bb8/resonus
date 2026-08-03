@@ -16,32 +16,33 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
-/** Lo que se le cuenta al renderer sobre la pista que va a sonar. */
+/** What the renderer is told about the track it is about to play. */
 class TrackInfo(
-  /** Tipo MIME real (audio/flac, audio/mpeg…). Sin él, un altavoz rechaza la
-   *  pista porque la librería la anuncia como vídeo (ver AvTransport). */
+  /** The real MIME type (audio/flac, audio/mpeg…). Without it a speaker turns
+   *  the track down, because the library announces it as video (see
+   *  AvTransport). */
   @Field val mime: String? = null,
-  /** El título a secas; el que va como argumento lleva además el artista, que
-   *  es lo único que sabe enseñar el respaldo. */
+  /** The title on its own; the one passed as an argument carries the artist
+   *  too, which is all the fallback path knows how to show. */
   @Field val title: String? = null,
   @Field val artist: String? = null,
   @Field val album: String? = null,
-  /** Carátula, solo si es una URL que el aparato pueda alcanzar. */
+  /** The cover, only when it is a URL the device can reach. */
   @Field val artworkUrl: String? = null,
   @Field val durationSec: Double? = null
 ) : Record
 
 /**
- * Puente Expo ↔ UPnPCast (DLNA/UPnP). Descubre renderers en la red local y
- * controla la reproducción por AVTransport. Como UPnP no empuja eventos de
- * forma fiable, el estado/progreso se sondea cada segundo mientras hay
- * conexión y se emite a JS con el evento "state".
+ * Expo bridge to UPnPCast (DLNA/UPnP). Finds renderers on the local network and
+ * drives playback over AVTransport. UPnP has no reliable way of pushing events,
+ * so state and progress are polled once a second for as long as there is a
+ * session and sent to JS as a "state" event.
  */
 class UpnpCastModule : Module() {
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
   private var pollJob: Job? = null
 
-  /** Aparatos vistos en la última búsqueda, por id (para conectar por id). */
+  /** What the last search found, by id, so a device can be connected to by id. */
   private var devices: Map<String, DLNACast.Device> = emptyMap()
   private var current: DLNACast.Device? = null
 
@@ -61,7 +62,8 @@ class UpnpCastModule : Module() {
     }
 
     /**
-     * Busca renderers en la red; resuelve con la lista al agotar el timeout.
+     * Searches the network for renderers, resolving with the list once the
+     * timeout is up.
      *
      * A search has to go out to the whole network, so everything on it answers,
      * and almost nothing in a house can play a note. The router is the usual
@@ -100,12 +102,12 @@ class UpnpCastModule : Module() {
     }
 
     /**
-     * Carga una URL en el renderer conectado. El renderer siempre arranca
-     * reproduciendo; con startMs > 0 se busca esa posición nada más empezar.
+     * Loads a URL on the connected renderer. It always starts playing; with
+     * startMs > 0 that position is sought as soon as it does.
      *
-     * La entrega la hace `AvTransport`, que le cuenta al aparato qué es lo que
-     * suena; la librería queda de respaldo por si no logramos hablar con él
-     * (ver #70).
+     * The handover is `AvTransport`'s, which tells the device what it is being
+     * sent; the library stays as the fallback for when we cannot make ourselves
+     * understood (see #70).
      */
     AsyncFunction("load") { url: String, title: String, startMs: Double, track: TrackInfo?, promise: Promise ->
       val device = current
@@ -153,7 +155,7 @@ class UpnpCastModule : Module() {
       }
     }
 
-    /** Volumen del renderer, 0..100. */
+    /** The renderer's volume, 0..100. */
     AsyncFunction("setVolume") { volume: Int, promise: Promise ->
       scope.launch {
         promise.resolve(runCatching { DLNACast.setVolume(volume) }.getOrDefault(false))

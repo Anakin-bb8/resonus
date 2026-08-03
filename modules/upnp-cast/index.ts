@@ -1,3 +1,3 @@
-// La API JS vive en `src/store/upnp.ts` (lee el módulo nativo "UpnpCast").
-// Este archivo existe para que expo-modules-autolinking detecte el módulo local.
+// The JS API lives in `src/store/upnp.ts` (which reads the native module "UpnpCast").
+// This file only exists so expo-modules-autolinking picks the local module up.
 export {};

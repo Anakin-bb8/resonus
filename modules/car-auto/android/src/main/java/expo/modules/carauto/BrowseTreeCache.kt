@@ -1,4 +1,4 @@
-// Adaptado de wavio (github.com/Joel-Mercier/wavio, MIT) para Resonus.
+// Adapted from wavio (github.com/Joel-Mercier/wavio, MIT) for Resonus.
 package expo.modules.carauto
 
 import android.content.Context
@@ -21,9 +21,9 @@ object BrowseTreeCache {
 
   @Volatile private var nodes: Map<String, List<BrowseNode>> = emptyMap()
   @Volatile private var loaded: Boolean = false
-  // Recuerda el último padre navegable que el usuario abrió en Android Auto. Lo
-  // usamos al reenviar un evento de play para que JS pueda encolar toda la
-  // colección (álbum / lista / sección de inicio) y no solo la pista tocada.
+  // The last browsable parent opened in Android Auto. It travels with a play
+  // event so JS can queue the whole collection (the album, the playlist, the
+  // section of Home) rather than only the track that was tapped.
   @Volatile private var lastBrowsedParent: String? = null
 
   fun setFromJson(context: Context, json: String) {
@@ -35,8 +35,8 @@ object BrowseTreeCache {
     loaded = true
   }
 
-  // Lo usa el servicio cuando JS aún no ha empujado un árbol en este proceso
-  // (p. ej. Android Auto arrancó el servicio por su cuenta).
+  // For when JS has not pushed a tree into this process yet, which is what
+  // happens when Android Auto starts the service on its own.
   fun loadFromDiskIfNeeded(context: Context) {
     if (loaded) return
     loaded = true
@@ -48,19 +48,19 @@ object BrowseTreeCache {
 
   fun getChildren(parentId: String): List<BrowseNode> {
     val children = nodes[parentId] ?: emptyList()
-    // Recuerda el padre más profundo que realmente contiene hojas reproducibles;
-    // esa es la colección que AA estaba navegando cuando el usuario tocó una pista.
+    // The deepest parent that actually holds playable leaves is the collection
+    // AA was browsing when a track was tapped, so that is the one worth keeping.
     if (children.any { it.playable }) lastBrowsedParent = parentId
     return children
   }
 
   fun lastBrowsedParent(): String? = lastBrowsedParent
 
-  // Mejor esfuerzo: si la pista tocada vive en un padre conocido, devuelve el id
-  // de ese padre. Cae al último padre navegado cuando la pista no se resuelve
-  // desde la caché (raro — durante el calentamiento). El lado JS es ahora
-  // autoritativo (los mediaIds de pista llevan su padre embebido), así que esto
-  // es solo un respaldo para ids antiguos sin padre embebido.
+  // Best effort: the id of the parent the tapped track lives in, when that
+  // parent is known. Falls back to the last one browsed if the track cannot be
+  // resolved from the cache, which is rare and only happens while it is warming
+  // up. JS is the authority now (a track's mediaId carries its parent), so this
+  // is only here for older ids that carry none.
   fun findParentOf(childId: String): String? {
     for ((pid, list) in nodes) {
       if (list.any { it.id == childId }) return pid

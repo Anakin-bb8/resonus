@@ -1,4 +1,4 @@
-// Adaptado de wavio (github.com/Joel-Mercier/wavio, MIT) para Resonus.
+// Adapted from wavio (github.com/Joel-Mercier/wavio, MIT) for Resonus.
 package expo.modules.carauto
 
 import android.os.Bundle
@@ -15,13 +15,13 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 
 /**
- * MediaLibraryService que expone el BrowseTree construido en JS a Android Auto.
- * El player de la sesión es un `JsProxyPlayer` cuyo estado se empuja desde JS,
- * de modo que el mini-player y la pantalla "Now Playing" de AA reflejan la
- * reproducción real. Tocar un ítem navegable pasa por el flujo de browse normal
- * de Media3; tocar una hoja reproducible reenvía el mediaId (más el padre que el
- * usuario estaba navegando) a JS vía `CarAutoModule.emitPlayEvent`, para que JS
- * encole la colección entera y arranque en la pista tocada.
+ * The MediaLibraryService that shows Android Auto the BrowseTree built in JS.
+ * The session's player is a `JsProxyPlayer` whose state is pushed from JS, so
+ * the mini player and the car's "Now Playing" screen show what is really
+ * playing. Tapping a browsable item goes through Media3's usual browse flow;
+ * tapping a playable leaf hands the mediaId, along with the parent being
+ * browsed at the time, to JS through `CarAutoModule.emitPlayEvent`, so that JS
+ * can queue the whole collection and start on the track that was tapped.
  */
 @OptIn(UnstableApi::class)
 class ResonusCarBrowserService : MediaLibraryService() {
@@ -57,8 +57,8 @@ class ResonusCarBrowserService : MediaLibraryService() {
       params: LibraryParams?,
     ): ListenableFuture<LibraryResult<MediaItem>> {
       val rootExtras = Bundle().apply {
-        // Pistas para Android Auto: los hijos de la raíz se dibujan como pestañas
-        // (category list items) y cualquier navegable interno por defecto, lista.
+        // Hints for Android Auto: the root's children are drawn as tabs
+        // (category list items), and anything browsable below that as a list.
         putInt(
           MediaConstants.EXTRAS_KEY_CONTENT_STYLE_BROWSABLE,
           MediaConstants.EXTRAS_VALUE_CONTENT_STYLE_CATEGORY_LIST_ITEM,
@@ -100,11 +100,11 @@ class ResonusCarBrowserService : MediaLibraryService() {
       pageSize: Int,
       params: LibraryParams?,
     ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
-      // Respeta la ventana de paginación del controlador. Cada MediaItem de
-      // browse puede llevar su carátula local (reescalada) como bytes, así que
-      // devolver una lista grande de golpe podría exceder el límite de
-      // transacción binder. Cortar a la página pedida acota cada transacción;
-      // Android Auto pagina con un pageSize razonable y para cuando llega corta.
+      // Honours the controller's paging window. Every browse MediaItem can
+      // carry its local cover as bytes (scaled down), so answering a long list
+      // in one go could run past the binder transaction limit. Cutting to the
+      // page that was asked for keeps each transaction bounded; Android Auto
+      // pages with a sensible pageSize and stops when it has enough.
       val all = BrowseTreeCache.getChildren(parentId)
       val from = page.toLong() * pageSize.toLong()
       if (from >= all.size) {
@@ -207,7 +207,7 @@ class ResonusCarBrowserService : MediaLibraryService() {
 @OptIn(UnstableApi::class)
 private fun BrowseNode.toMediaItem(): MediaItem {
   val extras = Bundle()
-  // contentStyle en un nodo navegable le dice a AA cómo dibujar *sus hijos*.
+  // contentStyle on a browsable node tells AA how to draw *its children*.
   if (!playable) {
     val styleValue = when (contentStyle) {
       "grid" -> MediaConstants.EXTRAS_VALUE_CONTENT_STYLE_GRID_ITEM

@@ -1,3 +1,3 @@
-// La API JS vive en `src/store/castMedia.ts` (lee el módulo nativo "CastMedia").
-// Este archivo existe para que expo-modules-autolinking detecte el módulo local.
+// The JS API lives in `src/store/castMedia.ts` (which reads the native module "CastMedia").
+// This file only exists so expo-modules-autolinking picks the local module up.
 export {};

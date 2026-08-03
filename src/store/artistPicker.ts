@@ -1,4 +1,4 @@
-/** Estado del selector de artistas (hoja inferior para colaboraciones). */
+/** State of the artist picker, the bottom sheet for collaborations. */
 import { create } from 'zustand';
 
 import { type ArtistTarget } from '@/lib/artistNav';

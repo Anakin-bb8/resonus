@@ -1,4 +1,4 @@
-// Adaptado de wavio (github.com/Joel-Mercier/wavio, MIT) para Resonus.
+// Adapted from wavio (github.com/Joel-Mercier/wavio, MIT) for Resonus.
 package expo.modules.carauto
 
 import android.os.Handler
@@ -15,11 +15,11 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 
 /**
- * Player de Media3 cuyo estado lo alimenta JS (pista actual + estado de
- * reproducción) y cuyos comandos de transporte se reenvían a JS vía eventos
- * `transport` de CarAutoModule. Respalda la MediaLibrarySession con la que habla
- * Android Auto, de modo que el mini-player y la pantalla "Now Playing" del coche
- * reflejan la reproducción real (expo-audio) sin un segundo motor de audio.
+ * A Media3 player fed by JS, which tells it the current track and whether it is
+ * playing, and whose transport commands go back to JS as CarAutoModule
+ * `transport` events. It backs the MediaLibrarySession Android Auto talks to,
+ * so the car's mini player and "Now Playing" screen show what is really playing
+ * (expo-audio) without a second audio engine behind them.
  */
 @OptIn(UnstableApi::class)
 class JsProxyPlayer : SimpleBasePlayer(Looper.getMainLooper()) {
@@ -34,10 +34,10 @@ class JsProxyPlayer : SimpleBasePlayer(Looper.getMainLooper()) {
   )
 
   @Volatile private var nowPlaying: NowPlaying? = null
-  // Cola + índice actual reflejados desde JS. Cuando no está vacía, el player la
-  // expone como su playlist para que la vista de cola de AA muestre toda la
-  // colección. nowPlaying sigue siendo la fuente de verdad de los metadatos
-  // (puede traer una versión más refinada de queue[index]).
+  // The queue and the current index, mirrored from JS. While it is not empty
+  // the player shows it as its playlist, so AA's queue view has the whole
+  // collection. nowPlaying is still the authority on the metadata: it can carry
+  // a more refined version of queue[index].
   @Volatile private var queue: List<NowPlaying> = emptyList()
   @Volatile private var currentIndex: Int = 0
   @Volatile private var playing: Boolean = false
@@ -48,8 +48,9 @@ class JsProxyPlayer : SimpleBasePlayer(Looper.getMainLooper()) {
 
   private val mainHandler = Handler(Looper.getMainLooper())
 
-  // SimpleBasePlayer exige su hilo de aplicación (main). Las llamadas de JS caen
-  // en el hilo JS, así que saltamos al looper main antes de mutar + invalidar.
+  // SimpleBasePlayer insists on its application thread (main), and calls from
+  // JS land on the JS thread, so we hop to the main looper before mutating and
+  // invalidating.
   private fun runOnMain(block: () -> Unit) {
     if (Looper.myLooper() == Looper.getMainLooper()) block() else mainHandler.post(block)
   }
@@ -64,10 +65,10 @@ class JsProxyPlayer : SimpleBasePlayer(Looper.getMainLooper()) {
     invalidateState()
   }
 
-  // Placeholder optimista que se aplica en cuanto el usuario toca una hoja
-  // navegable en Android Auto, antes de que JS termine de resolver + arrancar la
-  // reproducción. Cambia el spinner "buscando" de AA por los metadatos de la
-  // pista tocada; el now-playing real desde JS refinará duración/artista luego.
+  // An optimistic placeholder, applied the moment a leaf is tapped in Android
+  // Auto and before JS has finished resolving the track and starting it. It
+  // turns AA's "searching" spinner into the metadata of the track that was
+  // tapped; the real now-playing from JS fills in duration and artist after.
   fun applyTappedItem(node: BrowseNode) = runOnMain {
     nowPlaying = NowPlaying(
       id = node.id,
@@ -93,8 +94,8 @@ class JsProxyPlayer : SimpleBasePlayer(Looper.getMainLooper()) {
     invalidateState()
   }
 
-  // Movimiento barato de cursor dentro de la cola ya reflejada, para que un
-  // salto de pista no necesite reenviar toda la lista desde JS.
+  // A cheap move of the cursor within the queue already mirrored here, so
+  // skipping a track does not need the whole list sent over from JS again.
   fun applyQueueIndex(index: Int) = runOnMain {
     if (queue.isEmpty()) return@runOnMain
     currentIndex = index.coerceIn(0, queue.size - 1)
@@ -114,8 +115,9 @@ class JsProxyPlayer : SimpleBasePlayer(Looper.getMainLooper()) {
   override fun getState(): State {
     val np = nowPlaying
     val q = queue
-    // Prioriza la cola empujada por JS. Cae a la playlist optimista de un solo
-    // ítem mientras la cola no se ha reflejado aún (p. ej. justo tras un tap).
+    // The queue pushed from JS wins. It falls back to the optimistic
+    // single-item playlist while the queue has not been mirrored yet, which is
+    // the moment right after a tap.
     val source: List<NowPlaying> = when {
       q.isNotEmpty() -> q
       np != null -> listOf(np)
@@ -123,13 +125,14 @@ class JsProxyPlayer : SimpleBasePlayer(Looper.getMainLooper()) {
     }
     val activeIndex = if (q.isNotEmpty()) currentIndex.coerceIn(0, q.size - 1) else 0
 
-    // Embebe la carátula local como bytes para que el "Now Playing" / cola / card
-    // de inicio de AA pueda dibujar carátulas file:// que su proceso no puede
-    // leer. Toda la cola viaja en una transacción de estado del player, así que
-    // limitamos cuánta carátula embebemos: el ítem actual siempre la lleva (la
-    // grande del Now Playing) y el resto se embeben en orden hasta agotar un
-    // presupuesto de bytes, tras lo cual caen a la uri (no legible para local,
-    // pero pequeña). Mantiene la timeline bajo el límite de transacción binder.
+    // Local covers go as bytes so AA's "Now Playing", its queue and its home
+    // card can draw file:// covers its own process cannot read. The whole queue
+    // travels in a single player-state transaction, so how much artwork is
+    // embedded has to be limited: the current item always carries its own (the
+    // big one on Now Playing) and the rest are embedded in order until a byte
+    // budget runs out, after which they fall back to the uri, which a local
+    // file cannot be read from but is at least small. That keeps the timeline
+    // under the binder transaction limit.
     val builder = ImmutableList.builder<MediaItemData>()
     var artBudget = ART_BUDGET_BYTES
     for ((i, item) in source.withIndex()) {
@@ -176,9 +179,9 @@ class JsProxyPlayer : SimpleBasePlayer(Looper.getMainLooper()) {
       .build()
   }
 
-  // Construye el ítem de timeline y lo añade a [out]. Devuelve el nº de bytes de
-  // carátula embebidos para que quien llama presupueste la transacción binder
-  // del estado del player; cuando [embed] es false la carátula cae a su uri.
+  // Builds the timeline item and adds it to [out]. Returns how many bytes of
+  // artwork it embedded, so the caller can budget the player-state binder
+  // transaction; with [embed] false the cover falls back to its uri.
   private fun NowPlaying.toMediaItemDataInto(
     out: ImmutableList.Builder<MediaItemData>,
     embed: Boolean,
@@ -205,9 +208,9 @@ class JsProxyPlayer : SimpleBasePlayer(Looper.getMainLooper()) {
   }
 
   private companion object {
-    // Tope de carátula de cola embebida por push de estado (~768KB), dejando
-    // margen bajo el límite de transacción binder (~1MB) para el resto de la
-    // timeline (títulos, ids, duraciones).
+    // Ceiling on queue artwork embedded per state push (~768KB), leaving room
+    // under the binder transaction limit (~1MB) for the rest of the timeline:
+    // the titles, the ids and the durations.
     const val ART_BUDGET_BYTES = 768 * 1024
   }
 

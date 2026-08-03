@@ -1,12 +1,12 @@
 /**
- * Acceso a la música local para el modo sin conexión. Dos orígenes:
+ * Getting at the music on the phone, for the offline mode. Two sources:
  *
- * - 'device': toda la música del dispositivo vía expo-media-library.
- * - 'folder': una carpeta SAF elegida por el usuario.
+ * - 'device': everything on the device, through expo-media-library.
+ * - 'folder': one SAF folder, chosen by hand.
  *
- * Lee etiquetas ID3v2 de cada fichero (título, artista, álbum, pista,
- * carátula embebida) y construye un catálogo de álbumes y artistas.
- * El catálogo se cachea en memoria para no re-leer los tags en cada consulta.
+ * It reads each file's ID3v2 tags (title, artist, album, track number, embedded
+ * cover) and builds a catalog of albums and artists out of them. The catalog is
+ * cached in memory so the tags are not read again on every query.
  */
 import * as FileSystem from 'expo-file-system/legacy';
 import { StorageAccessFramework } from 'expo-file-system/legacy';
@@ -18,30 +18,31 @@ import { base64ToUint8, parseID3, type ID3Tags } from './id3';
 
 const AUDIO_EXT = /\.(mp3|flac|m4a|aac|ogg|opus|wav|wma|alac|aif|aiff)$/i;
 
-// ── Catálogo local ─────────────────────────────────────────────────────────
+// ── The local catalog ──────────────────────────────────────────────────────
 
 export interface LocalAlbum {
   id: string;
   name: string;
   artist?: string;
   /**
-   * Carátula embebida, solo transitoria durante el escaneo (y en catálogos
-   * antiguos en disco): se vuelca a fichero y queda `coverUri` en su lugar.
+   * The embedded cover, which only passes through here during the scan (and
+   * sits in older catalogs on disk): it is written out to a file and `coverUri`
+   * is left in its place.
    */
   coverBase64?: string;
   coverMime?: string;
-  /** URI `file://` de la carátula volcada a disco. */
+  /** `file://` URI of the cover once written to disk. */
   coverUri?: string;
   songCount: number;
   year?: number;
-  /** Fecha del fichero más reciente del álbum (ms), para "Añadidos recientemente". */
+  /** Date of the album's newest file (ms), for "Recently added". */
   addedAt?: number;
 }
 
 export interface LocalArtist {
   id: string;
   name: string;
-  /** URI `file://` de la carátula (heredada de uno de sus álbumes). */
+  /** `file://` URI of the cover, inherited from one of their albums. */
   coverUri?: string;
   albumCount: number;
 }
@@ -52,24 +53,24 @@ export interface LocalCatalog {
   artists: LocalArtist[];
 }
 
-/** Caché en memoria indexada por clave de origen. */
+/** In-memory cache, keyed by source. */
 const catalogCache = new Map<string, LocalCatalog>();
 
 function cacheKey(sourceMode: string, uri?: string): string {
   return uri ? `${sourceMode}:${uri}` : sourceMode;
 }
 
-// ── Concurrencia acotada ─────────────────────────────────────────────────────
+// ── Bounded concurrency ──────────────────────────────────────────────────────
 
 /**
- * Nº de ficheros cuyos tags se leen a la vez. Las lecturas ID3 son casi todo
- * espera de I/O (saltos JS↔nativo), así que solaparlas acelera el escaneo varias
- * veces. Un valor moderado evita saturar el bridge y la memoria (cada lectura
- * puede traer una carátula de hasta ~2 MB).
+ * How many files have their tags read at once. An ID3 read is almost entirely
+ * waiting on I/O (hops between JS and native), so overlapping them makes the
+ * scan several times faster. A moderate number keeps the bridge and the memory
+ * from being swamped: each read can bring back a cover of up to ~2 MB.
  */
 const SCAN_CONCURRENCY = 8;
 
-/** Aplica `worker` a `items` con como máximo `limit` tareas en vuelo a la vez. */
+/** Runs `worker` over `items` with at most `limit` of them in flight at once. */
 async function mapPool<T, R>(
   items: T[],
   limit: number,
@@ -88,14 +89,14 @@ async function mapPool<T, R>(
 }
 
 /**
- * Devuelve una función para llamar tras procesar cada fichero. Agrupa las
- * actualizaciones del progreso para no re-renderizar el indicador una vez por
- * fichero durante el escaneo.
+ * Returns a function to call after each file is dealt with. It batches the
+ * progress updates so the indicator is not re-rendered once per file for the
+ * whole scan.
  *
- * El grupo es ~1% del total, no un número fijo: 20 ficheros son un salto del
- * 10% en una carpeta de 200 canciones (la barra iba a tirones) y del 0,4% en
- * una de 5000 (re-renders de sobra para lo que se nota). Con ~100 tics la barra
- * fluye igual de bien en las dos.
+ * The batch is ~1% of the total rather than a fixed number: 20 files is a 10%
+ * jump in a folder of 200 songs, which made the bar lurch, and 0.4% in one of
+ * 5000, which is far more re-renders than anyone can see. At ~100 ticks the bar
+ * moves just as smoothly in both.
  */
 function progressBumper(total: number): () => void {
   const every = Math.max(1, Math.round(total / 100));
@@ -111,26 +112,26 @@ function progressBumper(total: number): () => void {
   };
 }
 
-// ── Lectura de ID3 desde archivo ───────────────────────────────────────────
+// ── Reading ID3 off a file ─────────────────────────────────────────────────
 
 /**
- * Tope de lectura de un tag. Un tag más gordo que esto es casi siempre una
- * carátula desmedida; nos quedamos con lo que quepa.
+ * Ceiling on how much of a tag is read. A tag fatter than this is almost always
+ * an oversized cover; whatever fits is what we keep.
  */
 const TAG_CAP = 2_500_000;
 
 /**
- * Cuánto tag se lee cuando solo se busca el texto. Los frames de texto
- * (título, artista, álbum, año…) van al principio y ocupan unos pocos KB;
- * 16 KB dan margen de sobra sin arrastrar la carátula.
+ * How much of a tag is read when only the text is wanted. The text frames
+ * (title, artist, album, year…) come first and take a few KB; 16 KB is room to
+ * spare without dragging the cover along.
  */
 const TEXT_TAG_BYTES = 16_384;
 
 /**
- * Lee el buffer del tag ID3v2: primero la cabecera (10 B) y, si hay tag, hasta
- * `maxBytes` del resto. Solo lecturas de bytes, sin `stat` (que es un salto
- * nativo caro y solo hace falta para el fallback ID3v1, que resolvemos aparte y
- * de forma perezosa).
+ * Reads the ID3v2 tag buffer: the 10-byte header first and, if there is a tag,
+ * up to `maxBytes` of the rest. Byte reads only, no `stat`, which is an
+ * expensive hop into native and is only needed for the ID3v1 fallback, dealt
+ * with separately and lazily.
  */
 async function readTagBuffer(uri: string, maxBytes: number): Promise<Uint8Array | null> {
   try {
@@ -145,9 +146,10 @@ async function readTagBuffer(uri: string, maxBytes: number): Promise<Uint8Array 
     }
     const tagSize = ((head[6] & 0x7f) << 21) | ((head[7] & 0x7f) << 14) | ((head[8] & 0x7f) << 7) | (head[9] & 0x7f);
     const want = Math.min(10 + tagSize, maxBytes);
-    // Pedimos con margen (×4/3 + colchón): en SAF la lectura parcial puede
-    // quedarse corta y cortar la carátula embebida (APIC), que suele ir al
-    // final del tag. Leer de más es inofensivo y luego recortamos al decodificar.
+    // Asked for with room to spare (×4/3 plus a cushion): over SAF a partial
+    // read can come up short and cut the embedded cover (APIC), which usually
+    // sits at the end of the tag. Reading too much is harmless, and the excess
+    // is trimmed when decoding.
     const limit = Math.ceil(want * (4 / 3)) + 4096;
     const fullB64 = await FileSystem.readAsStringAsync(uri, {
       encoding: FileSystem.EncodingType.Base64,
@@ -161,18 +163,19 @@ async function readTagBuffer(uri: string, maxBytes: number): Promise<Uint8Array 
 }
 
 /**
- * Lee los tags ID3 de un fichero. `maxBytes` acota cuánto tag se trae: con
- * `TEXT_TAG_BYTES` se queda en el texto y deja fuera la carátula, que es lo que
- * quiere la primera pasada del escaneo; por defecto lee el tag entero.
+ * Reads a file's ID3 tags. `maxBytes` bounds how much of the tag is brought
+ * over: with `TEXT_TAG_BYTES` it stops at the text and leaves the cover out,
+ * which is what the scan's first pass wants; by default it reads the whole tag.
  *
- * Cuando el tag se corta, hay dos casos. Si lo que quedó fuera es la carátula
- * (APIC va casi siempre al final) y el texto llegó entero, la lectura vale tal
- * cual: es justo lo que se buscaba. Si se cortó por otro frame, o por la
- * carátula pero yendo esta delante del texto —raro, pero legal— y nos hemos
- * quedado sin título, se relee el tag completo: antes pagar la lectura que dar
- * la canción por anónima.
+ * When the tag is cut short there are two cases. If what was left out is the
+ * cover (APIC nearly always comes last) and the text arrived whole, the read
+ * stands as it is: that is exactly what was asked for. If it was cut at another
+ * frame, or at the cover but with the cover ahead of the text (rare, but legal)
+ * and we are left with no title, the whole tag is read again: better to pay for
+ * the read than to write the song off as nameless.
  *
- * Si aun así no hay título, intenta ID3v1 al final (leyendo el tamaño ahí).
+ * If there is still no title, it tries ID3v1 at the end, reading the file size
+ * to get there.
  */
 export async function readTags(uri: string, maxBytes = TAG_CAP): Promise<ID3Tags | null> {
   const buf = await readTagBuffer(uri, maxBytes);
@@ -182,9 +185,9 @@ export async function readTags(uri: string, maxBytes = TAG_CAP): Promise<ID3Tags
     const full = await readTagBuffer(uri, TAG_CAP);
     if (full) tags = parseID3(full);
   }
-  // Solo si ID3v2 no dio título vamos al final por un tag ID3v1. Es raro, así
-  // que el `stat` (para saber el tamaño y leer los últimos 128 B) se paga aquí
-  // y no en cada fichero.
+  // Only when ID3v2 gave no title do we go to the end for an ID3v1 tag. That is
+  // rare, so the `stat` needed to know the size and read the last 128 bytes is
+  // paid here rather than on every file.
   if (!tags.title) {
     try {
       const info = await FileSystem.getInfoAsync(uri);
@@ -205,17 +208,17 @@ export async function readTags(uri: string, maxBytes = TAG_CAP): Promise<ID3Tags
         }
       }
     } catch {
-      // ignorar errores leyendo el final
+      // errors reading the tail are not worth anything
     }
   }
   return tags;
 }
 
-/** Lee el `mtime` (ms) de un fichero para "Añadidos recientemente" (modo carpeta). */
+/** A file's `mtime` in ms, for "Recently added" in folder mode. */
 async function readMtime(uri: string): Promise<number> {
   try {
     const info = await FileSystem.getInfoAsync(uri);
-    // modificationTime viene en segundos; lo pasamos a ms.
+    // modificationTime comes in seconds; this wants ms.
     return info.exists && (info as any).modificationTime
       ? ((info as any).modificationTime as number) * 1000
       : 0;
@@ -236,12 +239,12 @@ function nameFromSafUri(uri: string): string {
   return titleFromFilename(last);
 }
 
-/** Normaliza una cadena para agrupar: minúsculas, sin espacios extra. */
+/** Normalises a string for grouping: lower case, no stray whitespace. */
 export function normKey(s: string): string {
   return s.toLowerCase().trim().replace(/\s+/g, ' ');
 }
 
-/** Hash estable y corto (FNV-1a → base36) para usar como id de ruta seguro. */
+/** A short stable hash (FNV-1a → base36), safe to use as an id in a path. */
 export function hashKey(s: string): string {
   let h = 0x811c9dc5;
   for (let i = 0; i < s.length; i++) {
@@ -251,14 +254,14 @@ export function hashKey(s: string): string {
   return (h >>> 0).toString(36);
 }
 
-/** Nombre legible de una carpeta a partir de su URI SAF (sin prefijo [año]). */
+/** A readable folder name out of its SAF URI, without the [year] prefix. */
 function folderNameFromUri(dirUri: string): string {
   const decoded = decodeURIComponent(dirUri);
   const last = (decoded.split('/').pop() ?? decoded).split(':').pop() ?? decoded;
   return last.replace(/^\[\d{4}\]\s*/, '').trim() || last;
 }
 
-/** Carpeta contenedora de un fichero `file://` (modo dispositivo). */
+/** The folder a `file://` file sits in, for device mode. */
 function parentDirOf(uri: string): string | null {
   const decoded = decodeURIComponent(uri);
   const idx = decoded.lastIndexOf('/');
@@ -267,9 +270,9 @@ function parentDirOf(uri: string): string | null {
 }
 
 /**
- * Asigna el álbum por carpeta: id estable a partir de la ruta de la carpeta y,
- * si la pista no trae etiqueta de álbum, usa el nombre de la carpeta. Así cada
- * carpeta es un álbum y las colaboraciones no parten el álbum (como Navidrome).
+ * Assigns the album by folder: a stable id from the folder's path and, when the
+ * track carries no album tag, the folder's name. That way each folder is one
+ * album and a collaboration does not split it, which is what Navidrome does.
  */
 function assignFolderAlbum(base: Record<string, unknown>, dirPath: string, hasAlbumTag: boolean) {
   base.albumId = 'f' + hashKey(dirPath);
@@ -277,7 +280,7 @@ function assignFolderAlbum(base: Record<string, unknown>, dirPath: string, hasAl
   if (!hasAlbumTag) base.album = folderNameFromUri(dirPath);
 }
 
-/** Nombre más frecuente de una lista (para mostrar el más común como display). */
+/** The most frequent name in a list, which is the one worth displaying. */
 function pickBestName(names: string[]): string {
   const freq = new Map<string, number>();
   for (const n of names) {
@@ -303,10 +306,10 @@ function groupByAlbum(songs: Song[]): LocalAlbum[] {
     addedAt?: number;
   }>();
   for (const song of songs) {
-    // La clave de agrupación es el id de álbum ya calculado por canción:
-    // en modo carpeta es la subcarpeta (todas sus pistas = un álbum), y en
-    // modo dispositivo el nombre de álbum normalizado. Así un álbum con
-    // colaboraciones no se parte; el artista se decide por mayoría más abajo.
+    // The grouping key is the album id already worked out per song: in folder
+    // mode that is the subfolder, whose tracks are all one album, and in device
+    // mode the normalised album name. An album with collaborations is not split
+    // that way; who the artist is gets decided by majority below.
     const key = albumKeyOf(song);
     let entry = map.get(key);
     if (!entry) {
@@ -321,8 +324,9 @@ function groupByAlbum(songs: Song[]): LocalAlbum[] {
     if (song.year) entry.year = song.year;
     if (song.addedAt && song.addedAt > (entry.addedAt ?? 0)) entry.addedAt = song.addedAt;
   }
-  // El nombre de álbum/artista de display (el más frecuente) se calcula una sola
-  // vez por grupo, no en cada canción (evita un coste O(n²) durante el escaneo).
+  // The album and artist names to display (the most frequent ones) are worked
+  // out once per group and not per song, which is what keeps the scan from
+  // costing O(n²).
   return Array.from(map.entries()).map(([key, v]) => {
     const artist = pickBestName(v.songs.map((s) => s.artist || 'Artista desconocido'));
     return {
@@ -362,14 +366,14 @@ function groupByArtist(albums: LocalAlbum[]): LocalArtist[] {
 }
 
 /**
- * Segunda pasada del escaneo: trae la carátula de cada álbum leyendo el tag
- * entero de una sola de sus canciones.
+ * The scan's second pass: each album's cover, read out of the whole tag of one
+ * single song of its own.
  *
- * La primera pasada lee solo texto (ver `readTags`), así que las carátulas se
- * quedan fuera salvo las que caben en `TEXT_TAG_BYTES`. Aquí se recuperan, pero
- * pagando una lectura grande por álbum en vez de una por canción: de todas
- * formas `groupByAlbum` se queda con una sola portada por álbum y tira el resto,
- * así que leerlas todas era tiempo y megas para nada.
+ * The first pass reads text only (see `readTags`), so the covers are left out
+ * unless they fit within `TEXT_TAG_BYTES`. They are picked up here, at one big
+ * read per album instead of one per song: `groupByAlbum` keeps a single cover
+ * per album and throws the rest away anyway, so reading them all was time and
+ * megabytes spent on nothing.
  */
 async function loadAlbumCovers(songs: Song[]): Promise<void> {
   const covered = new Set<string>();
@@ -377,7 +381,7 @@ async function loadAlbumCovers(songs: Song[]): Promise<void> {
   for (const song of songs) {
     const key = albumKeyOf(song);
     if (song.coverBase64) {
-      // Portada pequeña, ya vino en la primera pasada: este álbum no debe nada.
+      // A small cover, already here from the first pass: this album owes nothing.
       covered.add(key);
       candidates.delete(key);
     } else if (song.hasCover && !covered.has(key) && !candidates.has(key)) {
@@ -396,7 +400,7 @@ async function loadAlbumCovers(songs: Song[]): Promise<void> {
         song.coverMime = tags.coverMime;
       }
     } catch {
-      // Un álbum sin portada no rompe nada; el resto del catálogo sigue.
+      // An album without a cover breaks nothing; the rest of the catalog goes on.
     }
     bump();
   });
@@ -405,19 +409,19 @@ async function loadAlbumCovers(songs: Song[]): Promise<void> {
 async function buildCatalog(songs: Song[]): Promise<LocalCatalog> {
   await loadAlbumCovers(songs);
   const albums = groupByAlbum(songs);
-  // Las carátulas embebidas se vuelcan a ficheros y se referencian por URI
-  // `file://`: así el catálogo/coverIndex no retienen megas de base64 en RAM,
-  // y Android Auto puede embeber la carátula (su puente nativo solo sabe leer
-  // file://; un data URI ni se pinta ni respeta el límite de binder).
+  // Embedded covers are written out to files and referred to by `file://` URI:
+  // that way neither the catalog nor coverIndex holds megabytes of base64 in
+  // RAM, and Android Auto can embed the cover (its native bridge can only read
+  // file://; a data URI is neither drawn nor bounded by the binder limit).
   await flushAlbumCovers(albums);
   const artists = groupByArtist(albums);
-  // Registra las carátulas para que `localCoverUrl(albumId)` y
-  // `localCoverUrl(artistId)` funcionen en toda la app justo tras el escaneo.
+  // Registering the covers is what makes `localCoverUrl(albumId)` and
+  // `localCoverUrl(artistId)` work across the app right after a scan.
   for (const a of albums) registerCover(a.id, a.coverUri);
   for (const a of artists) registerCover(a.id, a.coverUri);
-  // La carátula ya vive deduplicada en disco (una por álbum). No la
-  // retenemos en cada canción: con miles de pistas serían cientos de MB en RAM.
-  // La reproducción y la UI la resuelven por `coverArt`/`albumId` vía coverIndex.
+  // The cover already lives on disk, one per album and no more. Holding it on
+  // every song would be hundreds of MB in RAM across a few thousand tracks;
+  // playback and the UI resolve it through `coverArt`/`albumId` and coverIndex.
   for (const s of songs) {
     delete s.coverBase64;
     delete s.coverMime;
@@ -426,11 +430,11 @@ async function buildCatalog(songs: Song[]): Promise<LocalCatalog> {
   return { songs, albums, artists };
 }
 
-/** Rellena título/artista/álbum/IDs de una canción a partir de sus tags ID3. */
+/** Fills a song's title, artist, album and ids in from its ID3 tags. */
 function applyTags(base: Record<string, unknown>, fallbackTitle: string, tags: ID3Tags | null) {
   base.title = tags?.title || fallbackTitle;
-  // Preferimos el artista del álbum (TPE2) para agrupar todo bajo un solo
-  // artista, como hace Navidrome; si no, el artista de pista (TPE1).
+  // The album artist (TPE2) is preferred so everything groups under one artist,
+  // the way Navidrome does it; failing that, the track artist (TPE1).
   base.artist = tags?.albumArtist || tags?.artist;
   base.album = tags?.album;
   base.track = tags?.track;
@@ -438,17 +442,17 @@ function applyTags(base: Record<string, unknown>, fallbackTitle: string, tags: I
     base.coverBase64 = tags.coverBase64;
     base.coverMime = tags.coverMime;
   } else if (tags?.cutFrame === 'APIC') {
-    // Tiene carátula, pero la lectura se paró justo antes de traerla. Lo
-    // anotamos para que `loadAlbumCovers` sepa a qué canción volver si su
-    // álbum se queda sin portada.
+    // It has a cover, but the read stopped just short of it. Noting that down
+    // is how `loadAlbumCovers` knows which song to come back to if its album
+    // ends up with none.
     base.hasCover = true;
   }
   if (tags?.year) base.year = tags.year;
-  // El comentario del fichero: aquí no hay servidor que lo cuente, así que esta
-  // es la única forma de que la hoja de información lo enseñe (#59).
+  // The file's own comment: there is no server here to tell it, so this is the
+  // only way the information sheet gets to show it (#59).
   if (tags?.comment) base.comment = tags.comment;
-  // IDs derivados (componen las claves del catálogo) para poder navegar al
-  // álbum / artista desde una canción, igual que en modo servidor.
+  // Derived ids, which are the catalog's keys, so a song can be followed to its
+  // album or artist the same way it can against a server.
   const album = (base.album as string) || 'Álbum desconocido';
   const artist = (base.artist as string) || 'Artista desconocido';
   base.albumId = normKey(album);
@@ -456,12 +460,13 @@ function applyTags(base: Record<string, unknown>, fallbackTitle: string, tags: I
   base.coverArt = base.albumId;
 }
 
-// ── Origen: dispositivo (expo-media-library) ──────────────────────────────
+// ── Source: the device (expo-media-library) ───────────────────────────────
 
-// Filtra audio que no es música al escanear todo el dispositivo. MediaStore
-// devuelve TODO (notas de voz, grabaciones, tonos, SFX), así que descartamos por
-// ruta las carpetas típicas de no-música (mensajería, grabaciones, tonos…). No
-// filtramos por duración: hay canciones cortas legítimas (interludios, skits).
+// Keeps audio that is not music out when the whole device is scanned.
+// MediaStore hands over EVERYTHING (voice notes, recordings, ringtones, sound
+// effects), so the usual non-music folders are dropped by path: messaging apps,
+// recordings, ringtones and the like. Not by duration: a short song is a real
+// thing (interludes, skits).
 const NON_MUSIC_PATH =
   /\/(whatsapp|telegram|signal|threema|viber|wechat|kakaotalk|line)\b|voice[ _-]?notes?|voice[ _-]?recorder|call[ _-]?rec|\/recordings?\/|\/ringtones?\/|\/notifications?\/|\/alarms?\//i;
 
@@ -491,8 +496,9 @@ export async function loadDeviceSongs(): Promise<Song[]> {
     return disk.songs;
   }
 
-  // Buscar y analizar son dos fases, y las dos pueden tardar: `begin()` enciende
-  // el indicador ya, para que recorrer miles de ficheros no parezca un cuelgue.
+  // Finding the files and reading them are two phases and both can take a
+  // while, so `begin()` puts the indicator up straight away: walking thousands
+  // of files should not look like the app has hung.
   useScanProgress.getState().begin();
   const rawSongs: { id: string; filename: string; duration: number; uri: string; mtime: number }[] = [];
   let songs: Song[];
@@ -508,7 +514,7 @@ export async function loadDeviceSongs(): Promise<Song[]> {
       });
       const before = rawSongs.length;
       for (const a of page.assets) {
-        // Salta carpetas que no son de música (mensajería, grabaciones, tonos…).
+        // Skips folders that are not music: messaging, recordings, ringtones…
         if (!isLikelyMusic(a.uri)) continue;
         rawSongs.push({
           id: `local:${a.id}`,
@@ -518,7 +524,7 @@ export async function loadDeviceSongs(): Promise<Song[]> {
           mtime: a.modificationTime || 0,
         });
       }
-      // Una vez por página, no por fichero: ya vienen de 200 en 200.
+      // Once per page and not per file: they arrive 200 at a time as it is.
       useScanProgress.getState().tick(rawSongs.length - before);
       after = page.endCursor;
       hasNext = page.hasNextPage;
@@ -531,21 +537,21 @@ export async function loadDeviceSongs(): Promise<Song[]> {
       try {
         tags = await readTags(raw.uri, TEXT_TAG_BYTES);
       } catch {
-        // Si falla la lectura ID3, seguimos con el nombre de fichero.
+        // If the ID3 read fails, the filename will have to do.
       }
       const base: any = { id: raw.id, localUri: raw.uri, duration: raw.duration };
       applyTags(base, titleFromFilename(raw.filename), tags);
-      if (raw.mtime) base.addedAt = raw.mtime; // MediaLibrary ya da ms
-      // Agrupa por carpeta (igual que en modo carpeta): el álbum lo define el
-      // directorio del fichero, no las etiquetas de cada pista.
+      if (raw.mtime) base.addedAt = raw.mtime; // MediaLibrary already gives ms
+      // Grouped by folder, as in folder mode: the album is decided by the
+      // directory the file is in, not by each track's tags.
       const dir = parentDirOf(raw.uri);
       if (dir) assignFolderAlbum(base, dir, !!tags?.album);
       bump();
       return base as Song;
     });
     songs.sort((a, b) => a.title.localeCompare(b.title));
-    // Dentro del `try`: construir el catálogo aún lee las carátulas (una por
-    // álbum) y eso tarda, así que el indicador tiene que seguir encendido.
+    // Inside the `try`: building the catalog still reads the covers, one per
+    // album, and that takes time, so the indicator has to stay up.
     catalog = await buildCatalog(songs);
   } finally {
     useScanProgress.getState().done();
@@ -556,7 +562,7 @@ export async function loadDeviceSongs(): Promise<Song[]> {
   return songs;
 }
 
-// ── Origen: carpeta concreta (Storage Access Framework) ───────────────────
+// ── Source: one folder (Storage Access Framework) ─────────────────────────
 
 export async function pickFolder(): Promise<string | null> {
   const res = await StorageAccessFramework.requestDirectoryPermissionsAsync();
@@ -592,13 +598,14 @@ export async function loadFolderSongs(treeUri: string): Promise<Song[]> {
         await walk(entryUri, depth + 1);
       }
     }
-    // Una vez por carpeta: recorrer un árbol grande por SAF no es instantáneo,
-    // y sin esto la pantalla se queda muerta hasta que empieza a analizar.
+    // Once per folder: walking a large tree over SAF is not instant, and
+    // without this the screen sits dead until the reading starts.
     if (rawSongs.length > before) useScanProgress.getState().tick(rawSongs.length - before);
   }
 
-  // Buscar y analizar son dos fases, y las dos pueden tardar: `begin()` enciende
-  // el indicador ya, para que recorrer el árbol no parezca un cuelgue.
+  // Finding the files and reading them are two phases and both can take a
+  // while, so `begin()` puts the indicator up straight away: walking the tree
+  // should not look like the app has hung.
   useScanProgress.getState().begin();
   let songs: Song[];
   let catalog: LocalCatalog;
@@ -611,24 +618,24 @@ export async function loadFolderSongs(treeUri: string): Promise<Song[]> {
       let tags = null;
       let mtime = 0;
       try {
-        // SAF no da mtime en readDirectoryAsync; se lee en paralelo con los tags.
+        // SAF gives no mtime in readDirectoryAsync; it is read alongside the tags.
         [tags, mtime] = await Promise.all([readTags(raw.uri, TEXT_TAG_BYTES), readMtime(raw.uri)]);
       } catch {
-        // Si falla la lectura ID3, seguimos con el nombre de fichero.
+        // If the ID3 read fails, the filename will have to do.
       }
       const base: any = { id: raw.id, localUri: raw.uri };
       applyTags(base, raw.filename, tags);
       if (mtime) base.addedAt = mtime;
-      // En modo carpeta, cada subcarpeta es un álbum (lo más fiable). Los
-      // ficheros sueltos en la raíz elegida se agrupan por su etiqueta de
-      // álbum (p. ej. un single).
+      // In folder mode each subfolder is an album, which is the most reliable
+      // reading of it. Loose files at the chosen root group by their album tag
+      // instead, a single being the usual case.
       if (raw.dirUri !== treeUri) assignFolderAlbum(base, raw.dirUri, !!tags?.album);
       bump();
       return base as Song;
     });
     songs.sort((a, b) => a.title.localeCompare(b.title));
-    // Dentro del `try`: construir el catálogo aún lee las carátulas (una por
-    // álbum) y eso tarda, así que el indicador tiene que seguir encendido.
+    // Inside the `try`: building the catalog still reads the covers, one per
+    // album, and that takes time, so the indicator has to stay up.
     catalog = await buildCatalog(songs);
   } finally {
     useScanProgress.getState().done();
@@ -639,7 +646,7 @@ export async function loadFolderSongs(treeUri: string): Promise<Song[]> {
   return songs;
 }
 
-// ── Acceso al catálogo completo ────────────────────────────────────────────
+// ── Getting at the whole catalog ───────────────────────────────────────────
 
 export function getLocalCatalog(sourceMode: string, uri?: string): LocalCatalog | undefined {
   return catalogCache.get(cacheKey(sourceMode, uri));
@@ -659,7 +666,7 @@ function albumKeyOf(song: Song): string {
 
 export function getLocalAlbumSongs(sourceMode: string, albumId: string, uri?: string): Song[] {
   const songs = catalogCache.get(cacheKey(sourceMode, uri))?.songs.filter((s) => albumKeyOf(s) === albumId) ?? [];
-  // Orden por nº de pista (las que no lo tengan, al final por título).
+  // By track number, with the ones that have none last, by title.
   return songs.sort((a, b) => {
     const ta = a.track ?? Infinity;
     const tb = b.track ?? Infinity;
@@ -672,7 +679,7 @@ export function getLocalArtistAlbums(sourceMode: string, artistName: string, uri
   return catalogCache.get(cacheKey(sourceMode, uri))?.albums.filter((a) => normKey(a.artist || 'Artista desconocido') === artistName) ?? [];
 }
 
-// ── Índice de carátulas ───────────────────────────────────────────────────
+// ── The cover index ───────────────────────────────────────────────────────
 
 const coverIndex = new Map<string, string>();
 
@@ -682,24 +689,24 @@ export function registerCover(id: string, uri?: string) {
 
 export function localCoverUrl(id: string | undefined): string | undefined {
   if (!id) return undefined;
-  // Las carátulas personalizadas de listas ya llegan como URI de fichero.
+  // A playlist's own uploaded cover already arrives as a file URI.
   if (id.startsWith('file://')) return id;
   return coverIndex.get(id);
 }
 
-/** Invalida el catálogo cacheado y las carátulas (útil al cambiar de origen). */
+/** Throws away the cached catalog and covers, as when the source changes. */
 export function clearLocalCatalog(): void {
   catalogCache.clear();
   coverIndex.clear();
 }
 
-// ── Persistencia del catálogo en disco ──────────────────────────────────────
-// Evita re-leer los ID3 de todos los ficheros cada vez que se entra al modo
-// local: el catálogo (con carátulas) se guarda en disco y se recarga al
-// instante. El botón "Volver a escanear" fuerza un re-análisis.
+// ── Keeping the catalog on disk ─────────────────────────────────────────────
+// So the ID3 tags of every file are not read again each time the local mode is
+// opened: the catalog, covers and all, is saved to disk and comes back
+// instantly. The "Scan again" button is what forces a fresh read.
 const CATALOG_DIR = FileSystem.documentDirectory + 'local-catalog/';
-// Dentro de CATALOG_DIR para que "Volver a escanear" (que borra el directorio
-// entero) no deje carátulas huérfanas acumulándose.
+// Inside CATALOG_DIR so that "Scan again", which deletes the whole directory,
+// leaves no orphaned covers piling up.
 const COVERS_DIR = CATALOG_DIR + 'covers/';
 
 function catalogFile(sourceMode: string, uri?: string): string {
@@ -707,8 +714,9 @@ function catalogFile(sourceMode: string, uri?: string): string {
 }
 
 /**
- * Vuelca la carátula embebida (base64) de cada álbum a un fichero y deja en su
- * lugar `coverUri`. Los álbumes sin carátula quedan sin `coverUri` (placeholder).
+ * Writes each album's embedded base64 cover out to a file and leaves `coverUri`
+ * in its place. An album without one is left without `coverUri` too, and gets
+ * the placeholder.
  */
 async function flushAlbumCovers(albums: LocalAlbum[]): Promise<void> {
   const pending = albums.filter((a) => a.coverBase64);
@@ -723,7 +731,7 @@ async function flushAlbumCovers(albums: LocalAlbum[]): Promise<void> {
         });
         a.coverUri = file;
       } catch {
-        // Si no se puede escribir, el álbum se queda con el placeholder.
+        // If it cannot be written, the album keeps the placeholder.
       }
     });
   }
@@ -734,8 +742,8 @@ async function flushAlbumCovers(albums: LocalAlbum[]): Promise<void> {
 }
 
 /**
- * Migración de catálogos antiguos: los artistas llevaban la carátula en base64;
- * ahora heredan la URI del primer álbum suyo que tenga carátula en disco.
+ * Migration for older catalogs: artists used to carry their cover as base64, and
+ * now inherit the URI of the first album of theirs that has one on disk.
  */
 function migrateArtistCovers(catalog: LocalCatalog): void {
   const byArtist = new Map<string, string>();
@@ -755,7 +763,7 @@ async function saveCatalogToDisk(sourceMode: string, uri: string | undefined, ca
     await FileSystem.makeDirectoryAsync(CATALOG_DIR, { intermediates: true }).catch(() => {});
     await FileSystem.writeAsStringAsync(catalogFile(sourceMode, uri), JSON.stringify(catalog));
   } catch {
-    // Si no se puede guardar, se re-analizará la próxima vez (no es crítico).
+    // If it cannot be saved, the next time will read it again. No harm done.
   }
 }
 
@@ -767,14 +775,14 @@ async function loadCatalogFromDisk(sourceMode: string, uri?: string): Promise<Lo
     const raw = await FileSystem.readAsStringAsync(file);
     const catalog = JSON.parse(raw) as LocalCatalog;
     if (!catalog?.songs?.length) return null;
-    // Migración: los catálogos antiguos llevan las carátulas embebidas en
-    // base64. Se vuelcan a ficheros una vez y se regraba el catálogo aligerado.
+    // Migration: older catalogs carry their covers embedded as base64. They
+    // are written out to files once and the lighter catalog is saved again.
     if (catalog.albums.some((a) => a.coverBase64)) {
       await flushAlbumCovers(catalog.albums);
       migrateArtistCovers(catalog);
       void saveCatalogToDisk(sourceMode, uri, catalog);
     }
-    // El índice de carátulas no se persiste aparte: se reconstruye al cargar.
+    // The cover index is not saved separately: it is rebuilt on load.
     for (const a of catalog.albums) registerCover(a.id, a.coverUri);
     for (const a of catalog.artists) registerCover(a.id, a.coverUri);
     return catalog;
@@ -783,7 +791,7 @@ async function loadCatalogFromDisk(sourceMode: string, uri?: string): Promise<Lo
   }
 }
 
-/** Borra el catálogo persistido en disco (al volver a escanear). */
+/** Deletes the catalog kept on disk, which is what scanning again does. */
 export async function clearLocalCatalogDisk(): Promise<void> {
   try {
     await FileSystem.deleteAsync(CATALOG_DIR, { idempotent: true });

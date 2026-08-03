@@ -26,12 +26,12 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * Servicio foreground que mantiene una MediaSessionCompat viva mientras se
- * castea por UPnP. Da los controles de bloqueo/notificación (Issue 3) y, al
- * declarar la sesión como reproducción remota con un VolumeProviderCompat, hace
- * que los botones físicos de volumen controlen el stream (Issue 1). Los comandos
- * (play/pausa/anterior/siguiente/seek/volumen) se reenvían a JS vía
- * `CastMediaModule`, que ya sabe enrutarlos al renderer. No reproduce audio.
+ * A foreground service that keeps a MediaSessionCompat alive while casting over
+ * UPnP. It provides the lock screen and notification controls (Issue 3) and, by
+ * declaring the session as remote playback with a VolumeProviderCompat, puts the
+ * phone's volume keys in charge of the stream (Issue 1). The commands (play,
+ * pause, previous, next, seek, volume) go to JS through `CastMediaModule`, which
+ * already knows how to route them to the renderer. It plays no audio itself.
  */
 class CastMediaService : Service() {
   data class Info(
@@ -58,11 +58,11 @@ class CastMediaService : Service() {
       MAX_VOLUME / 2,
     ) {
       override fun onAdjustVolume(direction: Int) {
-        // direction: +1 subir, -1 bajar, 0 (mute toggle) lo ignoramos.
+        // direction: +1 up, -1 down; 0 is the mute toggle and is ignored.
         if (direction == 0) return
-        // Optimista: mueve el overlay del sistema en el acto (antes era fijo a
-        // 50% porque currentVolume nunca se tocaba). JS reenvía el valor exacto
-        // por setVolumeLevel tras aplicarlo en el renderer.
+        // Optimistic: it moves the system overlay at once. It used to sit at
+        // 50% forever because currentVolume was never touched. JS sends the
+        // exact value back through setVolumeLevel once the renderer has it.
         currentVolume = (currentVolume + direction).coerceIn(0, MAX_VOLUME)
         CastMediaModule.instance?.emitCommand("volume", direction.toDouble())
       }
@@ -80,7 +80,7 @@ class CastMediaService : Service() {
         MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS,
     )
     s.setCallback(SessionCallback())
-    // Reproducción remota: enruta los botones físicos de volumen al provider.
+    // Remote playback: it puts the volume keys through to the provider.
     s.setPlaybackToRemote(volumeProvider)
     s.isActive = true
     session = s
@@ -105,7 +105,7 @@ class CastMediaService : Service() {
         stopEverything()
       }
       else -> {
-        // Reinicio del sistema sin datos: no dejamos un servicio zombie.
+        // Restarted by the system with nothing to go on: no zombie service.
         if (session == null) stopSelf(startId)
       }
     }
@@ -122,7 +122,7 @@ class CastMediaService : Service() {
     super.onDestroy()
   }
 
-  /** Refresca metadatos + estado (cambio de pista). Corre en el hilo main. */
+  /** Fresh metadata and state, for a track change. Runs on the main thread. */
   fun update(next: Info) = mainHandler.post {
     val artChanged = next.artworkUrl != info.artworkUrl
     info = next
@@ -136,21 +136,21 @@ class CastMediaService : Service() {
     if (artChanged) loadArtwork()
   }
 
-  /** Refresca solo estado de reproducción (play/pausa/progreso). */
+  /** Playback state only: playing or paused, and how far in. */
   fun setState(isPlaying: Boolean, positionMs: Long) = mainHandler.post {
     val playingChanged = isPlaying != info.isPlaying
     info = info.copy(isPlaying = isPlaying, positionMs = positionMs)
     applyPlaybackState()
-    // El scrubber del bloqueo lo lee del PlaybackState de la sesión; solo hay
-    // que rehacer la notificación cuando cambia el botón play/pausa (no cada
-    // segundo por el progreso).
+    // The lock screen reads its scrubber off the session's PlaybackState, so
+    // the notification only has to be rebuilt when the play/pause button
+    // changes, not once a second because the position moved.
     if (playingChanged) renotify()
   }
 
   /**
-   * Fija el volumen que muestra el overlay del sistema (fracción 0..1 desde JS).
-   * Sin esto el provider se quedaba clavado en 50% aunque el volumen real
-   * cambiara en el renderer.
+   * Sets the level the system's volume overlay shows, a 0..1 fraction from JS.
+   * Without it the provider stayed pinned at 50% however much the real volume
+   * moved on the renderer.
    */
   fun setVolumeLevel(fraction: Double) = mainHandler.post {
     volumeProvider.currentVolume = (fraction * MAX_VOLUME).toInt().coerceIn(0, MAX_VOLUME)
@@ -230,8 +230,9 @@ class CastMediaService : Service() {
       .setContentTitle(info.title ?: "")
       .setContentText(info.artist ?: "")
       .setOnlyAlertOnce(true)
-      // Persistente mientras dura la sesión de cast: se retira al desconectar,
-      // no al deslizarla (evita dejar el servicio foreground huérfano).
+      // It stays for as long as the cast session does: it goes when the
+      // session ends, not when it is swiped, which would leave the foreground
+      // service orphaned.
       .setOngoing(true)
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
       .setContentIntent(contentPendingIntent())
@@ -284,7 +285,8 @@ class CastMediaService : Service() {
     nm.createNotificationChannel(channel)
   }
 
-  /** Baja la carátula (best-effort) en un hilo aparte y la aplica al volver. */
+  /** Fetches the cover on another thread, best effort, and applies it on the
+   *  way back. */
   private fun loadArtwork() {
     val url = info.artworkUrl ?: return
     if (url == lastArtUrl && artBitmap != null) return
@@ -299,7 +301,8 @@ class CastMediaService : Service() {
         conn.inputStream.use { BitmapFactory.decodeStream(it) }
       }.getOrNull() ?: return@Thread
       mainHandler.post {
-        // La pista pudo cambiar mientras bajaba: solo aplica si sigue vigente.
+        // The track may have changed while it downloaded: only apply it if it
+        // is still the one playing.
         if (url != info.artworkUrl) return@post
         artBitmap = bmp
         applyMetadata()
@@ -310,11 +313,11 @@ class CastMediaService : Service() {
 
   private inner class SessionCallback : MediaSessionCompat.Callback() {
     /**
-     * Algunos mandos Bluetooth/AVRCP mandan el comando como KeyEvent crudo
-     * (KEYCODE_MEDIA_NEXT/PREVIOUS) que el callback por defecto no siempre
-     * traduce a onSkipToNext/Previous — de ahí que el skip no funcionara aunque
-     * play/pausa sí. Lo enrutamos explícitamente. Solo ACTION_DOWN para no
-     * disparar dos veces (down + up).
+     * Some Bluetooth/AVRCP remotes send the command as a raw KeyEvent
+     * (KEYCODE_MEDIA_NEXT/PREVIOUS) that the default callback does not always
+     * turn into onSkipToNext/Previous, which is why skipping did nothing while
+     * play and pause worked. They are routed explicitly here. ACTION_DOWN only,
+     * so it does not fire twice (down and up).
      */
     override fun onMediaButtonEvent(mediaButtonEvent: Intent): Boolean {
       val ke: KeyEvent? =
@@ -382,7 +385,7 @@ class CastMediaService : Service() {
     @Volatile var instance: CastMediaService? = null
       private set
 
-    /** Estado inicial que el módulo deja antes de arrancar el servicio. */
+    /** The initial state the module leaves behind before starting the service. */
     @Volatile var bootInfo: Info? = null
   }
 }

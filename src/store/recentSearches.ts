@@ -1,4 +1,4 @@
-/** Búsquedas recientes (persistidas por perfil) para la pantalla de Buscar. */
+/** Recent searches, kept per profile, for the Search screen. */
 import { create } from 'zustand';
 
 import { primaryUrl } from '@/lib/serverUrls';
@@ -9,16 +9,16 @@ const MAX = 12;
 
 export type RecentKind = 'artist' | 'album' | 'song';
 
-/** Un resultado que el usuario tocó: se guarda con su carátula para mostrarlo. */
+/** A result that was tapped, kept with its cover so it can be shown again. */
 export interface RecentItem {
   kind: RecentKind;
   id: string;
   title: string;
-  /** Artista (para álbumes/canciones); ausente en artistas. */
+  /** The artist, for albums and songs; absent on an artist. */
   artist?: string;
-  /** Id de carátula para `coverArtUrl`. */
+  /** Cover id, for `coverArtUrl`. */
   coverArt?: string;
-  /** Destino de navegación al tocarlo. */
+  /** Where tapping it goes. */
   href: string;
 }
 
@@ -104,7 +104,7 @@ export const useRecentSearches = create<RecentSearchesState>((set, get) => ({
 
   hydrate: async () => {
     try {
-      // Limpiar elementos de una clave anterior distinta (otro perfil)
+      // Drop whatever belonged to a different key, which is another profile
       const key = storageKey();
       if (currentKey && currentKey !== key) {
         set({ items: [] });

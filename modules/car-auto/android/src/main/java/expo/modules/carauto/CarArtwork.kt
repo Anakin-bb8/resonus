@@ -1,4 +1,4 @@
-// Adaptado de wavio (github.com/Joel-Mercier/wavio, MIT) para Resonus.
+// Adapted from wavio (github.com/Joel-Mercier/wavio, MIT) for Resonus.
 package expo.modules.carauto
 
 import android.graphics.Bitmap
@@ -9,18 +9,19 @@ import androidx.media3.common.MediaMetadata
 import java.io.ByteArrayOutputStream
 
 /**
- * Puente de carátulas para Android Auto. El host de AA dibuja las carátulas en
- * su *propio* proceso: puede descargar una artworkUri http(s) por su cuenta,
- * pero NO puede leer nuestras carátulas file:// privadas de la app. Para los
- * ficheros locales decodificamos + reescalamos el bitmap en proceso y enviamos
- * los bytes JPEG vía setArtworkData, que viaja por el binder para que el host la
- * dibuje sin acceso al sistema de archivos. Las URLs remotas siguen usando
- * setArtworkUri (pequeñas, las descarga el host).
+ * Cover art for Android Auto. The AA host draws the covers in its *own*
+ * process: it can fetch an http(s) artworkUri by itself, but it cannot read our
+ * file:// covers, which are private to the app. For those the bitmap is decoded
+ * and scaled down in our process and the JPEG bytes are sent with
+ * setArtworkData, which travels over the binder so the host can draw it without
+ * touching the filesystem. Remote URLs still go as setArtworkUri: they are
+ * small, and fetching them is the host's business.
  *
- * Los bytes se mantienen pequeños (máx 320px, JPEG q80 → ~20-40KB) y se cachean
- * por ruta para que ítems de álbum/cola que comparten carátula se decodifiquen
- * una sola vez. `apply` devuelve el nº de bytes embebidos (0 para uri/ninguna)
- * para que quien llama acote una transacción binder — ver el guard de JsProxyPlayer.
+ * The bytes are kept small (320px at most, JPEG q80, so ~20-40KB) and cached by
+ * path, so the album and queue items that share a cover are only decoded once.
+ * `apply` returns how many bytes it embedded (0 for a uri, or for nothing at
+ * all) so the caller can keep a binder transaction within bounds. See the guard
+ * in JsProxyPlayer.
  */
 internal object CarArtwork {
   private const val MAX_DIM = 320
@@ -30,9 +31,9 @@ internal object CarArtwork {
   }
 
   /**
-   * Pone la carátula en [builder]. Si [embed] es false, el fichero local nunca
-   * se decodifica — se usa la uri tal cual — para que quien llama pueda acotar
-   * cuánta carátula embebe por transacción. Devuelve el nº de bytes embebidos.
+   * Puts the cover on [builder]. With [embed] false a local file is never
+   * decoded and its uri is used as it is, which is how the caller limits how
+   * much artwork it embeds in one transaction. Returns the bytes embedded.
    */
   fun apply(builder: MediaMetadata.Builder, artworkUrl: String?, embed: Boolean = true): Int {
     if (artworkUrl == null) return 0
@@ -64,7 +65,7 @@ internal object CarArtwork {
     }.getOrNull()
   }
 
-  // Mayor submuestreo potencia-de-dos que mantenga ambas dimensiones >= MAX_DIM.
+  // The largest power-of-two subsampling that keeps both sides >= MAX_DIM.
   private fun sampleSize(width: Int, height: Int): Int {
     var sample = 1
     var w = width

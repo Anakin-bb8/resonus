@@ -1,18 +1,18 @@
 /**
- * Config plugin: inyecta una signingConfig de *release* en android/app/build.gradle
- * durante `expo prebuild`. La keystore y las contraseñas se leen de variables de
- * entorno (las pone el workflow de CI desde los Secrets del repo):
+ * Config plugin: puts a *release* signingConfig into android/app/build.gradle
+ * during `expo prebuild`. The keystore and its passwords are read from the
+ * environment, which the CI workflow fills in from the repository's Secrets:
  *
- *   RESONUS_KEYSTORE_FILE       ruta absoluta al .jks
- *   RESONUS_KEYSTORE_PASSWORD   contraseña del almacén
- *   RESONUS_KEY_ALIAS           alias de la clave
- *   RESONUS_KEY_PASSWORD        contraseña de la clave
+ *   RESONUS_KEYSTORE_FILE       absolute path to the .jks
+ *   RESONUS_KEYSTORE_PASSWORD   the store's password
+ *   RESONUS_KEY_ALIAS           the key's alias
+ *   RESONUS_KEY_PASSWORD        the key's password
  *
- * Si esas variables no están definidas (p. ej. en un build local de debug), el
- * release sigue usando la firma de debug, así no se rompe el desarrollo normal.
+ * With those unset, as in a local debug build, release keeps signing with the
+ * debug key, so ordinary development is not held up by any of this.
  *
- * Como android/ está en .gitignore y se regenera con prebuild, esto debe hacerse
- * por plugin (una edición a mano de build.gradle se perdería).
+ * android/ is in .gitignore and prebuild regenerates it, so this has to be a
+ * plugin: an edit to build.gradle by hand would not survive.
  */
 const { withAppBuildGradle } = require('@expo/config-plugins');
 
@@ -29,7 +29,7 @@ const RELEASE_SIGNING_CONFIG = `        release {
 function applyReleaseSigning(gradle) {
   let out = gradle;
 
-  // 1) Añade el bloque signingConfigs.release (justo tras abrir signingConfigs).
+  // 1) Adds the signingConfigs.release block, right after signingConfigs opens.
   if (!out.includes('signingConfigs.release') && !out.includes('release {\n            if (System.getenv')) {
     out = out.replace(
       /signingConfigs \{\n/,
@@ -37,7 +37,7 @@ function applyReleaseSigning(gradle) {
     );
   }
 
-  // 2) El buildType release usa la firma de release si hay keystore en el entorno.
+  // 2) The release buildType signs with it when there is a keystore to sign with.
   out = out.replace(
     /(\/\/ see https:\/\/reactnative\.dev\/docs\/signed-apk-android\.\n\s*)signingConfig signingConfigs\.debug/,
     `$1signingConfig System.getenv('RESONUS_KEYSTORE_FILE') ? signingConfigs.release : signingConfigs.debug`,

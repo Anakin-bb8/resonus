@@ -1,7 +1,7 @@
 /**
- * Modo "Reordenar" de una playlist: lista arrastrable (mismo motor que la cola)
- * con cabecera Cancelar / Hecho. Trabaja siempre sobre el orden manual; al
- * confirmar devuelve la nueva secuencia de ids para reescribirla en el servidor.
+ * A playlist's "Reorder" mode: a draggable list, on the same engine as the
+ * queue, under a Cancel / Done header. It always works on the manual order, and
+ * confirming hands back the new sequence of ids to rewrite on the server.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
@@ -22,7 +22,7 @@ import { colors, fontSize, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
 import { Cover } from './Cover';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
-// ReorderableList necesita las celdas montadas para animar el arrastre.
+// ReorderableList needs the cells mounted to animate the drag.
 const perf = {
   initialNumToRender: listPerf.initialNumToRender,
   maxToRenderPerBatch: listPerf.maxToRenderPerBatch,

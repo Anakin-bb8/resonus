@@ -22,7 +22,7 @@ import { useSettings, type ExploreChip, type ExploreChipKey } from '@/store/sett
 import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
-/** Etiqueta (clave i18n) de cada chip. Las mismas que se pintan en Inicio. */
+/** Each chip's label, as an i18n key. The same ones Home draws. */
 const LABEL: Record<ExploreChipKey, string> = {
   shuffle: 'Shuffle',
   favorites: 'Favorites',
@@ -65,8 +65,8 @@ function ChipRow({ chip }: { chip: ExploreChip }) {
   );
 }
 
-/** Chips que en local no existen (Inicio los filtra por OFFLINE_KEYS): su fila
- * here would promise something that never appears. */
+/** Chips that do not exist on a local profile (Home filters them out through
+ * OFFLINE_KEYS): a row here would promise something that never turns up. */
 const SERVER_ONLY: ExploreChipKey[] = ['genres', 'radio', 'history'];
 
 export default function ExploreChipsSettings() {

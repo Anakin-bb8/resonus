@@ -1,3 +1,3 @@
-// La API JS vive en `src/lib/batteryOpt.ts` (lee el módulo nativo "BatteryOpt").
-// Este archivo existe para que expo-modules-autolinking detecte el módulo local.
+// The JS API lives in `src/lib/batteryOpt.ts` (which reads the native module "BatteryOpt").
+// This file only exists so expo-modules-autolinking picks the local module up.
 export {};

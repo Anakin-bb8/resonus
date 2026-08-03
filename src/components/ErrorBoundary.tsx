@@ -1,4 +1,4 @@
-/** Captura errores de render para no tumbar la app entera. */
+/** Catches render errors so one of them cannot take the whole app down. */
 import { Component, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 

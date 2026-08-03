@@ -7,33 +7,34 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
 /**
- * Ecualizador del sistema (android.media.audiofx.Equalizer) aplicado al audio
- * de la app. El procesado lo hace el framework de Android; aquí solo creamos el
- * efecto y le pasamos las ganancias.
+ * The system equaliser (android.media.audiofx.Equalizer) over the app's audio.
+ * Android's framework does the processing; all that happens here is creating
+ * the effect and handing it the gains.
  *
- * Un efecto por SESIÓN de audio: el reproductor usa dos ExoPlayer alternos (para
- * el crossfade), así que hay dos sesiones vivas y ambas deben ecualizarse igual.
- * El estado (activado + ganancias) vive aquí y se aplica a toda sesión que se
- * enganche, incluidas las que aparezcan después (al recrearse un player).
+ * One effect per audio SESSION: the player alternates between two ExoPlayers
+ * for the crossfade, so two sessions are alive at once and both have to be
+ * equalised the same. The state, meaning whether it is on and what the gains
+ * are, lives here and is applied to every session that attaches, including the
+ * ones that turn up later when a player is recreated.
  */
 class AudioEqModule : Module() {
-  /** Efecto por id de sesión. Solo existen mientras el ecualizador está puesto. */
+  /** Effect by session id. They only exist while the equaliser is on. */
   private val effects = mutableMapOf<Int, Equalizer>()
   /**
-   * Sesiones vivas del reproductor, tengan efecto o no.
+   * The player's live sessions, with an effect on them or not.
    *
-   * Se guardan aparte porque un efecto enganchado no es gratis aunque esté en
-   * bypass: mientras hay uno, Android saca a esa sesión del camino de descarga
-   * al DSP y la mezcla por CPU. Eso lo pagaba todo el mundo, y el ecualizador
-   * viene apagado de fábrica, así que casi nadie lo estaba usando para nada.
+   * Kept apart because an attached effect is not free even when it is bypassed:
+   * while one is there, Android takes that session off the path that offloads
+   * to the DSP and mixes it on the CPU instead. Everyone was paying for that,
+   * and the equaliser ships off, so almost nobody was getting anything back.
    */
   private val sessions = linkedSetOf<Int>()
   private var enabled = false
 
-  /** Ganancia por banda en milibelios; null = aún sin configurar (plano). */
+  /** Gain per band in millibels; null means not set up yet, so flat. */
   private var levels: ShortArray? = null
 
-  /** Vuelca el estado actual sobre un efecto concreto. */
+  /** Pours the current state onto one effect. */
   private fun applyTo(eq: Equalizer) {
     runCatching {
       levels?.forEachIndexed { i, mb ->
@@ -45,7 +46,7 @@ class AudioEqModule : Module() {
 
   private fun applyAll() = effects.values.forEach(::applyTo)
 
-  /** Crea el efecto de una sesión, si no lo tenía ya. */
+  /** Creates a session's effect, unless it already had one. */
   private fun openEffect(sessionId: Int) {
     if (sessionId == 0 || effects.containsKey(sessionId)) return
     runCatching {
@@ -55,16 +56,17 @@ class AudioEqModule : Module() {
     }
   }
 
-  /** Suelta todos los efectos; las sesiones siguen anotadas. */
+  /** Releases every effect; the sessions stay on the books. */
   private fun closeEffects() {
     effects.values.forEach { runCatching { it.release() } }
     effects.clear()
   }
 
   /**
-   * Un efecto suelto sobre una sesión inventada, para preguntarle al dispositivo
-   * cosas que son suyas (bandas, rangos, presets) y no de una reproducción. Sirve
-   * también con el ecualizador apagado, que es cuando no hay ningún efecto vivo.
+   * A loose effect on a made-up session, for asking the device about things that
+   * are the device's own (its bands, ranges and presets) and not any one piece
+   * of playback. It works with the equaliser off too, which is exactly when
+   * there is no live effect to ask.
    */
   private fun <T> withScratchEffect(block: (Equalizer) -> T): T? = runCatching {
     val am = appContext.reactContext?.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
@@ -77,7 +79,7 @@ class AudioEqModule : Module() {
     }
   }.getOrNull()
 
-  /** Lee las ganancias reales del primer efecto (tras aplicar un preset). */
+  /** The real gains off the first effect, for after a preset is applied. */
   private fun readLevels(): List<Int> {
     val eq = effects.values.firstOrNull() ?: return levels?.map { it.toInt() } ?: emptyList()
     return runCatching {
@@ -94,19 +96,20 @@ class AudioEqModule : Module() {
     }
 
     /**
-     * Capacidades del ecualizador del dispositivo: bandas, frecuencias, rango de
-     * ganancia y presets. Se consultan con un efecto temporal sobre una sesión
-     * libre, porque son del dispositivo y no de una reproducción concreta.
+     * What the device's equaliser can do: its bands, their frequencies, the gain
+     * range and the presets. Asked through a temporary effect on a spare
+     * session, since the answers belong to the device and not to anything
+     * playing.
      */
     Function("getInfo") {
       withScratchEffect { eq ->
-        val range = eq.bandLevelRange // [min, max] en milibelios
+        val range = eq.bandLevelRange // [min, max] in millibels
         mapOf(
           "supported" to true,
           "bands" to (0 until eq.numberOfBands.toInt()).map { i ->
             mapOf(
               "index" to i,
-              // getCenterFreq viene en miliherzios.
+              // getCenterFreq answers in millihertz.
               "centerFreq" to eq.getCenterFreq(i.toShort()) / 1000,
             )
           },
@@ -118,9 +121,9 @@ class AudioEqModule : Module() {
     }
 
     /**
-     * Anota una sesión del reproductor (se llama al crear cada player). El
-     * efecto solo se crea si el ecualizador está puesto; si se enciende después,
-     * se engancha a lo que haya sonando en ese momento.
+     * Takes note of a player session, called as each player is created. The
+     * effect is only created if the equaliser is on; turning it on later
+     * attaches it to whatever is playing then.
      */
     Function("attach") { sessionId: Int ->
       if (sessionId == 0) return@Function
@@ -128,7 +131,7 @@ class AudioEqModule : Module() {
       if (enabled) openEffect(sessionId)
     }
 
-    /** Suelta la sesión (al destruir un player). */
+    /** Lets a session go, as its player is destroyed. */
     Function("detach") { sessionId: Int ->
       sessions.remove(sessionId)
       effects.remove(sessionId)?.let { runCatching { it.release() } }
@@ -140,13 +143,13 @@ class AudioEqModule : Module() {
       applyAll()
     }
 
-    /** Fija todas las ganancias (milibelios), p. ej. al restaurar lo guardado. */
+    /** Sets every gain (in millibels), as when restoring what was saved. */
     Function("setBandLevels") { millibels: List<Int> ->
       levels = ShortArray(millibels.size) { millibels[it].toShort() }
       applyAll()
     }
 
-    /** Fija una banda (al mover un slider). */
+    /** Sets one band, which is a slider being moved. */
     Function("setBandLevel") { band: Int, millibels: Int ->
       val cur = levels
       if (cur != null && band < cur.size) {
@@ -157,11 +160,11 @@ class AudioEqModule : Module() {
       }
     }
 
-    /** Aplica un preset del dispositivo y devuelve las ganancias resultantes. */
+    /** Applies one of the device's presets and answers with the gains it left. */
     Function("usePreset") { preset: Int ->
       effects.values.forEach { eq -> runCatching { eq.usePreset(preset.toShort()) } }
-      // Apagado no hay ningún efecto al que preguntarle cómo quedó, pero las
-      // ganancias de un preset son del dispositivo: valen las de uno suelto.
+      // With it off there is no effect to ask how it turned out, but a preset's
+      // gains belong to the device, so a loose effect's answer is as good.
       val next = if (effects.isNotEmpty()) {
         readLevels()
       } else {
@@ -174,7 +177,7 @@ class AudioEqModule : Module() {
       next
     }
 
-    /** Ganancias actuales (milibelios). */
+    /** The gains as they are now, in millibels. */
     Function("getBandLevels") { readLevels() }
   }
 }

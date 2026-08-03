@@ -1,4 +1,4 @@
-// Adaptado de wavio (github.com/Joel-Mercier/wavio, MIT) para Resonus.
+// Adapted from wavio (github.com/Joel-Mercier/wavio, MIT) for Resonus.
 package expo.modules.carauto
 
 import androidx.annotation.OptIn

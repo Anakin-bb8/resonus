@@ -38,7 +38,7 @@ function diskSpace(): { total: number; free: number } | null {
     const free = Paths.availableDiskSpace;
     if (total > 0 && free >= 0) return { total, free };
   } catch {
-    // p. ej. plataforma sin soporte
+    // a platform that does not support it, say
   }
   return null;
 }
