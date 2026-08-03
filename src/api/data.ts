@@ -12,6 +12,7 @@ import {
   writeAlbumCache,
 } from '@/store/libraries';
 import { hashKey } from '@/lib/localLibrary';
+import { bump } from '@/lib/perfLog';
 import { queryClient } from '@/lib/query';
 import { getItem, setItem } from '@/lib/storage';
 import { useLibraryMirror } from '@/store/libraryMirror';
@@ -393,6 +394,9 @@ async function derivedSongList(
   count: number,
 ): Promise<Subsonic.Song[]> {
   const type = sort === 'added' ? 'newest' : 'frequent';
+  // And counted at the other end too, whatever the reason for being here: this
+  // is the one list in the app that costs fifteen requests to draw.
+  bump('song list · from albums');
   const albums = await getAlbumList(type, DERIVED_POOL);
   const parts = await Promise.all(
     albums.map((al) =>
@@ -435,9 +439,14 @@ export function getSongList(
   // any of this is alphabetical. If it says no (an older server, a password
   // that no longer works, anything), the Subsonic paths below still answer.
   if (canListNative(a)) {
-    return Navidrome.listSongs(a, ND_SORT[sort], count, offset, enabledFolderIds(a)).catch(() =>
-      subsonicSongList(a, sort, count, offset),
-    );
+    return Navidrome.listSongs(a, ND_SORT[sort], count, offset, enabledFolderIds(a)).catch(() => {
+      // Counted, because falling back here is expensive and silent: Navidrome
+      // sorts songs itself in one request, and what follows sorts albums and
+      // then asks for fifteen of them. A server where this quietly fails looks
+      // exactly like one that never had the native path at all.
+      bump('song list · native failed');
+      return subsonicSongList(a, sort, count, offset);
+    });
   }
   return subsonicSongList(a, sort, count, offset);
 }
