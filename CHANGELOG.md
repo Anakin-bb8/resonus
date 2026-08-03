@@ -11,6 +11,16 @@ Releases before 0.2.1 are only listed on the
 
 ### Added
 
+- When a downloaded song plays from the file is now yours to decide, in
+  Settings › Quality & playback. It always played from the file, which is what
+  a download is for and what nearly everyone wants, but a library downloaded
+  small to save room is a worse copy than the one on the server, and whether
+  that matters depends on what the connection costs. So: always, on mobile data
+  only, only when the download is the original file rather than a transcode, or
+  never. Without a connection the file is used whatever it says, since it is
+  the only thing there is. The quality badge under the player follows the same
+  answer, so it never claims a smaller copy while playing the good one. Asked
+  for by @CraftoHohenvels and @ztx-lyghters.
 - A way out of a deep pile of screens. An artist, one of its albums, another
   artist off a track, a genre from there: getting back was four taps, and there
   was no shorter way. Holding the back arrow now drops the whole pile at once,

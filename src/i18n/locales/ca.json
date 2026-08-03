@@ -572,5 +572,10 @@
   "Playlist covers": "Caràtules de llistes",
   "Pending changes": "Canvis pendents",
   "Local library index": "Índex de la biblioteca local",
-  "Radio station art": "Caràtules d’emissores"
+  "Radio station art": "Caràtules d’emissores",
+  "Play downloaded songs from the phone": "Reproduir les descàrregues des del mòbil",
+  "A downloaded song normally plays from the file, which costs no data. Choose otherwise if your downloads are smaller copies and you would rather stream the good one when you can. Without a connection the file is always used.": "Una cançó descarregada sona des del fitxer, que no gasta dades. Tria una altra cosa si les teves descàrregues són còpies més petites i prefereixes reproduir la bona quan puguis. Sense connexió sempre es fa servir el fitxer.",
+  "On mobile data only": "Només amb dades mòbils",
+  "Only if it is the original file": "Només si és el fitxer original",
+  "Always": "Sempre"
 }

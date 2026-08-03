@@ -286,14 +286,48 @@ export function effectiveStreamFormat(): TranscodeFormat {
 }
 
 /** Source for expo-audio: radio (url), local (file/content) or Subsonic stream. */
+/**
+ * Does this song play from the file on disk, and which file?
+ *
+ * A download exists so the song does not have to be fetched again, and that is
+ * the default. But a library downloaded at 128 kbps to save room is a worse
+ * copy than the server's, and somebody may want the good one when the data is
+ * free and the small one when it is not: hence the setting (#108).
+ *
+ * Offline the question does not arise. The file is the only thing that can
+ * play, and a queue of songs that cannot play is refused before it gets here.
+ *
+ * Everything that asks "is this a stream?" asks this, and not whether a
+ * download exists: seeking, warming and the transcode-offset dance all depend
+ * on where the audio actually comes from.
+ */
+export function localSourceFor(song: Song): string | undefined {
+  // The phone's own library is not a download and there is nothing to stream.
+  if (song.localUri) return song.localUri;
+  const file = downloadedUri(song);
+  if (!file) return undefined;
+  const { auth, offline } = useAuthStore.getState();
+  if (offline || !auth) return file;
+  switch (useSettings.getState().preferDownloads) {
+    case 'never':
+      return undefined;
+    case 'cellular':
+      return useNetworkType.getState().cellular ? file : undefined;
+    case 'original':
+      // Downloaded without transcoding, so the file IS the server's copy.
+      // Downloads made before the app recorded this are taken as original,
+      // which is what they were unless the setting said otherwise back then.
+      return useDownloads.getState().dlBitRates[song.id] ? undefined : file;
+    default:
+      return file;
+  }
+}
+
 function sourceFor(song: Song, timeOffsetSec = 0): AudioSource {
   const metadata = itemMetadataFor(song);
   if (song.url) return { uri: song.url, metadata };
-  if (song.localUri) return { uri: song.localUri, metadata };
-  // Downloaded → plays from disk also in server mode: works without
-  // connection and with connection doesn't waste data.
-  const dl = downloadedUri(song);
-  if (dl) return { uri: dl, metadata };
+  const local = localSourceFor(song);
+  if (local) return { uri: local, metadata };
   const auth = useAuthStore.getState().auth!;
   const format = effectiveStreamFormat();
   return {
@@ -332,8 +366,8 @@ let sourceHasLength: boolean | null = null;
 
 /** Is this song being transcoded (the server generates it on the fly)? */
 function isTranscoded(song: Song): boolean {
-  // Downloaded tracks play from disk: normal native seek, no timeOffset.
-  if (song.url || song.localUri || downloadedUri(song)) return false;
+  // Playing from disk: normal native seek, no timeOffset.
+  if (song.url || localSourceFor(song)) return false;
   const max = effectiveMaxBitRate();
   // Without limit the server serves the original file (direct, native seek).
   // Forced codec is only sent with `maxBitRate > 0` (see streamUrl), so
@@ -350,7 +384,7 @@ function needsOffsetSeek(song: Song): boolean {
   // Radio (own url), local library and downloads: real random access. And a
   // radio must NEVER be re-requested against the Subsonic stream endpoint,
   // even though its live stream has no length either.
-  if (song.url || song.localUri || downloadedUri(song)) return false;
+  if (song.url || localSourceFor(song)) return false;
   // Already playing an offset segment: its native timeline starts at
   // `streamOffsetSec`, so a native seek would land that much further ahead.
   // From here on, every seek is another re-request.
@@ -713,7 +747,7 @@ async function loadIndex(index: number, autoplay: boolean) {
     // on a transcoded stream already has the answer cached. For ANY server
     // stream: the transcode may be the server's decision, and we only find
     // out when the source loads without a length (see `sourceHasLength`).
-    if (!song.url && !song.localUri && !downloadedUri(song)) {
+    if (!song.url && !localSourceFor(song)) {
       void ensureTranscodeOffsetSupport();
     }
   } catch {
@@ -864,8 +898,9 @@ function warmUpcoming() {
     const ni = repeat === 'all' ? (index + i) % queue.length : index + i;
     if (repeat !== 'all' && ni >= queue.length) break;
     const song = queue[ni];
-    // Downloaded/local/radio don't go through the server: nothing to warm.
-    if (!song || song.url || song.localUri || downloadedUri(song)) continue;
+    // What plays from disk, and radio, don't go through the server: nothing
+    // to warm.
+    if (!song || song.url || localSourceFor(song)) continue;
     if (warmedIds.has(song.id)) continue;
     warmedIds.add(song.id);
     // Without `maxBitRate`: we warm the ORIGIN, not the transcoding. On an
@@ -1279,7 +1314,7 @@ function onTrackTransition() {
   });
   applyLockScreen(p, song);
   onTrackChanged(song);
-  if (!song.url && !song.localUri && !downloadedUri(song)) void ensureTranscodeOffsetSupport();
+  if (!song.url && !localSourceFor(song)) void ensureTranscodeOffsetSupport();
   scheduleNextSource();
 }
 
@@ -1705,8 +1740,8 @@ function maybeDetectStall(intendPlay: boolean, buffering: boolean, positionSec: 
   const st = usePlayerStore.getState();
   const song = st.queue[st.index];
   // Only applies online and to tracks coming from the server via streaming
-  // (downloaded/local play from disk and don't depend on the server).
-  const streamed = !!song && !song.url && !song.localUri && !downloadedUri(song);
+  // (what plays from disk does not depend on the server).
+  const streamed = !!song && !song.url && !localSourceFor(song);
   if (useAuthStore.getState().offline || !intendPlay || !streamed || !buffering) {
     stallSince = 0;
     stallProbed = false;
@@ -2817,9 +2852,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   reloadCurrent: () => {
     const { queue, index, positionSec, isPlaying } = get();
     const song = queue[index];
-    // Radio (own url), local and downloaded sound the same no matter what:
-    // their source doesn't depend on the server URL.
-    if (!song || song.url || song.localUri || downloadedUri(song)) return;
+    // Radio (own url) and anything playing from disk sound the same whatever
+    // the server URL is, so there is nothing to reload against a new one.
+    if (!song || song.url || localSourceFor(song)) return;
     // Cast (UPnP) carries its own session; don't touch it.
     if (remoteKind()) return;
     // Paused, there's no audio to preserve: abrupt reload, simpler and safer.

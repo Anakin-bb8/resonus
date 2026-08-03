@@ -181,6 +181,17 @@ export type CoverTapAction = 'none' | 'screen' | 'inline';
  */
 export type LyricsSource = 'local' | 'online' | 'off';
 
+/**
+ * When a song that is downloaded plays from the file instead of the server.
+ *
+ * 'always' is what the app always did, and what most people want: a download
+ * exists so it does not have to be fetched again. The rest are for libraries
+ * downloaded at a lower quality than they are served at, where the file is a
+ * convenience rather than the best copy. Offline none of it applies: the file
+ * is the only thing there is.
+ */
+export type PreferDownloads = 'always' | 'cellular' | 'original' | 'never';
+
 /** Tab the app starts on (and returns to after being in the background for a
  *  while). Matches the `(tabs)` route names. */
 export type DefaultTab = 'index' | 'search' | 'library';
@@ -524,6 +535,8 @@ interface SettingsState {
    * disabled. Defaults to 'local' (local first, LRCLIB as fallback).
    */
   lyricsSource: LyricsSource;
+  /** When a downloaded song plays from disk instead of being streamed. */
+  preferDownloads: PreferDownloads;
   /** Circular artist photo next to the name on the album screen. */
   showArtistPhoto: boolean;
   /**
@@ -660,6 +673,7 @@ interface SettingsState {
   setLyricsBackground: (value: ScreenBackground) => void;
   setLyricsCardBackground: (value: CardBackground) => void;
   setLyricsSource: (value: LyricsSource) => void;
+  setPreferDownloads: (value: PreferDownloads) => void;
   setShowArtistPhoto: (value: boolean) => void;
   setShowDiscHeaders: (value: boolean) => void;
   setShowGenreChips: (value: boolean) => void;
@@ -759,6 +773,7 @@ function snapshot(get: () => SettingsState) {
     lyricsBackground: s.lyricsBackground,
     lyricsCardBackground: s.lyricsCardBackground,
     lyricsSource: s.lyricsSource,
+    preferDownloads: s.preferDownloads,
     showArtistPhoto: s.showArtistPhoto,
     showDiscHeaders: s.showDiscHeaders,
     showGenreChips: s.showGenreChips,
@@ -836,6 +851,7 @@ const DEFAULTS = {
   lyricsBackground: 'color' as ScreenBackground,
   lyricsCardBackground: 'color' as CardBackground,
   lyricsSource: 'local' as LyricsSource,
+  preferDownloads: 'always' as PreferDownloads,
   showArtistPhoto: true,
   showDiscHeaders: true,
   showGenreChips: false,
@@ -1053,6 +1069,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
 
   setLyricsSource: (lyricsSource) => {
     set({ lyricsSource });
+    persist(snapshot(get));
+  },
+
+  setPreferDownloads: (preferDownloads) => {
+    set({ preferDownloads });
     persist(snapshot(get));
   },
 
@@ -1341,6 +1362,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           lyricsCardBackground: CardBackground;
           lyricsColorBackground: boolean;
           lyricsSource?: LyricsSource;
+          preferDownloads?: PreferDownloads;
           lyricsOnlineFallback?: boolean;
           showArtistPhoto: boolean;
           showDiscHeaders: boolean;
@@ -1514,6 +1536,14 @@ export const useSettings = create<SettingsState>((set, get) => ({
         } else if (typeof parsed.lyricsOnlineFallback === 'boolean') {
           // Migrate the old boolean: on = local first with online fallback, off = no online.
           set({ lyricsSource: parsed.lyricsOnlineFallback ? 'local' : 'off' });
+        }
+        if (
+          parsed.preferDownloads === 'always' ||
+          parsed.preferDownloads === 'cellular' ||
+          parsed.preferDownloads === 'original' ||
+          parsed.preferDownloads === 'never'
+        ) {
+          set({ preferDownloads: parsed.preferDownloads });
         }
         if (typeof parsed.showArtistPhoto === 'boolean') {
           set({ showArtistPhoto: parsed.showArtistPhoto });

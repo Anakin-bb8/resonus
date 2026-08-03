@@ -42,6 +42,8 @@ export default function PlaybackSettings() {
   const crossfadeSec = useSettings((s) => s.crossfadeSec);
   const setCrossfadeSec = useSettings((s) => s.setCrossfadeSec);
   const preloadUpcoming = useSettings((s) => s.preloadUpcoming);
+  const preferDownloads = useSettings((s) => s.preferDownloads);
+  const setPreferDownloads = useSettings((s) => s.setPreferDownloads);
   const setPreloadUpcoming = useSettings((s) => s.setPreloadUpcoming);
   const replayGain = useSettings((s) => s.replayGain);
   const setReplayGain = useSettings((s) => s.setReplayGain);
@@ -113,6 +115,23 @@ export default function PlaybackSettings() {
               onChange={setStreamFormatCellular}
               disabled={maxBitRateCellular === 0}
               disabledLabel={t('Not used')}
+            />
+            {/* Between streaming and its options on purpose: this is the
+                question of whether the streaming settings above apply to a
+                song at all. */}
+            <SelectList
+              label={t('Play downloaded songs from the phone')}
+              description={t(
+                'A downloaded song normally plays from the file, which costs no data. Choose otherwise if your downloads are smaller copies and you would rather stream the good one when you can. Without a connection the file is always used.',
+              )}
+              options={[
+                { value: 'always', label: t('Always') },
+                { value: 'cellular', label: t('On mobile data only') },
+                { value: 'original', label: t('Only if it is the original file') },
+                { value: 'never', label: t('Never') },
+              ]}
+              value={preferDownloads}
+              onChange={setPreferDownloads}
             />
             <SwitchList
               options={[

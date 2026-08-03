@@ -580,5 +580,10 @@
   "Playlist covers": "Carátulas de listas",
   "Pending changes": "Cambios pendientes",
   "Local library index": "Índice de la biblioteca local",
-  "Radio station art": "Carátulas de emisoras"
+  "Radio station art": "Carátulas de emisoras",
+  "Play downloaded songs from the phone": "Reproducir las descargas desde el móvil",
+  "A downloaded song normally plays from the file, which costs no data. Choose otherwise if your downloads are smaller copies and you would rather stream the good one when you can. Without a connection the file is always used.": "Una canción descargada suena desde el fichero, que no gasta datos. Elige otra cosa si tus descargas son copias más pequeñas y prefieres reproducir la buena cuando puedas. Sin conexión siempre se usa el fichero.",
+  "On mobile data only": "Solo con datos móviles",
+  "Only if it is the original file": "Solo si es el fichero original",
+  "Always": "Siempre"
 }
