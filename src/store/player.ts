@@ -747,6 +747,25 @@ function pushHistory() {
   if (playedHistory.length > HISTORY_MAX) playedHistory.shift();
 }
 
+/** What tells one playing context from another: the screen it came from, and
+ *  its name when it has no screen (the library shuffle, a mix). */
+function contextKey(source: string | null, sourceHref: string | null) {
+  return sourceHref ?? source ?? null;
+}
+
+/**
+ * Forgets the back history of a list that is being started again. Every entry
+ * of that list points into the queue about to be replaced, so returning to one
+ * put you back inside the queue you had just discarded, and what played after
+ * it were the old songs (#100). Pressing "Shuffle play" twice is the way to
+ * see it: the second shuffle is the queue, but ⏮️ still walked into the first.
+ * Other lists keep their entries, so going back to what was playing before
+ * this one still works.
+ */
+function forgetHistoryOf(key: string) {
+  playedHistory = playedHistory.filter((e) => contextKey(e.source, e.sourceHref) !== key);
+}
+
 // ── Honest scrobble ──────────────────────────────────────────────────────────
 // When starting a track, only "now playing" is announced (submission false);
 // the actual listen is sent when crossing the classic Last.fm threshold:
@@ -2204,8 +2223,12 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     artistFill = null;
     resetWarmed();
     // Before jumping to another list/album, save the current song in the
-    // "back" history so we can return to it (Spotify-style).
-    pushHistory();
+    // "back" history so we can return to it (Spotify-style). Starting the list
+    // that is already playing is not a jump: there is nowhere to go back to,
+    // and what it kept of this list is about to stop existing.
+    const key = contextKey(source ?? null, sourceHref ?? null);
+    if (key) forgetHistoryOf(key);
+    if (!key || key !== contextKey(get().source, get().sourceHref)) pushHistory();
     // Mark the source as recently listened (Library "Recent" order).
     if (sourceHref) useLastPlayed.getState().touch(sourceHref);
     set({

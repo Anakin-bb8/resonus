@@ -93,6 +93,16 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- Shuffling a list twice left the first shuffle within reach of the back
+  button. Pressing "Shuffle play" again builds a new queue, but the old one
+  stayed in the history that ⏮️ walks, so going back from the first song
+  dropped you into the queue that had just been thrown away, and from there
+  the songs that followed were the old ones, not the ones the queue on screen
+  showed. Starting a list that is already playing now forgets where you were
+  in it, since there is nowhere to go back to: it is the same list. Going back
+  to a different album or playlist, the one you were listening to before this
+  one, works as it did. Reported by @CraftoHohenvels, and seen on artists too
+  by @ztx-lyghters.
 - An album's genre chips show every genre it is tagged with. The row stopped at
   six, which is a number a well tagged record reaches without trying, and the
   rest were simply not there: nothing said so, so the album looked like it
