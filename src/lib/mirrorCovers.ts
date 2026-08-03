@@ -27,8 +27,11 @@ import { isOfflineMode } from '@/api/netGate';
 import { whenIdle } from '@/lib/idle';
 import { bump } from '@/lib/perfLog';
 import { hashKey, localCoverUrl, registerCover } from '@/lib/localLibrary';
+import * as Db from './mirrorDb';
 
-const DIR = FileSystem.documentDirectory + 'library-mirror/covers/';
+/** The mirror's own folder, which is where its database is opened. */
+const BASE = FileSystem.documentDirectory + 'library-mirror/';
+const DIR = BASE + 'covers/';
 
 /**
  * One size for everything, and it has to be the largest anything asks for
@@ -75,7 +78,6 @@ let aliases = new Map<string, string>();
 let bytes = 0;
 let loaded = '';
 let saving: Promise<unknown> = Promise.resolve();
-let writeTimer: ReturnType<typeof setTimeout> | null = null;
 /** How many covers are fetched at the same time. */
 const FETCH_AT_ONCE = 4;
 
@@ -91,24 +93,16 @@ function fileFor(profile: string, coverId: string): string {
 }
 
 /**
- * Writes the index down, at most once every few seconds. It holds every id, so
- * it is rewritten whole each time: browsing a hundred albums should not be a
- * hundred writes of the same growing file.
+ * Writes down what has just been saved, and only that.
+ *
+ * This used to be an index file rewritten whole every few seconds, which grew
+ * with the library: eight hundred ids and their other names, serialised again
+ * for each new cover. Rows go into the mirror's database instead, in one
+ * statement per batch, and nothing already written is touched.
  */
-function persist(profile: string): void {
-  if (writeTimer) clearTimeout(writeTimer);
-  writeTimer = setTimeout(() => {
-    writeTimer = null;
-    const payload = JSON.stringify({ ids: [...known], aliases: Object.fromEntries(aliases), bytes });
-    saving = saving.then(async () => {
-      try {
-        await FileSystem.makeDirectoryAsync(DIR, { intermediates: true }).catch(() => {});
-        await FileSystem.writeAsStringAsync(indexFile(profile), payload);
-      } catch {
-        // Lost on exit: the covers are still on disk and will be fetched again.
-      }
-    });
-  }, 3000);
+function persist(profile: string, rows: Db.CoverRow[]): void {
+  if (rows.length === 0) return;
+  saving = saving.then(() => Db.putCovers(BASE, profile, rows).catch(() => {}));
 }
 
 /** The index as it is stored, and as older versions stored it (a bare list). */
@@ -127,7 +121,8 @@ function parseIndex(raw: string): {
 /**
  * Registers the covers this profile already has, so an offline lookup finds
  * them. The file name is a hash, so which id each one belongs to has to be
- * written down: hence the index, which is a list of ids and nothing else.
+ * written down: that is what the `covers` table holds, along with the other
+ * names each file answers to.
  */
 export async function loadMirrorCovers(profile: string): Promise<void> {
   if (!profile || loaded === profile) return;
@@ -136,23 +131,52 @@ export async function loadMirrorCovers(profile: string): Promise<void> {
   aliases = new Map();
   bytes = 0;
   try {
-    const index = parseIndex(await FileSystem.readAsStringAsync(indexFile(profile)));
-    bytes = index.bytes;
-    for (const id of index.ids) {
-      known.add(id);
-      registerCover(id, fileFor(profile, id));
+    let rows = await Db.allCovers(BASE, profile);
+    if (rows.length === 0) rows = await migrateIndex(profile);
+    for (const r of rows) {
+      if (r.aliasOf) continue;
+      known.add(r.id);
+      bytes += r.bytes;
+      registerCover(r.id, fileFor(profile, r.id));
     }
     // The other names the same file answers to. No second copy on disk: the
     // album's cover and the one its songs ask for are one picture.
-    for (const [key, from] of Object.entries(index.aliases)) {
-      if (!known.has(from)) continue;
-      aliases.set(key, from);
-      registerCover(key, fileFor(profile, from));
+    for (const r of rows) {
+      if (!r.aliasOf || !known.has(r.aliasOf)) continue;
+      aliases.set(r.id, r.aliasOf);
+      registerCover(r.id, fileFor(profile, r.aliasOf));
     }
   } catch {
-    // No index yet, or unreadable: nothing is registered and the covers get
-    // fetched again the next time their entry is written to the mirror.
+    // A table that cannot be read leaves the shelves as placeholders, which is
+    // what they were before any of this, rather than taking the screen down.
   }
+}
+
+/**
+ * Moves an index written as JSON into the table, once.
+ *
+ * Everybody who has used the app before this has one, holding what may be
+ * thousands of covers already on disk; without this they would all look
+ * missing and be fetched again. The file goes when its contents are safely in.
+ */
+async function migrateIndex(profile: string): Promise<Db.CoverRow[]> {
+  let index: { ids: string[]; aliases: Record<string, string>; bytes: number };
+  try {
+    index = parseIndex(await FileSystem.readAsStringAsync(indexFile(profile)));
+  } catch {
+    return []; // no old index: nothing was ever saved
+  }
+  if (index.ids.length === 0) return [];
+  // The size was kept as one number for the lot, and the table keeps it per
+  // row: it is shared out so the total still adds up to what it was.
+  const each = Math.round(index.bytes / index.ids.length);
+  const rows: Db.CoverRow[] = index.ids.map((id) => ({ id, aliasOf: null, bytes: each }));
+  for (const [id, from] of Object.entries(index.aliases)) {
+    rows.push({ id, aliasOf: from, bytes: 0 });
+  }
+  await Db.putCovers(BASE, profile, rows);
+  await FileSystem.deleteAsync(indexFile(profile), { idempotent: true }).catch(() => {});
+  return rows;
 }
 
 /**
@@ -161,10 +185,11 @@ export async function loadMirrorCovers(profile: string): Promise<void> {
  * The id a file is named after is not recorded as an alias of itself: the index
  * already has it, and writing it twice would be two ways of saying one thing.
  */
-function alias(profile: string, key: string, from: string): void {
-  if (key === from || aliases.get(key) === from) return;
+function alias(profile: string, key: string, from: string): boolean {
+  if (key === from || aliases.get(key) === from) return false;
   aliases.set(key, from);
   registerCover(key, fileFor(profile, from));
+  return true;
 }
 
 /**
@@ -229,7 +254,9 @@ export function keepMirrorCovers(
       const taking = wanted.slice(0, MAX - known.size);
       if (taking.length === 0) return;
       for (const w of taking) inFlight.add(w.from);
-      let added = false;
+      // What this run has to write down, gathered as it goes and written in one
+      // statement at the end rather than a file rewritten per cover.
+      const written: Db.CoverRow[] = [];
 
       /** One want: the file if it is missing, the names for it either way. */
       const fetchOne = async (w: CoverWant): Promise<void> => {
@@ -238,8 +265,9 @@ export function keepMirrorCovers(
           // Already on disk, and only the other names for it were missing: the
           // picture does not need fetching twice.
           if (known.has(id)) {
-            for (const key of w.keys) alias(profile, key, id);
-            added = true;
+            for (const key of w.keys) {
+              if (alias(profile, key, id)) written.push({ id: key, aliasOf: id, bytes: 0 });
+            }
             return;
           }
           const url = coverArtUrl(auth, id, SIZE);
@@ -256,13 +284,16 @@ export function keepMirrorCovers(
           }
           known.add(id);
           registerCover(id, file);
-          for (const key of w.keys) alias(profile, key, id);
+          for (const key of w.keys) {
+            if (alias(profile, key, id)) written.push({ id: key, aliasOf: id, bytes: 0 });
+          }
           bump('cover saved');
           // Counted as it is written: walking thousands of files to add up
           // what they take is not something a settings screen should do.
           const info = await FileSystem.getInfoAsync(file).catch(() => null);
-          bytes += info?.exists ? (info.size ?? 0) : 0;
-          added = true;
+          const size = info?.exists ? (info.size ?? 0) : 0;
+          bytes += size;
+          written.push({ id, aliasOf: null, bytes: size });
         } catch {
           // Network, disk, whatever: it stays unknown and can be tried again.
           bump('cover fetch failed');
@@ -279,7 +310,7 @@ export function keepMirrorCovers(
       for (let i = 0; i < taking.length; i += FETCH_AT_ONCE) {
         await Promise.all(taking.slice(i, i + FETCH_AT_ONCE).map(fetchOne));
       }
-      if (added) persist(profile);
+      persist(profile, written);
     })();
   });
 }
@@ -303,11 +334,11 @@ export function mirrorCoverState(): { saved: number; aliases: number } {
  */
 export function forgetMirrorCover(profile: string, coverId: string | undefined): void {
   if (!profile || !coverId || !known.delete(coverId)) return;
-  // The other names for it go too, or the index would keep pointing them at a
-  // file that is no longer there.
+  // The other names for it go too, or they would keep pointing at a file that
+  // is no longer there. One statement takes the lot.
   for (const [key, from] of aliases) if (from === coverId) aliases.delete(key);
   void FileSystem.deleteAsync(fileFor(profile, coverId), { idempotent: true }).catch(() => {});
-  persist(profile);
+  saving = saving.then(() => Db.dropCover(BASE, profile, coverId).catch(() => {}));
 }
 
 /**
@@ -318,9 +349,9 @@ export function forgetMirrorCover(profile: string, coverId: string | undefined):
 export async function removeMirrorCovers(profile: string): Promise<void> {
   let ids: string[] = [];
   try {
-    ids = parseIndex(await FileSystem.readAsStringAsync(indexFile(profile))).ids;
+    ids = (await Db.allCovers(BASE, profile)).filter((r) => !r.aliasOf).map((r) => r.id);
   } catch {
-    // No index: the files, if any, cannot be told apart from another
+    // No table yet: the files, if any, cannot be told apart from another
     // profile's, and they are bounded and harmless.
   }
   if (loaded === profile) {
@@ -332,6 +363,9 @@ export async function removeMirrorCovers(profile: string): Promise<void> {
   for (const id of ids) {
     await FileSystem.deleteAsync(fileFor(profile, id), { idempotent: true }).catch(() => {});
   }
+  await Db.dropCovers(BASE, profile).catch(() => {});
+  // The index this used to be kept in, for an install that never got as far as
+  // migrating it.
   await FileSystem.deleteAsync(indexFile(profile), { idempotent: true }).catch(() => {});
 }
 
@@ -348,11 +382,14 @@ export async function mirrorCoversInfo(
   // one place where walking the files is worth what it costs, and the answer
   // is written down so it is not walked again.
   let total = 0;
+  const rows: Db.CoverRow[] = [];
   for (const id of known) {
     const info = await FileSystem.getInfoAsync(fileFor(profile, id)).catch(() => null);
-    total += info?.exists ? (info.size ?? 0) : 0;
+    const size = info?.exists ? (info.size ?? 0) : 0;
+    total += size;
+    rows.push({ id, aliasOf: null, bytes: size });
   }
   bytes = total;
-  persist(profile);
+  persist(profile, rows);
   return { bytes, count: known.size };
 }

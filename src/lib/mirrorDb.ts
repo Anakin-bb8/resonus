@@ -50,6 +50,17 @@ CREATE TABLE IF NOT EXISTS songs (
   id TEXT PRIMARY KEY NOT NULL,
   data TEXT NOT NULL
 );
+-- The covers kept for browsing offline. The files sit next to this database;
+-- what is here is which id each one belongs to, what it takes, and the other
+-- ids that find the same file (an album's cover answers to the album's own id
+-- and to the one the server gave it). It was a JSON index rewritten whole
+-- every few seconds as it grew.
+CREATE TABLE IF NOT EXISTS covers (
+  id TEXT PRIMARY KEY NOT NULL,
+  -- NULL for the one the file is named after; the target for the others.
+  alias_of TEXT,
+  bytes INTEGER
+);
 `;
 
 /**
@@ -357,6 +368,62 @@ export async function songCoverIds(
       WHERE album IS NOT NULL
       GROUP BY album`,
   );
+}
+
+// ── The covers kept alongside ───────────────────────────────────────────────
+
+export interface CoverRow {
+  id: string;
+  aliasOf: string | null;
+  bytes: number;
+}
+
+/** Everything known about this profile's covers, in one query. */
+export async function allCovers(dir: string, profile: string): Promise<CoverRow[]> {
+  const db = await mirrorDb(dir, profile);
+  const rows = await timed('mirror covers read', () =>
+    db.getAllAsync<{ id: string; alias_of: string | null; bytes: number | null }>(
+      'SELECT id, alias_of, bytes FROM covers',
+    ),
+  );
+  return rows.map((r) => ({ id: r.id, aliasOf: r.alias_of, bytes: r.bytes ?? 0 }));
+}
+
+/**
+ * Writes down covers that have just been saved, and the other names for them.
+ *
+ * One statement for the lot: catching a library up is hundreds of these, and
+ * the index they replace was rewritten in full for each.
+ */
+export async function putCovers(dir: string, profile: string, rows: CoverRow[]): Promise<void> {
+  if (rows.length === 0) return;
+  const db = await mirrorDb(dir, profile);
+  await serialized(async () => {
+    for (let i = 0; i < rows.length; i += 200) {
+      const part = rows.slice(i, i + 200);
+      const marks = part.map(() => '(?, ?, ?)').join(',');
+      const params: (string | number | null)[] = [];
+      for (const r of part) params.push(r.id, r.aliasOf, r.bytes);
+      await db.runAsync(
+        `INSERT OR REPLACE INTO covers (id, alias_of, bytes) VALUES ${marks}`,
+        params,
+      );
+    }
+  });
+}
+
+/** Forgets one cover and every other name that pointed at it. */
+export async function dropCover(dir: string, profile: string, id: string): Promise<void> {
+  const db = await mirrorDb(dir, profile);
+  await serialized(() =>
+    db.runAsync('DELETE FROM covers WHERE id = ? OR alias_of = ?', [id, id]),
+  );
+}
+
+/** Forgets all of them, for when the files are going too. */
+export async function dropCovers(dir: string, profile: string): Promise<void> {
+  const db = await mirrorDb(dir, profile);
+  await serialized(() => db.runAsync('DELETE FROM covers'));
 }
 
 // ── Reading ─────────────────────────────────────────────────────────────────
