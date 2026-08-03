@@ -402,13 +402,23 @@ export async function getArtist(artistId: string): Promise<{ artist: Artist; alb
   const dir = downloadsDir();
   if (dir) {
     try {
-      const rows = await Cat.artistAlbums(dir, artistId);
-      if (rows.length > 0) {
-        const shelf = (await getDownloadShelf()).artists.find((a) => a.id === artistId);
+      const shelf = (await getDownloadShelf()).artists.find((a) => a.id === artistId);
+      let rows = await Cat.artistAlbums(dir, artistId);
+      let name = shelf?.name;
+      if (rows.length === 0 || !name) {
+        // Nothing under their name, or no name to show. Both happen to an
+        // artist credited on a track of somebody else's album: the ids here are
+        // made from the strings the tags carry, so theirs belongs to the songs
+        // and not to any album. Their name and their records are in the songs,
+        // and showing the id instead is how "bring me the horizon . dimension
+        // 32" ended up as somebody's name on screen.
+        const found = await Cat.artistFromSongs(dir, artistId);
+        name = name ?? found.name;
+        if (rows.length === 0) rows = await Cat.albumsByIds(dir, found.albumIds);
+      }
+      if (rows.length > 0 || name) {
         return {
-          artist: shelf
-            ? toArtist(shelf)
-            : { id: artistId, name: rows[0].artist || artistId, albumCount: rows.length },
+          artist: { id: artistId, name: name ?? rows[0]?.artist ?? '', albumCount: rows.length },
           albums: rows.map(toAlbum),
         };
       }

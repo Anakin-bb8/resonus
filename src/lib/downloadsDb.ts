@@ -450,6 +450,42 @@ export async function searchAlbums(dir: string, text: string, limit: number): Pr
   return rows.map((r) => JSON.parse(r.data) as DlAlbum);
 }
 
+/**
+ * An artist whose albums are filed under somebody else's name.
+ *
+ * A song's artist and its album's are not always the same string: a track
+ * credited to two people sits on an album credited to one, and the ids here
+ * are made from those strings, so the artist you tapped may own no album at
+ * all. Their name and what they play are in their songs.
+ */
+export async function artistFromSongs(
+  dir: string,
+  artistId: string,
+): Promise<{ name?: string; albumIds: string[] }> {
+  const db = await catalogDb(dir);
+  return timed('catalog artist songs', async () => {
+    const rows = await db.getAllAsync<{ artist: string | null; album_id: string | null }>(
+      `SELECT DISTINCT artist, album_id FROM songs
+        WHERE json_extract(data, '$.artistId') = ?`,
+      [artistId],
+    );
+    const albumIds = rows.map((r) => r.album_id).filter((id): id is string => !!id);
+    return { name: rows.find((r) => r.artist)?.artist ?? undefined, albumIds };
+  });
+}
+
+/** The albums with these ids, for an artist reached through their songs. */
+export async function albumsByIds(dir: string, ids: string[]): Promise<DlAlbum[]> {
+  if (ids.length === 0) return [];
+  const db = await catalogDb(dir);
+  const marks = ids.map(() => '?').join(',');
+  const rows = await db.getAllAsync<{ data: string }>(
+    `SELECT data FROM albums WHERE id IN (${marks}) ORDER BY added_at DESC, name COLLATE NOCASE`,
+    ids,
+  );
+  return rows.map((r) => JSON.parse(r.data) as DlAlbum);
+}
+
 /** The ones with these ids, for lists whose order comes from elsewhere. */
 export async function songsByIds(dir: string, ids: string[]): Promise<Map<string, Song>> {
   const out = new Map<string, Song>();
