@@ -140,6 +140,12 @@ async function copyOne(song: Song, srcUri: string, folder: Directory): Promise<s
   const name = exportFileName(song, srcUri);
   const mime = mimeOf(srcUri);
   const src = new File(srcUri);
+  // Checked before anything is opened. A file handle is a `RandomAccessFile`
+  // in "rw", which CREATES what it does not find: on a catalog that has drifted
+  // from the disk, reading a missing download would leave an empty file sitting
+  // in the downloads folder as if it were the song, and export a silent empty
+  // copy on top of that. Failing here is the honest end of both.
+  if (!src.exists) throw new Error(`missing download: ${srcUri}`);
   let dest = folder.createFile(name, mime);
   try {
     await copyInChunks(src, dest);
