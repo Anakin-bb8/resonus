@@ -496,7 +496,7 @@
   "{songs} will be saved to this device (about {size}).": "{songs} будет скачано на это устройство (примерно {size}).",
   "{songs} need about {size}, but only {free} is free. The download may stop partway.": "Для {songs} необходимо примерно {size}, но свободно только {free}. Скачивание может завершиться неполностью.",
   "Show greeting": "Отображать приветствие",
-  "“Good morning”, “Good evening”… at the top of Home.": "“Доброго утра”, “Доброго вечера" и т.п. в самом верху домашнего экрана.",
+  "“Good morning”, “Good evening”… at the top of Home.": "“Доброго утра”, “Доброго вечера” и т.п. в самом верху домашнего экрана.",
   "Custom greeting": "Пользовательское приветствие",
   "Leave it empty to greet you by the time of day.": "Оставьте пустым, чтобы использовать стандартные приветствия (в зависимости от времени суток).",
   "Greeting": "Приветствие",
