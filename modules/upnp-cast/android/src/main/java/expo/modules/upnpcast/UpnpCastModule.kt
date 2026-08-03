@@ -8,6 +8,7 @@ import expo.modules.kotlin.records.Field
 import expo.modules.kotlin.records.Record
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -71,8 +72,11 @@ class UpnpCastModule : Module() {
      */
     AsyncFunction("search") { timeoutMs: Double, promise: Promise ->
       scope.launch {
+        // Both searches speak SSDP and both are mostly spent waiting, so they
+        // wait together: asking what each device is costs no extra seconds.
+        val locations = async { runCatching { AvTransport.locations() }.getOrDefault(emptyMap()) }
         val found = runCatching { DLNACast.search(timeoutMs.toLong()) }.getOrDefault(emptyList())
-        val verdicts = runCatching { AvTransport.renderers(found.map { it.address }) }
+        val verdicts = runCatching { AvTransport.renderers(found.map { it.address }, locations.await()) }
           .getOrDefault(emptyMap())
         val playable = found.filter { verdicts[it.address] != false }
         devices = devices + playable.associateBy { it.id }

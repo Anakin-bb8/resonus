@@ -109,6 +109,8 @@ object AvTransport {
    * which is all `discover` waits for; without it the whole window is spent
    * listening, so one search serves every device at once.
    */
+  suspend fun locations(): Map<String, String> = ssdpLocations()
+
   private suspend fun ssdpLocations(
     timeoutMs: Long = 3000,
     until: String? = null
@@ -173,13 +175,18 @@ object AvTransport {
    * description cannot be fetched right now, says nothing about what it is, and
    * is left for the caller to decide. Better a router on the list than a
    * speaker missing from it.
+   *
+   * `locations` is what `locations()` collected, taken as an argument so the
+   * caller can have that search running while it does its own.
    */
-  suspend fun renderers(addresses: List<String>): Map<String, Boolean> {
+  suspend fun renderers(
+    addresses: List<String>,
+    locations: Map<String, String>
+  ): Map<String, Boolean> {
     if (addresses.isEmpty()) return emptyMap()
     val known = addresses.filter { controlUrls.containsKey(it) }.associateWith { true }
     val rest = addresses.filter { it !in known }
     if (rest.isEmpty()) return known
-    val locations = ssdpLocations()
     val checked = withContext(Dispatchers.IO) {
       // At once: each description is a request to a different device, and one
       // that is slow to answer should not decide how long the list takes.
