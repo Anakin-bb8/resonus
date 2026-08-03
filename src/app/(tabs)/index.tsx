@@ -616,9 +616,8 @@ export default function HomeScreen() {
           </View>
           <View style={styles.headerRight}>
             {/* Before the buttons, and dimmer than them, so it reads as a state
-                and not as something to press. Only the cloud: the word was
-                taking the end of the greeting. */}
-            <OfflineIndicator iconOnly />
+                and not as something to press. */}
+            <OfflineIndicator />
             {showHistoryButton ? (
               <Link href="/history" asChild>
                 <Pressable hitSlop={10} accessibilityLabel={t('History')}>
