@@ -11,7 +11,8 @@ import { usePlayHistory } from '@/store/playHistory';
 import { type Album, type Artist, type ArtistInfo, type GuestAlbum, type Playlist, type SearchResult, type Song, type SongListSort, type StarType, type Starred } from '@/api/subsonic';
 import { queryClient } from '@/lib/query';
 import { deleteItem, getItem, setItem } from '@/lib/storage';
-import { getDownloadsCatalog } from '@/store/downloads';
+import { activeServerDir, getDownloadShelf, getDownloadsCatalog } from '@/store/downloads';
+import * as Cat from './downloadsDb';
 import {
   clearLocalCatalog,
   clearLocalCatalogDisk,
@@ -188,6 +189,25 @@ async function ensureCatalog(): Promise<MergedCatalog | null> {
   return (await ensureScanCatalog().catch(() => undefined)) ?? null;
 }
 
+
+/**
+ * The downloads catalog, when that is what is being browsed, as a database
+ * rather than as a list in memory.
+ *
+ * The queries below take this road when it is there: a server account offline
+ * browses its downloads, and on a library of fifteen thousand songs sorting or
+ * searching them in JavaScript means walking all of them for a screen that
+ * shows twenty. The local profile keeps the in-memory catalog it has always
+ * had, which is the music on the phone and a different size of problem.
+ *
+ * Null means "not that source", and every caller falls back to what it did
+ * before, which is also what happens if a query throws.
+ */
+function downloadsDir(): string | null {
+  if (!useAuthStore.getState().auth) return null;
+  return activeServerDir();
+}
+
 /**
  * Rescans the local source: discards the cached catalog (and the covers) and
  * rebuilds it by reading the files' tags again. Useful after adding or
@@ -229,6 +249,21 @@ function toArtist(local: CatArtist): Artist {
 }
 
 export async function getAlbumList(type: string, size = 20, offset = 0): Promise<Album[]> {
+  // The orders that are the database's to answer. "Recently played" and "most
+  // played" are not: they come from this phone's own history and counts, which
+  // live in a store, so those stay below.
+  const dir = downloadsDir();
+  const order = ({ newest: 'newest', random: 'random', alphabeticalByArtist: 'artist' } as const)[
+    type as 'newest' | 'random' | 'alphabeticalByArtist'
+  ];
+  if (dir && (order || (type !== 'recent' && type !== 'frequent'))) {
+    try {
+      const rows = await Cat.albumsPage(dir, order ?? 'name', size, offset);
+      return rows.map(toAlbum);
+    } catch {
+      // Falls through to the catalog in memory.
+    }
+  }
   const c = await ensureCatalog();
   if (!c) return [];
   let albums = [...c.albums];
@@ -288,6 +323,30 @@ export async function getAllAlbums(): Promise<Album[]> {
 }
 
 export async function getAlbum(albumId: string): Promise<{ album: Album; songs: Song[] }> {
+  const dir = downloadsDir();
+  if (dir) {
+    try {
+      const songs = await Cat.albumSongs(dir, albumId);
+      if (songs.length > 0) {
+        const shelf = (await getDownloadShelf()).albums.find((a) => a.id === albumId);
+        const first = songs[0];
+        return {
+          album: shelf
+            ? toAlbum(shelf)
+            : {
+                id: albumId,
+                name: first.album ?? '',
+                artist: first.artist,
+                songCount: songs.length,
+                coverArt: albumId,
+              },
+          songs,
+        };
+      }
+    } catch {
+      // Falls through to the catalog in memory.
+    }
+  }
   const c = await ensureCatalog();
   const songs = (c?.songs ?? [])
     .filter((s) => (s.albumId || normKey(s.album || UNKNOWN_ALBUM)) === albumId)
@@ -322,12 +381,41 @@ export async function getAlbum(albumId: string): Promise<{ album: Album; songs: 
 }
 
 export async function getArtists(): Promise<Artist[]> {
+  // The artists are derived from the albums, which the shelf already holds:
+  // this one never needed the songs, and asking for the catalog dragged all
+  // fifteen thousand of them along.
+  const dir = downloadsDir();
+  if (dir) {
+    try {
+      const shelf = await getDownloadShelf();
+      if (shelf.artists.length > 0) return shelf.artists.map(toArtist);
+    } catch {
+      // Falls through to the catalog in memory.
+    }
+  }
   const c = await ensureCatalog();
   if (!c) return [];
   return c.artists.map(toArtist);
 }
 
 export async function getArtist(artistId: string): Promise<{ artist: Artist; albums: Album[] }> {
+  const dir = downloadsDir();
+  if (dir) {
+    try {
+      const rows = await Cat.artistAlbums(dir, artistId);
+      if (rows.length > 0) {
+        const shelf = (await getDownloadShelf()).artists.find((a) => a.id === artistId);
+        return {
+          artist: shelf
+            ? toArtist(shelf)
+            : { id: artistId, name: rows[0].artist || artistId, albumCount: rows.length },
+          albums: rows.map(toAlbum),
+        };
+      }
+    } catch {
+      // Falls through to the catalog in memory.
+    }
+  }
   const c = await ensureCatalog();
   const albums = (c?.albums ?? []).filter(
     (a) => normKey(a.artist || UNKNOWN_ARTIST) === artistId,
@@ -374,6 +462,19 @@ export async function getSongList(
   count = 50,
   offset = 0,
 ): Promise<Song[]> {
+  // The orders the database can answer, which is all of them except the two
+  // that come from this phone's own history and play counts.
+  const dir = downloadsDir();
+  const order = ({ alpha: 'title', added: 'newest', random: 'random', server: 'title' } as const)[
+    sort as 'alpha' | 'added' | 'random' | 'server'
+  ];
+  if (dir && order) {
+    try {
+      return await Cat.songsPage(dir, order, count, offset);
+    } catch {
+      // Falls through to the catalog in memory.
+    }
+  }
   const c = await ensureCatalog();
   if (!c) return [];
   let songs = [...c.songs];
@@ -760,6 +861,14 @@ export async function search(query: string): Promise<SearchResult> {
  * album, and `search` already covers finding it by one of its songs.
  */
 export async function searchAlbums(query: string, count = 50): Promise<Album[]> {
+  const dir = downloadsDir();
+  if (dir && query.trim()) {
+    try {
+      return (await Cat.searchAlbums(dir, query.trim(), count)).map(toAlbum);
+    } catch {
+      // Falls through to the catalog in memory.
+    }
+  }
   const c = await ensureCatalog();
   if (!c) return [];
   const q = query.toLowerCase();
@@ -775,6 +884,14 @@ export async function searchAlbums(query: string, count = 50): Promise<Album[]> 
 
 /** Songs matching the text, over the catalog already in memory. */
 export async function searchSongs(query: string, count = 50): Promise<Song[]> {
+  const dir = downloadsDir();
+  if (dir && query.trim()) {
+    try {
+      return await Cat.searchSongs(dir, query.trim(), count);
+    } catch {
+      // Falls through to the catalog in memory.
+    }
+  }
   const c = await ensureCatalog();
   if (!c) return [];
   const q = query.toLowerCase();

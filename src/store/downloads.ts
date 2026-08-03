@@ -174,7 +174,7 @@ let cachedFull: DownloadsCatalog | null = null;
 let hydrateRun = 0;
 
 /** Download directory for the active server account (null if none). */
-function activeServerDir(): string | null {
+export function activeServerDir(): string | null {
   const auth = useAuthStore.getState().auth;
   return auth ? serverDir(auth) : null;
 }

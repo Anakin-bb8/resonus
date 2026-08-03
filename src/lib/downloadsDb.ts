@@ -344,6 +344,129 @@ export async function albumHasSongs(dir: string, albumId: string): Promise<boole
   return !!row;
 }
 
+/**
+ * The queries the offline screens actually make, answered by the database.
+ *
+ * Browsing offline used to mean `allSongs` and `allAlbums` in memory and a
+ * `filter` per screen: opening a twelve track album walked fifteen thousand
+ * songs, and so did every sort, every search and every artist. These do the
+ * walking in SQLite, over indexed columns, and hand back the rows asked for.
+ */
+export async function albumsPage(
+  dir: string,
+  order: 'name' | 'artist' | 'newest' | 'random',
+  limit: number,
+  offset: number,
+): Promise<DlAlbum[]> {
+  const db = await catalogDb(dir);
+  const by = {
+    name: 'name COLLATE NOCASE ASC',
+    artist: 'artist COLLATE NOCASE ASC, name COLLATE NOCASE ASC',
+    newest: 'added_at DESC',
+    random: 'RANDOM()',
+  }[order];
+  const rows = await timed('catalog albums page', () =>
+    db.getAllAsync<{ data: string }>(
+      `SELECT data FROM albums ORDER BY ${by} LIMIT ? OFFSET ?`,
+      [limit, offset],
+    ),
+  );
+  return rows.map((r) => JSON.parse(r.data) as DlAlbum);
+}
+
+/** One album's songs, in disc and track order. */
+export async function albumSongs(dir: string, albumId: string): Promise<Song[]> {
+  const db = await catalogDb(dir);
+  const rows = await timed('catalog album songs', () =>
+    db.getAllAsync<{ data: string }>(
+      `SELECT data FROM songs WHERE album_id = ?
+        ORDER BY disc IS NULL, disc, track IS NULL, track, title COLLATE NOCASE`,
+      [albumId],
+    ),
+  );
+  return rows.map((r) => JSON.parse(r.data) as Song);
+}
+
+/** The albums of one artist, by the key their songs were filed under. */
+export async function artistAlbums(dir: string, artistId: string): Promise<DlAlbum[]> {
+  const db = await catalogDb(dir);
+  const rows = await timed('catalog artist albums', () =>
+    db.getAllAsync<{ data: string }>(
+      `SELECT data FROM albums WHERE artist_id = ? ORDER BY added_at DESC, name COLLATE NOCASE`,
+      [artistId],
+    ),
+  );
+  return rows.map((r) => JSON.parse(r.data) as DlAlbum);
+}
+
+/** A page of songs, in the order the screen asked for. */
+export async function songsPage(
+  dir: string,
+  order: 'title' | 'artist' | 'newest' | 'random',
+  limit: number,
+  offset: number,
+): Promise<Song[]> {
+  const db = await catalogDb(dir);
+  const by = {
+    title: 'title COLLATE NOCASE ASC',
+    artist: 'artist COLLATE NOCASE ASC, title COLLATE NOCASE ASC',
+    newest: 'added_at DESC',
+    random: 'RANDOM()',
+  }[order];
+  const rows = await timed('catalog songs page', () =>
+    db.getAllAsync<{ data: string }>(
+      `SELECT data FROM songs ORDER BY ${by} LIMIT ? OFFSET ?`,
+      [limit, offset],
+    ),
+  );
+  return rows.map((r) => JSON.parse(r.data) as Song);
+}
+
+/** Songs whose title or artist contains the text. */
+export async function searchSongs(dir: string, text: string, limit: number): Promise<Song[]> {
+  const db = await catalogDb(dir);
+  const like = `%${text}%`;
+  const rows = await timed('catalog search songs', () =>
+    db.getAllAsync<{ data: string }>(
+      `SELECT data FROM songs WHERE title LIKE ? OR artist LIKE ?
+        ORDER BY title COLLATE NOCASE LIMIT ?`,
+      [like, like, limit],
+    ),
+  );
+  return rows.map((r) => JSON.parse(r.data) as Song);
+}
+
+/** Albums whose name or artist contains the text. */
+export async function searchAlbums(dir: string, text: string, limit: number): Promise<DlAlbum[]> {
+  const db = await catalogDb(dir);
+  const like = `%${text}%`;
+  const rows = await timed('catalog search albums', () =>
+    db.getAllAsync<{ data: string }>(
+      `SELECT data FROM albums WHERE name LIKE ? OR artist LIKE ?
+        ORDER BY name COLLATE NOCASE LIMIT ?`,
+      [like, like, limit],
+    ),
+  );
+  return rows.map((r) => JSON.parse(r.data) as DlAlbum);
+}
+
+/** The ones with these ids, for lists whose order comes from elsewhere. */
+export async function songsByIds(dir: string, ids: string[]): Promise<Map<string, Song>> {
+  const out = new Map<string, Song>();
+  if (ids.length === 0) return out;
+  const db = await catalogDb(dir);
+  for (let i = 0; i < ids.length; i += 400) {
+    const part = ids.slice(i, i + 400);
+    const marks = part.map(() => '?').join(',');
+    const rows = await db.getAllAsync<{ id: string; data: string }>(
+      `SELECT id, data FROM songs WHERE id IN (${marks})`,
+      part,
+    );
+    for (const r of rows) out.set(r.id, JSON.parse(r.data) as Song);
+  }
+  return out;
+}
+
 export async function allSongs(dir: string): Promise<Song[]> {
   const db = await catalogDb(dir);
   const rows = await db.getAllAsync<{ data: string }>('SELECT data FROM songs');
