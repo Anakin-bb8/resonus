@@ -45,11 +45,11 @@ body:
   - type: dropdown
     id: connectivity
     attributes:
-      label: Offline mode
-      description: Optional. Whether "Offline mode" was on in Settings when it went wrong.
+      label: Mode
+      description: Optional. Whether it goes wrong with a connection, with "Offline mode" on in Settings, or either way.
       options:
         - "Online"
-        - "Offline mode was on"
-        - "Not sure"
+        - "Offline"
+        - "Both"
     validations:
       required: false
