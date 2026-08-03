@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { coverArtUrl } from '@/api/data';
 import { useBottomSheetAnim } from '@/hooks/useBottomSheetAnim';
 import { useT } from '@/i18n';
+import { artistTargets } from '@/lib/artistNav';
 import { qualityLabel, sampleLabel } from '@/lib/audioQuality';
 import { formatBytes, formatDuration } from '@/lib/format';
 import { useDownloads } from '@/store/downloads';
@@ -42,27 +43,27 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-/** Same row, with the value as chips that browse each one (genres). */
-function ChipRow({
-  label,
-  values,
-  onPress,
-}: {
-  label: string;
-  values: string[];
-  onPress: (value: string) => void;
-}) {
+/** One chip: what it says and where it goes. */
+interface Chip {
+  key: string;
+  text: string;
+  onPress: () => void;
+}
+
+/** Same row, with the value as chips that each browse somewhere. */
+function ChipRow({ label, chips }: { label: string; chips: Chip[] }) {
   return (
     <View style={styles.row}>
       <Text style={styles.label}>{label}</Text>
       <View style={styles.chips}>
-        {values.map((v) => (
+        {chips.map((c) => (
           <Pressable
-            key={v}
+            key={c.key}
             style={({ pressed }) => [styles.chip, pressed && { opacity: 0.6 }]}
-            onPress={() => onPress(v)}
+            onPress={c.onPress}
+            accessibilityRole="button"
           >
-            <Text style={styles.chipText}>{v}</Text>
+            <Text style={styles.chipText}>{c.text}</Text>
           </Pressable>
         ))}
       </View>
@@ -96,22 +97,55 @@ export function SongInfoSheet() {
 
   const close = () => dismiss(closeNow);
 
-  /** Browses a genre, closing the sheet on the way out. */
-  const goToGenre = (genre: string) =>
+  /** Goes somewhere, closing the sheet on the way out. */
+  const go = (path: string) =>
     dismiss(() => {
       closeNow();
-      router.push(`/genre/${encodeURIComponent(genre)}`);
+      router.push(path);
     });
 
-  type InfoRow = { label: string; value: string } | { label: string; chips: string[] };
+  type InfoRow = { label: string; value: string } | { label: string; chips: Chip[] };
   const rows: InfoRow[] = [];
   const add = (label: string, value: string | number | undefined | null) => {
     if (value === undefined || value === null || value === '') return;
     rows.push({ label, value: String(value) });
   };
 
-  add(t('Album'), song.album);
-  add(t('Artist'), song.artist);
+  // Album and artist are chips too, and for the same reason the genres are:
+  // they are somewhere to go. Only when there is an id to go to, though; a
+  // radio stream or a song whose tags carry names and nothing else keeps them
+  // as the plain text they were.
+  if (song.album) {
+    rows.push(
+      song.albumId
+        ? {
+            label: t('Album'),
+            chips: [
+              { key: 'album', text: song.album, onPress: () => go(`/album/${song.albumId}`) },
+            ],
+          }
+        : { label: t('Album'), value: song.album },
+    );
+  }
+  // One chip per artist rather than a single "A feat. B" line: on a
+  // collaboration each name goes to its own screen, with no picker in between.
+  // A nameless target would draw an empty chip, so it falls back to the song's
+  // own artist string and, failing that, is dropped.
+  const artists = artistTargets(song)
+    .map((a) => ({ id: a.id, name: a.name || song.artist || '' }))
+    .filter((a) => a.name);
+  if (artists.length > 0) {
+    rows.push({
+      label: t('Artist'),
+      chips: artists.map((a) => ({
+        key: a.id,
+        text: a.name,
+        onPress: () => go(`/artist/${a.id}`),
+      })),
+    });
+  } else {
+    add(t('Artist'), song.artist);
+  }
   add(t('Year'), song.year);
   // Disc only when the album has more than one: "1 · disc 1" on a single disc
   // album is noise dressed up as information.
@@ -126,7 +160,16 @@ export function SongInfoSheet() {
   // Chips, like the album header's: a genre is somewhere to go, and it already
   // reads as one everywhere else in the app.
   const genres = song.genres?.map((g) => g.name) ?? (song.genre ? [song.genre] : []);
-  if (genres.length > 0) rows.push({ label: t('Genre'), chips: genres });
+  if (genres.length > 0) {
+    rows.push({
+      label: t('Genre'),
+      chips: genres.map((g) => ({
+        key: g,
+        text: g,
+        onPress: () => go(`/genre/${encodeURIComponent(g)}`),
+      })),
+    });
+  }
   add(t('Duration'), song.duration ? formatDuration(song.duration) : undefined);
 
   // The player's exact wording, arrow and all, so the same file is not
@@ -206,7 +249,7 @@ export function SongInfoSheet() {
               >
                 {rows.map((r) =>
                   'chips' in r ? (
-                    <ChipRow key={r.label} label={r.label} values={r.chips} onPress={goToGenre} />
+                    <ChipRow key={r.label} label={r.label} chips={r.chips} />
                   ) : (
                     <Row key={r.label} label={r.label} value={r.value} />
                   ),
