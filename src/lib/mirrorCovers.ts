@@ -75,6 +75,9 @@ let bytes = 0;
 let loaded = '';
 let saving: Promise<unknown> = Promise.resolve();
 let writeTimer: ReturnType<typeof setTimeout> | null = null;
+/** How many covers are fetched at the same time. */
+const FETCH_AT_ONCE = 4;
+
 /** Ids being fetched right now, so two screens don't fetch the same one. */
 const inFlight = new Set<string>();
 
@@ -190,18 +193,29 @@ export function keepMirrorCovers(
       // difference between saving them on the first run and on some later one.
       await loadMirrorCovers(profile);
       if (known.size >= MAX) return;
-      // Deduplicated by what will be fetched: a playlist hands over the album of
-      // every one of its songs, and twenty tracks off the same record are twenty
-      // copies of one want. Without this each would be fetched, since none is in
-      // `known` yet when the list is drawn up.
+      // Deduplicated by what is being LOOKED UP, not by what is fetched. Twenty
+      // favourites off one record ask for twenty different pictures as far as
+      // the server is concerned, since each song has a cover id of its own, and
+      // all twenty are the album's one file. Keeping the first want that claims
+      // a key is what turns eight hundred downloads into two hundred.
+      const claimed = new Set<string>();
       const byFrom = new Map<string, CoverWant>();
       for (const want of ids) {
         if (!want) continue;
         const w = typeof want === 'string' ? { from: want, keys: [want] } : want;
-        if (!w.from) continue;
+        if (!w.from || w.keys.length === 0) continue;
         const seen = byFrom.get(w.from);
-        if (seen) seen.keys.push(...w.keys);
-        else byFrom.set(w.from, { from: w.from, keys: [...w.keys] });
+        if (seen) {
+          for (const k of w.keys) {
+            if (claimed.has(k)) continue;
+            claimed.add(k);
+            seen.keys.push(k);
+          }
+          continue;
+        }
+        if (w.keys.every((k) => claimed.has(k))) continue;
+        for (const k of w.keys) claimed.add(k);
+        byFrom.set(w.from, { from: w.from, keys: [...w.keys] });
       }
       // A want whose keys can all be found already is nothing to do. That is
       // what makes running this over a whole library cheap after the first time.
@@ -215,44 +229,51 @@ export function keepMirrorCovers(
       if (taking.length === 0) return;
       for (const w of taking) inFlight.add(w.from);
       let added = false;
-      for (const w of taking) {
+
+      /** One want: the file if it is missing, the names for it either way. */
+      const fetchOne = async (w: CoverWant): Promise<void> => {
         const id = w.from;
-        // Already on disk, and only the other names for it were missing: the
-        // picture does not need fetching twice.
-        if (known.has(id)) {
-          for (const key of w.keys) alias(profile, key, id);
-          inFlight.delete(id);
-          added = true;
-          continue;
-        }
-        const url = coverArtUrl(auth, id, SIZE);
-        if (!url) {
-          inFlight.delete(id);
-          continue;
-        }
-        const file = fileFor(profile, id);
         try {
+          // Already on disk, and only the other names for it were missing: the
+          // picture does not need fetching twice.
+          if (known.has(id)) {
+            for (const key of w.keys) alias(profile, key, id);
+            added = true;
+            return;
+          }
+          const url = coverArtUrl(auth, id, SIZE);
+          if (!url) return;
+          const file = fileFor(profile, id);
           await FileSystem.makeDirectoryAsync(DIR, { intermediates: true }).catch(() => {});
           const res = await FileSystem.downloadAsync(url, file);
           // A server that answers an error writes that error to the file, and a
           // broken file on disk would pass for a cover for good.
           if (res.status !== 200) {
             await FileSystem.deleteAsync(file, { idempotent: true }).catch(() => {});
-          } else {
-            known.add(id);
-            registerCover(id, file);
-            for (const key of w.keys) alias(profile, key, id);
-            // Counted as it is written: walking thousands of files to add up
-            // what they take is not something a settings screen should do.
-            const info = await FileSystem.getInfoAsync(file).catch(() => null);
-            bytes += info?.exists ? (info.size ?? 0) : 0;
-            added = true;
+            return;
           }
+          known.add(id);
+          registerCover(id, file);
+          for (const key of w.keys) alias(profile, key, id);
+          // Counted as it is written: walking thousands of files to add up
+          // what they take is not something a settings screen should do.
+          const info = await FileSystem.getInfoAsync(file).catch(() => null);
+          bytes += info?.exists ? (info.size ?? 0) : 0;
+          added = true;
         } catch {
           // Network, disk, whatever: it stays unknown and can be tried again.
         } finally {
           inFlight.delete(id);
         }
+      };
+
+      // A few at a time. One after another meant a library's worth of covers
+      // took as many round trips as there were albums, and somebody looking at
+      // their favourites five minutes in still saw grey. Four, which is what
+      // the playlist prefetch settled on: enough to keep the link busy, few
+      // enough not to be a burst at somebody's server.
+      for (let i = 0; i < taking.length; i += FETCH_AT_ONCE) {
+        await Promise.all(taking.slice(i, i + FETCH_AT_ONCE).map(fetchOne));
       }
       if (added) persist(profile);
     })();
