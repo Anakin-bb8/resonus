@@ -102,6 +102,14 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- The list of devices to play to no longer offers things that cannot play. A
+  search for speakers has to go out to the whole network, so everything on it
+  answers, and almost nothing in a house plays music: the router is the usual
+  one, since it speaks UPnP to open ports, and for anyone without a DLNA
+  speaker it was the only thing on the list. A device is now asked whether it
+  can be played to at all, and the ones that answer that they cannot are left
+  out. The ones that answer nothing still show: not having been able to ask is
+  not a no, and a speaker missing from the list is worse than a router on it.
 - Resonus no longer asks the system for the audio the way an interruption
   asks for it. Playing anything requested the audio "for a moment", which is
   what a navigation prompt, a notification or a call asks for, and the request

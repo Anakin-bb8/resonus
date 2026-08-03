@@ -59,13 +59,25 @@ class UpnpCastModule : Module() {
       scope.cancel()
     }
 
-    /** Busca renderers en la red; resuelve con la lista al agotar el timeout. */
+    /**
+     * Busca renderers en la red; resuelve con la lista al agotar el timeout.
+     *
+     * A search has to go out to the whole network, so everything on it answers,
+     * and almost nothing in a house can play a note. The router is the usual
+     * one: it speaks UPnP to open ports, and it ended up in a list of speakers,
+     * which is all anyone without one would find there. Devices that answer
+     * that they have no AVTransport are dropped; the ones that answer nothing
+     * still show, since not having been able to ask is not a no.
+     */
     AsyncFunction("search") { timeoutMs: Double, promise: Promise ->
       scope.launch {
         val found = runCatching { DLNACast.search(timeoutMs.toLong()) }.getOrDefault(emptyList())
-        devices = devices + found.associateBy { it.id }
+        val verdicts = runCatching { AvTransport.renderers(found.map { it.address }) }
+          .getOrDefault(emptyMap())
+        val playable = found.filter { verdicts[it.address] != false }
+        devices = devices + playable.associateBy { it.id }
         promise.resolve(
-          found.map {
+          playable.map {
             mapOf("id" to it.id, "name" to it.name, "address" to it.address, "isTV" to it.isTV)
           },
         )

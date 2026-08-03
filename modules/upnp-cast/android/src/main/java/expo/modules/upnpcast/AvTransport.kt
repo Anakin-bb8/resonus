@@ -2,6 +2,8 @@ package expo.modules.upnpcast
 
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
 import java.net.DatagramPacket
 import java.net.DatagramSocket
@@ -99,6 +101,18 @@ object AvTransport {
    * come back to our own port, so this needs no multicast lock.
    */
   private suspend fun discover(address: String, timeoutMs: Long = 3000): String? =
+    ssdpLocations(timeoutMs, until = address)[address]
+
+  /**
+   * Where each device on the network says its description lives, address →
+   * LOCATION. With `until` set it stops as soon as that address has answered,
+   * which is all `discover` waits for; without it the whole window is spent
+   * listening, so one search serves every device at once.
+   */
+  private suspend fun ssdpLocations(
+    timeoutMs: Long = 3000,
+    until: String? = null
+  ): Map<String, String> =
     withContext(Dispatchers.IO) {
       // Asked for twice: not every renderer answers a search for its own device
       // type, and the ones that don't do answer a search for anything at all.
@@ -111,6 +125,7 @@ object AvTransport {
             "ST: $it\r\n\r\n"
           ).toByteArray()
       }
+      val found = mutableMapOf<String, String>()
       runCatching {
         DatagramSocket().use { socket ->
           socket.soTimeout = 500
@@ -127,18 +142,60 @@ object AvTransport {
             } catch (e: SocketTimeoutException) {
               continue
             }
-            if (packet.address?.hostAddress != address) continue
+            val from = packet.address?.hostAddress ?: continue
             val answer = String(packet.data, 0, packet.length)
             val location = answer.lineSequence()
               .firstOrNull { it.startsWith("LOCATION:", ignoreCase = true) }
               ?.substringAfter(":")
               ?.trim()
-            if (!location.isNullOrEmpty()) return@use location
+            if (location.isNullOrEmpty()) continue
+            found.putIfAbsent(from, location)
+            if (until != null && from == until) break
           }
-          null
         }
-      }.getOrNull()
+      }
+      found
     }
+
+  /**
+   * Which of these addresses can be played to, as far as they are willing to
+   * say. Answers by address: true is a renderer, false is something that
+   * answered and cannot play, and absent means it did not say.
+   *
+   * A search has to go out to the whole network to reach anything at all, so
+   * everything on it answers, and most of what is on a home network cannot play
+   * a note. A router is the usual one: it speaks UPnP to open ports, has no
+   * business in a list of speakers, and is what people find there when they
+   * have nothing else. Anything that does play audio over UPnP has an
+   * AVTransport service in its description, and that is what is asked here.
+   *
+   * Silence is not a "no": a device that does not answer in time, or whose
+   * description cannot be fetched right now, says nothing about what it is, and
+   * is left for the caller to decide. Better a router on the list than a
+   * speaker missing from it.
+   */
+  suspend fun renderers(addresses: List<String>): Map<String, Boolean> {
+    if (addresses.isEmpty()) return emptyMap()
+    val known = addresses.filter { controlUrls.containsKey(it) }.associateWith { true }
+    val rest = addresses.filter { it !in known }
+    if (rest.isEmpty()) return known
+    val locations = ssdpLocations()
+    val checked = withContext(Dispatchers.IO) {
+      // At once: each description is a request to a different device, and one
+      // that is slow to answer should not decide how long the list takes.
+      rest.map { address ->
+        async {
+          val location = locations[address] ?: return@async null
+          val description = fetch(location) ?: return@async null
+          val control = avTransportControlUrl(description, location)
+          // Resolved on the way: playing to it later is one round trip shorter.
+          if (control != null) controlUrls[address] = control
+          address to (control != null)
+        }
+      }.awaitAll().filterNotNull()
+    }
+    return known + checked
+  }
 
   /**
    * The AVTransport control URL out of the device description.
