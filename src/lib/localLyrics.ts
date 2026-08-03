@@ -15,6 +15,8 @@ import { parseLrc } from './lrc';
 import { isManualOffline } from '@/api/netGate';
 
 const LRCLIB_CACHE_DIR = FileSystem.documentDirectory + 'lyrics-cache/';
+/** Who is asking, for LRCLIB. Sent as both headers: see `fetchLrclib`. */
+const CLIENT_UA = 'Resonus (https://github.com/juananzzz/resonus)';
 const AUDIO_EXT_RE = /\.[a-z0-9]{1,5}$/i;
 
 /** URI of the sibling `.lrc` next to an audio file (works for `file://` and SAF). */
@@ -120,7 +122,15 @@ async function fetchLrclib(song: Song): Promise<string | null> {
     trace('not asked: offline was chosen', song);
     return null;
   }
-  const headers = { 'Lrclib-Client': 'Resonus (https://github.com/juananzzz/resonus)' };
+  // The User-Agent is not politeness, it is the request working at all. React
+  // Native sends okhttp's own on Android, and LRCLIB answers that with a 520
+  // from Cloudflare: every lookup failed, silently, on every Android phone.
+  // Anything that identifies the client is accepted, and identifying it is
+  // what their API asks for anyway.
+  const headers = {
+    'Lrclib-Client': CLIENT_UA,
+    'User-Agent': CLIENT_UA,
+  };
   try {
     // /api/get requires the full signature (album + duration); if we have it,
     // it's the most precise path. If not (or 404), /api/search and the first match.

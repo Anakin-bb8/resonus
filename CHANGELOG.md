@@ -102,6 +102,12 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- Online lyrics search works again. Every lookup on Android was being turned
+  away by LRCLIB with an error, so a song the server had no lyrics for simply
+  showed none, whatever the setting said. The app was not saying who it was:
+  React Native sends the name of the HTTP library it is built on, and that is
+  what was refused. It now introduces itself, which is what their API asks for
+  anyway. Nothing about the setting changed; it had never been the setting.
 - Lyrics are looked up again when the app has fallen back to offline on its
   own. Making offline mode offline took LRCLIB with it, which is right when
   somebody chose that mode and wrong when the app chose it for them: falling
