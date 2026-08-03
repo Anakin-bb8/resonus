@@ -15,6 +15,7 @@ import * as MediaLibrary from 'expo-media-library';
 import { type Song } from '@/api/subsonic';
 import { useScanProgress } from '@/store/scanProgress';
 import { base64ToUint8, parseID3, type ID3Tags } from './id3';
+import * as Db from './localDb';
 
 const AUDIO_EXT = /\.(mp3|flac|m4a|aac|ogg|opus|wav|wma|alac|aif|aiff)$/i;
 
@@ -751,10 +752,15 @@ function migrateArtistCovers(catalog: LocalCatalog): void {
   }
 }
 
+/** Which database this source's catalog lives in. */
+function dbName(sourceMode: string, uri?: string): string {
+  return `c_${hashKey(cacheKey(sourceMode, uri))}.db`;
+}
+
 async function saveCatalogToDisk(sourceMode: string, uri: string | undefined, catalog: LocalCatalog): Promise<void> {
   try {
     await FileSystem.makeDirectoryAsync(CATALOG_DIR, { intermediates: true }).catch(() => {});
-    await FileSystem.writeAsStringAsync(catalogFile(sourceMode, uri), JSON.stringify(catalog));
+    await Db.saveCatalog(CATALOG_DIR, dbName(sourceMode, uri), catalog);
   } catch {
     // If it cannot be saved, the next time will read it again. No harm done.
   }
@@ -762,12 +768,12 @@ async function saveCatalogToDisk(sourceMode: string, uri: string | undefined, ca
 
 async function loadCatalogFromDisk(sourceMode: string, uri?: string): Promise<LocalCatalog | null> {
   try {
-    const file = catalogFile(sourceMode, uri);
-    const info = await FileSystem.getInfoAsync(file);
-    if (!info.exists) return null;
-    const raw = await FileSystem.readAsStringAsync(file);
-    const catalog = JSON.parse(raw) as LocalCatalog;
-    if (!catalog?.songs?.length) return null;
+    await FileSystem.makeDirectoryAsync(CATALOG_DIR, { intermediates: true }).catch(() => {});
+    const stored =
+      (await Db.loadCatalog<LocalAlbum, LocalArtist>(CATALOG_DIR, dbName(sourceMode, uri))) ??
+      (await migrateCatalogFile(sourceMode, uri));
+    if (!stored?.songs?.length) return null;
+    const catalog: LocalCatalog = stored;
     // Migration: older catalogs carry their covers embedded as base64. They
     // are written out to files once and the lighter catalog is saved again.
     if (catalog.albums.some((a) => a.coverBase64)) {
@@ -784,9 +790,38 @@ async function loadCatalogFromDisk(sourceMode: string, uri?: string): Promise<Lo
   }
 }
 
+/**
+ * Moves a catalog written as one JSON file into the database, once.
+ *
+ * Anybody using the local profile has one, and it is the whole library: without
+ * this they would open the app to an empty shelf and a rescan, which on a phone
+ * full of music is minutes of reading tags again. The file goes when its
+ * contents are safely in.
+ */
+async function migrateCatalogFile(
+  sourceMode: string,
+  uri?: string,
+): Promise<LocalCatalog | null> {
+  const file = catalogFile(sourceMode, uri);
+  try {
+    const info = await FileSystem.getInfoAsync(file);
+    if (!info.exists) return null;
+    const catalog = JSON.parse(await FileSystem.readAsStringAsync(file)) as LocalCatalog;
+    if (!catalog?.songs?.length) return null;
+    await Db.saveCatalog(CATALOG_DIR, dbName(sourceMode, uri), catalog);
+    await FileSystem.deleteAsync(file, { idempotent: true }).catch(() => {});
+    return catalog;
+  } catch {
+    return null;
+  }
+}
+
 /** Deletes the catalog kept on disk, which is what scanning again does. */
 export async function clearLocalCatalogDisk(): Promise<void> {
   try {
+    // The handles first: a database whose file is deleted underneath it keeps
+    // answering from a file nobody can see any more.
+    await Db.closeLocalDbs();
     await FileSystem.deleteAsync(CATALOG_DIR, { idempotent: true });
   } catch {
     // ignore
