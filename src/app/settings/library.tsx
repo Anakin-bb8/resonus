@@ -10,6 +10,7 @@ import { rescanLocal } from '@/api/data';
 import { getScanStatus, startScan } from '@/api/backend';
 import { Field, SettingRow, SettingsPage, SwitchList, settingsStyles } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
+import { clearExportCache } from '@/lib/exportSong';
 import { ensureAudioPermission, pickFolder } from '@/lib/localLibrary';
 import { queryClient } from '@/lib/query';
 import { useAuthStore } from '@/store/auth';
@@ -108,6 +109,9 @@ export default function LibrarySettings() {
 
   async function clearCache() {
     queryClient.clear();
+    // The copy left behind by the last "send to another app" counts as cache
+    // too, and it is the biggest thing in it: a whole song.
+    clearExportCache();
     await Promise.all([Image.clearMemoryCache(), Image.clearDiskCache()]).catch(() => {});
     toast(t('Cache cleared'));
   }
