@@ -4,7 +4,7 @@
  * from the server or the local catalog based on the mode (online/offline).
  */
 import { useAuthStore } from '@/store/auth';
-import { getDownloadsCatalog, useDownloads } from '@/store/downloads';
+import { getDownloadShelf, getDownloadsCatalog, useDownloads } from '@/store/downloads';
 import {
   enabledFolderIds,
   profileKeyOf,
@@ -68,13 +68,21 @@ function annotate(songs: Song[]): Song[] {
   return hideUnavailable ? annotated.filter((s) => !s.unavailable) : annotated;
 }
 
-/** Loads the mirror and the outbox for the profile, and registers the
- *  album art of downloads in the local index (without this, offline album art won't appear). */
+/**
+ * Loads the mirror and the outbox for the profile, and registers the album art
+ * of downloads in the local index (without this, offline album art won't
+ * appear).
+ *
+ * The shelf, not the whole catalog: the songs behind it are only needed to
+ * resolve ids, whoever needs them asks for them, and waiting for fifteen
+ * thousand of them was the offline start standing still with placeholders on
+ * screen whatever the screen was showing.
+ */
 async function loadMirror(): Promise<void> {
   await Promise.all([
     useLibraryMirror.getState().load(),
     useOfflineQueue.getState().load(),
-    getDownloadsCatalog(),
+    getDownloadShelf(),
   ]);
 }
 
@@ -98,7 +106,7 @@ function catalogSongs(catalog: { songs: Song[] }): Map<string, Song> {
  * of its songs at once. The mirror answers with one query for the lot, which
  * is what its own table of songs is for.
  */
-async function resolveSongs(ids: string[], catalog: { songs: Song[] }): Promise<Map<string, Song>> {
+async function resolveSongs(ids: string[]): Promise<Map<string, Song>> {
   const out = new Map<string, Song>();
   const meta = useOfflineQueue.getState().data.songMeta ?? {};
   const pending: string[] = [];
@@ -109,18 +117,29 @@ async function resolveSongs(ids: string[], catalog: { songs: Song[] }): Promise<
   }
   if (pending.length > 0) {
     const fromMirror = await useLibraryMirror.getState().songs(pending);
-    const local = catalogSongs(catalog);
     for (const id of pending) {
-      const s = fromMirror.get(id) ?? local.get(id);
+      const s = fromMirror.get(id);
       if (s) out.set(id, s);
+    }
+    // The downloads catalog is the fallback, and it is only built if the mirror
+    // came up short: it is every downloaded song parsed out of the database, and
+    // asking for it to resolve a handful of ids the mirror already knows was
+    // paying for the whole library to answer a question about six covers.
+    const missing = pending.filter((id) => !out.has(id));
+    if (missing.length > 0) {
+      const local = catalogSongs(await getDownloadsCatalog());
+      for (const id of missing) {
+        const s = local.get(id);
+        if (s) out.set(id, s);
+      }
     }
   }
   return out;
 }
 
 /** One song, for the places that only need one. */
-async function resolveSong(id: string, catalog: { songs: Song[] }): Promise<Song | undefined> {
-  return (await resolveSongs([id], catalog)).get(id);
+async function resolveSong(id: string): Promise<Song | undefined> {
+  return (await resolveSongs([id])).get(id);
 }
 
 /** Final desired tracklist for an offline playlist: the outbox edit if any,
@@ -713,7 +732,6 @@ async function mirrorPlaylists(): Promise<Subsonic.Playlist[]> {
   const mirror = useLibraryMirror.getState();
   const stored = await mirror.playlists();
   const qpls = useOfflineQueue.getState().data.playlists ?? {};
-  const catalog = await getDownloadsCatalog();
   const files = useDownloads.getState().files;
   if (!stored && Object.keys(qpls).length === 0) return Local.getPlaylists();
 
@@ -740,7 +758,7 @@ async function mirrorPlaylists(): Promise<Subsonic.Playlist[]> {
     const f = firstDownloaded(songIds);
     if (f) wanted.push(f);
   }
-  const covers = await resolveSongs(wanted, catalog);
+  const covers = await resolveSongs(wanted);
 
   const out: Subsonic.Playlist[] = [];
   // Playlists created offline (still with a temporary id).
@@ -817,7 +835,9 @@ export function getStarred(): Promise<Subsonic.Starred> {
 async function mirrorStarred(): Promise<Subsonic.Starred> {
   await loadMirror();
   const mirror = useLibraryMirror.getState();
-  const catalog = await getDownloadsCatalog();
+  // The shelf: what is asked of it here is which albums are downloaded, and
+  // that does not need the songs behind them.
+  const catalog = await getDownloadShelf();
   await useOfflineQueue.getState().load();
   const favs = useOfflineQueue.getState().data.favs ?? {};
   const hasQueue = Object.keys(favs).length > 0;
@@ -856,7 +876,7 @@ async function mirrorStarred(): Promise<Subsonic.Starred> {
         if (a) artists = [a, ...artists];
       }
     } else if (!songs.some((x) => x.id === id)) {
-      const song = await resolveSong(id, catalog);
+      const song = await resolveSong(id);
       if (song) songs = [song, ...songs];
     }
   }
@@ -1171,8 +1191,7 @@ export async function addToPlaylist(playlistId: string, songId: string): Promise
     const ids = await currentPlaylistSongIds(playlistId);
     useOfflineQueue.getState().setPlaylist(playlistId, { songIds: [...ids, songId] });
     // Save the song's metadata so it can be displayed in the offline playlist.
-    const catalog = await getDownloadsCatalog();
-    const song = await resolveSong(songId, catalog);
+    const song = await resolveSong(songId);
     if (song) useOfflineQueue.getState().rememberSongs([song]);
     return;
   }
@@ -1220,7 +1239,6 @@ async function mirrorPlaylist(
 ): Promise<{ playlist: Subsonic.Playlist; songs: Subsonic.Song[] }> {
   await loadMirror();
   const mirror = useLibraryMirror.getState();
-  const catalog = await getDownloadsCatalog();
   const edit = useOfflineQueue.getState().data.playlists?.[id];
   const detail = await mirror.playlistDetail(id);
 
@@ -1244,7 +1262,7 @@ async function mirrorPlaylist(
     return { playlist: { ...playlist, songCount: 0 }, songs: [] };
   }
   // Every id at once: one query for the playlist instead of one per song.
-  const found = await resolveSongs(songIds, catalog);
+  const found = await resolveSongs(songIds);
   const songs = songIds
     .map((sid) => found.get(sid))
     .filter((s): s is Subsonic.Song => !!s);

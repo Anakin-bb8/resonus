@@ -309,18 +309,21 @@ export async function downloadedFiles(
   dir: string,
 ): Promise<{ files: Record<string, string>; bitRates: Record<string, number> }> {
   const db = await catalogDb(dir);
-  const rows = await db.getAllAsync<{ id: string; local_uri: string | null; data: string }>(
-    'SELECT id, local_uri, data FROM songs WHERE local_uri IS NOT NULL',
+  // The bitrate is dug out of the row's JSON by SQLite rather than by us: it is
+  // the one field wanted from it, and only transcoded downloads even have it.
+  // Handing the whole `data` column over instead meant fifteen thousand strings
+  // crossing into JS and fifteen thousand `JSON.parse` calls, on a path the
+  // offline start waits for before it can show anything.
+  const rows = await db.getAllAsync<{ id: string; local_uri: string | null; bit: number | null }>(
+    `SELECT id, local_uri, json_extract(data, '$.dlBitRate') AS bit
+       FROM songs WHERE local_uri IS NOT NULL`,
   );
   const files: Record<string, string> = {};
   const bitRates: Record<string, number> = {};
   for (const r of rows) {
     if (!r.local_uri) continue;
     files[r.id] = r.local_uri;
-    // Only the transcoded ones carry it, so it is read from the row's own
-    // JSON rather than given a column of its own.
-    const bit = (JSON.parse(r.data) as Song).dlBitRate;
-    if (bit != null) bitRates[r.id] = bit;
+    if (r.bit != null) bitRates[r.id] = r.bit;
   }
   return { files, bitRates };
 }

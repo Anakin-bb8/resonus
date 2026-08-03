@@ -146,8 +146,17 @@ async function serverDirs(): Promise<string[]> {
 
 // ── Active account's catalog, cached in memory ───────────────────────────
 
-let cachedCatalog: DownloadsCatalog | null = null;
+/** The albums and artists, which every offline screen needs. */
+let cachedShelf: Omit<DownloadsCatalog, 'songs'> | null = null;
 let cachedForDir: string | null = null;
+/** Every song, which only the screens that resolve ids need. Kept apart from
+ *  the shelf because it is twenty times the size and comes at twenty times the
+ *  cost (see `getDownloadsCatalog`). */
+let cachedSongs: Song[] | null = null;
+let cachedSongsDir: string | null = null;
+/** The two of them handed out as one object, and always the SAME object: what
+ *  reads it keys its own index on that identity (see `catalogSongs`). */
+let cachedFull: DownloadsCatalog | null = null;
 
 /** Counts hydrations, so a slower earlier one can't overwrite a later one. */
 let hydrateRun = 0;
@@ -184,26 +193,42 @@ function deriveArtists(albums: DlAlbum[]): (Artist & { coverUri?: string })[] {
 export async function getDownloadsCatalog(): Promise<DownloadsCatalog> {
   const dir = activeServerDir();
   if (!dir) return { songs: [], albums: [], artists: [] };
-  if (!cachedCatalog || cachedForDir !== dir) {
-    // The whole library, which is what the offline Library screen is. Kept in
-    // memory afterwards, as before; what changed is that building it no longer
-    // means parsing a file of everything, and that nothing else has to.
-    //
-    // Timed because it is the one thing left that reads everything at once, and
-    // the question is how long the database takes to hand a whole library over.
-    // If that turns out to cost, the offline screens should ask for what they
-    // show instead, which is a bigger change than it is worth guessing at.
-    const [songs, albums] = await timed('offline catalog', () =>
-      Promise.all([Db.allSongs(dir), Db.allAlbums(dir)]),
-    );
-    cachedCatalog = { songs, albums, artists: deriveArtists(albums) };
+  const shelf = await getDownloadShelf();
+  if (!cachedSongs || cachedSongsDir !== dir) {
+    // Every song, which is what resolving an id offline needs. The shelf above
+    // does not, and neither does the screen that shows it, so this waits until
+    // something actually asks: on fifteen thousand downloads it is fifteen
+    // thousand rows parsed out of the database, and it used to happen on the way
+    // into the first offline screen whatever that screen was showing.
+    cachedSongs = await timed('offline catalog', () => Db.allSongs(dir));
+    cachedSongsDir = dir;
+    cachedFull = null;
+  }
+  if (!cachedFull) cachedFull = { ...shelf, songs: cachedSongs };
+  return cachedFull;
+}
+
+/**
+ * The albums and artists of what is downloaded, without the songs.
+ *
+ * This is what the offline Library is made of, and what registers the covers of
+ * downloads in the global index, so it is also what the data layer waits for
+ * before answering anything. Six hundred albums where the songs are fifteen
+ * thousand: the difference is the offline start.
+ */
+export async function getDownloadShelf(): Promise<Omit<DownloadsCatalog, 'songs'>> {
+  const dir = activeServerDir();
+  if (!dir) return { albums: [], artists: [] };
+  if (!cachedShelf || cachedForDir !== dir) {
+    const albums = await timed('offline shelf', () => Db.allAlbums(dir));
+    cachedShelf = { albums, artists: deriveArtists(albums) };
     cachedForDir = dir;
   }
   // Always (not just on build): clearLocalCatalog() empties the global cover
   // index and downloaded covers need to be re-registered.
-  for (const a of cachedCatalog.albums) registerCover(a.id, a.coverUri);
-  for (const a of cachedCatalog.artists) registerCover(a.id, a.coverUri);
-  return cachedCatalog;
+  for (const a of cachedShelf.albums) registerCover(a.id, a.coverUri);
+  for (const a of cachedShelf.artists) registerCover(a.id, a.coverUri);
+  return cachedShelf;
 }
 
 /** Does the active account have downloads? A count, not the catalog. */
@@ -222,8 +247,11 @@ export async function albumHasDownloads(albumId: string): Promise<boolean> {
 
 /** Drops the in-memory view of the catalog, without asking anyone to re-read. */
 function resetCatalogCache() {
-  cachedCatalog = null;
+  cachedShelf = null;
   cachedForDir = null;
+  cachedSongs = null;
+  cachedSongsDir = null;
+  cachedFull = null;
 }
 
 function invalidate() {
@@ -717,7 +745,10 @@ export const useDownloads = create<DownloadsState>((set, get) => {
       for (const dir of dirs) {
         try {
           // Two columns out of the database, not every song parsed out of a file.
-          const part = await Db.downloadedFiles(dir);
+          // Timed because offline this is on the way in: nothing is drawn until
+          // the app knows whether there is anything downloaded, and on a library
+          // of fifteen thousand that wait is the whole of the first screen.
+          const part = await timed('downloads hydrate', () => Db.downloadedFiles(dir));
           Object.assign(files, part.files);
           Object.assign(dlBitRates, part.bitRates);
         } catch {
