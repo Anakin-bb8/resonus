@@ -308,7 +308,12 @@ export async function saveEntry(
   songs?: Song[],
 ): Promise<void> {
   const db = await mirrorDb(dir, profile);
-  await serialized(() => db.withTransactionAsync(() => putEntry(db, kind, id, value, songs)));
+  // Timed per kind: writing an album is one row and its tracklist, writing a
+  // playlist can be a thousand songs, and until now none of it had a name in
+  // the report, so it showed up as time nobody could account for.
+  await timed(`mirror ${kind}`, () =>
+    serialized(() => db.withTransactionAsync(() => putEntry(db, kind, id, value, songs))),
+  );
 }
 
 export async function dropEntry(

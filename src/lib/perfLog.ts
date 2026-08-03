@@ -10,6 +10,8 @@
  * per measured operation, so it can stay on for everyone.
  */
 
+import { AppState } from 'react-native';
+
 /** How often the heartbeat checks in. */
 const TICK_MS = 250;
 /** Under this, being late is ordinary scheduling noise rather than a block. */
@@ -41,16 +43,31 @@ const ops = new Map<string, OpStat>();
 /** Operations in flight, for `during`. */
 const running: string[] = [];
 
-/** Starts the heartbeat (idempotent). */
+/**
+ * Starts the heartbeat (idempotent).
+ *
+ * The app being in the background is not a block. Android stops handing the
+ * timer its turn out there, so coming back after ten seconds away looked like a
+ * ten second freeze, and those went straight to the top of the report where
+ * they were the first thing anybody read. The state is watched for that reason,
+ * and the tick after a return is skipped rather than blamed.
+ */
 export function startPerfLog(): void {
   if (timer) return;
   startedAt = Date.now();
   lastTick = Date.now();
+  let awake = AppState.currentState === 'active';
+  AppState.addEventListener('change', (state) => {
+    awake = state === 'active';
+    // Whatever happened out there is not ours to measure, and the clock starts
+    // again here.
+    lastTick = Date.now();
+  });
   timer = setInterval(() => {
     const now = Date.now();
     const late = now - lastTick - TICK_MS;
     lastTick = now;
-    if (late < BLOCK_MS) return;
+    if (!awake || late < BLOCK_MS) return;
     const block: Block = { at: now, ms: late, during: running[running.length - 1] ?? '—' };
     // In development it also goes to the console, where whoever is driving the
     // app can see it land on the screen that caused it.

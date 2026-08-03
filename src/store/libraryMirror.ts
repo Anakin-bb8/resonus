@@ -17,6 +17,7 @@
  * remains is a rule about what belongs here, which is a different thing.
  */
 import * as FileSystem from 'expo-file-system/legacy';
+import { InteractionManager } from 'react-native';
 import { create } from 'zustand';
 
 import type { Album, Artist, Playlist, Song, Starred, SubsonicAuth } from '@/api/subsonic';
@@ -137,6 +138,21 @@ async function withMirror<T>(
   }
 }
 
+/**
+ * A write, which is bookkeeping and not what anybody is waiting for.
+ *
+ * These run off the back of a fetch: opening an album stores it, and the songs
+ * screen sorted by "recently added" fetches fifteen albums at once and stores
+ * all fifteen. Each one is a transaction and a `JSON.stringify` per song, on
+ * the same thread that is drawing the screen that asked. Waiting for the
+ * interactions to finish costs nothing here and takes it off the way.
+ */
+function writeMirror(fn: (dir: string, profile: string) => Promise<unknown>): void {
+  void InteractionManager.runAfterInteractions(() => {
+    void withMirror(fn, undefined);
+  });
+}
+
 interface MirrorState {
   /** Profile whose mirror is open (empty = none). */
   profile: string;
@@ -190,7 +206,7 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
     // Favourites are fetched again and again and almost always come back
     // identical. Each of those used to dirty the file and cost a full rewrite,
     // measured at thirty seven seconds on a large mirror (#50).
-    void withMirror(async (dir, profile) => {
+    writeMirror(async (dir, profile) => {
       keepCovers(profile, [
         ...starred.albums.map((a) => a.coverArt ?? a.id),
         // The photo beside an album's artist is asked for by `artistId`, which
@@ -205,31 +221,31 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
       ]);
       if (sameLists(await Db.getStarred(dir, profile), starred)) return;
       await Db.saveEntry(dir, profile, 'starred', '', starred, starred.songs);
-    }, undefined);
+    });
   },
 
   savePlaylists: (playlists) => {
-    void withMirror(async (dir, profile) => {
+    writeMirror(async (dir, profile) => {
       keepCovers(profile, playlists.map((p) => p.coverArt ?? p.id));
       if (samePlaylists(await Db.getPlaylists(dir, profile), playlists)) return;
       await Db.saveEntry(dir, profile, 'playlists', '', playlists);
-    }, undefined);
+    });
   },
 
   savePlaylistDetail: (id, playlist, songs) => {
-    void withMirror((dir, profile) => {
+    writeMirror((dir, profile) => {
       // The playlist's own cover, and the album behind each of its songs: those
       // are the pictures the rows ask for offline. A playlist of five hundred
       // songs is a few hundred albums at most, deduplicated against what is
       // already saved and capped like everything else here.
       keepCovers(profile, [playlist.coverArt ?? playlist.id, ...songs.map((s) => s.albumId)]);
       return Db.saveEntry(dir, profile, 'playlist', id, { playlist, songs }, songs);
-    }, undefined);
+    });
   },
 
   savePlaylistDetails: (entries) => {
     if (entries.length === 0) return;
-    void withMirror(async (dir, profile) => {
+    writeMirror(async (dir, profile) => {
       keepCovers(profile, [
         ...entries.map((e) => e.playlist.coverArt ?? e.playlist.id),
         ...entries.flatMap((e) => e.songs.map((s) => s.albumId)),
@@ -244,11 +260,11 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
           e.songs,
         );
       }
-    }, undefined);
+    });
   },
 
   saveAlbum: (id, album, songs, dl) => {
-    void withMirror(async (dir, profile) => {
+    writeMirror(async (dir, profile) => {
       if (worthKeepingAlbumOf(album, songs, dl.files)) {
         keepCovers(profile, [album.coverArt ?? album.id, album.artistId]);
         await Db.saveEntry(dir, profile, 'album', id, { album, songs }, songs);
@@ -260,11 +276,11 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
       // Dropped, not merely skipped, so unfavouriting takes it out on its own
       // the next time it is looked at.
       await Db.dropEntry(dir, profile, 'album', id);
-    }, undefined);
+    });
   },
 
   saveArtist: (id, artist, albums) => {
-    void withMirror(async (dir, profile) => {
+    writeMirror(async (dir, profile) => {
       if (worthKeepingArtist(artist)) {
         keepCovers(profile, [
           artist.coverArt ?? artist.id,
@@ -275,7 +291,7 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
         return;
       }
       await Db.dropEntry(dir, profile, 'artist', id);
-    }, undefined);
+    });
   },
 
   prune: async (dl) => {
