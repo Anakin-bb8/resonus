@@ -212,10 +212,19 @@ export async function removeMirrorCovers(profile: string): Promise<void> {
 
 /** What this profile's covers take on disk, for Settings › Downloads. */
 export async function mirrorCoversBytes(profile: string): Promise<number> {
-  if (loaded === profile) return bytes;
-  try {
-    return parseIndex(await FileSystem.readAsStringAsync(indexFile(profile))).bytes;
-  } catch {
-    return 0;
+  if (!profile) return 0;
+  await loadMirrorCovers(profile);
+  if (bytes > 0 || known.size === 0) return bytes;
+  // Covers saved before the size was being counted, or an index that lost it.
+  // Added up once, here: this is asked by a screen about sizes, which is the
+  // one place where walking the files is worth what it costs, and the answer
+  // is written down so it is not walked again.
+  let total = 0;
+  for (const id of known) {
+    const info = await FileSystem.getInfoAsync(fileFor(profile, id)).catch(() => null);
+    total += info?.exists ? (info.size ?? 0) : 0;
   }
+  bytes = total;
+  persist(profile);
+  return bytes;
 }
