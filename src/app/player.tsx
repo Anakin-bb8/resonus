@@ -211,6 +211,9 @@ export default function PlayerScreen() {
   // only radio (direct url) is excluded. Hiding the card (setting) doesn't
   // disable lyrics: tapping cover art still opens the full screen.
   const canLyrics = !song?.url;
+  // The only reason this screen scrolls at all. Everything that makes the
+  // content taller than one page hangs off it, so they all read the same flag.
+  const hasLyricsCard = canLyrics && showLyricsCard;
   const favIds = useFavoriteIds(!!song && (!song?.localUri || offline));
 
   // The data layer resolves the cover: from the server (online) or from the
@@ -501,7 +504,13 @@ export default function PlayerScreen() {
         <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, spacing.md) }}
+          // Keeps the lyrics card clear of the navigation bar, and only then:
+          // the first page already ends at the bottom edge (see `styles.bottom`),
+          // so with no card below it this padding was pure overflow and the whole
+          // player scrolled by that much for nothing (#107).
+          contentContainerStyle={
+            hasLyricsCard ? { paddingBottom: Math.max(insets.bottom, spacing.md) } : undefined
+          }
           onLayout={(e) => {
             const h = e.nativeEvent.layout.height;
             setPageH(h);
@@ -530,8 +539,7 @@ export default function PlayerScreen() {
             // which reflowed the cover slot and shoved the controls — the jump on
             // songs that have lyrics (and only those). Matching the card's own
             // render gate keeps the height stable from the first frame.
-            height:
-              (pageH || approxPageH) - (canLyrics && showLyricsCard ? LYRICS_PEEK : 0),
+            height: (pageH || approxPageH) - (hasLyricsCard ? LYRICS_PEEK : 0),
           }}
         >
         <View style={styles.topBar}>
@@ -871,7 +879,7 @@ export default function PlayerScreen() {
           ) : null}
         </View>
         </View>
-        {canLyrics && showLyricsCard ? <LyricsCard /> : null}
+        {hasLyricsCard ? <LyricsCard /> : null}
         </ScrollView>
         </SafeAreaView>
         <OutputSheet visible={outputOpen} onClose={() => setOutputOpen(false)} />

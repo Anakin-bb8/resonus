@@ -82,6 +82,12 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- The player screen could be scrolled a little with the lyrics card turned off,
+  which made it look like something was hanging past the bottom edge. Nothing
+  was: the card is the one thing that reaches below the first page, and the
+  room left for it at the bottom of the scroll was being kept whether or not
+  there was a card to put there. Without one the player is exactly one screen
+  tall again and stays put. Reported by @ztx-lyghters.
 - "Nothing here is downloaded" greeted a cold start in offline mode. The saved
   queue is restored as soon as the session is, which is before the list of
   downloaded files has been read out of the database, so every song in it
