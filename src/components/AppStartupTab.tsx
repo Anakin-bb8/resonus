@@ -5,10 +5,13 @@
  * - On returning from background after a while (RESET_AFTER_MS), dismiss any
  *   stacked screens and go back to the default tab (like Spotify/YouTube).
  *   A brief app switch preserves where you were.
+ * - Except the player: whoever left from it comes back to it, however long it
+ *   was. The music is still there, and so is the reason they were looking at
+ *   it; that is not a screen anyone forgot they had open.
  *
  * Renders nothing; only orchestrates navigation. Mounted with an active session.
  */
-import { useRouter } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 
@@ -25,11 +28,24 @@ const TAB_HREF: Record<DefaultTab, '/' | '/search' | '/library'> = {
 // tab. Below this (quick app switch) the current screen is preserved.
 const RESET_AFTER_MS = 3 * 60 * 1000;
 
+// The player and the two screens that open from it (the queue, the lyrics).
+// Leaving from any of them is leaving from the player, and the reset above
+// does not apply.
+const PLAYER_PATHS = new Set(['/player', '/queue', '/lyrics']);
+
 export function AppStartupTab() {
   const router = useRouter();
   const defaultTab = useSettings((s) => s.defaultTab);
   const backgroundedAt = useRef<number | null>(null);
   const didInitial = useRef(false);
+  // Where the app was when it went away. Read in the listener, which has no
+  // render of its own to take the value from.
+  const pathname = usePathname();
+  const path = useRef(pathname);
+  useEffect(() => {
+    path.current = pathname;
+  }, [pathname]);
+  const leftFromPlayer = useRef(false);
 
   const goToDefaultTab = () => {
     // Dismiss whatever was stacked on top of the tabs (album, settings,
@@ -50,11 +66,19 @@ export function AppStartupTab() {
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state: AppStateStatus) => {
       if (state === 'background') {
-        if (backgroundedAt.current === null) backgroundedAt.current = Date.now();
+        if (backgroundedAt.current === null) {
+          backgroundedAt.current = Date.now();
+          leftFromPlayer.current = PLAYER_PATHS.has(path.current);
+        }
       } else if (state === 'active') {
         const since = backgroundedAt.current;
         backgroundedAt.current = null;
-        if (since !== null && Date.now() - since > RESET_AFTER_MS) goToDefaultTab();
+        // The path is checked again here as well: a tap on the media
+        // notification opens the player through a deep link, and that arrives
+        // around now, with the app already coming back.
+        const player = leftFromPlayer.current || PLAYER_PATHS.has(path.current);
+        leftFromPlayer.current = false;
+        if (since !== null && !player && Date.now() - since > RESET_AFTER_MS) goToDefaultTab();
         // On return, sync auto-download playlists (catch what was added from
         // another client while the app was in the background).
         void useAutoDownloads.getState().reconcileAll();
