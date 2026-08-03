@@ -396,7 +396,12 @@ async function derivedSongList(
   const albums = await getAlbumList(type, DERIVED_POOL);
   const parts = await Promise.all(
     albums.map((al) =>
-      getAlbum(al.id)
+      // Through the query cache, under the same key the album screen uses: an
+      // album opened a minute ago, or one this list already asked for, costs
+      // nothing the second time. Fifteen requests every time the screen was
+      // shown is what this list used to be.
+      queryClient
+        .fetchQuery({ queryKey: ['album', al.id], queryFn: () => getAlbum(al.id) })
         .then((d) => d.songs)
         .catch(() => [] as Subsonic.Song[]),
     ),

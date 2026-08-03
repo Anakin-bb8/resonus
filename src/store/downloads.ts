@@ -149,6 +149,17 @@ async function serverDirs(): Promise<string[]> {
 
 /** The albums and artists, which every offline screen needs. */
 let cachedShelf: Omit<DownloadsCatalog, 'songs'> | null = null;
+/**
+ * The read in flight, if there is one.
+ *
+ * Six screens ask for this within the same second of a cold start, and none of
+ * them had anything to wait on: each saw an empty cache and read the whole
+ * shelf again. On a big library that is six times the same two hundred
+ * milliseconds. Now the first one reads and the rest wait for it.
+ */
+let shelfReading: { dir: string; work: Promise<Omit<DownloadsCatalog, 'songs'>> } | null = null;
+/** Same, for the songs, which cost twenty times more. */
+let songsReading: { dir: string; work: Promise<Song[]> } | null = null;
 let cachedForDir: string | null = null;
 /** Every song, which only the screens that resolve ids need. Kept apart from
  *  the shelf because it is twenty times the size and comes at twenty times the
@@ -201,7 +212,14 @@ export async function getDownloadsCatalog(): Promise<DownloadsCatalog> {
     // something actually asks: on fifteen thousand downloads it is fifteen
     // thousand rows parsed out of the database, and it used to happen on the way
     // into the first offline screen whatever that screen was showing.
-    cachedSongs = await timed('offline catalog', () => Db.allSongs(dir));
+    if (!songsReading || songsReading.dir !== dir) {
+      songsReading = { dir, work: timed('offline catalog', () => Db.allSongs(dir)) };
+    }
+    try {
+      cachedSongs = await songsReading.work;
+    } finally {
+      if (songsReading?.dir === dir) songsReading = null;
+    }
     cachedSongsDir = dir;
     cachedFull = null;
   }
@@ -221,8 +239,20 @@ export async function getDownloadShelf(): Promise<Omit<DownloadsCatalog, 'songs'
   const dir = activeServerDir();
   if (!dir) return { albums: [], artists: [] };
   if (!cachedShelf || cachedForDir !== dir) {
-    const albums = await timed('offline shelf', () => Db.allAlbums(dir));
-    cachedShelf = { albums, artists: deriveArtists(albums) };
+    if (!shelfReading || shelfReading.dir !== dir) {
+      shelfReading = {
+        dir,
+        work: timed('offline shelf', () => Db.allAlbums(dir)).then((albums) => ({
+          albums,
+          artists: deriveArtists(albums),
+        })),
+      };
+    }
+    try {
+      cachedShelf = await shelfReading.work;
+    } finally {
+      if (shelfReading?.dir === dir) shelfReading = null;
+    }
     cachedForDir = dir;
   }
   // Always (not just on build): clearLocalCatalog() empties the global cover
@@ -253,6 +283,8 @@ function resetCatalogCache() {
   cachedSongs = null;
   cachedSongsDir = null;
   cachedFull = null;
+  shelfReading = null;
+  songsReading = null;
 }
 
 function invalidate() {

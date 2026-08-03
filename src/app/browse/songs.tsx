@@ -125,9 +125,13 @@ export default function BrowseSongsScreen() {
       initialPageParam: 0,
       getNextPageParam: (last, pages) => (last.length === PAGE ? pages.length * PAGE : undefined),
       enabled: canFetch,
-      // Everything that has been played changes with every listen, and the
-      // server is the one keeping count: coming back to the screen asks again.
-      refetchOnMount: sort === 'recent' || sort === 'frequent' ? 'always' : undefined,
+      // "Recent" is this phone's own play history and costs nothing to rebuild,
+      // so it is rebuilt every time the screen opens. "Most played" is not:
+      // the server only sorts albums, so that list is fifteen album requests,
+      // and asking for them again on every visit was most of the traffic of a
+      // session. It goes back to the ordinary five minutes, and the album
+      // details behind it are shared with the album screens now.
+      refetchOnMount: sort === 'recent' ? 'always' : undefined,
     });
 
   // ── Search ─────────────────────────────────────────────────────────────
