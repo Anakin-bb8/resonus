@@ -30,6 +30,9 @@ export default function TabsLayout() {
         tabBar={alwaysShowTabs ? () => null : undefined}
         screenOptions={{
           headerShown: false,
+          // The tab you are not on stops re-rendering until you go back to it
+          // (see the root layout, where the same is done for the stack).
+          freezeOnBlur: true,
           // Short crossfade when switching tabs, instead of the default hard
           // cut ('shift' felt slow).
           animation: 'fade',

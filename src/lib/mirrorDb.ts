@@ -355,6 +355,40 @@ export async function songCoverIds(
 
 // ── Reading ─────────────────────────────────────────────────────────────────
 
+/**
+ * The song ids of every stored playlist, without their tracklists.
+ *
+ * The Library and Home only need the ids: how many there are, and which is the
+ * first downloaded one, whose album gives the playlist its picture. Reading the
+ * entries themselves meant one query per playlist and every tracklist parsed
+ * into JS, fifty of them each time either screen drew, which offline is where
+ * the time was going. SQLite pulls the ids out of the JSON itself and hands
+ * back a short array per playlist.
+ */
+export async function playlistSongIds(
+  dir: string,
+  profile: string,
+): Promise<Map<string, string[]>> {
+  const db = await mirrorDb(dir, profile);
+  const rows = await timed('mirror read ids', () =>
+    db.getAllAsync<{ id: string; ids: string | null }>(
+      `SELECT id,
+              (SELECT json_group_array(json_extract(value, '$.id'))
+                 FROM json_each(json_extract(data, '$.songs'))) AS ids
+         FROM entries WHERE kind = 'playlist'`,
+    ),
+  );
+  const out = new Map<string, string[]>();
+  for (const r of rows) {
+    try {
+      out.set(r.id, r.ids ? (JSON.parse(r.ids) as string[]) : []);
+    } catch {
+      out.set(r.id, []);
+    }
+  }
+  return out;
+}
+
 async function getEntry<T>(
   dir: string,
   profile: string,
@@ -362,9 +396,13 @@ async function getEntry<T>(
   id: string,
 ): Promise<T | undefined> {
   const db = await mirrorDb(dir, profile);
-  const row = await db.getFirstAsync<{ data: string }>(
-    'SELECT data FROM entries WHERE kind = ? AND id = ?',
-    [kind, id],
+  // Timed like the writes: reading one is a row and a `JSON.parse` of whatever
+  // is in it, and a playlist of a thousand songs is not a small one.
+  const row = await timed(`mirror read ${kind}`, () =>
+    db.getFirstAsync<{ data: string }>('SELECT data FROM entries WHERE kind = ? AND id = ?', [
+      kind,
+      id,
+    ]),
   );
   return row ? (JSON.parse(row.data) as T) : undefined;
 }

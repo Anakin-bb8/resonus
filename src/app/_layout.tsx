@@ -182,6 +182,15 @@ export default function RootLayout() {
                 // durations can't be adjusted and lateral pushes
                 // (slide/ios_from_right) felt sluggish.
                 animation: 'fade',
+                // A screen you have navigated away from stops re-rendering
+                // until you come back. It stays mounted either way, which is
+                // the point of a stack, but without this every screen still
+                // behind you kept answering to every change in every store:
+                // the position of the song playing, a download's progress, a
+                // favourite. Ten screens deep that is ten renders nobody sees,
+                // between the tap and the screen that was asked for, which is
+                // why the lag grew the more you browsed.
+                freezeOnBlur: true,
                 contentStyle: { backgroundColor: colors.background },
               }}
             >

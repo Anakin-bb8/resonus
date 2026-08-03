@@ -741,12 +741,11 @@ async function mirrorPlaylists(): Promise<Subsonic.Playlist[]> {
   const files = useDownloads.getState().files;
   if (!stored && Object.keys(qpls).length === 0) return Local.getPlaylists();
 
-  // The tracklists of the ones being listed, asked for together.
-  const details = new Map<string, Subsonic.Song[]>();
-  for (const p of stored ?? []) {
-    const d = await mirror.playlistDetail(p.id);
-    if (d) details.set(p.id, d.songs);
-  }
+  // The song ids of the ones being listed, in one query. What this screen needs
+  // of a tracklist is how long it is and which song is the first downloaded
+  // one; reading the tracklists themselves was a query per playlist and every
+  // song in them parsed, fifty times over, each time Home or the Library drew.
+  const details = await mirror.playlistSongIds();
 
   // The cover of a playlist without one is the album art of its first
   // downloaded track, so those ids are resolved in one go rather than one at
@@ -760,7 +759,7 @@ async function mirrorPlaylists(): Promise<Subsonic.Playlist[]> {
   }
   for (const p of stored ?? []) {
     if (p.coverArt) continue;
-    const songIds = qpls[p.id]?.songIds ?? details.get(p.id)?.map((s) => s.id) ?? [];
+    const songIds = qpls[p.id]?.songIds ?? details.get(p.id) ?? [];
     const f = firstDownloaded(songIds);
     if (f) wanted.push(f);
   }
@@ -785,7 +784,7 @@ async function mirrorPlaylists(): Promise<Subsonic.Playlist[]> {
   for (const p of stored ?? []) {
     const edit = qpls[p.id];
     if (edit?.deleted) continue;
-    const detailIds = details.get(p.id)?.map((s) => s.id);
+    const detailIds = details.get(p.id);
     const songIds = edit?.songIds ?? detailIds ?? [];
     const firstDl = firstDownloaded(songIds);
     // With known tracklist (cached details or offline edit) the real count;
