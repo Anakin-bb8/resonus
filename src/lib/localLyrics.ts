@@ -98,8 +98,16 @@ function pickLrclibText(r: LrclibResult | undefined): string | null {
 }
 
 /** Searches LRCLIB for lyrics by artist+title. Returns LRC/plain text. */
+/** Only in development: where a lyrics lookup went, since it never throws. */
+function trace(what: string, song: Song): void {
+  if (__DEV__) console.log(`[lyrics] lrclib · ${what} · ${song.artist} — ${song.title}`);
+}
+
 async function fetchLrclib(song: Song): Promise<string | null> {
-  if (!song.title || !song.artist) return null;
+  if (!song.title || !song.artist) {
+    trace('not asked: the song has no artist or no title', song);
+    return null;
+  }
   // LRCLIB is somebody else's server, but it is reached the same way and costs
   // the same data, so an offline somebody asked for covers it too: the .lrc
   // cached next to a download is read before this is ever called.
@@ -108,7 +116,10 @@ async function fetchLrclib(song: Song): Promise<string | null> {
   // stopped answering, not that the phone has no connection, and taking the
   // lyrics away too made the app look broken to whoever never noticed the
   // mode had changed.
-  if (isManualOffline()) return null;
+  if (isManualOffline()) {
+    trace('not asked: offline was chosen', song);
+    return null;
+  }
   const headers = { 'Lrclib-Client': 'Resonus (https://github.com/juananzzz/resonus)' };
   try {
     // /api/get requires the full signature (album + duration); if we have it,
@@ -121,6 +132,7 @@ async function fetchLrclib(song: Song): Promise<string | null> {
         duration: String(Math.round(song.duration)),
       });
       const res = await fetch(`https://lrclib.net/api/get?${params}`, { headers });
+      trace(`get ${res.status}`, song);
       if (res.ok) {
         const text = pickLrclibText((await res.json()) as LrclibResult);
         if (text) return text;
@@ -128,14 +140,20 @@ async function fetchLrclib(song: Song): Promise<string | null> {
     }
     const params = new URLSearchParams({ artist_name: song.artist, track_name: song.title });
     const res = await fetch(`https://lrclib.net/api/search?${params}`, { headers });
+    trace(`search ${res.status}`, song);
     if (!res.ok) return null;
     const results = (await res.json()) as LrclibResult[];
     for (const r of results) {
       const text = pickLrclibText(r);
       if (text) return text;
     }
+    trace(`search matched nothing (${results.length} results)`, song);
     return null;
-  } catch {
-    return null; // no network or API down: simply no lyrics
+  } catch (e) {
+    // No network or the API down: simply no lyrics. Said out loud in
+    // development, because a feature that fails in silence cannot be told
+    // apart from one that was never asked.
+    trace(`failed: ${e instanceof Error ? e.message : String(e)}`, song);
+    return null;
   }
 }

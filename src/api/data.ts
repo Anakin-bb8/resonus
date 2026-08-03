@@ -1096,6 +1096,9 @@ export async function getSongLyrics(
   // and it is what the person chose to carry.
   if (song.localUri) return getLocalLyrics(song, allowOnline, preferOnline);
   if (!useAuthStore.getState().auth) return null;
+  if (__DEV__) {
+    console.log(`[lyrics] asking · source=${source} · ${song.artist} — ${song.title}`);
+  }
   try {
     // 'online': LRCLIB first (it absorbs its own network errors and answers
     // null), then the server.
@@ -1121,6 +1124,7 @@ export async function getSongLyrics(
     if (allowOnline && !preferOnline) return getOnlineLyrics(song);
     return null;
   } catch (e) {
+    if (__DEV__) console.log('[lyrics] the server path threw', e);
     // Only reached with no network: with one, the inner catch has already
     // absorbed a server without the extension. A downloaded song still has the
     // `.lrc` saved next to it when it was downloaded.
