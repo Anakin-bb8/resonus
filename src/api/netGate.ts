@@ -32,6 +32,15 @@
  */
 let offline = true;
 
+/**
+ * Whether that offline was asked for or fell out of the server being
+ * unreachable. They are not the same instruction: one says "use no network",
+ * the other says "your server is not answering", and the phone may well have a
+ * perfectly good connection in the second case. It starts as a decision, so
+ * that the closed gate at launch is the strict one until proven otherwise.
+ */
+let automatic = false;
+
 /** Thrown instead of making the request. Reads as a network error, because to
  *  everything upstream that is exactly what it is: the server is unreachable. */
 export class OfflineError extends Error {
@@ -43,12 +52,23 @@ export class OfflineError extends Error {
 }
 
 /** Called by the auth store whenever the mode changes. */
-export function setOfflineMode(value: boolean): void {
+export function setOfflineMode(value: boolean, auto = false): void {
   offline = value;
+  automatic = value && auto;
 }
 
 export function isOfflineMode(): boolean {
   return offline;
+}
+
+/**
+ * Offline because somebody said so, rather than because the server stopped
+ * answering. For anything that is not the server: LRCLIB, say, which is
+ * reachable when your own server is not. Falling back to offline should not
+ * take the rest of the internet with it, but choosing it should.
+ */
+export function isManualOffline(): boolean {
+  return offline && !automatic;
 }
 
 /**

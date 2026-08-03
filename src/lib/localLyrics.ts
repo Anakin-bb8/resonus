@@ -12,7 +12,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { type Song, type SongLyrics } from '@/api/subsonic';
 import { hashKey, readTags } from './localLibrary';
 import { parseLrc } from './lrc';
-import { isOfflineMode } from '@/api/netGate';
+import { isManualOffline } from '@/api/netGate';
 
 const LRCLIB_CACHE_DIR = FileSystem.documentDirectory + 'lyrics-cache/';
 const AUDIO_EXT_RE = /\.[a-z0-9]{1,5}$/i;
@@ -101,9 +101,14 @@ function pickLrclibText(r: LrclibResult | undefined): string | null {
 async function fetchLrclib(song: Song): Promise<string | null> {
   if (!song.title || !song.artist) return null;
   // LRCLIB is somebody else's server, but it is reached the same way and costs
-  // the same data. Offline means offline for it too; the .lrc cached next to a
-  // download is read before this is ever called.
-  if (isOfflineMode()) return null;
+  // the same data, so an offline somebody asked for covers it too: the .lrc
+  // cached next to a download is read before this is ever called.
+  //
+  // An offline the app fell into is a different thing. It means one server
+  // stopped answering, not that the phone has no connection, and taking the
+  // lyrics away too made the app look broken to whoever never noticed the
+  // mode had changed.
+  if (isManualOffline()) return null;
   const headers = { 'Lrclib-Client': 'Resonus (https://github.com/juananzzz/resonus)' };
   try {
     // /api/get requires the full signature (album + duration); if we have it,

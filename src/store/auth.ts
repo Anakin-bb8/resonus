@@ -213,7 +213,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // unknown. The gate starts closed (see `api/netGate`), so saying so is
       // what opens it, and a subscription would not: it only fires on a change,
       // and reading back "online" from disk is not one.
-      setOfflineMode(get().offline);
+      setOfflineMode(get().offline, get().autoOffline);
       set({ hydrating: false });
     }
   },
@@ -515,5 +515,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
  * call in each action so no path can set the mode and forget to say so.
  */
 useAuthStore.subscribe((s, prev) => {
-  if (s.offline !== prev.offline) setOfflineMode(s.offline);
+  if (s.offline !== prev.offline || s.autoOffline !== prev.autoOffline) {
+    setOfflineMode(s.offline, s.autoOffline);
+  }
 });

@@ -102,6 +102,13 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- Lyrics are looked up again when the app has fallen back to offline on its
+  own. Making offline mode offline took LRCLIB with it, which is right when
+  somebody chose that mode and wrong when the app chose it for them: falling
+  back means one server stopped answering, not that the phone lost its
+  connection, and the lyrics are somewhere else entirely. Whoever never noticed
+  the mode had changed just saw lyrics stop working. An offline you asked for
+  still asks nobody anything.
 - Tapping a song in the history that is not downloaded, offline, no longer
   leaves the player telling a lie. It could not play, which is right, but the
   queue had already been replaced: the mini player showed that song, and

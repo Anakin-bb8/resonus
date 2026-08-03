@@ -17,6 +17,7 @@ import { getItem, setItem } from '@/lib/storage';
 import { useLibraryMirror } from '@/store/libraryMirror';
 import { useOfflineQueue, type PlayOp, type QueuePlaylist } from '@/store/offlineQueue';
 import { usePlayHistory } from '@/store/playHistory';
+import { isManualOffline } from './netGate';
 import { getLocalLyrics, getOnlineLyrics } from '@/lib/localLyrics';
 import { useSettings, type LyricsSource } from '@/store/settings';
 import * as Navidrome from './navidrome';
@@ -1080,11 +1081,16 @@ export async function getSongLyrics(
   const allowOnline = source !== 'off';
   const preferOnline = source === 'online';
   const downloaded = () => song.localUri ?? useDownloads.getState().files[song.id];
-  // Offline: the phone and nothing else, LRCLIB included. It is somebody else's
-  // server, but it is reached the same way and costs the same data (#89).
+  // Offline: the phone first, and the question is whether anything else is
+  // allowed at all. LRCLIB is not this server: an offline the app fell into
+  // means one server stopped answering, and the phone's connection is very
+  // probably fine, so the lyrics are still there to be found. An offline
+  // somebody chose means use no network, and that covers LRCLIB too (#89).
   if (isOffline()) {
+    const online = allowOnline && !isManualOffline();
     const uri = downloaded();
-    return uri ? getLocalLyrics({ ...song, localUri: uri }, false) : null;
+    if (uri) return getLocalLyrics({ ...song, localUri: uri }, online, preferOnline);
+    return online ? getOnlineLyrics(song) : null;
   }
   // A file already on the phone is read first even online: it is right there,
   // and it is what the person chose to carry.
