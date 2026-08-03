@@ -759,7 +759,8 @@ async function mirrorPlaylists(): Promise<Subsonic.Playlist[]> {
   }
   for (const p of stored ?? []) {
     if (p.coverArt) continue;
-    const songIds = qpls[p.id]?.songIds ?? details.get(p.id) ?? [];
+    const known = details.get(p.id);
+    const songIds = qpls[p.id]?.songIds ?? (known && known.length > 0 ? known : []);
     const f = firstDownloaded(songIds);
     if (f) wanted.push(f);
   }
@@ -784,7 +785,11 @@ async function mirrorPlaylists(): Promise<Subsonic.Playlist[]> {
   for (const p of stored ?? []) {
     const edit = qpls[p.id];
     if (edit?.deleted) continue;
-    const detailIds = details.get(p.id);
+    // An empty list is not a tracklist we know: a stored playlist whose entry
+    // has no songs in it comes back that way, and taking it at its word turned
+    // the count into "0 songs" for playlists nobody had opened yet.
+    const stored = details.get(p.id);
+    const detailIds = stored && stored.length > 0 ? stored : undefined;
     const songIds = edit?.songIds ?? detailIds ?? [];
     const firstDl = firstDownloaded(songIds);
     // With known tracklist (cached details or offline edit) the real count;

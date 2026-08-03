@@ -25,16 +25,20 @@ interface Props {
 }
 
 /**
- * Sizes the app asks covers at. The same picture is a different URL at each of
- * them, and so a different entry in the image loader's cache: a cover seen in a
- * list and the album that opens from it used to be a miss on each other.
+ * Sizes to look for a marked cover at, and there are more of them than the app
+ * asks for on purpose.
  *
- * So a marked cover is looked for at the size asked and then at the others,
- * largest first, since scaling a picture down is free and up is not. There are
- * three of them now rather than eight (see `COVER`), which is what makes the
- * first look the one that usually answers.
+ * The same picture at a different size is a different URL and so a different
+ * entry in the image loader's cache. The first three are what the app asks for
+ * now (see `COVER`); the rest are what older versions asked for, and the cache
+ * on somebody's phone was filled by those. Dropping them from this list is what
+ * made covers disappear offline after an update: the pictures were still there,
+ * under names we had stopped saying.
+ *
+ * The size asked for is tried on its own first, and the rest only on a miss and
+ * all at once, so the length of this list costs one round trip, not six.
  */
-const CACHE_SIZES = [COVER.card, COVER.full, COVER.thumb] as const;
+const CACHE_SIZES = [COVER.card, COVER.full, COVER.thumb, 500, 300, 100] as const;
 
 /**
  * What each marked cover was found to be, so a lookup is done once.
