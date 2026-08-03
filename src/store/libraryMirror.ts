@@ -22,7 +22,7 @@ import { create } from 'zustand';
 import type { Album, Artist, Playlist, Song, Starred, SubsonicAuth } from '@/api/subsonic';
 import { hashKey } from '@/lib/localLibrary';
 import * as Db from '@/lib/mirrorDb';
-import { keepMirrorCovers, loadMirrorCovers } from '@/lib/mirrorCovers';
+import { keepMirrorCovers, loadMirrorCovers, mirrorCoversBytes } from '@/lib/mirrorCovers';
 import { primaryUrl } from '@/lib/serverUrls';
 import { useAuthStore } from './auth';
 
@@ -274,7 +274,13 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
   },
 
   stats: () =>
-    withMirror((dir, profile) => Db.stats(dir, profile), {
+    withMirror(async (dir, profile) => {
+      const st = await Db.stats(dir, profile);
+      // The covers are files of their own, next to the database rather than in
+      // it. Left out, a screen that says what the offline copy takes would be
+      // leaving out most of it.
+      return { ...st, bytes: st.bytes + (await mirrorCoversBytes(profile)) };
+    }, {
       bytes: 0,
       albums: 0,
       artists: 0,

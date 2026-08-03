@@ -33,16 +33,21 @@ const DIR = FileSystem.documentDirectory + 'library-mirror/covers/';
 const SIZE = 300;
 
 /**
- * Ceiling on how many are kept. Two thousand covers is a library nobody
- * browses in one sitting, and about 50 MB. Past it nothing new is fetched:
- * better to stop than to grow without an end somebody has to discover.
+ * Ceiling on how many are kept: about 250 MB at the size above, which is a
+ * large library browsed end to end and a fair trade on a phone that has room.
+ * There is a ceiling at all because this grows on its own, and something that
+ * grows on its own should have an end somebody chose rather than one they
+ * discover. What it takes is counted and shown in Settings › Downloads next to
+ * the rest of the offline copy, and it goes when that goes.
  */
-const MAX = 2000;
+const MAX = 10000;
 
-/** Cover ids already on disk for the loaded profile. */
+/** Cover ids already on disk for the loaded profile, and what they take. */
 let known = new Set<string>();
+let bytes = 0;
 let loaded = '';
 let saving: Promise<unknown> = Promise.resolve();
+let writeTimer: ReturnType<typeof setTimeout> | null = null;
 /** Ids being fetched right now, so two screens don't fetch the same one. */
 const inFlight = new Set<string>();
 
@@ -54,16 +59,32 @@ function fileFor(profile: string, coverId: string): string {
   return `${DIR}${profile}_${hashKey(coverId)}.jpg`;
 }
 
+/**
+ * Writes the index down, at most once every few seconds. It holds every id, so
+ * it is rewritten whole each time: browsing a hundred albums should not be a
+ * hundred writes of the same growing file.
+ */
 function persist(profile: string): void {
-  const ids = [...known];
-  saving = saving.then(async () => {
-    try {
-      await FileSystem.makeDirectoryAsync(DIR, { intermediates: true }).catch(() => {});
-      await FileSystem.writeAsStringAsync(indexFile(profile), JSON.stringify(ids));
-    } catch {
-      // Lost on exit: the covers are still on disk and will be fetched again.
-    }
-  });
+  if (writeTimer) clearTimeout(writeTimer);
+  writeTimer = setTimeout(() => {
+    writeTimer = null;
+    const payload = JSON.stringify({ ids: [...known], bytes });
+    saving = saving.then(async () => {
+      try {
+        await FileSystem.makeDirectoryAsync(DIR, { intermediates: true }).catch(() => {});
+        await FileSystem.writeAsStringAsync(indexFile(profile), payload);
+      } catch {
+        // Lost on exit: the covers are still on disk and will be fetched again.
+      }
+    });
+  }, 3000);
+}
+
+/** The index as it is stored, and as older versions stored it (a bare list). */
+function parseIndex(raw: string): { ids: string[]; bytes: number } {
+  const data = JSON.parse(raw) as string[] | { ids?: string[]; bytes?: number };
+  if (Array.isArray(data)) return { ids: data, bytes: 0 };
+  return { ids: data.ids ?? [], bytes: data.bytes ?? 0 };
 }
 
 /**
@@ -75,9 +96,11 @@ export async function loadMirrorCovers(profile: string): Promise<void> {
   if (!profile || loaded === profile) return;
   loaded = profile;
   known = new Set();
+  bytes = 0;
   try {
-    const raw = await FileSystem.readAsStringAsync(indexFile(profile));
-    for (const id of JSON.parse(raw) as string[]) {
+    const index = parseIndex(await FileSystem.readAsStringAsync(indexFile(profile)));
+    bytes = index.bytes;
+    for (const id of index.ids) {
       known.add(id);
       registerCover(id, fileFor(profile, id));
     }
@@ -134,6 +157,10 @@ export function keepMirrorCovers(
         } else {
           known.add(id);
           registerCover(id, file);
+          // Counted as it is written: walking thousands of files to add up
+          // what they take is not something a settings screen should do.
+          const info = await FileSystem.getInfoAsync(file).catch(() => null);
+          bytes += info?.exists ? (info.size ?? 0) : 0;
           added = true;
         }
       } catch {
@@ -167,17 +194,28 @@ export function forgetMirrorCover(profile: string, coverId: string | undefined):
 export async function removeMirrorCovers(profile: string): Promise<void> {
   let ids: string[] = [];
   try {
-    ids = JSON.parse(await FileSystem.readAsStringAsync(indexFile(profile))) as string[];
+    ids = parseIndex(await FileSystem.readAsStringAsync(indexFile(profile))).ids;
   } catch {
     // No index: the files, if any, cannot be told apart from another
     // profile's, and they are bounded and harmless.
   }
   if (loaded === profile) {
     known = new Set();
+    bytes = 0;
     loaded = '';
   }
   for (const id of ids) {
     await FileSystem.deleteAsync(fileFor(profile, id), { idempotent: true }).catch(() => {});
   }
   await FileSystem.deleteAsync(indexFile(profile), { idempotent: true }).catch(() => {});
+}
+
+/** What this profile's covers take on disk, for Settings › Downloads. */
+export async function mirrorCoversBytes(profile: string): Promise<number> {
+  if (loaded === profile) return bytes;
+  try {
+    return parseIndex(await FileSystem.readAsStringAsync(indexFile(profile))).bytes;
+  } catch {
+    return 0;
+  }
 }
