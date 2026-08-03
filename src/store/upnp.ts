@@ -139,7 +139,8 @@ function onNativeState(e: NativeState) {
  * round would vanish if we replaced the list, then reappear on the next scan
  * (the flakiness users report). So we MERGE by id and keep everything seen this
  * session; a re-answer refreshes the entry. Truly-gone devices just fail to
- * connect (handled gracefully). Use `upnpClearDevices` to start a fresh list.
+ * connect (handled gracefully) and are forgotten when the app is: the list is
+ * only ever held in memory.
  */
 /** A name the library made up out of the address, not the device's own. */
 function looksRaw(name: string): boolean {
