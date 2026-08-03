@@ -513,8 +513,12 @@ export const useDownloads = create<DownloadsState>((set, get) => {
 
   /** Downloads a group of songs and updates catalog + progress. */
   async function downloadGroup(groupKey: string, songs: Song[], albums: Album[]): Promise<void> {
-    const auth = useAuthStore.getState().auth;
+    const { auth, offline } = useAuthStore.getState();
     if (!auth) return;
+    // A download is a transfer, and offline mode makes none. It goes through
+    // expo-file-system rather than the API, so the gate under the API layer
+    // (see `api/netGate`) cannot see it: this is that same rule, said here.
+    if (offline) return;
     if (get().active[groupKey]) return; // already in progress
     // No duplicates (a playlist may have the same song twice) nor
     // already downloaded, radio songs (url), or songs already local.

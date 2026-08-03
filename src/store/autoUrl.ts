@@ -42,9 +42,15 @@ let consecutiveFails = 0;
  */
 async function check(): Promise<void> {
   if (checking) return;
-  const auth = useAuthStore.getState().auth;
+  const { auth, offline, autoOffline } = useAuthStore.getState();
   // No server account (signed out or local profile): nothing to probe.
   if (!auth) return;
+  // Offline on purpose: not even the probe. Somebody who turned the mode on by
+  // hand said no network, and this ran on every network change and at every
+  // cold start, which is what made a manually offline app talk to the server
+  // before it had drawn a screen (#89). An automatic offline is the opposite
+  // case: the probe is the only way back, so it keeps going.
+  if (offline && !autoOffline) return;
   const urls = auth.urls ?? [auth.serverUrl];
   checking = true;
   try {

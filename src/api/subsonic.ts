@@ -8,6 +8,7 @@
 import * as Crypto from 'expo-crypto';
 
 import { timed } from '@/lib/perfLog';
+import { assertCanRequest } from './netGate';
 
 export const CLIENT_NAME = 'Resonus';
 const API_VERSION = '1.16.1';
@@ -350,7 +351,10 @@ async function request<T>(
   auth: SubsonicAuth,
   endpoint: string,
   extra: Record<string, string | number | undefined> = {},
+  allowOffline = false,
 ): Promise<T> {
+  // Offline mode stops here, before the socket (see netGate).
+  assertCanRequest(allowOffline);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
@@ -390,8 +394,10 @@ async function request<T>(
 }
 
 /** Verifies that the credentials are valid. */
+/** The one question allowed while offline: it is how the app learns the server
+ *  is back, and what the "test" button in Settings asks. */
 export async function ping(auth: SubsonicAuth): Promise<void> {
-  await request(auth, 'ping.view');
+  await request(auth, 'ping.view', {}, true);
 }
 
 export type AlbumListType =
@@ -664,6 +670,7 @@ export async function reorderPlaylist(
   const params = authParams(auth);
   params.set('playlistId', id);
   for (const sid of songIds) params.append('songId', sid);
+  assertCanRequest();
   const res = await fetch(`${auth.serverUrl}/rest/createPlaylist.view`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -1126,6 +1133,7 @@ export async function savePlayQueue(
   params.set('position', String(Math.max(0, Math.floor(positionMs))));
   try {
     // POST with parameters in the body: avoids giant URLs with long queues.
+    assertCanRequest();
     await fetch(`${auth.serverUrl}/rest/savePlayQueue.view`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

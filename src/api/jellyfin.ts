@@ -37,6 +37,7 @@ import {
   type Starred,
   type SubsonicAuth,
 } from './subsonic';
+import { assertCanRequest } from './netGate';
 
 const CLIENT_VERSION = '1.0';
 const REQUEST_TIMEOUT_MS = 15000;
@@ -115,7 +116,10 @@ async function request<T>(
   path: string,
   params: Params = {},
   init: { method?: string; body?: unknown } = {},
+  allowOffline = false,
 ): Promise<T> {
+  // Offline mode stops here, before the socket (see netGate).
+  assertCanRequest(allowOffline);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
@@ -202,9 +206,14 @@ export async function makeAuth(
   };
 }
 
-/** Checks that the session token is still valid. */
+/**
+ * Checks that the session token is still valid.
+ *
+ * The one question allowed while offline: it is how the app learns the server is
+ * back, and what the "test" button in Settings asks.
+ */
 export async function ping(auth: SubsonicAuth): Promise<void> {
-  await request(auth, '/Users/Me');
+  await request(auth, '/Users/Me', {}, {}, true);
 }
 
 // ── Mapping BaseItemDto to app models ──

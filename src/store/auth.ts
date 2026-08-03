@@ -20,6 +20,7 @@ import {
 import { primaryUrl } from '@/lib/serverUrls';
 import { clearLocalCatalog } from '@/lib/localLibrary';
 import { deleteProfileData } from '@/lib/profileData';
+import { setOfflineMode } from '@/api/netGate';
 import { queryClient } from '@/lib/query';
 import { deleteItem, getItem, setItem } from '@/lib/storage';
 
@@ -208,6 +209,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch {
       // If something fails, login will be required again.
     } finally {
+      // Whatever the mode turned out to be, this is where it stops being
+      // unknown. The gate starts closed (see `api/netGate`), so saying so is
+      // what opens it, and a subscription would not: it only fires on a change,
+      // and reading back "online" from disk is not one.
+      setOfflineMode(get().offline);
       set({ hydrating: false });
     }
   },
@@ -423,7 +429,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // touched; views recalculate against the server when cache is cleared.
     const current = get().auth;
     if (!get().offline || !current) return;
-    // Before going back: flush offline actions (favorites…) to the server.
+    await deleteItem(OFFLINE_KEY);
+    await deleteItem(OFFLINE_AUTO_KEY);
+    // See goOffline: selective invalidation instead of `clear()`, to avoid
+    // discarding all cache and refetching everything at once on reconnect.
+    // The mode changes BEFORE the outbox is flushed: offline mode now refuses
+    // requests under the API layer (see `api/netGate`), and what the flush is
+    // for is precisely to make them. Coming back online is already decided by
+    // the time we are here, so nothing is lost by saying so first.
+    set({ offline: false, autoOffline: false });
     // Best-effort; failed items are kept for the next reconnection.
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -431,11 +445,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch {
       // Does not block the online transition.
     }
-    await deleteItem(OFFLINE_KEY);
-    await deleteItem(OFFLINE_AUTO_KEY);
-    // See goOffline: selective invalidation instead of `clear()`, to avoid
-    // discarding all cache and refetching everything at once on reconnect.
-    set({ offline: false, autoOffline: false });
     void queryClient.invalidateQueries();
   },
 
@@ -498,3 +507,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ auth: null, offline: false, autoOffline: false, offlineSource: null });
   },
 }));
+
+/**
+ * Offline mode is enforced under the API layer, not at each call site: while it
+ * is on, a request fails before it reaches the network (see `api/netGate`).
+ * This is the only wire between the two, and it is a subscription rather than a
+ * call in each action so no path can set the mode and forget to say so.
+ */
+useAuthStore.subscribe((s, prev) => {
+  if (s.offline !== prev.offline) setOfflineMode(s.offline);
+});

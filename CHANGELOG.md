@@ -102,6 +102,27 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- Offline mode makes no network requests at all. It was built as a rule
+  repeated at every place that asks the server something: each one checked the
+  mode and went to the copy on the phone instead. That holds for as long as
+  nobody forgets, and several things had: the queue was pushed to the server
+  every twenty seconds and every time the app went to the background, the
+  server's addresses were probed on every network change and at every cold
+  start, lyrics were looked up on LRCLIB, and the covers of albums that were
+  not downloaded were fetched one by one, which is what made album art appear
+  slowly on a screen that should not have been loading anything. On a metered
+  connection that is somebody's money.
+  The rule now lives underneath, in the one place that makes requests: with
+  offline mode on, a request fails before it reaches the network, and it starts
+  that way at launch until the saved mode has been read, so a cold start cannot
+  leak either. Forgetting a check somewhere is now a bug that shows itself
+  rather than one that quietly uses data. Two things still go out, and both are
+  asked for: checking whether the server is back, which is the only way out of
+  an automatic offline, and the "test" button in Settings › Network.
+  What changes on screen: an album that is not downloaded now shows its
+  placeholder instead of its cover, since fetching that cover was the request.
+  Found by @ztx-lyghters with a packet capture, after @aona noticed the album
+  art loading.
 - A song whose file says nothing about its album no longer files it under
   "Álbum desconocido", in Spanish, whatever language the app is in. The same
   went for an artist. Those two names are how the local library groups what

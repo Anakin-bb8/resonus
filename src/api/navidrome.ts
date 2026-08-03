@@ -6,6 +6,7 @@
  * password to obtain a JWT (`auth.ndPassword`); see SubsonicAuth.
  */
 import { type Song, type SubsonicAuth } from './subsonic';
+import { assertCanRequest } from './netGate';
 
 /** Typed error to provide useful messages in the UI. */
 export class NavidromeError extends Error {
@@ -38,6 +39,8 @@ async function ndLogin(auth: SubsonicAuth, fresh = false): Promise<string> {
   if (!password) throw new NavidromeError('Sin contraseña guardada', 'auth');
   const key = tokenKey(auth);
   if (!fresh && cached?.key === key && Date.now() - cached.at < TOKEN_TTL) return cached.token;
+  // Offline mode stops here, before the socket (see netGate).
+  assertCanRequest();
   let res: Response;
   try {
     res = await fetch(`${auth.serverUrl}/auth/login`, {

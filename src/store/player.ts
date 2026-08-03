@@ -888,6 +888,9 @@ function warmUpcoming() {
  * the entire response.
  */
 async function warmStream(url: string) {
+  // Nothing is warmed offline: there is no stream to fetch, and the request
+  // would be one more thing reaching the network behind someone's back.
+  if (useAuthStore.getState().offline) return;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 4000);
   try {
@@ -1926,8 +1929,12 @@ let appStateAttached = false;
 /** Saves the queue on this device and, if there is a session, on the server. */
 function syncQueueNow(force = false) {
   saveQueueLocal(force);
-  const auth = useAuthStore.getState().auth;
-  if (!auth) return;
+  // The local copy above is the one that matters offline, and it is the only
+  // one written there: the server's copy is a request, and offline mode makes
+  // none. Without this the queue was pushed every twenty seconds and on every
+  // trip to the background, which is a phone using data its owner said not to.
+  const { auth, offline } = useAuthStore.getState();
+  if (!auth || offline) return;
   const { queue, index, positionSec } = usePlayerStore.getState();
   const current = queue[index];
   if (!current || current.url || current.localUri) return;

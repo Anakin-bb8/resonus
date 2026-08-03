@@ -135,15 +135,13 @@ export function coverArtUrl(id: string | undefined, _size?: number): string | un
   // like audio plays from the downloaded file.
   const local = Local.coverUrl(id);
   if (local) return local;
-  if (isOffline()) {
-    // Server offline: the server URL as fallback. expo-image serves it
-    // from its cache if it was already seen online (or downloads it if
-    // offline is manual with network); otherwise the placeholder remains.
-    // This way non-downloaded songs/albums show album art even if they
-    // can't be played. The local profile (no account) has no server, so
-    // there is no fallback there.
-    return serverOffline() ? Subsonic.coverArtUrl(auth(), id, _size) : undefined;
-  }
+  // Offline: what is on the phone, and nothing else. This used to hand back the
+  // server's URL for anything not downloaded, so the covers of an album you
+  // could not even play were fetched one by one over the network — which is how
+  // someone noticed that offline mode was not offline (#89). A URL given to the
+  // image loader is a request like any other; it just doesn't look like one in
+  // the code. Non-downloaded items show their placeholder instead.
+  if (isOffline()) return undefined;
   return Subsonic.coverArtUrl(auth(), id, _size);
 }
 
