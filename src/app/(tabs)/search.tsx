@@ -45,6 +45,7 @@ const GENRE_W = (Dimensions.get('window').width - spacing.lg * 2 - spacing.sm) /
 export default function SearchScreen() {
   useSettings((s) => s.accentColor); // re-render when accent changes
   useSettings((s) => s.appFont); // re-render when font changes
+  const offline = useAuthStore((s) => s.offline);
   const canSearch = useAuthStore((s) => !!s.auth || s.offline);
   const auth = useAuthStore((s) => s.auth);
   const t = useT();
@@ -88,10 +89,14 @@ export default function SearchScreen() {
   });
 
   // Genres for "Browse all" (server only) when there's no active search.
+  //
+  // Not offline: a genre is the server's idea and there is no local index of
+  // them, so the section had nothing to open even when it drew. What it did
+  // instead was ask, fail, and leave its skeleton behind on the way.
   const { data: genres, isLoading: genresLoading } = useQuery({
     queryKey: ['genres'],
     queryFn: () => getGenres(auth!),
-    enabled: !!auth,
+    enabled: !!auth && !offline,
   });
 
   const openMediaMenu = useMediaMenu((s) => s.open);
@@ -113,7 +118,7 @@ export default function SearchScreen() {
   const { data: stations } = useQuery({
     queryKey: ['radioStations'],
     queryFn: () => getRadioStations(auth!),
-    enabled: !!auth && auth.serverType !== 'jellyfin' && debouncedQuery.length > 1,
+    enabled: !!auth && !offline && auth.serverType !== 'jellyfin' && debouncedQuery.length > 1,
   });
   const stationMatches =
     debouncedQuery.length > 1
@@ -125,7 +130,7 @@ export default function SearchScreen() {
   const isEmpty = query.trim().length === 0;
   const showRecent = focused && isEmpty && recent.length > 0;
   const showBrowse = isEmpty && !showRecent && !!genres && genres.length > 0;
-  const showBrowseSkeleton = isEmpty && !showRecent && !!auth && genresLoading;
+  const showBrowseSkeleton = isEmpty && !showRecent && !!auth && !offline && genresLoading;
 
   /** Recent item subtitle: type (+ artist for albums/songs). */
   const recentLabel = (item: RecentItem): string => {

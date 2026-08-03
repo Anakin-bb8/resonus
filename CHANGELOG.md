@@ -102,6 +102,12 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- Search no longer offers what it cannot open offline. "Browse all" laid out
+  its genres, or rather the grey shapes of them, and radio stations were
+  searched for too: both are the server's to answer, and offline the answer was
+  a request that failed, leaving the loading shapes behind. A genre in
+  particular has nowhere to go there, since the app keeps no index of them
+  without a server. They are simply not offered until there is a connection.
 - The covers of what you can browse offline are kept on the phone. They were
   only ever an address on the server, so without a connection they came out of
   the image loader's cache or not at all, and that cache is not the app's: it
