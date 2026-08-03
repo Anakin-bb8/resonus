@@ -1851,6 +1851,22 @@ interface StoredQueue {
   source?: string | null;
   /** Route of that origin, so tapping the header still navigates there. */
   sourceHref?: string | null;
+  /**
+   * Shuffle and repeat as they were left (#102). Both are how someone listens
+   * rather than something they set up once, and finding them off after every
+   * cold start meant turning them on again each morning. `originalQueue` is
+   * NOT saved: it would double what a queue weighs, and turning shuffle off
+   * without it keeps the order that is playing instead of restoring the
+   * album's, which is a fair price for a session that already ended.
+   */
+  shuffle?: boolean;
+  repeat?: RepeatMode;
+}
+
+/** Guards what comes back from disk: the file is ours, but an older version's
+ *  (or a hand-edited one's) is not worth trusting into the player. */
+function isRepeatMode(v: unknown): v is RepeatMode {
+  return v === 'off' || v === 'one' || v === 'all';
 }
 
 /**
@@ -1869,7 +1885,7 @@ let queueDirty = true;
 function saveQueueLocal(force = false) {
   const key = queueStorageKey();
   if (!key) return;
-  const { queue, index, positionSec, radioMode, radioSeed, source, sourceHref } =
+  const { queue, index, positionSec, radioMode, radioSeed, source, sourceHref, shuffle, repeat } =
     usePlayerStore.getState();
   if (queue.length === 0) return;
   if (!force && !queueDirty && AppState.currentState === 'active') return;
@@ -1883,6 +1899,8 @@ function saveQueueLocal(force = false) {
     radioSeed,
     source,
     sourceHref,
+    shuffle,
+    repeat,
   };
   void setItem(key, JSON.stringify(payload));
 }
@@ -2615,8 +2633,15 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   toggleShuffle: () => {
-    const { shuffle, queue, index, originalQueue } = get();
+    const { shuffle, queue, index, originalQueue, source, sourceHref } = get();
     const current = queue[index];
+    // Same reasoning as starting a list again (see `forgetHistoryOf`): the
+    // order changes under the list being played, so where the back history had
+    // you in it no longer means anything. Left in, ⏮️ restored one of those
+    // positions along with the shuffle it was taken with, which turned the
+    // button you had just pressed back off by itself.
+    const key = contextKey(source, sourceHref);
+    if (key) forgetHistoryOf(key);
 
     if (!shuffle) {
       const rest = queue.filter((_, i) => i !== index);
@@ -2651,6 +2676,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     set({ repeat });
     const p = activePlayer();
     if (p) p.loop = repeat === 'one';
+    // It travels with the queue now, so it is written down like the rest of it
+    // instead of waiting for the next thing that happens to save.
+    scheduleSync();
   },
 
   setSleepTimer: (minutes) => {
@@ -2751,6 +2779,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       // silent when reaching the end of what was already queued.
       radioMode: saved.radioMode === true,
       radioSeed: saved.radioSeed ?? null,
+      // The queue was saved already shuffled, so this only restores the button:
+      // nothing is reordered on the way back in. `originalQueue` stays null
+      // (see `StoredQueue`), which turning shuffle off handles on its own.
+      shuffle: saved.shuffle === true,
+      repeat: isRepeatMode(saved.repeat) ? saved.repeat : 'off',
     });
     await loadIndex(index, false);
     if (positionSec > 0) seekActive(positionSec);
@@ -2816,6 +2849,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       positionSec: 0,
       durationSec: 0,
       shuffle: false,
+      // Next to `shuffle`, now that it is saved with the queue: another
+      // profile's is restored with that profile's queue, and one that has none
+      // saved should not inherit this one's.
+      repeat: 'off',
       originalQueue: null,
       source: null,
       sourceHref: null,
@@ -2845,7 +2882,9 @@ usePlayerStore.subscribe((st, prev) => {
     st.source !== prev.source ||
     st.sourceHref !== prev.sourceHref ||
     st.radioMode !== prev.radioMode ||
-    st.radioSeed !== prev.radioSeed
+    st.radioSeed !== prev.radioSeed ||
+    st.shuffle !== prev.shuffle ||
+    st.repeat !== prev.repeat
   ) {
     queueDirty = true;
   }

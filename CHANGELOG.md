@@ -22,6 +22,15 @@ Releases before 0.2.1 are only listed on the
   Navigation, off by default, which keeps Home, Search and Library at the
   bottom of every screen and clears the stack on the way there too. Raised by
   @ztx-lyghters, and by justtrife in the Discord.
+- Shuffle and repeat are still on when you come back. Both were forgotten on a
+  cold start, so whoever listens shuffled had to say so again every morning,
+  which is not a setting anyone means to give twice. They travel with the queue
+  that is already saved for each profile, so they come back with it and with
+  the song it was left on. What is not kept is the order the list had before
+  being shuffled: it would double what a queue weighs on disk, and turning
+  shuffle off after a restart simply keeps the order that is playing instead of
+  going back to the album's. Asked for by @ztx-lyghters, on behalf of another
+  user.
 - What you listen to offline reaches the server anyway. Away from the network
   the play could only be counted on the phone, for its own "Most played", and
   as far as the server was concerned a whole trip's music had never been
@@ -93,6 +102,12 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- Going back a song no longer turns shuffle off by itself. The back button
+  restores where you were along with everything that came with it, shuffle
+  included, so pressing it after shuffling a list undid the shuffle: the list
+  had been reordered underneath, and the position it went back to belonged to
+  the order from before. Changing the shuffle of a list now forgets those
+  positions, for the same reason starting the list again does.
 - Shuffling a list twice left the first shuffle within reach of the back
   button. Pressing "Shuffle play" again builds a new queue, but the old one
   stayed in the history that ⏮️ walks, so going back from the first song
