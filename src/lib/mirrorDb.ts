@@ -507,6 +507,38 @@ async function getEntry<T>(
   return value;
 }
 
+/**
+ * What is known about an artist who has no entry of their own.
+ *
+ * Offline you can reach an artist the mirror never stored: from a favourited
+ * album, say, whose artist screen was never opened online. Their id is the
+ * server's, so the local catalog cannot answer for them either, and what the
+ * screen showed was the id itself where the name goes. Their name is in every
+ * song of theirs the mirror holds, and their albums are stored under their own
+ * entries, so both come out of what is already here.
+ */
+export async function artistFallback(
+  dir: string,
+  profile: string,
+  artistId: string,
+): Promise<{ name?: string; albums: Album[] }> {
+  const db = await mirrorDb(dir, profile);
+  return timed('mirror artist fallback', async () => {
+    const named = await db.getFirstAsync<{ name: string | null }>(
+      `SELECT json_extract(data, '$.artist') AS name FROM songs
+        WHERE json_extract(data, '$.artistId') = ? AND name IS NOT NULL LIMIT 1`,
+      [artistId],
+    );
+    const rows = await db.getAllAsync<{ data: string }>(
+      `SELECT data FROM entries
+        WHERE kind = 'album' AND json_extract(data, '$.album.artistId') = ?`,
+      [artistId],
+    );
+    const albums = rows.map((r) => (JSON.parse(r.data) as AlbumDetail).album).filter(Boolean);
+    return { name: named?.name ?? undefined, albums };
+  });
+}
+
 export function getStarred(dir: string, profile: string): Promise<Starred | undefined> {
   return getEntry<Starred>(dir, profile, 'starred', '');
 }

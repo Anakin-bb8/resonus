@@ -528,10 +528,23 @@ async function mirrorArtist(
   id: string,
 ): Promise<{ artist: Subsonic.Artist; albums: Subsonic.Album[] }> {
   await loadMirror();
-  const d = await useLibraryMirror.getState().artistDetail(id);
-  if (!d) return Local.getArtist(id);
+  const mirror = useLibraryMirror.getState();
+  const d = await mirror.artistDetail(id);
   // Album art resolved by their id (so they work offline).
-  return { artist: d.artist, albums: d.albums.map((al) => ({ ...al, coverArt: al.id })) };
+  if (d) return { artist: d.artist, albums: d.albums.map((al) => ({ ...al, coverArt: al.id })) };
+  // No entry of their own: reachable all the same, from a favourited album
+  // whose artist was never opened online. Their name and their albums are in
+  // what the mirror does hold. Without this the screen showed the server's id
+  // where the name goes, since the local catalog is keyed by name and cannot
+  // answer for a server id either.
+  const found = await mirror.artistFallback(id);
+  if (found.name || found.albums.length > 0) {
+    return {
+      artist: { id, name: found.name ?? '', albumCount: found.albums.length },
+      albums: found.albums.map((al) => ({ ...al, coverArt: al.id })),
+    };
+  }
+  return Local.getArtist(id);
 }
 
 export function getArtistInfo(id: string): Promise<Subsonic.ArtistInfo> {

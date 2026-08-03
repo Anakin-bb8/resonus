@@ -204,6 +204,8 @@ interface MirrorState {
   playlistSongIds: () => Promise<Map<string, string[]>>;
   albumDetail: (id: string) => Promise<Db.AlbumDetail | undefined>;
   artistDetail: (id: string) => Promise<Db.ArtistDetail | undefined>;
+  /** Name and albums for an artist with no entry of their own. */
+  artistFallback: (id: string) => Promise<{ name?: string; albums: Album[] }>;
   song: (id: string) => Promise<Song | undefined>;
   songs: (ids: string[]) => Promise<Map<string, Song>>;
   playlistVersions: () => Promise<Record<string, string | undefined>>;
@@ -394,6 +396,8 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
     withMirror((d, p) => Db.playlistSongIds(d, p), new Map<string, string[]>()),
   albumDetail: (id) => withMirror((d, p) => Db.getAlbumDetail(d, p, id), undefined),
   artistDetail: (id) => withMirror((d, p) => Db.getArtistDetail(d, p, id), undefined),
+  artistFallback: (id) =>
+    withMirror((d, p) => Db.artistFallback(d, p, id), { albums: [] as Album[] }),
   song: (id) => withMirror((d, p) => Db.getSong(d, p, id), undefined),
   songs: (ids) => withMirror((d, p) => Db.getSongs(d, p, ids), new Map<string, Song>()),
   playlistVersions: () => withMirror((d, p) => Db.playlistVersions(d, p), {}),
