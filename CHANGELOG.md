@@ -102,6 +102,20 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- Resonus no longer asks the system for the audio the way an interruption
+  asks for it. Playing anything requested the audio "for a moment", which is
+  what a navigation prompt, a notification or a call asks for, and the request
+  never said what it was for. A car reads exactly that to decide which of its
+  channels an app belongs on, and the one for something short and unnamed is
+  the one calls come out of: the volume shows a phone rather than a speaker,
+  and the music arrives with the bandwidth of a phone call. It now asks the way
+  a music player does, for as long as the music lasts, and says it is music.
+  This is the second half of what 0.6.1 fixed on the same report: the first
+  stopped the app from taking over the phone's call route, and the symptom
+  stayed. What it changes elsewhere: an app paused to let Resonus play is no
+  longer told to expect the audio back, so it will not resume on its own when
+  the music stops, which is how every other music player behaves. Reported by
+  @CraftoHohenvels and @Anakin-bb8, still to be confirmed from a car.
 - Going back a song no longer turns shuffle off by itself. The back button
   restores where you were along with everything that came with it, shuffle
   included, so pressing it after shuffling a list undid the shuffle: the list
