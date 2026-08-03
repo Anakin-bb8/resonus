@@ -88,16 +88,25 @@ function discHeadersFor(
  * carry two genres across its tracks.
  *
  * Deduped ignoring case and trimmed, so "Rock" on one track and "rock " on
- * another are one chip. Capped because the row is meant to be a hint, not a
- * tag cloud.
+ * another are one chip.
+ *
+ * The cap is only there so a library with a tag per track can't put a
+ * thousand chips in a header that doesn't virtualize them: the row scrolls
+ * sideways, so nothing below it moves however many there are, and whoever
+ * tagged a record with a dozen genres meant all twelve (#104). Six of them,
+ * which is what this used to show, is a number small enough to be reached by
+ * accident.
  */
-const MAX_GENRES = 6;
+const MAX_GENRES = 50;
 
 function albumGenres(album: Album, songs: Song[]): string[] {
   const raw = [
     ...(album.genres ?? []).map((g) => g.name),
     ...(album.genre ? [album.genre] : []),
-    ...songs.map((s) => s.genre ?? ''),
+    // Every genre of each track, not just the first: `genre` is the single one
+    // plain Subsonic has room for, and a track tagged "Rock; Pop" only ever
+    // handed over "Rock" through it.
+    ...songs.flatMap((s) => [...(s.genres ?? []).map((g) => g.name), s.genre ?? '']),
   ];
   const seen = new Set<string>();
   const out: string[] = [];

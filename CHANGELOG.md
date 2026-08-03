@@ -93,6 +93,16 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- An album's genre chips show every genre it is tagged with. The row stopped at
+  six, which is a number a well tagged record reaches without trying, and the
+  rest were simply not there: nothing said so, so the album looked like it
+  carried fewer tags than it does. There is still a ceiling, at fifty, but only
+  so a library with a tag per track can't fill the header with a thousand
+  chips; the row scrolls sideways, so however many there are nothing below it
+  moves. Two genres on the same track were also being read as one, since only
+  the first was taken from each: on Jellyfin the others were dropped as the
+  song was read, which left "Song information" showing a single tag as well.
+  Reported by @ztx-lyghters.
 - The player screen could be scrolled a little with the lyrics card turned off,
   which made it look like something was hanging past the bottom edge. Nothing
   was: the card is the one thing that reaches below the first page, and the

@@ -237,6 +237,10 @@ function toSong(it: JfItem): Song {
           ? it.Id
           : undefined,
     genre: it.Genres?.[0],
+    // The rest of them too: `genre` is the one slot Subsonic has, and dropping
+    // the others here left "Song information" and the album's chips showing a
+    // single tag for a track that carries several (#104).
+    genres: it.Genres?.map((name) => ({ name })),
     duration: it.RunTimeTicks ? Math.round(it.RunTimeTicks / TICKS_PER_SECOND) : undefined,
     track: it.IndexNumber,
     discNumber: it.ParentIndexNumber,
