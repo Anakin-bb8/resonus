@@ -13,9 +13,12 @@
  * small, and from then on it is a file on disk like a download's. Nothing is
  * crawled ahead of time; this only follows what you were already looking at.
  *
- * Only albums, playlists and artists, which is what the shelves are made of. A
- * cover per song would be one file per track on a server that gives each song
- * its own cover id, and those rows are reading their album's picture anyway.
+ * Albums, playlists and artists, which is what the shelves are made of, plus
+ * the album behind each song a playlist or the favourites keep. Never a song's
+ * own cover id: on a server that gives every track one, that would be a file
+ * per track, and offline the rows ask for their album's picture instead (see
+ * `songCoverUrl`). That last part used to be assumed rather than done, which
+ * is why a playlist offline was a column of grey squares.
  */
 import * as FileSystem from 'expo-file-system/legacy';
 
@@ -135,7 +138,11 @@ export function keepMirrorCovers(
     // difference between saving them on the first run and on some later one.
     await loadMirrorCovers(profile);
     if (known.size >= MAX) return;
-    const wanted = ids.filter(
+    // Deduplicated first: a playlist hands over the album of every one of its
+    // songs, and twenty tracks off the same record are twenty copies of one id.
+    // Without this each of them would be fetched, since none is in `known` yet
+    // when the list is drawn up.
+    const wanted = [...new Set(ids)].filter(
       (id): id is string =>
         !!id && !known.has(id) && !inFlight.has(id) && !localCoverUrl(id),
     );

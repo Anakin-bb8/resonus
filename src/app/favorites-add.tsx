@@ -21,7 +21,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
-  coverArtUrl,
+  songCoverUrl,
   getMostPlayedSongs,
   getSimilarSongs,
   getStarred,
@@ -260,7 +260,7 @@ function AddRow({
   const t = useT();
   return (
     <View style={styles.row}>
-      <Cover uri={coverArtUrl(song.coverArt ?? song.albumId, 100)} size={44} />
+      <Cover uri={songCoverUrl(song, 100)} size={44} />
       <View style={styles.info}>
         <Text style={styles.songTitle} numberOfLines={1}>
           {song.title}

@@ -17,7 +17,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { coverArtUrl, type Song } from '@/api/data';
+import { songCoverUrl, type Song } from '@/api/data';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { useT } from '@/i18n';
@@ -120,7 +120,7 @@ export function MiniPlayer() {
   }, [song?.id, translateX, translateY]);
 
   // A radio has no album, but the station may carry its own image.
-  const cover = song ? coverArtUrl(song.coverArt ?? (song.url ? undefined : song.albumId), 100) : undefined;
+  const cover = song ? songCoverUrl(song, 100) : undefined;
   // Dominant color from the cover art, if the setting is active; otherwise neutral surface.
   const miniColor = useSettings((s) => s.miniPlayerColorBackground);
   const marqueeTitles = useSettings((s) => s.marqueeTitles);
@@ -128,7 +128,7 @@ export function MiniPlayer() {
   // with different sizes the quantization picks different colors and the mini
   // ended up one color and the player screen another for the same song.
   const colorSource = song
-    ? coverArtUrl(song.coverArt ?? (song.url ? undefined : song.albumId), 600)
+    ? songCoverUrl(song, 600)
     : undefined;
   const dominant = useDominantColor(miniColor ? colorSource : undefined);
   const bg = miniColor ? dominant : colors.surfaceHighlight;

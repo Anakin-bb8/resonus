@@ -10,7 +10,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { coverArtUrl, type Song } from '@/api/data';
+import { songCoverUrl, type Song } from '@/api/data';
 import { colors, fontSize, radius, spacing } from '@/theme';
 import { Cover } from './Cover';
 
@@ -48,7 +48,7 @@ export const SongCard = memo(function SongCard({
       accessibilityState={selecting ? { selected: !!selected } : undefined}
     >
       <View>
-        <Cover uri={coverArtUrl(song.coverArt ?? song.albumId ?? song.id, 300)} size={width} />
+        <Cover uri={songCoverUrl(song, 300)} size={width} />
         {/* Only while selecting: a tick on every cover the rest of the time
             would be noise on top of the artwork. */}
         {selecting ? (

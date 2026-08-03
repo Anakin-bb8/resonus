@@ -12,7 +12,7 @@ import ReorderableList, {
 } from 'react-native-reorderable-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { coverArtUrl } from '@/api/data';
+import { songCoverUrl } from '@/api/data';
 import { type Song } from '@/api/subsonic';
 import { useT } from '@/i18n';
 import { listPerf } from '@/lib/listPerf';
@@ -35,7 +35,7 @@ function ReorderRow({ song }: { song: Song }) {
   return (
     <Pressable style={styles.row} onLongPress={() => { haptic('medium'); drag(); }} delayLongPress={150}>
       {showListArtwork ? (
-        <Cover uri={coverArtUrl(song.coverArt ?? song.albumId, 100)} size={44} />
+        <Cover uri={songCoverUrl(song, 100)} size={44} />
       ) : null}
       <View style={styles.info}>
         <Text style={styles.title} numberOfLines={1}>

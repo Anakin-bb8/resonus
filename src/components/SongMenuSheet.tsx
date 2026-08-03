@@ -23,6 +23,7 @@ import { useBottomSheetAnim } from '@/hooks/useBottomSheetAnim';
 import {
   addToPlaylist,
   coverArtUrl,
+  songCoverUrl,
   createPlaylist,
   getPlaylist,
   getPlaylists,
@@ -343,7 +344,7 @@ export function SongMenuSheet() {
                   dragged down to dismiss. */}
               <View style={styles.grabber} />
               <View style={styles.headerRow}>
-                <Cover uri={coverArtUrl( song.coverArt ?? song.albumId, 100)} size={48} />
+                <Cover uri={songCoverUrl(song, 100)} size={48} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.title} numberOfLines={1}>
                     {song.title}

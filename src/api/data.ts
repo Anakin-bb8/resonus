@@ -168,6 +168,27 @@ export function coverArtUrl(id: string | undefined, _size?: number): string | un
 }
 
 /**
+ * The cover for one song, which is not always the same picture offline.
+ *
+ * Online a song's own art wins, because on a compilation or a live take it is
+ * the one that belongs to the track. Offline that art is usually nothing: on a
+ * server that gives every track its own cover id, nothing on this phone was
+ * ever saved under it. What was saved is the album's, both by a download and
+ * by the mirror, so offline the album's is what gets asked for. A picture from
+ * the right record beats a grey square, which is what the rows of a playlist
+ * were showing.
+ *
+ * A station has no album to fall back to, and its `url` is what says so.
+ */
+export function songCoverUrl(
+  song: Pick<Song, 'coverArt' | 'albumId' | 'url'>,
+  size?: number,
+): string | undefined {
+  const album = song.url ? undefined : song.albumId;
+  return coverArtUrl(isOffline() ? (album ?? song.coverArt) : (song.coverArt ?? album), size);
+}
+
+/**
  * Marks what cannot be played without a connection, for a list that builds
  * itself rather than coming from the mirror (the history, which is written on
  * this phone as it plays). Rows read `unavailable` to dim themselves and to

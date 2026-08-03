@@ -198,6 +198,10 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
         // `123` on Subsonic). Saved under both, since both are asked.
         ...starred.albums.map((a) => a.artistId),
         ...starred.artists.map((a) => a.coverArt ?? a.id),
+        // And the album of every favourite song, which is the picture its row
+        // draws offline (see `songCoverUrl`). Not the song's own cover id:
+        // that would be a file per track, and the row is not asking for it.
+        ...starred.songs.map((s) => s.albumId),
       ]);
       if (sameLists(await Db.getStarred(dir, profile), starred)) return;
       await Db.saveEntry(dir, profile, 'starred', '', starred, starred.songs);
@@ -214,7 +218,11 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
 
   savePlaylistDetail: (id, playlist, songs) => {
     void withMirror((dir, profile) => {
-      keepCovers(profile, [playlist.coverArt ?? playlist.id]);
+      // The playlist's own cover, and the album behind each of its songs: those
+      // are the pictures the rows ask for offline. A playlist of five hundred
+      // songs is a few hundred albums at most, deduplicated against what is
+      // already saved and capped like everything else here.
+      keepCovers(profile, [playlist.coverArt ?? playlist.id, ...songs.map((s) => s.albumId)]);
       return Db.saveEntry(dir, profile, 'playlist', id, { playlist, songs }, songs);
     }, undefined);
   },
@@ -222,7 +230,10 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
   savePlaylistDetails: (entries) => {
     if (entries.length === 0) return;
     void withMirror(async (dir, profile) => {
-      keepCovers(profile, entries.map((e) => e.playlist.coverArt ?? e.playlist.id));
+      keepCovers(profile, [
+        ...entries.map((e) => e.playlist.coverArt ?? e.playlist.id),
+        ...entries.flatMap((e) => e.songs.map((s) => s.albumId)),
+      ]);
       for (const e of entries) {
         await Db.saveEntry(
           dir,

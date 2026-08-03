@@ -17,7 +17,7 @@ import { GestureDetector, GestureHandlerRootView } from 'react-native-gesture-ha
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { coverArtUrl } from '@/api/data';
+import { songCoverUrl } from '@/api/data';
 import { useBottomSheetAnim } from '@/hooks/useBottomSheetAnim';
 import { useT } from '@/i18n';
 import { artistTargets } from '@/lib/artistNav';
@@ -218,7 +218,7 @@ export function SongInfoSheet() {
                   accessibilityRole="button"
                   accessibilityLabel={t('Cover art')}
                 >
-                  <Cover uri={coverArtUrl(song.coverArt ?? song.id, 100)} size={48} />
+                  <Cover uri={songCoverUrl(song, 100)} size={48} />
                 </Pressable>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.title} numberOfLines={2}>
@@ -264,7 +264,7 @@ export function SongInfoSheet() {
       </GestureHandlerRootView>
       <CoverViewer
         visible={coverOpen}
-        uri={coverArtUrl(song.coverArt ?? song.id, 1200)}
+        uri={songCoverUrl(song, 1200)}
         onClose={() => setCoverOpen(false)}
       />
     </Modal>

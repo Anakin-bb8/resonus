@@ -18,7 +18,7 @@ import ReorderableList, {
   type ReorderableListReorderEvent,
 } from 'react-native-reorderable-list';
 
-import { coverArtUrl } from '@/api/data';
+import { songCoverUrl } from '@/api/data';
 import { type Song } from '@/api/subsonic';
 import { Cover } from '@/components/Cover';
 import { Dialog } from '@/components/Dialog';
@@ -54,7 +54,7 @@ function NowPlayingRow({ song }: { song: Song }) {
       <View style={styles.main}>
         {showListArtwork ? (
           <View style={styles.artwork}>
-            <Cover uri={coverArtUrl(song.coverArt ?? song.albumId, 100)} size={44} />
+            <Cover uri={songCoverUrl(song, 100)} size={44} />
           </View>
         ) : null}
         <View style={styles.info}>
@@ -82,7 +82,7 @@ function PreviousRow({ item, absIndex }: { item: Song; absIndex: number }) {
       <View style={styles.main}>
         {showListArtwork ? (
           <View style={styles.artwork}>
-            <Cover uri={coverArtUrl(item.coverArt ?? item.albumId, 100)} size={44} />
+            <Cover uri={songCoverUrl(item, 100)} size={44} />
           </View>
         ) : null}
         <View style={styles.info}>
@@ -119,7 +119,7 @@ function UpcomingRow({ item, absIndex }: { item: Song; absIndex: number }) {
       <Pressable style={styles.main} onPress={() => jumpTo(absIndex)} onLongPress={() => { haptic('medium'); drag(); }}>
         {showListArtwork ? (
           <View style={styles.artwork}>
-            <Cover uri={coverArtUrl(item.coverArt ?? item.albumId, 100)} size={44} />
+            <Cover uri={songCoverUrl(item, 100)} size={44} />
           </View>
         ) : null}
         <View style={styles.info}>
