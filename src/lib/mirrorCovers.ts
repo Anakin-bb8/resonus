@@ -26,15 +26,18 @@ import { hashKey, localCoverUrl, registerCover } from '@/lib/localLibrary';
 const DIR = FileSystem.documentDirectory + 'library-mirror/covers/';
 
 /**
- * One size for everything. The shelves ask for 100 to 300 px and the image
- * loader scales down what it is given, so the largest of those is enough to
- * serve them all from one file. Around 25 KB each in practice.
+ * One size for everything, and it has to be the largest anything asks for
+ * rather than the smallest: the same file is the 56 px thumbnail in a list and
+ * the cover across the top of the album, and a picture saved for the list
+ * looks soft where it matters most. The image loader scales down for free;
+ * upwards it cannot. Around 50 KB each in practice.
  */
-const SIZE = 300;
+const SIZE = 500;
 
 /**
- * Ceiling on how many are kept: about 250 MB at the size above, which is a
- * large library browsed end to end and a fair trade on a phone that has room.
+ * Ceiling on how many are kept. A library browsed end to end, and nobody
+ * browses ten thousand albums in a sitting: what this really bounds is the
+ * runaway case, which is the only reason to have a number at all.
  * There is a ceiling at all because this grows on its own, and something that
  * grows on its own should have an end somebody chose rather than one they
  * discover. What it takes is counted and shown in Settings › Downloads next to

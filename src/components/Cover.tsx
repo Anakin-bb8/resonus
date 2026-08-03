@@ -24,6 +24,28 @@ interface Props {
   style?: StyleProp<ViewStyle | ImageStyle>;
 }
 
+/**
+ * Sizes the app asks covers at. The same picture is a different URL at each of
+ * them, and so a different entry in the image loader's cache: a cover seen in a
+ * list is cached at 100 and the album that opens from it asks for 500, which is
+ * a miss. Offline that meant a thumbnail everywhere and a blank header.
+ *
+ * So a marked cover is looked for at the size asked and then at the others,
+ * largest first, since scaling a picture down is free and up is not. Only a
+ * handful of lookups, only offline, and only for covers that were never saved
+ * (see `mirrorCovers`, which is where this stops being needed).
+ */
+const CACHE_SIZES = [500, 300, 1200, 100] as const;
+
+async function cachedPath(url: string): Promise<string | undefined> {
+  const sized = (n: number) => url.replace(/([?&](?:size|fillWidth|fillHeight)=)\d+/g, `$1${n}`);
+  for (const candidate of [url, ...CACHE_SIZES.map(sized)]) {
+    const path = await Image.getCachePathAsync(candidate).catch(() => null);
+    if (path) return path.startsWith('file://') ? path : `file://${path}`;
+  }
+  return undefined;
+}
+
 export function Cover({
   uri,
   size,
@@ -54,11 +76,9 @@ export function Cover({
       return;
     }
     let alive = true;
-    void Image.getCachePathAsync(uri.slice(CACHED_COVER.length))
-      .then((path) => {
-        if (alive && path) setCached(path.startsWith('file://') ? path : `file://${path}`);
-      })
-      .catch(() => {});
+    void cachedPath(uri.slice(CACHED_COVER.length)).then((path) => {
+      if (alive && path) setCached(path);
+    });
     return () => {
       alive = false;
     };
