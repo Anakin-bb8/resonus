@@ -102,6 +102,16 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- A song whose file says nothing about its album no longer files it under
+  "Álbum desconocido", in Spanish, whatever language the app is in. The same
+  went for an artist. Those two names are how the local library groups what
+  arrives untagged, and they doubled as the album's and the artist's id, which
+  is why they were never translated: the id is written into the catalog on the
+  phone and into the name of every cover saved with it, so changing it would
+  have orphaned all of it and forced a rescan. They stay as they are underneath
+  and are translated on the way to the screen, so a library already scanned
+  reads correctly without being scanned again. Downloads on a server account
+  did the same thing and are fixed with it.
 - The list of devices to play to no longer offers things that cannot play. A
   search for speakers has to go out to the whole network, so everything on it
   answers, and almost nothing in a house plays music: the router is the usual

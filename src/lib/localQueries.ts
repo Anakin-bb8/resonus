@@ -21,6 +21,8 @@ import {
   loadFolderSongs,
   normKey,
   registerCover,
+  UNKNOWN_ALBUM,
+  UNKNOWN_ARTIST,
 } from './localLibrary';
 
 // Local favorites and playlists are PER PROFILE (each account/profile has its
@@ -198,11 +200,15 @@ export async function rescan(): Promise<void> {
   await ensureCatalog();
 }
 
+// An album and an artist with nothing to go by are grouped under a name that
+// cannot change, because it is their id (see localLibrary). This is where that
+// name stops being an id and becomes something to read, so it is also where it
+// gets translated. Everything the local catalog shows passes through here.
 function toAlbum(local: CatAlbum): Album {
   registerCover(local.id, local.coverUri);
   return {
     id: local.id,
-    name: local.name,
+    name: local.name === UNKNOWN_ALBUM ? tg('Unknown album') : local.name,
     artist: local.artist,
     artistId: local.artist ? normKey(local.artist) : undefined,
     coverArt: local.id,
@@ -216,7 +222,7 @@ function toArtist(local: CatArtist): Artist {
   registerCover(local.id, local.coverUri);
   return {
     id: local.id,
-    name: local.name,
+    name: local.name === UNKNOWN_ARTIST ? tg('Unknown artist') : local.name,
     coverArt: local.id,
     albumCount: local.albumCount,
   };
@@ -284,7 +290,7 @@ export async function getAllAlbums(): Promise<Album[]> {
 export async function getAlbum(albumId: string): Promise<{ album: Album; songs: Song[] }> {
   const c = await ensureCatalog();
   const songs = (c?.songs ?? [])
-    .filter((s) => (s.albumId || normKey(s.album || 'Álbum desconocido')) === albumId)
+    .filter((s) => (s.albumId || normKey(s.album || UNKNOWN_ALBUM)) === albumId)
     // Disc first, then track number (those without one go last, by title). On
     // multi-disc albums track numbers repeat per disc, so sorting by track alone
     // interleaved the discs and mislabeled them (matches the online order now).
@@ -324,7 +330,7 @@ export async function getArtists(): Promise<Artist[]> {
 export async function getArtist(artistId: string): Promise<{ artist: Artist; albums: Album[] }> {
   const c = await ensureCatalog();
   const albums = (c?.albums ?? []).filter(
-    (a) => normKey(a.artist || 'Artista desconocido') === artistId,
+    (a) => normKey(a.artist || UNKNOWN_ARTIST) === artistId,
   );
   const artist = c?.artists.find((a) => a.id === artistId);
   return {
@@ -345,11 +351,11 @@ export async function getAppearsOn(artistId: string): Promise<GuestAlbum[]> {
   if (!c) return [];
   const albumIds = new Set(
     c.songs
-      .filter((s) => normKey(s.artist || 'Artista desconocido') === artistId)
-      .map((s) => s.albumId || normKey(s.album || 'Álbum desconocido')),
+      .filter((s) => normKey(s.artist || UNKNOWN_ARTIST) === artistId)
+      .map((s) => s.albumId || normKey(s.album || UNKNOWN_ALBUM)),
   );
   return c.albums
-    .filter((a) => albumIds.has(a.id) && normKey(a.artist || 'Artista desconocido') !== artistId)
+    .filter((a) => albumIds.has(a.id) && normKey(a.artist || UNKNOWN_ARTIST) !== artistId)
     // The album's own artist is compared here, so there's no ambiguity.
     .map((a) => ({ ...toAlbum(a), confirmed: true }));
 }

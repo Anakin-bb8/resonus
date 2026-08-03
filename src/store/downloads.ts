@@ -33,7 +33,7 @@ import {
   type SubsonicAuth,
 } from '@/api/backend';
 import { tg } from '@/i18n';
-import { hashKey, normKey, registerCover } from '@/lib/localLibrary';
+import { hashKey, normKey, registerCover, UNKNOWN_ARTIST } from '@/lib/localLibrary';
 import { serializeLrc } from '@/lib/lrc';
 import { siblingLrcUri } from '@/lib/localLyrics';
 import * as Db from '@/lib/downloadsDb';
@@ -161,8 +161,10 @@ function activeServerDir(): string | null {
 function deriveArtists(albums: DlAlbum[]): (Artist & { coverUri?: string })[] {
   const map = new Map<string, Artist & { coverUri?: string }>();
   for (const al of albums) {
-    const name = al.artist || 'Artista desconocido';
-    const key = normKey(name);
+    // The key is the untranslatable one (it is the artist's id, see
+    // localLibrary); the name is what gets read, so it is the translated one.
+    const key = normKey(al.artist || UNKNOWN_ARTIST);
+    const name = al.artist || tg('Unknown artist');
     const existing = map.get(key);
     if (existing) {
       existing.albumCount = (existing.albumCount ?? 0) + 1;
@@ -301,7 +303,7 @@ function toLocalSong(song: Song, fileUri: string, dlBitRate?: number, dlBytes?: 
     // carry it, so the quality label can show it offline.
     dlBitRate,
     // Local artist id (by name) to merge with artists from scanning.
-    artistId: normKey(song.artist || 'Artista desconocido'),
+    artistId: normKey(song.artist || UNKNOWN_ARTIST),
     // Server ids don't work offline: we re-peg each artist by name.
     artists: song.artists?.map((a) => ({ id: normKey(a.name), name: a.name })),
     coverArt: song.albumId,
@@ -314,7 +316,7 @@ function toLocalSong(song: Song, fileUri: string, dlBitRate?: number, dlBytes?: 
 function toLocalAlbum(album: Album, coverUri?: string, dlBytes?: number): DlAlbum {
   return {
     ...album,
-    artistId: normKey(album.artist || 'Artista desconocido'),
+    artistId: normKey(album.artist || UNKNOWN_ARTIST),
     artists: album.artists?.map((a) => ({ id: normKey(a.name), name: a.name })),
     coverArt: album.id,
     coverUri,
@@ -348,7 +350,7 @@ async function mirrorAlbumTracklists(auth: SubsonicAuth, songs: Song[]): Promise
 function albumFromSong(song: Song): Album {
   return {
     id: song.albumId ?? `dl-${hashKey(song.album || song.id)}`,
-    name: song.album || 'Álbum desconocido',
+    name: song.album || tg('Unknown album'),
     artist: song.artist,
     year: song.year,
   };

@@ -239,6 +239,21 @@ function nameFromSafUri(uri: string): string {
   return titleFromFilename(last);
 }
 
+/**
+ * What an album and an artist are grouped under when the file says nothing.
+ *
+ * They are in Spanish, and they have to stay that way: `normKey` of these is
+ * the album's and the artist's id, so they are written into every catalog
+ * already scanned, into the `albumId` of every song in it, and into the name of
+ * every cover file on disk. Translating them here would orphan all of that.
+ *
+ * Nobody reads them either: what is shown for an untagged album is decided when
+ * the catalog is read (see `toAlbum` in localQueries), where they become
+ * "Unknown album" and "Unknown artist" in whatever language the app is in.
+ */
+export const UNKNOWN_ALBUM = 'Álbum desconocido';
+export const UNKNOWN_ARTIST = 'Artista desconocido';
+
 /** Normalises a string for grouping: lower case, no stray whitespace. */
 export function normKey(s: string): string {
   return s.toLowerCase().trim().replace(/\s+/g, ' ');
@@ -328,11 +343,11 @@ function groupByAlbum(songs: Song[]): LocalAlbum[] {
   // out once per group and not per song, which is what keeps the scan from
   // costing O(n²).
   return Array.from(map.entries()).map(([key, v]) => {
-    const artist = pickBestName(v.songs.map((s) => s.artist || 'Artista desconocido'));
+    const artist = pickBestName(v.songs.map((s) => s.artist || UNKNOWN_ARTIST));
     return {
       id: key,
-      name: pickBestName(v.songs.map((s) => s.album || 'Álbum desconocido')),
-      artist: artist !== 'Artista desconocido' ? artist : undefined,
+      name: pickBestName(v.songs.map((s) => s.album || UNKNOWN_ALBUM)),
+      artist: artist !== UNKNOWN_ARTIST ? artist : undefined,
       coverBase64: v.coverBase64,
       coverMime: v.coverMime,
       songCount: v.songs.length,
@@ -348,7 +363,7 @@ function groupByArtist(albums: LocalAlbum[]): LocalArtist[] {
     coverUri?: string;
   }>();
   for (const album of albums) {
-    const key = normKey(album.artist || 'Artista desconocido');
+    const key = normKey(album.artist || UNKNOWN_ARTIST);
     let entry = map.get(key);
     if (!entry) {
       entry = { albums: [] };
@@ -359,7 +374,7 @@ function groupByArtist(albums: LocalAlbum[]): LocalArtist[] {
   }
   return Array.from(map.entries()).map(([key, v]) => ({
     id: key,
-    name: pickBestName(v.albums.map((a) => a.artist || 'Artista desconocido')),
+    name: pickBestName(v.albums.map((a) => a.artist || UNKNOWN_ARTIST)),
     coverUri: v.coverUri,
     albumCount: v.albums.length,
   }));
@@ -453,8 +468,8 @@ function applyTags(base: Record<string, unknown>, fallbackTitle: string, tags: I
   if (tags?.comment) base.comment = tags.comment;
   // Derived ids, which are the catalog's keys, so a song can be followed to its
   // album or artist the same way it can against a server.
-  const album = (base.album as string) || 'Álbum desconocido';
-  const artist = (base.artist as string) || 'Artista desconocido';
+  const album = (base.album as string) || UNKNOWN_ALBUM;
+  const artist = (base.artist as string) || UNKNOWN_ARTIST;
   base.albumId = normKey(album);
   base.artistId = normKey(artist);
   base.coverArt = base.albumId;
@@ -661,7 +676,7 @@ export function getLocalArtists(sourceMode: string, uri?: string): LocalArtist[]
 }
 
 function albumKeyOf(song: Song): string {
-  return song.albumId || normKey(song.album || 'Álbum desconocido');
+  return song.albumId || normKey(song.album || UNKNOWN_ALBUM);
 }
 
 export function getLocalAlbumSongs(sourceMode: string, albumId: string, uri?: string): Song[] {
@@ -676,7 +691,7 @@ export function getLocalAlbumSongs(sourceMode: string, albumId: string, uri?: st
 }
 
 export function getLocalArtistAlbums(sourceMode: string, artistName: string, uri?: string): LocalAlbum[] {
-  return catalogCache.get(cacheKey(sourceMode, uri))?.albums.filter((a) => normKey(a.artist || 'Artista desconocido') === artistName) ?? [];
+  return catalogCache.get(cacheKey(sourceMode, uri))?.albums.filter((a) => normKey(a.artist || UNKNOWN_ARTIST) === artistName) ?? [];
 }
 
 // ── The cover index ───────────────────────────────────────────────────────
@@ -748,7 +763,7 @@ async function flushAlbumCovers(albums: LocalAlbum[]): Promise<void> {
 function migrateArtistCovers(catalog: LocalCatalog): void {
   const byArtist = new Map<string, string>();
   for (const al of catalog.albums) {
-    const key = normKey(al.artist || 'Artista desconocido');
+    const key = normKey(al.artist || UNKNOWN_ARTIST);
     if (al.coverUri && !byArtist.has(key)) byArtist.set(key, al.coverUri);
   }
   for (const ar of catalog.artists) {
