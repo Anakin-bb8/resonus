@@ -39,6 +39,7 @@ import { useToast } from '@/store/toast';
 import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
 import { BackChevron } from '@/components/BackChevron';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
+import { listPerf } from '@/lib/listPerf';
 
 const EMPTY_EDIT: RadioEdit = { name: '', streamUrl: '', homePageUrl: '' };
 
@@ -189,6 +190,7 @@ export default function RadioScreen() {
         <Message text={t("Couldn't load radio stations.")} onRetry={() => refetch()} />
       ) : (
         <FlatList
+          {...listPerf}
           data={stations}
           keyExtractor={(item) => item.id}
           contentContainerStyle={[styles.list, { paddingBottom: bottomPad }]}
