@@ -747,21 +747,25 @@ async function mirrorPlaylists(): Promise<Subsonic.Playlist[]> {
   // song in them parsed, fifty times over, each time Home or the Library drew.
   const details = await mirror.playlistSongIds();
 
-  // The cover of a playlist without one is the album art of its first
-  // downloaded track, so those ids are resolved in one go rather than one at
-  // a time inside the loop.
+  // The cover of a playlist without one is the album art of one of its tracks:
+  // a downloaded one for preference, since that album's cover is certainly on
+  // the phone, and otherwise simply the first, whose cover the mirror has
+  // probably kept too. Falling back only to downloaded tracks left a playlist
+  // with none of them as a blank tile on Home, which is what it looked like.
+  // The ids are resolved in one go rather than one at a time inside the loop.
   const firstDownloaded = (songIds: string[]) => songIds.find((sid) => files[sid]);
+  const firstShowable = (songIds: string[]) => firstDownloaded(songIds) ?? songIds[0];
   const wanted: string[] = [];
   for (const edit of Object.values(qpls)) {
     if (!edit.created || edit.deleted) continue;
-    const f = firstDownloaded(edit.songIds ?? []);
+    const f = firstShowable(edit.songIds ?? []);
     if (f) wanted.push(f);
   }
   for (const p of stored ?? []) {
     if (p.coverArt) continue;
     const known = details.get(p.id);
     const songIds = qpls[p.id]?.songIds ?? (known && known.length > 0 ? known : []);
-    const f = firstDownloaded(songIds);
+    const f = firstShowable(songIds);
     if (f) wanted.push(f);
   }
   const covers = await resolveSongs(wanted);
@@ -771,7 +775,7 @@ async function mirrorPlaylists(): Promise<Subsonic.Playlist[]> {
   for (const [id, edit] of Object.entries(qpls)) {
     if (!edit.created || edit.deleted) continue;
     const songIds = edit.songIds ?? [];
-    const firstDl = firstDownloaded(songIds);
+    const firstDl = firstShowable(songIds);
     out.push({
       id,
       name: edit.name ?? '',
@@ -791,7 +795,7 @@ async function mirrorPlaylists(): Promise<Subsonic.Playlist[]> {
     const stored = details.get(p.id);
     const detailIds = stored && stored.length > 0 ? stored : undefined;
     const songIds = edit?.songIds ?? detailIds ?? [];
-    const firstDl = firstDownloaded(songIds);
+    const firstDl = firstShowable(songIds);
     // With known tracklist (cached details or offline edit) the real count;
     // otherwise, the count provided by the server playlist.
     const haveTracks = edit?.songIds != null || detailIds != null;
