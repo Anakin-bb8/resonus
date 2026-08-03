@@ -1159,6 +1159,18 @@ export async function scrobble(auth: SubsonicAuth, id: string, submission = true
   }
 }
 
+/**
+ * A listen that already happened, sent with the time it happened at (ms since
+ * epoch). For the offline outbox: the play is uploaded on reconnect, and
+ * `time` is what keeps it in the right place in the server's history and in
+ * Last.fm/ListenBrainz instead of piling every trip's music onto the minute
+ * the phone found the network. Unlike `scrobble` it lets errors through, so
+ * what didn't arrive stays queued.
+ */
+export async function submitPlay(auth: SubsonicAuth, id: string, at: number): Promise<void> {
+  await request(auth, 'scrobble.view', { id, submission: 'true', time: at });
+}
+
 export interface RadioStation {
   id: string;
   name: string;

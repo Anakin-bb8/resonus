@@ -237,6 +237,9 @@ export const getPlayQueue = (auth: SubsonicAuth) => api(auth).getPlayQueue(auth)
 export const scrobble = (auth: SubsonicAuth, id: string, submission?: boolean) =>
   api(auth).scrobble(auth, id, submission);
 
+export const submitPlay = (auth: SubsonicAuth, id: string, at: number) =>
+  api(auth).submitPlay(auth, id, at);
+
 export const getRadioStations = (auth: SubsonicAuth) => api(auth).getRadioStations(auth);
 
 export const createRadioStation = (

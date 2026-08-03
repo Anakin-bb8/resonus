@@ -81,6 +81,7 @@ import {
 import { castSetState, castSetVolumeLevel, castUpdate, initCastMedia } from './castMedia';
 import { useDownloads } from './downloads';
 import { useNetworkType } from './networkType';
+import { useOfflineQueue } from './offlineQueue';
 import { usePlayCounts } from './playCounts';
 import { usePlayHistory } from './playHistory';
 import { useSettings, type TranscodeFormat } from './settings';
@@ -766,9 +767,13 @@ function maybeScrobbleThreshold(positionSec: number) {
   scrobbledThisTrack = true;
   const { auth, offline } = useAuthStore.getState();
   // Offline (including a server account without connection): local count, no
-  // scrobble to server — which we wouldn't reach anyway.
-  if (offline) usePlayCounts.getState().bump(song.id);
-  else if (auth) scrobble(auth, song.id, true);
+  // scrobble to server — which we wouldn't reach anyway. With an account it
+  // isn't lost either: the listen goes to the outbox, dated, and is scrobbled
+  // on reconnect (#106). The local profile has no server to tell.
+  if (offline) {
+    usePlayCounts.getState().bump(song.id);
+    if (auth) useOfflineQueue.getState().addPlay(song.id, Date.now());
+  } else if (auth) scrobble(auth, song.id, true);
 }
 
 /** Waiting to warm the next song's lyrics (see `onTrackChanged`). */

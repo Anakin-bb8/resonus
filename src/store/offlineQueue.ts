@@ -7,7 +7,8 @@
  * online (see auth.goOnline). The local profile (no account) doesn't use this
  * queue.
  *
- * Phases: favorites and ratings. Playlists are added in a subsequent phase.
+ * It also carries what isn't a change to the library but still belongs to the
+ * server: the songs listened to while there was no way to reach it.
  */
 import * as FileSystem from 'expo-file-system/legacy';
 import { create } from 'zustand';
@@ -44,6 +45,17 @@ interface QueuePlaylist {
   songIds?: string[];
 }
 
+/**
+ * A listen that happened offline. Not last-write-wins like the rest of the
+ * outbox: playing the same song twice is two listens, and each carries the
+ * moment it happened so the server's history keeps its shape on upload.
+ */
+interface PlayOp {
+  id: string;
+  /** ms since epoch. */
+  at: number;
+}
+
 interface QueueData {
   /** id → desired favorite state. */
   favs?: Record<string, FavOp>;
@@ -53,9 +65,19 @@ interface QueueData {
   playlists?: Record<string, QueuePlaylist>;
   /** Metadata for songs added offline, to show them in playlists. */
   songMeta?: Record<string, Song>;
+  /** Listens to scrobble on reconnect, oldest first. */
+  plays?: PlayOp[];
 }
 
-export type { QueuePlaylist };
+export type { PlayOp, QueuePlaylist };
+
+/**
+ * Ceiling on queued listens. A day and a half of music without a network is
+ * already generous, and the alternative is a file that grows for as long as
+ * the trip lasts. Past it the oldest ones go: they are the ones the server's
+ * history misses the least.
+ */
+const PLAYS_MAX = 500;
 
 function fileFor(auth: SubsonicAuth): string {
   return `${DIR}${hashKey(`${primaryUrl(auth)}|${auth.username}`)}.json`;
@@ -86,6 +108,11 @@ interface QueueState {
   rememberSongs: (songs: Song[]) => void;
   /** Clears playlist edits (after flushing to server). */
   clearPlaylists: () => void;
+  /** Records a listen that happened offline. */
+  addPlay: (id: string, at: number) => void;
+  /** Drops the listens already uploaded, leaving the rest (and any that
+   *  arrived while uploading) in the queue. */
+  removePlays: (done: PlayOp[]) => void;
   /** Is there anything pending to sync? */
   isEmpty: () => boolean;
 }
@@ -190,12 +217,29 @@ export const useOfflineQueue = create<QueueState>((set, get) => {
       persist();
     },
 
+    addPlay: (id, at) => {
+      const plays = [...(get().data.plays ?? []), { id, at }];
+      set({ data: { ...get().data, plays: plays.slice(-PLAYS_MAX) } });
+      persist();
+    },
+
+    // By value and not by clearing the list: the music doesn't stop while the
+    // queue is being uploaded, so a listen can be recorded mid-flush and
+    // clearing would swallow it.
+    removePlays: (done) => {
+      const sent = new Set(done.map((p) => `${p.at}|${p.id}`));
+      const plays = (get().data.plays ?? []).filter((p) => !sent.has(`${p.at}|${p.id}`));
+      set({ data: { ...get().data, plays } });
+      persist();
+    },
+
     isEmpty: () => {
       const d = get().data;
       return (
         (!d.favs || Object.keys(d.favs).length === 0) &&
         (!d.ratings || Object.keys(d.ratings).length === 0) &&
-        (!d.playlists || Object.keys(d.playlists).length === 0)
+        (!d.playlists || Object.keys(d.playlists).length === 0) &&
+        (!d.plays || d.plays.length === 0)
       );
     },
   };

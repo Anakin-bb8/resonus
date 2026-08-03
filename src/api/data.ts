@@ -15,7 +15,7 @@ import { hashKey } from '@/lib/localLibrary';
 import { queryClient } from '@/lib/query';
 import { getItem, setItem } from '@/lib/storage';
 import { useLibraryMirror } from '@/store/libraryMirror';
-import { useOfflineQueue, type QueuePlaylist } from '@/store/offlineQueue';
+import { useOfflineQueue, type PlayOp, type QueuePlaylist } from '@/store/offlineQueue';
 import { usePlayHistory } from '@/store/playHistory';
 import { useSettings } from '@/store/settings';
 import * as Navidrome from './navidrome';
@@ -839,7 +839,7 @@ export function unstar(id: string, type?: Subsonic.StarType): Promise<void> {
 
 /**
  * Flushes the offline action queue to the server (on reconnect). Best-effort:
- * whatever fails is kept for the next reconnection. Phase 1: favorites.
+ * whatever fails is kept for the next reconnection.
  */
 export async function flushOfflineQueue(auth: Subsonic.SubsonicAuth): Promise<void> {
   const q = useOfflineQueue.getState();
@@ -875,6 +875,32 @@ export async function flushOfflineQueue(auth: Subsonic.SubsonicAuth): Promise<vo
     q.clearRatings();
     for (const [id, rating] of ratingFailed) q.setRating(id, rating);
   }
+
+  // Listens. Each one goes up with the time it happened, so an evening's music
+  // lands where it belongs in the server's history (and in Last.fm) instead of
+  // arriving all at once the moment the phone finds the network. Sent oldest
+  // first, and only what actually arrived is taken off the queue.
+  const plays = q.data.plays ?? [];
+  const sent: PlayOp[] = [];
+  let refused = 0;
+  for (const play of plays) {
+    try {
+      await Subsonic.submitPlay(auth, play.id, play.at);
+      sent.push(play);
+      refused = 0;
+    } catch (e) {
+      // Out of network again: the ones behind would each wait out a timeout to
+      // learn the same thing. They keep their turn for the next reconnection.
+      if (e instanceof Subsonic.SubsonicRequestError && e.network) break;
+      // The server answered and turned this one down, which is usually about
+      // that listen alone (a song no longer on the server), so it doesn't get
+      // to hold up the rest. Several in a row is the server or the session
+      // refusing everything, and there is no sense walking the whole queue to
+      // hear it again. Nothing is discarded either way.
+      if (++refused >= 5) break;
+    }
+  }
+  if (sent.length > 0) q.removePlays(sent);
 
   // Playlists. Rewrites the final state of each one (create/delete/rename +
   // full tracklist via reorderPlaylist, which avoids index juggling).

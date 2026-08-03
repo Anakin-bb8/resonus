@@ -22,6 +22,17 @@ Releases before 0.2.1 are only listed on the
   Navigation, off by default, which keeps Home, Search and Library at the
   bottom of every screen and clears the stack on the way there too. Raised by
   @ztx-lyghters, and by justtrife in the Discord.
+- What you listen to offline reaches the server anyway. Away from the network
+  the play could only be counted on the phone, for its own "Most played", and
+  as far as the server was concerned a whole trip's music had never been
+  played: nothing in the history, nothing in the counters, nothing scrobbled on
+  to Last.fm or ListenBrainz. Each listen now waits in the same outbox that
+  already held favourites, ratings and playlist edits, and goes up on
+  reconnection carrying the time it happened, so an evening's music lands in
+  the right place in the history instead of arriving all at once the minute the
+  phone finds a signal. The rule for what counts as a listen has not changed:
+  half the song or four minutes, whichever comes first, so skipping through an
+  album still inflates nothing. Asked for by @CraftoHohenvels.
 - A playlist shows its description, between the name and the line that counts
   the songs and in the same quiet type: what it says about itself belongs with
   the rest of what it says. Whole, however long it runs, because a description

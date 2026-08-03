@@ -851,6 +851,24 @@ export async function scrobble(auth: SubsonicAuth, id: string, submission = true
   }
 }
 
+/**
+ * A listen that already happened, dated (see the Subsonic one). Errors are let
+ * through so the outbox can keep what didn't arrive, with one exception: if the
+ * server takes the play but not the date, it is sent again undated. A play at
+ * the wrong time is worth more than one stuck in the queue for good.
+ */
+export async function submitPlay(auth: SubsonicAuth, id: string, at: number): Promise<void> {
+  const path = `/Users/${auth.jfUserId}/PlayedItems/${id}`;
+  try {
+    await request(auth, path, { datePlayed: new Date(at).toISOString() }, { method: 'POST' });
+  } catch (e) {
+    // Only worth a second try if the server answered at all: with no network
+    // the undated one has nowhere to go either.
+    if (e instanceof SubsonicRequestError && e.network) throw e;
+    await request(auth, path, {}, { method: 'POST' });
+  }
+}
+
 /** Cover art URL. `id` can come from an album, song, or playlist. */
 export function coverArtUrl(
   auth: SubsonicAuth,
