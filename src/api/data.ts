@@ -17,7 +17,8 @@ import { getItem, setItem } from '@/lib/storage';
 import { useLibraryMirror } from '@/store/libraryMirror';
 import { useOfflineQueue, type PlayOp, type QueuePlaylist } from '@/store/offlineQueue';
 import { usePlayHistory } from '@/store/playHistory';
-import { useSettings } from '@/store/settings';
+import { getLocalLyrics, getOnlineLyrics } from '@/lib/localLyrics';
+import { useSettings, type LyricsSource } from '@/store/settings';
 import * as Navidrome from './navidrome';
 import * as Subsonic from './backend';
 import * as Local from '@/lib/localQueries';
@@ -1022,6 +1023,71 @@ export function search(query: string): Promise<Subsonic.SearchResult> {
     albums: dedupeById(parts.flatMap((p) => p.albums)),
     songs: dedupeById(parts.flatMap((p) => p.songs)),
   }));
+}
+
+/**
+ * Lyrics for a song, from wherever this profile's lyrics come from.
+ *
+ * The decision used to live in the hook that displays them, which made it the
+ * one screen that knew about servers and files at the same time. It belongs
+ * here, with the rest of the choosing: offline it reads what is on the phone,
+ * online it asks the server and falls back the way the setting says.
+ *
+ * Three places have them, and they are not interchangeable. A downloaded song
+ * kept its `.lrc` beside the file, and a track from the phone's own library can
+ * carry them inside (USLT). The server has whatever it was given. LRCLIB is a
+ * public database, and whether it is asked at all is the person's choice
+ * (Settings › Lyrics): as a fallback, as the first place to look, or never.
+ */
+export async function getSongLyrics(
+  song: Song,
+  source: LyricsSource,
+): Promise<Subsonic.SongLyrics | null> {
+  const allowOnline = source !== 'off';
+  const preferOnline = source === 'online';
+  const downloaded = () => song.localUri ?? useDownloads.getState().files[song.id];
+  // Offline: the phone and nothing else, LRCLIB included. It is somebody else's
+  // server, but it is reached the same way and costs the same data (#89).
+  if (isOffline()) {
+    const uri = downloaded();
+    return uri ? getLocalLyrics({ ...song, localUri: uri }, false) : null;
+  }
+  // A file already on the phone is read first even online: it is right there,
+  // and it is what the person chose to carry.
+  if (song.localUri) return getLocalLyrics(song, allowOnline, preferOnline);
+  if (!useAuthStore.getState().auth) return null;
+  try {
+    // 'online': LRCLIB first (it absorbs its own network errors and answers
+    // null), then the server.
+    if (preferOnline) {
+      const online = await getOnlineLyrics(song);
+      if (online) return online;
+    }
+    try {
+      const structured = await Subsonic.getLyricsBySongId(auth(), song.id);
+      if (structured) return structured;
+      // It answered, and it has nothing. The classic endpoint reads the same
+      // place, so asking it as well was a second request per song for an answer
+      // already given: seventy of them in a twenty three minute session, queued
+      // in front of what the screens were waiting for (#50). Only a server that
+      // rejects the modern one, which throws, gets the old question.
+      return allowOnline && !preferOnline ? getOnlineLyrics(song) : null;
+    } catch {
+      // Server without the songLyrics extension: try the classic endpoint.
+    }
+    const plain = await Subsonic.getLyrics(auth(), song.artist ?? '', song.title ?? '');
+    if (plain) return { synced: false, lines: plain.split('\n').map((value) => ({ value })) };
+    // The server has none: LRCLIB if allowed and not already tried above.
+    if (allowOnline && !preferOnline) return getOnlineLyrics(song);
+    return null;
+  } catch (e) {
+    // Only reached with no network: with one, the inner catch has already
+    // absorbed a server without the extension. A downloaded song still has the
+    // `.lrc` saved next to it when it was downloaded.
+    const dl = downloaded();
+    if (dl) return getLocalLyrics({ ...song, localUri: dl }, allowOnline, preferOnline);
+    throw e;
+  }
 }
 
 export function scrobble(id: string): Promise<void> {
