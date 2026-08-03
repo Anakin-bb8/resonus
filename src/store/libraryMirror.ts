@@ -193,6 +193,10 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
     void withMirror(async (dir, profile) => {
       keepCovers(profile, [
         ...starred.albums.map((a) => a.coverArt ?? a.id),
+        // The photo beside an album's artist is asked for by `artistId`, which
+        // is not the same key as the artist's own cover (`ar-123` against
+        // `123` on Subsonic). Saved under both, since both are asked.
+        ...starred.albums.map((a) => a.artistId),
         ...starred.artists.map((a) => a.coverArt ?? a.id),
       ]);
       if (sameLists(await Db.getStarred(dir, profile), starred)) return;
@@ -235,7 +239,7 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
   saveAlbum: (id, album, songs, dl) => {
     void withMirror(async (dir, profile) => {
       if (worthKeepingAlbumOf(album, songs, dl.files)) {
-        keepCovers(profile, [album.coverArt ?? album.id]);
+        keepCovers(profile, [album.coverArt ?? album.id, album.artistId]);
         await Db.saveEntry(dir, profile, 'album', id, { album, songs }, songs);
         return;
       }
@@ -253,6 +257,7 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
       if (worthKeepingArtist(artist)) {
         keepCovers(profile, [
           artist.coverArt ?? artist.id,
+          artist.id,
           ...albums.map((a) => a.coverArt ?? a.id),
         ]);
         await Db.saveEntry(dir, profile, 'artist', id, { artist, albums });

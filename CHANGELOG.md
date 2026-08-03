@@ -102,6 +102,15 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- Offline, an album shows its artist's photo, and its tracks show a cover. The
+  covers kept for browsing without a connection were filed under the name each
+  thing calls its own picture, and the screens ask for them under other names:
+  an album asks for its artist's photo by the artist's id, and a track row asks
+  by whatever cover id the server gave that one song, which on some servers is
+  a different one per track. Both are answered now, one from the artist's photo
+  saved under both its names and the other from the album's cover, which is the
+  same picture in all but the rarest case and is one file instead of one per
+  song.
 - The player leaves no gap under a song that has no lyrics. Room for the
   lyrics card was kept for every song, whether or not there were any to put in
   it, so a song without them sat pushed up with an empty strip below, and

@@ -56,9 +56,14 @@ function annotate(songs: Song[]): Song[] {
   const annotated = songs.map((s0) => {
     const s = ratings[s0.id] !== undefined ? { ...s0, userRating: ratings[s0.id] } : s0;
     const uri = files[s.id];
+    // Both point at the album's cover, downloaded or not. A server can give
+    // each song a cover id of its own, and offline that is a file we do not
+    // have and will not keep: one per track, for a picture that is the album's
+    // in all but the rarest case. The album's is saved once and serves the
+    // shelf, the header and every row under it.
     return uri
       ? { ...s, coverArt: s.albumId ?? s.coverArt, localUri: uri, unavailable: false }
-      : { ...s, unavailable: true };
+      : { ...s, coverArt: s.albumId ?? s.coverArt, unavailable: true };
   });
   return hideUnavailable ? annotated.filter((s) => !s.unavailable) : annotated;
 }
