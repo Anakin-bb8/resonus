@@ -23,7 +23,7 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import { InteractionManager } from 'react-native';
 
-import { coverArtUrl, type SubsonicAuth } from '@/api/backend';
+import { COVER, coverArtUrl, type SubsonicAuth } from '@/api/backend';
 import { isOfflineMode } from '@/api/netGate';
 import { hashKey, localCoverUrl, registerCover } from '@/lib/localLibrary';
 
@@ -36,7 +36,7 @@ const DIR = FileSystem.documentDirectory + 'library-mirror/covers/';
  * looks soft where it matters most. The image loader scales down for free;
  * upwards it cannot. Around 50 KB each in practice.
  */
-const SIZE = 500;
+const SIZE = COVER.card;
 
 /**
  * Ceiling on how many are kept. A library browsed end to end, and nobody

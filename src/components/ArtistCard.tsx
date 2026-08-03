@@ -6,7 +6,7 @@
 import { Link } from 'expo-router';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
-import { coverArtUrl, type Artist } from '@/api/data';
+import { COVER, coverArtUrl, type Artist } from '@/api/data';
 import { colors, fontSize, spacing } from '@/theme';
 import { Cover } from './Cover';
 
@@ -16,7 +16,7 @@ interface Props {
 }
 
 export function ArtistCard({ artist, width = 150 }: Props) {
-  const cover = coverArtUrl(artist.coverArt ?? artist.id, 300);
+  const cover = coverArtUrl(artist.coverArt ?? artist.id, COVER.card);
 
   return (
     <Link href={`/artist/${artist.id}`} asChild>

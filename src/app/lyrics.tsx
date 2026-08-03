@@ -10,7 +10,7 @@ import { useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { songCoverUrl } from '@/api/data';
+import { COVER, songCoverUrl } from '@/api/data';
 import { lyricsStyles, SyncedLyricsView } from '@/components/LyricsCard';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useLyrics } from '@/hooks/useLyrics';
@@ -33,7 +33,7 @@ export default function LyricsScreen() {
   const next = usePlayerStore((s) => s.next);
   const { data, isLoading } = useLyrics(song ?? undefined);
   const background = useSettings((s) => s.lyricsBackground);
-  const cover = song ? songCoverUrl(song, 600) : undefined;
+  const cover = song ? songCoverUrl(song, COVER.card) : undefined;
   // Only extract the palette when it's actually going to be used.
   const dominant = useDominantColor(background === 'color' ? cover : undefined);
   const bg = background === 'color' ? dominant : colors.background;

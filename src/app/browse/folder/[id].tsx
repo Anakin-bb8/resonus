@@ -10,7 +10,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { coverArtUrl, getFolderIndexes, getMusicDirectory, type Song } from '@/api/data';
+import { COVER, coverArtUrl, getFolderIndexes, getMusicDirectory, type Song } from '@/api/data';
 import { Cover } from '@/components/Cover';
 import { Message } from '@/components/Message';
 import { TrackRow } from '@/components/TrackRow';
@@ -102,7 +102,7 @@ export default function FolderBrowseScreen() {
                 }
               >
                 <Cover
-                  uri={showListArtwork ? coverArtUrl(item.coverArt, 100) : undefined}
+                  uri={showListArtwork ? coverArtUrl(item.coverArt, COVER.thumb) : undefined}
                   size={44}
                   placeholderIcon="folder"
                 />

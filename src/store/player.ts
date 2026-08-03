@@ -49,7 +49,7 @@ import {
 // filter and asks each library for its share (the rest of the mix cannot be
 // filtered, see `radioCandidates`), and `coverArtUrl` hands back the file on
 // disk when the album is downloaded instead of an address on the server.
-import { coverArtUrl, getRandomSongs } from '@/api/data';
+import { COVER, coverArtUrl, getRandomSongs } from '@/api/data';
 import { prefetchLyrics } from '@/hooks/useLyrics';
 import { queryClient } from '@/lib/query';
 import { getItem, setItem } from '@/lib/storage';
@@ -468,7 +468,7 @@ function seekActive(sec: number) {
 function artworkUrlFor(song: Song): string | undefined {
   // A radio has no album to fall back to, but the server may hold an image for
   // the station, and one picked on the device arrives as a file:// path.
-  return coverArtUrl(song.coverArt ?? (song.url ? undefined : song.albumId), 500);
+  return coverArtUrl(song.coverArt ?? (song.url ? undefined : song.albumId), COVER.card);
 }
 
 /**

@@ -1255,6 +1255,23 @@ export async function deleteRadioStation(
 }
 
 /** Cover art URL. `id` can come from an album, song or playlist. */
+/**
+ * The sizes covers are asked for, and there are three of them on purpose.
+ *
+ * The same picture at a different size is a different URL, so it is a separate
+ * request, a separate resize on the server, a separate decode and a separate
+ * entry in the image cache. The app used to ask for eight: 100 in a row, 200
+ * for the tint, 300 in a grid, 500 in an album header, 600 in the player, 1200
+ * in the viewer, and 400 and 800 in one place each. One album seen across those
+ * screens was six copies of itself.
+ *
+ * Three tiers, chosen by what they land in at three times density: a row or a
+ * small circle, anything card-sized up to the player's full width, and the
+ * viewer, which is the picture on its own. `thumb` is also what the palette
+ * asks for, so the tint of a list comes from the file the list already has.
+ */
+export const COVER = { thumb: 200, card: 600, full: 1200 } as const;
+
 export function coverArtUrl(
   auth: SubsonicAuth,
   id: string | undefined,

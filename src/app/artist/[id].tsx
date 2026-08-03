@@ -27,6 +27,7 @@ import {
   getArtist,
   getArtistInfo,
   getTopSongs,
+  COVER,
 } from '@/api/data';
 import { type Album, type Song } from '@/api/subsonic';
 import { AlbumCard } from '@/components/AlbumCard';
@@ -85,7 +86,7 @@ export default function ArtistScreen() {
   const [photoOpen, setPhotoOpen] = useState(false);
   // ⋯ menu (imperative: opening/closing doesn't re-render the screen).
   const menuRef = useRef<() => void>(() => {});
-  const dominant = useDominantColor(canFetch ? coverArtUrl(id, 400) : undefined);
+  const dominant = useDominantColor(canFetch ? coverArtUrl(id, COVER.thumb) : undefined);
 
   // ── Download the discography ────────────────────────────────────────────
   // With `songIds` intentionally empty: `groupDownloadState` can only say
@@ -194,7 +195,7 @@ export default function ArtistScreen() {
   const shuffleActive = isCurrentArtistQueue && playerShuffle;
   const { own: albums, guest: guestAlbums } = splitArtistAlbums(data.albums, appearsOn ?? []);
   const headerUri =
-    info?.imageUrl ?? coverArtUrl( data.artist.coverArt ?? data.artist.id, 800);
+    info?.imageUrl ?? coverArtUrl( data.artist.coverArt ?? data.artist.id, COVER.full);
 
   async function shufflePlay() {
     if (shuffling) return;
@@ -524,7 +525,7 @@ export default function ArtistScreen() {
               {info.similarArtists.map((a) => (
                 <Link key={a.id} href={`/artist/${a.id}`} asChild>
                   <Pressable style={styles.similar}>
-                    <Cover uri={coverArtUrl( a.coverArt ?? a.id, 200)} size={110} rounded />
+                    <Cover uri={coverArtUrl( a.coverArt ?? a.id, COVER.thumb)} size={110} rounded />
                     <Text style={styles.similarName} numberOfLines={1}>
                       {a.name}
                     </Text>

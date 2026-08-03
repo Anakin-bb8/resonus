@@ -19,6 +19,7 @@ import * as Network from 'expo-network';
 import { create } from 'zustand';
 
 import {
+  COVER,
   coverArtUrl,
   downloadUrl,
   getAlbum,
@@ -456,7 +457,7 @@ async function downloadCover(
   dir: string,
   album: Album,
 ): Promise<{ uri: string; bytes: number } | undefined> {
-  const url = coverArtUrl(auth, album.coverArt ?? album.id, 500);
+  const url = coverArtUrl(auth, album.coverArt ?? album.id, COVER.card);
   if (!url) return undefined;
   const file = `${dir}covers/${hashKey(album.id)}.jpg`;
   try {

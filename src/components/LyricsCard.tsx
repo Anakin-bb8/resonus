@@ -26,7 +26,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { songCoverUrl } from '@/api/data';
+import { COVER, songCoverUrl } from '@/api/data';
 import { type LyricLine } from '@/api/subsonic';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useLyrics } from '@/hooks/useLyrics';
@@ -47,7 +47,7 @@ export function LyricsCard() {
   const tinted = useSettings((s) => s.lyricsCardBackground) !== 'none';
   const dominant = useDominantColor(
     // Without color the palette is not extracted (same savings the player does).
-    tinted ? song ? songCoverUrl(song, 600) : undefined : undefined,
+    tinted ? song ? songCoverUrl(song, COVER.card) : undefined : undefined,
   );
   const bg = tinted ? dominant : colors.surface;
 

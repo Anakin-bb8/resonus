@@ -24,6 +24,7 @@ import {
   type Album,
   type Artist,
   type Playlist,
+  COVER,
 } from '@/api/data';
 import { AlbumCard } from '@/components/AlbumCard';
 import { PlaylistCard } from '@/components/PlaylistCard';
@@ -114,7 +115,7 @@ function QuickGrid() {
             key: href,
             href,
             name: p.name,
-            cover: coverArtUrl(p.coverArt ?? p.id, 100),
+            cover: coverArtUrl(p.coverArt ?? p.id, COVER.thumb),
             ts: times[href] ?? (Date.parse(p.changed ?? p.created ?? '') || 0),
           };
         })
@@ -126,7 +127,7 @@ function QuickGrid() {
             key: href,
             href,
             name: a.name,
-            cover: coverArtUrl(a.coverArt ?? a.id, 100),
+            cover: coverArtUrl(a.coverArt ?? a.id, COVER.thumb),
             ts: times[href] ?? 0,
           };
         })

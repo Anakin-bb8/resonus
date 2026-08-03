@@ -153,7 +153,7 @@ async function currentPlaylistSongIds(id: string): Promise<string[]> {
 }
 
 export type { Album, AlbumListType, Artist, ArtistInfo, FolderContents, FolderEntry, MusicFolder, Playlist, RadioStation, SearchResult, Song, StarType, Starred, SubsonicAuth } from './subsonic';
-export { normalizeUrl } from './subsonic';
+export { COVER, normalizeUrl } from './subsonic';
 
 /**
  * Marks a cover that may only be shown if it is already in the image cache.
@@ -161,6 +161,8 @@ export { normalizeUrl } from './subsonic';
  * reaching the network, which is the whole point (see `coverArtUrl`).
  */
 export const CACHED_COVER = 'cached-cover:';
+
+
 
 export function coverArtUrl(id: string | undefined, _size?: number): string | undefined {
   // If the album art is downloaded (album/artist on disk), use it even

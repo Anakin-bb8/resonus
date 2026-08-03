@@ -12,7 +12,7 @@ import { GestureDetector, GestureHandlerRootView } from 'react-native-gesture-ha
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { addToPlaylist, coverArtUrl, createPlaylist, getPlaylist, getPlaylists } from '@/api/data';
+import { addToPlaylist, COVER, coverArtUrl, createPlaylist, getPlaylist, getPlaylists } from '@/api/data';
 import { type Song } from '@/api/subsonic';
 import { useBottomSheetAnim } from '@/hooks/useBottomSheetAnim';
 import { useT } from '@/i18n';
@@ -181,7 +181,7 @@ export function PlaylistPickerSheet({
                         style={({ pressed }) => [styles.row, pressed && { opacity: 0.6 }]}
                         onPress={() => addAllTo(p.id, p.name)}
                       >
-                        <Cover uri={coverArtUrl(p.coverArt ?? p.id, 100)} size={40} />
+                        <Cover uri={coverArtUrl(p.coverArt ?? p.id, COVER.thumb)} size={40} />
                         <Text style={styles.rowText} numberOfLines={1}>
                           {p.name}
                         </Text>

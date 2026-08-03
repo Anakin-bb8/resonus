@@ -2,7 +2,7 @@
 import { Link } from 'expo-router';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
-import { coverArtUrl, type Playlist } from '@/api/data';
+import { COVER, coverArtUrl, type Playlist } from '@/api/data';
 import { songsLabel } from '@/i18n';
 import { useSettings } from '@/store/settings';
 import { colors, fontSize, spacing } from '@/theme';
@@ -15,7 +15,7 @@ interface Props {
 
 export function PlaylistCard({ playlist, width = 150 }: Props) {
   const lang = useSettings((s) => s.language);
-  const cover = coverArtUrl(playlist.coverArt ?? playlist.id, 300);
+  const cover = coverArtUrl(playlist.coverArt ?? playlist.id, COVER.card);
 
   return (
     <Link href={`/playlist/${playlist.id}`} asChild>

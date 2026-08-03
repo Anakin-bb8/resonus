@@ -9,7 +9,7 @@ import { GestureDetector, GestureHandlerRootView } from 'react-native-gesture-ha
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { coverArtUrl } from '@/api/data';
+import { COVER, coverArtUrl } from '@/api/data';
 import { useBottomSheetAnim } from '@/hooks/useBottomSheetAnim';
 import { useT } from '@/i18n';
 import { useArtistPicker } from '@/store/artistPicker';
@@ -77,7 +77,7 @@ export function ArtistPickerSheet() {
                     style={({ pressed }) => [styles.row, pressed && { opacity: 0.6 }]}
                     onPress={() => go(a.id)}
                   >
-                    <Cover uri={coverArtUrl(a.id, 100)} size={48} rounded />
+                    <Cover uri={coverArtUrl(a.id, COVER.thumb)} size={48} rounded />
                     <Text style={styles.name} numberOfLines={1}>
                       {a.name}
                     </Text>

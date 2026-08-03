@@ -57,7 +57,7 @@ function trackMediaId(parentId: string, songId: string): string {
 }
 
 function art(id: string | undefined): string | undefined {
-  return data.coverArtUrl(id, 300);
+  return data.coverArtUrl(id, data.COVER.card);
 }
 
 function songNode(s: Song, parentId: string): CarNode {

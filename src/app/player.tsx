@@ -31,7 +31,7 @@ import Animated, {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { songCoverUrl, type Song } from '@/api/data';
+import { COVER, songCoverUrl, type Song } from '@/api/data';
 import { AudioQualityBadge } from '@/components/AudioQualityBadge';
 import { Cover } from '@/components/Cover';
 import { FavoriteButton } from '@/components/FavoriteButton';
@@ -222,7 +222,7 @@ export default function PlayerScreen() {
   // A radio has no album, but the station may carry its own image (the server
   // holds it, so it's the same one every client shows).
   const coverOf = (s?: Song | null) =>
-    s ? songCoverUrl(s, 600) : undefined;
+    s ? songCoverUrl(s, COVER.card) : undefined;
   const cover = coverOf(song);
   // Spotify-style background: gradient from the cover's dominant color
   // (toggle in Settings → Theme). The color transitions smoothly on song

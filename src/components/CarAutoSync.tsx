@@ -9,7 +9,7 @@
  */
 import { useEffect } from 'react';
 
-import { songCoverUrl, type Song } from '@/api/data';
+import { COVER, songCoverUrl, type Song } from '@/api/data';
 import {
   carAutoAvailable,
   onPlay,
@@ -38,7 +38,7 @@ function toCarTrack(song: Song, live?: StreamInfo | null): CarTrack {
     title: live?.title ?? song.title ?? undefined,
     artist: live?.artist ?? song.artist ?? undefined,
     album: song.album || undefined,
-    artworkUrl: songCoverUrl(song, 300) || undefined,
+    artworkUrl: songCoverUrl(song, COVER.card) || undefined,
     durationMs: Math.round((song.duration ?? 0) * 1000),
   };
 }

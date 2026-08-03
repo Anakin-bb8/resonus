@@ -12,7 +12,7 @@ import { create } from 'zustand';
 import { streamUrl, type Song } from '@/api/backend';
 // The data layer's: it resolves a downloaded cover to the file on disk, which
 // is filtered out below since only this phone can reach it.
-import { coverArtUrl } from '@/api/data';
+import { COVER, coverArtUrl } from '@/api/data';
 import { useAuthStore } from './auth';
 import { castStop } from './castMedia';
 import { useSettings } from './settings';
@@ -296,7 +296,7 @@ export async function upnpLoad(song: Song, autoplay: boolean, startTimeSec = 0):
     album: song.album ?? undefined,
     // The renderer gets the same picture the lock screen gets, as long as it is
     // an address it can reach: a downloaded cover lives on this phone only.
-    artworkUrl: coverArtUrl(song.coverArt ?? (song.url ? undefined : song.albumId), 500),
+    artworkUrl: coverArtUrl(song.coverArt ?? (song.url ? undefined : song.albumId), COVER.card),
     durationSec: song.duration ?? 0,
   };
   try {

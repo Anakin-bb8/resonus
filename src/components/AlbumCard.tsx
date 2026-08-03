@@ -2,7 +2,7 @@
 import { Link } from 'expo-router';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
-import { coverArtUrl, type Album } from '@/api/data';
+import { COVER, coverArtUrl, type Album } from '@/api/data';
 import { useMediaMenu } from '@/store/mediaMenu';
 import { haptic } from '@/lib/haptics';
 import { colors, fontSize, spacing } from '@/theme';
@@ -16,7 +16,7 @@ interface Props {
 }
 
 export function AlbumCard({ album, width = 150, onPress }: Props) {
-  const cover = coverArtUrl(album.coverArt ?? album.id, 300);
+  const cover = coverArtUrl(album.coverArt ?? album.id, COVER.card);
   const openMenu = useMediaMenu((s) => s.open);
 
   return (

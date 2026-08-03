@@ -4,7 +4,7 @@ import { Image, type ImageContentFit, type ImageStyle } from 'expo-image';
 import { useEffect, useState } from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { CACHED_COVER } from '@/api/data';
+import { CACHED_COVER, COVER } from '@/api/data';
 import { colors, radius } from '@/theme';
 
 interface Props {
@@ -27,15 +27,14 @@ interface Props {
 /**
  * Sizes the app asks covers at. The same picture is a different URL at each of
  * them, and so a different entry in the image loader's cache: a cover seen in a
- * list is cached at 100 and the album that opens from it asks for 500, which is
- * a miss. Offline that meant a thumbnail everywhere and a blank header.
+ * list and the album that opens from it used to be a miss on each other.
  *
  * So a marked cover is looked for at the size asked and then at the others,
- * largest first, since scaling a picture down is free and up is not. Only a
- * handful of lookups, only offline, and only for covers that were never saved
- * (see `mirrorCovers`, which is where this stops being needed).
+ * largest first, since scaling a picture down is free and up is not. There are
+ * three of them now rather than eight (see `COVER`), which is what makes the
+ * first look the one that usually answers.
  */
-const CACHE_SIZES = [500, 300, 1200, 100] as const;
+const CACHE_SIZES = [COVER.card, COVER.full, COVER.thumb] as const;
 
 /**
  * What each marked cover was found to be, so a lookup is done once.

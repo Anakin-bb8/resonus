@@ -19,7 +19,7 @@ import {
 import { ScrollView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { coverArtUrl, getPlaylists, search } from '@/api/data';
+import { COVER, coverArtUrl, getPlaylists, search } from '@/api/data';
 import { getGenres, getRadioStations } from '@/api/backend';
 import { AlbumCard } from '@/components/AlbumCard';
 import { Cover } from '@/components/Cover';
@@ -181,7 +181,7 @@ export default function SearchScreen() {
                 <Link key={`${item.kind}:${item.id}`} href={item.href} asChild>
                   <Pressable style={styles.recentRow}>
                     <Cover
-                      uri={coverArtUrl(item.coverArt ?? item.id, 100)}
+                      uri={coverArtUrl(item.coverArt ?? item.id, COVER.thumb)}
                       size={48}
                       rounded={item.kind === 'artist'}
                     />
@@ -267,7 +267,7 @@ export default function SearchScreen() {
                     }
                   >
                     <Cover
-                      uri={coverArtUrl(artist.coverArt ?? artist.id, 200)}
+                      uri={coverArtUrl(artist.coverArt ?? artist.id, COVER.thumb)}
                       size={110}
                       rounded
                     />
@@ -345,7 +345,7 @@ export default function SearchScreen() {
                   style={styles.recentRow}
                   onLongPress={() => { haptic('light'); openMediaMenu({ kind: 'playlist', playlist: p }); }}
                 >
-                  <Cover uri={coverArtUrl(p.coverArt ?? p.id, 100)} size={48} />
+                  <Cover uri={coverArtUrl(p.coverArt ?? p.id, COVER.thumb)} size={48} />
                   <View style={styles.recentInfo}>
                     <Text style={styles.recentTitle} numberOfLines={1}>
                       {p.name}
@@ -387,7 +387,7 @@ export default function SearchScreen() {
                 }
               >
                 <Cover
-                  uri={coverArtUrl(r.coverArt, 100)}
+                  uri={coverArtUrl(r.coverArt, COVER.thumb)}
                   size={48}
                   rounded
                   placeholderIcon="radio"

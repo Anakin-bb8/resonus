@@ -9,7 +9,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Link } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { coverArtUrl, type Album } from '@/api/data';
+import { COVER, coverArtUrl, type Album } from '@/api/data';
 import { haptic } from '@/lib/haptics';
 import { useMediaMenu } from '@/store/mediaMenu';
 import { useSettings } from '@/store/settings';
@@ -37,7 +37,7 @@ export function AlbumRow({ album, pinned }: Props) {
           openMenu({ kind: 'album', album });
         }}
       >
-        <Cover uri={coverArtUrl(album.coverArt ?? album.id, 100)} size={56} />
+        <Cover uri={coverArtUrl(album.coverArt ?? album.id, COVER.thumb)} size={56} />
         <View style={styles.info}>
           <Text style={styles.name} numberOfLines={1}>
             {album.name}

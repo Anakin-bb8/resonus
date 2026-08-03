@@ -12,7 +12,7 @@ import { GestureDetector, GestureHandlerRootView } from 'react-native-gesture-ha
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { coverArtUrl, getAlbum, getPlaylist, star, unstar, type Song } from '@/api/data';
+import { COVER, coverArtUrl, getAlbum, getPlaylist, star, unstar, type Song } from '@/api/data';
 import { useBottomSheetAnim } from '@/hooks/useBottomSheetAnim';
 import { useAlbumDownloads } from '@/hooks/useAlbumDownloads';
 import { useCanShare } from '@/hooks/useCanShare';
@@ -219,7 +219,7 @@ export function MediaMenuSheet() {
                 dragged down to dismiss. */}
             <View style={styles.grabber} />
             <View style={styles.headerRow}>
-              <Cover uri={coverArtUrl(coverId, 100)} size={48} />
+              <Cover uri={coverArtUrl(coverId, COVER.thumb)} size={48} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.title} numberOfLines={1}>
                   {name}

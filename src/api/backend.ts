@@ -38,7 +38,7 @@ export type {
   Starred,
   SubsonicAuth,
 } from './subsonic';
-export { normalizeUrl, SubsonicRequestError } from './subsonic';
+export { COVER, normalizeUrl, SubsonicRequestError } from './subsonic';
 
 /** Implementation matching the profile (same signature in both). */
 function api(auth: SubsonicAuth) {

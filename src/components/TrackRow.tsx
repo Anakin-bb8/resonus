@@ -8,7 +8,7 @@ import ReanimatedSwipeable, {
 } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Reanimated, { useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
 
-import { songCoverUrl, star } from '@/api/data';
+import { COVER, songCoverUrl, star } from '@/api/data';
 import { type Song } from '@/api/subsonic';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { formatDuration } from '@/lib/format';
@@ -229,7 +229,7 @@ function TrackRowBase({
       ) : null}
       {showArtwork ? (
         <View style={styles.artwork}>
-          <Cover uri={songCoverUrl(song, 100)} size={44} />
+          <Cover uri={songCoverUrl(song, COVER.thumb)} size={44} />
         </View>
       ) : null}
 

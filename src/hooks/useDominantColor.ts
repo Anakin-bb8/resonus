@@ -8,7 +8,7 @@
 import { useEffect, useState } from 'react';
 import { getColors } from 'react-native-image-colors';
 
-import { CACHED_COVER } from '@/api/data';
+import { CACHED_COVER, COVER } from '@/api/data';
 import { colors as theme } from '@/theme';
 
 function hexToRgb(hex: string): [number, number, number] | null {
@@ -86,7 +86,7 @@ function normalize(hex: string): string {
  * to agree on one already, or the same song came out two different colours on
  * two screens. Now everything reads the same pixels.
  */
-const PALETTE_SIZE = 200;
+const PALETTE_SIZE = COVER.thumb;
 
 /** The same cover, small, when it's a server cover URL — Subsonic asks for
  *  `size`, Jellyfin for `fillWidth`/`fillHeight`. Anything else (local files,

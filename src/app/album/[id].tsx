@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
 
-import { coverArtUrl, getAlbum } from '@/api/data';
+import { COVER, coverArtUrl, getAlbum } from '@/api/data';
 import { type Album, type Song } from '@/api/subsonic';
 import { CoverViewer } from '@/components/CoverViewer';
 import { Dialog } from '@/components/Dialog';
@@ -234,12 +234,12 @@ export default function AlbumScreen() {
         artists={data.album.artists}
         artistImageUri={
           showArtistPhoto && data.album.artistId
-            ? coverArtUrl(data.album.artistId, 100)
+            ? coverArtUrl(data.album.artistId, COVER.thumb)
             : undefined
         }
         meta={metaParts.join(' · ')}
         genres={genres}
-        coverUri={coverArtUrl(data.album.coverArt ?? data.album.id, 500)}
+        coverUri={coverArtUrl(data.album.coverArt ?? data.album.id, COVER.card)}
         onCoverPress={() => setCoverOpen(true)}
         // Same sheet as the long-press on cards: play, queue, download,
         // favorite and pin, without duplicating the menu.
@@ -293,7 +293,7 @@ export default function AlbumScreen() {
       <PlaylistPickerSheet songs={addingSongs} onClose={() => setAddingSongs(null)} />
       <CoverViewer
         visible={coverOpen}
-        uri={coverArtUrl(data.album.coverArt ?? data.album.id, 1200)}
+        uri={coverArtUrl(data.album.coverArt ?? data.album.id, COVER.full)}
         onClose={() => setCoverOpen(false)}
       />
       <Dialog

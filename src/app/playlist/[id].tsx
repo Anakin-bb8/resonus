@@ -13,6 +13,7 @@ import {
   removeFromPlaylist,
   reorderPlaylist,
   updatePlaylist,
+  COVER,
 } from '@/api/data';
 import { type Song } from '@/api/subsonic';
 import { CoverViewer } from '@/components/CoverViewer';
@@ -314,7 +315,7 @@ export default function PlaylistScreen() {
         title={data.playlist.name}
         description={showPlaylistDescription ? data.playlist.comment : undefined}
         meta={metaParts.join(' · ')}
-        coverUri={coverArtUrl(data.playlist.coverArt ?? data.playlist.id, 500)}
+        coverUri={coverArtUrl(data.playlist.coverArt ?? data.playlist.id, COVER.card)}
         onCoverPress={
           data.playlist.coverArt || data.songs.length > 0 ? () => setCoverOpen(true) : undefined
         }
@@ -357,7 +358,7 @@ export default function PlaylistScreen() {
       />
       <CoverViewer
         visible={coverOpen}
-        uri={coverChange.pickedUri ?? coverArtUrl(data.playlist.coverArt ?? data.playlist.id, 1200)}
+        uri={coverChange.pickedUri ?? coverArtUrl(data.playlist.coverArt ?? data.playlist.id, COVER.full)}
         onClose={() => setCoverOpen(false)}
         footer={
           coverChange.enabled ? (
@@ -528,7 +529,7 @@ export default function PlaylistScreen() {
           comment: data.playlist.comment ?? '',
           public: data.playlist.public ?? false,
         }}
-        coverUri={coverArtUrl(data.playlist.coverArt ?? data.playlist.id, 500)}
+        coverUri={coverArtUrl(data.playlist.coverArt ?? data.playlist.id, COVER.card)}
         hidePublic={offline}
         coverUploadId={!offline && auth?.serverType === 'navidrome' ? id : undefined}
         localCoverId={offline ? id : undefined}

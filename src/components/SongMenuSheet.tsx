@@ -32,6 +32,7 @@ import {
   star,
   unstar,
   type Song,
+  COVER,
 } from '@/api/data';
 import { useCanShare } from '@/hooks/useCanShare';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
@@ -344,7 +345,7 @@ export function SongMenuSheet() {
                   dragged down to dismiss. */}
               <View style={styles.grabber} />
               <View style={styles.headerRow}>
-                <Cover uri={songCoverUrl(song, 100)} size={48} />
+                <Cover uri={songCoverUrl(song, COVER.thumb)} size={48} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.title} numberOfLines={1}>
                     {song.title}
@@ -390,7 +391,7 @@ export function SongMenuSheet() {
                           style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
                           onPress={() => addTo(p.id, p.name)}
                         >
-                          <Cover uri={coverArtUrl( p.coverArt ?? p.id, 100)} size={40} />
+                          <Cover uri={coverArtUrl( p.coverArt ?? p.id, COVER.thumb)} size={40} />
                           <Text style={styles.actionText} numberOfLines={1}>
                             {p.name}
                           </Text>

@@ -23,7 +23,7 @@ import {
   updateRadioStation,
   type RadioStation,
 } from '@/api/backend';
-import { coverArtUrl } from '@/api/data';
+import { COVER, coverArtUrl } from '@/api/data';
 import { uploadCoverImage } from '@/api/navidrome';
 import { Cover } from '@/components/Cover';
 import { Dialog } from '@/components/Dialog';
@@ -219,7 +219,7 @@ export default function RadioScreen() {
                 onLongPress={() => setMenu(item)}
               >
                 <Cover
-                  uri={coverArtUrl(item.coverArt, 100)}
+                  uri={coverArtUrl(item.coverArt, COVER.thumb)}
                   size={52}
                   rounded
                   placeholderIcon="radio"
@@ -281,7 +281,7 @@ export default function RadioScreen() {
         }
         coverId={canEditCover ? editForm?.station?.id : undefined}
         coverEditable={canEditCover}
-        serverCoverUri={coverArtUrl(editForm?.station?.coverArt, 300)}
+        serverCoverUri={coverArtUrl(editForm?.station?.coverArt, COVER.card)}
         onCancel={() => setEditForm(null)}
         onSave={(changes, pendingCoverUri) => void saveStation(changes, pendingCoverUri)}
       />

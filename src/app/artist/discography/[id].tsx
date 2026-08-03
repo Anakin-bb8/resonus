@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { coverArtUrl, getAppearsOn, getArtist, type Album } from '@/api/data';
+import { COVER, coverArtUrl, getAppearsOn, getArtist, type Album } from '@/api/data';
 import { AlbumCard } from '@/components/AlbumCard';
 import { Cover } from '@/components/Cover';
 import { Message } from '@/components/Message';
@@ -131,7 +131,7 @@ export default function DiscographyScreen() {
             ) : (
               <Link href={`/album/${item.id}`} asChild>
                 <Pressable style={styles.row}>
-                  <Cover uri={coverArtUrl(item.coverArt ?? item.id, 100)} size={56} />
+                  <Cover uri={coverArtUrl(item.coverArt ?? item.id, COVER.thumb)} size={56} />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.rowTitle} numberOfLines={1}>
                       {item.name}

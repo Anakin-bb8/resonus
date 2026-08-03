@@ -6,7 +6,7 @@
 import { Link } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { coverArtUrl, type Artist } from '@/api/data';
+import { COVER, coverArtUrl, type Artist } from '@/api/data';
 import { albumsLabel } from '@/i18n';
 import { useSettings } from '@/store/settings';
 import { colors, fontSize, spacing } from '@/theme';
@@ -17,7 +17,7 @@ export function ArtistRow({ artist }: { artist: Artist }) {
   return (
     <Link href={`/artist/${artist.id}`} asChild>
       <Pressable style={styles.row}>
-        <Cover uri={coverArtUrl(artist.coverArt ?? artist.id, 100)} size={56} rounded />
+        <Cover uri={coverArtUrl(artist.coverArt ?? artist.id, COVER.thumb)} size={56} rounded />
         <View style={styles.info}>
           <Text style={styles.name} numberOfLines={1}>
             {artist.name}

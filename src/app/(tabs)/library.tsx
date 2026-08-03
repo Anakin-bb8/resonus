@@ -29,6 +29,7 @@ import {
   getPlaylists,
   getStarred,
   type Playlist,
+  COVER,
 } from '@/api/data';
 import { AlbumRow } from '@/components/AlbumRow';
 import { ArtistRow } from '@/components/ArtistRow';
@@ -323,7 +324,7 @@ function PlaylistsTab({ onNew, query }: { onNew?: () => void; query: string }) {
         ) : grid ? (
           <GridCard
             href={`/playlist/${item.id}`}
-            uri={coverArtUrl(item.coverArt ?? item.id, 300)}
+            uri={coverArtUrl(item.coverArt ?? item.id, COVER.card)}
             title={item.name}
             subtitle={songsLabel(item.songCount ?? 0, lang)}
             pinned={!!pins[`playlist:${item.id}`]}
@@ -335,7 +336,7 @@ function PlaylistsTab({ onNew, query }: { onNew?: () => void; query: string }) {
               style={styles.row}
               onLongPress={() => { haptic('light'); openMenu({ kind: 'playlist', playlist: item }); }}
             >
-              <Cover uri={coverArtUrl(item.coverArt ?? item.id, 100)} size={56} />
+              <Cover uri={coverArtUrl(item.coverArt ?? item.id, COVER.thumb)} size={56} />
               <View style={styles.rowInfo}>
                 <Text style={styles.rowTitle} numberOfLines={1}>
                   {item.name}
@@ -399,7 +400,7 @@ function ArtistsTab({ query }: { query: string }) {
         grid ? (
           <GridCard
             href={`/artist/${item.id}`}
-            uri={coverArtUrl(item.coverArt ?? item.id, 300)}
+            uri={coverArtUrl(item.coverArt ?? item.id, COVER.card)}
             rounded
             title={item.name}
             subtitle={albumsLabel(item.albumCount ?? 0, lang)}
@@ -531,7 +532,7 @@ function AlbumsTab({ query }: { query: string }) {
         grid ? (
           <GridCard
             href={`/album/${item.id}`}
-            uri={coverArtUrl(item.coverArt ?? item.id, 300)}
+            uri={coverArtUrl(item.coverArt ?? item.id, COVER.card)}
             title={item.name}
             subtitle={item.artist}
             pinned={!!pins[`album:${item.id}`]}

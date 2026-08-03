@@ -28,6 +28,7 @@ import {
   search,
   star,
   unstar,
+  COVER,
 } from '@/api/data';
 import { type Song } from '@/api/subsonic';
 import { Cover } from '@/components/Cover';
@@ -260,7 +261,7 @@ function AddRow({
   const t = useT();
   return (
     <View style={styles.row}>
-      <Cover uri={songCoverUrl(song, 100)} size={44} />
+      <Cover uri={songCoverUrl(song, COVER.thumb)} size={44} />
       <View style={styles.info}>
         <Text style={styles.songTitle} numberOfLines={1}>
           {song.title}
