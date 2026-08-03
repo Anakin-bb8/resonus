@@ -2241,6 +2241,14 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       startIndex = tapped && !tapped.unavailable ? Math.max(0, playable.indexOf(tapped)) : 0;
       songs = playable;
     }
+    // Offline, a queue with nothing downloaded in it cannot be played at all,
+    // and it used to be set anyway: the mini player then showed a song that was
+    // never loaded, and pressing play resumed whatever had been loaded before
+    // it. Nothing is touched, so what was playing keeps playing.
+    if (useAuthStore.getState().offline && !songs.some(playableOffline)) {
+      useToast.getState().show(tg('Nothing here is downloaded'));
+      return;
+    }
     attachAppState();
     autoplayFetchedFor = null;
     // A new queue starts the artist's catalogue over, even the same artist's:

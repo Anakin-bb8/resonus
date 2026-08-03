@@ -102,6 +102,13 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- Tapping a song in the history that is not downloaded, offline, no longer
+  leaves the player telling a lie. It could not play, which is right, but the
+  queue had already been replaced: the mini player showed that song, and
+  pressing play resumed whichever downloaded track had been loaded before it.
+  The history now dims what it cannot reach and says so when tapped, like every
+  other list, and a queue with nothing playable in it is refused outright
+  rather than shown, so whatever was playing keeps playing.
 - The history is there offline, and it is the same history. It is written on
   this phone as each song plays and needs nobody to read it back, yet it was
   hidden from Home without a connection, so a screen that worked could not be

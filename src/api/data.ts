@@ -162,6 +162,25 @@ export function coverArtUrl(id: string | undefined, _size?: number): string | un
 }
 
 /**
+ * Marks what cannot be played without a connection, for a list that builds
+ * itself rather than coming from the mirror (the history, which is written on
+ * this phone as it plays). Rows read `unavailable` to dim themselves and to
+ * say so when tapped instead of pretending.
+ *
+ * The rule is the player's own: a radio, a track from the phone's library or a
+ * downloaded file. Online it marks nothing, since everything can be streamed.
+ */
+export function markUnplayableOffline(songs: Song[]): Song[] {
+  if (!isOffline()) return songs;
+  const files = useDownloads.getState().files;
+  return songs.map((s) => {
+    const uri = s.localUri ?? files[s.id];
+    if (s.url) return { ...s, unavailable: false };
+    return uri ? { ...s, localUri: uri, unavailable: false } : { ...s, unavailable: true };
+  });
+}
+
+/**
  * "Recently played" with only what was actually played. Servers order that list
  * by play date and let the albums with no play date trail along, so once your
  * history runs out the list is padded with albums you never opened. With
