@@ -116,6 +116,10 @@ export function mirrorDb(dir: string, profile: string): Promise<SQLite.SQLiteDat
 /** Closes and forgets one profile's mirror, for when its files are about to
  *  go. Not for switching profiles: that was the bug this comment warns about. */
 export async function closeMirrorFor(profile: string): Promise<void> {
+  // Whatever was held parsed for it goes with the handle: the files are about
+  // to, and answering out of memory afterwards would be answering for a
+  // library that is no longer there.
+  for (const key of [...parsed.keys()]) if (key.startsWith(`${profile}|`)) parsed.delete(key);
   const handle = open.get(profile);
   if (!handle) return;
   open.delete(profile);
@@ -312,6 +316,7 @@ export async function saveEntry(
   // timing the wait as well turned five albums arriving together into one that
   // took seven hundred milliseconds, which was the queue and not the work. What
   // this measures is the transaction.
+  forgetEntry(profile, kind, id);
   await serialized(() =>
     timed(`mirror ${kind}`, () =>
       db.withTransactionAsync(() => putEntry(db, kind, id, value, songs)),
@@ -326,6 +331,7 @@ export async function dropEntry(
   id: string,
 ): Promise<void> {
   const db = await mirrorDb(dir, profile);
+  forgetEntry(profile, kind, id);
   await serialized(() =>
     db.runAsync('DELETE FROM entries WHERE kind = ? AND id = ?', [kind, id]),
   );
@@ -389,12 +395,37 @@ export async function playlistSongIds(
   return out;
 }
 
+/**
+ * The two entries that are read whole, over and over, kept parsed in memory.
+ *
+ * "The playlists" and "the favourites" are one row each and the whole list is
+ * in it, so reading one is a `JSON.parse` of the lot: measured at a third of a
+ * second, seven times in three minutes, because Home and the Library both ask
+ * and anything that changes offline asks again. The details of an album or a
+ * playlist are not here on purpose: there is one per album in the library and
+ * holding them all would be the mirror in memory again, which is the thing it
+ * was moved into a database to stop being.
+ */
+const LISTS: Kind[] = ['playlists', 'starred'];
+const parsed = new Map<string, unknown>();
+
+function entryKey(profile: string, kind: Kind, id: string): string {
+  return `${profile}|${kind}|${id}`;
+}
+
+/** Drops what a write has just made wrong. */
+function forgetEntry(profile: string, kind: Kind, id: string): void {
+  parsed.delete(entryKey(profile, kind, id));
+}
+
 async function getEntry<T>(
   dir: string,
   profile: string,
   kind: Kind,
   id: string,
 ): Promise<T | undefined> {
+  const key = entryKey(profile, kind, id);
+  if (LISTS.includes(kind) && parsed.has(key)) return parsed.get(key) as T;
   const db = await mirrorDb(dir, profile);
   // Timed like the writes: reading one is a row and a `JSON.parse` of whatever
   // is in it, and a playlist of a thousand songs is not a small one.
@@ -404,7 +435,9 @@ async function getEntry<T>(
       id,
     ]),
   );
-  return row ? (JSON.parse(row.data) as T) : undefined;
+  const value = row ? (JSON.parse(row.data) as T) : undefined;
+  if (LISTS.includes(kind) && value !== undefined) parsed.set(key, value);
+  return value;
 }
 
 export function getStarred(dir: string, profile: string): Promise<Starred | undefined> {
@@ -510,6 +543,7 @@ export async function dropEntries(
 ): Promise<void> {
   if (ids.length === 0) return;
   const db = await mirrorDb(dir, profile);
+  for (const id of ids) forgetEntry(profile, kind, id);
   for (let i = 0; i < ids.length; i += 400) {
     const part = ids.slice(i, i + 400);
     const marks = part.map(() => '?').join(',');
