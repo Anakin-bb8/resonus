@@ -119,6 +119,28 @@ export async function timed<T>(tag: string, fn: () => Promise<T>): Promise<T> {
   }
 }
 
+/**
+ * Things that happened, counted rather than timed.
+ *
+ * Half of what went wrong this week was not slow, it was silent: a cover
+ * looked for under a name nothing had saved it as, a picture fetched once per
+ * song instead of once per album. None of that shows up as time; it shows up
+ * as a tally that does not add up, which is what these are for. A count is two
+ * numbers and a map lookup, so they can stay on with the rest.
+ */
+const counts = new Map<string, number>();
+
+export function bump(tag: string, by = 1): void {
+  counts.set(tag, (counts.get(tag) ?? 0) + by);
+}
+
+/** Biggest first, which is where the surprises are. */
+export function perfCounts(): { tag: string; n: number }[] {
+  return [...counts.entries()]
+    .map(([tag, n]) => ({ tag, n }))
+    .sort((a, b) => b.n - a.n);
+}
+
 /** Worst blocks first. */
 export function perfBlocks(): Block[] {
   return [...blocks].sort((a, b) => b.ms - a.ms);
@@ -136,6 +158,7 @@ export function perfSince(): number {
 export function resetPerfLog(): void {
   blocks.length = 0;
   ops.clear();
+  counts.clear();
   startedAt = Date.now();
   lastTick = Date.now();
 }
@@ -148,6 +171,11 @@ export function perfReport(): string {
   const bs = perfBlocks();
   if (bs.length === 0) lines.push('  none over 120 ms');
   for (const b of bs) lines.push(`  ${b.ms} ms · during ${b.during}`);
+  const cs = perfCounts();
+  if (cs.length > 0) {
+    lines.push('', 'Counted:');
+    for (const c of cs) lines.push(`  ${c.tag}: ${c.n}`);
+  }
   lines.push('', 'Operations by total time:');
   const os = perfOps();
   if (os.length === 0) lines.push('  none measured');

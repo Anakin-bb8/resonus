@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { CACHED_COVER, COVER } from '@/api/data';
+import { bump } from '@/lib/perfLog';
 import { colors, radius } from '@/theme';
 
 interface Props {
@@ -69,9 +70,17 @@ async function cachedPath(url: string): Promise<string | undefined> {
   // misses are the other sizes worth asking for, and then all at once rather
   // than one after another, in the order that prefers scaling down to up.
   let found = await look(url);
-  if (!found) {
+  // Counted, because this is where the covers went missing twice already: once
+  // when the sizes the app asks for changed under a cache filled by an older
+  // one, and once when a picture was saved under a name the row never asks by.
+  // "asked for" against "another size" against "missing" says which it is
+  // without anybody having to guess from a screenshot.
+  if (found) {
+    bump('cover cache · asked for');
+  } else {
     const others = await Promise.all(CACHE_SIZES.map((n) => look(sized(n))));
     found = others.find(Boolean);
+    bump(found ? 'cover cache · another size' : 'cover cache · missing');
   }
   memo.set(url, { path: found, at: Date.now() });
   return found;

@@ -591,5 +591,8 @@
   "Export “{name}”?": "Vols exportar «{name}»?",
   "{n} songs, {size}, copied into a folder of their own.": "{n} cançons, {size}, copiades en una carpeta pròpia.",
   "{n} songs exported": "{n} cançons exportades",
-  "{n} of {m} songs exported": "{n} de {m} cançons exportades"
+  "{n} of {m} songs exported": "{n} de {m} cançons exportades",
+  "State": "Estat",
+  "Counted": "Comptat",
+  "What happened, rather than how long it took.": "Què ha passat, no quant ha trigat."
 }

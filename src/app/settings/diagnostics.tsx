@@ -6,14 +6,17 @@
  * thing as plain text, which is easier to paste into an issue than a
  * screenshot is to read.
  */
+import { useRootNavigationState } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 
 import { songListSorts } from '@/api/data';
 import { SettingRow, SettingsPage, settingsStyles } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
-import { perfBlocks, perfOps, perfReport, perfSince, resetPerfLog } from '@/lib/perfLog';
+import { mirrorCoverState } from '@/lib/mirrorCovers';
+import { perfBlocks, perfCounts, perfOps, perfReport, perfSince, resetPerfLog } from '@/lib/perfLog';
 import { useAuthStore } from '@/store/auth';
+import { anyDownloads, useDownloads } from '@/store/downloads';
 import { enabledFolderIds } from '@/store/libraries';
 import { colors, fontSize, spacing } from '@/theme';
 
@@ -37,6 +40,20 @@ export default function DiagnosticsSettings() {
     `song sorts: ${(auth || offline ? songListSorts() : []).join(', ') || '—'}`,
   ];
   const ops = perfOps();
+  const counts = perfCounts();
+  const covers = mirrorCoverState();
+  const downloads = useDownloads((s) => Object.keys(s.files).length);
+  const hydrated = useDownloads((s) => s.hydrated);
+  const anyDl = useDownloads(anyDownloads);
+  // How deep the stack is. Screens you left stay mounted, which is what makes
+  // going back instant and what made the app slow down the more you opened
+  // before they were frozen: a number here would have said so in a sentence.
+  const navState = useRootNavigationState();
+  const stateLines = [
+    `downloads: ${hydrated ? downloads : 'loading'}${anyDl && !hydrated ? ' (some)' : ''}`,
+    `mirror covers: ${covers.saved} saved, ${covers.aliases} other names`,
+    `screens open: ${navState?.routes?.length ?? '—'}`,
+  ];
   const minutes = Math.max(1, Math.round((Date.now() - perfSince()) / 60000));
 
   return (
@@ -52,6 +69,13 @@ export default function DiagnosticsSettings() {
 
         <Text style={settingsStyles.sectionTitle}>{t('Profile')}</Text>
         {profileLines.map((line) => (
+          <Text key={line} style={styles.line}>
+            {line}
+          </Text>
+        ))}
+
+        <Text style={settingsStyles.sectionTitle}>{t('State')}</Text>
+        {stateLines.map((line) => (
           <Text key={line} style={styles.line}>
             {line}
           </Text>
@@ -87,10 +111,31 @@ export default function DiagnosticsSettings() {
           ))
         )}
 
+        {counts.length > 0 ? (
+          <>
+            <Text style={settingsStyles.sectionTitle}>{t('Counted')}</Text>
+            <Text style={settingsStyles.sectionDescription}>
+              {t('What happened, rather than how long it took.')}
+            </Text>
+            {counts.map((c) => (
+              <View key={c.tag} style={styles.row}>
+                <Text style={styles.tag} numberOfLines={1}>
+                  {c.tag}
+                </Text>
+                <Text style={styles.value}>{c.n}</Text>
+              </View>
+            ))}
+          </>
+        ) : null}
+
         <SettingRow
           icon="share-outline"
           label={t('Share report')}
-          onPress={() => void Share.share({ message: `${profileLines.join('\n')}\n\n${perfReport()}` })}
+          onPress={() =>
+            void Share.share({
+              message: `${profileLines.join('\n')}\n${stateLines.join('\n')}\n\n${perfReport()}`,
+            })
+          }
         />
         <SettingRow
           icon="refresh"

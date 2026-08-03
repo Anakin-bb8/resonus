@@ -598,5 +598,8 @@
   "Export “{name}”?": "Export “{name}”?",
   "{n} songs, {size}, copied into a folder of their own.": "{n} songs, {size}, copied into a folder of their own.",
   "{n} songs exported": "{n} songs exported",
-  "{n} of {m} songs exported": "{n} of {m} songs exported"
+  "{n} of {m} songs exported": "{n} of {m} songs exported",
+  "State": "State",
+  "Counted": "Counted",
+  "What happened, rather than how long it took.": "What happened, rather than how long it took."
 }

@@ -599,5 +599,8 @@
   "Export “{name}”?": "¿Exportar «{name}»?",
   "{n} songs, {size}, copied into a folder of their own.": "{n} canciones, {size}, copiadas en una carpeta propia.",
   "{n} songs exported": "{n} canciones exportadas",
-  "{n} of {m} songs exported": "{n} de {m} canciones exportadas"
+  "{n} of {m} songs exported": "{n} de {m} canciones exportadas",
+  "State": "Estado",
+  "Counted": "Contado",
+  "What happened, rather than how long it took.": "Qué ha pasado, no cuánto ha tardado."
 }

@@ -25,6 +25,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { COVER, coverArtUrl, type SubsonicAuth } from '@/api/backend';
 import { isOfflineMode } from '@/api/netGate';
 import { whenIdle } from '@/lib/idle';
+import { bump } from '@/lib/perfLog';
 import { hashKey, localCoverUrl, registerCover } from '@/lib/localLibrary';
 
 const DIR = FileSystem.documentDirectory + 'library-mirror/covers/';
@@ -250,11 +251,13 @@ export function keepMirrorCovers(
           // broken file on disk would pass for a cover for good.
           if (res.status !== 200) {
             await FileSystem.deleteAsync(file, { idempotent: true }).catch(() => {});
+            bump('cover refused by server');
             return;
           }
           known.add(id);
           registerCover(id, file);
           for (const key of w.keys) alias(profile, key, id);
+          bump('cover saved');
           // Counted as it is written: walking thousands of files to add up
           // what they take is not something a settings screen should do.
           const info = await FileSystem.getInfoAsync(file).catch(() => null);
@@ -262,6 +265,7 @@ export function keepMirrorCovers(
           added = true;
         } catch {
           // Network, disk, whatever: it stays unknown and can be tried again.
+          bump('cover fetch failed');
         } finally {
           inFlight.delete(id);
         }
@@ -278,6 +282,16 @@ export function keepMirrorCovers(
       if (added) persist(profile);
     })();
   });
+}
+
+/**
+ * What is on disk for the loaded profile, for the diagnostics screen. A cover
+ * that is missing is either not saved (`saved` low against a big library) or
+ * saved under a name nothing asks by (`saved` high and the lookups still
+ * missing), and those are two different bugs.
+ */
+export function mirrorCoverState(): { saved: number; aliases: number } {
+  return { saved: known.size, aliases: aliases.size };
 }
 
 /**
