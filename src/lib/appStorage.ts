@@ -22,7 +22,12 @@ const base = Legacy.documentDirectory ?? '';
 const FOLDERS = {
   /** LRCLIB answers cached as `.lrc`, and the ones saved with a download. */
   lyrics: `${base}lyrics-cache/`,
-  /** The index of the phone's own music: tags read once, plus a cover per album. */
+  /**
+   * The index of the phone's own music, NOT the music: the tags read once
+   * while scanning plus a cover per album pulled out of the files. The music
+   * itself is the person's own files, wherever they keep them, and none of
+   * this app's business to count.
+   */
   localLibrary: `${base}local-catalog/`,
   /** Pictures put on a local profile's playlists. */
   playlistCovers: `${base}playlist-covers/`,

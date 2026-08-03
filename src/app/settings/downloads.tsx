@@ -274,9 +274,9 @@ export default function DownloadsSettings() {
           ? (
               [
                 ['lyrics', t('Lyrics')],
-                ['localLibrary', t('Local music')],
+                ['localLibrary', t('Local library index')],
                 ['playlistCovers', t('Playlist covers')],
-                ['legacyRadioCovers', t('Radio')],
+                ['legacyRadioCovers', t('Radio station art')],
                 ['outbox', t('Pending changes')],
               ] as [keyof StorageParts, string][]
             )
