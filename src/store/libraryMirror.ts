@@ -22,6 +22,7 @@ import { create } from 'zustand';
 import type { Album, Artist, Playlist, Song, Starred, SubsonicAuth } from '@/api/subsonic';
 import { hashKey } from '@/lib/localLibrary';
 import * as Db from '@/lib/mirrorDb';
+import { keepMirrorCovers, loadMirrorCovers } from '@/lib/mirrorCovers';
 import { primaryUrl } from '@/lib/serverUrls';
 import { useAuthStore } from './auth';
 
@@ -165,6 +166,9 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
     // The previous profile's handle stays open on purpose: closing it here
     // raced with reads that were still in flight (see `mirrorDb`).
     await Db.mirrorDb(target.dir, target.profile).catch(() => {});
+    // The covers this profile already has, so the shelves can draw them
+    // offline (see `mirrorCovers`).
+    await loadMirrorCovers(target.profile);
     set({ profile: target.profile });
   },
 
@@ -173,6 +177,10 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
     // identical. Each of those used to dirty the file and cost a full rewrite,
     // measured at thirty seven seconds on a large mirror (#50).
     void withMirror(async (dir, profile) => {
+      keepMirrorCovers(profile, [
+        ...starred.albums.map((a) => a.coverArt ?? a.id),
+        ...starred.artists.map((a) => a.coverArt ?? a.id),
+      ]);
       if (sameLists(await Db.getStarred(dir, profile), starred)) return;
       await Db.saveEntry(dir, profile, 'starred', '', starred, starred.songs);
     }, undefined);
@@ -180,21 +188,23 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
 
   savePlaylists: (playlists) => {
     void withMirror(async (dir, profile) => {
+      keepMirrorCovers(profile, playlists.map((p) => p.coverArt ?? p.id));
       if (samePlaylists(await Db.getPlaylists(dir, profile), playlists)) return;
       await Db.saveEntry(dir, profile, 'playlists', '', playlists);
     }, undefined);
   },
 
   savePlaylistDetail: (id, playlist, songs) => {
-    void withMirror(
-      (dir, profile) => Db.saveEntry(dir, profile, 'playlist', id, { playlist, songs }, songs),
-      undefined,
-    );
+    void withMirror((dir, profile) => {
+      keepMirrorCovers(profile, [playlist.coverArt ?? playlist.id]);
+      return Db.saveEntry(dir, profile, 'playlist', id, { playlist, songs }, songs);
+    }, undefined);
   },
 
   savePlaylistDetails: (entries) => {
     if (entries.length === 0) return;
     void withMirror(async (dir, profile) => {
+      keepMirrorCovers(profile, entries.map((e) => e.playlist.coverArt ?? e.playlist.id));
       for (const e of entries) {
         await Db.saveEntry(
           dir,
@@ -211,6 +221,7 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
   saveAlbum: (id, album, songs, dl) => {
     void withMirror(async (dir, profile) => {
       if (worthKeepingAlbumOf(album, songs, dl.files)) {
+        keepMirrorCovers(profile, [album.coverArt ?? album.id]);
         await Db.saveEntry(dir, profile, 'album', id, { album, songs }, songs);
         return;
       }
@@ -226,6 +237,10 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
   saveArtist: (id, artist, albums) => {
     void withMirror(async (dir, profile) => {
       if (worthKeepingArtist(artist)) {
+        keepMirrorCovers(profile, [
+          artist.coverArt ?? artist.id,
+          ...albums.map((a) => a.coverArt ?? a.id),
+        ]);
         await Db.saveEntry(dir, profile, 'artist', id, { artist, albums });
         return;
       }

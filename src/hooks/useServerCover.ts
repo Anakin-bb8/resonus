@@ -12,7 +12,9 @@ import { useCallback, useState } from 'react';
 import { deleteCoverImage, NavidromeError, uploadCoverImage, type CoverKind } from '@/api/navidrome';
 import { useT } from '@/i18n';
 import { removeLocalPlaylistCover, setLocalPlaylistCover } from '@/lib/localQueries';
+import { forgetMirrorCover } from '@/lib/mirrorCovers';
 import { useAuthStore } from '@/store/auth';
+import { useLibraryMirror } from '@/store/libraryMirror';
 
 type PickedImage = { uri: string; name: string; type: string };
 
@@ -119,6 +121,9 @@ export function useServerCover({
         await deleteCoverImage(authToUse, kind, coverUploadId);
         setPickedUri(null);
       }
+      // The mirror keeps a copy of this cover for offline browsing, and it was
+      // just replaced: forgetting it is what makes the new one be saved.
+      forgetMirrorCover(useLibraryMirror.getState().profile, coverUploadId);
       if (kind === 'radio') {
         void queryClient.invalidateQueries({ queryKey: ['radioStations'] });
       } else {

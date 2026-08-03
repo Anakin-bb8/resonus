@@ -18,6 +18,7 @@ import type { SubsonicAuth } from '@/api/backend';
 import { closeCatalog } from './downloadsDb';
 import { hashKey } from './localLibrary';
 import { closeMirrorFor } from './mirrorDb';
+import { removeMirrorCovers } from './mirrorCovers';
 import { primaryUrl } from './serverUrls';
 import { deleteItem } from './storage';
 
@@ -69,6 +70,10 @@ export async function deleteProfileData(auth: SubsonicAuth): Promise<void> {
   ]) {
     await remove(`${MIRROR_DIR}${name}`);
   }
+
+  // The covers kept for that mirror, which live in a folder of their own: one
+  // file per cover plus the index that says which id each belongs to.
+  await removeMirrorCovers(scope);
 
   for (const key of SCOPED_KEYS) {
     await deleteItem(`${key}.${scope}`).catch(() => {});

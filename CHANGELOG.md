@@ -102,6 +102,16 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- The covers of what you can browse offline are kept on the phone. They were
+  only ever an address on the server, so without a connection they came out of
+  the image loader's cache or not at all, and that cache is not the app's: it
+  has a size and it throws out the oldest, so on a library of any size the
+  shelves were mostly grey squares. Now, while online, whatever is written to
+  the offline copy has its cover saved once, small, right next to it. Nothing
+  is crawled ahead of time: it follows what you were already looking at, which
+  is the same rule the offline copy itself follows, and it goes when that
+  profile's data goes. Albums, playlists and artists, which is what the shelves
+  are made of.
 - Offline mode makes no network requests at all. It was built as a rule
   repeated at every place that asks the server something: each one checked the
   mode and went to the copy on the phone instead. That holds for as long as
@@ -119,10 +129,9 @@ Releases before 0.2.1 are only listed on the
   rather than one that quietly uses data. Two things still go out, and both are
   asked for: checking whether the server is back, which is the only way out of
   an automatic offline, and the "test" button in Settings › Network.
-  What changes on screen: the cover of something not downloaded is only shown
-  if the phone already has it, from having seen it online, because fetching it
-  was the request. A playlist, a favourite or an album you have never opened
-  with a connection keeps its placeholder.
+  What changes on screen: nothing, in the end. The covers of what you can
+  browse offline are now saved on purpose rather than fetched when you look at
+  them, so the shelves fill the same way they did (see below).
   Found by @ztx-lyghters with a packet capture, after @aona noticed the album
   art loading.
 - A song whose file says nothing about its album no longer files it under
