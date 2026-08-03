@@ -128,7 +128,7 @@ export default function DownloadsSettings() {
   }, [usageBytes]);
 
   return (
-    <SettingsPage title={t('Downloads')}>
+    <SettingsPage title={t('Downloads & offline')}>
       <ScrollView contentContainerStyle={settingsStyles.content}>
         {offline ? null : (
           <>

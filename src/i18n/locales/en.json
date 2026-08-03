@@ -584,5 +584,6 @@
   "A downloaded song normally plays from the file, which costs no data. Choose otherwise if your downloads are smaller copies and you would rather stream the good one when you can. Without a connection the file is always used.": "A downloaded song normally plays from the file, which costs no data. Choose otherwise if your downloads are smaller copies and you would rather stream the good one when you can. Without a connection the file is always used.",
   "On mobile data only": "On mobile data only",
   "Only if it is the original file": "Only if it is the original file",
-  "Always": "Always"
+  "Always": "Always",
+  "Downloads & offline": "Downloads & offline"
 }

@@ -66,11 +66,21 @@ export default function SettingsScreen() {
     // local profile (no account) there are NO server downloads, so it's skipped.
     ...(offline && !auth
       ? []
-      : [{ key: 'downloads', title: 'Downloads', icon: 'download-outline' as const }]),
+      : [
+          {
+            key: 'downloads',
+            // Named for both halves of what is in there: what gets downloaded,
+            // and what the app does when there is no connection. The switch
+            // that turns the mode on by itself lived here with no sign of it
+            // from the outside (#89).
+            title: 'Downloads & offline',
+            icon: 'download-outline' as const,
+          },
+        ]),
     // Library: online is the server's; in local profile, the device's music.
     // In server-offline it's hidden: its content is server-side (scanning,
     // libraries) which doesn't apply offline, and download management already
-    // lives in the "Downloads" section above (avoid duplication).
+    // lives in the "Downloads & offline" section above (avoid duplication).
     ...(serverOffline
       ? []
       : [
