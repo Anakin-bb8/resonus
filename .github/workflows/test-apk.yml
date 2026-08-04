@@ -57,6 +57,10 @@ jobs:
 
       - name: Build release APK
         env:
+          # Stamped into the bundle so the diagnostics screen can say which
+          # build a report came from: a test APK carries the same version as
+          # the release it was branched from.
+          EXPO_PUBLIC_COMMIT: ${{ github.sha }}
           RESONUS_KEYSTORE_FILE: ${{ runner.temp }}/release.jks
           RESONUS_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           RESONUS_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}

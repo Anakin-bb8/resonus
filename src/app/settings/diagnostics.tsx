@@ -6,6 +6,7 @@
  * thing as plain text, which is easier to paste into an issue than a
  * screenshot is to read.
  */
+import Constants from 'expo-constants';
 import { useRootNavigationState } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, Share, StyleSheet, Text, View } from 'react-native';
@@ -21,6 +22,9 @@ import { useSettings } from '@/store/settings';
 import { enabledFolderIds } from '@/store/libraries';
 import { colors, fontSize, spacing } from '@/theme';
 
+/** Stamped in by the workflow that builds the APK; empty when run locally. */
+const COMMIT = (process.env.EXPO_PUBLIC_COMMIT ?? '').slice(0, 7);
+
 export default function DiagnosticsSettings() {
   const t = useT();
   // Nothing here is reactive: it is a snapshot, refreshed by pulling or by
@@ -33,6 +37,10 @@ export default function DiagnosticsSettings() {
   const offline = useAuthStore((s) => s.offline);
   const folderFilter = enabledFolderIds(auth);
   const profileLines = [
+    // Which build this is, since a test APK carries the same version as the
+    // release it was branched from and there is otherwise no telling them
+    // apart from inside the app.
+    `build: ${Constants.expoConfig?.version ?? '?'}${COMMIT ? ` (${COMMIT})` : ' (local)'}`,
     `type: ${auth?.serverType ?? '—'}`,
     `native password: ${auth?.ndPassword || auth?.password ? 'yes' : 'no'}`,
     `plain auth: ${auth?.plainAuth ? 'yes' : 'no'}`,
