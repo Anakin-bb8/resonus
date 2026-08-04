@@ -18,7 +18,8 @@ export default function PlayerSettings() {
   // Rating is a Subsonic thing: needs a server account and doesn't apply to
   // Jellyfin. It does work offline (queued in the outbox and uploaded on
   // reconnect), so its toggle is also shown offline, same as in the player.
-  // The devices button, however, has no offline destination and is hidden.
+  // The devices button has no offline destination, so its toggle is greyed out
+  // there rather than taken away (#114).
   const offline = useAuthStore((s) => s.offline);
   const hasAccount = useAuthStore((s) => !!s.auth);
   const serverType = useAuthStore((s) => s.auth?.serverType);
@@ -166,15 +167,14 @@ export default function PlayerSettings() {
               value: showQueueButton,
               onChange: setShowQueueButton,
             },
-            ...(offline
-              ? []
-              : [
-                  {
-                    label: t('Show devices button'),
-                    value: showDevicesButton,
-                    onChange: setShowDevicesButton,
-                  },
-                ]),
+            {
+              label: t('Show devices button'),
+              value: showDevicesButton,
+              onChange: setShowDevicesButton,
+              // Nothing to send the music to without a network, so the button
+              // is not drawn offline and the setting has nothing to switch.
+              disabled: offline,
+            },
             {
               label: t('Swap favorite and menu'),
               description: t(

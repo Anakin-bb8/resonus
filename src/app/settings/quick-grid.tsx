@@ -14,8 +14,9 @@ const SIZES = [4, 6, 8] as const;
 
 export default function QuickGridSettings() {
   const t = useT();
-  // Locally there are no server playlists; the source is hidden to avoid
-  // promising something that never appears (same idea as server-only chips).
+  // Locally there are no server playlists, so that source is greyed out rather
+  // than taken off the list: the grid is made of the same three things
+  // whichever mode you are in, and only one of them is out of reach (#114).
   const offline = useAuthStore((s) => s.offline);
   const showQuickGrid = useSettings((s) => s.showQuickGrid);
   const setShowQuickGrid = useSettings((s) => s.setShowQuickGrid);
@@ -40,15 +41,12 @@ export default function QuickGridSettings() {
       value: withAlbums,
       onChange: setWithAlbums,
     },
-    ...(offline
-      ? []
-      : [
-          {
-            label: t('Playlists'),
-            value: withPlaylists,
-            onChange: setWithPlaylists,
-          },
-        ]),
+    {
+      label: t('Playlists'),
+      value: withPlaylists,
+      onChange: setWithPlaylists,
+      disabled: offline,
+    },
   ];
 
   return (

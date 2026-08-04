@@ -9,6 +9,26 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Changed
+
+- Settings keep every setting where it is without a connection, greyed out
+  instead of taken away. Streaming quality and its codec, everything about
+  downloading, autoplay, the devices button, folder browsing, the playlists of
+  the quick grid, the chips on Home, "Start mix" and "Rate" in the song menu:
+  all of them vanished offline, so looking for one meant walking through every
+  screen that could plausibly hold it before working out that it had never been
+  there. They now stay in their place, dimmed and not answering, with a line at
+  the top of the section saying that they apply once there is a connection. The
+  values are still shown, since what they say will happen is still what will
+  happen. Asked for by @jaredm4.
+- Server addresses can be reached without a connection, which is the one place
+  where being shown is not enough. A wrong address, or a server that moved, is
+  exactly what puts the app offline, and Settings › Network was hidden there:
+  the way out was to delete the profile and sign in again, or to walk to the
+  network the old address works on. It is now a normal screen in offline mode,
+  and it works, because checking an address is a ping and that is one of the
+  two requests offline mode lets through. Reported by @jaredm4.
+
 ## [0.6.2] - 2026-08-04
 
 Offline mode now means it. The rule that the app asks nobody anything without a

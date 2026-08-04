@@ -34,7 +34,7 @@ const LABEL: Record<ExploreChipKey, string> = {
   history: 'Recently played',
 };
 
-function ChipRow({ chip }: { chip: ExploreChip }) {
+function ChipRow({ chip, disabled }: { chip: ExploreChip; disabled?: boolean }) {
   const t = useT();
   const drag = useReorderableDrag();
   const setExploreChip = useSettings((s) => s.setExploreChip);
@@ -42,7 +42,9 @@ function ChipRow({ chip }: { chip: ExploreChip }) {
   // keep the previous accent while the screen stays mounted.
   const accent = useSettings((s) => s.accentColor);
   return (
-    <View style={styles.row}>
+    // Still draggable while greyed out: where it goes is a preference about the
+    // Home screen you get back, and it costs nothing to set now.
+    <View style={[styles.row, disabled && { opacity: 0.5 }]}>
       <Pressable
         hitSlop={8}
         onPressIn={() => {
@@ -58,6 +60,7 @@ function ChipRow({ chip }: { chip: ExploreChip }) {
       <Switch
         value={chip.enabled}
         onValueChange={(v) => setExploreChip(chip.key, v)}
+        disabled={disabled}
         trackColor={{ false: colors.border, true: accent }}
         thumbColor={colors.text}
       />
@@ -65,8 +68,9 @@ function ChipRow({ chip }: { chip: ExploreChip }) {
   );
 }
 
-/** Chips that do not exist on a local profile (Home filters them out through
- * OFFLINE_KEYS): a row here would promise something that never turns up. */
+/** Chips Home does not draw without a connection (it filters them out through
+ * OFFLINE_KEYS). Their rows stay here, greyed out, so the list is the same list
+ * whichever mode you are in (#114). */
 const SERVER_ONLY: ExploreChipKey[] = ['genres', 'radio'];
 
 export default function ExploreChipsSettings() {
@@ -75,28 +79,23 @@ export default function ExploreChipsSettings() {
   const offline = useAuthStore((s) => s.offline);
   const exploreChips = useSettings((s) => s.exploreChips);
   const setExploreChips = useSettings((s) => s.setExploreChips);
-  const visible = offline
-    ? exploreChips.filter((c) => !SERVER_ONLY.includes(c.key))
-    : exploreChips;
-
   return (
     <SafeAreaView style={settingsStyles.safe} edges={['top']}>
       <ScreenHeader title={t('Explore chips')} />
       <Text style={styles.hint}>{t('Drag to reorder, toggle to show or hide.')}</Text>
       <ReorderableList
-        data={visible}
+        data={exploreChips}
         keyExtractor={(item) => item.key}
-        renderItem={({ item }) => <ChipRow chip={item} />}
+        renderItem={({ item }) => (
+          <ChipRow chip={item} disabled={offline && SERVER_ONLY.includes(item.key)} />
+        )}
         onReorder={({ from, to }: ReorderableListReorderEvent) => {
-          const nextVisible = visible.slice();
-          const [moved] = nextVisible.splice(from, 1);
-          nextVisible.splice(to, 0, moved);
-          // Hidden ones go back to their absolute position: reordering locally
-          // must not lose or reposition the config of server-only chips.
-          let vi = 0;
-          const next = exploreChips.map((c) =>
-            offline && SERVER_ONLY.includes(c.key) ? c : nextVisible[vi++],
-          );
+          // Every chip is on screen, so the positions dragged are the positions
+          // stored. Holding back the server-only ones used to mean mapping one
+          // list onto the other, which was the price of hiding them.
+          const next = exploreChips.slice();
+          const [moved] = next.splice(from, 1);
+          next.splice(to, 0, moved);
           setExploreChips(next);
         }}
         contentContainerStyle={[styles.list, { paddingBottom: bottomPad }]}

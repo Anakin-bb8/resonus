@@ -23,11 +23,13 @@ import {
 export default function AppearanceSettings() {
   const router = useRouter();
   const t = useT();
-  // The folders tab only exists with a Subsonic server (see library):
-  // offline or Jellyfin the toggle wouldn't do anything, so it's not shown.
+  // The folders tab only exists with a Subsonic server (see library).
   const offline = useAuthStore((s) => s.offline);
   const serverType = useAuthStore((s) => s.auth?.serverType);
-  const canBrowseFolders = !offline && serverType !== 'jellyfin';
+  // Jellyfin has no folder tree to browse, so for that server the setting does
+  // not exist at all. Offline it exists and is simply out of reach, which is a
+  // different thing and reads as one: greyed out, where it always was (#114).
+  const canBrowseFolders = offline || serverType !== 'jellyfin';
   const language = useSettings((s) => s.language);
   const showListArtwork = useSettings((s) => s.showListArtwork);
   const setShowListArtwork = useSettings((s) => s.setShowListArtwork);
@@ -214,6 +216,7 @@ export default function AppearanceSettings() {
                 ),
                 value: showFolderBrowser,
                 onChange: setShowFolderBrowser,
+                disabled: offline,
               },
             ]}
           />

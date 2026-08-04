@@ -62,15 +62,13 @@ export default function SongMenuSettings() {
   const songMenuActions = useSettings((s) => s.songMenuActions);
   const setSongMenuAction = useSettings((s) => s.setSongMenuAction);
   const canShare = useCanShare();
-  // «Start mix» and «Rate» don't exist locally (similar tracks and rating are
-  // server-side): their toggles would promise actions the menu never shows.
-  // «Download» stays: locally it controls «Remove download». «Share» goes for
-  // the same reason whenever the server doesn't offer sharing at all.
-  const order = ORDER.filter((key) => {
-    if (offline && (key === 'mix' || key === 'rating')) return false;
-    if (key === 'share' && !canShare) return false;
-    return true;
-  });
+  // «Start mix» and «Rate» need a server (similar tracks and rating are its
+  // idea), so offline their toggles are greyed out: the menu will not show
+  // them, but the list of what the menu can hold is the same list either way
+  // (#114). «Download» stays on: locally it controls «Remove download».
+  // «Share» is different, and stays out: a server that does not offer sharing
+  // at all is not a mode you come back from.
+  const order = ORDER.filter((key) => !(key === 'share' && !canShare));
 
   return (
     <SettingsPage title={t('Song menu')}>
@@ -83,6 +81,7 @@ export default function SongMenuSettings() {
             label: t(LABEL[key]),
             value: songMenuActions[key],
             onChange: (v: boolean) => setSongMenuAction(key, v),
+            disabled: offline && (key === 'mix' || key === 'rating'),
           }))}
         />
       </ScrollView>

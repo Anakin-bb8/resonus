@@ -55,10 +55,17 @@ export default function SettingsScreen() {
       ? t('Music on your device')
       : auth?.serverUrl.replace(/^https?:\/\//, '') ?? '';
 
-  // In offline, Playback also appears: the screen itself hides what's server-
-  // side (bitrates, autoplay) and leaves what applies locally (crossfade,
-  // online lyrics). "Library" becomes the local music.
-  const sections: { key: string; title: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  // Offline, the categories are the same categories: each screen greys out what
+  // needs a server rather than taking it away, so nothing here has to disappear
+  // either (#114). "Library" is the exception, since server-offline leaves it
+  // with nothing but scanning, and "Local music" is what a local profile gets
+  // in its place.
+  const sections: {
+    key: string;
+    title: string;
+    icon: keyof typeof Ionicons.glyphMap;
+    disabled?: boolean;
+  }[] = [
     { key: 'playback', title: 'Quality & playback', icon: 'musical-notes-outline' as const },
     { key: 'player', title: 'Player', icon: 'play-circle-outline' as const },
     // Downloads: in server-offline it reduces to used space and delete (no
@@ -78,24 +85,23 @@ export default function SettingsScreen() {
           },
         ]),
     // Library: online is the server's; in local profile, the device's music.
-    // In server-offline it's hidden: its content is server-side (scanning,
-    // libraries) which doesn't apply offline, and download management already
-    // lives in the "Downloads & offline" section above (avoid duplication).
-    ...(serverOffline
-      ? []
-      : [
-          {
-            key: 'library',
-            title: offline ? 'Local music' : 'Library',
-            icon: offline
-              ? ('phone-portrait-outline' as const)
-              : ('server-outline' as const),
-          },
-        ]),
-    // Network: multiple server URLs and automatic switching. Server only.
-    ...(offline
-      ? []
-      : [{ key: 'network', title: 'Network', icon: 'git-network-outline' as const }]),
+    // Server-offline it is greyed out: what is inside (scanning, choosing
+    // libraries) is the server's, and what could be done from here without one
+    // is already in "Downloads & offline" above.
+    {
+      key: 'library',
+      title: offline && !auth ? 'Local music' : 'Library',
+      icon: offline && !auth ? ('phone-portrait-outline' as const) : ('server-outline' as const),
+      disabled: serverOffline,
+    },
+    // Network: the addresses of the server and the switching between them. It
+    // is the one thing here that must work offline and not merely be visible:
+    // an address that is wrong, or a server that moved, is exactly why you
+    // ended up offline, and hiding this screen left no way back in short of
+    // deleting the profile and signing in again (#113). Checking an address is
+    // a ping, which is one of the two requests offline mode lets through. A
+    // local profile has no server, so there is nothing for it here.
+    ...(auth ? [{ key: 'network', title: 'Network', icon: 'git-network-outline' as const }] : []),
     // Theme lives inside Appearance (row with chevron, like Language).
     { key: 'personalization', title: 'Appearance', icon: 'color-palette-outline' as const },
     { key: 'about', title: 'About::app', icon: 'information-circle-outline' as const },
@@ -120,12 +126,26 @@ export default function SettingsScreen() {
         {sections.map((s) => (
           <Pressable
             key={s.key}
-            style={({ pressed }) => [styles.sectionRow, pressed && { opacity: 0.6 }]}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !!s.disabled }}
+            disabled={s.disabled}
+            style={({ pressed }) => [
+              styles.sectionRow,
+              s.disabled && { opacity: 0.5 },
+              pressed && !s.disabled && { opacity: 0.6 },
+            ]}
             onPress={() => router.push(`/settings/${s.key}`)}
           >
             <Ionicons name={s.icon} size={24} color={colors.text} />
             <Text style={styles.sectionRowTitle}>{t(s.title)}</Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+            {/* Says why instead of leaving a row that does nothing and gives no
+                reason, and takes the arrow's place: an arrow on a row that does
+                not open is a promise it cannot keep. */}
+            {s.disabled ? (
+              <Text style={settingsStyles.rowValue}>{t('Needs a connection')}</Text>
+            ) : (
+              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+            )}
           </Pressable>
         ))}
 

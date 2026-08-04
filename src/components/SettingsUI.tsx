@@ -592,13 +592,27 @@ export function SwitchList({
     description?: string;
     value: boolean;
     onChange: (value: boolean) => void;
+    /**
+     * Greys the row out and stops the switch moving, for a setting that has
+     * nothing to do in the mode you are in. It stays where it always is, so
+     * looking for it is not a search that ends in nothing (#114).
+     */
+    disabled?: boolean;
   }[];
 }) {
   const accent = useAccent();
   return (
     <View style={settingsStyles.cardBox}>
       {options.map((opt, i) => (
-        <View key={opt.label} style={[settingsStyles.row, i > 0 && settingsStyles.rowBorder]}>
+        <View
+          key={opt.label}
+          style={[
+            settingsStyles.row,
+            i > 0 && settingsStyles.rowBorder,
+            // The whole row, not the label alone: see `SelectList`.
+            opt.disabled && { opacity: 0.5 },
+          ]}
+        >
           <View style={settingsStyles.rowLabelBox}>
             <Text style={settingsStyles.rowLabel}>{opt.label}</Text>
             {opt.description ? (
@@ -608,6 +622,7 @@ export function SwitchList({
           <Switch
             value={opt.value}
             onValueChange={opt.onChange}
+            disabled={opt.disabled}
             trackColor={{ false: colors.border, true: accent }}
             thumbColor={colors.text}
           />

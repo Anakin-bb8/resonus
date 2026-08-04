@@ -1,8 +1,9 @@
 /**
- * Settings › Quality & playback: streaming bitrate, crossfade and autoplay. In
- * offline mode only settings that apply locally are shown (crossfade, normalize,
- * keep screen on); the rest is server-side. Download-related settings live in
- * Settings › Downloads, and lyrics options in Settings › Player.
+ * Settings › Quality & playback: streaming bitrate, crossfade and autoplay.
+ * Offline, what is server-side stays where it is and is greyed out instead of
+ * being taken away, so looking for a setting never ends in an empty screen
+ * (#114). Download-related settings live in Settings › Downloads, and lyrics
+ * options in Settings › Player.
  */
 import { useRouter } from 'expo-router';
 import { ScrollView, Text } from 'react-native';
@@ -68,88 +69,98 @@ export default function PlaybackSettings() {
   return (
     <SettingsPage title={t('Quality & playback')}>
       <ScrollView contentContainerStyle={settingsStyles.content}>
-        {offline ? null : (
-          <>
-            {/* The first title sticks to the header (no section margin). */}
-            <Text style={[settingsStyles.sectionTitle, { marginTop: 0 }]}>{t('Streaming')}</Text>
-            <SelectList
-              label={t('Streaming quality (Wi-Fi)')}
-              description={t(
-                '“Original” is the file exactly as it is on the server, with nothing transcoded. A lower bitrate saves data and may cost audible quality.',
-              )}
-              options={bitrateOptions}
-              value={maxBitRate}
-              onChange={setMaxBitRate}
-            />
-            {/* Each codec right under its own quality: the codec only applies
-                where a bitrate is set, and reading them as a pair is what says
-                which network each one is about. At "Original" nothing is
-                transcoded, so the codec of that network has nothing to do and
-                is greyed out rather than silently ignored (#72). */}
-            <SelectList
-              label={t('Streaming codec (Wi-Fi)')}
-              description={
-                maxBitRate > 0
-                  ? t('Codec to transcode to. Your server must support it.')
-                  : t('Codec to transcode to. At “Original” quality nothing is transcoded.')
-              }
-              options={codecOptions}
-              value={streamFormat}
-              onChange={setStreamFormat}
-              disabled={maxBitRate === 0}
-              disabledLabel={t('Not used')}
-            />
-            <SelectList
-              label={t('Streaming quality (mobile data)')}
-              options={bitrateOptions}
-              value={maxBitRateCellular}
-              onChange={setMaxBitRateCellular}
-            />
-            {/* No description here on purpose: it would be the same paragraph
-                as the Wi-Fi codec's, twice in the same section. The one above
-                explains the pair. */}
-            <SelectList
-              label={t('Streaming codec (mobile data)')}
-              options={codecOptions}
-              value={streamFormatCellular}
-              onChange={setStreamFormatCellular}
-              disabled={maxBitRateCellular === 0}
-              disabledLabel={t('Not used')}
-            />
-            {/* Between streaming and its options on purpose: this is the
-                question of whether the streaming settings above apply to a
-                song at all. */}
-            <SelectList
-              label={t('Play downloaded songs from the phone')}
-              description={t(
-                'A downloaded song normally plays from the file, which costs no data. Choose otherwise if your downloads are smaller copies and you would rather stream the good one when you can. Without a connection the file is always used.',
-              )}
-              options={[
-                { value: 'always', label: t('Always') },
-                { value: 'cellular', label: t('On mobile data only') },
-                { value: 'original', label: t('Only if it is the original file') },
-                { value: 'never', label: t('Never') },
-              ]}
-              value={preferDownloads}
-              onChange={setPreferDownloads}
-            />
-            <SwitchList
-              options={[
-                {
-                  label: t('Preload upcoming tracks'),
-                  description: t('Request the next few tracks ahead of time so they start instantly. Helps with proxy servers like Octo-Fiesta or slow sources that fetch tracks on demand.'),
-                  value: preloadUpcoming,
-                  onChange: setPreloadUpcoming,
-                },
-              ]}
-            />
-          </>
-        )}
+        {/* The first title sticks to the header (no section margin). */}
+        <Text style={[settingsStyles.sectionTitle, { marginTop: 0 }]}>{t('Streaming')}</Text>
+        {/* Offline there is no stream, so none of this does anything. It is
+            greyed out rather than taken away: a setting that is not where you
+            left it sends you hunting through every other screen before you work
+            out it was never there (#114). What each one says still holds for
+            when the connection is back. */}
+        {offline ? (
+          <Text style={settingsStyles.sectionDescription}>
+            {t('These apply when you have a connection. Offline, songs play from the phone.')}
+          </Text>
+        ) : null}
+        <SelectList
+          label={t('Streaming quality (Wi-Fi)')}
+          description={t(
+            '“Original” is the file exactly as it is on the server, with nothing transcoded. A lower bitrate saves data and may cost audible quality.',
+          )}
+          options={bitrateOptions}
+          value={maxBitRate}
+          onChange={setMaxBitRate}
+          disabled={offline}
+        />
+        {/* Each codec right under its own quality: the codec only applies
+            where a bitrate is set, and reading them as a pair is what says
+            which network each one is about. At "Original" nothing is
+            transcoded, so the codec of that network has nothing to do and
+            is greyed out rather than silently ignored (#72). */}
+        <SelectList
+          label={t('Streaming codec (Wi-Fi)')}
+          description={
+            maxBitRate > 0
+              ? t('Codec to transcode to. Your server must support it.')
+              : t('Codec to transcode to. At “Original” quality nothing is transcoded.')
+          }
+          options={codecOptions}
+          value={streamFormat}
+          onChange={setStreamFormat}
+          disabled={offline || maxBitRate === 0}
+          // "Not used" is about the quality above being "Original", which is
+          // still worth saying offline; being offline is not, or every row in
+          // the section would repeat the line already above it.
+          disabledLabel={maxBitRate === 0 ? t('Not used') : undefined}
+        />
+        <SelectList
+          label={t('Streaming quality (mobile data)')}
+          options={bitrateOptions}
+          value={maxBitRateCellular}
+          onChange={setMaxBitRateCellular}
+          disabled={offline}
+        />
+        {/* No description here on purpose: it would be the same paragraph
+            as the Wi-Fi codec's, twice in the same section. The one above
+            explains the pair. */}
+        <SelectList
+          label={t('Streaming codec (mobile data)')}
+          options={codecOptions}
+          value={streamFormatCellular}
+          onChange={setStreamFormatCellular}
+          disabled={offline || maxBitRateCellular === 0}
+          disabledLabel={maxBitRateCellular === 0 ? t('Not used') : undefined}
+        />
+        {/* Between streaming and its options on purpose: this is the
+            question of whether the streaming settings above apply to a
+            song at all. */}
+        <SelectList
+          label={t('Play downloaded songs from the phone')}
+          description={t(
+            'A downloaded song normally plays from the file, which costs no data. Choose otherwise if your downloads are smaller copies and you would rather stream the good one when you can. Without a connection the file is always used.',
+          )}
+          options={[
+            { value: 'always', label: t('Always') },
+            { value: 'cellular', label: t('On mobile data only') },
+            { value: 'original', label: t('Only if it is the original file') },
+            { value: 'never', label: t('Never') },
+          ]}
+          value={preferDownloads}
+          onChange={setPreferDownloads}
+          disabled={offline}
+        />
+        <SwitchList
+          options={[
+            {
+              label: t('Preload upcoming tracks'),
+              description: t('Request the next few tracks ahead of time so they start instantly. Helps with proxy servers like Octo-Fiesta or slow sources that fetch tracks on demand.'),
+              value: preloadUpcoming,
+              onChange: setPreloadUpcoming,
+              disabled: offline,
+            },
+          ]}
+        />
 
-        {/* In offline there's no Streaming section: this becomes the first title. */}
-        <Text style={[settingsStyles.sectionTitle, offline && { marginTop: 0 }]}>
-          {t('Sound')}
-        </Text>
+        <Text style={settingsStyles.sectionTitle}>{t('Sound')}</Text>
         <SliderRow
           label={t('Crossfade')}
           description={t('Songs blend into each other when one ends.')}
@@ -198,16 +209,15 @@ export default function PlaybackSettings() {
         <Text style={settingsStyles.sectionTitle}>{t('Playback')}</Text>
         <SwitchList
           options={[
-            ...(offline
-              ? []
-              : [
-                  {
-                    label: t('Autoplay'),
-                    description: t('Keep playing similar songs when your queue ends. A mix you start yourself always does, even with this off.'),
-                    value: autoplaySimilar,
-                    onChange: setAutoplaySimilar,
-                  },
-                ]),
+            {
+              label: t('Autoplay'),
+              description: t('Keep playing similar songs when your queue ends. A mix you start yourself always does, even with this off.'),
+              value: autoplaySimilar,
+              onChange: setAutoplaySimilar,
+              // What comes next is the server's idea of similar, so offline
+              // there is nothing to ask.
+              disabled: offline,
+            },
             {
               label: t('Keep screen on'),
               description: t('The screen never turns off while the app is visible.'),

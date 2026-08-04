@@ -1,9 +1,10 @@
 /**
  * Settings › Downloads: quality, Wi-Fi only, used space (with visual
  * disk bar, Spotify-style) and full clear. Brings together what previously
- * lived split between "Quality & playback" and "Library". In offline mode the
- * reduced version remains: used space and delete (free space without network);
- * quality and Wi-Fi only apply when downloading, which requires a server.
+ * lived split between "Quality & playback" and "Library". Offline, everything
+ * about downloading is greyed out rather than taken away (#114): it needs a
+ * server, but it is still where you left it. Used space and delete keep
+ * working, since freeing space needs no network.
  */
 import { Paths } from 'expo-file-system';
 import { useEffect, useState } from 'react';
@@ -130,65 +131,68 @@ export default function DownloadsSettings() {
   return (
     <SettingsPage title={t('Downloads & offline')}>
       <ScrollView contentContainerStyle={settingsStyles.content}>
-        {offline ? null : (
-          <>
-            {/* The first title sticks to the header (no section margin). */}
-            <Text style={[settingsStyles.sectionTitle, { marginTop: 0 }]}>
-              {t('Downloading')}
-            </Text>
-            {/* Quality first and the codec under it, as in Quality & playback:
-                at "Original" the original file is downloaded and the codec has
-                nothing to do, so it reads as a pair and is greyed out (#72). */}
-            <SelectList
-              label={t('Download quality')}
-              description={t('Applies to new downloads only.')}
-              // Only "Original" is a word; the rest are a number and a unit.
-              options={BITRATE_OPTIONS.map((opt) => ({
-                value: opt.value,
-                label: opt.value === 0 ? t('Original') : opt.label,
-              }))}
-              value={downloadBitRate}
-              onChange={setDownloadBitRate}
-            />
-            <SelectList
-              label={t('Download codec')}
-              description={
-                downloadBitRate > 0
-                  ? t('Codec to transcode to. Your server must support it.')
-                  : t('Codec to transcode to. At “Original” quality nothing is transcoded.')
-              }
-              options={TRANSCODE_FORMATS.map((v) => ({
-                value: v,
-                label: v === '' ? t('Server default') : v.toUpperCase(),
-              }))}
-              value={downloadFormat}
-              onChange={setDownloadFormat}
-              disabled={downloadBitRate === 0}
-              disabledLabel={t('Not used')}
-            />
-            <SelectList
-              label={t('Simultaneous downloads')}
-              description={t('Songs fetched at the same time. Fewer is gentler on the server, network and your phone.')}
-              options={DOWNLOAD_CONCURRENCY_OPTIONS.map((n) => ({ value: n, label: String(n) }))}
-              value={downloadConcurrency}
-              onChange={setDownloadConcurrency}
-            />
-            <SwitchList
-              options={[
-                {
-                  label: t('Download over Wi-Fi only'),
-                  description: t('Block downloads on mobile data.'),
-                  value: downloadWifiOnly,
-                  onChange: setDownloadWifiOnly,
-                },
-              ]}
-            />
-          </>
-        )}
-        {/* In offline there's no download section: this becomes the first title. */}
-        <Text style={[settingsStyles.sectionTitle, offline && { marginTop: 0 }]}>
-          {t('Offline')}
-        </Text>
+        {/* The first title sticks to the header (no section margin). */}
+        <Text style={[settingsStyles.sectionTitle, { marginTop: 0 }]}>{t('Downloading')}</Text>
+        {/* Nothing can be downloaded without a server, so offline these are
+            greyed out rather than taken away: what they say still holds for the
+            next download, and a setting that moves house is one you hunt for
+            through every other screen (#114). */}
+        {offline ? (
+          <Text style={settingsStyles.sectionDescription}>
+            {t('These apply when you have a connection. Offline, nothing is downloaded.')}
+          </Text>
+        ) : null}
+        {/* Quality first and the codec under it, as in Quality & playback:
+            at "Original" the original file is downloaded and the codec has
+            nothing to do, so it reads as a pair and is greyed out (#72). */}
+        <SelectList
+          label={t('Download quality')}
+          description={t('Applies to new downloads only.')}
+          // Only "Original" is a word; the rest are a number and a unit.
+          options={BITRATE_OPTIONS.map((opt) => ({
+            value: opt.value,
+            label: opt.value === 0 ? t('Original') : opt.label,
+          }))}
+          value={downloadBitRate}
+          onChange={setDownloadBitRate}
+          disabled={offline}
+        />
+        <SelectList
+          label={t('Download codec')}
+          description={
+            downloadBitRate > 0
+              ? t('Codec to transcode to. Your server must support it.')
+              : t('Codec to transcode to. At “Original” quality nothing is transcoded.')
+          }
+          options={TRANSCODE_FORMATS.map((v) => ({
+            value: v,
+            label: v === '' ? t('Server default') : v.toUpperCase(),
+          }))}
+          value={downloadFormat}
+          onChange={setDownloadFormat}
+          disabled={offline || downloadBitRate === 0}
+          disabledLabel={downloadBitRate === 0 ? t('Not used') : undefined}
+        />
+        <SelectList
+          label={t('Simultaneous downloads')}
+          description={t('Songs fetched at the same time. Fewer is gentler on the server, network and your phone.')}
+          options={DOWNLOAD_CONCURRENCY_OPTIONS.map((n) => ({ value: n, label: String(n) }))}
+          value={downloadConcurrency}
+          onChange={setDownloadConcurrency}
+          disabled={offline}
+        />
+        <SwitchList
+          options={[
+            {
+              label: t('Download over Wi-Fi only'),
+              description: t('Block downloads on mobile data.'),
+              value: downloadWifiOnly,
+              onChange: setDownloadWifiOnly,
+              disabled: offline,
+            },
+          ]}
+        />
+        <Text style={settingsStyles.sectionTitle}>{t('Offline')}</Text>
         <SwitchList
           options={[
             {
