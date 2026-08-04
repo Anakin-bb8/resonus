@@ -1048,12 +1048,18 @@ const TRANSCODE_TO: Record<string, { container: string; codec: string }> = {
  * bitrate, with the app showing the codec that had been asked for rather than
  * the one that came. Left empty it is still mp3, which is what "server
  * default" amounts to on a server that transcodes to whatever it is told.
+ *
+ * `timeOffset` (seconds) asks the server to start the stream partway into the
+ * track, which is the only way to move around inside a transcode: it is being
+ * made as it is sent, so there is nothing behind or ahead to jump to. Jellyfin
+ * takes it as `StartTimeTicks` and it was being dropped here, so every seek in
+ * a transcoded track started it over (#117).
  */
 export function streamUrl(
   auth: SubsonicAuth,
   id: string,
   maxBitRate = 0,
-  _timeOffset = 0,
+  timeOffset = 0,
   format = '',
 ): string {
   const target = TRANSCODE_TO[format] ?? TRANSCODE_TO.mp3;
@@ -1066,5 +1072,6 @@ export function streamUrl(
     TranscodingProtocol: 'http',
     AudioCodec: target.codec,
     MaxStreamingBitrate: maxBitRate > 0 ? maxBitRate * 1000 : 140_000_000,
+    StartTimeTicks: timeOffset > 0 ? Math.round(timeOffset * TICKS_PER_SECOND) : undefined,
   });
 }

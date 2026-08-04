@@ -34,13 +34,13 @@ import {
   getAlbum,
   getArtist,
   getArtistInfo,
-  getOpenSubsonicExtensions,
   getPlayQueue,
   getSimilarSongs,
   getTopSongs,
   savePlayQueue,
   scrobble,
   streamUrl,
+  supportsTranscodeOffset,
   type Album,
   type Song,
   type SubsonicAuth,
@@ -393,14 +393,13 @@ function needsOffsetSeek(song: Song): boolean {
   return isTranscoded(song) || sourceHasLength === false;
 }
 
-/** Checks (once per profile) if the server supports `transcodeOffset`. */
+/** Checks (once per profile) if the server can start a stream partway in. */
 async function ensureTranscodeOffsetSupport(): Promise<boolean> {
   if (transcodeOffsetSupported != null) return transcodeOffsetSupported;
   const auth = useAuthStore.getState().auth;
   if (!auth) return false; // no session yet: don't cache, re-check later
   try {
-    const exts = await getOpenSubsonicExtensions(auth);
-    transcodeOffsetSupported = exts.includes('transcodeOffset');
+    transcodeOffsetSupported = await supportsTranscodeOffset(auth);
     return transcodeOffsetSupported;
   } catch {
     // Transient network failure: do NOT cache as "not supported", or a single

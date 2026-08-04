@@ -299,6 +299,14 @@ Releases before 0.2.1 are only listed on the
   now passes it along with the title and the cover. Only as a fallback, so a
   file, or anything that does know its own length, still answers for itself.
   Reported by @jaredm4.
+- Moving around inside a track works on Jellyfin while streaming transcoded.
+  Touching the bar started the song over, every time. A transcode is made as it
+  is sent, so there is nothing behind or ahead to jump to: the only way through
+  it is asking the server to start the stream at that second instead, which the
+  app already did for the Subsonic servers that offer it. Jellyfin has it in
+  its streaming endpoint and was never asked, so it kept sending the track from
+  the top. Downloads and untranscoded streams were never affected, since those
+  can be moved around like any file. Reported by @jaredm4.
 
 ## [0.6.1] - 2026-08-01
 

@@ -276,3 +276,14 @@ export const getOpenSubsonicExtensions = (auth: SubsonicAuth): Promise<string[]>
   auth.serverType === 'jellyfin'
     ? Promise.resolve([])
     : Subsonic.getOpenSubsonicExtensions(auth);
+
+/**
+ * Can the server start a stream partway into the track? That is what moving
+ * around inside a transcode comes down to, since the stream is being made as it
+ * is sent. Subsonic servers announce it as an OpenSubsonic extension and most
+ * don't have it; Jellyfin's streaming endpoint takes the offset itself, so
+ * there is nothing to ask it.
+ */
+export const supportsTranscodeOffset = async (auth: SubsonicAuth): Promise<boolean> =>
+  auth.serverType === 'jellyfin' ||
+  (await Subsonic.getOpenSubsonicExtensions(auth)).includes('transcodeOffset');
