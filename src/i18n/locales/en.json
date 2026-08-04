@@ -606,7 +606,6 @@
   "Measure performance": "Measure performance",
   "Records how long the app takes at things, for the diagnostics report. Turn it off to rule it out as a cause.": "Records how long the app takes at things, for the diagnostics report. Turn it off to rule it out as a cause.",
   "Measuring is off (Settings › About), so there is nothing to show.": "Measuring is off (Settings › About), so there is nothing to show.",
-  "Needs a connection": "Needs a connection",
   "These apply when you have a connection. Offline, songs play from the phone.": "These apply when you have a connection. Offline, songs play from the phone.",
   "These apply when you have a connection. Offline, nothing is downloaded.": "These apply when you have a connection. Offline, nothing is downloaded."
 }

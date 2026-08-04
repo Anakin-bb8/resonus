@@ -599,7 +599,6 @@
   "Measure performance": "Mesura el rendiment",
   "Records how long the app takes at things, for the diagnostics report. Turn it off to rule it out as a cause.": "Registra quant triga l'app a cada cosa, per a l'informe de diagnòstic. Desactiva'l per descartar-lo com a causa.",
   "Measuring is off (Settings › About), so there is nothing to show.": "La mesura està desactivada (Configuració › Quant a), així que no hi ha res a mostrar.",
-  "Needs a connection": "Necessita connexió",
   "These apply when you have a connection. Offline, songs play from the phone.": "S'apliquen quan tens connexió. Sense connexió, les cançons sonen des del mòbil.",
   "These apply when you have a connection. Offline, nothing is downloaded.": "S'apliquen quan tens connexió. Sense connexió no es baixa res."
 }

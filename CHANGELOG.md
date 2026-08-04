@@ -20,7 +20,9 @@ Releases before 0.2.1 are only listed on the
   there. They now stay in their place, dimmed and not answering, with a line at
   the top of the section saying that they apply once there is a connection. The
   values are still shown, since what they say will happen is still what will
-  happen. Asked for by @jaredm4.
+  happen. "Library" goes the same way, dimmed and quiet: everything it holds is
+  the server's, and what can be done about downloads with no connection already
+  lives in the section above it. Asked for by @jaredm4.
 - Server addresses can be reached without a connection, which is the one place
   where being shown is not enough. A wrong address, or a server that moved, is
   exactly what puts the app offline, and Settings › Network was hidden there:

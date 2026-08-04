@@ -607,7 +607,6 @@
   "Measure performance": "Medir el rendimiento",
   "Records how long the app takes at things, for the diagnostics report. Turn it off to rule it out as a cause.": "Registra cuánto tarda la app en cada cosa, para el informe de diagnóstico. Desactívalo para descartarlo como causa.",
   "Measuring is off (Settings › About), so there is nothing to show.": "La medición está desactivada (Ajustes › Acerca de), así que no hay nada que mostrar.",
-  "Needs a connection": "Necesita conexión",
   "These apply when you have a connection. Offline, songs play from the phone.": "Se aplican cuando tienes conexión. Sin conexión, las canciones suenan desde el móvil.",
   "These apply when you have a connection. Offline, nothing is downloaded.": "Se aplican cuando tienes conexión. Sin conexión no se descarga nada."
 }

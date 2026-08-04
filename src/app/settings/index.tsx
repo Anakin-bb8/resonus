@@ -85,9 +85,11 @@ export default function SettingsScreen() {
           },
         ]),
     // Library: online is the server's; in local profile, the device's music.
-    // Server-offline it is greyed out: what is inside (scanning, choosing
-    // libraries) is the server's, and what could be done from here without one
-    // is already in "Downloads & offline" above.
+    // Server-offline it is greyed out and says nothing else: what is inside
+    // (scanning, choosing libraries) is the server's, and what could be done
+    // from here without one is already in "Downloads & offline" above. The row
+    // dims like any other disabled control, arrow included, which is a thing
+    // people already know how to read.
     {
       key: 'library',
       title: offline && !auth ? 'Local music' : 'Library',
@@ -138,14 +140,7 @@ export default function SettingsScreen() {
           >
             <Ionicons name={s.icon} size={24} color={colors.text} />
             <Text style={styles.sectionRowTitle}>{t(s.title)}</Text>
-            {/* Says why instead of leaving a row that does nothing and gives no
-                reason, and takes the arrow's place: an arrow on a row that does
-                not open is a promise it cannot keep. */}
-            {s.disabled ? (
-              <Text style={settingsStyles.rowValue}>{t('Needs a connection')}</Text>
-            ) : (
-              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-            )}
+            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
           </Pressable>
         ))}
 
