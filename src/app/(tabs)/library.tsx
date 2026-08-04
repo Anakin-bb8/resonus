@@ -52,6 +52,7 @@ import { useToast } from '@/store/toast';
 import { colors, fontSize, radius, spacing } from '@/theme';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { listPerf } from '@/lib/listPerf';
+import { bump } from '@/lib/perfLog';
 import { haptic } from '@/lib/haptics';
 
 type Segment = 'playlists' | 'albums' | 'artists' | 'folders';
@@ -641,6 +642,11 @@ function gridListProps(grid: boolean, bottomPad: number) {
 }
 
 export default function LibraryScreen() {
+  // Counted, to answer whether a tab you have visited keeps working
+  // afterwards: they stay mounted once opened, and freezing them is
+  // supposed to stop them rendering while they are not on screen. If this
+  // climbs while you are somewhere else, it does not.
+  bump('render · library');
   const t = useT();
   const accent = useAccent();
   useSettings((s) => s.appFont); // re-render when font changes

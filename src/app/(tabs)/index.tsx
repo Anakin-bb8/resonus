@@ -44,6 +44,7 @@ import { useSettings, type ExploreChipKey, type HomeSectionKey } from '@/store/s
 import { colors, fontSize, radius, spacing } from '@/theme';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { listPerf } from '@/lib/listPerf';
+import { bump } from '@/lib/perfLog';
 import { playShuffle } from '@/lib/playShuffle';
 
 const TILE_W = (Dimensions.get('window').width - spacing.lg * 2 - spacing.sm) / 2;
@@ -493,6 +494,11 @@ const HOME_ALBUM_CONFIG: Record<
 };
 
 export default function HomeScreen() {
+  // Counted, to answer whether a tab you have visited keeps working
+  // afterwards: they stay mounted once opened, and freezing them is
+  // supposed to stop them rendering while they are not on screen. If this
+  // climbs while you are somewhere else, it does not.
+  bump('render · home');
   const auth = useAuthStore((s) => s.auth);
   const offline = useAuthStore((s) => s.offline);
   const bottomPad = useScreenBottomPadding();

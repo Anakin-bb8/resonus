@@ -32,6 +32,7 @@ import { TrackRow } from '@/components/TrackRow';
 import { useDebounce } from '@/hooks/useDebounce';
 import { songsLabel, useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
+import { bump } from '@/lib/perfLog';
 import { useAuthStore } from '@/store/auth';
 import { useMediaMenu } from '@/store/mediaMenu';
 import { currentSong, usePlayerStore } from '@/store/player';
@@ -43,6 +44,11 @@ import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 const GENRE_W = (Dimensions.get('window').width - spacing.lg * 2 - spacing.sm) / 2;
 
 export default function SearchScreen() {
+  // Counted, to answer whether a tab you have visited keeps working
+  // afterwards: they stay mounted once opened, and freezing them is
+  // supposed to stop them rendering while they are not on screen. If this
+  // climbs while you are somewhere else, it does not.
+  bump('render · search');
   useSettings((s) => s.accentColor); // re-render when accent changes
   useSettings((s) => s.appFont); // re-render when font changes
   const offline = useAuthStore((s) => s.offline);
