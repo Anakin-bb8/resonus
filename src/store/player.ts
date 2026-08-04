@@ -481,6 +481,13 @@ function artworkUrlFor(song: Song): string | undefined {
  * A radio goes without title or artist on purpose: those belong to the stream,
  * which fills them in track by track (see `onStreamMetadata`), and anything set
  * here would win over them for as long as the station played.
+ *
+ * How long the song is goes with it, which the queue knows and a stream being
+ * transcoded on the fly cannot say: with no length and no seek table the player
+ * has no duration to report, and the system's controls answer that by showing
+ * neither the times nor the progress bar (#116). It is only ever a fallback,
+ * so a file, or a stream that does have a length, still speaks for itself. A
+ * radio has no duration to give and is not supposed to.
  */
 function itemMetadataFor(song: Song): AudioMetadata {
   const artworkUrl = artworkUrlFor(song);
@@ -490,6 +497,7 @@ function itemMetadataFor(song: Song): AudioMetadata {
     artist: song.artist ?? undefined,
     albumTitle: song.album ?? undefined,
     artworkUrl,
+    durationMs: song.duration && song.duration > 0 ? Math.round(song.duration * 1000) : undefined,
   };
 }
 

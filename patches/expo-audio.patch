@@ -13,7 +13,7 @@ index 4bf0f847760cd005ec81db876683f751704f48c3..e98b9cf8758dbb6b56af520237e4e9d5
 +  <uses-permission android:name="android.permission.WAKE_LOCK" />
  </manifest>
 diff --git a/android/src/main/java/expo/modules/audio/AudioModule.kt b/android/src/main/java/expo/modules/audio/AudioModule.kt
-index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..44dadb61d273b0bf84fa16e4a966d32ce48326ac 100644
+index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..284b277179ab4812d7144bbef29297067593bc6c 100644
 --- a/android/src/main/java/expo/modules/audio/AudioModule.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioModule.kt
 @@ -17,6 +17,7 @@ import androidx.media3.common.C.CONTENT_TYPE_HLS
@@ -130,7 +130,7 @@ index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..44dadb61d273b0bf84fa16e4a966d32c
        Function("setActiveForLockScreen") { ref: AudioPlayer, active: Boolean, metadata: Metadata?, options: AudioLockScreenOptions? ->
          runOnMain {
            ref.setActiveForLockScreen(active, metadata, options)
-@@ -780,13 +833,26 @@ class AudioModule : Module() {
+@@ -780,13 +833,27 @@ class AudioModule : Module() {
  
    private fun createMediaItem(source: AudioSource?): MediaSource? = source?.uri?.let { uriString ->
      val uri = uriString.toUri()
@@ -152,13 +152,14 @@ index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..44dadb61d273b0bf84fa16e4a966d32c
 +          .setArtist(meta.artist)
 +          .setAlbumTitle(meta.albumTitle)
 +          .setArtworkUri(meta.artworkUrl?.toString()?.toUri())
++          .setDurationMs(meta.durationMs)
 +          .build()
 +      ).build()
 +    } ?: baseItem
  
      val preloadedBytes = AudioPreloadManager.get(uriString)
      val factory: DataSource.Factory = if (preloadedBytes != null) {
-@@ -834,10 +900,32 @@ class AudioModule : Module() {
+@@ -834,10 +901,32 @@ class AudioModule : Module() {
      }
    }
  
@@ -328,7 +329,7 @@ index f7c43641fc12b627c70759fb49bbe65e746c4c1d..640ecc619014e50c8c1bd78e388ef77d
        }
  
 diff --git a/android/src/main/java/expo/modules/audio/AudioRecords.kt b/android/src/main/java/expo/modules/audio/AudioRecords.kt
-index 1d9541e2ff3eabc621143892b0fc35e7cd728f18..717920c60e3a1f186bf7f15ff9c274d2b3f62cb6 100644
+index 1d9541e2ff3eabc621143892b0fc35e7cd728f18..815f5b0a4665c170cd9d3b6bd099bc6731c7a9a3 100644
 --- a/android/src/main/java/expo/modules/audio/AudioRecords.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioRecords.kt
 @@ -10,7 +10,15 @@ import java.net.URL
@@ -348,7 +349,24 @@ index 1d9541e2ff3eabc621143892b0fc35e7cd728f18..717920c60e3a1f186bf7f15ff9c274d2
  ) : Record
  
  enum class LoopMode(val value: String) : Enumerable {
-@@ -101,7 +109,9 @@ enum class LockScreenButtons(val value: Int) : Enumerable {
+@@ -43,7 +51,15 @@ class Metadata(
+   @Field val title: String?,
+   @Field val artist: String?,
+   @Field val albumTitle: String?,
+-  @Field val artworkUrl: URL?
++  @Field val artworkUrl: URL?,
++  /**
++   * How long the track is, when whoever queued it knows and the stream does
++   * not: a server transcoding on the fly sends no length and no seek table, so
++   * the player has no duration to give and the system's controls drop the
++   * times and the progress bar. media3 falls back to this one whenever the
++   * real duration is unknown, and ignores it otherwise.
++   */
++  @Field val durationMs: Long? = null
+ ) : Record
+ 
+ enum class AndroidOutputFormat(val value: String) : Enumerable {
+@@ -101,7 +117,9 @@ enum class LockScreenButtons(val value: Int) : Enumerable {
  
  class AudioLockScreenOptions(
    @Field val showSeekForward: Boolean,
@@ -597,7 +615,7 @@ index 839aaef12d7699ea1a89037b31849775daa079f4..a1fce18411843a6aa636e83576371a07
      return super.onCustomCommand(session, controller, command, args)
    }
 diff --git a/build/Audio.types.d.ts b/build/Audio.types.d.ts
-index 4aba6ad4505f98371840e3c3c9edd4a300001c49..0e33fd8c01bd9fd835c79d7b339650236f891914 100644
+index 4aba6ad4505f98371840e3c3c9edd4a300001c49..1951c94a9a5df097e23f47c308d4c9af58487d8e 100644
 --- a/build/Audio.types.d.ts
 +++ b/build/Audio.types.d.ts
 @@ -34,6 +34,13 @@ export type AudioSource = string | number | null | {
@@ -614,6 +632,21 @@ index 4aba6ad4505f98371840e3c3c9edd4a300001c49..0e33fd8c01bd9fd835c79d7b33965023
  };
  /**
   * Options for configuring audio player behavior.
+@@ -583,6 +590,14 @@ export type AudioMetadata = {
+     artist?: string;
+     albumTitle?: string;
+     artworkUrl?: string;
++    /**
++     * How long the track is, in milliseconds, for when the source can't say:
++     * a server transcoding on the fly sends no length, so the player has no
++     * duration and the system's controls show neither the times nor the
++     * progress bar. Used only as a fallback, never over a real duration, and
++     * only when given as the source's `metadata`. Android only.
++     */
++    durationMs?: number;
+ };
+ /**
+  * Loop mode for audio playlist playback.
 diff --git a/build/AudioConstants.d.ts b/build/AudioConstants.d.ts
 index a290f9aed8224d89cca6361c102d26b24feaa2ce..7008466705ffdacc2d8ab113d334b82261b5ce68 100644
 --- a/build/AudioConstants.d.ts

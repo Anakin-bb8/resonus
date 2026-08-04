@@ -289,6 +289,16 @@ Releases before 0.2.1 are only listed on the
   actually made of. Which also means playlists can be reordered there now, by
   holding a track and dragging it, an option that was hidden on Jellyfin for
   the same reason. Reported by @jaredm4.
+- The notification and the lock screen show how far into the song you are while
+  streaming transcoded. They showed the times and the progress bar for a file
+  arriving untouched and nothing at all for one being converted on the way,
+  which is the same song and looks like the controls half broke. A server
+  transcoding on the fly can't say how long the result will be before making
+  it, so it sends no length, and the player had no duration to hand over. It
+  does not need to guess: the app knows the song's length from the library, and
+  now passes it along with the title and the cover. Only as a fallback, so a
+  file, or anything that does know its own length, still answers for itself.
+  Reported by @jaredm4.
 
 ## [0.6.1] - 2026-08-01
 
