@@ -131,6 +131,7 @@ export async function closeMirrorFor(profile: string): Promise<void> {
   // to, and answering out of memory afterwards would be answering for a
   // library that is no longer there.
   for (const key of [...parsed.keys()]) if (key.startsWith(`${profile}|`)) parsed.delete(key);
+  if (idsCache?.profile === profile) idsCache = null;
   const handle = open.get(profile);
   if (!handle) return;
   open.delete(profile);
@@ -438,10 +439,17 @@ export async function dropCovers(dir: string, profile: string): Promise<void> {
  * the time was going. SQLite pulls the ids out of the JSON itself and hands
  * back a short array per playlist.
  */
+let idsCache: { profile: string; map: Map<string, string[]> } | null = null;
+
 export async function playlistSongIds(
   dir: string,
   profile: string,
 ): Promise<Map<string, string[]>> {
+  // Kept until a playlist is written. Pulling the ids out of every stored
+  // tracklist is the database's work rather than ours, but on a library with
+  // fifty playlists and thousands of songs in them it was measured at nearly
+  // three seconds, and Home and the Library ask for it on every refresh.
+  if (idsCache?.profile === profile) return idsCache.map;
   const db = await mirrorDb(dir, profile);
   const rows = await timed('mirror read ids', () =>
     db.getAllAsync<{ id: string; ids: string | null }>(
@@ -459,6 +467,7 @@ export async function playlistSongIds(
       out.set(r.id, []);
     }
   }
+  idsCache = { profile, map: out };
   return out;
 }
 
@@ -483,6 +492,8 @@ function entryKey(profile: string, kind: Kind, id: string): string {
 /** Drops what a write has just made wrong. */
 function forgetEntry(profile: string, kind: Kind, id: string): void {
   parsed.delete(entryKey(profile, kind, id));
+  // A tracklist that changed changes the ids drawn from all of them.
+  if (kind === 'playlist' || kind === 'playlists') idsCache = null;
 }
 
 async function getEntry<T>(

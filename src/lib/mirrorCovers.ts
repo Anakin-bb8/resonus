@@ -218,6 +218,36 @@ export function keepMirrorCovers(
   // Online only: this is a download, and it goes through the file system rather
   // than the API, so the gate that refuses requests offline cannot see it.
   if (!auth || !profile || isOfflineMode()) return;
+  // Every fetch that touches the mirror ends up here, and a pull to refresh is
+  // several at once: the favourites alone hand over the album of every
+  // favourite song, so on a large library that is thousands of wants rebuilt,
+  // deduplicated and filtered, dozens of times a minute, on the thread drawing
+  // the screen. Measured at thirty five refreshes of the favourites in three
+  // minutes. It is catch-up work, so it is gathered and run on a slow clock.
+  for (const want of ids) if (want) pending.push(want);
+  if (runScheduled) return;
+  runScheduled = true;
+  const wait = Math.max(0, lastRun + MIN_GAP_MS - Date.now());
+  setTimeout(() => {
+    runScheduled = false;
+    lastRun = Date.now();
+    const batch = pending;
+    pending = [];
+    runCovers(profile, auth, batch);
+  }, wait);
+}
+
+/** How long between runs, however often they are asked for. */
+const MIN_GAP_MS = 30_000;
+let pending: (string | CoverWant)[] = [];
+let runScheduled = false;
+let lastRun = 0;
+
+function runCovers(
+  profile: string,
+  auth: SubsonicAuth,
+  ids: (string | CoverWant | undefined)[],
+): void {
   // When the thread is free. This is called from the middle of opening an album
   // or a playlist, and downloading a few hundred covers is not something to
   // start while a transition is still running: nothing here is urgent, and a
