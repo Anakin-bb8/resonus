@@ -15,6 +15,7 @@ import { usePathname, useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 
+import { mark } from '@/lib/perfLog';
 import { useAutoDownloads } from '@/store/autoDownloads';
 import { useSettings, type DefaultTab } from '@/store/settings';
 
@@ -44,6 +45,29 @@ export function AppStartupTab() {
   const path = useRef(pathname);
   useEffect(() => {
     path.current = pathname;
+  }, [pathname]);
+
+  /**
+   * How long the thread takes to come back after a screen changes.
+   *
+   * This is the number everybody has been arguing about and nobody had: the
+   * complaint is "half a second between tapping and the screen being there",
+   * and everything measured so far has been how long single operations take,
+   * which is not the same thing.
+   *
+   * The clock starts when the route changes and stops on the next frame the
+   * thread manages to run, so what it counts is the new screen's first render
+   * plus whatever else was in the way. It says nothing about the animation:
+   * that is native, and if this number comes back small while the app still
+   * feels slow, the animation is where to look next.
+   *
+   * By section rather than by route, or every album would be a line of its own.
+   */
+  useEffect(() => {
+    const started = Date.now();
+    const section = pathname === '/' ? '/' : `/${pathname.split('/')[1] ?? ''}`;
+    const frame = requestAnimationFrame(() => mark(`nav ${section}`, Date.now() - started));
+    return () => cancelAnimationFrame(frame);
   }, [pathname]);
   const leftFromPlayer = useRef(false);
 

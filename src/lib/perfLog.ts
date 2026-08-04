@@ -130,6 +130,15 @@ function record(tag: string, ms: number): void {
 }
 
 /**
+ * Records something already measured, for what cannot be wrapped in a call:
+ * how long the thread took to come back after a navigation, say.
+ */
+export function mark(tag: string, ms: number): void {
+  if (!enabled) return;
+  record(tag, ms);
+}
+
+/**
  * Times an async operation. Note this is wall time, waiting included, so for
  * anything that goes to the network it says how long the answer took, not how
  * busy the thread was. Reading the response is timed apart, and that one IS
