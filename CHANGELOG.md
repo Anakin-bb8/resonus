@@ -267,6 +267,16 @@ Releases before 0.2.1 are only listed on the
   looked like it was only on the server. The queue now waits for that list,
   and the message is only given when playing was actually asked for, not when
   the app is putting itself back together on its own.
+- Songs can be taken out of a playlist on Jellyfin. The track went, the way it
+  should, and came back a moment later with "Couldn't complete the action",
+  and the server had no record of having been asked anything. It hadn't been:
+  removing a song is done by handing the server the playlist as it should end
+  up, which is one call in Subsonic and no call at all in Jellyfin, and that
+  one request was going out in Subsonic's words to a server that doesn't speak
+  them. Jellyfin gets it in three steps instead, over the entries a playlist is
+  actually made of. Which also means playlists can be reordered there now, by
+  holding a track and dragging it, an option that was hidden on Jellyfin for
+  the same reason. Reported by @jaredm4.
 
 ## [0.6.1] - 2026-08-01
 

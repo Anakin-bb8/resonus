@@ -211,9 +211,7 @@ export default function PlaylistScreen() {
     toast(res.isError ? t("Couldn't complete the action") : t('Updated'));
   }
 
-  /** Reordering available on Subsonic servers and locally (Jellyfin doesn't support it). */
-  const canReorder =
-    (data?.songs.length ?? 0) > 1 && (offline || (!!auth && auth.serverType !== 'jellyfin'));
+  const canReorder = (data?.songs.length ?? 0) > 1 && (offline || !!auth);
 
   /** Removes several songs (real indices) with deferred delete and undo. */
   function removeMany(indices: number[]) {

@@ -739,20 +739,143 @@ export async function updatePlaylist(
   await request(auth, `/Playlists/${id}`, {}, { method: 'POST', body });
 }
 
+/** How many ids fit in one URL comfortably (they go as a query parameter). */
+const IDS_PER_REQUEST = 100;
+
+function chunks<T>(list: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size));
+  return out;
+}
+
+/**
+ * The playlist's entries in order. A playlist doesn't hold songs but entries,
+ * and it is the entry's `PlaylistItemId` that removing and moving take, never
+ * the song's id. What that id is made of changed in Jellyfin 10.10 (it used to
+ * be the entry's own, it is now the song's), so it is always read back from the
+ * server rather than built here. One consequence, from 10.10 on: a song sitting
+ * twice in the same playlist has the same id in both places, and the server
+ * can't tell the copies apart.
+ */
+async function playlistEntries(
+  auth: SubsonicAuth,
+  id: string,
+): Promise<{ entryId: string; songId: string }[]> {
+  const res = await request<{ Items?: { Id?: string; PlaylistItemId?: string }[] }>(
+    auth,
+    `/Playlists/${id}/Items`,
+    { UserId: auth.jfUserId },
+  );
+  return (res.Items ?? []).flatMap((it) =>
+    it.Id && it.PlaylistItemId ? [{ entryId: it.PlaylistItemId, songId: it.Id }] : [],
+  );
+}
+
 /** Removes a song by position: its entry id must be resolved first. */
 export async function removeFromPlaylist(
   auth: SubsonicAuth,
   id: string,
   index: number,
 ): Promise<void> {
-  const res = await request<{ Items?: { PlaylistItemId?: string }[] }>(
-    auth,
-    `/Playlists/${id}/Items`,
-    { UserId: auth.jfUserId },
-  );
-  const entryId = res.Items?.[index]?.PlaylistItemId;
+  const entryId = (await playlistEntries(auth, id))[index]?.entryId;
   if (!entryId) throw new Error('No se encontró la canción en la lista');
   await request(auth, `/Playlists/${id}/Items`, { EntryIds: entryId }, { method: 'DELETE' });
+}
+
+/**
+ * Leaves the playlist holding exactly `songIds`, in that order. Subsonic does
+ * this in one call by rewriting the list; Jellyfin has no such call, so it's
+ * three steps over the entries: drop the ones no longer wanted, append the ones
+ * that weren't there, and move the rest into place. Removing a song from a
+ * playlist arrives here too (the list minus that one), which is why it has to
+ * work with no reordering left to do.
+ */
+export async function reorderPlaylist(
+  auth: SubsonicAuth,
+  id: string,
+  songIds: string[],
+): Promise<void> {
+  // Which entry to use for each requested song: a song asked for twice takes a
+  // different copy each time it comes up.
+  const pick = (entries: { entryId: string; songId: string }[]) => {
+    const pool = new Map<string, string[]>();
+    for (const e of entries) {
+      const copies = pool.get(e.songId);
+      if (copies) copies.push(e.entryId);
+      else pool.set(e.songId, [e.entryId]);
+    }
+    const wanted: string[] = [];
+    const missing: string[] = [];
+    for (const songId of songIds) {
+      const entryId = pool.get(songId)?.shift();
+      if (entryId) wanted.push(entryId);
+      else missing.push(songId);
+    }
+    return { wanted, missing };
+  };
+
+  let entries = await playlistEntries(auth, id);
+  let { wanted, missing } = pick(entries);
+
+  // Counted rather than matched by id: with a song repeated in the playlist the
+  // copies share an id, and what says one of them is leaving is that the list
+  // asks for fewer than there are.
+  const room = new Map<string, number>();
+  for (const entryId of wanted) room.set(entryId, (room.get(entryId) ?? 0) + 1);
+  const seen = new Map<string, number>();
+  const drop: string[] = [];
+  for (const e of entries) {
+    const nth = (seen.get(e.entryId) ?? 0) + 1;
+    seen.set(e.entryId, nth);
+    if (nth > (room.get(e.entryId) ?? 0)) drop.push(e.entryId);
+  }
+  // The server takes every copy with it when their ids match, so what should
+  // have stayed is read back and put in again below.
+  const takesCopiesWithIt = drop.some((entryId) => room.has(entryId));
+
+  // Both lists travel in the URL, so they go in batches: a long playlist would
+  // otherwise build a request line the server refuses to read.
+  for (const batch of chunks([...new Set(drop)], IDS_PER_REQUEST)) {
+    await request(
+      auth,
+      `/Playlists/${id}/Items`,
+      { EntryIds: batch.join(',') },
+      { method: 'DELETE' },
+    );
+  }
+  if (takesCopiesWithIt) {
+    entries = await playlistEntries(auth, id);
+    ({ wanted, missing } = pick(entries));
+  }
+  if (missing.length > 0) {
+    for (const batch of chunks(missing, IDS_PER_REQUEST)) {
+      await request(
+        auth,
+        `/Playlists/${id}/Items`,
+        { Ids: batch.join(','), UserId: auth.jfUserId },
+        { method: 'POST' },
+      );
+    }
+    // The appended entries get their id on the server, so the list has to be
+    // read again before anything can be moved.
+    entries = await playlistEntries(auth, id);
+    ({ wanted } = pick(entries));
+  }
+
+  // What the server has now, kept in step with each move so the list is only
+  // touched where it actually differs (removing a song needs no move at all).
+  const want = new Set(wanted);
+  let current = entries.filter((e) => want.has(e.entryId)).map((e) => e.entryId);
+  for (let i = 0; i < wanted.length; i++) {
+    const entryId = wanted[i];
+    if (current[i] === entryId) continue;
+    // Looked for from here on: what is already in place stays where it is.
+    const from = current.indexOf(entryId, i);
+    if (from < 0) continue;
+    await request(auth, `/Playlists/${id}/Items/${entryId}/Move/${i}`, {}, { method: 'POST' });
+    current.splice(from, 1);
+    current.splice(i, 0, entryId);
+  }
 }
 
 // ── Server library ──
