@@ -12,6 +12,34 @@
 
 import { AppState } from 'react-native';
 
+/**
+ * Whether any of this runs at all.
+ *
+ * The measuring is meant to be cheap enough to leave on for everyone: a timer
+ * four times a second and two `Date.now()` per measured operation. Cheap is not
+ * the same as free, though, and somebody chasing a slow app is right to want it
+ * out of the way before believing anything else. So it can be turned off, from
+ * Settings › About, and off means off: no heartbeat, no stopwatch, no counting.
+ */
+let enabled = true;
+
+/** Turned on and off from the setting; off clears what was collected. */
+export function setPerfEnabled(on: boolean): void {
+  if (on === enabled) return;
+  enabled = on;
+  if (on) {
+    startPerfLog();
+    return;
+  }
+  if (timer) clearInterval(timer);
+  timer = null;
+  resetPerfLog();
+}
+
+export function perfEnabled(): boolean {
+  return enabled;
+}
+
 /** How often the heartbeat checks in. */
 const TICK_MS = 250;
 /** Under this, being late is ordinary scheduling noise rather than a block. */
@@ -53,7 +81,7 @@ const running: string[] = [];
  * and the tick after a return is skipped rather than blamed.
  */
 export function startPerfLog(): void {
-  if (timer) return;
+  if (timer || !enabled) return;
   startedAt = Date.now();
   lastTick = Date.now();
   let awake = AppState.currentState === 'active';
@@ -108,6 +136,9 @@ function record(tag: string, ms: number): void {
  * the thread.
  */
 export async function timed<T>(tag: string, fn: () => Promise<T>): Promise<T> {
+  // Not even the two `Date.now()`, so that a session with this off is the app
+  // with nothing of this in it.
+  if (!enabled) return fn();
   const t0 = Date.now();
   running.push(tag);
   try {
@@ -131,6 +162,7 @@ export async function timed<T>(tag: string, fn: () => Promise<T>): Promise<T> {
 const counts = new Map<string, number>();
 
 export function bump(tag: string, by = 1): void {
+  if (!enabled) return;
   counts.set(tag, (counts.get(tag) ?? 0) + by);
 }
 

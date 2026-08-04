@@ -4,8 +4,9 @@ import { useRouter } from 'expo-router';
 import { useRef } from 'react';
 import { Linking, Pressable, ScrollView } from 'react-native';
 
-import { Field, SettingRow, SettingsPage, settingsStyles } from '@/components/SettingsUI';
+import { Field, SettingRow, SettingsPage, SwitchList, settingsStyles } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
+import { useSettings } from '@/store/settings';
 
 const REPO_URL = 'https://github.com/juananzzz/resonus';
 const DISCORD_URL = 'https://discord.gg/pecE8MTPVr';
@@ -17,6 +18,8 @@ export default function AboutSettings() {
   // with someone, so it is not worth a row of its own that everybody else has
   // to scroll past.
   const taps = useRef(0);
+  const diagnostics = useSettings((s) => s.diagnostics);
+  const setDiagnostics = useSettings((s) => s.setDiagnostics);
 
   return (
     <SettingsPage title={t('About::app')}>
@@ -54,6 +57,22 @@ export default function AboutSettings() {
           icon="logo-discord"
           label="Discord"
           onPress={() => Linking.openURL(DISCORD_URL)}
+        />
+        {/* Out in the open, unlike the screen it feeds, because turning it off
+            is something to try when the app itself feels slow: whoever is
+            chasing that wants the measuring out of the way before believing
+            anything else. */}
+        <SwitchList
+          options={[
+            {
+              label: t('Measure performance'),
+              description: t(
+                'Records how long the app takes at things, for the diagnostics report. Turn it off to rule it out as a cause.',
+              ),
+              value: diagnostics,
+              onChange: setDiagnostics,
+            },
+          ]}
         />
       </ScrollView>
     </SettingsPage>

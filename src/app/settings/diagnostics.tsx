@@ -17,6 +17,7 @@ import { mirrorCoverState } from '@/lib/mirrorCovers';
 import { perfBlocks, perfCounts, perfOps, perfReport, perfSince, resetPerfLog } from '@/lib/perfLog';
 import { useAuthStore } from '@/store/auth';
 import { anyDownloads, useDownloads } from '@/store/downloads';
+import { useSettings } from '@/store/settings';
 import { enabledFolderIds } from '@/store/libraries';
 import { colors, fontSize, spacing } from '@/theme';
 
@@ -41,6 +42,7 @@ export default function DiagnosticsSettings() {
   ];
   const ops = perfOps();
   const counts = perfCounts();
+  const enabled = useSettings((s) => s.diagnostics);
   const covers = mirrorCoverState();
   const downloads = useDownloads((s) => Object.keys(s.files).length);
   const hydrated = useDownloads((s) => s.hydrated);
@@ -64,7 +66,9 @@ export default function DiagnosticsSettings() {
         onScrollEndDrag={() => setTick(tick + 1)}
       >
         <Text style={settingsStyles.sectionDescription}>
-          {t('Measured over the last {n} min of use.', { n: minutes })}
+          {enabled
+            ? t('Measured over the last {n} min of use.', { n: minutes })
+            : t('Measuring is off (Settings › About), so there is nothing to show.')}
         </Text>
 
         <Text style={settingsStyles.sectionTitle}>{t('Profile')}</Text>

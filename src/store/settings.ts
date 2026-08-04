@@ -3,6 +3,7 @@ import { create } from 'zustand';
 
 import { LANGUAGE_NAMES, isLanguage, type Language } from '@/i18n/languages';
 import { hashKey } from '@/lib/localLibrary';
+import { setPerfEnabled } from '@/lib/perfLog';
 import { profileScopeGuard } from '@/lib/profileScope';
 import { getItem, setItem } from '@/lib/storage';
 import { applyAccent, DEFAULT_ACCENT } from '@/theme';
@@ -493,6 +494,13 @@ interface SettingsState {
   showListRating: boolean;
   /** When the queue ends, continue with similar songs (getSimilarSongs2). */
   autoplaySimilar: boolean;
+  /**
+   * Whether the app measures itself (Settings › About → Diagnostics). On for
+   * everybody, since a report from the phone with the problem is worth more
+   * than the little it costs, and off for whoever is chasing that problem and
+   * wants the measuring out of the way first.
+   */
+  diagnostics: boolean;
   /** Crossfade seconds between songs (0 = disabled). */
   crossfadeSec: number;
   /**
@@ -665,6 +673,7 @@ interface SettingsState {
   setShowSongDuration: (value: boolean) => void;
   setShowListRating: (value: boolean) => void;
   setAutoplaySimilar: (value: boolean) => void;
+  setDiagnostics: (value: boolean) => void;
   setCrossfadeSec: (value: number) => void;
   setPreloadUpcoming: (value: boolean) => void;
   setAutoOfflineSwitch: (value: boolean) => void;
@@ -765,6 +774,7 @@ function snapshot(get: () => SettingsState) {
     showSongDuration: s.showSongDuration,
     showListRating: s.showListRating,
     autoplaySimilar: s.autoplaySimilar,
+    diagnostics: s.diagnostics,
     crossfadeSec: s.crossfadeSec,
     preloadUpcoming: s.preloadUpcoming,
     autoOfflineSwitch: s.autoOfflineSwitch,
@@ -843,6 +853,7 @@ const DEFAULTS = {
   showSongDuration: false,
   showListRating: false,
   autoplaySimilar: true,
+  diagnostics: true,
   crossfadeSec: 0,
   preloadUpcoming: false,
   autoOfflineSwitch: true,
@@ -1009,6 +1020,12 @@ export const useSettings = create<SettingsState>((set, get) => ({
 
   setShowListRating: (showListRating) => {
     set({ showListRating });
+    persist(snapshot(get));
+  },
+
+  setDiagnostics: (diagnostics) => {
+    set({ diagnostics });
+    setPerfEnabled(diagnostics);
     persist(snapshot(get));
   },
 
@@ -1353,6 +1370,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           showSongDuration: boolean;
           showListRating: boolean;
           autoplaySimilar: boolean;
+          diagnostics: boolean;
           crossfadeSec: number;
           preloadUpcoming: boolean;
           autoOfflineSwitch: boolean;
@@ -1482,6 +1500,10 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (typeof parsed.showListRating === 'boolean') {
           set({ showListRating: parsed.showListRating });
+        }
+        if (typeof parsed.diagnostics === 'boolean') {
+          set({ diagnostics: parsed.diagnostics });
+          setPerfEnabled(parsed.diagnostics);
         }
         if (typeof parsed.autoplaySimilar === 'boolean') {
           set({ autoplaySimilar: parsed.autoplaySimilar });

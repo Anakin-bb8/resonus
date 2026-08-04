@@ -601,5 +601,8 @@
   "{n} of {m} songs exported": "{n} of {m} songs exported",
   "State": "State",
   "Counted": "Counted",
-  "What happened, rather than how long it took.": "What happened, rather than how long it took."
+  "What happened, rather than how long it took.": "What happened, rather than how long it took.",
+  "Measure performance": "Measure performance",
+  "Records how long the app takes at things, for the diagnostics report. Turn it off to rule it out as a cause.": "Records how long the app takes at things, for the diagnostics report. Turn it off to rule it out as a cause.",
+  "Measuring is off (Settings › About), so there is nothing to show.": "Measuring is off (Settings › About), so there is nothing to show."
 }

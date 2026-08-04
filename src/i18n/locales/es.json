@@ -602,5 +602,8 @@
   "{n} of {m} songs exported": "{n} de {m} canciones exportadas",
   "State": "Estado",
   "Counted": "Contado",
-  "What happened, rather than how long it took.": "Qué ha pasado, no cuánto ha tardado."
+  "What happened, rather than how long it took.": "Qué ha pasado, no cuánto ha tardado.",
+  "Measure performance": "Medir el rendimiento",
+  "Records how long the app takes at things, for the diagnostics report. Turn it off to rule it out as a cause.": "Registra cuánto tarda la app en cada cosa, para el informe de diagnóstico. Desactívalo para descartarlo como causa.",
+  "Measuring is off (Settings › About), so there is nothing to show.": "La medición está desactivada (Ajustes › Acerca de), así que no hay nada que mostrar."
 }
