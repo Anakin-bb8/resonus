@@ -403,6 +403,7 @@
   "Song and artist names that don't fit scroll across.": "Los nombres de canción y artista que no caben se desplazan solos.",
   "Song downloaded": "Canción descargada",
   "Song lists": "Listas de canciones",
+  "Artwork, duration, rating and the rest of what a song shows in a list.": "Carátula, duración, valoración y todo lo demás que muestra una canción en una lista.",
   "Songs": "Canciones",
   "Songs blend into each other when one ends.": "Las canciones se funden entre sí al terminar cada una.",
   "Songs you play will show up here.": "Las canciones que reproduzcas aparecerán aquí.",
@@ -458,6 +459,7 @@
   "We need permission to read your device music.": "Necesitamos permiso para leer la música del dispositivo.",
   "What would you like to add?": "¿Qué quieres añadir?",
   "What's new": "Novedades",
+  "Support Resonus": "Apoya Resonus",
   "When the song ends": "Al terminar la canción",
   "Where should we get your music?": "¿De dónde sacamos tu música?",
   "Will pause in {n} min": "Se pausará en {n} min",
@@ -605,7 +607,6 @@
   "Counted": "Contado",
   "What happened, rather than how long it took.": "Qué ha pasado, no cuánto ha tardado.",
   "Measure performance": "Medir el rendimiento",
-  "Records how long the app takes at things, for the diagnostics report. Turn it off to rule it out as a cause.": "Registra cuánto tarda la app en cada cosa, para el informe de diagnóstico. Desactívalo para descartarlo como causa.",
   "Measuring is off (Settings › About), so there is nothing to show.": "La medición está desactivada (Ajustes › Acerca de), así que no hay nada que mostrar.",
   "These apply when you have a connection. Offline, songs play from the phone.": "Se aplican cuando tienes conexión. Sin conexión, las canciones suenan desde el móvil.",
   "These apply when you have a connection. Offline, nothing is downloaded.": "Se aplican cuando tienes conexión. Sin conexión no se descarga nada."

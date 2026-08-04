@@ -402,6 +402,7 @@
   "Song and artist names that don't fit scroll across.": "Song and artist names that don't fit scroll across.",
   "Song downloaded": "Song downloaded",
   "Song lists": "Song lists",
+  "Artwork, duration, rating and the rest of what a song shows in a list.": "Artwork, duration, rating and the rest of what a song shows in a list.",
   "Songs": "Songs",
   "Songs blend into each other when one ends.": "Songs blend into each other when one ends.",
   "Songs you play will show up here.": "Songs you play will show up here.",
@@ -457,6 +458,7 @@
   "We need permission to read your device music.": "We need permission to read your device music.",
   "What would you like to add?": "What would you like to add?",
   "What's new": "What's new",
+  "Support Resonus": "Support Resonus",
   "When the song ends": "When the song ends",
   "Where should we get your music?": "Where should we get your music?",
   "Will pause in {n} min": "Will pause in {n} min",
@@ -604,7 +606,6 @@
   "Counted": "Counted",
   "What happened, rather than how long it took.": "What happened, rather than how long it took.",
   "Measure performance": "Measure performance",
-  "Records how long the app takes at things, for the diagnostics report. Turn it off to rule it out as a cause.": "Records how long the app takes at things, for the diagnostics report. Turn it off to rule it out as a cause.",
   "Measuring is off (Settings › About), so there is nothing to show.": "Measuring is off (Settings › About), so there is nothing to show.",
   "These apply when you have a connection. Offline, songs play from the phone.": "These apply when you have a connection. Offline, songs play from the phone.",
   "These apply when you have a connection. Offline, nothing is downloaded.": "These apply when you have a connection. Offline, nothing is downloaded."

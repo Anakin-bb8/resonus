@@ -7,6 +7,13 @@
  * itself after a while without opening it, so «Later» has to mean later.
  * «Don't remind me» is the one that stops it for good (a switch in Settings ›
  * Playback brings it back).
+ *
+ * Once per launch is counted here, not per mount. This is only on screen with a
+ * profile open, so leaving one and going back in builds it again, and it used
+ * to ask again on the way: at that moment the settings still on hand are the
+ * ones of the profile that left, or the factory ones, and either way the answer
+ * given a minute ago was not among them. Turning the warning off, or answering
+ * «Don't remind me», did not survive the round trip.
  */
 import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
@@ -15,6 +22,9 @@ import { useT } from '@/i18n';
 import { isBatteryOptimized, openBatterySettings } from '@/lib/batteryOpt';
 import { useSettings } from '@/store/settings';
 import { Dialog } from './Dialog';
+
+/** Whether this launch has already had its answer, whatever it was. */
+let asked = false;
 
 export function BatteryWarning() {
   const t = useT();
@@ -26,7 +36,9 @@ export function BatteryWarning() {
   // Only once the settings are read from disk: before that `batteryWarning` is
   // its default (on), and someone who had turned it off would see it anyway.
   useEffect(() => {
-    if (hydrated && enabled && isBatteryOptimized()) setVisible(true);
+    if (asked || !hydrated || !enabled || !isBatteryOptimized()) return;
+    asked = true;
+    setVisible(true);
   }, [hydrated, enabled]);
 
   // Coming back from the system screen: if it was granted there, the dialog

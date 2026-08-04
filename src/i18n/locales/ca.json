@@ -381,6 +381,7 @@
   "Song and artist names that don't fit scroll across.": "Els noms de cançó i artista que no hi caben es desplacen sols.",
   "Song downloaded": "Cançó baixada",
   "Song lists": "Llistes de cançons",
+  "Artwork, duration, rating and the rest of what a song shows in a list.": "Caràtula, durada, valoració i tota la resta del que mostra una cançó en una llista.",
   "Songs": "Cançons",
   "Songs blend into each other when one ends.": "Les cançons es fonen entre si quan una s'acaba.",
   "Songs you play will show up here.": "Les cançons que reprodueixis apareixeran aquí.",
@@ -436,6 +437,7 @@
   "We need permission to read your device music.": "Necessitem permís per llegir la música del teu dispositiu.",
   "What would you like to add?": "Què vols afegir?",
   "What's new": "Novetats",
+  "Support Resonus": "Dona suport a Resonus",
   "When the song ends": "Quan s'acabi la cançó",
   "Where should we get your music?": "D'on hem d'agafar la teva música?",
   "Will pause in {n} min": "Es pausarà d'aquí a {n} min",
@@ -597,7 +599,6 @@
   "Counted": "Comptat",
   "What happened, rather than how long it took.": "Què ha passat, no quant ha trigat.",
   "Measure performance": "Mesura el rendiment",
-  "Records how long the app takes at things, for the diagnostics report. Turn it off to rule it out as a cause.": "Registra quant triga l'app a cada cosa, per a l'informe de diagnòstic. Desactiva'l per descartar-lo com a causa.",
   "Measuring is off (Settings › About), so there is nothing to show.": "La mesura està desactivada (Configuració › Quant a), així que no hi ha res a mostrar.",
   "These apply when you have a connection. Offline, songs play from the phone.": "S'apliquen quan tens connexió. Sense connexió, les cançons sonen des del mòbil.",
   "These apply when you have a connection. Offline, nothing is downloaded.": "S'apliquen quan tens connexió. Sense connexió no es baixa res."

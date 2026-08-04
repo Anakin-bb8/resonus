@@ -853,7 +853,9 @@ const DEFAULTS = {
   showSongDuration: false,
   showListRating: false,
   autoplaySimilar: true,
-  diagnostics: true,
+  // Off: measuring is for somebody who is being asked to measure. Everyone
+  // else was paying for a report they will never send.
+  diagnostics: false,
   crossfadeSec: 0,
   preloadUpcoming: false,
   autoOfflineSwitch: true,
@@ -862,7 +864,9 @@ const DEFAULTS = {
   replayGainPreampDb: 0,
   keepScreenAwake: false,
   hapticsEnabled: false,
-  lyricsBackground: 'color' as ScreenBackground,
+  // Same as the player's: the blurred artwork, which is what the screen it
+  // opens from is already showing.
+  lyricsBackground: 'cover' as ScreenBackground,
   lyricsCardBackground: 'color' as CardBackground,
   lyricsSource: 'local' as LyricsSource,
   preferDownloads: 'always' as PreferDownloads,
@@ -1328,6 +1332,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
     const key = settingsKey();
     const token = scope.start();
     let applied = false;
+    // What is in memory belongs to the profile that just left, and this says
+    // so until the new one's has been read. It was only ever false on the first
+    // read of a launch, so on a profile change whoever waits for this was told
+    // the previous profile's settings were the new one's.
+    set({ hydrated: false });
     try {
       // Active profile settings; if it doesn't have its own yet, inherits the
       // old (shared) ones as fallback/migration. Read BEFORE touching the
@@ -1503,7 +1512,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (typeof parsed.diagnostics === 'boolean') {
           set({ diagnostics: parsed.diagnostics });
-          setPerfEnabled(parsed.diagnostics);
         }
         if (typeof parsed.autoplaySimilar === 'boolean') {
           set({ autoplaySimilar: parsed.autoplaySimilar });
@@ -1776,6 +1784,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
     } finally {
       // Read or failed, what's in memory is now what this profile gets.
       set({ hydrated: true });
+      // Here rather than where the value is read, so it is also settled for a
+      // profile that saved nothing about it: the measuring starts on, to catch
+      // the startup it would otherwise miss, and this is where it is told
+      // whether anybody asked for it.
+      setPerfEnabled(get().diagnostics);
     }
   },
 }));

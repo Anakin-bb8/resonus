@@ -10,6 +10,7 @@ import { useSettings } from '@/store/settings';
 
 const REPO_URL = 'https://github.com/juananzzz/resonus';
 const DISCORD_URL = 'https://discord.gg/pecE8MTPVr';
+const KOFI_URL = 'https://ko-fi.com/juananzzz';
 
 export default function AboutSettings() {
   const t = useT();
@@ -58,17 +59,23 @@ export default function AboutSettings() {
           label="Discord"
           onPress={() => Linking.openURL(DISCORD_URL)}
         />
-        {/* Out in the open, unlike the screen it feeds, because turning it off
-            is something to try when the app itself feels slow: whoever is
-            chasing that wants the measuring out of the way before believing
-            anything else. */}
+        {/* Last of the links and never in the way: the app asks for nothing to
+            work, and this is the one place where it is fair to mention that
+            somebody is paying for the time it takes. */}
+        <SettingRow
+          icon="cafe-outline"
+          label={t('Support Resonus')}
+          onPress={() => Linking.openURL(KOFI_URL)}
+        />
+        {/* Out in the open, unlike the screen it feeds: it is turned on when
+            somebody is being walked through a slowdown, and it has to be as
+            easy to turn back off. No description, for the same reason the
+            screen has no row: it means nothing to anyone not in that
+            conversation. */}
         <SwitchList
           options={[
             {
               label: t('Measure performance'),
-              description: t(
-                'Records how long the app takes at things, for the diagnostics report. Turn it off to rule it out as a cause.',
-              ),
               value: diagnostics,
               onChange: setDiagnostics,
             },

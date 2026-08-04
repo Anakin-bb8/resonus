@@ -31,22 +31,8 @@ export default function AppearanceSettings() {
   // different thing and reads as one: greyed out, where it always was (#114).
   const canBrowseFolders = offline || serverType !== 'jellyfin';
   const language = useSettings((s) => s.language);
-  const showListArtwork = useSettings((s) => s.showListArtwork);
-  const setShowListArtwork = useSettings((s) => s.setShowListArtwork);
-  const showSongDuration = useSettings((s) => s.showSongDuration);
-  const setShowSongDuration = useSettings((s) => s.setShowSongDuration);
-  const showListRating = useSettings((s) => s.showListRating);
-  const setShowListRating = useSettings((s) => s.setShowListRating);
-  const showPlaylistDescription = useSettings((s) => s.showPlaylistDescription);
-  const setShowPlaylistDescription = useSettings((s) => s.setShowPlaylistDescription);
   const alwaysShowTabs = useSettings((s) => s.alwaysShowTabs);
   const setAlwaysShowTabs = useSettings((s) => s.setAlwaysShowTabs);
-  const showArtistPhoto = useSettings((s) => s.showArtistPhoto);
-  const setShowArtistPhoto = useSettings((s) => s.setShowArtistPhoto);
-  const showDiscHeaders = useSettings((s) => s.showDiscHeaders);
-  const showGenreChips = useSettings((s) => s.showGenreChips);
-  const setShowDiscHeaders = useSettings((s) => s.setShowDiscHeaders);
-  const setShowGenreChips = useSettings((s) => s.setShowGenreChips);
   const showHistoryButton = useSettings((s) => s.showHistoryButton);
   const setShowHistoryButton = useSettings((s) => s.setShowHistoryButton);
   const showProfileButton = useSettings((s) => s.showProfileButton);
@@ -85,51 +71,15 @@ export default function AppearanceSettings() {
           onPress={() => router.push('/settings/font')}
         />
 
+        {/* Under its own heading, where the seven switches used to be, and not
+            up with the language and the theme: it is its own thing and reads
+            like one. */}
         <Text style={settingsStyles.sectionTitle}>{t('Song lists')}</Text>
-        <SwitchList
-          options={[
-            {
-              label: t('Show artwork'),
-              description: t('Show the album artwork next to each song in playlists and favorites.'),
-              value: showListArtwork,
-              onChange: setShowListArtwork,
-            },
-            {
-              label: t('Show song duration'),
-              value: showSongDuration,
-              onChange: setShowSongDuration,
-            },
-            {
-              label: t('Show rating'),
-              description: t('Show each song’s star rating in lists.'),
-              value: showListRating,
-              onChange: setShowListRating,
-            },
-            {
-              label: t('Show playlist description'),
-              description: t('Show what a playlist says about itself, under its name.'),
-              value: showPlaylistDescription,
-              onChange: setShowPlaylistDescription,
-            },
-            {
-              label: t('Show artist photo'),
-              description: t('Show a round artist photo next to the name on album screens.'),
-              value: showArtistPhoto,
-              onChange: setShowArtistPhoto,
-            },
-            {
-              label: t('Show disc titles'),
-              description: t('Separate discs with a header on multi-disc albums.'),
-              value: showDiscHeaders,
-              onChange: setShowDiscHeaders,
-            },
-            {
-              label: t('Show genres'),
-              description: t('Show the album’s genres as chips; tap one to browse it.'),
-              value: showGenreChips,
-              onChange: setShowGenreChips,
-            },
-          ]}
+        <SettingRow
+          label={t('Song lists')}
+          description={t('Artwork, duration, rating and the rest of what a song shows in a list.')}
+          chevron
+          onPress={() => router.push('/settings/song-lists')}
         />
 
         <Text style={settingsStyles.sectionTitle}>{t('Navigation')}</Text>

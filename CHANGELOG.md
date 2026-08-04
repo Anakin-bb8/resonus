@@ -9,7 +9,22 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Added
+
+- A way to support Resonus, at the bottom of Settings › About. The app asks for
+  nothing to work and that is not changing; this is one row, out of the way of
+  everything else, for whoever wants to.
+
 ### Fixed
+
+- The battery optimization warning stops coming back after leaving a profile and
+  going back in. It is meant to ask once per launch, and answering it, or
+  turning it off in Settings › Playback, is meant to be the end of it. But it is
+  only on screen with a profile open, so it was built again on the way back in,
+  and at that moment the settings on hand are still the ones of the profile that
+  left, or the factory ones: it asked again, against an answer it could not see.
+  It now counts the launch rather than the screen, and the settings say plainly
+  that they are not the new profile's yet until they have been read.
 
 - The player stays at the same height from one song to the next. The room for
   the lyrics card peeking below was only kept for songs that actually had
@@ -20,6 +35,23 @@ Releases before 0.2.1 are only listed on the
   than the whole screen moving.
 
 ### Changed
+
+- Settings › Appearance is shorter. What a song shows in a list, seven switches
+  with a line of explanation each, was a screenful sitting in the middle of it,
+  between the language and the navigation bar, so everything below was a scroll
+  away for anyone who had not come looking for exactly that. It is now a row
+  that opens its own screen, "Song lists", like the quick grid and the home
+  sections already were.
+
+- The lyrics screen comes with the blurred artwork behind it, the same as the
+  player it opens from, instead of the flat tint. Only for a profile that has
+  never said otherwise: anyone who picked a background keeps the one they
+  picked, in Settings › Player.
+
+- "Measure performance" comes switched off, and no longer explains itself. It
+  is turned on when somebody is being walked through a slowdown, and until then
+  it was measuring for a report nobody was going to send. Same rule as above:
+  a profile that already has it on keeps it on until it is turned off.
 
 - "Playing from" says the mix once the queue has become one. When an album or a
   playlist runs out, autoplay keeps it going with similar songs, and from the
