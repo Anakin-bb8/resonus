@@ -317,6 +317,16 @@ Releases before 0.2.1 are only listed on the
   where the music was. It now counts them where they happen. A swipe toward an
   end of the queue that has nowhere to go gives the travel back instead of
   counting it. Reported by @ztx-lyghters.
+- The app no longer gets slower for the rest of the session the first time you
+  open Search. Tabs are never closed once visited, only hidden, so they are
+  meant to stop working while you are elsewhere, and they were not: asking for
+  a fade between tabs turned that off, quietly and completely, the day it was
+  added. Every visited tab kept redrawing on every screen change, and Search
+  lays out the whole genre list of the library at once, with nothing recycling
+  it, so from the first visit on it was rebuilt on every navigation, on a
+  library with hundreds of genres. Both halves are fixed: a tab you are not on
+  stops, and the genre grid is built once. The tabs no longer crossfade, which
+  is what the fade cost. Reported by @ztx-lyghters.
 
 ## [0.6.1] - 2026-08-01
 

@@ -4,7 +4,7 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { ParamListBase } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigation } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -133,6 +133,17 @@ export default function SearchScreen() {
         )
       : [];
 
+  // Built once per genre list and not on every render of this screen. There is
+  // no ceiling on how many a library has, they are all laid out at once (no
+  // list to recycle them), and this screen re-renders for reasons that have
+  // nothing to do with them: a setting, the song that started playing, a
+  // keystroke. Same elements, so React walks past the whole grid instead of
+  // rebuilding it.
+  const genreGrid = useMemo(
+    () => genres?.map((g) => <GenreCard key={g.value} name={g.value} width={GENRE_W} />),
+    [genres],
+  );
+
   const isEmpty = query.trim().length === 0;
   const showRecent = focused && isEmpty && recent.length > 0;
   const showBrowse = isEmpty && !showRecent && !!genres && genres.length > 0;
@@ -216,11 +227,7 @@ export default function SearchScreen() {
         {showBrowse ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t('Browse all')}</Text>
-            <View style={styles.genreGrid}>
-              {genres!.map((g) => (
-                <GenreCard key={g.value} name={g.value} width={GENRE_W} />
-              ))}
-            </View>
+            <View style={styles.genreGrid}>{genreGrid}</View>
           </View>
         ) : showBrowseSkeleton ? (
           <View style={styles.section}>

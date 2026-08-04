@@ -30,16 +30,21 @@ export default function TabsLayout() {
         tabBar={alwaysShowTabs ? () => null : undefined}
         screenOptions={{
           headerShown: false,
-          // The tab you are not on stops re-rendering until you go back to it
-          // (see the root layout, where the same is done for the stack).
+          // The tab you are not on stops re-rendering, and its views come off
+          // the screen, until you go back to it (the root layout does the same
+          // for the stack). A tab is never unmounted once opened, so without
+          // this every one you have visited keeps re-rendering for the rest of
+          // the session, and Search, which lays out the whole genre list at
+          // once, was making every screen change slower from the first visit
+          // on.
+          //
+          // It costs the tabs their crossfade, and that is not a preference:
+          // asking for any animation here hands the navigator an animated value
+          // where it expects the number 0 or 2, and the comparison that decides
+          // whether to freeze can only come out false. So an 80 ms fade turned
+          // the whole thing off, quietly, from the day it was added. Whoever
+          // wants it back has to check that freezing still happens.
           freezeOnBlur: true,
-          // Short crossfade when switching tabs, instead of the default hard
-          // cut ('shift' felt slow).
-          animation: 'fade',
-          transitionSpec: {
-            animation: 'timing',
-            config: { duration: 80 },
-          },
           tabBarActiveTintColor: colors.text,
           tabBarInactiveTintColor: colors.textSecondary,
           sceneStyle: { backgroundColor: colors.background },
