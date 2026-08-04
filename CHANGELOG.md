@@ -307,6 +307,16 @@ Releases before 0.2.1 are only listed on the
   its streaming endpoint and was never asked, so it kept sending the track from
   the top. Downloads and untranscoded streams were never affected, since those
   can be moved around like any file. Reported by @jaredm4.
+- The cover in the player belongs to the song that is playing, however fast you
+  swipe. Two or three quick swipes and it settled one track ahead: the cover of
+  the song after, with the right title under it and the right music playing,
+  and it stayed that way for every song after that. The strip of covers and the
+  queue count the same swipes, but not at the same instant: a swipe reaches the
+  screen one render later, and one that landed before that render measured its
+  travel from a count one behind, leaving the strip parked a cover away from
+  where the music was. It now counts them where they happen. A swipe toward an
+  end of the queue that has nowhere to go gives the travel back instead of
+  counting it. Reported by @ztx-lyghters.
 
 ## [0.6.1] - 2026-08-01
 

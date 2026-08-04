@@ -325,24 +325,48 @@ export default function PlayerScreen() {
   });
   const prevCover = coverOf(prevSong);
   const nextCover = coverOf(nextSong);
-  const goNext = () => {
-    const { queue, index: i, repeat: r } = usePlayerStore.getState();
-    if (i < queue.length - 1) jumpTo(i + 1);
-    else if (r === 'all' && queue.length > 1) jumpTo(0);
-  };
-  const goPrev = () => {
-    const { index: i } = usePlayerStore.getState();
-    if (i > 0) jumpTo(i - 1);
-  };
-
-  // Net committed advances of the carousel: integer mirror of `-offset/W` at
-  // rest. Lives in React because it decides which song each panel shows.
+  /**
+   * Net committed advances of the carousel: integer mirror of `-offset/W` at
+   * rest. It is kept twice on purpose. `spins` is React's, because it decides
+   * which song each panel shows; `spinsSV` is the gesture's, and the one all
+   * the arithmetic uses.
+   *
+   * They are the same number, but not at the same time: a swipe reaches React
+   * one render later, and a second swipe landing before that render measured
+   * its travel from a count one behind. The strip then came to rest a screen
+   * away from the song it was showing — the cover of the following track, on
+   * every song from then on, while the title and the music were right.
+   */
   const [spins, setSpins] = useState(0);
+  const spinsSV = useSharedValue(0);
   const offset = useSharedValue(0);
   const dragBase = useSharedValue(0);
+  /**
+   * The strip travelled, so the song follows it. Where to is worked out here
+   * and not in the gesture: `canNext` and `canPrev` are as old as the closure
+   * that captured them, and counting an advance the queue can't make would
+   * leave the strip off by a screen just the same. With nowhere to go, the
+   * travel is given back instead.
+   */
   const commitSwipe = (advance: 1 | -1) => {
+    const { queue, index: i, repeat: r } = usePlayerStore.getState();
+    const to =
+      advance === 1
+        ? i < queue.length - 1
+          ? i + 1
+          : r === 'all' && queue.length > 1
+            ? 0
+            : -1
+        : i > 0
+          ? i - 1
+          : -1;
+    if (to < 0) {
+      spinsSV.value -= advance;
+      offset.value = withSpring(-spinsSV.value * SCREEN_W, { damping: 20, stiffness: 200 });
+      return;
+    }
     setSpins((n) => n + advance);
-    (advance === 1 ? goNext : goPrev)();
+    jumpTo(to);
   };
   const coverPan = Gesture.Pan()
     .activeOffsetX([-20, 20])
@@ -357,15 +381,17 @@ export default function PlayerScreen() {
       const goingPrev = e.translationX > 0;
       const blocked = goingPrev ? !canPrev : !canNext;
       const raw = dragBase.value + (blocked ? e.translationX / 4 : e.translationX);
-      const min = canNext ? -(spins + 1) * SCREEN_W : -spins * SCREEN_W;
-      const max = canPrev ? -(spins - 1) * SCREEN_W : -spins * SCREEN_W;
+      const rest = spinsSV.value;
+      const min = canNext ? -(rest + 1) * SCREEN_W : -rest * SCREEN_W;
+      const max = canPrev ? -(rest - 1) * SCREEN_W : -rest * SCREEN_W;
       offset.value = Math.min(max, Math.max(min, raw));
     })
     .onEnd((e) => {
       const wantNext = canNext && (e.translationX < -SWIPE_THRESHOLD || e.velocityX < -600);
       const wantPrev = canPrev && (e.translationX > SWIPE_THRESHOLD || e.velocityX > 600);
       const advance = wantNext ? 1 : wantPrev ? -1 : 0;
-      const target = -(spins + advance) * SCREEN_W;
+      const base = spinsSV.value;
+      const target = -(base + advance) * SCREEN_W;
       if (advance !== 0) {
         // The carousel finishes the travel with the neighbor centered; the
         // track changes at the end. If React lags, it's not noticeable: the
@@ -375,7 +401,12 @@ export default function PlayerScreen() {
           target,
           { duration: 220, easing: Easing.out(Easing.cubic) },
           (finished) => {
-            if (finished) scheduleOnRN(commitSwipe, advance as 1 | -1);
+            // Counted where the strip actually arrived, and only if it did: a
+            // travel cut short by the next swipe never happened.
+            if (finished) {
+              spinsSV.value = base + advance;
+              scheduleOnRN(commitSwipe, advance as 1 | -1);
+            }
           },
         );
       } else {
