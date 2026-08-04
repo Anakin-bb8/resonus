@@ -77,29 +77,23 @@ export default function RootLayout() {
       ? 'offline'
       : '';
 
-  /**
-   * Once, when the app starts. None of this belongs to a profile: the settings,
-   * the history, the equaliser, the network watcher, the remote control.
+/**
+   * Once, when the app starts, and only what belongs to the phone rather than
+   * to whoever is signed in: the equaliser, the network watcher, the remote
+   * control, the measuring.
    *
-   * It used to sit with the per-profile work below, in one effect keyed on the
-   * profile, so switching server or stepping in and out of offline mode ran the
-   * whole opening of the app again. On a large library that was a second and a
-   * half of rehydrating downloads for a toggle, which is what made the app feel
-   * slower the more it was used.
+   * All of it used to sit with the per-profile work below, in one effect keyed
+   * on the profile, so switching server ran the whole opening of the app again
+   * — on a large library, a second and a half of rehydrating downloads. What
+   * does belong to a profile stayed there, and had to: read before the session
+   * is restored, a profile's settings come back as factory defaults.
    */
   useEffect(() => {
     // Before anything else, so the first seconds count too.
     startPerfLog();
-    useSettings.getState().hydrate();
-    useRecentSearches.getState().hydrate();
-    usePlayCounts.getState().hydrate();
-    usePlayHistory.getState().hydrate();
-    useSortPrefs.getState().hydrate();
-    void useLastPlayed.getState().hydrate();
-    void usePins.getState().hydrate();
     void removeLegacyRadioCovers();
-    void useAutoDownloads.getState().hydrate();
-    // Equalizer: reads device capabilities and applies saved settings.
+    // Equalizer: reads device capabilities and applies saved settings. Not the
+    // profile's: it belongs to the phone and its output.
     void useEqualizer.getState().hydrate();
     initNetworkType();
     // Server URL switching on network change (profiles with multiple URLs).
@@ -112,10 +106,25 @@ export default function RootLayout() {
    * profile's: its downloads, its mirror, its libraries, its server.
    */
   useEffect(() => {
+    // Everything below is the profile's, and read under its own key: the
+    // settings, what you searched, what you played, what you pinned. Read
+    // before the session is restored they come back as factory defaults, which
+    // is what happened when they were moved up to the effect above.
+    const authReady = hydrate();
+    void authReady.then(() => {
+      useSettings.getState().hydrate();
+      useRecentSearches.getState().hydrate();
+      usePlayCounts.getState().hydrate();
+      usePlayHistory.getState().hydrate();
+      useSortPrefs.getState().hydrate();
+      void useLastPlayed.getState().hydrate();
+      void usePins.getState().hydrate();
+      void useAutoDownloads.getState().hydrate();
+    });
     // After the session is restored, never before: the downloads store reads
     // the account's own catalog, and with no account yet it falls back to
     // reading every one of them, which is both slow and wrong (#50).
-    const downloadsReady = hydrate().then(() => useDownloads.getState().hydrate());
+    const downloadsReady = authReady.then(() => useDownloads.getState().hydrate());
     // Mirror + outbox for offline. Offline it is the library, so it is read
     // right away: a query could otherwise resolve before it is in memory and
     // stay empty until manually reloaded. Online nothing reads it, only writes
