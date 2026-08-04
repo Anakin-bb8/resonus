@@ -9,6 +9,33 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-08-04
+
+Offline mode now means it. The rule that the app asks nobody anything without a
+connection was repeated at every place that talks to the server, and several of
+them had forgotten it: the queue went up every twenty seconds, the addresses
+were probed on every network change, the lyrics were looked up, and the covers
+of albums you had not downloaded were fetched one by one. On a metered
+connection that is somebody's money. The rule now lives underneath, in the one
+place that makes requests, where there is nothing left to forget. Browsing
+without a connection is only worth as much as the pictures that come with it,
+so those covers are now kept on the phone on purpose instead of borrowed from
+a cache that throws them out.
+
+The app also stops getting slower the longer you use it. A screen you had left
+kept re-rendering behind the one you were on, which is what made the half
+second between screens grow as you went, and a tab you had opened once kept
+redrawing for the rest of the session.
+
+Jellyfin catches up on three things it could not do: taking songs out of a
+playlist, moving around inside a track that is being transcoded, and saying how
+far into that track you are on the lock screen.
+
+And what you listen to away from the network reaches the server when it comes
+back, carrying the time it happened, so an evening's music lands where it
+belongs in the history instead of arriving all at once the minute the phone
+finds a signal.
+
 ### Added
 
 - When a downloaded song plays from the file is now yours to decide, in
