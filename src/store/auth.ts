@@ -18,6 +18,7 @@ import {
   type SubsonicAuth,
 } from '@/api/backend';
 import { primaryUrl } from '@/lib/serverUrls';
+import { bump } from '@/lib/perfLog';
 import { clearLocalCatalog } from '@/lib/localLibrary';
 import { deleteProfileData } from '@/lib/profileData';
 import { setOfflineMode } from '@/api/netGate';
@@ -400,6 +401,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   goOffline: async (auto) => {
+    // Counted, and by how it happened. Each switch snapshots the caches into
+    // the mirror and then marks everything stale, so everything visible is
+    // fetched again: on a large library that is not free, and a connection
+    // that comes and goes would be doing it over and over without anybody
+    // pressing anything. If a report shows a dozen automatic ones in three
+    // minutes, that is the lag, and it has nothing to do with the screens.
+    bump(auto ? 'offline · fell into' : 'offline · asked for');
     // Preserves `auth`: it's the same account, but showing/playing downloads.
     // Sends to server (scrobble, now-playing) are gated by `offline` in the
     // player. Clearing the cache makes views recalculate against the local
@@ -425,6 +433,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   goOnline: async () => {
+    bump('offline · came back');
     // Instant return to the same account (auth intact). Playback is not
     // touched; views recalculate against the server when cache is cleared.
     const current = get().auth;
