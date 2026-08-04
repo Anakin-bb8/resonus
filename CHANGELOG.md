@@ -36,6 +36,13 @@ Releases before 0.2.1 are only listed on the
 
 ### Changed
 
+- Streaming settings come in two named sets, Wi-Fi and mobile data, instead of
+  four rows in a row that you told apart by reading to the end of each label.
+  The labels keep saying which network they are about, since a row read on its
+  own still has to. What decides whether a downloaded song streams at all, and
+  the preloading, now come first: they are not about either network, and under
+  a heading they would have looked like they were.
+
 - Settings › Appearance is shorter. What a song shows in a list, seven switches
   with a line of explanation each, was a screenful sitting in the middle of it,
   between the language and the navigation bar, so everything below was a scroll

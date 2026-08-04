@@ -81,58 +81,10 @@ export default function PlaybackSettings() {
             {t('These apply when you have a connection. Offline, songs play from the phone.')}
           </Text>
         ) : null}
-        <SelectList
-          label={t('Streaming quality (Wi-Fi)')}
-          description={t(
-            '“Original” is the file exactly as it is on the server, with nothing transcoded. A lower bitrate saves data and may cost audible quality.',
-          )}
-          options={bitrateOptions}
-          value={maxBitRate}
-          onChange={setMaxBitRate}
-          disabled={offline}
-        />
-        {/* Each codec right under its own quality: the codec only applies
-            where a bitrate is set, and reading them as a pair is what says
-            which network each one is about. At "Original" nothing is
-            transcoded, so the codec of that network has nothing to do and
-            is greyed out rather than silently ignored (#72). */}
-        <SelectList
-          label={t('Streaming codec (Wi-Fi)')}
-          description={
-            maxBitRate > 0
-              ? t('Codec to transcode to. Your server must support it.')
-              : t('Codec to transcode to. At “Original” quality nothing is transcoded.')
-          }
-          options={codecOptions}
-          value={streamFormat}
-          onChange={setStreamFormat}
-          disabled={offline || maxBitRate === 0}
-          // "Not used" is about the quality above being "Original", which is
-          // still worth saying offline; being offline is not, or every row in
-          // the section would repeat the line already above it.
-          disabledLabel={maxBitRate === 0 ? t('Not used') : undefined}
-        />
-        <SelectList
-          label={t('Streaming quality (mobile data)')}
-          options={bitrateOptions}
-          value={maxBitRateCellular}
-          onChange={setMaxBitRateCellular}
-          disabled={offline}
-        />
-        {/* No description here on purpose: it would be the same paragraph
-            as the Wi-Fi codec's, twice in the same section. The one above
-            explains the pair. */}
-        <SelectList
-          label={t('Streaming codec (mobile data)')}
-          options={codecOptions}
-          value={streamFormatCellular}
-          onChange={setStreamFormatCellular}
-          disabled={offline || maxBitRateCellular === 0}
-          disabledLabel={maxBitRateCellular === 0 ? t('Not used') : undefined}
-        />
-        {/* Between streaming and its options on purpose: this is the
-            question of whether the streaming settings above apply to a
-            song at all. */}
+        {/* First, because it is the question of whether any of the quality
+            settings below apply to a song at all. It used to sit under them,
+            which read fine while they were four plain rows; under a heading it
+            would have looked like one more mobile data setting. */}
         <SelectList
           label={t('Play downloaded songs from the phone')}
           description={t(
@@ -158,6 +110,62 @@ export default function PlaybackSettings() {
               disabled: offline,
             },
           ]}
+        />
+        {/* One set per network, each under a heading of its own, instead of
+            four rows in a row telling them apart by what is in brackets. The
+            brackets stay: read on its own, out of the group it is under, a row
+            still has to say which network it is about. Last in the section, so
+            nothing after them falls under a heading it has nothing to do
+            with. */}
+        <Text style={settingsStyles.groupTitle}>Wi-Fi</Text>
+        <SelectList
+          label={t('Streaming quality (Wi-Fi)')}
+          description={t(
+            '“Original” is the file exactly as it is on the server, with nothing transcoded. A lower bitrate saves data and may cost audible quality.',
+          )}
+          options={bitrateOptions}
+          value={maxBitRate}
+          onChange={setMaxBitRate}
+          disabled={offline}
+        />
+        {/* Each codec right under its own quality: the codec only applies
+            where a bitrate is set. At "Original" nothing is transcoded, so the
+            codec of that network has nothing to do and is greyed out rather
+            than silently ignored (#72). */}
+        <SelectList
+          label={t('Streaming codec (Wi-Fi)')}
+          description={
+            maxBitRate > 0
+              ? t('Codec to transcode to. Your server must support it.')
+              : t('Codec to transcode to. At “Original” quality nothing is transcoded.')
+          }
+          options={codecOptions}
+          value={streamFormat}
+          onChange={setStreamFormat}
+          disabled={offline || maxBitRate === 0}
+          // "Not used" is about the quality above being "Original", which is
+          // still worth saying offline; being offline is not, or every row in
+          // the section would repeat the line already above it.
+          disabledLabel={maxBitRate === 0 ? t('Not used') : undefined}
+        />
+        <Text style={settingsStyles.groupTitle}>{t('Mobile data')}</Text>
+        {/* No descriptions in this group on purpose: they would be the same two
+            paragraphs as above, in the same section. The Wi-Fi pair explains
+            both. */}
+        <SelectList
+          label={t('Streaming quality (mobile data)')}
+          options={bitrateOptions}
+          value={maxBitRateCellular}
+          onChange={setMaxBitRateCellular}
+          disabled={offline}
+        />
+        <SelectList
+          label={t('Streaming codec (mobile data)')}
+          options={codecOptions}
+          value={streamFormatCellular}
+          onChange={setStreamFormatCellular}
+          disabled={offline || maxBitRateCellular === 0}
+          disabledLabel={maxBitRateCellular === 0 ? t('Not used') : undefined}
         />
 
         <Text style={settingsStyles.sectionTitle}>{t('Sound')}</Text>

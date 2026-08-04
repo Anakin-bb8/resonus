@@ -716,6 +716,17 @@ export const settingsStyles = StyleSheet.create({
     fontSize: fontSize.xs,
     marginBottom: spacing.xs,
   },
+  // A division inside a section, for when the same settings come in more than
+  // one set (streaming, once per network). Quieter than `sectionTitle` and with
+  // less air above it, so it reads as belonging to the title above rather than
+  // competing with it.
+  groupTitle: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+  },
   // Rounded box on the background (rows live inside, more readable).
   cardBox: { backgroundColor: colors.surface, borderRadius: radius.md, overflow: 'hidden' },
   row: {
