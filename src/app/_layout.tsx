@@ -77,8 +77,17 @@ export default function RootLayout() {
       ? 'offline'
       : '';
 
+  /**
+   * Once, when the app starts. None of this belongs to a profile: the settings,
+   * the history, the equaliser, the network watcher, the remote control.
+   *
+   * It used to sit with the per-profile work below, in one effect keyed on the
+   * profile, so switching server or stepping in and out of offline mode ran the
+   * whole opening of the app again. On a large library that was a second and a
+   * half of rehydrating downloads for a toggle, which is what made the app feel
+   * slower the more it was used.
+   */
   useEffect(() => {
-    const authReady = hydrate();
     // Before anything else, so the first seconds count too.
     startPerfLog();
     useSettings.getState().hydrate();
@@ -89,11 +98,24 @@ export default function RootLayout() {
     void useLastPlayed.getState().hydrate();
     void usePins.getState().hydrate();
     void removeLegacyRadioCovers();
+    void useAutoDownloads.getState().hydrate();
+    // Equalizer: reads device capabilities and applies saved settings.
+    void useEqualizer.getState().hydrate();
+    initNetworkType();
+    // Server URL switching on network change (profiles with multiple URLs).
+    initAutoUrl();
+    initRemoteIntegration();
+  }, []);
+
+  /**
+   * And this much again whenever the profile changes, because it is the
+   * profile's: its downloads, its mirror, its libraries, its server.
+   */
+  useEffect(() => {
     // After the session is restored, never before: the downloads store reads
     // the account's own catalog, and with no account yet it falls back to
     // reading every one of them, which is both slow and wrong (#50).
-    const downloadsReady = authReady.then(() => useDownloads.getState().hydrate());
-    void useAutoDownloads.getState().hydrate();
+    const downloadsReady = hydrate().then(() => useDownloads.getState().hydrate());
     // Mirror + outbox for offline. Offline it is the library, so it is read
     // right away: a query could otherwise resolve before it is in memory and
     // stay empty until manually reloaded. Online nothing reads it, only writes
@@ -119,12 +141,7 @@ export default function RootLayout() {
     void Promise.all([downloadsReady, mirrorReady]).then(() => {
       useLibraryMirror.getState().prune(useDownloads.getState());
     });
-    // Equalizer: reads device capabilities and applies saved settings.
-    void useEqualizer.getState().hydrate();
-    initNetworkType();
-    // Server URL switching on network change (profiles with multiple URLs);
-    // re-probes on profile switch as well.
-    initAutoUrl();
+    // The server may be a different one, so where it answers is asked again.
     checkAutoUrlNow();
     // Libraries: hydrates the saved filter and refreshes the server list.
     void useLibraries
@@ -134,7 +151,6 @@ export default function RootLayout() {
         const current = useAuthStore.getState().auth;
         if (current) void useLibraries.getState().load(current);
       });
-    initRemoteIntegration();
   }, [hydrate, activeProfile]);
 
   // On entering a profile (server or local), resumes the saved queue
