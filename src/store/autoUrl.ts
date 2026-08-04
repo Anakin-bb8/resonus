@@ -17,6 +17,8 @@
  */
 import * as Network from 'expo-network';
 
+import { bump } from '@/lib/perfLog';
+
 import { reachable } from '@/api/backend';
 import { tg } from '@/i18n';
 import { byProbePriority } from '@/lib/serverUrls';
@@ -69,7 +71,7 @@ async function check(): Promise<void> {
     const autoSwitch = useSettings.getState().autoOfflineSwitch;
     if (up) {
       consecutiveFails = 0;
-      if (now.autoOffline && autoSwitch) {
+      if (now.autoOffline && autoSwitch && canSwitchMode()) {
         // We had auto-fallen to offline: server is back → reconnect.
         // First online, then (if applicable) set the reachable URL, already in
         // online context so track reload works properly.
@@ -95,7 +97,7 @@ async function check(): Promise<void> {
       // downloads it stays online (the UI already warns); falling to an empty
       // library would be worse than the warning.
       consecutiveFails += 1;
-      if (consecutiveFails >= 2) {
+      if (consecutiveFails >= 2 && canSwitchMode()) {
         consecutiveFails = 0;
         await now.goOffline(true);
         useToast.getState().show(tg('Offline'));
@@ -106,6 +108,33 @@ async function check(): Promise<void> {
   } finally {
     checking = false;
   }
+}
+
+/**
+ * How long the mode has to stay where it is, whatever the network does.
+ *
+ * Two failed probes are already required before falling offline, but nothing
+ * stopped the app from falling and coming back and falling again on a server
+ * that answers every other time. Each of those rounds writes what was browsed
+ * into the mirror and then marks everything stale, so everything on screen is
+ * fetched again: on a large library that is not free, and it happens with
+ * nobody touching anything.
+ *
+ * A switch asked for by hand, from Settings, does not come through here and is
+ * never held back.
+ */
+const MODE_COOLDOWN_MS = 60_000;
+let lastModeSwitch = 0;
+
+function canSwitchMode(): boolean {
+  if (Date.now() - lastModeSwitch < MODE_COOLDOWN_MS) {
+    // Counted, or fixing this would take the evidence with it: a report has to
+    // still be able to say that the app wanted to flap and was not allowed to.
+    bump('offline · switch held back');
+    return false;
+  }
+  lastModeSwitch = Date.now();
+  return true;
 }
 
 /** Re-schedules the probe after a breather (Wi-Fi→data handoff takes time to settle). */

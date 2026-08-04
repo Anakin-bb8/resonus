@@ -226,7 +226,15 @@ export function flushMirror(): Promise<void> {
   queued.clear();
   if (batch.length === 0) return flushing;
   flushing = flushing.then(async () => {
-    for (const fn of batch) await withMirror(fn, undefined);
+    for (const fn of batch) {
+      await withMirror(fn, undefined);
+      // A breath between one and the next. Writing an entry is a transaction
+      // and a `JSON.stringify` per song, and a queue of them back to back holds
+      // the thread for as long as it takes them all: the screen that was being
+      // drawn waits, and so does the tab bar, which is what somebody sees as a
+      // navigation that lags behind itself.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
   });
   return flushing;
 }
