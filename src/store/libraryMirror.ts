@@ -189,10 +189,46 @@ async function unchanged(
  * the same thread that is drawing the screen that asked. Waiting for the
  * interactions to finish costs nothing here and takes it off the way.
  */
-function writeMirror(fn: (dir: string, profile: string) => Promise<unknown>): void {
-  whenIdle(() => {
-    void withMirror(fn, undefined);
+function writeMirror(key: string, fn: (dir: string, profile: string) => Promise<unknown>): void {
+  // The last word about a thing is the only one worth writing: a list refetched
+  // five times while somebody browses is one row's worth of work, not five.
+  queued.set(key, fn);
+  if (flushTimer) return;
+  flushTimer = setTimeout(() => {
+    flushTimer = null;
+    whenIdle(() => void flushMirror());
+  }, FLUSH_AFTER_MS);
+}
+
+/**
+ * How long the queue waits before it is written, when nothing asks for it
+ * sooner. Long enough to swallow the burst that a pull to refresh sets off,
+ * short enough that little is lost if the app is killed.
+ */
+const FLUSH_AFTER_MS = 8000;
+const queued = new Map<string, (dir: string, profile: string) => Promise<unknown>>();
+let flushTimer: ReturnType<typeof setTimeout> | null = null;
+let flushing: Promise<void> = Promise.resolve();
+
+/**
+ * Writes down everything waiting, and can be waited for.
+ *
+ * Going offline waits for it: that is the moment the mirror stops being a copy
+ * of what you browsed and becomes the library itself, so nothing may still be
+ * in a queue. Everything else lets it happen when it happens.
+ */
+export function flushMirror(): Promise<void> {
+  if (flushTimer) {
+    clearTimeout(flushTimer);
+    flushTimer = null;
+  }
+  const batch = [...queued.values()];
+  queued.clear();
+  if (batch.length === 0) return flushing;
+  flushing = flushing.then(async () => {
+    for (const fn of batch) await withMirror(fn, undefined);
   });
+  return flushing;
 }
 
 interface MirrorState {
@@ -212,6 +248,8 @@ interface MirrorState {
    * playlists stored before covers were kept at all.
    */
   keepStoredCovers: () => void;
+  /** Writes down everything waiting, for whoever cannot carry on without it. */
+  flush: () => Promise<void>;
   /** Applies the "worth keeping" rule to what is already stored. Needs the
    *  downloads hydrated, so it is called after them. */
   prune: (downloads: DownloadsView) => Promise<void>;
@@ -258,7 +296,7 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
     // Favourites are fetched again and again and almost always come back
     // identical. Each of those used to dirty the file and cost a full rewrite,
     // measured at thirty seven seconds on a large mirror (#50).
-    writeMirror(async (dir, profile) => {
+    writeMirror('starred', async (dir, profile) => {
       keepCovers(profile, [
         // One file per album, found by both names: the header asks by the
         // cover id the server gave (`al-123` on Subsonic) and a song row asks
@@ -286,7 +324,7 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
   },
 
   savePlaylists: (playlists) => {
-    writeMirror(async (dir, profile) => {
+    writeMirror('playlists', async (dir, profile) => {
       keepCovers(
         profile,
         playlists.map((p) => ({ from: p.coverArt ?? p.id, keys: [p.coverArt ?? p.id, p.id] })),
@@ -297,7 +335,7 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
   },
 
   savePlaylistDetail: (id, playlist, songs) => {
-    writeMirror(async (dir, profile) => {
+    writeMirror(`playlist:${id}`, async (dir, profile) => {
       // The playlist's own cover, and the album behind each of its songs: those
       // are the pictures the rows ask for offline. A playlist of five hundred
       // songs is a few hundred albums at most, deduplicated against what is
@@ -317,7 +355,7 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
 
   savePlaylistDetails: (entries) => {
     if (entries.length === 0) return;
-    writeMirror(async (dir, profile) => {
+    writeMirror(`playlists:${entries.map((e) => e.id).join(',')}`, async (dir, profile) => {
       keepCovers(profile, [
         ...entries.map((e) => ({
           from: e.playlist.coverArt ?? e.playlist.id,
@@ -340,7 +378,7 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
   },
 
   saveAlbum: (id, album, songs, dl) => {
-    writeMirror(async (dir, profile) => {
+    writeMirror(`album:${id}`, async (dir, profile) => {
       if (worthKeepingAlbumOf(album, songs, dl.files)) {
         keepCovers(profile, [
           { from: album.coverArt ?? album.id, keys: [album.coverArt ?? album.id, album.id] },
@@ -363,7 +401,7 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
   },
 
   saveArtist: (id, artist, albums) => {
-    writeMirror(async (dir, profile) => {
+    writeMirror(`artist:${id}`, async (dir, profile) => {
       if (worthKeepingArtist(artist)) {
         keepCovers(profile, [
           { from: artist.coverArt ?? artist.id, keys: [artist.coverArt ?? artist.id, artist.id] },
@@ -380,7 +418,7 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
   },
 
   keepStoredCovers: () => {
-    writeMirror(async (dir, profile) => {
+    writeMirror('covers', async (dir, profile) => {
       const rows = await Db.songCoverIds(dir, profile);
       keepCovers(
         profile,
@@ -388,6 +426,8 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
       );
     });
   },
+
+  flush: () => flushMirror(),
 
   prune: async (dl) => {
     if (!dl.hydrated) return; // everything downloaded would look disposable

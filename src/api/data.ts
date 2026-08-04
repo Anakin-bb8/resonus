@@ -1068,32 +1068,20 @@ export async function flushOfflineQueue(auth: Subsonic.SubsonicAuth): Promise<vo
  * offline without that query being refetched, the mirror reflects the latest
  * seen state instead of sticking with the old server copy.
  */
-export function snapshotCachesToMirror(): void {
+export function snapshotCachesToMirror(): Promise<void> {
   const mirror = useLibraryMirror.getState();
+  // The two lists, which are the ones that may have moved without being
+  // written: everything else — an album, a playlist's tracklist — was written
+  // when it arrived, so walking the cache to write it again was doing a whole
+  // session's work a second time, and the more you had browsed the longer it
+  // took. That is what made the app feel slower the longer it ran.
   const playlists = queryClient.getQueryData<Subsonic.Playlist[]>(['playlists']);
   if (playlists) mirror.savePlaylists(playlists);
-  for (const [key, data] of queryClient.getQueriesData<{
-    playlist: Subsonic.Playlist;
-    songs: Song[];
-  }>({ queryKey: ['playlist'] })) {
-    const id = key[1];
-    if (typeof id === 'string' && data?.playlist && Array.isArray(data.songs)) {
-      mirror.savePlaylistDetail(id, data.playlist, data.songs);
-    }
-  }
   const starred = queryClient.getQueryData<Subsonic.Starred>(['starred']);
   if (starred) mirror.saveStarred(starred);
-  for (const [key, data] of queryClient.getQueriesData<{
-    album: Subsonic.Album;
-    songs: Song[];
-  }>({ queryKey: ['album'] })) {
-    const id = key[1];
-    if (typeof id === 'string' && data?.album && Array.isArray(data.songs)) {
-      mirror.saveAlbum(id, data.album, data.songs, useDownloads.getState());
-    }
-  }
-  // Nothing to flush any more: every save above is its own transaction and is
-  // already on disk by the time it returns.
+  // And nothing may be left waiting: from here on the mirror is not a copy of
+  // what was browsed, it is the library.
+  return mirror.flush();
 }
 
 /** Rate a song (1-5; 0 removes the rating). */

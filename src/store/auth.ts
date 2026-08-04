@@ -413,11 +413,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // player. Clearing the cache makes views recalculate against the local
     // catalog.
     if (get().offline) return;
-    // Before clearing cache: flush the latest online data to the mirror (playlists,
-    // favorites, albums), so offline doesn't show a stale copy.
+    // Before clearing cache: the two lists as last seen, and everything still
+    // queued, written down. Waited for, unlike before: what browsing writes is
+    // queued now, and going offline is exactly the moment none of it may still
+    // be waiting.
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      require('@/api/data').snapshotCachesToMirror();
+      await require('@/api/data').snapshotCachesToMirror();
     } catch {
       // Does not block the offline transition.
     }
