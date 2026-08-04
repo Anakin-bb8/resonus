@@ -156,6 +156,14 @@ export interface Song {
    * played. Only populated in offline server mode.
    */
   unavailable?: boolean;
+  /**
+   * Set by the app, never by a server: autoplay put this song in the queue to
+   * keep it going after the album or playlist ran out. The player reads it to
+   * stop announcing a source that stopped being true (#65). Marked song by
+   * song, not as a position, so it survives reordering and comes back with the
+   * locally saved queue.
+   */
+  fromMix?: boolean;
   /** Song year (from ID3, offline mode). */
   year?: number;
   /** File modification timestamp in ms (offline mode). */

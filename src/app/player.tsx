@@ -49,6 +49,7 @@ import { useArtistPicker } from '@/store/artistPicker';
 import { useAuthStore } from '@/store/auth';
 import {
   currentSong,
+  mixSeedOf,
   SOURCE_FAVORITES,
   SOURCE_HISTORY,
   useLiveInfo,
@@ -170,6 +171,9 @@ export default function PlayerScreen() {
   const live = useLiveInfo(song);
   const source = usePlayerStore((s) => s.source);
   const sourceHref = usePlayerStore((s) => s.sourceHref);
+  // Set once playback crosses into what autoplay added on its own: from there
+  // the album or the playlist the queue started as is not what is playing.
+  const mixSeed = usePlayerStore(mixSeedOf);
   const isPlaying = usePlayerStore((s) => s.isPlaying);
   const isBuffering = usePlayerStore((s) => s.isBuffering);
   const durationSec = usePlayerStore((s) => s.durationSec);
@@ -483,6 +487,27 @@ export default function PlayerScreen() {
   // a non-Jellyfin server account; not applicable to radio (direct url) or
   // the local profile (no account). Offline queues and uploads on reconnect.
   const canRate = showRating && hasAccount && serverType !== 'jellyfin' && !song.url;
+  // What the header announces. A mix that autoplay grew takes over from
+  // whatever the queue was before it (#65); it comes first because by then the
+  // source it would otherwise show is the album that ran out. With no mix it
+  // is the source as before: a station says "Radio", the two sentinels are
+  // translated, and a queue that never had a source (one recovered from the
+  // server) leaves "NOW PLAYING" as it did.
+  const sourceLabel = mixSeed
+    ? t('Mix of “{name}”', { name: mixSeed.title })
+    : !source
+      ? null
+      : song.url
+        ? t('Radio')
+        : source === SOURCE_FAVORITES
+          ? t('Favorites')
+          : source === SOURCE_HISTORY
+            ? t('History')
+            : source;
+  // The header is a link back to where the queue came from, and a mix is not
+  // there: the songs playing are not in that album, so it stops leading
+  // anywhere until the queue goes back into it.
+  const canOpenSource = !!sourceHref && !mixSeed;
   // Artist · Album · Year on a single line, but with two tap targets: the
   // artist name goes to the artist, and «Album · Year» to the album.
   // A radio announcing what it plays takes over both lines, same as it does
@@ -590,25 +615,19 @@ export default function PlayerScreen() {
           <CircleButton name="chevron-down" label={t('Close')} onPress={() => router.back()} />
           <Pressable
             style={styles.topTitleWrap}
-            disabled={!sourceHref}
-            accessibilityRole={sourceHref ? 'button' : undefined}
+            disabled={!canOpenSource}
+            accessibilityRole={canOpenSource ? 'button' : undefined}
             onPress={() => {
-              if (!sourceHref) return;
+              if (!canOpenSource) return;
               router.back();
               router.navigate(sourceHref as never);
             }}
           >
-            {source ? (
+            {sourceLabel ? (
               <>
                 <Text style={styles.topLabel}>{t('PLAYING FROM')}</Text>
                 <Text style={styles.topSource} numberOfLines={1}>
-                  {song?.url
-                    ? t('Radio')
-                    : source === SOURCE_FAVORITES
-                      ? t('Favorites')
-                      : source === SOURCE_HISTORY
-                        ? t('History')
-                        : source}
+                  {sourceLabel}
                 </Text>
               </>
             ) : (

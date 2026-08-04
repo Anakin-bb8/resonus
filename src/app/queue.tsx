@@ -25,7 +25,7 @@ import { Dialog } from '@/components/Dialog';
 import { EmptyState } from '@/components/EmptyState';
 import { SheetModal } from '@/components/SheetModal';
 import { formatTotalDuration } from '@/lib/format';
-import { SOURCE_FAVORITES, SOURCE_HISTORY, usePlayerStore } from '@/store/player';
+import { mixSeedOf, SOURCE_FAVORITES, SOURCE_HISTORY, usePlayerStore } from '@/store/player';
 import { usePlaylistPicker } from '@/store/playlistPicker';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
@@ -156,6 +156,7 @@ export default function QueueScreen() {
   const index = usePlayerStore((s) => s.index);
   const queuedCount = usePlayerStore((s) => s.queuedCount);
   const source = usePlayerStore((s) => s.source);
+  const mixSeed = usePlayerStore(mixSeedOf);
   const moveTrack = usePlayerStore((s) => s.moveTrack);
   const clearQueue = usePlayerStore((s) => s.clearQueue);
   const radioMode = usePlayerStore((s) => s.radioMode);
@@ -194,14 +195,28 @@ export default function QueueScreen() {
   const totalSec = upcoming.reduce((acc, s) => acc + (s.duration ?? 0), 0);
 
   // Source label for the "Next from:" section; favorites/history sentinels
-  // are translated (like in the player).
-  const sourceName =
-    source === SOURCE_FAVORITES
+  // are translated (like in the player). Playing a mix that autoplay grew, it
+  // is the mix that is announced: the album the queue started as is behind and
+  // nothing coming is in it (#65).
+  const sourceName = mixSeed
+    ? t('Mix of “{name}”', { name: mixSeed.title })
+    : source === SOURCE_FAVORITES
       ? t('Favorites')
       : source === SOURCE_HISTORY
         ? t('History')
         : source;
   const contextHeader = sourceName ? t('Next from {name}', { name: sourceName }) : null;
+  // Where that mix begins, while it is still ahead: the source above holds
+  // until there and the block gets a header of its own, named after the song
+  // it was grown from (the one right before it). In a radio there is nothing
+  // to separate, the whole queue is the mix.
+  const mixStart = radioMode ? -1 : queue.findIndex((s) => s.fromMix);
+  const mixHeader =
+    mixStart > 0 && mixStart > index
+      ? t('Next from {name}', {
+          name: t('Mix of “{name}”', { name: queue[mixStart - 1].title }),
+        })
+      : null;
 
   /**
    * Section header for upcoming row `rel` (or null).
@@ -215,6 +230,10 @@ export default function QueueScreen() {
    */
   const headerFor = (rel: number): string | null => {
     if (queuedCount > 0 && rel === 0) return t('Next in queue');
+    // Before the source's: with the queue ending right where the mix starts,
+    // both fall on the same row and the one that still applies below it is
+    // this one.
+    if (mixHeader && index + 1 + rel === mixStart) return mixHeader;
     if (rel === queuedCount && contextHeader) return contextHeader;
     return null;
   };

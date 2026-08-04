@@ -21,6 +21,18 @@ Releases before 0.2.1 are only listed on the
 
 ### Changed
 
+- "Playing from" says the mix once the queue has become one. When an album or a
+  playlist runs out, autoplay keeps it going with similar songs, and from the
+  moment one of those starts the header was still naming the album: songs that
+  are not in it, under a heading that was also a link, so tapping it walked to
+  a place that had nothing to do with what was sounding. It now reads "Mix of
+  «song»", after the song the mix was grown from, and stops leading anywhere
+  until the queue goes back into the album. The queue screen separates the two
+  the same way, with the mix under its own heading. Skipping back into the
+  album puts the album's name back, and a queue extended with more albums by
+  the artist you were listening to keeps naming the artist, because that is
+  still where it comes from. Asked for by @ztx-lyghters (#65).
+
 - Settings keep every setting where it is without a connection, greyed out
   instead of taken away. Streaming quality and its codec, everything about
   downloading, autoplay, the devices button, folder browsing, the playlists of

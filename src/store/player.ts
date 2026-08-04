@@ -274,6 +274,14 @@ function playableOffline(song: Song | null | undefined): boolean {
   return !!song && (!!song.url || !!song.localUri || !!downloadedUri(song));
 }
 
+/** The same song without autoplay's mark on it: it is being put in the queue
+ *  by hand, whatever it was doing there before. */
+function unmixed(song: Song): Song {
+  if (!song.fromMix) return song;
+  const { fromMix: _fromMix, ...rest } = song;
+  return rest;
+}
+
 /** Max streaming bitrate according to current network (Wi-Fi or mobile data). */
 function effectiveMaxBitRate(): number {
   const s = useSettings.getState();
@@ -1173,8 +1181,13 @@ async function maybeQueueAutoplay() {
   // the last song is still the same.
   if (st.queue[st.queue.length - 1]?.id !== last.id) return;
   const have = new Set(st.queue.map((s) => s.id));
-  const fresh = similar.filter((s) => !have.has(s.id) && !s.url).slice(0, 10);
-  if (fresh.length === 0) return;
+  const picked = similar.filter((s) => !have.has(s.id) && !s.url).slice(0, 10);
+  if (picked.length === 0) return;
+  // Marked so the player can stop announcing the album or the playlist once
+  // playback reaches them (`mixSeedOf`). Not in a radio: there the whole queue
+  // is the mix and it already says so, and marking would have the header work
+  // out a seed of its own instead of using the name the mix was started with.
+  const fresh = radioMode ? picked : picked.map((s) => ({ ...s, fromMix: true }));
   usePlayerStore.setState({ queue: [...st.queue, ...fresh] });
   scheduleSync();
 }
@@ -2242,6 +2255,33 @@ export function currentSong(state: PlayerState): Song | null {
 }
 
 /**
+ * The song the mix now playing was built from, or null when what is playing is
+ * still the queue's own album, playlist or artist.
+ *
+ * Autoplay hands the queue a block of similar songs when it is about to run
+ * out, and from the moment playback crosses into that block the source the
+ * player is announcing has stopped being true: those songs are not in the
+ * album, and the header is a link, so tapping it walked to a place that had
+ * nothing to do with what was sounding (#65).
+ *
+ * The seed is worked out rather than stored: the block is appended in one
+ * piece at the end, so the song right before it is the one the server was
+ * asked about. That costs a short walk backwards and buys two things — the
+ * name survives a restart with no field to persist, since the queue is saved
+ * song by song, and skipping back into the album puts the album's name back on
+ * its own.
+ *
+ * Not for radios: there the whole queue is the mix and the name it was started
+ * with is already in `source`.
+ */
+export function mixSeedOf(state: Pick<PlayerState, 'queue' | 'index'>): Song | null {
+  if (!state.queue[state.index]?.fromMix) return null;
+  let i = state.index;
+  while (i > 0 && state.queue[i - 1]?.fromMix) i--;
+  return state.queue[i - 1] ?? null;
+}
+
+/**
  * What `song`'s stream says it is playing, for the screens that show it. Null
  * for anything that isn't a radio broadcasting metadata, and then the song's
  * own title and artist are the whole story.
@@ -2369,6 +2409,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
   // Spotify-style: manually added songs play right after the current one (and
   // after what was already added before), not at the end of the playing list.
+  //
+  // Adding one from the queue itself hands back the very object that is in it,
+  // mark and all, so a song picked out of a mix would have carried the mark
+  // into the middle of an album and taken the header with it (`unmixed`).
   addToQueue: (song) => {
     const { queue, index, queuedCount } = get();
     if (queue.length === 0) {
@@ -2376,7 +2420,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       return;
     }
     const next = [...queue];
-    next.splice(Math.min(index + queuedCount + 1, next.length), 0, song);
+    next.splice(Math.min(index + queuedCount + 1, next.length), 0, unmixed(song));
     set({ queue: next, queuedCount: queuedCount + 1 });
     scheduleSync();
   },
@@ -2388,7 +2432,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       return;
     }
     const next = [...queue];
-    next.splice(index + 1, 0, song);
+    next.splice(index + 1, 0, unmixed(song));
     // It jumps to the front of the "queued" block; the block grows with it.
     set({ queue: next, queuedCount: queuedCount + 1 });
     scheduleSync();
@@ -2706,7 +2750,13 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         const j = Math.floor(Math.random() * (i + 1));
         [rest[i], rest[j]] = [rest[j], rest[i]];
       }
-      const newQueue = current ? [current, ...rest] : rest;
+      // Autoplay's mark comes off with the shuffle, the same as the "queued"
+      // block does and for the same reason: it names a block at the end of the
+      // queue, and there are no blocks left in here. Left on, its songs would
+      // be scattered among the album's and the header would have flipped
+      // between the album and a mix on every track. `originalQueue` keeps the
+      // marked copies, so turning shuffle off brings the mix back with them.
+      const newQueue = (current ? [current, ...rest] : rest).map(unmixed);
       // The current song keeps playing; we only reorder and leave it at index 0.
       // Shuffling dissolves the "queued" block (the positions no longer exist).
       set({ shuffle: true, originalQueue: queue, queue: newQueue, index: 0, queuedCount: 0 });
