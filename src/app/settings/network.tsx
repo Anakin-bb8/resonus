@@ -31,6 +31,7 @@ export default function NetworkSettings() {
   const auth = useAuthStore((s) => s.auth);
   const setActiveUrl = useAuthStore((s) => s.setActiveUrl);
   const addServerUrl = useAuthStore((s) => s.addServerUrl);
+  const editServerUrl = useAuthStore((s) => s.editServerUrl);
   const removeServerUrl = useAuthStore((s) => s.removeServerUrl);
   const setAutoUrl = useAuthStore((s) => s.setAutoUrl);
   // From the store, not `colors.accent`: without subscription the active URL
@@ -40,6 +41,7 @@ export default function NetworkSettings() {
 
   const [health, setHealth] = useState<'checking' | 'ok' | 'down'>('checking');
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
 
   const activeUrl = auth?.serverUrl ?? '';
 
@@ -61,7 +63,6 @@ export default function NetworkSettings() {
   }
 
   const urls = auth.urls ?? [activeUrl];
-  const primary = urls[0];
 
   async function onAdd(value: string) {
     setAdding(false);
@@ -69,6 +70,16 @@ export default function NetworkSettings() {
     if (result === 'duplicate') toast(t('This address is already in the list.'));
     else if (result === 'unreachable') toast(t("Couldn't reach this address with your account."));
     else toast(t('Address added'));
+  }
+
+  async function onEdit(value: string) {
+    const url = editing;
+    setEditing(null);
+    if (!url) return;
+    const result = await editServerUrl(url, value);
+    if (result === 'duplicate') toast(t('This address is already in the list.'));
+    else if (result === 'unreachable') toast(t("Couldn't reach this address with your account."));
+    else toast(t('Address updated'));
   }
 
   return (
@@ -115,7 +126,6 @@ export default function NetworkSettings() {
         <View style={settingsStyles.cardBox}>
           {urls.map((url, i) => {
             const isActive = url === activeUrl;
-            const isPrimary = url === primary;
             return (
               <Pressable
                 key={url}
@@ -137,23 +147,33 @@ export default function NetworkSettings() {
                   <Text style={settingsStyles.rowLabel} numberOfLines={1}>
                     {shown(url)}
                   </Text>
-                  {/* Auto-detected label (Local/Remote) + «Primary» on the first
-                      one: explains the model at a glance. */}
+                  {/* Auto-detected label (Local/Remote): explains the model at
+                      a glance. */}
                   <Text style={settingsStyles.rowDescription}>
                     {isLanUrl(url) ? t('Local') : t('Remote')}
-                    {isPrimary ? ` · ${t('Primary')}` : ''}
                   </Text>
                 </View>
-                {/* The primary is the profile's identity: can't be deleted. */}
-                {!isPrimary ? (
+                {/* Side by side, so their reach is spread out rather than
+                    piled on top of each other: one of them deletes. */}
+                <View style={styles.rowActions}>
                   <Pressable
-                    hitSlop={10}
-                    onPress={() => void removeServerUrl(url)}
+                    hitSlop={ACTION_SLOP}
+                    onPress={() => setEditing(url)}
                     style={({ pressed }) => pressed && { opacity: 0.6 }}
                   >
-                    <Ionicons name="trash-outline" size={20} color={colors.danger} />
+                    <Ionicons name="create-outline" size={20} color={colors.textMuted} />
                   </Pressable>
-                ) : null}
+                  {/* An account with a single address would be left with none. */}
+                  {urls.length > 1 ? (
+                    <Pressable
+                      hitSlop={ACTION_SLOP}
+                      onPress={() => void removeServerUrl(url)}
+                      style={({ pressed }) => pressed && { opacity: 0.6 }}
+                    >
+                      <Ionicons name="trash-outline" size={20} color={colors.danger} />
+                    </Pressable>
+                  ) : null}
+                </View>
               </Pressable>
             );
           })}
@@ -182,11 +202,24 @@ export default function NetworkSettings() {
         onCancel={() => setAdding(false)}
         onConfirm={onAdd}
       />
+
+      <Dialog
+        visible={editing !== null}
+        title={t('Edit server address')}
+        input={{ placeholder: 'https://…', initialValue: editing ?? '' }}
+        confirmLabel={t('Save')}
+        onCancel={() => setEditing(null)}
+        onConfirm={onEdit}
+      />
     </SettingsPage>
   );
 }
 
+/** Taller than the icon and no wider than half the space between the two. */
+const ACTION_SLOP = { top: 12, bottom: 12, left: spacing.sm, right: spacing.sm };
+
 const styles = StyleSheet.create({
+  rowActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   activeRow: {
     flexDirection: 'row',
     alignItems: 'center',

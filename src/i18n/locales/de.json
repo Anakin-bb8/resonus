@@ -454,7 +454,6 @@
   "Current server address": "Aktuelle Serveradresse",
   "Network": "Netzwerk",
   "Add the address you use from outside next to the one you use at home, so the server works wherever you are.": "Füge die Adresse, die du von unterwegs nutzt, neben der von zu Hause hinzu, damit der Server überall funktioniert.",
-  "Primary": "Primär",
   "Remote": "Extern",
   "Server addresses": "Serveradressen",
   "Switches to your remote address automatically when you leave home.": "Wechselt automatisch zu deiner externen Adresse, wenn du das Haus verlässt.",

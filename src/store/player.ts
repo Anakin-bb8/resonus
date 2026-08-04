@@ -52,6 +52,7 @@ import {
 import { COVER, coverArtUrl, getRandomSongs } from '@/api/data';
 import { prefetchLyrics } from '@/hooks/useLyrics';
 import { queryClient } from '@/lib/query';
+import { primaryUrl } from '@/lib/serverUrls';
 import { getItem, setItem } from '@/lib/storage';
 import { useAuthStore } from './auth';
 import { checkAutoUrlNow } from './autoUrl';
@@ -1866,11 +1867,10 @@ function safeKey(s: string): string {
 function queueStorageKey(): string | null {
   const { auth, offline } = useAuthStore.getState();
   if (offline) return 'resonus.queue.offline';
-  // Primary URL (not the active one): so the queue is not lost on network
-  // switch (the active URL changes; the primary identifies the profile). See auth store.
+  // The profile's own name (not the active URL): so the queue is not lost on a
+  // network switch, which changes the active URL. See auth store.
   if (auth) {
-    const primary = auth.urls?.[0] ?? auth.serverUrl;
-    return `resonus.queue.server.${safeKey(primary)}.${safeKey(auth.username)}`;
+    return `resonus.queue.server.${safeKey(primaryUrl(auth))}.${safeKey(auth.username)}`;
   }
   return null;
 }

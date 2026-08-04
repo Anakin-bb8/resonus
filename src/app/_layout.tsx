@@ -26,6 +26,7 @@ import { Toast } from '@/components/Toast';
 import { installAppFont, setAppFont } from '@/lib/appFont';
 import { startPerfLog } from '@/lib/perfLog';
 import { queryClient } from '@/lib/query';
+import { primaryUrl } from '@/lib/serverUrls';
 import { useAuthStore } from '@/store/auth';
 import { useAutoDownloads } from '@/store/autoDownloads';
 import { anyDownloads, useDownloads } from '@/store/downloads';
@@ -69,10 +70,11 @@ export default function RootLayout() {
   const downloadsHydrated = useDownloads((s) => s.hydrated);
   const ready = !!auth || (offline && (!!offlineSource || hasDownloads));
   // Active profile identified to reload recent searches when switching.
-  // Depends on the PRIMARY URL (not the active one): when switching networks the
-  // active URL changes but we stay on the same profile, so it must not reinitialize.
+  // Depends on the profile's own name, not the active URL: when switching
+  // networks that URL changes but we stay on the same profile, so it must not
+  // reinitialize.
   const activeProfile = auth
-    ? `${auth.urls?.[0] ?? auth.serverUrl}|${auth.username}`
+    ? `${primaryUrl(auth)}|${auth.username}`
     : offline
       ? 'offline'
       : '';

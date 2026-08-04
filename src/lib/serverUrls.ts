@@ -9,13 +9,15 @@
 import type { SubsonicAuth } from '@/api/subsonic';
 
 /**
- * Primary profile URL (stable identity). `serverUrl` is the ACTIVE URL and
+ * The profile's identity (see `scopeUrl`). `serverUrl` is the ACTIVE URL and
  * changes when switching networks; for per-profile storage keys (queue,
  * downloads, history...) you must use this one, not the active one, or
- * they'd split.
+ * they'd split. It is an address, but not necessarily one the profile still
+ * uses: an edited address leaves its name behind so that what was filed under
+ * it stays found.
  */
-export function primaryUrl(auth: Pick<SubsonicAuth, 'urls' | 'serverUrl'>): string {
-  return auth.urls?.[0] ?? auth.serverUrl;
+export function primaryUrl(auth: Pick<SubsonicAuth, 'urls' | 'serverUrl' | 'scopeUrl'>): string {
+  return auth.scopeUrl ?? auth.urls?.[0] ?? auth.serverUrl;
 }
 
 function hostOf(url: string): string | null {

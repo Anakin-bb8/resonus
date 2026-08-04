@@ -18,11 +18,20 @@ export interface SubsonicAuth {
   username: string;
   /**
    * Candidate URLs for the same server/account (local, domain, Tailscale…),
-   * sorted by priority; `urls[0]` is the primary one (profile identity).
-   * `serverUrl` is the one currently active. If missing, it defaults to
-   * `[serverUrl]`. See `store/autoUrl.ts` for automatic switching.
+   * in the order they were added. `serverUrl` is the one currently active. If
+   * missing, it defaults to `[serverUrl]`. See `store/autoUrl.ts` for automatic
+   * switching.
    */
   urls?: string[];
+  /**
+   * What this profile is filed under, everywhere it owns something: settings,
+   * downloads, queue, history. It is an address because that is what named a
+   * profile before addresses could be edited, and it stays whatever it was so
+   * that renaming one doesn't hide everything the profile had. Absent on
+   * profiles whose addresses were never touched, where `urls[0]` still answers
+   * for it. Always read it through `primaryUrl()`.
+   */
+  scopeUrl?: string;
   /**
    * Switch `serverUrl` alone to the first reachable URL when the network
    * changes (e.g. leaving home: local IP stops responding → Tailscale/domain).

@@ -71,6 +71,18 @@ Releases before 0.2.1 are only listed on the
   precision a finger on a slider can't reach. A song already close
   to its peak takes less of the boost than asked, because the rest would be
   distortion rather than volume. Asked for by @jaredm4.
+- A server address can be edited, in Settings › Network. There was a pencil's
+  worth of work missing there: a domain that changes, a server that moves to
+  another port, and the only way through it was adding the new address and
+  deleting the old one. That worked for every address except the first, which
+  could not be deleted at all, and the first is the one an account is most
+  likely to have only. It could not be deleted because it was what the profile
+  was filed under: its settings, its downloads, its queue and its history all
+  hang off that address, so changing it would have hidden the lot. What a
+  profile is called is now written down once and kept, whatever happens to the
+  addresses afterwards, which is what lets any of them be edited or removed as
+  long as one is left. A new address still has to answer with your account
+  before it is accepted, same as when adding one. Asked for by @jaredm4.
 
 ### Changed
 

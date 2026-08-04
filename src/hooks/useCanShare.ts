@@ -10,6 +10,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { hasShareRole } from '@/api/subsonic';
+import { primaryUrl } from '@/lib/serverUrls';
 import { useAuthStore } from '@/store/auth';
 
 export function useCanShare(): boolean {
@@ -17,7 +18,7 @@ export function useCanShare(): boolean {
   const offline = useAuthStore((s) => s.offline);
   const supported = !!auth && !offline && auth.serverType !== 'jellyfin';
   const { data } = useQuery({
-    queryKey: ['shareRole', auth?.username, auth?.urls?.[0] ?? auth?.serverUrl],
+    queryKey: ['shareRole', auth?.username, auth ? primaryUrl(auth) : null],
     queryFn: () => hasShareRole(auth!),
     enabled: supported,
     staleTime: Infinity,

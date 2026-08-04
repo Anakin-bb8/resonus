@@ -140,7 +140,10 @@ interface AuthState {
   /** Adds an alternative URL to the active profile. Validates that it responds
    *  with current credentials (same server). Returns the result for the UI. */
   addServerUrl: (url: string) => Promise<'ok' | 'duplicate' | 'unreachable'>;
-  /** Removes a URL from the active profile (if it was the active one, reverts to the primary). */
+  /** Changes one of the active profile's URLs, validated like a new one. */
+  editServerUrl: (url: string, next: string) => Promise<'ok' | 'duplicate' | 'unreachable'>;
+  /** Removes a URL from the active profile (if it was the active one, falls
+   *  back to the first remaining). The last one can't be removed. */
   removeServerUrl: (url: string) => Promise<void>;
   /** Enables/disables automatic URL switching on the active profile. */
   setAutoUrl: (value: boolean) => Promise<void>;
@@ -171,7 +174,7 @@ interface AuthState {
  */
 export function profileScopeId(): string {
   const { auth, offline } = useAuthStore.getState();
-  if (auth) return `${auth.urls?.[0] ?? auth.serverUrl}|${auth.username}`;
+  if (auth) return `${primaryUrl(auth)}|${auth.username}`;
   return offline ? 'local' : 'default';
 }
 
@@ -235,6 +238,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (existing?.urls?.length) {
       auth.urls = existing.urls;
       auth.autoUrl = existing.autoUrl;
+      // And the name it is filed under, or signing in again through an address
+      // that was edited would look at an empty profile.
+      auth.scopeUrl = existing.scopeUrl;
     }
     await ping(auth);
     // The just-used profile goes first (last-used ordering).
@@ -351,7 +357,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // Must respond with current credentials: this confirms it's the same
     // server/account and not a random URL.
     if (!(await reachable(current, norm))) return 'unreachable';
-    const next = [...urls, norm]; // insertion order; urls[0] remains the primary
+    const next = [...urls, norm]; // insertion order; nothing about it is special
     // We do NOT touch `autoUrl`: automatic switching is turned on manually by
     // the user if they want it (adding a URL should not activate anything).
     const auth: SubsonicAuth = { ...current, urls: next };
@@ -359,17 +365,50 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     return 'ok';
   },
 
+  editServerUrl: async (url, next) => {
+    const current = get().auth;
+    if (!current) return 'unreachable';
+    const norm = normalizeUrl(next);
+    const urls = current.urls ?? [current.serverUrl];
+    if (!urls.includes(url)) return 'unreachable';
+    if (norm === url) return 'ok';
+    if (urls.includes(norm)) return 'duplicate';
+    // Same check the address had to pass when it was added: it must answer with
+    // this account, or a typo would leave the profile pointing nowhere.
+    if (!(await reachable(current, norm))) return 'unreachable';
+    const nextUrls = urls.map((u) => (u === url ? norm : u));
+    const wasActive = current.serverUrl === url;
+    const serverUrl = wasActive ? norm : current.serverUrl;
+    // The name this profile is filed under is written down before the address
+    // it was taken from can change, so its settings, downloads and queue are
+    // still its own afterwards. Idempotent: it only ever takes the value it
+    // already had.
+    const scopeUrl = primaryUrl(current);
+    const auth: SubsonicAuth = { ...current, urls: nextUrls, serverUrl, scopeUrl };
+    await persistActive(get, set, auth, (p) => ({ ...p, urls: nextUrls, serverUrl, scopeUrl }));
+    if (wasActive) {
+      void queryClient.invalidateQueries();
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require('./player').usePlayerStore.getState().reloadCurrent();
+    }
+    return 'ok';
+  },
+
   removeServerUrl: async (url) => {
     const current = get().auth;
     if (!current) return;
-    // The primary (urls[0]) is the profile's identity: cannot be removed.
-    if (url === primaryUrl(current)) return;
     const urls = (current.urls ?? [current.serverUrl]).filter((u) => u !== url);
+    // A profile with no address left has nowhere to go.
+    if (urls.length === 0) return;
     const wasActive = current.serverUrl === url;
     const serverUrl = wasActive ? urls[0] : current.serverUrl;
-    const auth: SubsonicAuth = { ...current, urls, serverUrl };
-    await persistActive(get, set, auth, (p) => ({ ...p, urls, serverUrl }));
+    // Same as when editing: the profile keeps the name it already had, whether
+    // or not the address it came from is still in the list.
+    const scopeUrl = primaryUrl(current);
+    const auth: SubsonicAuth = { ...current, urls, serverUrl, scopeUrl };
+    await persistActive(get, set, auth, (p) => ({ ...p, urls, serverUrl, scopeUrl }));
     if (wasActive) {
+      void queryClient.invalidateQueries();
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       require('./player').usePlayerStore.getState().reloadCurrent();
     }

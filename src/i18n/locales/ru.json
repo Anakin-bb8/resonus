@@ -451,7 +451,6 @@
   "Current server address": "Текущий адрес сервера",
   "Network": "Сеть",
   "Add the address you use from outside next to the one you use at home, so the server works wherever you are.": "При необходимости, Вы можете добавить локальный (домашний) адрес сервера помимо внешнего, чтобы подключаться из любого места без проблем",
-  "Primary": "Основной",
   "Remote": "Удалённый",
   "Server addresses": "Адреса сервера",
   "Switches to your remote address automatically when you leave home.": "Автоматически переключаться на внешний адрес вне дома.",
