@@ -157,6 +157,29 @@ function coverOfSong(s: Song): { from: string; keys: string[] } | undefined {
   return key && from ? { from, keys: [key] } : undefined;
 }
 
+
+/**
+ * Is what we are about to write the same as what is there?
+ *
+ * By the version the server gives the thing, when it gives one, and otherwise
+ * by the ids of the songs in it, which is what a rewrite would cost. Anything
+ * unknown answers no, so an entry that has never been stored is written.
+ */
+async function unchanged(
+  dir: string,
+  profile: string,
+  kind: 'playlist' | 'album',
+  id: string,
+  changed: string | undefined,
+  songs: Song[],
+): Promise<boolean> {
+  const stored = await Db.entrySummary(dir, profile, kind, id);
+  if (!stored) return false;
+  if (changed != null && stored.changed != null) return stored.changed === changed;
+  if (!stored.songIds) return false;
+  return stored.songIds === JSON.stringify(songs.map((s) => s.id));
+}
+
 /**
  * A write, which is bookkeeping and not what anybody is waiting for.
  *
@@ -274,7 +297,7 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
   },
 
   savePlaylistDetail: (id, playlist, songs) => {
-    writeMirror((dir, profile) => {
+    writeMirror(async (dir, profile) => {
       // The playlist's own cover, and the album behind each of its songs: those
       // are the pictures the rows ask for offline. A playlist of five hundred
       // songs is a few hundred albums at most, deduplicated against what is
@@ -283,6 +306,11 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
         { from: playlist.coverArt ?? playlist.id, keys: [playlist.coverArt ?? playlist.id, playlist.id] },
         ...songs.map((s) => coverOfSong(s)),
       ]);
+      // Nothing to write if it is the same playlist as the one stored: opening
+      // one is a fetch, and a fetch used to be a full rewrite of its tracklist
+      // however little had changed. Fifty two of those in half an hour, the
+      // worst of them a second and a half.
+      if (await unchanged(dir, profile, 'playlist', id, playlist.changed, songs)) return;
       return Db.saveEntry(dir, profile, 'playlist', id, { playlist, songs }, songs);
     });
   },
@@ -298,6 +326,7 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
         ...entries.flatMap((e) => e.songs.map((s) => coverOfSong(s))),
       ]);
       for (const e of entries) {
+        if (await unchanged(dir, profile, 'playlist', e.id, e.playlist.changed, e.songs)) continue;
         await Db.saveEntry(
           dir,
           profile,
@@ -317,6 +346,10 @@ export const useLibraryMirror = create<MirrorState>((set, get) => ({
           { from: album.coverArt ?? album.id, keys: [album.coverArt ?? album.id, album.id] },
           album.artistId,
         ]);
+        // Albums carry no version, so the tracklist is the comparison. A
+        // hundred and seventy nine of these in three minutes on the library
+        // this came from, nearly all of them writing what was already there.
+        if (await unchanged(dir, profile, 'album', id, undefined, songs)) return;
         await Db.saveEntry(dir, profile, 'album', id, { album, songs }, songs);
         return;
       }

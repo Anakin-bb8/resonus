@@ -674,6 +674,29 @@ export async function albumIds(dir: string, profile: string): Promise<Set<string
 
 /** Which of these playlists are already stored, and with which `changed`, so
  *  the prefetch can ask only for what moved. */
+/**
+ * What is already stored for this entry, as the two things worth comparing
+ * before writing it again: the version the server gave it, and the ids of the
+ * songs in it.
+ *
+ * Writing a playlist means inserting every one of its songs, and a playlist of
+ * a thousand songs was measured at a second and a half of that. Opening one
+ * did it every time, whether or not anything about it had changed.
+ */
+export async function entrySummary(
+  dir: string,
+  profile: string,
+  kind: Kind,
+  id: string,
+): Promise<{ changed: string | null; songIds: string | null } | undefined> {
+  const db = await mirrorDb(dir, profile);
+  const row = await db.getFirstAsync<{ changed: string | null; song_ids: string | null }>(
+    'SELECT changed, song_ids FROM entries WHERE kind = ? AND id = ?',
+    [kind, id],
+  );
+  return row ? { changed: row.changed, songIds: row.song_ids } : undefined;
+}
+
 export async function playlistVersions(
   dir: string,
   profile: string,
