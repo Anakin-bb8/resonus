@@ -9,6 +9,16 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Fixed
+
+- The player stays at the same height from one song to the next. The room for
+  the lyrics card peeking below was only kept for songs that actually had
+  lyrics, so skipping through a queue where some do and some don't resized the
+  cover and slid the title, the slider and the controls up and down on every
+  track. The room is now kept for every song that could have lyrics, and what
+  is under a song without them is a strip of empty background, which is quieter
+  than the whole screen moving.
+
 ### Changed
 
 - Settings keep every setting where it is without a connection, greyed out

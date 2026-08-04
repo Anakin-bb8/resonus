@@ -245,10 +245,11 @@ export default function PlayerScreen() {
   // Same query used by the lyrics card (cached): here only to know if there
   // are lyrics and let the card peek below the first page.
   const { data: lyrics } = useLyrics(canLyrics ? (song ?? undefined) : undefined);
-  // The only reason this screen scrolls at all, and the one flag the three
-  // things that depend on it read: the room left for the card, the room left
-  // under it, and the card itself. They went out of step once and the player
-  // could be dragged for no reason (#107).
+  // The only reason this screen scrolls at all: the room left under the first
+  // page and the card itself both read this, and they must stay in step or the
+  // player can be dragged for no reason (#107). What does NOT read it is the
+  // room kept for the peek, which is `wantsLyricsCard`: see the first page's
+  // height below.
   const showsLyricsCard = wantsLyricsCard && !!lyrics;
 
   // The player is scrollable (like Spotify): the first "page" fills the
@@ -542,8 +543,8 @@ export default function PlayerScreen() {
         <ScrollView
           style={{ flex: 1 }}
           // Keeps the lyrics card clear of the navigation bar, and only then:
-          // the first page already ends at the bottom edge (see `styles.bottom`),
-          // so with no card below it this padding was pure overflow and the whole
+          // with no card below it the first page is the whole content and it is
+          // shorter than the screen, so this padding was pure overflow and the
           // player scrolled by that much for nothing (#107).
           contentContainerStyle={
             showsLyricsCard ? { paddingBottom: Math.max(insets.bottom, spacing.md) } : undefined
@@ -570,20 +571,19 @@ export default function PlayerScreen() {
         >
         <View
           style={{
-            // Room is only left for the lyrics card once there are lyrics to put
-            // in it. A song without them, or one whose lookup is still out
-            // looking, gets the whole screen and looks exactly like it does with
-            // the card turned off: nothing peeking, and the cover using the room
-            // that peek would have taken.
+            // The peek's room is kept for every song that could have lyrics, not
+            // only for the ones that turn out to have them (`showsLyricsCard`).
+            // Tying it to the actual lyrics moved the whole player: skipping
+            // through a queue where some songs have lyrics and some don't, the
+            // cover resized and the title, the slider and the controls slid up
+            // and down a peek's worth on every track. Everything is at the same
+            // height now, whoever is playing.
             //
-            // The cost is that lyrics arriving while the player is open settle
-            // the cover a little smaller, since the cover is the elastic piece
-            // here. It was the other way round before, reserved for every song,
-            // which held the layout still at the price of a gap under most of
-            // them. Warming the lyrics on the track change (see `prefetchLyrics`)
-            // is what keeps that settling rare: by the time the player is opened
-            // they are usually already in hand.
-            height: (pageH || approxPageH) - (showsLyricsCard ? LYRICS_PEEK : 0),
+            // The cost is the strip of empty background under a song with no
+            // lyrics. That is the same trade as before, taken the other way: the
+            // gap is quiet, the layout jumping on every skip is not. Only a radio
+            // (no lyrics ever, `wantsLyricsCard` false) gets the room back.
+            height: (pageH || approxPageH) - (wantsLyricsCard ? LYRICS_PEEK : 0),
           }}
         >
         <View style={styles.topBar}>
