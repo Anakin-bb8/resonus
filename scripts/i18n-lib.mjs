@@ -14,7 +14,7 @@
  * The other half, what a word means when it is ambiguous on its own, cannot be
  * derived and lives in `src/i18n/context.jsonc`.
  */
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, relative, sep } from 'node:path';
 
@@ -99,7 +99,12 @@ export function callSites() {
   const placed = new Set(sites.keys());
   const LITERAL = /(['"])((?:\\.|(?!\1)[^\\])*)\1/g;
   for (const [file, src] of files) {
-    for (const m of src.matchAll(LITERAL)) {
+    // Comments first, and not out of tidiness: this pass pairs quotes as it
+    // walks the file, so one apostrophe in a sentence of prose ("it's the
+    // header") pairs with the next quote in the code and every literal after it
+    // in that file is read wrong. That is what hid `Recents`, which is written
+    // in a table of sort labels twenty lines under such a comment.
+    for (const m of withoutComments(src).matchAll(LITERAL)) {
       const key = unescapeLiteral(m[2]);
       if (key in en && !placed.has(key)) add(key, file);
     }
@@ -116,6 +121,86 @@ export function callSites() {
 
 const unescapeLiteral = (s) => s.replace(/\\(['"\\])/g, '$1');
 
+/**
+ * Drops the lines that are only a comment. Not a parser and not trying to be:
+ * this codebase keeps its prose in whole-line comments and JSDoc blocks, which
+ * is where the stray apostrophes are, and a `//` sitting after code is left
+ * alone precisely because telling it from one inside a string needs the parser
+ * we are not writing.
+ */
+const withoutComments = (src) =>
+  src
+    .split('\n')
+    .filter((line) => !/^\s*(\/\/|\/?\*)/.test(line))
+    .join('\n');
+
+/**
+ * Which file imports which, so that a string living in a component can still be
+ * told where it is seen.
+ *
+ * Half this app's text is in sheets and cards rather than in the screen file:
+ * `SongMenuSheet` is not a place anybody has been to, and "Add anyway" showing
+ * up as `PlaylistPickerSheet (components)` is barely more use to a translator
+ * than nothing. But the screens that open it are places, and they are one hop
+ * away up the imports.
+ */
+function importGraph() {
+  const importers = new Map(); // file → the files that import it
+  const resolve = (from, spec) => {
+    const base = spec.startsWith('@/')
+      ? join(SRC, spec.slice(2))
+      : spec.startsWith('.')
+        ? join(dirname(from), spec)
+        : null;
+    if (!base) return null; // a package, not ours
+    for (const candidate of [`${base}.tsx`, `${base}.ts`, join(base, 'index.tsx'), join(base, 'index.ts')]) {
+      if (existsSync(candidate)) return candidate;
+    }
+    return null;
+  };
+  for (const file of sourceFiles()) {
+    const src = readFileSync(file, 'utf8');
+    for (const m of src.matchAll(/\bfrom\s+['"]([^'"]+)['"]/g)) {
+      const target = resolve(file, m[1]);
+      if (!target) continue;
+      if (!importers.has(target)) importers.set(target, new Set());
+      importers.get(target).add(file);
+    }
+  }
+  return importers;
+}
+
+let importersCache = null;
+
+/**
+ * The screens a file is seen from: itself if it is one, otherwise whoever
+ * imports it, and whoever imports them. Stops at the first screens it finds, so
+ * a component used by one screen names that screen rather than the whole app.
+ */
+function screensUsing(file) {
+  const full = join(ROOT, file);
+  if (file.startsWith(`src${sep}app${sep}`) || file.startsWith('src/app/')) return [screenName(file)];
+  importersCache ??= importGraph();
+  const seen = new Set([full]);
+  let frontier = [full];
+  for (let hop = 0; hop < 4 && frontier.length; hop += 1) {
+    const next = [];
+    const screens = new Set();
+    for (const node of frontier) {
+      for (const parent of importersCache.get(node) ?? []) {
+        if (seen.has(parent)) continue;
+        seen.add(parent);
+        const rel = relative(ROOT, parent);
+        if (rel.split(sep)[1] === 'app') screens.add(screenName(rel));
+        else next.push(parent);
+      }
+    }
+    if (screens.size) return [...screens].sort();
+    frontier = next;
+  }
+  return [];
+}
+
 /** Path → what a person would call that place in the app. */
 export function screenName(file) {
   const parts = file.split(sep);
@@ -131,6 +216,12 @@ export function screenName(file) {
       .replace(/\[.*?\]/g, '')
       .replace(/[-_]/g, ' ')
       .trim();
+  // A layout is not a screen but the frame around several, so whatever it draws
+  // is drawn on all of them. The mini player and the battery warning live here,
+  // and "anywhere in the app" is the honest answer for both.
+  if (name.startsWith('_layout')) {
+    return route.length ? `Any ${route.map(words).join(' › ')} screen` : 'Anywhere in the app';
+  }
   const tail = name === 'index' ? '' : words(name);
   const crumbs = [...route.map(words), tail].filter(Boolean);
   if (crumbs.length === 0) return 'Home';
@@ -142,9 +233,21 @@ export function screenName(file) {
 export function whereShown(key, sites) {
   const files = sites.get(key);
   if (!files) return '';
-  const names = [...new Set([...files].map(screenName))].sort();
-  if (names.length > 3) return `${names.slice(0, 3).join(', ')} and ${names.length - 3} more`;
-  return names.join(', ');
+  const names = new Set();
+  const parts = new Set();
+  for (const file of files) {
+    const screens = screensUsing(file);
+    for (const s of screens) names.add(s);
+    // The component's own name goes in brackets: it is what somebody grepping
+    // the code would look for, and for a sheet it is often the clearer half.
+    if (!screens.includes(screenName(file))) parts.add(screenName(file).replace(/ \(.*\)$/, ''));
+  }
+  const where = [...names].sort();
+  const shown =
+    where.length > 3 ? `${where.slice(0, 3).join(', ')} and ${where.length - 3} more` : where.join(', ');
+  const from = [...parts].sort().join(', ');
+  if (shown && from) return `${shown} · in ${from}`;
+  return shown || (from && `in ${from}`) || '';
 }
 
 /** Where it shows up, plus what it means if that needed saying. */

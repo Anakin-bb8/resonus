@@ -42,7 +42,6 @@
     "Interface": "Section header grouping toggles",
     "Size": "The size of the quick grid tiles",
     "Sources": "Which shortcuts the quick grid shows",
-    "Layout": "The list vs grid layout of a list",
 
     // ── Servers & network (Login, Settings › Network) ────────────────────────
     "Advanced": "The link that expands the advanced connection options",

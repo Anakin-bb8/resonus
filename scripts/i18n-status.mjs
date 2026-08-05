@@ -112,6 +112,16 @@ const orphaned = Object.keys(notes).filter((k) => !(k in en));
 if (orphaned.length) {
   console.log(`\n⚠ context.jsonc describes ${orphaned.length} keys that are gone: ${orphaned.join(', ')}`);
 }
+// An English key nothing asks for is a string every translator has been
+// translating for a screen that will never show it: five of them had survived a
+// rewording each. Worth saying out loud, and worth checking before deleting,
+// since a string built somewhere clever would look the same from here.
+const unused = todoKeys.filter((k) => !sites.has(k));
+if (unused.length) {
+  console.log(`\n⚠ ${unused.length} English keys are not used anywhere in the app:`);
+  for (const k of unused) console.log(`    ${JSON.stringify(k)}`);
+  console.log('  Check, then delete them from en.json (and es/ca; the rest report as stale).');
+}
 console.log('');
 const rows = locales.map((c) => analyze(c));
 const w = Math.max(6, ...locales.map((c) => c.length));
