@@ -224,15 +224,17 @@ export function SongMenuSheet() {
     if (!song || !dlUri) return;
     close();
     try {
-      // Not a failure and not the same as the catch below: the system says it
-      // has no share sheet, so nothing has been attempted yet. "Here" used to
-      // stand for the device and could be read as this screen or this song
-      // (raised by @ztx-lyghters).
+      // Both of these name the button that was pressed, not the mechanism
+      // behind it: "share" in this app is the link a server mints, which is in
+      // this very menu and is a different thing (raised by @ztx-lyghters).
+      // They also say different things: this one is the system reporting it
+      // has no share sheet, before anything has been attempted, and the one
+      // below is an attempt that failed.
       if (!(await shareSongFile(song, dlUri))) {
-        toast(t('Sharing isn’t available on this device'));
+        toast(t('Sending to another app isn’t available on this device'));
       }
     } catch {
-      toast(t('Couldn’t share the file'));
+      toast(t('Couldn’t send the file'));
     }
   }
 
