@@ -9,6 +9,34 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-08-05
+
+This one is mostly about what the app does when the server is not there.
+
+Nothing disappears from Settings any more. Streaming quality and its codec,
+everything about downloading, autoplay, folder browsing, the chips on Home:
+all of it used to vanish without a connection, so looking for a setting meant
+walking through every screen that could plausibly hold it before working out
+that it had never been there. It all stays in its place now, dimmed and not
+answering. Server addresses go one better and still work, because a wrong
+address is exactly the kind of thing that puts the app offline, and that screen
+was hidden behind the problem it exists to fix.
+
+Falling to offline mode notices more, too. It used to look only when the app
+started and when the phone's network changed, and a VPN going down while you
+were away is neither, so coming back left the app asking a server that was not
+there. And a downloaded song can be dragged through: a download made at a
+bitrate is a transcode with no index in it, and the player was answering every
+seek by starting the track over, in the car as well as in the app.
+
+The rest is tidying. Streaming settings are two named sets, Wi-Fi and mobile
+data, instead of four rows you told apart by reading to the end of each label;
+Appearance is a screenful shorter; the lyrics screen comes with the blurred
+artwork behind it, like the player it opens from; and "Playing from" stops
+naming an album once the queue has grown past it into a mix. Casting to a Sonos
+that is grouped, or is one half of a stereo pair, should work, fixed without a
+Sonos to try it on.
+
 ### Added
 
 - A way to support Resonus, at the bottom of Settings › About. The app asks for
