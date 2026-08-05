@@ -94,6 +94,7 @@
     "Show cover": "Lyrics screen: the button that goes back to the cover art",
 
     // ── Artist, playlists & radio ────────────────────────────────────────────
+    "About": "The heading over an artist's biography, and the name of the settings page about the app. Two very different uses of one English word, so `About::artist` and `About::app` exist for a language that needs two words",
     "Popular": "The artist's popular / top tracks",
     "Appears on": "Albums the artist appears on: features, compilations",
     "Similar artists": "Related artists",

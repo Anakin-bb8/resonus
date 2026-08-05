@@ -22,7 +22,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { ROOT, callSites, enKeys, keepEnglish, notes, whereShown } from './i18n-lib.mjs';
+import { ROOT, callSites, enKeys, keepEnglish, meaning, whereShown } from './i18n-lib.mjs';
 
 const OUT = join(ROOT, 'docs/TRANSLATION-CONTEXT.md');
 const check = process.argv.includes('--check');
@@ -79,7 +79,7 @@ for (const screen of [...screens, ...(byScreen.has(EVERYWHERE) ? [EVERYWHERE] : 
   const keys = [...new Set(byScreen.get(screen))].sort((a, b) => a.localeCompare(b));
   lines.push(`## ${screen}`, '', '| String | What it is |', '| --- | --- |');
   for (const key of keys) {
-    lines.push(`| \`${escape(key)}\` | ${escape(notes[key] ?? '')} |`);
+    lines.push(`| \`${escape(key)}\` | ${escape(meaning(key))} |`);
   }
   lines.push('');
 }

@@ -300,24 +300,32 @@ export function whereShown(key, sites) {
   return shown || (from && `in ${from}`) || '';
 }
 
+/**
+ * What this string is, in words: the note written for it, or what the code says
+ * about it when nobody wrote one. Everything that shows context goes through
+ * here, so the page on GitHub and the file in your editor say the same thing —
+ * they did not, once, and the half that was missing was the half most people
+ * read.
+ */
+export function meaning(key) {
+  // An override ("Never::expiry") falls back to the base word's note, the same
+  // way the app falls back to the base string.
+  const written = notes[key] ?? notes[baseKey(key)];
+  if (written) return written;
+  // Nobody wrote one, but a settings row is a label and an explanation a few
+  // lines apart, and a select is a label and its values. That is context too.
+  relationsCache ??= relations();
+  const rel = relationsCache.get(key);
+  if (!rel) return '';
+  return rel.kind === 'description'
+    ? `The line under “${rel.of}”, explaining it`
+    : `One of the values of “${rel.of}”`;
+}
+
 /** Where it shows up, plus what it means if that needed saying. */
 export function describe(key, sites) {
   const where = whereShown(key, sites);
-  // An override ("Never::expiry") is the base word in one particular place, so
-  // the base's note is the one that explains it.
-  let note = notes[key] ?? notes[baseKey(key)];
-  if (!note) {
-    // No note written, but the code may still say what this is: the line under
-    // a setting, or one of its values.
-    relationsCache ??= relations();
-    const rel = relationsCache.get(key);
-    if (rel) {
-      note =
-        rel.kind === 'description'
-          ? `The line under “${rel.of}”, explaining it`
-          : `One of the values of “${rel.of}”`;
-    }
-  }
+  const note = meaning(key);
   if (where && note) return `${where} · ${note}`;
   return note || where;
 }
