@@ -1,0 +1,38 @@
+name: Translations
+
+# Checks a translation pull request the moment it is pushed, instead of three
+# days later when somebody gets round to reading it. A stray comma, a key that
+# no longer exists, a {placeholder} lost in translation: all of it is knowable
+# straight away, and waiting to be told is the part of contributing that puts
+# people off.
+
+on:
+  pull_request:
+    paths:
+      - 'src/i18n/**'
+      - 'scripts/i18n-*.mjs'
+      - 'docs/TRANSLATION-CONTEXT.md'
+  push:
+    branches: [main]
+    paths:
+      - 'src/i18n/**'
+      - 'scripts/i18n-*.mjs'
+      - 'docs/TRANSLATION-CONTEXT.md'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      # The checks read the repo, not the app, so there is nothing to install.
+      - run: node scripts/i18n-check.mjs
+      - name: Where each language stands
+        if: always()
+        run: node scripts/i18n-status.mjs

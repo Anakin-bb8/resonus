@@ -159,7 +159,7 @@ Conventions:
   pnpm i18n:status
   ```
   **If the English is ambiguous on its own**, add a line to
-  `src/i18n/context.jsonc` saying what it is. `Direction` is a sort order and
+  `src/i18n/context.jsonc` saying what it is, and run `pnpm i18n:docs`. `Direction` is a sort order and
   not a compass; `Rate` is a verb and not a bitrate. That one line is what
   every translator of every language gets shown next to the string, and writing
   it while you still remember costs less than answering the question five

@@ -17,6 +17,17 @@
 // purpose. They are not counted as missing.
 {
   "notes": {
+    // ── The app's own words ──────────────────────────────────────────────────
+    // These come back on screen after screen. Whatever each language settles
+    // on, it reads much better said the same way every time.
+    "Queue": "The list of songs waiting to play. Not a playlist",
+    "Playlist": "A list saved on the server. Not the queue",
+    "Shuffle": "Play in random order",
+    "Repeat": "Start again at the end",
+    "Crossfade": "One song fading into the next",
+    "Downloads": "Songs saved on the phone, to play with no connection",
+    "Offline mode": "The app working with no server: downloads only",
+
     // ── Sorting & filtering ──────────────────────────────────────────────────
     "Direction": "Sort sheet: the ascending vs descending toggle. Not a compass direction",
     "A-Z": "Sort option: the order of a list",
