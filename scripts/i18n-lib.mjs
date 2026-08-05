@@ -201,6 +201,56 @@ function screensUsing(file) {
   return [];
 }
 
+/**
+ * The two strings a settings screen is made of, and which belongs to which.
+ *
+ * A settings row is a label and a line under it explaining it, and a select is
+ * a label and its values. Read on their own, out of a JSON file, the second
+ * half of each of those is the hardest kind of string there is: "Only if it is
+ * the original file" is a sentence with nothing to hang it on until you know it
+ * is one of four answers to "Play downloaded songs from the phone".
+ *
+ * Which is written down right there in the code, a few lines apart, so it is
+ * read from there instead of being typed into the notes a hundred times and
+ * going stale the first time a setting is reworded.
+ */
+function relations() {
+  const out = new Map(); // key → { kind: 'description' | 'value', of: label }
+  const LABEL = /\blabel(?:=\{|:\s*)t\(\s*(['"])((?:\\.|(?!\1)[^\\])*)\1/;
+  const DESC = /\bdescription(?:=\{|:\s*)(?:t\(\s*)?(['"])((?:\\.|(?!\1)[^\\])*)\1/;
+  const OPTION = /\bvalue:\s*[^,]+,\s*label:\s*t\(\s*(['"])((?:\\.|(?!\1)[^\\])*)\1/;
+  for (const file of sourceFiles()) {
+    const lines = readFileSync(file, 'utf8').split('\n');
+    let label = null;
+    let since = 0;
+    lines.forEach((line, i) => {
+      const isOption = OPTION.test(line);
+      const l = !isOption && LABEL.exec(line);
+      if (l) {
+        label = unescapeLiteral(l[2]);
+        since = i;
+        return;
+      }
+      if (!label || i - since > 12) return;
+      // A description can sit on the line after its `description=` opener.
+      const d = DESC.exec(line) ?? (/\bdescription(?:=\{|:\s*)t\($/.test(line.trim()) ? DESC.exec(lines[i + 1] ?? '') : null);
+      if (d) {
+        const key = unescapeLiteral(d[2]);
+        if (key !== label && !out.has(key)) out.set(key, { kind: 'description', of: label });
+        return;
+      }
+      const o = OPTION.exec(line);
+      if (o) {
+        const key = unescapeLiteral(o[2]);
+        if (key !== label && !out.has(key)) out.set(key, { kind: 'value', of: label });
+      }
+    });
+  }
+  return out;
+}
+
+let relationsCache = null;
+
 /** Path → what a person would call that place in the app. */
 export function screenName(file) {
   const parts = file.split(sep);
@@ -255,7 +305,19 @@ export function describe(key, sites) {
   const where = whereShown(key, sites);
   // An override ("Never::expiry") is the base word in one particular place, so
   // the base's note is the one that explains it.
-  const note = notes[key] ?? notes[baseKey(key)];
+  let note = notes[key] ?? notes[baseKey(key)];
+  if (!note) {
+    // No note written, but the code may still say what this is: the line under
+    // a setting, or one of its values.
+    relationsCache ??= relations();
+    const rel = relationsCache.get(key);
+    if (rel) {
+      note =
+        rel.kind === 'description'
+          ? `The line under “${rel.of}”, explaining it`
+          : `One of the values of “${rel.of}”`;
+    }
+  }
   if (where && note) return `${where} · ${note}`;
   return note || where;
 }

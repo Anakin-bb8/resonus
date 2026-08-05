@@ -54,7 +54,9 @@ for (const code of locales) {
 
 // The notes, and the strings they are about, still exist.
 for (const key of Object.keys(notes)) {
-  if (!(key in en)) fail(`context.jsonc describes "${key}", which is not in en.json`);
+  // An override ("Never::expiry") is a real string to explain, and a language
+  // that needs it needs the note most, so it is judged by its base key.
+  if (!(baseKey(key) in en)) fail(`context.jsonc describes "${key}", which is not in en.json`);
 }
 for (const key of keepEnglish) {
   if (!(key in en)) fail(`context.jsonc keeps "${key}" in English, but it is not in en.json`);

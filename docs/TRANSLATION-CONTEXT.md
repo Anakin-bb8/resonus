@@ -20,10 +20,10 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `Album` | In search results, the little word under a result saying what kind of thing it is |
-| `Couldn't load the album.` |  |
-| `Disc {n}` |  |
-| `Find in playlist` |  |
-| `More from {artist}` |  |
+| `Couldn't load the album.` | Error on the screen, with a Retry button |
+| `Disc {n}` | Heading over the songs of one disc of a multi-disc album. `{n}` is its number |
+| `Find in playlist` | Placeholder of the search box hidden above a tracklist, for finding a song within it |
+| `More from {artist}` | Heading under an album: their other records. `{artist}` is the name |
 | `Show all` | Opens the full list of what the row is showing a few of |
 | `Sort` | Read out by the screen reader for the button that opens the sort options. A verb |
 | `View cover` | The same as `View image`, for album and playlist artwork |
@@ -33,9 +33,9 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `{n} minutes` | A value of the sleep timer, in minutes from now |
-| `{n} of {m} songs exported` |  |
-| `{n} songs exported` |  |
-| `{n} songs, {size}, copied into a folder of their own.` |  |
+| `{n} of {m} songs exported` | Toast when only some of them made it |
+| `{n} songs exported` | Toast when it finished |
+| `{n} songs, {size}, copied into a folder of their own.` | The line under that title |
 | `1 day` | How long a shared link lasts, counted from the moment it is made |
 | `1 hour` | How long a shared link lasts, counted from the moment it is made. Not a time of day |
 | `1 month` | How long a shared link lasts, counted from the moment it is made |
@@ -45,18 +45,18 @@ you are actually typing into, which is easier than reading it here.
 | `Android may stop playback in the background, interrupt downloads or delay the sleep timer. Allowing unrestricted battery use fixes it.` |  |
 | `Artist` | In search results, the little word under a result saying what kind of thing it is |
 | `Artists` | A heading over a list of them, never a count |
-| `Battery optimization is on` |  |
+| `Battery optimization is on` | Title of the card warning that Android may cut playback off |
 | `BPM` | A property of the audio: beats per minute |
 | `Channels` | A property of the audio: mono, stereo |
 | `Comment` | The file's comment tag, where people keep notes about a recording |
 | `Couldn't create the link` | The server would not make a share link |
-| `Couldn't find anything to mix with this song` |  |
-| `Couldn't save the file` |  |
-| `Couldn't send the file` |  |
+| `Couldn't find anything to mix with this song` | Toast: the server had nothing similar to carry on with |
+| `Couldn't save the file` | Toast: writing to the chosen folder failed |
+| `Couldn't send the file` | Toast: handing it to another app failed |
 | `Cover art` | Three places, one word: a section header in Settings › Player, a line of the storage bar in Settings › Downloads, and what the screen reader calls the picture in the song information sheet |
-| `Disc {n}` |  |
-| `Don't remind me` |  |
-| `Download removed` |  |
+| `Disc {n}` | Heading over the songs of one disc of a multi-disc album. `{n}` is its number |
+| `Don't remind me` | Its other button: never show this again |
+| `Download removed` | Toast: the file was deleted, the song stays in the library |
 | `Duration` | Label of a field in the song information sheet: how long the song is |
 | `Export` | Get the downloaded file itself out of the app, as a file. Not the same as `Share`, which makes a link on the server |
 | `Export “{name}”?` | Confirms getting the files of an album or playlist out of the app |
@@ -71,7 +71,7 @@ you are actually typing into, which is easier than reading it here.
 | `Mix of “{name}”` | What the player calls the queue once it has grown past its album into songs the app picked itself. `{name}` is the song it was grown from |
 | `Mix started` | The toast that says the app is now picking the songs |
 | `Moods` | Mood tags the server has on the song: mellow, energetic… |
-| `Open settings` |  |
+| `Open settings` | Its confirm button: goes to Android's own settings, not the app's |
 | `Pick a date…` | Opens the calendar to choose the day the link stops working |
 | `Pin to top` | Keep this at the top of its list, above everything else. `Unpin` undoes it |
 | `Play next` | Action: put this song right after the one playing, without clearing the rest |
@@ -79,37 +79,37 @@ you are actually typing into, which is easier than reading it here.
 | `Plays` | How many times the song has been played |
 | `Rate` | Verb: rate the song with stars. Not "bitrate" |
 | `Rating` | The stars given to the song. Not a bitrate, not a review |
-| `Remove from favorites` |  |
-| `Remove from playlist` |  |
-| `Removed from playlist` |  |
+| `Remove from favorites` | The same button when it is already a favourite |
+| `Remove from playlist` | Menu action: take this song out of the playlist it was opened from |
+| `Removed from playlist` | Toast, with an undo button next to it |
 | `Sample rate` | A property of the audio, in kHz |
 | `Save to a folder` | A value of `Export`: write the file somewhere on the phone |
 | `Saved as “{name}”` | Where the exported file ended up. `{name}` is the file's name |
 | `Search` | The search tab, and the action of searching |
 | `Send to another app` | A value of `Export`: hand the file to another app |
-| `Sending to another app isn't available on this device` |  |
+| `Sending to another app isn't available on this device` | Toast: this phone has nothing that takes a shared file |
 | `Server didn't allow downloads` | Warning after sharing: the link was made and works, but the call that turns downloading on did not go through |
 | `Share` | Make a link on the server that others can open. Getting the file itself out is `Export` |
 | `Share “{name}”` | The sheet's title, with what is being shared |
 | `Size` | The size of the quick grid tiles |
 | `Sleep timer` | Stop playing after a while, for falling asleep to |
-| `Sleep timer ({n} min left)` |  |
-| `Sleep timer (end of song)` |  |
+| `Sleep timer ({n} min left)` | The menu row while it is counting down. `{n}` is minutes still to go |
+| `Sleep timer (end of song)` | The same row when it is set to stop at the end of this song |
 | `Sleep timer off` | The toast that says it was turned off |
 | `Song information` | The menu action and the sheet's title: what is known about the track |
 | `Start mix` | Start an auto-generated radio mix from this song |
 | `The link expires in` | Heading over the choices below. They are spans from the moment the link is made, not times of day |
-| `This download is a {n} kbps copy, not the original file.` |  |
+| `This download is a {n} kbps copy, not the original file.` | Shown before exporting: the file on the phone was transcoded when it was downloaded. `{n}` is a bitrate |
 | `This song carries no information.` | Empty state: the file and the server had nothing to say |
 | `Track` | The track number on its album. Not the song itself |
 | `Turn off` | Turn off the sleep timer |
 | `Unknown title` | Fallback when the file and the server have no title |
 | `Unpin` | Stop keeping it at the top of its list |
 | `When the song ends` | A value of the sleep timer: stop when this song finishes, however long that is |
-| `Will pause in {n} min` |  |
-| `Will pause when the song ends` |  |
+| `Will pause in {n} min` | Toast when it is set |
+| `Will pause when the song ends` | Toast when it is set to the end of the song |
 | `Year` | Label of a field in the song information sheet: the year of the release |
-| `You can pin up to {n} items.` |  |
+| `You can pin up to {n} items.` | Toast: there is no room for another pinned thing. `{n}` is the limit |
 
 ## Artist
 
@@ -117,12 +117,12 @@ you are actually typing into, which is easier than reading it here.
 | --- | --- |
 | `About` |  |
 | `Appears on` | Albums the artist appears on: features, compilations |
-| `Couldn't load the artist.` |  |
+| `Couldn't load the artist.` | Error on the screen, with a Retry button |
 | `Discography` | Everything an artist has released, albums and singles together |
 | `Downloaded` | Badge on something whose files are on the phone |
 | `Play discography` | Play the lot, in order |
 | `Popular` | The artist's popular / top tracks |
-| `Remove from favorites` |  |
+| `Remove from favorites` | The same button when it is already a favourite |
 | `Show all` | Opens the full list of what the row is showing a few of |
 | `Show less` | Folds it back |
 | `Show more` | Unfolds the rest of a text that was cut short |
@@ -134,7 +134,7 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `Appears on` | Albums the artist appears on: features, compilations |
-| `Couldn't load the artist.` |  |
+| `Couldn't load the artist.` | Error on the screen, with a Retry button |
 | `Discography` | Everything an artist has released, albums and singles together |
 
 ## Browse › Albums
@@ -142,12 +142,12 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `A-Z` | Sort option: the order of a list |
-| `Find an album` |  |
-| `No albums yet` |  |
+| `Find an album` | The search box's placeholder on that screen |
+| `No albums yet` | Empty state heading |
 | `Nothing played yet` | Empty state: this phone has not played anything yet |
-| `Your library looks empty.` |  |
-| `Your most played albums will show up here.` |  |
-| `Your recently played albums will show up here.` |  |
+| `Your library looks empty.` | Empty state: the server answered, and had nothing |
+| `Your most played albums will show up here.` | The line under an empty state, before anything has been played |
+| `Your recently played albums will show up here.` | The line under an empty state, before anything has been played |
 
 ## Browse › Artists
 
@@ -155,31 +155,31 @@ you are actually typing into, which is easier than reading it here.
 | --- | --- |
 | `A-Z` | Sort option: the order of a list |
 | `Artists` | A heading over a list of them, never a count |
-| `Couldn't load artists.` |  |
+| `Couldn't load artists.` | Error on the screen, with a Retry button |
 | `Filter artists` | Search box that narrows the list as you type, rather than a filter you set |
-| `No artists yet` |  |
-| `Your library looks empty.` |  |
+| `No artists yet` | Empty state heading |
+| `Your library looks empty.` | Empty state: the server answered, and had nothing |
 
 ## Browse › Folder
 
 | String | What it is |
 | --- | --- |
-| `Couldn't load the folder.` |  |
+| `Couldn't load the folder.` | Error on the screen, with a Retry button |
 | `Folders` | A heading: browsing the server by folder instead of by album |
-| `This folder is empty.` |  |
+| `This folder is empty.` | Empty state, browsing the server by folder |
 
 ## Browse › Songs
 
 | String | What it is |
 | --- | --- |
 | `A-Z` | Sort option: the order of a list |
-| `Couldn't load songs.` |  |
+| `Couldn't load songs.` | Error on the screen, with a Retry button |
 | `Default` | Sorting pill: what you get when nothing is sorted, which is the order the server keeps its songs in. Not alphabetical, and not Resonus deciding |
 | `Find a song` | The search box's placeholder on that screen |
 | `No songs yet` | Empty state when the library has no songs |
 | `Nothing played yet` | Empty state: this phone has not played anything yet |
 | `Songs` | Always a heading, never a count, so it wants the plain plural your language uses for a list of them ("Songs", not "of songs"). Counting songs is a different thing and goes through the plural forms |
-| `Your library looks empty.` |  |
+| `Your library looks empty.` | Empty state: the server answered, and had nothing |
 | `Your most played songs will show up here.` | Empty state, before anything has been played |
 | `Your recently played songs will show up here.` | Empty state, before anything has been played |
 
@@ -187,21 +187,21 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `{n} removed from favorites` |  |
+| `{n} removed from favorites` | Toast. `{n}` is a count of songs |
 | `Alphabetical` | Sort option: the order of a list |
 | `Ascending` | Sort option: the order of a list |
 | `Auto-download` | Keep this playlist downloaded by itself as songs are added to it |
 | `Auto-download off` | The toast that says it was turned off |
 | `Auto-download on` | The toast that says it was turned on |
-| `Couldn't load favorites.` |  |
+| `Couldn't load favorites.` | Error on the screen, with a Retry button |
 | `Descending` | Sort option: the order of a list |
 | `Direction` | Sort sheet: the ascending vs descending toggle. Not a compass direction |
-| `Find in favorites` |  |
-| `Find in playlist` |  |
-| `No favorites yet` |  |
+| `Find in favorites` | Placeholder of the search box that narrows the favourites already shown |
+| `Find in playlist` | Placeholder of the search box hidden above a tracklist, for finding a song within it |
+| `No favorites yet` | Empty state heading |
 | `Sort` | Read out by the screen reader for the button that opens the sort options. A verb |
 | `Sort by` | Heading over the sort options |
-| `Tap the heart on songs to see them here.` |  |
+| `Tap the heart on songs to see them here.` | The line under an empty state, saying how to fill it |
 | `View cover` | The same as `View image`, for album and playlist artwork |
 
 ## Favorites add
@@ -209,19 +209,19 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `Most played` | Sorted by how many times they were played |
-| `Nothing to suggest yet — play some music first.` |  |
+| `Nothing to suggest yet — play some music first.` | The line under an empty state on the add-favourites screen |
 | `Recently played` | Sorted by when they were last played |
 | `Suggestions` | Things the app offers when you are picking favourites to pin |
-| `What would you like to add?` |  |
+| `What would you like to add?` | Heading of the screen for adding favourites |
 
 ## Genre
 
 | String | What it is |
 | --- | --- |
-| `Couldn't load songs.` |  |
-| `No albums in this genre` |  |
-| `No songs in this genre` |  |
-| `Nothing to shuffle yet` |  |
+| `Couldn't load songs.` | Error on the screen, with a Retry button |
+| `No albums in this genre` | Empty state heading |
+| `No songs in this genre` | Empty state heading |
+| `Nothing to shuffle yet` | Empty state: there is nothing here to play in random order |
 | `Songs` | Always a heading, never a count, so it wants the plain plural your language uses for a list of them ("Songs", not "of songs"). Counting songs is a different thing and goes through the plural forms |
 | `Try exploring another genre.` | Empty state subtitle on a genre screen |
 
@@ -229,21 +229,21 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `Couldn't load genres.` |  |
+| `Couldn't load genres.` | Error on the screen, with a Retry button |
 | `Filter genres` | Search box that narrows the list as you type, rather than a filter you set |
 | `Genres` | A heading over a list of them, never a count |
-| `Genres come from your music's tags.` |  |
-| `No genres yet` |  |
+| `Genres come from your music's tags.` | The line under an empty state: the app does not invent them |
+| `No genres yet` | Empty state heading |
 
 ## History
 
 | String | What it is |
 | --- | --- |
 | `Clear all` | Throw away the whole list: the history, the queue, or what you searched for |
-| `Clear history` |  |
-| `History cleared` |  |
+| `Clear history` | Throw the listening history away |
+| `History cleared` | Toast |
 | `Nothing played yet` | Empty state: this phone has not played anything yet |
-| `Songs you play will show up here.` |  |
+| `Songs you play will show up here.` | The line under an empty state, saying how to fill it |
 | `Today` | Heading over the songs played today, on the listening history screen |
 | `Yesterday` | Heading over the songs played yesterday |
 
@@ -251,8 +251,8 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `Couldn't load songs.` |  |
-| `Couldn't reach the server. Check your connection.` |  |
+| `Couldn't load songs.` | Error on the screen, with a Retry button |
+| `Couldn't reach the server. Check your connection.` | Error on Home when the server does not answer at all |
 | `Discover` | Home section: discovery suggestions |
 | `Good afternoon` | Home's greeting. The hours it changes at are part of the language too — see TRANSLATING.md |
 | `Good evening` | Home's greeting. The hours it changes at are part of the language too — see TRANSLATING.md |
@@ -260,71 +260,71 @@ you are actually typing into, which is easier than reading it here.
 | `Good night` | Home's greeting, for the small hours. Spanish uses the same words as for the evening, which is fine |
 | `Loading covers…` | Still pulling the pictures out of the phone's own files |
 | `Looking for music…` | Reading the phone's own files, before anything can be shown |
-| `Nothing to shuffle yet` |  |
+| `Nothing to shuffle yet` | Empty state: there is nothing here to play in random order |
 | `Playlists` | A section on Home and in the library, and a folder in the car |
 | `Random albums` | A section of Home: albums picked at random, to happen upon something |
 | `Random artists` | A section of Home: artists picked at random |
 | `Scanning your music…` | Going through the phone's own files |
-| `Settings` |  |
+| `Settings` | The app's settings, and the button that opens them |
 
 ## Library
 
 | String | What it is |
 | --- | --- |
 | `Alphabetical` | Sort option: the order of a list |
-| `Couldn't load artists.` |  |
-| `Couldn't load folders.` |  |
-| `Couldn't load playlists.` |  |
-| `Create your first playlist to get started.` |  |
+| `Couldn't load artists.` | Error on the screen, with a Retry button |
+| `Couldn't load folders.` | Error on the screen, with a Retry button |
+| `Couldn't load playlists.` | Error on the screen, with a Retry button |
+| `Create your first playlist to get started.` | The line under an empty state |
 | `Music` | The name given to the server's folder when it does not have one of its own, browsing by folder |
-| `No favorite albums` |  |
-| `No favorite artists` |  |
-| `No playlists yet` |  |
+| `No favorite albums` | Empty state heading on the favourites tab |
+| `No favorite artists` | Empty state heading on the favourites tab |
+| `No playlists yet` | Empty state heading |
 | `Playlist created` | The toast after making one |
 | `Recents` | Library section: recently opened items |
 | `Search` | The search tab, and the action of searching |
 | `Sort by` | Heading over the sort options |
-| `Star albums to see them here.` |  |
-| `Star artists to see them here.` |  |
+| `Star albums to see them here.` | The line under an empty state, saying how to fill it |
+| `Star artists to see them here.` | The line under an empty state, saying how to fill it |
 
 ## Login
 
 | String | What it is |
 | --- | --- |
-| `{name} is not available yet 🚧` |  |
-| `Add profile` |  |
+| `{name} is not available yet 🚧` | A server type shown but not supported yet. `{name}` is its name, and the sign is part of the message |
+| `Add profile` | Add another account, keeping the ones already saved |
 | `Advanced` | The link that expands the advanced connection options |
-| `All the music on your device.` |  |
+| `All the music on your device.` | The line under `Scan the whole phone` |
 | `Choose a folder (recommended)` | One of the two ways to find the phone's own music: point at a folder |
-| `Choose the server type` |  |
-| `Couldn't sign in` |  |
-| `Couldn't sign in; check the account` |  |
-| `Its downloads and its offline copy of the library will be deleted from this device.` |  |
-| `Listen to music stored on your device, without a server. Choose where from:` |  |
+| `Choose the server type` | The line above the list of server kinds |
+| `Couldn't sign in` | Error when we do not know why it failed |
+| `Couldn't sign in; check the account` | Error when the server answered and refused the credentials |
+| `Its downloads and its offline copy of the library will be deleted from this device.` | The line under that title |
+| `Listen to music stored on your device, without a server. Choose where from:` | The line under `Music on your device`, before the two ways of finding it |
 | `Local profile` | The on-device profile, with no server account. Its library screen is `Local music` |
 | `Media server` | The type subtitle under Jellyfin |
 | `Music on your device` | Signing in to nothing at all and playing the phone's own files |
-| `Only the music in the folder you choose.` |  |
-| `Password` |  |
+| `Only the music in the folder you choose.` | The line under `Choose a folder (recommended)` |
+| `Password` | The password field, on the login screen and wherever the server asks again |
 | `Plain-text password authentication` |  |
-| `Remove profile?` |  |
+| `Remove profile?` | Dialog title: take a saved account off this phone |
 | `Saved profiles` | The accounts already signed in to, to pick one |
 | `Scan the whole phone` | The other way: look everywhere for audio files |
 | `Sends the password directly instead of a salted token. Only enable it if your server sits behind a reverse proxy or SSO that requires it.` |  |
 | `Show all` | Opens the full list of what the row is showing a few of |
-| `Sign in` |  |
+| `Sign in` | The button that signs in. A verb |
 | `Subsonic server` | The type subtitle under Navidrome's logo, the same kind of line as `Media server` |
 | `Subsonic-compatible` | The subtitle under OpenSubsonic / Ampache |
-| `The music on your device is not touched.` |  |
-| `Username` |  |
-| `We need permission to read your device music.` |  |
+| `The music on your device is not touched.` | The rest of that warning: only the account's own downloads go |
+| `Username` | The username field |
+| `We need permission to read your device music.` | Android has not granted access to the phone's files yet |
 
 ## Lyrics
 
 | String | What it is |
 | --- | --- |
 | `Next` | Player control: the next track (accessibility label) |
-| `No lyrics available for this song.` |  |
+| `No lyrics available for this song.` | Empty state on the lyrics screen |
 | `Previous` | Player control: the previous track (accessibility label) |
 | `Show cover` | Lyrics screen: the button that goes back to the cover art |
 
@@ -332,14 +332,14 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `All the music on your device.` |  |
+| `All the music on your device.` | The line under `Scan the whole phone` |
 | `Choose a folder (recommended)` | One of the two ways to find the phone's own music: point at a folder |
 | `Exit` | Leave the local profile and go back to choosing a server |
 | `Offline mode` | The app working with no server: downloads only |
-| `Only the music in the folder you choose.` |  |
+| `Only the music in the folder you choose.` | The line under `Choose a folder (recommended)` |
 | `Scan the whole phone` | The other way: look everywhere for audio files |
-| `We need permission to read your device music.` |  |
-| `Where should we get your music?` |  |
+| `We need permission to read your device music.` | Android has not granted access to the phone's files yet |
+| `Where should we get your music?` | Heading when choosing where the phone's own music is read from |
 
 ## Player
 
@@ -359,7 +359,7 @@ you are actually typing into, which is easier than reading it here.
 | `PLAYING FROM` | Small label above the cover, followed by the name of the album, playlist or mix. Written in capitals by the design, so it can be capitals in your language too, or not, whichever reads right |
 | `Previous` | Player control: the previous track (accessibility label) |
 | `Radio` | Internet radio stations. Most languages keep the word |
-| `Remove from favorites` |  |
+| `Remove from favorites` | The same button when it is already a favourite |
 | `Repeat` | Start again at the end |
 | `Search again` | In the output sheet: look for speakers and TVs once more |
 | `Searching for devices…` | In the output sheet: looking for speakers and TVs to cast to |
@@ -372,105 +372,105 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `{msg} It will keep downloading songs added to this playlist later.` |  |
+| `{msg} It will keep downloading songs added to this playlist later.` | `{msg}` is the ordinary download message, and this adds what auto-download means on top of it |
 | `{n} removed from playlist` | `{n}` is a count of songs, already worded by the plural rules |
 | `Add an optional description` | Placeholder in the empty description box |
-| `Add songs from the ⋯ menu of any song.` |  |
+| `Add songs from the ⋯ menu of any song.` | The line under an empty playlist, saying how to fill it |
 | `Alphabetical` | Sort option: the order of a list |
-| `Artwork upload is disabled on the server` |  |
+| `Artwork upload is disabled on the server` | The server can do it but has it turned off |
 | `Ascending` | Sort option: the order of a list |
 | `Auto-download` | Keep this playlist downloaded by itself as songs are added to it |
 | `Auto-download off` | The toast that says it was turned off |
 | `Auto-download on` | The toast that says it was turned on |
 | `Change cover` | Replace the cover image of a playlist or station |
 | `Confirm your password` | Changing a cover on the server needs the password again. It is not a new password being set |
-| `Couldn't load the playlist.` |  |
-| `Couldn't update the cover` |  |
+| `Couldn't load the playlist.` | Error on the screen, with a Retry button |
+| `Couldn't update the cover` | Toast: the upload failed |
 | `Delete` | The confirm button of a delete dialog, for a playlist or a radio station |
-| `Delete “{name}”?` |  |
-| `Delete playlist` |  |
+| `Delete “{name}”?` | Dialog title. `{name}` is the playlist or station |
+| `Delete playlist` | Menu action, in red |
 | `Descending` | Sort option: the order of a list |
 | `Description` | The playlist's own description: what whoever made it wrote about it |
 | `Direction` | Sort sheet: the ascending vs descending toggle. Not a compass direction |
-| `Done` |  |
-| `Edit playlist` |  |
-| `Find in playlist` |  |
+| `Done` | The button that leaves drag-to-reorder, or accepts a fine-tuned number |
+| `Edit playlist` | Menu action, and the title of the sheet it opens |
+| `Find in playlist` | Placeholder of the search box hidden above a tracklist, for finding a song within it |
 | `Name` | The Name field when editing a playlist or a station |
-| `Password` |  |
+| `Password` | The password field, on the login screen and wherever the server asks again |
 | `Playlist` | A list saved on the server. Not the queue |
-| `Playlist deleted` |  |
-| `Playlist updated` |  |
-| `Playlists are not available in offline mode.` |  |
+| `Playlist deleted` | Toast, with an undo button |
+| `Playlist updated` | Toast after saving a change |
+| `Playlists are not available in offline mode.` | Shown instead of a playlist when there is no connection |
 | `Public playlist` | Toggle that makes a playlist public on the server |
 | `Refresh` | Ask the server for this playlist again, in case it changed elsewhere |
-| `Remove cover` |  |
-| `Removed from playlist` |  |
+| `Remove cover` | Screen reader label for the small x on a chosen picture |
+| `Removed from playlist` | Toast, with an undo button next to it |
 | `Reorder` | Enter drag-to-reorder mode |
-| `Save` |  |
+| `Save` | The confirm button of an edit sheet. A verb |
 | `Share` | Make a link on the server that others can open. Getting the file itself out is `Export` |
 | `Sort` | Read out by the screen reader for the button that opens the sort options. A verb |
 | `Sort by` | Heading over the sort options |
-| `This playlist is empty` |  |
+| `This playlist is empty` | Empty state heading |
 | `Turn on` | The confirm button of that question |
 | `Turn on auto-download?` | Asks whether new songs added to this playlist should download by themselves from now on |
 | `Updated` | Toast after a change went through |
 | `View cover` | The same as `View image`, for album and playlist artwork |
-| `Visible to other users on the server` |  |
+| `Visible to other users on the server` | The line under `Public playlist` |
 | `Wrong password` | The password typed to confirm a cover change was not right |
-| `Your password is needed to upload images and will be stored securely.` |  |
-| `Your server doesn't support playlist covers` |  |
-| `Your server doesn't support radio covers` |  |
+| `Your password is needed to upload images and will be stored securely.` | The line explaining why the password is asked for again |
+| `Your server doesn't support playlist covers` | The server is too old, or is not Navidrome |
+| `Your server doesn't support radio covers` | The server is too old, or is not Navidrome |
 
 ## Queue
 
 | String | What it is |
 | --- | --- |
 | `Clear all` | Throw away the whole list: the history, the queue, or what you searched for |
-| `Clear queue` |  |
+| `Clear queue` | Menu action: empty the list of what is coming |
 | `Mix of “{name}”` | What the player calls the queue once it has grown past its album into songs the app picked itself. `{name}` is the song it was grown from |
 | `Next from {name}` | Heading on the queue screen: what is coming, and where it comes from. `{name}` is an album, a playlist or a mix |
 | `Next in queue` | Queue screen header: the track that plays next |
 | `Now playing` | Heading on the queue screen over the song sounding right now. The player's own label is `NOW PLAYING`, a different string |
-| `Play a song or album to start the queue.` |  |
+| `Play a song or album to start the queue.` | The line under the empty queue |
 | `Queue` | The list of songs waiting to play. Not a playlist |
-| `Queue cleared` |  |
-| `Removed from queue` |  |
+| `Queue cleared` | Toast |
+| `Removed from queue` | Toast |
 | `Stop the mix` | Stop the app carrying on with similar songs when the queue runs out |
-| `The current song keeps playing.` |  |
-| `The mix won't grow any further` |  |
-| `The queue is empty.` |  |
+| `The current song keeps playing.` | The line under the clear-queue dialog: only what is coming goes |
+| `The mix won't grow any further` | Toast after stopping the mix: what is in the queue stays, nothing new is added |
+| `The queue is empty.` | Empty state on the queue screen |
 
 ## Radio
 
 | String | What it is |
 | --- | --- |
-| `Add internet radio stations on your server and they'll show up here.` |  |
-| `Add station` |  |
+| `Add internet radio stations on your server and they'll show up here.` | The line under an empty state: the stations live on the server, not in the app |
+| `Add station` | Title of the sheet for adding an internet radio station |
 | `Change cover` | Replace the cover image of a playlist or station |
 | `Confirm your password` | Changing a cover on the server needs the password again. It is not a new password being set |
-| `Couldn't load radio stations.` |  |
-| `Couldn't update the cover` |  |
+| `Couldn't load radio stations.` | Error on the screen, with a Retry button |
+| `Couldn't update the cover` | Toast: the upload failed |
 | `Delete` | The confirm button of a delete dialog, for a playlist or a radio station |
-| `Delete station` |  |
-| `Edit station` |  |
+| `Delete station` | Menu action, in red |
+| `Edit station` | Title of the same sheet when changing one |
 | `Find a station` | The search box's placeholder on the radio screen |
 | `More` | A "see more" action |
 | `Name` | The Name field when editing a playlist or a station |
-| `No radio stations` |  |
-| `Password` |  |
+| `No radio stations` | Empty state heading |
+| `Password` | The password field, on the login screen and wherever the server asks again |
 | `Pin to top` | Keep this at the top of its list, above everything else. `Unpin` undoes it |
 | `Radio` | Internet radio stations. Most languages keep the word |
-| `Remove “{name}” from your server?` |  |
-| `Remove cover` |  |
-| `Save` |  |
+| `Remove “{name}” from your server?` | Dialog title: stations live on the server, so this deletes it for everybody |
+| `Remove cover` | Screen reader label for the small x on a chosen picture |
+| `Save` | The confirm button of an edit sheet. A verb |
 | `Station name` | The name field when adding an internet radio station |
 | `Stream URL` | Field when adding a radio station |
-| `Tap + to add an internet radio station.` |  |
-| `The stream URL must start with http:// or https://` |  |
+| `Tap + to add an internet radio station.` | The line under an empty state, pointing at the + button |
+| `The stream URL must start with http:// or https://` | Validation message under the address field |
 | `Unpin` | Stop keeping it at the top of its list |
 | `Website (optional)` | Field when adding a radio station |
-| `You can pin up to {n} items.` |  |
-| `Your password is needed to upload images and will be stored securely.` |  |
+| `You can pin up to {n} items.` | Toast: there is no room for another pinned thing. `{n}` is the limit |
+| `Your password is needed to upload images and will be stored securely.` | The line explaining why the password is asked for again |
 
 ## Search
 
@@ -481,13 +481,13 @@ you are actually typing into, which is easier than reading it here.
 | `Artists` | A heading over a list of them, never a count |
 | `Browse all` | Opens the full list |
 | `Clear all` | Throw away the whole list: the history, the queue, or what you searched for |
-| `Couldn't reach the server. Check your connection.` |  |
+| `Couldn't reach the server. Check your connection.` | Error on Home when the server does not answer at all |
 | `Playlists` | A section on Home and in the library, and a folder in the car |
 | `Radio` | Internet radio stations. Most languages keep the word |
 | `Recent searches` | What was searched for before, kept on the phone |
 | `Song` | In search results, the little word under a result saying what kind of thing it is |
 | `Songs` | Always a heading, never a count, so it wants the plain plural your language uses for a list of them ("Songs", not "of songs"). Counting songs is a different thing and goes through the plural forms |
-| `What do you want to listen to?` |  |
+| `What do you want to listen to?` | The placeholder in the search box, worded as a question |
 
 ## Settings
 
@@ -500,17 +500,17 @@ you are actually typing into, which is easier than reading it here.
 | `Offline mode` | The app working with no server: downloads only |
 | `Restore` | Restore settings to their defaults |
 | `Restore default settings` | Put every setting back the way it came |
-| `Settings` |  |
-| `Settings restored` |  |
-| `Sign out` |  |
-| `Your preferences will go back to their defaults. Your language stays.` |  |
+| `Settings` | The app's settings, and the button that opens them |
+| `Settings restored` | Toast after putting the settings back to their defaults |
+| `Sign out` | Leave the account. Its downloads stay on the phone |
+| `Your preferences will go back to their defaults. Your language stays.` | The line under that dialog |
 
 ## Settings › About
 
 | String | What it is |
 | --- | --- |
 | `Measure performance` | Timing, not analytics: how long the app takes to do things on this phone, kept on the phone. Nothing is sent anywhere. It is turned on when somebody is being walked through a slowdown |
-| `Report a bug` |  |
+| `Report a bug` | Opens a new issue on GitHub |
 | `Support Resonus` | The row for whoever wants to give something. The app needs nothing to work |
 | `Version` | Which version of Resonus this is. Tapping it five times opens Diagnostics |
 | `What's new` | Opens what changed in this version |
@@ -624,55 +624,55 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `{n} items` | How many things the server's scan has found so far |
-| `All the music on your device.` |  |
-| `Cache cleared` |  |
+| `All the music on your device.` | The line under `Scan the whole phone` |
+| `Cache cleared` | Toast: what was remembered from the server was thrown away. Downloads are untouched |
 | `Change source` | The music source (which server, or local). Not source code |
 | `Choose a folder (recommended)` | One of the two ways to find the phone's own music: point at a folder |
 | `Choose which libraries appear across the app.` |  |
 | `Clear cache` | Throw away what was remembered from the server. Downloads are not touched |
-| `Couldn't rescan` |  |
-| `Couldn't start the scan` |  |
+| `Couldn't rescan` | Toast: going through the phone's own files failed |
+| `Couldn't start the scan` | Toast: the server refused to start a scan |
 | `Device` | In offline mode, where the phone's own music is read from: the whole device, as opposed to `Folder`, one folder you picked. Not a server library |
 | `Folder` | In offline mode, where the phone's own music is read from: one folder you picked, as opposed to `Device`, the whole phone |
-| `Keep at least one library on` |  |
+| `Keep at least one library on` | Toast: at least one of the server's libraries has to stay ticked |
 | `Libraries` | Section header over the server's libraries, when it has more than one |
 | `Library updated` | Toast after the phone finished going through its own files |
 | `Local music` | Music stored on the phone itself |
-| `Only the music in the folder you choose.` |  |
+| `Only the music in the folder you choose.` | The line under `Choose a folder (recommended)` |
 | `Rescan` | Trigger the server's library scan again |
 | `Rescanning your music…` | The phone is going through its own files again, offline |
 | `Scan` | Trigger the server's library scan |
 | `Scan now` | Ask the server to look for new music |
-| `Scan started` |  |
+| `Scan started` | Toast: the server is now looking for new music |
 | `Scan status` | How the server's library scan is going |
 | `Scan the whole phone` | The other way: look everywhere for audio files |
 | `Scanning…` | The server is looking for new music right now |
 | `Source` | The music source (which server, or local). Not source code |
 | `Source updated` | Toast after changing where music is read from |
 | `Storage` | Section header over the cache |
-| `We need permission to read your device music.` |  |
-| `Where should we get your music?` |  |
+| `We need permission to read your device music.` | Android has not granted access to the phone's files yet |
+| `Where should we get your music?` | Heading when choosing where the phone's own music is read from |
 
 ## Settings › Network
 
 | String | What it is |
 | --- | --- |
 | `Add address` | The button. `Add server address` is the title of what it opens |
-| `Add server address` |  |
+| `Add server address` | Title of the dialog for adding another address for this account |
 | `Add the address you use from outside next to the one you use at home, so the server works wherever you are.` |  |
-| `Address added` |  |
-| `Address updated` |  |
+| `Address added` | Toast |
+| `Address updated` | Toast |
 | `Automatic URL switching` | Try the addresses and use whichever answers, so leaving the house needs nothing done by hand |
-| `Couldn't reach this address with your account.` |  |
+| `Couldn't reach this address with your account.` | Validation message: nothing answered there, or the account was refused |
 | `Current server address` | The one being used right now, of those |
-| `Edit server address` |  |
+| `Edit server address` | Title of the same dialog when changing one |
 | `Local` | An address on the same network (LAN). Nothing to do with the local profile |
 | `Network` |  |
 | `Remote` | An address reachable from outside the home network |
-| `Save` |  |
+| `Save` | The confirm button of an edit sheet. A verb |
 | `Server addresses` | Section header: a profile can have several addresses for the same account, one at home and one from outside |
 | `Switches to your remote address automatically when you leave home.` |  |
-| `This address is already in the list.` |  |
+| `This address is already in the list.` | Validation message: that one is already there |
 
 ## Settings › Personalization
 
@@ -734,13 +734,13 @@ you are actually typing into, which is easier than reading it here.
 | `Codec to transcode to. At “Original” quality nothing is transcoded.` |  |
 | `Codec to transcode to. Your server must support it.` |  |
 | `Crossfade` | One song fading into the next |
-| `Done` |  |
+| `Done` | The button that leaves drag-to-reorder, or accepts a fine-tuned number |
 | `Equalizer` |  |
 | `Evens out loudness between songs using your files' ReplayGain tags.` |  |
 | `Keep playing similar songs when your queue ends. A mix you start yourself always does, even with this off.` |  |
 | `Keep screen on` |  |
 | `Mobile data` | Group header under `Streaming`: the settings that apply on mobile data, as opposed to Wi-Fi |
-| `Never` | Under `The link expires in`: the link never stops working |
+| `Never` | A value of `Play downloaded songs from the phone`: always stream, never use the file on the phone. The share sheet's own "never expires" is a separate key, `Never::expiry`, so a language that needs two different words can have them |
 | `No` | A setting value meaning none or zero, not the answer to a question: no crossfade, no seek buttons |
 | `Normalize volume` |  |
 | `Not used` | Replaces the codec's value when that network's quality is `Original`. Nothing is transcoded then, so the codec setting has nothing to do and the row is greyed out |
@@ -873,52 +873,52 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `“{name}” will no longer be available offline.` |  |
-| `{n} added to “{name}”` |  |
+| `“{name}” will no longer be available offline.` | The line under that title. `{name}` is the album, artist or playlist |
+| `{n} added to “{name}”` | Toast when several songs went in at once. `{n}` is a count of songs |
 | `{n} selected` | How many songs are ticked right now |
-| `{n} songs couldn't be downloaded` |  |
-| `{n} songs deleted` |  |
-| `{n} songs downloaded` |  |
-| `{songs} need about {size}, but only {free} is free. The download may stop partway.` |  |
-| `{songs} will be saved to this device (about {size}).` |  |
-| `{songs} will be saved to this device.` |  |
-| `Add anyway` |  |
-| `Add to a playlist` |  |
-| `Add to favorites` |  |
+| `{n} songs couldn't be downloaded` | Toast: some failed, the rest are there |
+| `{n} songs deleted` | Toast after deleting downloads. `{n}` is how many files went |
+| `{n} songs downloaded` | Toast: a whole album or playlist finished |
+| `{songs} need about {size}, but only {free} is free. The download may stop partway.` | The same line when the phone is nearly full |
+| `{songs} will be saved to this device (about {size}).` | The same line when the size is known. `{size}` is like "340 MB" |
+| `{songs} will be saved to this device.` | The line under that title. `{songs}` is already worded and inflected, "12 songs" |
+| `Add anyway` | The confirm button of that warning: put it in a second time |
+| `Add to a playlist` | Menu action: put this song, album or selection into a playlist |
+| `Add to favorites` | Menu action and screen reader label for the heart. A verb |
 | `Add to queue` | Action: put this song at the end of the queue |
-| `Added to “{name}”` |  |
-| `Added to favorites` |  |
+| `Added to “{name}”` | Toast. `{name}` is the playlist's name |
+| `Added to favorites` | Toast |
 | `Added to queue` | The toast that says it worked |
 | `Albums` | A heading over a list of them, never a count |
-| `Already added` |  |
-| `Back` |  |
+| `Already added` | Title of the dialog that warns the song is in that playlist already |
+| `Back` | Screen reader label for the back arrow. A direction, not a verb |
 | `Back online` | The toast shown when the server answers again and the app comes out of offline mode |
-| `Cancel` |  |
+| `Cancel` | The button that closes a dialog without doing anything, and the one beside a search box |
 | `Clear` | Read out by the screen reader for the small x that empties a search box. A verb |
 | `Close` | Read out by the screen reader for a button that closes what is open. A verb |
-| `Connect to Wi-Fi to download` |  |
-| `Couldn't add to the playlist` |  |
+| `Connect to Wi-Fi to download` | Toast: downloading over mobile data is turned off in the settings |
+| `Couldn't add to the playlist` | Toast: the server refused |
 | `Couldn't complete the action` | What the app says when it does not know what went wrong. Deliberately vague |
-| `Couldn't create the playlist` |  |
-| `Couldn't load albums.` |  |
-| `Couldn't play the song` |  |
+| `Couldn't create the playlist` | Toast: the server refused |
+| `Couldn't load albums.` | Error on the screen, with a Retry button |
+| `Couldn't play the song` | Toast: the app could not start it at all |
 | `Create` | The confirm button of the new-playlist dialog. A verb |
-| `Delete downloads` |  |
-| `Download` |  |
-| `Download “{name}”?` |  |
-| `Download stopped` |  |
-| `Downloading…` |  |
+| `Delete downloads` | Menu action: delete the downloaded files of everything here |
+| `Download` | The confirm button of the download dialog, and what the screen reader calls the download button. A verb |
+| `Download “{name}”?` | Dialog title. `{name}` is an album, artist or playlist |
+| `Download stopped` | Toast: the download was stopped part way |
+| `Downloading…` | Toast: the download has started. The songs arrive one by one after this |
 | `Favorites` | The songs, albums and artists you starred |
 | `Grid view` | Show the list as cards in a grid |
-| `History` |  |
-| `Hold to go back to {tab}` |  |
+| `History` | The listening history: what was played and when |
+| `Hold to go back to {tab}` | The hint on holding the back arrow. `{tab}` is Home, Search or Library |
 | `Library` | The tab with your albums, artists and playlists, and a folder in the car |
 | `List view` | Show it as rows, one under the other |
-| `Lyrics` |  |
+| `Lyrics` | The words of the song. Also a line of the storage bar, where it is their size on the phone |
 | `More options` | The ⋯ button |
-| `New playlist` |  |
+| `New playlist` | Row at the top of the playlist picker, and the button on an empty library: make one |
 | `No results` | Nothing matched what was typed |
-| `No results for “{q}”` |  |
+| `No results for “{q}”` | Empty state. `{q}` is what was typed |
 | `Not available offline` | This one is not downloaded, so it cannot play without a connection |
 | `Nothing here is downloaded` | Toast when playing something that is not downloaded, offline |
 | `Offline` | The toast shown when the app falls into offline mode by itself, and the badge that says it is in it |
@@ -931,19 +931,19 @@ you are actually typing into, which is easier than reading it here.
 | `Recently added` | A sort order, and a section: newest in the library first |
 | `Remove` | Take something out of a list. Deleting for good is `Delete` |
 | `Remove download` | Delete the downloaded file, keeping the song in the library |
-| `Remove download?` |  |
-| `Removed from favorites` |  |
-| `Retry` |  |
+| `Remove download?` | Dialog title: delete the files of something already downloaded |
+| `Removed from favorites` | Toast |
+| `Retry` | The button on an error message: try again. A verb |
 | `Select all` | Tick every song in the list at once |
 | `Server default` | Codec option meaning "let the server decide" what to transcode to |
 | `Shuffle` | Play in random order |
-| `Some of these songs are already in “{name}”.` |  |
-| `Song downloaded` |  |
-| `Songs already downloaded will be kept.` |  |
+| `Some of these songs are already in “{name}”.` | The same warning when adding several at once |
+| `Song downloaded` | Toast: one song finished |
+| `Songs already downloaded will be kept.` | The line under that title: stopping does not undo what already arrived |
 | `Stop` | Stop a download that is running. Not stop playback |
-| `Stop download?` |  |
-| `This song can't be cast` |  |
-| `This song is already in “{name}”.` |  |
+| `Stop download?` | Dialog title: stop a download that is running |
+| `This song can't be cast` | Toast: the speaker or TV will not take this file |
+| `This song is already in “{name}”.` | The line under that title. `{name}` is the playlist |
 | `Undo` | The button in a toast that takes back what just happened. It is there for a few seconds |
 | `Unknown album` | Fallback when the file and the server have no album |
 | `Unknown artist` | Fallback when the file and the server have no artist |

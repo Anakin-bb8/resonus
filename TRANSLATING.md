@@ -3,7 +3,44 @@
 Thanks for helping translate Resonus! If anything here is unclear, open an issue
 or ask on [Discord](https://discord.gg/pecE8MTPVr).
 
-## How to do it
+## How it works
+
+Nothing here has changed in years, and nothing here needs a toolchain: you edit
+one JSON file and open a pull request. That is the whole of it.
+
+1. **Fork** the repo, on GitHub.
+2. **Edit your language's file**, `src/i18n/locales/<code>.json`. Right there in
+   the GitHub editor is fine, and is how most of this app has been translated.
+3. **Open a pull request.** A check runs on it straight away and tells you if
+   something is off — a comma, a lost `{name}` — before anybody reviews it.
+
+Partial is fine. Anything you don't translate falls back to English, so you can
+do fifty strings today and fifty next month.
+
+## Where to find out what a string means
+
+This is the part worth knowing about, because a locale file on its own is a wall
+of English words with nothing around them.
+
+**[docs/TRANSLATION-CONTEXT.md](docs/TRANSLATION-CONTEXT.md)** lists **every
+string in the app**, under the screen it shows up on, with what it means
+wherever the English is ambiguous on its own:
+
+| String | What it is |
+| --- | --- |
+| `Direction` | Sort sheet: the ascending vs descending toggle. Not a compass direction |
+| `Plain` | A value of `Background`: a flat colour behind the player, no picture |
+| `Free` | Free disk space in the storage bar. Not "free of charge" |
+
+Open it next to the file you are editing. If a string still isn't clear after
+that, [tell us](#when-a-string-still-isnt-clear) — the answer gets written into
+the repo, not into a reply.
+
+## If you'd rather work locally
+
+Optional, and only worth it if you already have Node and pnpm. It writes a file
+with just what is left to do, each string carrying that same context on the line
+above it, which saves going back and forth to the page:
 
 ```sh
 pnpm install
@@ -13,9 +50,6 @@ pnpm i18n:merge ru         # takes it back into src/i18n/locales/ru.json
 pnpm i18n:status ru        # what is left
 ```
 
-Each string comes with where it shows up in the app and, where the English is
-ambiguous on its own, what it means:
-
 ```jsonc
   // Sort sheet · the ascending vs descending toggle. Not a compass direction
   "Direction": "",
@@ -24,19 +58,14 @@ ambiguous on its own, what it means:
   "Free": "",
 ```
 
-Anything you leave empty is not merged, so you can do fifty strings and come
-back to the rest. Your pull request shows the lines you translated and nothing
+`merge` skips every line you left empty, so a half-finished round only adds what
+you actually translated and your pull request shows those lines and nothing
 else.
-
-Without cloning the repo: edit `src/i18n/locales/<code>.json` in the GitHub
-editor and read [docs/TRANSLATION-CONTEXT.md](docs/TRANSLATION-CONTEXT.md),
-which is the same context as one page, grouped by screen.
 
 ## The rules
 
 - The **English text is the key**. Each language has a JSON file in
   `src/i18n/locales/` mapping the English string to its translation.
-- Anything not translated falls back to English, so a partial file is fine.
 - `{name}`, `{n}` and the like are **placeholders**: keep them exactly as they
   are and translate only the words around them.
 - **A good translation reads naturally, it isn't literal.** If word-for-word
@@ -46,8 +75,10 @@ which is the same context as one page, grouped by screen.
 
 ## Adding a new language
 
-1. `pnpm i18n:scaffold <code>`, translate what you can, `pnpm i18n:merge <code>`.
-   That creates `src/i18n/locales/<code>.json`.
+1. Create `src/i18n/locales/<code>.json` with the strings you have translated
+   (`{ "English text": "your translation" }`). Locally, `pnpm i18n:scaffold
+   <code>` writes you the whole thing to fill in and `pnpm i18n:merge <code>`
+   creates the file from it.
 2. Add one row to `LANGUAGES` in `src/i18n/languages.ts`:
    `{ code: '<code>', name: '<native name>', dict: <import> }`. It is the single
    source of truth — the type, the settings picker and the persistence all come
