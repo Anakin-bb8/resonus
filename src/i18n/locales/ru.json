@@ -594,7 +594,8 @@
   "Send to another app": "Отправить в другое приложение",
   "Export “{name}”?": "Экспортировать “{name}”?",
   "Exporting…": "Экспортируем...",
-  "Couldn’t share the file": "Не удалось поделиться файлом",
+  "Couldn't send the file": "Не удалось отправить файл",
+  "Sending to another app isn't available on this device": "Передача файлов в другие приложения недоступна на Вашем устройстве",
   "{n} songs exported": "Экспортировано {n} композиций",
   "{n} of {m} songs exported": "Экспортировано {n} композиций из {m}",
   "This download is a {n} kbps copy, not the original file.": "Данный файл не является оригиналом и был транскодирован в {n} kbps",
@@ -609,8 +610,7 @@
   "Time spent": "Time spent",
   "Nothing measured yet.": "Nothing measured yet.",
   "What happened, rather than how long it took.": "What happened, rather than how long it took.",
-  "Local library index": "Local library index",
-  "Sharing isn’t available here": "Sharing isn’t available here",
-  "State": "State",
-  "Counted": "Counted"
+  "Local library index": "Индексация библиотеки",
+  "State": "Состояние",
+  "Counted": "Насчитано"
 }
