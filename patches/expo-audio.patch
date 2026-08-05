@@ -13,7 +13,7 @@ index 4bf0f847760cd005ec81db876683f751704f48c3..e98b9cf8758dbb6b56af520237e4e9d5
 +  <uses-permission android:name="android.permission.WAKE_LOCK" />
  </manifest>
 diff --git a/android/src/main/java/expo/modules/audio/AudioModule.kt b/android/src/main/java/expo/modules/audio/AudioModule.kt
-index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..284b277179ab4812d7144bbef29297067593bc6c 100644
+index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..97dabb153bbe7d1f344f8a3dc8bffdfd8a9f1c2f 100644
 --- a/android/src/main/java/expo/modules/audio/AudioModule.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioModule.kt
 @@ -17,6 +17,7 @@ import androidx.media3.common.C.CONTENT_TYPE_HLS
@@ -24,7 +24,16 @@ index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..284b277179ab4812d7144bbef2929706
  import androidx.media3.common.Player
  import androidx.media3.common.util.Util
  import androidx.media3.datasource.DataSource
-@@ -57,6 +58,8 @@ class AudioModule : Module() {
+@@ -27,6 +28,8 @@ import androidx.media3.exoplayer.hls.HlsMediaSource
+ import androidx.media3.exoplayer.smoothstreaming.SsMediaSource
+ import androidx.media3.exoplayer.source.MediaSource
+ import androidx.media3.exoplayer.source.ProgressiveMediaSource
++import androidx.media3.extractor.DefaultExtractorsFactory
++import androidx.media3.extractor.ExtractorsFactory
+ import expo.modules.interfaces.permissions.Permissions
+ import expo.modules.kotlin.Promise
+ import expo.modules.kotlin.exception.Exceptions
+@@ -57,6 +60,8 @@ class AudioModule : Module() {
    private var shouldPlayInBackground = false
    private var audioEnabled = true
    private var shouldRouteThroughEarpiece = false
@@ -33,7 +42,7 @@ index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..284b277179ab4812d7144bbef2929706
    private var focusAcquired = false
    private var interruptionMode: InterruptionMode? = null
    private var allowsBackgroundRecording = false
-@@ -119,6 +122,17 @@ class AudioModule : Module() {
+@@ -119,6 +124,17 @@ class AudioModule : Module() {
      return allPlayables.none { it.isPlaying }
    }
  
@@ -51,7 +60,7 @@ index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..284b277179ab4812d7144bbef2929706
    private fun requestAudioFocus() {
      if (focusAcquired || !audioEnabled || interruptionMode == InterruptionMode.MIX_WITH_OTHERS) {
        return
-@@ -127,14 +141,23 @@ class AudioModule : Module() {
+@@ -127,14 +143,23 @@ class AudioModule : Module() {
      val result = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
        val requestType = interruptionMode?.let {
          if (it == InterruptionMode.DO_NOT_MIX) {
@@ -77,7 +86,7 @@ index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..284b277179ab4812d7144bbef2929706
              .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
              .build()
          )
-@@ -148,7 +171,7 @@ class AudioModule : Module() {
+@@ -148,7 +173,7 @@ class AudioModule : Module() {
      } else {
        @Suppress("DEPRECATION")
        val requestType = if (interruptionMode == InterruptionMode.DO_NOT_MIX) {
@@ -86,7 +95,7 @@ index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..284b277179ab4812d7144bbef2929706
        } else {
          AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
        }
-@@ -332,6 +355,15 @@ class AudioModule : Module() {
+@@ -332,6 +357,15 @@ class AudioModule : Module() {
          player.id
        }
  
@@ -102,7 +111,7 @@ index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..284b277179ab4812d7144bbef2929706
        Property("isBuffering") { player ->
          runOnMain {
            player.ref.playbackState == Player.STATE_BUFFERING
-@@ -457,6 +489,27 @@ class AudioModule : Module() {
+@@ -457,6 +491,27 @@ class AudioModule : Module() {
          }
        }
  
@@ -130,7 +139,7 @@ index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..284b277179ab4812d7144bbef2929706
        Function("setActiveForLockScreen") { ref: AudioPlayer, active: Boolean, metadata: Metadata?, options: AudioLockScreenOptions? ->
          runOnMain {
            ref.setActiveForLockScreen(active, metadata, options)
-@@ -780,13 +833,27 @@ class AudioModule : Module() {
+@@ -780,13 +835,27 @@ class AudioModule : Module() {
  
    private fun createMediaItem(source: AudioSource?): MediaSource? = source?.uri?.let { uriString ->
      val uri = uriString.toUri()
@@ -159,7 +168,7 @@ index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..284b277179ab4812d7144bbef2929706
  
      val preloadedBytes = AudioPreloadManager.get(uriString)
      val factory: DataSource.Factory = if (preloadedBytes != null) {
-@@ -834,10 +901,32 @@ class AudioModule : Module() {
+@@ -834,10 +903,32 @@ class AudioModule : Module() {
      }
    }
  
@@ -193,6 +202,45 @@ index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..284b277179ab4812d7144bbef2929706
    }
  
    private fun retrieveStreamType(uri: Uri): Int = Util.inferContentType(uri)
+@@ -851,11 +942,37 @@ class AudioModule : Module() {
+       CONTENT_TYPE_SS -> SsMediaSource.Factory(factory)
+       CONTENT_TYPE_DASH -> DashMediaSource.Factory(factory)
+       CONTENT_TYPE_HLS -> HlsMediaSource.Factory(factory)
+-      CONTENT_TYPE_OTHER -> ProgressiveMediaSource.Factory(factory)
++      CONTENT_TYPE_OTHER -> ProgressiveMediaSource.Factory(factory, seekableExtractors())
+       else -> throw IllegalStateException("Unsupported type: $type")
+     }.createMediaSource(mediaItem)
+   }
+ 
++  /**
++   * Extractors that can seek a file carrying no index of its own.
++   *
++   * A server transcoding on the fly writes into a pipe, so what comes out the
++   * other end is a bare run of frames: Navidrome's AAC is raw ADTS, and an MP3
++   * made that way carries a Xing header it never got to go back and fill in.
++   * Downloaded, that is exactly what ends up on disk, and ExoPlayer does not
++   * seek what it cannot index — it answers the seek by starting the track over
++   * from zero, which is what somebody dragging the slider sees (#123).
++   *
++   * Constant bitrate seeking is the answer to that case and to no other: it
++   * works out where a second lives from the length of the file and its
++   * bitrate, and it is only consulted when the container offers nothing
++   * better. A real MP4, a FLAC, or an MP3 with a header worth reading keeps
++   * its own seek table. And these files are transcodes at a bitrate that was
++   * asked for, which is the case the estimate is exact for.
++   *
++   * Deliberately not `setConstantBitrateSeekingAlwaysEnabled`: that one is for
++   * sources whose length is unknown, which is the stream, not the download. A
++   * transcode arriving over HTTP has no length and takes no range requests
++   * either, so guessing a byte offset in it would get us nothing to play. That
++   * one is re-requested from the server at the second we want instead.
++   */
++  private fun seekableExtractors(): ExtractorsFactory =
++    DefaultExtractorsFactory().setConstantBitrateSeekingEnabled(true)
++
+   private fun <T> runOnMain(block: () -> T): T =
+     runBlocking(appContext.mainQueue.coroutineContext) { block() }
+ 
 diff --git a/android/src/main/java/expo/modules/audio/AudioPlayer.kt b/android/src/main/java/expo/modules/audio/AudioPlayer.kt
 index f7c43641fc12b627c70759fb49bbe65e746c4c1d..640ecc619014e50c8c1bd78e388ef77d6ee85c54 100644
 --- a/android/src/main/java/expo/modules/audio/AudioPlayer.kt

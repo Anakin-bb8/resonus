@@ -17,6 +17,19 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- Dragging the slider on a downloaded song no longer starts it again from the
+  beginning. A server transcoding on the fly writes into a pipe, so what comes
+  out is a bare run of frames with no index in it: Navidrome's AAC is raw ADTS,
+  and an MP3 made that way carries a header it never got to go back and fill
+  in. Downloading at a bitrate saves exactly that on the phone, and the player
+  will not seek a file it cannot index. It answered every seek by starting the
+  track over, in the app and in the car alike. Those files are now seeked by
+  working out where a second lives from the length of the file and the bitrate,
+  which is only consulted when the file itself offers nothing better, so
+  anything with a seek table of its own keeps using it. Downloads made without
+  a bitrate limit are the server's own file and were never affected. Reported
+  by @CraftoHohenvels (#123).
+
 - Automatic offline mode also looks when the app is opened again. What makes a
   server unreachable usually happens while nobody is watching —a VPN dropped, a
   tunnel expired, a server rebooted— and none of that changes the phone's
