@@ -16,6 +16,7 @@
  * what auto-activated is auto-reconnected: `autoOffline`).
  */
 import * as Network from 'expo-network';
+import { AppState } from 'react-native';
 
 import { bump } from '@/lib/perfLog';
 
@@ -36,6 +37,14 @@ let debounce: ReturnType<typeof setTimeout> | null = null;
  * we don't want to switch modes for that. Resets as soon as the server responds.
  */
 let consecutiveFails = 0;
+/**
+ * Somebody asked for a probe while one was running. It used to be dropped, and
+ * the ones most worth keeping are exactly the ones that arrive then: a screen
+ * asks for a probe when its own request comes back with nothing, and by that
+ * time a round is usually already in flight. Remembered here and run when the
+ * current one is done.
+ */
+let again = false;
 
 /**
  * Probes the active profile's URLs and acts: switches to the first reachable
@@ -43,8 +52,19 @@ let consecutiveFails = 0;
  * nothing responds.
  */
 async function check(): Promise<void> {
-  if (checking) return;
-  const { auth, offline, autoOffline } = useAuthStore.getState();
+  if (checking) {
+    again = true;
+    return;
+  }
+  const { auth, offline, autoOffline, hydrating } = useAuthStore.getState();
+  // The session is still being read off disk: there is nothing to probe yet,
+  // and there will be in a moment, so this waits rather than giving up. A probe
+  // dropped here is one nobody asks for again until the network changes, which
+  // on a cold start is precisely never.
+  if (hydrating) {
+    schedule();
+    return;
+  }
   // No server account (signed out or local profile): nothing to probe.
   if (!auth) return;
   // Offline on purpose: not even the probe. Somebody who turned the mode on by
@@ -107,6 +127,10 @@ async function check(): Promise<void> {
     }
   } finally {
     checking = false;
+    if (again) {
+      again = false;
+      schedule();
+    }
   }
 }
 
@@ -148,6 +172,17 @@ export function initAutoUrl(): void {
   if (started) return;
   started = true;
   Network.addNetworkStateListener(() => schedule());
+  // And whenever the app is opened again, which is not the same event. What
+  // makes a server unreachable can perfectly well happen while nobody is
+  // looking —a VPN dropped, a tunnel that expired, a server rebooted— and none
+  // of that changes the phone's network, so the listener above never fires and
+  // nothing else asks either: the effects that probe on startup only run when
+  // the app starts. That leaves an app whose process outlived the trip asking a
+  // server that is not there: the spinner, and then the message saying it could
+  // not be reached, with the downloads sitting right there (#122).
+  AppState.addEventListener('change', (state) => {
+    if (state === 'active') schedule();
+  });
   // Initial check (when opening the app we may already not be at home).
   schedule();
 }

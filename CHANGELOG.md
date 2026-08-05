@@ -17,6 +17,19 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- Automatic offline mode also looks when the app is opened again. What makes a
+  server unreachable usually happens while nobody is watching —a VPN dropped, a
+  tunnel expired, a server rebooted— and none of that changes the phone's
+  network, so the watcher that probes on a network change never heard about it,
+  and the only other probe runs when the app starts. An app whose process
+  outlived the trip was left asking a server that was not there: the spinner,
+  and then the message saying it could not be reached, with the downloads
+  sitting right there. It now probes when the app comes to the foreground too,
+  a probe asked for while another one is running is no longer dropped but run
+  after it, which is exactly when a screen asks for one, and one asked for
+  before the session has been read off disk waits for it instead of being
+  thrown away. Reported by @CraftoHohenvels (#122).
+
 - Casting to a Sonos speaker that is grouped, or is one half of a stereo pair,
   should work. Those speakers are driven through one of them, and the others
   are perfectly happy to be discovered, to appear in the list and to answer for
