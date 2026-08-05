@@ -224,8 +224,13 @@ function TrackRowBase({
           color={selected ? colors.accent : colors.textMuted}
         />
       ) : null}
+      {/* One line whatever happens: the slot fits any track number worth
+          having, and past that a number that does not fit should be cut rather
+          than push the row taller than every other one. */}
       {position !== undefined ? (
-        <Text style={[styles.position, styles.leftSlot]}>{position}</Text>
+        <Text style={[styles.position, styles.leftSlot]} numberOfLines={1}>
+          {position}
+        </Text>
       ) : null}
       {showArtwork ? (
         <View style={styles.artwork}>
@@ -337,7 +342,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   leftSlot: {
-    width: 24,
+    // Three digits' worth. A hundred-track compilation is a real thing, and at
+    // 24 the number wrapped: "100" came out as a 10 with a 0 under it, and the
+    // row grew a line to hold it. The width is generous on purpose, since the
+    // font is the reader's to choose and some are wider than others.
+    width: 30,
     alignItems: 'center',
     justifyContent: 'center',
   },
