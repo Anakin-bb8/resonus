@@ -224,7 +224,13 @@ export function SongMenuSheet() {
     if (!song || !dlUri) return;
     close();
     try {
-      if (!(await shareSongFile(song, dlUri))) toast(t('Sharing isn’t available here'));
+      // Not a failure and not the same as the catch below: the system says it
+      // has no share sheet, so nothing has been attempted yet. "Here" used to
+      // stand for the device and could be read as this screen or this song
+      // (raised by @ztx-lyghters).
+      if (!(await shareSongFile(song, dlUri))) {
+        toast(t('Sharing isn’t available on this device'));
+      }
     } catch {
       toast(t('Couldn’t share the file'));
     }

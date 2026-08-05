@@ -597,7 +597,7 @@
   "Saved as “{name}”": "Saved as “{name}”",
   "Couldn’t save the file": "Couldn’t save the file",
   "Couldn’t share the file": "Couldn’t share the file",
-  "Sharing isn’t available here": "Sharing isn’t available here",
+  "Sharing isn’t available on this device": "Sharing isn’t available on this device",
   "This download is a {n} kbps copy, not the original file.": "This download is a {n} kbps copy, not the original file.",
   "Export “{name}”?": "Export “{name}”?",
   "{n} songs, {size}, copied into a folder of their own.": "{n} songs, {size}, copied into a folder of their own.",
@@ -607,7 +607,5 @@
   "Counted": "Counted",
   "What happened, rather than how long it took.": "What happened, rather than how long it took.",
   "Measure performance": "Measure performance",
-  "Measuring is off (Settings › About), so there is nothing to show.": "Measuring is off (Settings › About), so there is nothing to show.",
-  "These apply when you have a connection. Offline, songs play from the phone.": "These apply when you have a connection. Offline, songs play from the phone.",
-  "These apply when you have a connection. Offline, nothing is downloaded.": "These apply when you have a connection. Offline, nothing is downloaded."
+  "Measuring is off (Settings › About), so there is nothing to show.": "Measuring is off (Settings › About), so there is nothing to show."
 }

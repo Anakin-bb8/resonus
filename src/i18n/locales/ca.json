@@ -590,7 +590,7 @@
   "Saved as “{name}”": "Desada com a «{name}»",
   "Couldn’t save the file": "No s'ha pogut desar el fitxer",
   "Couldn’t share the file": "No s'ha pogut compartir el fitxer",
-  "Sharing isn’t available here": "Compartir no està disponible aquí",
+  "Sharing isn’t available on this device": "Compartir no està disponible en aquest dispositiu",
   "This download is a {n} kbps copy, not the original file.": "Aquesta baixada és una còpia a {n} kbps, no el fitxer original.",
   "Export “{name}”?": "Vols exportar «{name}»?",
   "{n} songs, {size}, copied into a folder of their own.": "{n} cançons, {size}, copiades en una carpeta pròpia.",
@@ -600,7 +600,5 @@
   "Counted": "Comptat",
   "What happened, rather than how long it took.": "Què ha passat, no quant ha trigat.",
   "Measure performance": "Mesura el rendiment",
-  "Measuring is off (Settings › About), so there is nothing to show.": "La mesura està desactivada (Configuració › Quant a), així que no hi ha res a mostrar.",
-  "These apply when you have a connection. Offline, songs play from the phone.": "S'apliquen quan tens connexió. Sense connexió, les cançons sonen des del mòbil.",
-  "These apply when you have a connection. Offline, nothing is downloaded.": "S'apliquen quan tens connexió. Sense connexió no es baixa res."
+  "Measuring is off (Settings › About), so there is nothing to show.": "La mesura està desactivada (Configuració › Quant a), així que no hi ha res a mostrar."
 }

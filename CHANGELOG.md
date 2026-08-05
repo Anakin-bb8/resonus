@@ -78,10 +78,11 @@ Releases before 0.2.1 are only listed on the
   the quick grid, the chips on Home, "Start mix" and "Rate" in the song menu:
   all of them vanished offline, so looking for one meant walking through every
   screen that could plausibly hold it before working out that it had never been
-  there. They now stay in their place, dimmed and not answering, with a line at
-  the top of the section saying that they apply once there is a connection. The
-  values are still shown, since what they say will happen is still what will
-  happen. "Library" goes the same way, dimmed and quiet: everything it holds is
+  there. They now stay in their place, dimmed and not answering, and that is
+  all the explaining it takes: a line at the top of each section saying they
+  apply once there is a connection said the same thing a second time, so it is
+  gone (@ztx-lyghters). The values are still shown, since what they say will
+  happen is still what will happen. "Library" goes the same way, dimmed and quiet: everything it holds is
   the server's, and what can be done about downloads with no connection already
   lives in the section above it. Asked for by @jaredm4.
 - Server addresses can be reached without a connection, which is the one place

@@ -75,12 +75,9 @@ export default function PlaybackSettings() {
             greyed out rather than taken away: a setting that is not where you
             left it sends you hunting through every other screen before you work
             out it was never there (#114). What each one says still holds for
-            when the connection is back. */}
-        {offline ? (
-          <Text style={settingsStyles.sectionDescription}>
-            {t('These apply when you have a connection. Offline, songs play from the phone.')}
-          </Text>
-        ) : null}
+            when the connection is back. A line saying as much used to stand
+            here; a whole section in grey already says it, and being told twice
+            reads like being talked down to (raised by @ztx-lyghters). */}
         {/* First, because it is the question of whether any of the quality
             settings below apply to a song at all. It used to sit under them,
             which read fine while they were four plain rows; under a heading it

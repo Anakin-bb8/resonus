@@ -136,12 +136,9 @@ export default function DownloadsSettings() {
         {/* Nothing can be downloaded without a server, so offline these are
             greyed out rather than taken away: what they say still holds for the
             next download, and a setting that moves house is one you hunt for
-            through every other screen (#114). */}
-        {offline ? (
-          <Text style={settingsStyles.sectionDescription}>
-            {t('These apply when you have a connection. Offline, nothing is downloaded.')}
-          </Text>
-        ) : null}
+            through every other screen (#114). A line saying as much used to
+            stand here; a whole section in grey already says it, and being told
+            twice reads like being talked down to (raised by @ztx-lyghters). */}
         {/* Quality first and the codec under it, as in Quality & playback:
             at "Original" the original file is downloaded and the codec has
             nothing to do, so it reads as a pair and is greyed out (#72). */}
