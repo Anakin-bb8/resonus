@@ -5,8 +5,8 @@ or ask on [Discord](https://discord.gg/pecE8MTPVr).
 
 ## How it works
 
-Nothing here has changed in years, and nothing here needs a toolchain: you edit
-one JSON file and open a pull request. That is the whole of it.
+Nothing here needs a toolchain: you edit one JSON file and open a pull request.
+That is the whole of it.
 
 1. **Fork** the repo, on GitHub.
 2. **Edit your language's file**, `src/i18n/locales/<code>.json`. Right there in
@@ -30,7 +30,7 @@ wherever the English is ambiguous on its own:
 | --- | --- |
 | `Direction` | Sort sheet: the ascending vs descending toggle. Not a compass direction |
 | `Plain` | A value of `Background`: a flat colour behind the player, no picture |
-| `Free` | Free disk space in the storage bar. Not "free of charge" |
+| `Free` | Free disk space in the storage bar (Other / Downloads / Free). Not "free of charge" |
 
 Open it next to the file you are editing. If a string still isn't clear after
 that, [tell us](#when-a-string-still-isnt-clear). The answer gets written into
@@ -51,11 +51,11 @@ pnpm i18n:status ru        # what is left
 ```
 
 ```jsonc
-  // Sort sheet · the ascending vs descending toggle. Not a compass direction
-  "Direction": "",
+  // Settings › Player · A value of `Background`: a flat colour behind the player, no picture
+  "Plain": "",
 
-  // Settings › Downloads · Free disk space in the storage bar. Not "free of charge"
-  "Free": "",
+  // Favorites, Playlist · in useSongSort · Sort sheet: the ascending vs descending toggle. Not a compass direction
+  "Direction": "",
 ```
 
 `merge` skips every line you left empty, so a half-finished round only adds what
@@ -114,7 +114,7 @@ shaped `Base::context`, only in your file:
 ```jsonc
 "About": "Подробности",             // base: the fallback for every use
 "About::artist": "Об исполнителе",  // only on the artist screen
-"About::app": "О приложении"        // only on the About-app screen
+"About::app": "О программе"          // only on the About-app screen
 ```
 
 The app tries `::context` first and falls back to the base, so overrides are
@@ -152,9 +152,9 @@ was reworded. The old translation is dropped rather than carried over, because
 nobody has read the new sentence in your language yet, and a translation nobody
 has checked sitting there looking finished is worse than a gap.
 
-`pnpm i18n:status --gaps` is the other direction: the strings that have no note
-written for them yet. If one of those was the one that stumped you, that is
-exactly the one worth telling us about.
+`pnpm i18n:status --gaps` is the other direction: the strings that have nothing
+to go on but the screen they are on. If one of those was the one that stumped
+you, that is exactly the one worth telling us about.
 
 ## When a string still isn't clear
 

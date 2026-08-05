@@ -26,6 +26,7 @@ import {
   enKeys,
   keepEnglish,
   loadLocale,
+  meaning,
   locales,
   notes,
   callSites,
@@ -60,8 +61,11 @@ if (gaps) {
   // Which strings have nowhere to look but the words themselves. Not all of
   // them need a note: "Couldn't load the album." says what it is. This is for
   // reading down and spotting the ones that don't, before somebody has to ask.
-  const without = enKeys.filter((k) => !keepEnglish.has(k) && !notes[k]);
-  console.log(`\n${without.length} of ${enKeys.length - keepEnglish.size} strings have no note.`);
+  // Not `notes[k]`: a string the code explains by itself, because it is the
+  // line under a setting or one of its values, is not a gap. Counting those was
+  // asking for a note that would only repeat what the tools already say.
+  const without = enKeys.filter((k) => !keepEnglish.has(k) && !meaning(k));
+  console.log(`\n${without.length} of ${enKeys.length - keepEnglish.size} strings have nothing but the screen they are on.`);
   console.log('A note is worth writing when the English and the screen are not enough.\n');
   for (const k of without) console.log(`  ${JSON.stringify(k)}\n      ${describe(k, sites) || '?'}`);
   console.log('\nWrite them in src/i18n/context.jsonc, then: pnpm i18n:docs\n');
