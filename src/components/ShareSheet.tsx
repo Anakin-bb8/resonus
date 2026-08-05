@@ -96,7 +96,13 @@ export function GlobalShareSheet() {
     day: t('1 day'),
     week: t('1 week'),
     month: t('1 month'),
-    never: t('Never'),
+    // "Never" here is a link that does not expire, and elsewhere it is a plain
+    // no ("play downloaded songs: never"). Some languages want a different word
+    // for each, and with one key the two uses had to share whichever came last:
+    // Russian went from «Бессрочно» to «Никогда» for that reason. The context
+    // suffix is optional, so a language that is happy with one word still only
+    // defines "Never".
+    never: t('Never::expiry'),
   };
 
   /** The calendar's answer: a date, or nothing if it was dismissed. */
