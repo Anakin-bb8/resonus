@@ -5,6 +5,11 @@ name: Translations
 # no longer exists, a {placeholder} lost in translation: all of it is knowable
 # straight away, and waiting to be told is the part of contributing that puts
 # people off.
+#
+# Node and nothing else. These scripts read the repo, not the app, and import
+# only what Node ships with, so there is no install and nothing to cache — the
+# first version asked for the pnpm cache anyway and failed on the way out,
+# looking for a store directory that nothing had created.
 
 on:
   pull_request:
@@ -24,14 +29,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 11
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
-      # The checks read the repo, not the app, so there is nothing to install.
       - run: node scripts/i18n-check.mjs
       - name: Where each language stands
         if: always()
