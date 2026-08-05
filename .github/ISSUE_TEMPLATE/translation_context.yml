@@ -1,4 +1,4 @@
-name: Translation — a string isn't clear
+name: "Translation: a string isn't clear"
 description: Ask what a string means, so the answer ends up in the repo
 title: "[i18n]: "
 labels: ["i18n"]
@@ -34,6 +34,6 @@ body:
     id: problem
     attributes:
       label: What is unclear
-      description: What you cannot tell from the string alone — which of two meanings, what part of speech, what it refers to.
+      description: "What you cannot tell from the string alone: which of two meanings, what part of speech, what it refers to."
     validations:
       required: false

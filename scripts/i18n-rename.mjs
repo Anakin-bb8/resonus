@@ -15,7 +15,7 @@
  * a string nobody has read in Spanish, Russian or German since it changed, and
  * keeping their old text would mean a translation nobody has checked sitting
  * there looking finished. They are dropped instead, so the string falls back to
- * English and turns up as missing in `pnpm i18n:status` — which is the signal
+ * English and turns up as missing in `pnpm i18n:status`, which is the signal
  * their translators already go by (see CONTRIBUTING.md). The ones dropped are
  * printed, for pasting into the pull request.
  */
@@ -119,7 +119,7 @@ const dropped = locales.map((code) => [code, dropFrom(code)]).filter(([, gone]) 
 const noteMoved = rewriteNotes();
 
 console.log(`\n${dry ? 'Would reword' : 'Reworded'}:\n  ${oldKey}\n→ ${newKey}\n`);
-console.log(`  code:    ${files.length ? files.join(', ') : 'no t() call found — does the text match exactly?'}`);
+console.log(`  code:    ${files.length ? files.join(', ') : 'no t() call found, does the text match exactly?'}`);
 console.log(`  note:    ${noteMoved ? 'moved with it' : 'none to move'}`);
 if (noteMoved) {
   // The note travelled, but it was written about the old wording and may quote

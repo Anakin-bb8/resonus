@@ -89,11 +89,11 @@ for (const [k, v] of Object.entries(dict)) if (!(k in ordered)) ordered[k] = v;
 
 writeFileSync(join(LOCALES_DIR, `${code}.json`), `${JSON.stringify(ordered, null, 2)}\n`);
 
-console.log(`\n${code}.json — ${added} new, ${changed} changed, ${skipped} left for later\n`);
+console.log(`\n${code}.json: ${added} new, ${changed} changed, ${skipped} left for later\n`);
 if (!locales.includes(code)) {
   // The file is written, but nothing knows the language exists yet.
   console.log(`"${code}" is a new language: it also needs one row in src/i18n/languages.ts`);
-  console.log('(see TRANSLATING.md — or open the pull request with just the .json and');
+  console.log('(see TRANSLATING.md, or open the pull request with just the .json and');
   console.log('we will add the row for you).\n');
 }
 console.log(`Check it with: pnpm i18n:status ${code}\n`);

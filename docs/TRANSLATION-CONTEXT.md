@@ -7,7 +7,7 @@
 
 Every string the app can show, under the screen it shows up on. 597 of them.
 The second column is only filled in where the English is ambiguous on its own
-— if one tripped you up and the column is empty, that is worth telling us, and
+If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
 next language gets it too.
 
@@ -254,9 +254,9 @@ you are actually typing into, which is easier than reading it here.
 | `Couldn't load songs.` | Error on the screen, with a Retry button |
 | `Couldn't reach the server. Check your connection.` | Error on Home when the server does not answer at all |
 | `Discover` | Home section: discovery suggestions |
-| `Good afternoon` | Home's greeting. The hours it changes at are part of the language too — see TRANSLATING.md |
-| `Good evening` | Home's greeting. The hours it changes at are part of the language too — see TRANSLATING.md |
-| `Good morning` | Home's greeting. The hours it changes at are part of the language too — see TRANSLATING.md |
+| `Good afternoon` | Home's greeting. The hours it changes at are part of the language too, see TRANSLATING.md |
+| `Good evening` | Home's greeting. The hours it changes at are part of the language too, see TRANSLATING.md |
+| `Good morning` | Home's greeting. The hours it changes at are part of the language too, see TRANSLATING.md |
 | `Good night` | Home's greeting, for the small hours. Spanish uses the same words as for the evening, which is fine |
 | `Loading covers…` | Still pulling the pictures out of the phone's own files |
 | `Looking for music…` | Reading the phone's own files, before anything can be shown |
@@ -599,7 +599,7 @@ you are actually typing into, which is easier than reading it here.
 | --- | --- |
 | `“Good morning”, “Good evening”… at the top of Home.` | The line under “Show greeting”, explaining it |
 | `Custom greeting` | A greeting of your own, replacing Home's "Good morning" line |
-| `Good evening` | Home's greeting. The hours it changes at are part of the language too — see TRANSLATING.md |
+| `Good evening` | Home's greeting. The hours it changes at are part of the language too, see TRANSLATING.md |
 | `Greeting` | Home's "Good morning" line |
 | `Leave it empty to greet you by the time of day.` | The line under “Custom greeting”, explaining it |
 | `Show greeting` | Whether Home says "Good morning" at the top |

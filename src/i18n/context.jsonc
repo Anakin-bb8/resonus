@@ -397,9 +397,9 @@
     "Play discography": "Play the lot, in order",
     "Playlist name": "The name field when making or renaming a playlist",
     "Restore default settings": "Put every setting back the way it came",
-    "Good morning": "Home's greeting. The hours it changes at are part of the language too — see TRANSLATING.md",
-    "Good afternoon": "Home's greeting. The hours it changes at are part of the language too — see TRANSLATING.md",
-    "Good evening": "Home's greeting. The hours it changes at are part of the language too — see TRANSLATING.md",
+    "Good morning": "Home's greeting. The hours it changes at are part of the language too, see TRANSLATING.md",
+    "Good afternoon": "Home's greeting. The hours it changes at are part of the language too, see TRANSLATING.md",
+    "Good evening": "Home's greeting. The hours it changes at are part of the language too, see TRANSLATING.md",
     "Good night": "Home's greeting, for the small hours. Spanish uses the same words as for the evening, which is fine",
 
     // ── Song information sheet ───────────────────────────────────────────────

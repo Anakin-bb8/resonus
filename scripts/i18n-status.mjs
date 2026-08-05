@@ -84,7 +84,7 @@ if (todo) {
 
 if (one) {
   const r = analyze(one);
-  console.log(`\n${one} — ${r.translated}/${todoKeys.length} translated (${pct(r.translated)})\n`);
+  console.log(`\n${one}: ${r.translated}/${todoKeys.length} translated (${pct(r.translated)})\n`);
   const section = (title, list, withContext = true) => {
     if (list.length === 0) return;
     console.log(`${title} (${list.length}):`);
@@ -115,7 +115,7 @@ if (one) {
 }
 
 // Summary table for every locale.
-console.log(`\nSource: en.json — ${todoKeys.length} strings to translate`);
+console.log(`\nSource: en.json, ${todoKeys.length} strings to translate`);
 if (keepEnglish.size) {
   console.log(`(${keepEnglish.size} more are meant to stay in English; see src/i18n/context.jsonc)`);
 }

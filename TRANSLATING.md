@@ -12,7 +12,7 @@ one JSON file and open a pull request. That is the whole of it.
 2. **Edit your language's file**, `src/i18n/locales/<code>.json`. Right there in
    the GitHub editor is fine, and is how most of this app has been translated.
 3. **Open a pull request.** A check runs on it straight away and tells you if
-   something is off — a comma, a lost `{name}` — before anybody reviews it.
+   something is off (a comma, a lost `{name}`) before anybody reviews it.
 
 Partial is fine. Anything you don't translate falls back to English, so you can
 do fifty strings today and fifty next month.
@@ -33,7 +33,7 @@ wherever the English is ambiguous on its own:
 | `Free` | Free disk space in the storage bar. Not "free of charge" |
 
 Open it next to the file you are editing. If a string still isn't clear after
-that, [tell us](#when-a-string-still-isnt-clear) — the answer gets written into
+that, [tell us](#when-a-string-still-isnt-clear). The answer gets written into
 the repo, not into a reply.
 
 ## If you'd rather work locally
@@ -81,7 +81,7 @@ else.
    creates the file from it.
 2. Add one row to `LANGUAGES` in `src/i18n/languages.ts`:
    `{ code: '<code>', name: '<native name>', dict: <import> }`. It is the single
-   source of truth — the type, the settings picker and the persistence all come
+   source of truth: the type, the settings picker and the persistence all come
    from it, so nothing else needs touching.
 3. Only if your language needs **more than 2** plural forms, see below.
 
@@ -112,7 +112,7 @@ it everywhere. If yours needs to tell two uses apart, add an **override key**
 shaped `Base::context`, only in your file:
 
 ```jsonc
-"About": "Подробности",             // base — the fallback for every use
+"About": "Подробности",             // base: the fallback for every use
 "About::artist": "Об исполнителе",  // only on the artist screen
 "About::app": "О приложении"        // only on the About-app screen
 ```
@@ -142,10 +142,10 @@ pnpm i18n:status ru           # missing / same / stale, each with its context
 pnpm i18n:status --todo ru    # just the untranslated keys, one per line
 ```
 
-- **missing** — not in your file yet (falls back to English).
-- **same** — present but identical to the English (sometimes right, e.g.
+- **missing**: not in your file yet (falls back to English).
+- **same**: present but identical to the English (sometimes right, e.g.
   "Radio"; otherwise still to do).
-- **stale** — in your file but no longer in English; safe to delete.
+- **stale**: in your file but no longer in English; safe to delete.
 
 A string you had already done can come back as **missing**: it means the English
 was reworded. The old translation is dropped rather than carried over, because
@@ -178,7 +178,7 @@ and an awkward one in the source becomes an awkward one in six languages. It has
 happened: "Show what a playlist says about itself, under its name" was flagged
 by a translator and is now "Show the playlist description under its name".
 
-Open an issue or say it in your pull request — you don't have to change it
+Open an issue or say it in your pull request. You don't have to change it
 yourself. When one is reworded its translations are dropped and turn up as
 missing, so it is much better said early than translated around.
 

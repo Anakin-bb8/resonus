@@ -61,7 +61,7 @@ const lines = [
   '',
   `Every string the app can show, under the screen it shows up on. ${todoKeys.length} of them.`,
   'The second column is only filled in where the English is ambiguous on its own',
-  '— if one tripped you up and the column is empty, that is worth telling us, and',
+  'If one tripped you up and the column is empty, that is worth telling us, and',
   'the answer goes into `src/i18n/context.jsonc` where the next translator of the',
   'next language gets it too.',
   '',
@@ -111,4 +111,4 @@ if (check) {
 
 mkdirSync(join(ROOT, 'docs'), { recursive: true });
 writeFileSync(OUT, out);
-console.log(`docs/TRANSLATION-CONTEXT.md — ${todoKeys.length} strings under ${screens.length} screens`);
+console.log(`docs/TRANSLATION-CONTEXT.md: ${todoKeys.length} strings under ${screens.length} screens`);

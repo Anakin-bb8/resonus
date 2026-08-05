@@ -73,7 +73,7 @@ for (const key of enKeys) {
 try {
   execFileSync('node', [join(ROOT, 'scripts/i18n-docs.mjs'), '--check'], { stdio: 'pipe' });
 } catch {
-  fail('docs/TRANSLATION-CONTEXT.md is out of date — run: pnpm i18n:docs');
+  fail('docs/TRANSLATION-CONTEXT.md is out of date. Run: pnpm i18n:docs');
 }
 
 // Nothing left behind by a locale that was deleted.

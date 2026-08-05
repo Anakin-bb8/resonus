@@ -7,7 +7,7 @@ falls back to English, so a partial file is fine.
 **Before you translate a string, you can find out what it is.** Every one of them
 is listed in [docs/TRANSLATION-CONTEXT.md](../../../docs/TRANSLATION-CONTEXT.md),
 under the screen it shows up on, with what it means where the English is
-ambiguous on its own — `Direction` is a sort order and not a compass, `Rate` is
+ambiguous on its own: `Direction` is a sort order and not a compass, `Rate` is
 a verb and not a bitrate.
 
 Editing a file here in the GitHub editor is a perfectly good way to do it. If you
@@ -19,5 +19,5 @@ above it.
 words around them.
 
 Full guide: [TRANSLATING.md](../../../TRANSLATING.md). If a string still isn't
-clear, ask — the answer goes into `../context.jsonc` and every translator of
+clear, ask. The answer goes into `../context.jsonc` and every translator of
 every language is shown it from then on.

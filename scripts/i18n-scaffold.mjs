@@ -7,8 +7,8 @@
  *   pnpm i18n:scaffold pt          a language we do not have yet
  *
  * A locale `.json` is a wall of `"Direction": ""` with nothing around it, and
- * what somebody needs in order to translate a string — where it shows up, what
- * it means, what the English says — is somewhere else: another file, a table in
+ * what somebody needs in order to translate a string, where it shows up and
+ * what it means, is somewhere else: another file, a table in
  * a document, or a question on Discord. This puts all of it above the line
  * being translated, as a comment, which is what gettext, Android and Apple all
  * do for the same reason. When it is filled in, `pnpm i18n:merge` takes it back.
@@ -54,7 +54,7 @@ const pending = enKeys.filter((k) => {
 
 const quote = (s) => JSON.stringify(s);
 const lines = [
-  `// Resonus — ${code}${isNew ? ' (new language)' : ''}: ${pending.length} strings`,
+  `// Resonus, ${code}${isNew ? ' (new language)' : ''}: ${pending.length} strings`,
   '//',
   '// Each line is  "English text": "your translation".  Fill in the right-hand',
   '// side and leave the left alone: the English IS the key, so changing it',

@@ -13,7 +13,7 @@ name: Translations
 # pull request, which is the one person it should never land on.
 #
 # Node and nothing else. These scripts read the repo, not the app, and import
-# only what Node ships with, so there is no install and nothing to cache — the
+# only what Node ships with, so there is no install and nothing to cache. The
 # first version asked for the pnpm cache anyway and failed on the way out,
 # looking for a store directory that nothing had created.
 

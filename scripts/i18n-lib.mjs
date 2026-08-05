@@ -1,6 +1,6 @@
 /**
  * What the translation tools all need: the English source, each locale, the
- * notes, and — the part that is worked out rather than written down — where in
+ * notes, and the part that is worked out rather than written down: where in
  * the app each string shows up.
  *
  * Somebody translating a JSON file is looking at "Direction": "" with nothing
@@ -303,8 +303,8 @@ export function whereShown(key, sites) {
 /**
  * What this string is, in words: the note written for it, or what the code says
  * about it when nobody wrote one. Everything that shows context goes through
- * here, so the page on GitHub and the file in your editor say the same thing —
- * they did not, once, and the half that was missing was the half most people
+ * here, so the page on GitHub and the file in your editor say the same thing.
+ * They did not, once, and the half that was missing was the half most people
  * read.
  */
 export function meaning(key) {
