@@ -167,6 +167,11 @@ Conventions:
   times. Where the string shows up is worked out from your code, so that part
   needs nothing. `pnpm i18n:status --gaps` lists the strings that have no note
   yet, for reading down and spotting the ones that need one.
+  **To reword a string that is already in**, don't edit it by hand: the English
+  text is the key, so it lives in the call, in three locale files, in the notes
+  and in the generated page. `pnpm i18n:rename "old text" "new text"` does all
+  of it, and drops the translations of the languages that had one so they come
+  back as missing for their translators.
 
 ## Open a pull request
 

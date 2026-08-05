@@ -627,7 +627,7 @@
 
     // ── Other ────────────────────────────────────────────────────────────────
     "Show playlist description": "A setting: whether a playlist's own description is drawn under its name on its screen. The description is text whoever made the playlist wrote about it",
-    "Show what a playlist says about itself, under its name.": "The line explaining the setting above. \"What it says about itself\" is the description its author gave it",
+    "Show the playlist description under its name.": "The line under `Show playlist description`. The description is the text whoever made the playlist wrote about it",
     "Playlist covers": "One line of the storage breakdown in Settings › Downloads: how much room the playlist cover images take. It is a size, not a setting",
     "Free": "Free disk space in the storage bar (Other / Downloads / Free). Not \"free of charge\"",
     "Other": "In that same storage bar: space used by things other than downloads",

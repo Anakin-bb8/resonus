@@ -61,7 +61,8 @@
     "i18n:scaffold": "node scripts/i18n-scaffold.mjs",
     "i18n:merge": "node scripts/i18n-merge.mjs",
     "i18n:docs": "node scripts/i18n-docs.mjs",
-    "i18n:check": "node scripts/i18n-check.mjs"
+    "i18n:check": "node scripts/i18n-check.mjs",
+    "i18n:rename": "node scripts/i18n-rename.mjs"
   },
   "private": true,
   "expo": {

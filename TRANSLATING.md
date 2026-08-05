@@ -147,6 +147,11 @@ pnpm i18n:status --todo ru    # just the untranslated keys, one per line
   "Radio"; otherwise still to do).
 - **stale** — in your file but no longer in English; safe to delete.
 
+A string you had already done can come back as **missing**: it means the English
+was reworded. The old translation is dropped rather than carried over, because
+nobody has read the new sentence in your language yet, and a translation nobody
+has checked sitting there looking finished is worse than a gap.
+
 `pnpm i18n:status --gaps` is the other direction: the strings that have no note
 written for them yet. If one of those was the one that stumped you, that is
 exactly the one worth telling us about.
@@ -165,6 +170,17 @@ in your PR if you like:
 That file also holds `keepEnglish`: a few strings meant to **stay in English**,
 the Diagnostics measurements, because they are read in issues by people who
 don't speak every language we ship. They aren't counted as missing.
+
+## If the English itself reads badly
+
+Say so. You are reading these sentences more carefully than anyone else does,
+and an awkward one in the source becomes an awkward one in six languages. It has
+happened: "Show what a playlist says about itself, under its name" was flagged
+by a translator and is now "Show the playlist description under its name".
+
+Open an issue or say it in your pull request — you don't have to change it
+yourself. When one is reworded its translations are dropped and turn up as
+missing, so it is much better said early than translated around.
 
 ## Translation contributors
 

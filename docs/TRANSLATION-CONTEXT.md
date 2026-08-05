@@ -853,7 +853,7 @@ you are actually typing into, which is easier than reading it here.
 | `Show song duration` | Whether a song row says how long the song is |
 | `Show the album artwork next to each song in playlists and favorites.` | The line under “Show artwork”, explaining it |
 | `Show the album's genres as chips; tap one to browse it.` | The line under “Show genres”, explaining it |
-| `Show what a playlist says about itself, under its name.` | The line explaining the setting above. "What it says about itself" is the description its author gave it |
+| `Show the playlist description under its name.` | The line under `Show playlist description`. The description is the text whoever made the playlist wrote about it |
 | `Song lists` | The setting for how song lists look |
 
 ## Settings › Song menu

@@ -53,7 +53,7 @@ export default function SongListsSettings() {
             },
             {
               label: t('Show playlist description'),
-              description: t('Show what a playlist says about itself, under its name.'),
+              description: t('Show the playlist description under its name.'),
               value: showPlaylistDescription,
               onChange: setShowPlaylistDescription,
             },
