@@ -116,6 +116,10 @@ pnpm i18n:status --todo ru    # just the untranslated keys, one per line
   "Radio"; otherwise still to do).
 - **stale** — in your file but no longer in English; safe to delete.
 
+`pnpm i18n:status --gaps` is the other direction: the strings that have no note
+written for them yet. If one of those was the one that stumped you, that is
+exactly the one worth telling us about.
+
 ## When a string still isn't clear
 
 **Tell us, and the answer goes in the file rather than in a reply.** Notes live

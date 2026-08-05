@@ -53,7 +53,20 @@ function analyze(code) {
 // Parse args: optional `--todo` flag and an optional locale code.
 const args = process.argv.slice(2);
 const todo = args.includes('--todo');
+const gaps = args.includes('--gaps');
 const one = args.find((a) => !a.startsWith('--'));
+
+if (gaps) {
+  // Which strings have nowhere to look but the words themselves. Not all of
+  // them need a note: "Couldn't load the album." says what it is. This is for
+  // reading down and spotting the ones that don't, before somebody has to ask.
+  const without = enKeys.filter((k) => !keepEnglish.has(k) && !notes[k]);
+  console.log(`\n${without.length} of ${enKeys.length - keepEnglish.size} strings have no note.`);
+  console.log('A note is worth writing when the English and the screen are not enough.\n');
+  for (const k of without) console.log(`  ${JSON.stringify(k)}\n      ${describe(k, sites) || '?'}`);
+  console.log('\nWrite them in src/i18n/context.jsonc, then: pnpm i18n:docs\n');
+  process.exit(0);
+}
 
 if (one && !locales.includes(one)) {
   console.error(`Unknown locale "${one}". Available: ${locales.join(', ')}`);

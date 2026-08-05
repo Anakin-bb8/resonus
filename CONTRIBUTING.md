@@ -164,7 +164,8 @@ Conventions:
   every translator of every language gets shown next to the string, and writing
   it while you still remember costs less than answering the question five
   times. Where the string shows up is worked out from your code, so that part
-  needs nothing.
+  needs nothing. `pnpm i18n:status --gaps` lists the strings that have no note
+  yet, for reading down and spotting the ones that need one.
 
 ## Open a pull request
 
