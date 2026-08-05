@@ -17,12 +17,14 @@ on:
       - 'src/i18n/**'
       - 'scripts/i18n-*.mjs'
       - 'docs/TRANSLATION-CONTEXT.md'
+      - '.github/workflows/i18n.yml'
   push:
     branches: [main]
     paths:
       - 'src/i18n/**'
       - 'scripts/i18n-*.mjs'
       - 'docs/TRANSLATION-CONTEXT.md'
+      - '.github/workflows/i18n.yml'
 
 jobs:
   check:

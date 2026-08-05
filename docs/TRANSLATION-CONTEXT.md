@@ -509,7 +509,7 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `Measure performance` |  |
+| `Measure performance` | Timing, not analytics: how long the app takes to do things on this phone, kept on the phone. Nothing is sent anywhere. It is turned on when somebody is being walked through a slowdown |
 | `Report a bug` |  |
 | `Support Resonus` |  |
 | `Version` |  |
@@ -521,7 +521,7 @@ you are actually typing into, which is easier than reading it here.
 | --- | --- |
 | `Counted` |  |
 | `Diagnostics` | The screen's title, and the row in About that opens it |
-| `Measuring is off (Settings › About), so there is nothing to show.` |  |
+| `Measuring is off (Settings › About), so there is nothing to show.` | Empty state on the Diagnostics screen when `Measure performance` has never been switched on |
 | `Profile` | Section header over what kind of server the profile is. Not a user profile |
 | `Share report` | Button: hands the numbers over as plain text, to paste into an issue |
 | `Start over` | Button: clears the measurements and starts counting again. Not "start playback" |
@@ -559,7 +559,7 @@ you are actually typing into, which is easier than reading it here.
 | `Original` | Quality option: the file exactly as it is on the server, nothing transcoded. It also appears in quotes inside two descriptions on those screens, so use the same wording in all three |
 | `Other` | In that same storage bar: space used by things other than downloads |
 | `Pending changes` |  |
-| `Playlist covers` |  |
+| `Playlist covers` | One line of the storage breakdown in Settings › Downloads: how much room the playlist cover images take. It is a size, not a setting |
 | `Radio station art` |  |
 | `Simultaneous downloads` |  |
 | `Songs fetched at the same time. Fewer is gentler on the server, network and your phone.` |  |
@@ -848,12 +848,12 @@ you are actually typing into, which is easier than reading it here.
 | `Show disc titles` |  |
 | `Show each song's star rating in lists.` |  |
 | `Show genres` |  |
-| `Show playlist description` |  |
+| `Show playlist description` | A setting: whether a playlist's own description is drawn under its name on its screen. The description is text whoever made the playlist wrote about it |
 | `Show rating` |  |
 | `Show song duration` |  |
 | `Show the album artwork next to each song in playlists and favorites.` |  |
 | `Show the album's genres as chips; tap one to browse it.` |  |
-| `Show what a playlist says about itself, under its name.` |  |
+| `Show what a playlist says about itself, under its name.` | The line explaining the setting above. "What it says about itself" is the description its author gave it |
 | `Song lists` | The setting for how song lists look |
 
 ## Settings › Song menu

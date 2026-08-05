@@ -126,6 +126,8 @@
     "More": "A \"see more\" action",
 
     // ── Diagnostics (Settings › About, tapping the version five times) ───────
+    "Measure performance": "Timing, not analytics: how long the app takes to do things on this phone, kept on the phone. Nothing is sent anywhere. It is turned on when somebody is being walked through a slowdown",
+    "Measuring is off (Settings › About), so there is nothing to show.": "Empty state on the Diagnostics screen when `Measure performance` has never been switched on",
     "Diagnostics": "The screen's title, and the row in About that opens it",
     "Profile": "Section header over what kind of server the profile is. Not a user profile",
     "Share report": "Button: hands the numbers over as plain text, to paste into an issue",
@@ -161,6 +163,9 @@
     "Your most played songs will show up here.": "Empty state, before anything has been played",
 
     // ── Other ────────────────────────────────────────────────────────────────
+    "Show playlist description": "A setting: whether a playlist's own description is drawn under its name on its screen. The description is text whoever made the playlist wrote about it",
+    "Show what a playlist says about itself, under its name.": "The line explaining the setting above. \"What it says about itself\" is the description its author gave it",
+    "Playlist covers": "One line of the storage breakdown in Settings › Downloads: how much room the playlist cover images take. It is a size, not a setting",
     "Free": "Free disk space in the storage bar (Other / Downloads / Free). Not \"free of charge\"",
     "Other": "In that same storage bar: space used by things other than downloads",
     "Library metadata copy": "The offline copy of the library: the album, artist and playlist lists kept so the app works with no connection. Not the songs themselves, which are the downloads",
