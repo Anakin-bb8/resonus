@@ -61,7 +61,7 @@ export function BatteryWarning() {
       )}
       confirmLabel={t('Open settings')}
       neutral={{
-        label: t('Don’t remind me'),
+        label: t("Don't remind me"),
         onPress: () => {
           setEnabled(false);
           setVisible(false);

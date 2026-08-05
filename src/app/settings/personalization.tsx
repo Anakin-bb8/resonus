@@ -201,7 +201,7 @@ export default function AppearanceSettings() {
         />
         <SettingRow
           label={t('Song menu')}
-          description={t('Choose which actions show in a song\u2019s ⋯ menu.')}
+          description={t("Choose which actions show in a song's ⋯ menu.")}
           chevron
           onPress={() => router.push('/settings/song-menu')}
         />

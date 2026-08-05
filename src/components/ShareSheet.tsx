@@ -143,7 +143,7 @@ export function GlobalShareSheet() {
     const res = await shareItem(target.id, target.name, expiresAt, canDownloads && downloads);
     setSharing(false);
     dismiss(close);
-    if (!res.ok) toast(t('Couldn’t create the link'));
+    if (!res.ok) toast(t("Couldn't create the link"));
     // The link is out and it plays; it is only the downloading part that didn't
     // take, and saying nothing would leave whoever gets it wondering.
     else if (res.downloadsFailed) toast(t("Server didn't allow downloads"));

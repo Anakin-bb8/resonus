@@ -47,7 +47,7 @@ export default function SongListsSettings() {
             },
             {
               label: t('Show rating'),
-              description: t('Show each song’s star rating in lists.'),
+              description: t("Show each song's star rating in lists."),
               value: showListRating,
               onChange: setShowListRating,
             },
@@ -71,7 +71,7 @@ export default function SongListsSettings() {
             },
             {
               label: t('Show genres'),
-              description: t('Show the album’s genres as chips; tap one to browse it.'),
+              description: t("Show the album's genres as chips; tap one to browse it."),
               value: showGenreChips,
               onChange: setShowGenreChips,
             },

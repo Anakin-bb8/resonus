@@ -265,7 +265,7 @@ export default function QueueScreen() {
               accessibilityLabel={t('Stop the mix')}
               onPress={() => {
                 stopRadio();
-                toast(t('The mix won’t grow any further'));
+                toast(t("The mix won't grow any further"));
               }}
             >
               <Ionicons name="sparkles" size={22} color={accent} />

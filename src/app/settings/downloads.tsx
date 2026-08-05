@@ -203,7 +203,7 @@ export default function DownloadsSettings() {
             {
               label: t('Hide unavailable songs'),
               description: t(
-                'In offline mode, hide songs that aren’t downloaded instead of showing them greyed out.',
+                "In offline mode, hide songs that aren't downloaded instead of showing them greyed out.",
               ),
               value: hideUnavailableOffline,
               onChange: setHideUnavailableOffline,

@@ -215,7 +215,7 @@ export function SongMenuSheet() {
       const name = await exportToFolder(song, dlUri, folder);
       toast(t('Saved as “{name}”', { name }));
     } catch {
-      toast(t('Couldn’t save the file'));
+      toast(t("Couldn't save the file"));
     }
   }
 
@@ -231,10 +231,10 @@ export function SongMenuSheet() {
       // has no share sheet, before anything has been attempted, and the one
       // below is an attempt that failed.
       if (!(await shareSongFile(song, dlUri))) {
-        toast(t('Sending to another app isn’t available on this device'));
+        toast(t("Sending to another app isn't available on this device"));
       }
     } catch {
-      toast(t('Couldn’t send the file'));
+      toast(t("Couldn't send the file"));
     }
   }
 
@@ -649,7 +649,7 @@ export function SongMenuSheet() {
                             toast(
                               started
                                 ? t('Mix started')
-                                : t('Couldn’t find anything to mix with this song'),
+                                : t("Couldn't find anything to mix with this song"),
                             ),
                         );
                       }}
