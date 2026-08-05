@@ -11,60 +11,42 @@
  * "same"      = present but identical to the English text (often still untranslated).
  * "stale"     = key in the locale that no longer exists in English (safe to delete).
  *
+ * Every key listed comes with where it shows up in the app and, if it needed
+ * saying, what it means: a key on its own is what sends somebody to Discord to
+ * ask. See `scripts/i18n-lib.mjs` for where that comes from.
+ *
  * Context overrides ("Base::context") are optional, so they never count as
  * missing. They were also invisible here, which meant the only way to learn one
- * existed was reading TRANSLATING.md and hoping it was up to date. The per
- * locale report now lists them, read straight from the calls in the source.
+ * existed was reading TRANSLATING.md and hoping it was up to date.
  */
-import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import {
+  baseKey,
+  describe,
+  en,
+  enKeys,
+  keepEnglish,
+  loadLocale,
+  locales,
+  notes,
+  callSites,
+} from './i18n-lib.mjs';
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const DIR = join(ROOT, 'src/i18n/locales');
-
-const load = (code) => JSON.parse(readFileSync(join(DIR, `${code}.json`), 'utf8'));
-const en = load('en');
-const enKeys = Object.keys(en);
-
-const locales = readdirSync(DIR)
-  .filter((f) => f.endsWith('.json') && f !== 'en.json')
-  .map((f) => f.replace('.json', ''))
-  .sort();
-
-// A key may carry an optional "::context" suffix (e.g. "About::artist"), an
-// override a language adds when the base term ("About") can't cover every use.
-// Only the base key lives in English; overrides are valid as long as their base
-// exists there, and they never count as missing (nobody is required to add them).
-const baseKey = (k) => {
-  const i = k.indexOf('::');
-  return i === -1 ? k : k.slice(0, i);
-};
+const sites = callSites();
+/** Strings that are meant to stay in English are nobody's work. */
+const todoKeys = enKeys.filter((k) => !keepEnglish.has(k));
 
 /** Every `t('Base::context')` used in the source, so the report can offer them. */
-function findContextKeys() {
-  const out = new Set();
-  const walk = (dir) => {
-    for (const name of readdirSync(dir)) {
-      const full = join(dir, name);
-      if (statSync(full).isDirectory()) walk(full);
-      else if (/\.(ts|tsx)$/.test(name)) {
-        const src = readFileSync(full, 'utf8');
-        for (const m of src.matchAll(/['"`]([^'"`]+::[^'"`]+)['"`]/g)) out.add(m[1]);
-      }
-    }
-  };
-  walk(join(ROOT, 'src'));
-  return [...out].filter((k) => baseKey(k) in en).sort();
-}
+const contextKeys = [...sites.keys()]
+  .filter((k) => k.includes('::') && baseKey(k) in en)
+  .sort();
 
 function analyze(code) {
-  const dict = load(code);
+  const dict = loadLocale(code);
   const keys = new Set(Object.keys(dict));
-  const missing = enKeys.filter((k) => !keys.has(k));
-  const same = enKeys.filter((k) => keys.has(k) && dict[k] === en[k]);
+  const missing = todoKeys.filter((k) => !keys.has(k));
+  const same = todoKeys.filter((k) => keys.has(k) && dict[k] === en[k]);
   const stale = Object.keys(dict).filter((k) => !(baseKey(k) in en));
-  const translated = enKeys.length - missing.length - same.length;
+  const translated = todoKeys.length - missing.length - same.length;
   return { code, dict, missing, same, stale, translated };
 }
 
@@ -78,7 +60,7 @@ if (one && !locales.includes(one)) {
   process.exit(1);
 }
 
-const pct = (n) => `${Math.round((n / enKeys.length) * 100)}%`;
+const pct = (n) => `${Math.round((n / todoKeys.length) * 100)}%`;
 
 if (todo) {
   // Bare list of untranslated (missing + same) keys, one per line, to hand off.
@@ -89,30 +71,48 @@ if (todo) {
 
 if (one) {
   const r = analyze(one);
-  console.log(`\n${one} — ${r.translated}/${enKeys.length} translated (${pct(r.translated)})\n`);
-  const section = (title, list) => {
+  console.log(`\n${one} — ${r.translated}/${todoKeys.length} translated (${pct(r.translated)})\n`);
+  const section = (title, list, withContext = true) => {
     if (list.length === 0) return;
     console.log(`${title} (${list.length}):`);
-    for (const k of list) console.log(`  ${k}`);
+    for (const k of list) {
+      const about = withContext ? describe(k, sites) : '';
+      console.log(about ? `  ${k}\n      ${about}` : `  ${k}`);
+    }
     console.log('');
   };
   section('Missing', r.missing);
   section('Same as English', r.same);
-  section('Stale (delete these)', r.stale);
+  section('Stale (delete these)', r.stale, false);
   // Optional: only worth adding when the base word can't cover both uses in
   // this language, so these are listed as an offer, not as pending work.
-  const contexts = findContextKeys().filter((k) => !(k in r.dict));
+  const contexts = contextKeys.filter((k) => !(k in r.dict));
   if (contexts.length) {
     console.log(`Context overrides you could add (${contexts.length}, all optional):`);
-    for (const k of contexts) console.log(`  ${k}   falls back to "${r.dict[baseKey(k)] ?? en[baseKey(k)]}"`);
+    for (const k of contexts) {
+      console.log(`  ${k}   falls back to "${r.dict[baseKey(k)] ?? en[baseKey(k)]}"`);
+      const about = describe(k, sites);
+      if (about) console.log(`      ${about}`);
+    }
     console.log('');
   }
   if (!r.missing.length && !r.same.length && !r.stale.length) console.log('All good ✓\n');
+  console.log(`Start translating: pnpm i18n:scaffold ${one}\n`);
   process.exit(0);
 }
 
 // Summary table for every locale.
-console.log(`\nSource: en.json — ${enKeys.length} strings\n`);
+console.log(`\nSource: en.json — ${todoKeys.length} strings to translate`);
+if (keepEnglish.size) {
+  console.log(`(${keepEnglish.size} more are meant to stay in English; see src/i18n/context.jsonc)`);
+}
+// A note for a key that no longer exists is the drift this file is meant to
+// stop, so it says so rather than waiting to be noticed.
+const orphaned = Object.keys(notes).filter((k) => !(k in en));
+if (orphaned.length) {
+  console.log(`\n⚠ context.jsonc describes ${orphaned.length} keys that are gone: ${orphaned.join(', ')}`);
+}
+console.log('');
 const rows = locales.map((c) => analyze(c));
 const w = Math.max(6, ...locales.map((c) => c.length));
 const pad = (s, n) => String(s).padEnd(n);
@@ -123,4 +123,6 @@ for (const r of rows) {
     `${pad(r.code, w)}  ${pad(`${r.translated} (${pct(r.translated)})`, 10)}  ${pad(r.missing.length, 7)}  ${pad(r.same.length, 5)}  ${r.stale.length}`,
   );
 }
-console.log(`\nDetails: pnpm i18n:status <locale>   ·   list to translate: pnpm i18n:status --todo <locale>\n`);
+console.log(
+  `\nDetails: pnpm i18n:status <locale>   ·   file to work in: pnpm i18n:scaffold <locale>\n`,
+);

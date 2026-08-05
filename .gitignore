@@ -50,3 +50,6 @@ modules/*/android/build/
 modules/*/android/.cxx/
 modules/*/android/.gradle/
 modules/*/android/.kotlin/
+
+# translation work files (pnpm i18n:scaffold)
+/translate-*.jsonc

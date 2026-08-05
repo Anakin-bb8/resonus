@@ -1,0 +1,180 @@
+// What a string means, for whoever is translating it.
+//
+// The English text is the key, so two different things that English says with
+// the same word arrive here as one key: `Direction` is a sort order and not a
+// compass, `Rate` is a verb and not a bitrate. This file is where that gets
+// said, one line per key, and it is the only copy. The tools read it:
+//
+//   pnpm i18n:scaffold <locale>   puts each note above the string to translate
+//   pnpm i18n:status <locale>     shows it next to what is missing
+//
+// so a note written here reaches the person translating without them having to
+// know it exists. A note is only worth adding for a string that is ambiguous or
+// surprising on its own; where a string shows up is worked out from the code
+// (see `scripts/i18n-lib.mjs`) and does not need writing down.
+//
+// `keepEnglish` is the other half: strings that are meant to stay in English on
+// purpose. They are not counted as missing.
+{
+  "notes": {
+    // ── Sorting & filtering ──────────────────────────────────────────────────
+    "Direction": "Sort sheet: the ascending vs descending toggle. Not a compass direction",
+    "A-Z": "Sort option: the order of a list",
+    "Alphabetical": "Sort option: the order of a list",
+    "Ascending": "Sort option: the order of a list",
+    "Descending": "Sort option: the order of a list",
+    "Filter artists": "Search box that narrows the list as you type, rather than a filter you set",
+    "Filter genres": "Search box that narrows the list as you type, rather than a filter you set",
+
+    // ── Library & scanning (Settings › Library) ──────────────────────────────
+    "Source": "The music source (which server, or local). Not source code",
+    "Change source": "The music source (which server, or local). Not source code",
+    "Device": "A music library or folder exposed by the server",
+    "Scan": "Trigger the server's library scan",
+    "Rescan": "Trigger the server's library scan again",
+    "Scan status": "How the server's library scan is going",
+    "Local music": "Music stored on the phone itself",
+
+    // ── Settings section headers (short titles grouping toggles) ─────────────
+    "Elements": "Which player elements to show",
+    "Buttons": "Which player buttons to show",
+    "Interaction": "Section header grouping toggles",
+    "Interface": "Section header grouping toggles",
+    "Size": "The size of the quick grid tiles",
+    "Sources": "Which shortcuts the quick grid shows",
+    "Layout": "The list vs grid layout of a list",
+
+    // ── Servers & network (Login, Settings › Network) ────────────────────────
+    "Advanced": "The link that expands the advanced connection options",
+    "Local profile": "The on-device profile, with no server account. Its library screen is `Local music`",
+    "This phone": "The on-device profile, with no server account",
+    "Media server": "The type subtitle under Jellyfin",
+    "Subsonic-compatible": "The subtitle under OpenSubsonic / Ampache",
+    "Local": "An address on the same network (LAN). Nothing to do with the local profile",
+    "Remote": "An address reachable from outside the home network",
+    "Offline · your downloads": "Settings subtitle shown in offline mode",
+
+    // ── Streaming & download quality ─────────────────────────────────────────
+    "Original": "Quality option: the file exactly as it is on the server, nothing transcoded. It also appears in quotes inside two descriptions on those screens, so use the same wording in all three",
+    "Server default": "Codec option meaning \"let the server decide\" what to transcode to",
+    "Not used": "Replaces the codec's value when that network's quality is `Original`. Nothing is transcoded then, so the codec setting has nothing to do and the row is greyed out",
+
+    // ── Playback, audio & equalizer ──────────────────────────────────────────
+    "By track": "Volume normalization (ReplayGain) mode: even out loudness track by track",
+    "By album": "Volume normalization (ReplayGain) mode: even out loudness album by album",
+    "Hi-Res": "Audio quality label on the player. Keep the widely understood term",
+    "Lossless": "Audio quality label on the player. Keep the widely understood term",
+    "Bands": "The equalizer's frequency sliders",
+    "Reset bands": "Put the equalizer's frequency sliders back to flat",
+    "Preset": "An equalizer preset. Not a bitrate",
+    "Custom": "An equalizer preset the user made themselves",
+    "Off": "A setting value meaning disabled (crossfade, normalization…)",
+
+    // ── Player, output & queue ───────────────────────────────────────────────
+    "Output": "The audio output device (phone, or something to cast to)",
+    "Devices": "The audio output devices to cast to",
+    "Colored mini player": "Tint the mini player with the colour of the cover art",
+    "Cover color": "The colour taken from the cover art",
+    "Player background": "What is drawn behind the player: the blurred artwork, or a flat tint",
+    "Skip buttons": "The seek forward / back buttons setting",
+    "Next": "Player control: the next track (accessibility label)",
+    "Previous": "Player control: the previous track (accessibility label)",
+    "Next in queue": "Queue screen header: the track that plays next",
+    "Show cover": "Lyrics screen: the button that goes back to the cover art",
+
+    // ── Artist, playlists & radio ────────────────────────────────────────────
+    "Popular": "The artist's popular / top tracks",
+    "Appears on": "Albums the artist appears on: features, compilations",
+    "Similar artists": "Related artists",
+    "Public playlist": "Toggle that makes a playlist public on the server",
+    "Change cover": "Replace the cover image of a playlist or station",
+    "Name": "The Name field when editing a playlist or a station",
+    "Website (optional)": "Field when adding a radio station",
+    "Stream URL": "Field when adding a radio station",
+    "View image": "Artist screen: opens the artist photo full screen, since the header crops it",
+    "View cover": "The same as `View image`, for album and playlist artwork",
+
+    // ── Home & personalization ───────────────────────────────────────────────
+    "Discover": "Home section: discovery suggestions",
+    "Recents": "Library section: recently opened items",
+    "Greeting": "Home's \"Good morning\" line",
+    "Custom greeting": "A greeting of your own, replacing Home's \"Good morning\" line",
+    "Quick grid": "The grid of shortcut tiles on Home",
+    "Explore chips": "The row of tappable category chips",
+    "Song menu": "The ⋯ menu on a song. A setting picks which actions it shows",
+    "Song lists": "The setting for how song lists look",
+    "Home sections": "Reorder which sections appear on Home",
+    "Pin favorites": "Pin favourites to the quick grid",
+
+    // ── Actions & verbs (easy to translate as the wrong part of speech) ──────
+    "Rate": "Verb: rate the song with stars. Not \"bitrate\"",
+    "Restore": "Restore settings to their defaults",
+    "Reorder": "Enter drag-to-reorder mode",
+    "Turn off": "Turn off the sleep timer",
+    "Start mix": "Start an auto-generated radio mix from this song",
+    "More options": "The ⋯ button",
+    "More": "A \"see more\" action",
+
+    // ── Diagnostics (Settings › About, tapping the version five times) ───────
+    "Diagnostics": "The screen's title, and the row in About that opens it",
+    "Profile": "Section header over what kind of server the profile is. Not a user profile",
+    "Share report": "Button: hands the numbers over as plain text, to paste into an issue",
+    "Start over": "Button: clears the measurements and starts counting again. Not \"start playback\"",
+
+    // ── Song information (a song's ⋯ menu › the sheet it opens) ──────────────
+    "Song information": "The menu action and the sheet's title: what is known about the track",
+    "Track": "The track number on its album. Not the song itself",
+    "Format": "The file format (FLAC, MP3…), written as the player writes it",
+    "Sample rate": "A property of the audio, in kHz",
+    "Channels": "A property of the audio: mono, stereo",
+    "BPM": "A property of the audio: beats per minute",
+    "Plays": "How many times the song has been played",
+    "Rating": "The stars given to the song. Not a bitrate, not a review",
+    "Comment": "The file's comment tag, where people keep notes about a recording",
+    "Moods": "Mood tags the server has on the song: mellow, energetic…",
+    "This song carries no information.": "Empty state: the file and the server had nothing to say",
+
+    // ── Sharing a link (the sheet that opens on Share) ───────────────────────
+    "Share “{name}”": "The sheet's title, with what is being shared",
+    "The link expires in": "Heading over the choices below. They are spans from the moment the link is made, not times of day",
+    "Never": "Under `The link expires in`: the link never stops working",
+    "Pick a date…": "Opens the calendar to choose the day the link stops working",
+    "Allow downloads": "Whether whoever gets the link can download the music, not only listen to it",
+    "Server didn't allow downloads": "Warning after sharing: the link was made and works, but the call that turns downloading on did not go through",
+
+    // ── Browsing songs (Home › the Songs chip) ───────────────────────────────
+    "Songs": "Always a heading, never a count, so it wants the plain plural your language uses for a list of them (\"Songs\", not \"of songs\"). Counting songs is a different thing and goes through the plural forms",
+    "Default": "Sorting pill: what you get when nothing is sorted, which is the order the server keeps its songs in. Not alphabetical, and not Resonus deciding",
+    "Find a song": "The search box's placeholder on that screen",
+    "No songs yet": "Empty state when the library has no songs",
+    "Your recently played songs will show up here.": "Empty state, before anything has been played",
+    "Your most played songs will show up here.": "Empty state, before anything has been played",
+
+    // ── Other ────────────────────────────────────────────────────────────────
+    "Free": "Free disk space in the storage bar (Other / Downloads / Free). Not \"free of charge\"",
+    "Other": "In that same storage bar: space used by things other than downloads",
+    "Library metadata copy": "The offline copy of the library: the album, artist and playlist lists kept so the app works with no connection. Not the songs themselves, which are the downloads",
+    "Nothing here is downloaded": "Toast when playing something that is not downloaded, offline",
+    "Try exploring another genre.": "Empty state subtitle on a genre screen",
+    "Unknown artist": "Fallback when the file and the server have no artist",
+    "Unknown album": "Fallback when the file and the server have no album",
+    "Unknown title": "Fallback when the file and the server have no title"
+  },
+
+  // Strings that are meant to stay in English, and are not counted as missing.
+  //
+  // These are the Diagnostics measurements. They end up in a GitHub issue, often
+  // as a screenshot rather than as the shared text, and whoever reads them there
+  // does not speak every language we ship. English is what makes a report from
+  // any phone readable. The report the share button produces, and the operation
+  // names under `Time spent` (`offline catalog`, `storage used`, `net getAlbum`…),
+  // are written in English for the same reason and never reach a locale file.
+  "keepEnglish": [
+    "Measured over the last {n} min of use.",
+    "Interface freezes",
+    "Moments when the app stopped responding, longest first.",
+    "None over 120 ms.",
+    "Time spent",
+    "Nothing measured yet."
+  ]
+}

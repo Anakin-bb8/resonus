@@ -57,7 +57,9 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
-    "i18n:status": "node scripts/i18n-status.mjs"
+    "i18n:status": "node scripts/i18n-status.mjs",
+    "i18n:scaffold": "node scripts/i18n-scaffold.mjs",
+    "i18n:merge": "node scripts/i18n-merge.mjs"
   },
   "private": true,
   "expo": {

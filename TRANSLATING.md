@@ -3,6 +3,35 @@
 Thanks for helping translate Resonus! If anything here is unclear, open an issue
 or ask on [Discord](https://discord.gg/pecE8MTPVr).
 
+## The short version
+
+```sh
+pnpm install
+pnpm i18n:scaffold ru      # writes translate-ru.jsonc: everything still to do
+                           # ...fill it in...
+pnpm i18n:merge ru         # takes it back into src/i18n/locales/ru.json
+pnpm i18n:status ru        # check what is left
+```
+
+`translate-ru.jsonc` gives you one string per block with **where it shows up in
+the app** above it, and **what it means** when the English is ambiguous on its
+own:
+
+```jsonc
+  // Sort sheet · the ascending vs descending toggle. Not a compass direction
+  "Direction": "",
+
+  // Settings › Downloads · Free disk space in the storage bar. Not "free of charge"
+  "Free": "",
+```
+
+That is the whole point of this file existing: a locale `.json` on its own is a
+wall of English words with nothing around them, and "what is this string?" is
+the question everybody ends up asking. Now the answer arrives with the string.
+
+You can also edit `src/i18n/locales/<code>.json` by hand if you prefer. Nothing
+requires the tools.
+
 ## How translations work
 
 - The **English text is the key**. Each language has a JSON file in
@@ -10,12 +39,22 @@ or ask on [Discord](https://discord.gg/pecE8MTPVr).
 - Anything not translated falls back to English, so a partial file is fine.
 - `{name}`, `{n}`, etc. are **placeholders** — keep them exactly as-is; they get
   replaced at runtime. Only translate the words around them.
-- JSON can't hold comments, so the per-string context lives in this file (see
-  [String context](#string-context) below), not in the `.json`.
+- JSON can't hold comments, so what a string means lives in
+  [`src/i18n/context.jsonc`](src/i18n/context.jsonc), and the tools above put it
+  in front of you. Where a string shows up isn't written down at all: it is read
+  off the code, so it can't fall out of date.
+
+### Anything you leave empty is left alone
+
+`pnpm i18n:merge` skips every entry you left blank, and every one still sitting
+at the English text. So you can do fifty strings, merge, and come back to the
+rest another day: the file only ever gains what you actually translated, and
+your pull request shows those lines and nothing else.
 
 ## Adding a new language
 
-1. Create `src/i18n/locales/<code>.json` (English key → your translation).
+1. `pnpm i18n:scaffold <code>` and translate what you can. `pnpm i18n:merge
+   <code>` creates `src/i18n/locales/<code>.json` for you.
 2. Add one row to `LANGUAGES` in `src/i18n/languages.ts`: import your JSON and
    add `{ code: '<code>', name: '<native name>', dict: <import> }`. That's the
    single source of truth — the `Language` type, the display names, the settings
@@ -25,8 +64,8 @@ or ask on [Discord](https://discord.gg/pecE8MTPVr).
    its forms to `PLURALS` and its rule to `PLURAL_RULE` in `src/i18n/index.ts`
    (see [Plurals](#plurals)).
 
-Prefer not to touch the code? Just add the `.json` and open the PR — we'll add
-the one-line row for you.
+Prefer not to touch the code? Just open the PR with the `.json` — we'll add the
+one-line row for you.
 
 ## Adapt for what sounds natural
 
@@ -37,6 +76,29 @@ the wording.
 For example, "Quick grid" or "chips" needn't map to the literal words for
 "grid"/"chip" if those sound wrong — an equivalent like "Quick access" is fine,
 and folding a couple of UI terms into one natural word is welcome.
+
+## Words the app uses for its own things
+
+These come back over and over, and a language reads much better when the same
+idea is said the same way everywhere. Pick your word once and keep it.
+
+| Term | What it is |
+| --- | --- |
+| **Queue** | The list of songs waiting to play. Not a playlist |
+| **Playlist** | A saved list, on the server |
+| **Mix** | Songs the app picks itself, to keep playing after a list runs out |
+| **Shuffle** / **Repeat** | Play in random order / start again at the end |
+| **Crossfade** | One song fading into the next |
+| **Downloads** | Songs saved on the phone, to play with no connection |
+| **Library metadata copy** | The offline copy of the album, artist and playlist **lists**. Not the songs |
+| **Offline mode** | The app working with no server: downloads only |
+| **Local profile** | A profile with no server account at all, playing the phone's own files |
+| **Quick grid** | The grid of shortcut tiles on Home |
+| **Chips** | The row of tappable little category buttons |
+| **Cast** / **Output** | Sending the sound to a speaker or a TV, and which one |
+| **Scrobble** | Reporting a play to Last.fm or ListenBrainz. Most languages keep the English word |
+| **Transcode** | The server re-encoding a song, usually smaller, before sending it |
+| **Normalization** | Evening out the loudness between songs (ReplayGain) |
 
 ## Plurals
 
@@ -79,18 +141,10 @@ needs to distinguish a specific use, add an **override key** shaped
 ```
 
 The app looks up the `::context` key first and falls back to the base if you
-didn't add it, so overrides are always optional. Contexts available today:
-
-| Override key | Where it shows |
-| --- | --- |
-| `About::artist` | Artist screen: the **biography** section title |
-| `About::app` | Settings → the **About this app** page title |
-| `Previous::queue` | Queue: the section above the current track |
-
-This table is kept by hand and can fall behind, so `pnpm i18n:status <locale>`
-lists the overrides available to you and what each one falls back to if you skip
-it. If a base key needs a context that doesn't exist yet, tell us and we'll add
-it.
+didn't add it, so overrides are always optional. `pnpm i18n:status <locale>`
+lists every context available to you, where it shows up, and what it falls back
+to if you skip it. If a base key needs a context that doesn't exist yet, tell us
+and we'll add it.
 
 ## When the greetings change over
 
@@ -115,10 +169,7 @@ keys the same way. Nothing else is needed.
 
 ## Checking what's left to translate
 
-Run the status script to see, per language, how much is done and exactly which
-strings are still missing:
-
-```
+```sh
 pnpm i18n:status              # summary table for every language
 pnpm i18n:status ru           # details for one language (missing / same / stale)
 pnpm i18n:status --todo ru    # just the untranslated keys, one per line
@@ -129,196 +180,26 @@ pnpm i18n:status --todo ru    # just the untranslated keys, one per line
   e.g. "Radio"; otherwise it still needs translating).
 - **stale** — a key in your file that no longer exists in English; safe to delete.
 
-## String context
+Everything listed comes with where it shows up and what it means, the same as
+the scaffold.
 
-Strings that are ambiguous on their own, grouped by where they show up. If one
-tripped you up and isn't here, tell us.
+## When a string still isn't clear
 
-**Sorting & filtering**
+**Tell us, and the answer goes in the file rather than in a reply.** Notes live
+in [`src/i18n/context.jsonc`](src/i18n/context.jsonc), one line per string, and
+they reach every translator of every language from then on: a question answered
+on Discord helps one person once. You are welcome to write the note yourself in
+your PR — it is one line, in English, saying what the thing is:
 
-| String | Where / what it is |
-| --- | --- |
-| `Direction` | Sort sheet: the **ascending vs descending** toggle. Not a compass direction |
-| `A-Z` / `Alphabetical` / `Ascending` / `Descending` | Sort options (order of a list) |
-| `Filter artists` / `Filter genres` | Search box that **narrows** the list as you type |
-
-**Library & scanning** (Settings → Library)
-
-| String | Where / what it is |
-| --- | --- |
-| `Source` / `Change source` | The **music source** (which server, or local). Not source code |
-| `Device` | A **music library/folder** exposed by the server |
-| `Scan` / `Rescan` / `Scan status` | Trigger or check the **server's library scan** |
-| `Local music` | Music stored **on the phone** |
-
-**Settings section headers** (short titles grouping toggles)
-
-| String | Where / what it is |
-| --- | --- |
-| `Elements` / `Buttons` | Settings → Player: which player **elements / buttons** to show |
-| `Interaction` / `Interface` | Section headers in Settings → Personalization |
-| `Extras` | Settings → Playback: extra playback options |
-| `Size` / `Sources` | Settings → Quick grid: tile **size** / which **shortcuts** to show |
-| `Layout` | The **list vs grid** layout of lists |
-
-**Servers & network** (Login, Settings → Network)
-
-| String | Where / what it is |
-| --- | --- |
-| `Advanced` | Login screen: link that expands the advanced connection options |
-| `Local profile` / `This phone` | The **on-device / offline profile** (no server account). `Local music` is its library screen |
-| `Media server` | Login: the type subtitle under **Jellyfin** |
-| `Subsonic-compatible` | Login: the subtitle under **OpenSubsonic / Ampache** |
-| `Local` / `Remote` / `Primary` | Settings → Network: what kind of **address** a server URL is. `Local` here means **on the same network (LAN)**, nothing to do with the local profile above; `Primary` is the address the profile is identified by |
-| `Offline · your downloads` | Settings subtitle shown in offline mode |
-
-**Streaming & download quality** (Settings → Quality & playback, Settings → Downloads)
-
-| String | Where / what it is |
-| --- | --- |
-| `Original` | Quality option: the file **exactly as it is on the server**, nothing transcoded. It also appears in quotes inside two descriptions on those screens, so use the same wording in all three |
-| `Server default` | Codec option meaning **"let the server decide"** what to transcode to |
-| `Not used` | Replaces the codec's value when that network's quality is `Original`. Nothing is transcoded then, so the codec setting has nothing to do and the row is greyed out |
-
-**Playback, audio & equalizer**
-
-| String | Where / what it is |
-| --- | --- |
-| `By track` / `By album` | Volume-normalization (ReplayGain) modes: even out loudness per track / album |
-| `Hi-Res` / `Lossless` | Audio-quality labels on the player. Keep the widely-understood terms |
-| `Bands` / `Reset bands` | The equalizer's **frequency sliders** |
-| `Preset` / `Custom` | An **equalizer preset**; "Custom" is the user's own. Not a bitrate |
-| `Off` | A setting value meaning **disabled** (crossfade, normalization…) |
-
-**Player, output & queue**
-
-| String | Where / what it is |
-| --- | --- |
-| `Output` / `Devices` | **Audio output device** (phone / cast target) |
-| `Colored background` | Tint the player with the **cover art color** |
-| `Skip buttons` | The **seek forward / back** buttons setting |
-| `Next` / `Previous` | Player controls: **next / previous track** (accessibility labels) |
-| `Next in queue` | Queue screen header: the track playing next |
-| `Show cover` | Lyrics screen: button to **go back to the cover art** |
-
-**Artist, playlists & radio**
-
-| String | Where / what it is |
-| --- | --- |
-| `Popular` | The artist's **popular / top tracks** |
-| `Appears on` | Albums the artist **appears on** (features, compilations) |
-| `Similar artists` | Related / similar artists |
-| `Public playlist` | Toggle to make a playlist **public** on the server |
-| `Change cover` | Replace the **cover image** of a playlist / station |
-| `Name` | The **Name** field when editing a playlist or station |
-| `Website (optional)` / `Stream URL` | Fields when adding a **radio station** |
-| `View image` | Artist screen: opens the artist **photo** full-screen, since the header crops it. `View cover` is the same thing for album and playlist artwork |
-
-**Home & personalization**
-
-| String | Where / what it is |
-| --- | --- |
-| `Discover` | Home section: discovery **suggestions** |
-| `Recents` | Library section: **recently opened** items |
-| `Greeting` / `Custom greeting` | Home's "Good morning" line, and a **custom** replacement for it |
-| `Quick grid` | The grid of **shortcut tiles** on Home |
-| `Explore chips` | The row of tappable **category chips** |
-| `Song menu` | The **⋯ menu** on a song; a setting picks which actions it shows |
-| `Song lists` | The **appearance of song lists** setting |
-| `Home sections` | Reorder which **sections appear on Home** |
-| `Pin favorites` | Pin favorites to the quick grid |
-
-**Actions & verbs** (easy to translate as the wrong part of speech)
-
-| String | Where / what it is |
-| --- | --- |
-| `Rate` | Verb: **rate the song** with stars. Not "bitrate" |
-| `Restore` | **Restore settings** to defaults |
-| `Reorder` | Enter **drag-to-reorder** mode |
-| `Turn off` | **Turn off the sleep timer** |
-| `Start mix` | Start an auto-generated **radio mix** from this song |
-| `More options` / `More` | The **⋯** button and a **"More" (see more)** action |
-
-**Diagnostics** (Settings → About, tapping the version five times)
-
-This screen exists so that somebody with a slow phone can send us numbers. It is
-**split in two**, and only one half is translated.
-
-**Translate these**, because they are what a person reads and taps:
-
-| String | Where / what it is |
-| --- | --- |
-| `Diagnostics` | The screen's title, and the row in About that opens it |
-| `Profile` | Section header over what kind of server the profile is. Not a user profile |
-| `Share report` | Button: hands the numbers over as plain text, to paste into an issue |
-| `Start over` | Button: **clears the measurements** and starts counting again. Not "start playback" |
-
-**Leave these in English**, they are the measurements themselves:
-
-```
-Measured over the last {n} min of use.
-Interface freezes
-Moments when the app stopped responding, longest first.
-None over 120 ms.
-Time spent
-Nothing measured yet.
+```jsonc
+"Rate": "Verb: rate the song with stars. Not \"bitrate\"",
 ```
 
-The reason is that these end up in a GitHub issue, often as a screenshot rather
-than as the shared text, and whoever reads them there does not speak every
-language we ship. Keeping them in English is what makes a report from any phone
-readable. The report the share button produces, and the operation names under
-**Time spent** (`offline catalog`, `storage used`, `net getAlbum`…), are written
-in English for the same reason and never reach the locale files at all.
-
-`pnpm i18n:status` has no way of knowing this, so it will keep counting those six
-as missing. That is expected: **leave them out and ignore the count.**
-
-**Song information** (a song's ⋯ menu → the sheet it opens)
-
-| String | Where / what it is |
-| --- | --- |
-| `Song information` | The menu action and the sheet's title: what is known about the track |
-| `Track` | The **track number** on its album. Not the song itself |
-| `Format` | The **file format** (FLAC, MP3…), written as the player writes it |
-| `Sample rate` / `Channels` / `BPM` | Properties of the audio: kHz, mono/stereo, beats per minute |
-| `Plays` | **How many times** the song has been played |
-| `Rating` | The **stars** given to the song. Not a bitrate, not a review |
-| `Comment` | The file's **comment tag**, where people keep notes about a recording |
-| `Moods` | Mood **tags** the server has on the song (mellow, energetic…) |
-| `This song carries no information.` | Empty state: the file and the server had nothing to say |
-
-**Sharing a link** (the sheet that opens on Share)
-
-| String | Where / what it is |
-| --- | --- |
-| `Share “{name}”` | The sheet's title, with what is being shared |
-| `The link expires in` | Heading over the choices below. They are **spans from the moment the link is made**, not times of day |
-| `Never` | The link never stops working |
-| `Pick a date…` | Opens the calendar to choose the day it stops working |
-| `Allow downloads` | Whether whoever gets the link can **download** the music, not only listen to it |
-| `Server didn't allow downloads` | Warning after sharing: the link was made and works, but the call that turns downloading on did not go through |
-
-**Browsing songs** (Home → the Songs chip)
-
-| String | Where / what it is |
-| --- | --- |
-| `Songs` | Always a **heading**, never a count, so it wants the plain plural your language uses for a list of them ("Songs", not "of songs"). It names the chip on Home, that screen's title and the queue started from it, the Songs half of the Albums/Songs switch on a genre, the Songs section of the search results, and the chip's own row in Settings → Appearance → Explore chips. Counting songs is a different thing entirely and goes through the plural forms (see [Plurals](#plurals)) |
-| `Default` | Sorting pill: what you get when nothing is sorted, which is the order the **server keeps** its songs in. It is not alphabetical and usually ends up grouped by artist, and it is not Resonus deciding. Only appears where the server cannot sort songs |
-| `Find a song` | The search box's placeholder on that screen |
-| `No songs yet` | Empty state when the library has no songs |
-| `Your recently played songs will show up here.` / `Your most played songs will show up here.` | Empty states for those two orders, before anything has been played |
-
-**Other**
-
-| String | Where / what it is |
-| --- | --- |
-| `Free` | **Free disk space** in the storage bar (Other / Downloads / Free). Not "free of charge" |
-| `Other` | In that same bar: space used by **things other than** downloads |
-| `Library metadata copy` | Settings → Downloads: the **offline copy of the library** (the album, artist and playlist lists kept so the app works with no connection). Not the songs themselves, which are the downloads. Its size and contents follow on the same line |
-| `Nothing here is downloaded` | Toast when playing something not downloaded (offline) |
-| `Try exploring another genre.` | Empty-state subtitle on a genre screen |
-| `Unknown` | Fallback for a missing artist / album / title |
+That file also holds `keepEnglish`: a handful of strings that are **meant to stay
+in English**. They are the Diagnostics measurements, which end up in a GitHub
+issue, often as a screenshot, and whoever reads them there does not speak every
+language we ship. `pnpm i18n:status` does not count them as missing, so you can
+ignore them entirely.
 
 ## Translation contributors
 
