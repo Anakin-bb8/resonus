@@ -6,6 +6,12 @@ name: Translations
 # straight away, and waiting to be told is the part of contributing that puts
 # people off.
 #
+# It watches `src/**`, not only `src/i18n/**`, because what it checks is read
+# off the code: which strings are still used, what each is next to, which screen
+# each shows up on. A pull request that only touches a component can leave the
+# generated page stale, and the failure would then land on the next translation
+# pull request, which is the one person it should never land on.
+#
 # Node and nothing else. These scripts read the repo, not the app, and import
 # only what Node ships with, so there is no install and nothing to cache — the
 # first version asked for the pnpm cache anyway and failed on the way out,
@@ -14,17 +20,28 @@ name: Translations
 on:
   pull_request:
     paths:
-      - 'src/i18n/**'
+      - 'src/**'
       - 'scripts/i18n-*.mjs'
       - 'docs/TRANSLATION-CONTEXT.md'
       - '.github/workflows/i18n.yml'
   push:
     branches: [main]
     paths:
-      - 'src/i18n/**'
+      - 'src/**'
       - 'scripts/i18n-*.mjs'
       - 'docs/TRANSLATION-CONTEXT.md'
       - '.github/workflows/i18n.yml'
+
+# Nothing here writes anything, and saying so means it stays that way whatever
+# the repository's default becomes.
+permissions:
+  contents: read
+
+# A second push supersedes the first: nobody is waiting on the answer to a
+# commit that no longer exists.
+concurrency:
+  group: i18n-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check:
