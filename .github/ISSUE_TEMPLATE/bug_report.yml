@@ -42,6 +42,22 @@ body:
         - Local (no server)
     validations:
       required: true
+  - type: input
+    id: android
+    attributes:
+      label: Android version
+      description: Optional, but it settles a lot of bugs on its own. Under Settings › About phone on the device.
+      placeholder: "Android 14"
+    validations:
+      required: false
+  - type: input
+    id: device
+    attributes:
+      label: Phone model
+      description: Optional. If you run a custom ROM (LineageOS, GrapheneOS, crDroid…) please say which one and its version: they change how playback in the background, battery optimization and permissions behave.
+      placeholder: "Pixel 7a, or Pixel 7a on GrapheneOS 2026041000"
+    validations:
+      required: false
   - type: dropdown
     id: connectivity
     attributes:
