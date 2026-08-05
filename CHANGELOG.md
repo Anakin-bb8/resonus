@@ -17,6 +17,18 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- Casting to a Sonos speaker that is grouped, or is one half of a stereo pair,
+  should work. Those speakers are driven through one of them, and the others
+  are perfectly happy to be discovered, to appear in the list and to answer for
+  their volume, and then refuse to be handed a track: casting to whichever one
+  was not in charge failed every time with nothing to say about why. Which one
+  it is comes from the group topology, which is now asked for, and only after a
+  refusal, so a speaker that took the track never pays for the question. A
+  renderer that turns down the track description is also offered the track
+  without it, since the description is what tells it the track is audio and not
+  a video, and it is better to lose it than the song. Reported by @hui1848
+  (#121), fixed without a Sonos to try it on.
+
 - The battery optimization warning stops coming back after leaving a profile and
   going back in. It is meant to ask once per launch, and answering it, or
   turning it off in Settings › Playback, is meant to be the end of it. But it is

@@ -58,16 +58,33 @@ object AvTransport {
    */
   suspend fun play(address: String, track: Track): Boolean {
     val control = controlUrl(address) ?: return false
-    val ok = soap(
-      control,
-      "SetAVTransportURI",
-      """
-      <InstanceID>0</InstanceID>
-      <CurrentURI>${escape(track.url)}</CurrentURI>
-      <CurrentURIMetaData>${escape(didl(track))}</CurrentURIMetaData>
-      """.trimIndent()
-    )
-    if (!ok) {
+    var accepted = setUri(control, track, withMetadata = true)
+    // Turned down with the metadata, offered again without it. The DIDL is what
+    // says the track is audio and not a video, so it goes first every time, but
+    // a renderer that dislikes something in it refuses the whole call and the
+    // URI alone is better than nothing (#121).
+    if (!accepted) accepted = setUri(control, track, withMetadata = false)
+    // Sonos, and only Sonos: speakers that are grouped or paired take their
+    // orders through one of them, and the others answer a SetAVTransportURI
+    // with a refusal no matter what is in it. Which one is the coordinator is
+    // in the group topology, so it is asked, and the same two attempts are made
+    // there. On a speaker that is on its own the coordinator is itself, so this
+    // resolves to the address we already tried and costs one lookup.
+    if (!accepted) {
+      val coordinator = sonosCoordinatorControl(address)
+      if (coordinator != null && coordinator != control) {
+        accepted = setUri(coordinator, track, withMetadata = true) ||
+          setUri(coordinator, track, withMetadata = false)
+        if (accepted) {
+          // It answers for this speaker from here on, including the Play below
+          // and everything the session sends afterwards.
+          controlUrls[address] = coordinator
+          soap(coordinator, "Play", "<InstanceID>0</InstanceID><Speed>1</Speed>")
+          return true
+        }
+      }
+    }
+    if (!accepted) {
       // Whatever we had cached about this device is worth nothing if it is not
       // answering, so the next attempt looks it up again.
       controlUrls.remove(address)
@@ -78,6 +95,18 @@ object AvTransport {
     soap(control, "Play", "<InstanceID>0</InstanceID><Speed>1</Speed>")
     return true
   }
+
+  /** The one call that hands the track over, with or without the DIDL. */
+  private suspend fun setUri(control: String, track: Track, withMetadata: Boolean): Boolean =
+    soap(
+      control,
+      "SetAVTransportURI",
+      """
+      <InstanceID>0</InstanceID>
+      <CurrentURI>${escape(track.url)}</CurrentURI>
+      <CurrentURIMetaData>${if (withMetadata) escape(didl(track)) else ""}</CurrentURIMetaData>
+      """.trimIndent()
+    )
 
   /** Forgets what was resolved, for a session that is ending. */
   fun forget() = controlUrls.clear()
@@ -211,11 +240,20 @@ object AvTransport {
    * guessing one is how a device that answers everything else ends up unable to
    * play anything.
    */
-  private fun avTransportControlUrl(description: String, location: String): String? {
+  private fun avTransportControlUrl(description: String, location: String): String? =
+    serviceControlUrl(description, location, "AVTransport")
+
+  /**
+   * The control URL of a service, wherever it sits in the description. Nesting
+   * is not looked at on purpose: on Sonos the AVTransport belongs to a
+   * MediaRenderer that hangs inside the ZonePlayer, and the only thing that
+   * matters is which `<service>` block carries the name.
+   */
+  private fun serviceControlUrl(description: String, location: String, name: String): String? {
     val service = Regex("<service>(.*?)</service>", RegexOption.DOT_MATCHES_ALL)
       .findAll(description)
       .map { it.groupValues[1] }
-      .firstOrNull { it.contains("AVTransport", ignoreCase = true) }
+      .firstOrNull { it.contains(name, ignoreCase = true) }
       ?: return null
     val control = Regex("<controlURL>(.*?)</controlURL>", RegexOption.DOT_MATCHES_ALL)
       .find(service)
@@ -236,12 +274,74 @@ object AvTransport {
     return runCatching { URL(URL(base), control).toString() }.getOrNull()
   }
 
+  // ── Sonos, which does not answer for itself ────────────────────────────────
+
+  /**
+   * Where AVTransport has to be sent for the group this speaker belongs to, or
+   * null if there is nothing to change: not a Sonos, on its own, or already the
+   * one in charge.
+   *
+   * Sonos speakers that are grouped, and the two halves of a stereo pair, are
+   * driven through one of them. The others accept being discovered, appear in
+   * the list, answer for their volume, and then refuse to be handed a track, so
+   * casting to a speaker that happened not to be the coordinator failed with
+   * nothing to say about why (#121). Which one it is comes from the group
+   * topology, which every Sonos will describe on request.
+   *
+   * Only on the way out of a failure, so a renderer that took the track never
+   * pays for any of this.
+   */
+  private suspend fun sonosCoordinatorControl(address: String): String? {
+    val location = discover(address) ?: return null
+    val description = fetch(location) ?: return null
+    if (!description.contains("Sonos", ignoreCase = true)) return null
+    val uuid = Regex("<UDN>\\s*(?:uuid:)?(.*?)</UDN>", RegexOption.DOT_MATCHES_ALL)
+      .find(description)
+      ?.groupValues
+      ?.get(1)
+      ?.trim()
+      ?: return null
+    val topology = serviceControlUrl(description, location, "ZoneGroupTopology") ?: return null
+    val answer = soapText(
+      topology,
+      "urn:schemas-upnp-org:service:ZoneGroupTopology:1",
+      "GetZoneGroupState",
+      ""
+    ) ?: return null
+    // The state is a whole XML document escaped inside the answer, so it comes
+    // back out before anything can be read from it.
+    val state = unescape(answer)
+    val group = Regex("<ZoneGroup\\b(.*?)</ZoneGroup>", RegexOption.DOT_MATCHES_ALL)
+      .findAll(state)
+      .map { it.groupValues[1] }
+      .firstOrNull { it.contains(uuid) }
+      ?: return null
+    val coordinator = Regex("Coordinator=\"(.*?)\"").find(group)?.groupValues?.get(1) ?: return null
+    if (coordinator == uuid) return null
+    val member = Regex(
+      "<ZoneGroupMember\\b[^>]*UUID=\"${Regex.escape(coordinator)}\"[^>]*>"
+    ).find(group)?.value ?: return null
+    val where = Regex("Location=\"(.*?)\"").find(member)?.groupValues?.get(1)?.let { unescape(it) }
+      ?: return null
+    Log.w(TAG, "$address is not the coordinator of its group; trying $where")
+    val coordinatorDescription = fetch(where) ?: return null
+    return serviceControlUrl(coordinatorDescription, where, "AVTransport")
+  }
+
   // ── Talking to it ──────────────────────────────────────────────────────────
 
   /** A SOAP action on AVTransport. True when the renderer accepted it. */
   private suspend fun soap(controlUrl: String, action: String, body: String): Boolean =
+    soapText(controlUrl, "urn:schemas-upnp-org:service:AVTransport:1", action, body) != null
+
+  /** The same, on any service, and answering with what came back. */
+  private suspend fun soapText(
+    controlUrl: String,
+    service: String,
+    action: String,
+    body: String
+  ): String? =
     withContext(Dispatchers.IO) {
-      val service = "urn:schemas-upnp-org:service:AVTransport:1"
       val envelope = """
         <?xml version="1.0" encoding="utf-8"?>
         <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
@@ -271,9 +371,11 @@ object AvTransport {
             connection!!.errorStream?.bufferedReader()?.use { it.readText() }
           }.getOrNull()
           Log.w(TAG, "$action refused ($code): ${fault?.take(400)}")
+          null
+        } else {
+          connection!!.inputStream.bufferedReader().use { it.readText() }
         }
-        code == 200
-      }.getOrDefault(false).also { connection?.disconnect() }
+      }.getOrNull().also { connection?.disconnect() }
     }
 
   private fun fetch(url: String): String? = runCatching {
@@ -333,4 +435,12 @@ object AvTransport {
     .replace(">", "&gt;")
     .replace("\"", "&quot;")
     .replace("'", "&apos;")
+
+  /** The way back, for a document that arrives escaped inside another one. */
+  private fun unescape(text: String): String = text
+    .replace("&lt;", "<")
+    .replace("&gt;", ">")
+    .replace("&quot;", "\"")
+    .replace("&apos;", "'")
+    .replace("&amp;", "&")
 }
