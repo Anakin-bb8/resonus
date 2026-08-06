@@ -122,7 +122,7 @@ export default function PlayerSettings() {
             },
             {
               label: t('Show quality label'),
-              description: t('Show format, bitrate and Lossless / Hi-Res in the player.'),
+              description: t('Show format and bitrate in the player.'),
               value: showAudioQuality,
               onChange: setShowAudioQuality,
             },

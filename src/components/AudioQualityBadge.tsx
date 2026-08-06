@@ -1,4 +1,4 @@
-/** Discreet label with format, bitrate, and whether it's lossless/Hi-Res. */
+/** Discreet label with format and bitrate */
 import { StyleSheet, Text } from 'react-native';
 
 import { type Song } from '@/api/subsonic';

@@ -801,7 +801,7 @@ you are actually typing into, which is easier than reading it here.
 | `Show a star rating bar to rate the current song.` | The line under “Show rating”, explaining it |
 | `Show album & year` |  |
 | `Show devices button` |  |
-| `Show format, bitrate and Lossless / Hi-Res in the player.` | The line under “Show quality label”, explaining it |
+| `Show format and bitrate in the player.` | The line under “Show quality label”, explaining it |
 | `Show lyrics card` |  |
 | `Show lyrics on the cover` | One of the values of “On cover tap” |
 | `Show previous tracks` | Whether the queue keeps the songs already played, dimmed, above the current one |
