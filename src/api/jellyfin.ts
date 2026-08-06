@@ -50,6 +50,13 @@ const TICKS_PER_MS = 10_000;
 const ALBUM_FIELDS = 'ChildCount,DateCreated,Genres';
 const SONG_FIELDS = 'MediaSources,DateCreated,NormalizationGain,Genres';
 const PLAYLIST_FIELDS = 'ChildCount,DateCreated,DateLastMediaAdded';
+/**
+ * How many albums an artist has. Jellyfin does not put counts on an item
+ * unless they are asked for, and an artist row that says "0 albums" is what
+ * happens when nobody asks (#129). It is one field on a request that is already
+ * being made, not a request per artist.
+ */
+const ARTIST_FIELDS = 'ItemCounts';
 
 /** Subset of BaseItemDto that the app uses. */
 interface JfItem {
@@ -67,6 +74,8 @@ interface JfItem {
   ParentIndexNumber?: number;
   ProductionYear?: number;
   ChildCount?: number;
+  /** Only present when `ItemCounts` is among the requested fields. */
+  AlbumCount?: number;
   DateCreated?: string;
   DateLastMediaAdded?: string;
   Genres?: string[];
@@ -292,6 +301,10 @@ function toArtist(it: JfItem): Artist {
     name: it.Name ?? '',
     coverArt: it.ImageTags?.Primary ? it.Id : undefined,
     starred: favDate(it),
+    // Absent unless the request asked for `ItemCounts`, and left undefined
+    // rather than zero when it is: the row reads "0 albums" either way, but a
+    // count nobody asked for is not the same as an artist with nothing.
+    albumCount: it.AlbumCount,
   };
 }
 
@@ -445,6 +458,7 @@ export async function getArtists(auth: SubsonicAuth, _musicFolderId?: string): P
   const res = await request<JfItems>(auth, '/Artists/AlbumArtists', {
     UserId: auth.jfUserId,
     SortBy: 'SortName',
+    Fields: ARTIST_FIELDS,
   });
   return (res.Items ?? []).map(toArtist);
 }
@@ -464,7 +478,10 @@ export async function getArtist(
       Fields: ALBUM_FIELDS,
     }),
   ]);
-  return { artist: toArtist(item), albums: (albums.Items ?? []).map(toAlbum) };
+  // The albums have just been fetched, so the count is known exactly here and
+  // does not depend on the server having filled `ItemCounts` in.
+  const own = (albums.Items ?? []).map(toAlbum);
+  return { artist: { ...toArtist(item), albumCount: own.length }, albums: own };
 }
 
 /** Albums where the artist collaborates without being the album artist ("Appears on"). */
@@ -492,6 +509,7 @@ export async function getArtistInfo(auth: SubsonicAuth, id: string): Promise<Art
     request<JfItems>(auth, `/Items/${id}/Similar`, {
       UserId: auth.jfUserId,
       Limit: 12,
+      Fields: ARTIST_FIELDS,
     }).catch(() => ({ Items: [] }) as JfItems),
   ]);
   return {
@@ -617,7 +635,12 @@ export async function search(
       Fields: kind === 'Audio' ? SONG_FIELDS : ALBUM_FIELDS,
     });
   const [artists, albums, songs] = await Promise.all([
-    request<JfItems>(auth, '/Artists', { UserId: auth.jfUserId, SearchTerm: query, Limit: 20 }),
+    request<JfItems>(auth, '/Artists', {
+      UserId: auth.jfUserId,
+      SearchTerm: query,
+      Limit: 20,
+      Fields: ARTIST_FIELDS,
+    }),
     items('MusicAlbum'),
     items('Audio'),
   ]);
@@ -641,7 +664,11 @@ export async function getStarred(auth: SubsonicAuth, _musicFolderId?: string): P
   const [songs, albums, artists] = await Promise.all([
     fav('Audio'),
     fav('MusicAlbum'),
-    request<JfItems>(auth, '/Artists', { UserId: auth.jfUserId, IsFavorite: true }),
+    request<JfItems>(auth, '/Artists', {
+      UserId: auth.jfUserId,
+      IsFavorite: true,
+      Fields: ARTIST_FIELDS,
+    }),
   ]);
   return {
     songs: (songs.Items ?? []).map(toSong),

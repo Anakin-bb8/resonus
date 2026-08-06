@@ -22,6 +22,14 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- On Jellyfin, a favourited artist no longer says it has no albums. Jellyfin
+  does not put counts on an item unless they are asked for, and nothing asked,
+  so every artist arrived without one and every row read "0 albums": in
+  favourites, in the library, in a search and under similar artists. The four
+  requests that fetch artists now ask for the count, and the artist's own screen
+  takes it from the albums it has just fetched, so that one is right whatever
+  the server fills in. Reported by @jaredm4 (#129).
+
 - Turning the Wi-Fi back on brings the app back online. It went offline by
   itself when the connection dropped, which was the half that worked, and then
   stayed there: a rule added to stop the mode flapping made it hold still for a
