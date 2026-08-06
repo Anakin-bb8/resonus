@@ -72,7 +72,13 @@ async function check(): Promise<void> {
   // cold start, which is what made a manually offline app talk to the server
   // before it had drawn a screen (#89). An automatic offline is the opposite
   // case: the probe is the only way back, so it keeps going.
-  if (offline && !autoOffline) return;
+  if (offline && !autoOffline) {
+    // The fourth reason nothing happens, and the one that looks most like a
+    // bug from outside: an offline chosen by hand is never left by itself, so
+    // the connection coming back changes nothing until somebody says so.
+    bump('offline · by hand, not probing');
+    return;
+  }
   const urls = auth.urls ?? [auth.serverUrl];
   checking = true;
   try {
@@ -89,6 +95,14 @@ async function check(): Promise<void> {
     // Automatic online↔offline change: the user can disable it to control the
     // mode manually. URL switching (autoUrl) is separate and not gated.
     const autoSwitch = useSettings.getState().autoOfflineSwitch;
+    // Counted, because a report saying the mode never changed cannot say why,
+    // and there are four reasons and no way to tell them apart from outside:
+    // the probe was never run, the server answered after all, the setting is
+    // off, or there is nothing downloaded to fall back to. One blind fix has
+    // already been shipped against this (#122) and it was aimed at the wrong
+    // one of the four.
+    bump(up ? 'offline · probe answered' : 'offline · probe found nothing');
+    if (!autoSwitch) bump('offline · switching turned off');
     if (up) {
       consecutiveFails = 0;
       if (now.autoOffline && autoSwitch && canSwitchMode()) {
@@ -111,7 +125,7 @@ async function check(): Promise<void> {
         // Normal URL switching (same different network: local ↔ remote).
         await now.setActiveUrl(up);
       }
-    } else if (!now.offline && autoSwitch && (await hasDownloads())) {
+    } else if (!now.offline && autoSwitch && (await downloadsToFallBackTo())) {
       // No server responds and there are downloads. We confirm with a 2nd probe
       // before falling to offline (a stray failure could be a hiccup). Without
       // downloads it stays online (the UI already warns); falling to an empty
@@ -131,6 +145,30 @@ async function check(): Promise<void> {
       again = false;
       schedule();
     }
+  }
+}
+
+/**
+ * Is there anything downloaded to fall back to, and does the answer arrive?
+ *
+ * The question reaches SQLite, and a database that will not open answers with a
+ * rejected promise rather than a `false`. Awaited bare, as it was, that
+ * rejection walks out of `check`, past a `finally` that only resets the flag,
+ * and into a `void` where nothing catches it: the fall to offline is abandoned
+ * and nothing anywhere says so. It would fail that way every time, quietly,
+ * which is the shape of the bug being chased here.
+ *
+ * A database that cannot be read is also, for this purpose, a library that
+ * cannot be played, so `false` is the honest answer as well as the safe one.
+ */
+async function downloadsToFallBackTo(): Promise<boolean> {
+  try {
+    const any = await hasDownloads();
+    if (!any) bump('offline · nothing downloaded to fall back to');
+    return any;
+  } catch {
+    bump('offline · could not read the downloads');
+    return false;
   }
 }
 
