@@ -76,12 +76,6 @@ export function qualityLabel(
   }
   const parts: string[] = [fmt];
 
-  if (isHiRes(song)) {
-    parts.push(t('Hi-Res'));
-  } else if (isLossless(song.suffix)) {
-    parts.push(t('Lossless'));
-  }
-
   if (song.bitRate && song.bitRate > 0) {
     parts.push(`${song.bitRate} kbps`);
   }
