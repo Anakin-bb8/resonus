@@ -111,7 +111,7 @@
     "Custom greeting": "A greeting of your own, replacing Home's \"Good morning\" line",
     "Quick grid": "The grid of shortcut tiles on Home",
     "Explore chips": "The row of tappable category chips",
-    "Song menu": "The ⋯ menu on a song. A setting picks which actions it shows",
+    "Song menu": "The three-dot menu on a song, drawn as ⋮ in a list and ⋯ in a header. A setting picks which actions it shows",
     "Song lists": "The setting for how song lists look",
     "Home sections": "Reorder which sections appear on Home",
     "Pin favorites": "Pin favourites to the quick grid",
@@ -122,7 +122,7 @@
     "Reorder": "Enter drag-to-reorder mode",
     "Turn off": "Turn off the sleep timer",
     "Start mix": "Start an auto-generated radio mix from this song",
-    "More options": "The ⋯ button",
+    "More options": "Read out by the screen reader for the three-dot button, which is ⋮ on a song row and in the player and ⋯ in a screen's header",
     "More": "A \"see more\" action",
 
     // ── Empty states: what a screen says when it has nothing to show ─────────
@@ -593,7 +593,7 @@
     "Share report": "Button: hands the numbers over as plain text, to paste into an issue",
     "Start over": "Button: clears the measurements and starts counting again. Not \"start playback\"",
 
-    // ── Song information (a song's ⋯ menu › the sheet it opens) ──────────────
+    // ── Song information (a song's three-dot menu › the sheet it opens) ──────
     "Song information": "The menu action and the sheet's title: what is known about the track",
     "Track": "The track number on its album. Not the song itself",
     "Format": "The file format (FLAC, MP3…), written as the player writes it",

@@ -706,7 +706,7 @@ you are actually typing into, which is easier than reading it here.
 | `Show, hide and reorder the chips at the top of Home.` | The line under “Explore chips”, explaining it |
 | `Show, personalize and size the shortcut cards on Home.` | The line under “Quick grid”, explaining it |
 | `Song lists` | The setting for how song lists look |
-| `Song menu` | The ⋯ menu on a song. A setting picks which actions it shows |
+| `Song menu` | The three-dot menu on a song, drawn as ⋮ in a list and ⋯ in a header. A setting picks which actions it shows |
 | `Subtle vibration on key actions.` | The line under “Haptic feedback”, explaining it |
 | `Swipe left` | What dragging a song to the left in a list does |
 | `Swipe right` | What dragging a song to the right in a list does. Its values are the actions listed under it |
@@ -856,7 +856,7 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `Song menu` | The ⋯ menu on a song. A setting picks which actions it shows |
+| `Song menu` | The three-dot menu on a song, drawn as ⋮ in a list and ⋯ in a header. A setting picks which actions it shows |
 
 ## Settings › Theme
 
@@ -911,7 +911,7 @@ you are actually typing into, which is easier than reading it here.
 | `Library` | The tab with your albums, artists and playlists, and a folder in the car |
 | `List view` | Show it as rows, one under the other |
 | `Lyrics` | The words of the song. Also a line of the storage bar, where it is their size on the phone |
-| `More options` | The ⋯ button |
+| `More options` | Read out by the screen reader for the three-dot button, which is ⋮ on a song row and in the player and ⋯ in a screen's header |
 | `New playlist` | Row at the top of the playlist picker, and the button on an empty library: make one |
 | `No results` | Nothing matched what was typed |
 | `No results for “{q}”` | Empty state. `{q}` is what was typed |
