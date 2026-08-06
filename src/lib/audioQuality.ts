@@ -8,23 +8,6 @@
  */
 import { type Song } from '@/api/subsonic';
 
-const LOSSLESS = new Set([
-  'flac', 'wav', 'alac', 'aiff', 'ape', 'wv', 'dsd', 'dsf', 'wma',
-]);
-
-/** Is this format one that keeps every bit of the original? */
-function isLossless(suffix: string | undefined): boolean {
-  return !!suffix && LOSSLESS.has(suffix.toLowerCase());
-}
-
-/** More than CD: either more bits per sample or more samples per second. */
-function isHiRes(song: Song): boolean {
-  return (
-    (song.bitDepth != null && song.bitDepth > 16) ||
-    (song.samplingRate != null && song.samplingRate > 48000)
-  );
-}
-
 /** "24-bit / 96 kHz", or nothing if the file says neither. */
 export function sampleLabel(song: Song): string | null {
   const depth = song.bitDepth ? `${song.bitDepth}-bit` : '';
@@ -42,7 +25,6 @@ export function qualityLabel(
   maxBitRate: number,
   dlUri: string | undefined,
   dlBitRate: number | undefined,
-  t: (k: string) => string,
 ): string | null {
   // Without format there's nothing to show. Previously it was also hidden with
   // `localUri` (local/offline), but a downloaded song does have specs to
@@ -70,8 +52,8 @@ export function qualityLabel(
     song.bitRate > maxBitRate
   ) {
     // With a quality cap active and an original that exceeds it, the server
-    // transcodes: the label reflects what actually plays, not the file
-    // (no showing off "Lossless" while a 128kbps MP3 is arriving).
+    // transcodes: the label reflects what actually plays, not the file, so it
+    // says the bitrate that is really arriving.
     return `${fmt} → ${maxBitRate} kbps`;
   }
   const parts: string[] = [fmt];

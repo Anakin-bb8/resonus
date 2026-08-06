@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 597 of them.
+Every string the app can show, under the screen it shows up on. 595 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -65,9 +65,7 @@ you are actually typing into, which is easier than reading it here.
 | `Genre` | Label of a field in the song information sheet |
 | `Go to album` | Leave this sheet and open the album the song is on |
 | `Go to artist` | Leave this sheet and open the artist |
-| `Hi-Res` | Audio quality label on the player. Keep the widely understood term |
 | `Home` | The first tab, and a folder in the car |
-| `Lossless` | Audio quality label on the player. Keep the widely understood term |
 | `Mix of “{name}”` | What the player calls the queue once it has grown past its album into songs the app picked itself. `{name}` is the song it was grown from |
 | `Mix started` | The toast that says the app is now picking the songs |
 | `Moods` | Mood tags the server has on the song: mellow, energetic… |
@@ -348,8 +346,6 @@ you are actually typing into, which is easier than reading it here.
 | `Back {n} seconds` | Read out by the screen reader for the seek button. `{n}` is how many seconds it is set to |
 | `Devices` | The audio output devices to cast to |
 | `Forward {n} seconds` | Read out by the screen reader for the seek button. `{n}` is how many seconds it is set to |
-| `Hi-Res` | Audio quality label on the player. Keep the widely understood term |
-| `Lossless` | Audio quality label on the player. Keep the widely understood term |
 | `Mix of “{name}”` | What the player calls the queue once it has grown past its album into songs the app picked itself. `{name}` is the song it was grown from |
 | `Next` | Player control: the next track (accessibility label) |
 | `No devices found` | In the output sheet: no speaker or TV answered on this network |

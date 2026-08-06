@@ -73,8 +73,6 @@
     // ── Playback, audio & equalizer ──────────────────────────────────────────
     "By track": "Volume normalization (ReplayGain) mode: even out loudness track by track",
     "By album": "Volume normalization (ReplayGain) mode: even out loudness album by album",
-    "Hi-Res": "Audio quality label on the player. Keep the widely understood term",
-    "Lossless": "Audio quality label on the player. Keep the widely understood term",
     "Bands": "The equalizer's frequency sliders",
     "Reset bands": "Put the equalizer's frequency sliders back to flat",
     "Preset": "An equalizer preset. Not a bitrate",

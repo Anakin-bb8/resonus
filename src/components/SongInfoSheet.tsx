@@ -174,7 +174,7 @@ export function SongInfoSheet() {
 
   // The player's exact wording, arrow and all, so the same file is not
   // described two different ways on two screens.
-  const format = qualityLabel(song, maxBitRate, dlUri, dlBitRate, t);
+  const format = qualityLabel(song, maxBitRate, dlUri, dlBitRate);
   add(t('Format'), format);
   // `qualityLabel` folds the sample rate in already, except when it took the
   // transcode branch and dropped the original's specs. Only then is it worth

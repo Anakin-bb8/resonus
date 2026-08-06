@@ -1,8 +1,7 @@
-/** Discreet label with format and bitrate */
+/** Discreet label with the format, the bitrate and the sample rate. */
 import { StyleSheet, Text } from 'react-native';
 
 import { type Song } from '@/api/subsonic';
-import { useT } from '@/i18n';
 import { qualityLabel } from '@/lib/audioQuality';
 import { useAuthStore } from '@/store/auth';
 import { useDownloads } from '@/store/downloads';
@@ -12,7 +11,6 @@ import { useSettings } from '@/store/settings';
 import { colors, fontSize } from '@/theme';
 
 export function AudioQualityBadge({ song }: { song: Song }) {
-  const t = useT();
   // Streaming quality depends on the current network (Wi-Fi or mobile data).
   const cellular = useNetworkType((s) => s.cellular);
   const maxBitRate = useSettings((s) => (cellular ? s.maxBitRateCellular : s.maxBitRate));
@@ -25,7 +23,7 @@ export function AudioQualityBadge({ song }: { song: Song }) {
   useSettings((s) => s.preferDownloads);
   useAuthStore((s) => s.offline);
   const fromDisk = !!dlUri && !!localSourceFor(song);
-  const label = qualityLabel(song, maxBitRate, fromDisk ? dlUri : undefined, dlBitRate, t);
+  const label = qualityLabel(song, maxBitRate, fromDisk ? dlUri : undefined, dlBitRate);
   if (!label) return null;
   return <Text style={styles.badge}>{label}</Text>;
 }

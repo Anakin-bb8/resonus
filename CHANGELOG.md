@@ -9,6 +9,17 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Changed
+
+- The player no longer labels a song "Lossless" or "Hi-Res". The line under the
+  cover still says the format, the bitrate and the sample rate, which is the
+  same information without the verdict on top of it. The argument, made by
+  @ztx-lyghters and @CraftoHohenvels on Discord, is that the badge tells whoever
+  already reads sample rates nothing they cannot see, and tells everybody else
+  that one file is simply better than another, which is how a person ends up
+  filling a phone with copies they cannot hear the difference in. Contributed by
+  @CraftoHohenvels (#125).
+
 ### Fixed
 
 - Turning the Wi-Fi back on brings the app back online. It went offline by
