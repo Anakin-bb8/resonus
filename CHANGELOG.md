@@ -11,6 +11,11 @@ Releases before 0.2.1 are only listed on the
 
 ### Changed
 
+- German is complete, and reads better than it did: the strings that were still
+  in English are translated, and a good number of the ones that were not have
+  been reworded to say the same thing in plainer German, with the technical
+  words swapped for the ones people use. Thanks to @CraftoHohenvels.
+
 - The player no longer labels a song "Lossless" or "Hi-Res". The line under the
   cover still says the format, the bitrate and the sample rate, which is the
   same information without the verdict on top of it. The argument, made by
