@@ -9,6 +9,19 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Fixed
+
+- Turning the Wi-Fi back on brings the app back online. It went offline by
+  itself when the connection dropped, which was the half that worked, and then
+  stayed there: a rule added to stop the mode flapping made it hold still for a
+  minute after every change, and the moment the server answered again fell
+  inside that minute. The switch was refused, nothing asked a second time, and
+  the app sat in offline mode with the Wi-Fi visibly back on until it was
+  reopened. Coming back is no longer held back at all, and the rule still does
+  its job, since a return only ever follows a fall and the fall is still gated.
+  A fall that does get held back is now retried instead of dropped. Found from a
+  diagnostics report by @juananzzz on 0.6.3 (#122).
+
 ## [0.6.3] - 2026-08-05
 
 This one is mostly about what the app does when the server is not there.

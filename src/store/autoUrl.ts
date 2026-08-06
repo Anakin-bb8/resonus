@@ -105,10 +105,10 @@ async function check(): Promise<void> {
     if (!autoSwitch) bump('offline · switching turned off');
     if (up) {
       consecutiveFails = 0;
-      if (now.autoOffline && autoSwitch && canSwitchMode()) {
-        // We had auto-fallen to offline: server is back → reconnect.
-        // First online, then (if applicable) set the reachable URL, already in
-        // online context so track reload works properly.
+      if (now.autoOffline && autoSwitch) {
+        // Not held back by the cooldown: coming back is the direction worth
+        // being eager about, and the fall being gated already bounds the
+        // flapping (see MODE_COOLDOWN_MS).
         await now.goOnline();
         if (up !== now.auth.serverUrl && now.auth.urls?.includes(up)) {
           await now.setActiveUrl(up);
@@ -131,12 +131,16 @@ async function check(): Promise<void> {
       // downloads it stays online (the UI already warns); falling to an empty
       // library would be worse than the warning.
       consecutiveFails += 1;
-      if (consecutiveFails >= 2 && canSwitchMode()) {
+      if (consecutiveFails < 2) {
+        schedule(); // re-probes shortly to confirm
+      } else if (canSwitchMode()) {
         consecutiveFails = 0;
         await now.goOffline(true);
         useToast.getState().show(tg('Offline'));
       } else {
-        schedule(); // re-probes shortly to confirm
+        // Same as above, the other way round: the server has gone and the mode
+        // is not free to follow yet. Ask again when it is.
+        retryAfterCooldown();
       }
     }
   } finally {
@@ -173,14 +177,20 @@ async function downloadsToFallBackTo(): Promise<boolean> {
 }
 
 /**
- * How long the mode has to stay where it is, whatever the network does.
+ * How long the app has to wait before falling to offline again.
  *
- * Two failed probes are already required before falling offline, but nothing
- * stopped the app from falling and coming back and falling again on a server
- * that answers every other time. Each of those rounds writes what was browsed
- * into the mirror and then marks everything stale, so everything on screen is
- * fetched again: on a large library that is not free, and it happens with
- * nobody touching anything.
+ * Two failed probes are already required, but nothing stopped the app from
+ * falling and coming back and falling again on a server that answers every
+ * other time. Each of those rounds writes what was browsed into the mirror and
+ * then marks everything stale, so everything on screen is fetched again: on a
+ * large library that is not free, and it happens with nobody touching anything.
+ *
+ * It gates the fall and not the return, and one gate is enough to bound the
+ * flapping: a return only ever follows a fall, so at most one round can happen
+ * per minute either way. Gating both was worse than useless. Being wrongly
+ * offline costs the whole library and being wrongly online costs a spinner, and
+ * a minute of the first, sitting there with the Wi-Fi visibly back on, is what
+ * #122 turned out to be.
  *
  * A switch asked for by hand, from Settings, does not come through here and is
  * never held back.
@@ -188,10 +198,17 @@ async function downloadsToFallBackTo(): Promise<boolean> {
 const MODE_COOLDOWN_MS = 60_000;
 let lastModeSwitch = 0;
 
+/** How long the mode still has to hold still. 0 when it is free to move. */
+function cooldownLeft(): number {
+  return Math.max(0, MODE_COOLDOWN_MS - (Date.now() - lastModeSwitch));
+}
+
 function canSwitchMode(): boolean {
-  if (Date.now() - lastModeSwitch < MODE_COOLDOWN_MS) {
+  if (cooldownLeft() > 0) {
     // Counted, or fixing this would take the evidence with it: a report has to
     // still be able to say that the app wanted to flap and was not allowed to.
+    // That count is what found #122: two failed probes, a fall to offline, a
+    // probe answering a moment later, and this holding it back.
     bump('offline · switch held back');
     return false;
   }
@@ -199,10 +216,26 @@ function canSwitchMode(): boolean {
   return true;
 }
 
-/** Re-schedules the probe after a breather (Wi-Fi→data handoff takes time to settle). */
-function schedule(): void {
+/**
+ * Re-probes after a breather. The default is the one a Wi-Fi to data handoff
+ * needs to settle; a wait that is being served out gives its own.
+ */
+function schedule(delayMs = 1500): void {
   if (debounce) clearTimeout(debounce);
-  debounce = setTimeout(() => void check(), 1500);
+  debounce = setTimeout(() => void check(), delayMs);
+}
+
+/**
+ * The fall that was refused, asked for again once the mode is free to move.
+ *
+ * Held back used to mean dropped: the probe found nothing, the cooldown said
+ * not yet, and nobody asked again until the network changed, which it was not
+ * going to do because it had already changed. That is how a mode switch went
+ * missing in #122, and the same hole was on the way back too before the return
+ * stopped being gated at all.
+ */
+function retryAfterCooldown(): void {
+  schedule(cooldownLeft() + 500);
 }
 
 /** Starts the watcher (idempotent; from the root layout, after hydration). */
