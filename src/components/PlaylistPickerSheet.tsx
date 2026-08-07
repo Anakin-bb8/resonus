@@ -127,6 +127,9 @@ export function PlaylistPickerSheet({
     await doAdd(playlistId, name);
   }
 
+  /** The warning has something to offer besides adding them all again. */
+  const hasFresh = !!dupPrompt && dupPrompt.fresh.length > 0;
+
   async function createAndAdd(name: string) {
     setCreating(false);
     if (!name.trim()) return;
@@ -212,12 +215,9 @@ export function PlaylistPickerSheet({
         onConfirm={createAndAdd}
       />
 
-      {/* Three ways out rather than a switch inside the dialog (#132). A
-          switch would be state to read and understand before pressing a button
-          that no longer does what it says; each of these says what it does.
-          Adding only the new ones is offered when there are any: with every one
-          of them already there it would add nothing, and a button that does
-          nothing is worse than one that is not there. */}
+      {/* Three ways out rather than a switch inside the dialog (#132). A switch
+          would be state to read and understand before pressing a button that no
+          longer does what it says; each of these says what it does. */}
       <Dialog
         visible={!!dupPrompt}
         title={t('Already added')}
@@ -230,24 +230,31 @@ export function PlaylistPickerSheet({
                 : t('Some of these songs are already in “{name}”.', { name: dupPrompt.name })
             : undefined
         }
+        // Adding only the new ones is the confirm, in the corner and in the
+        // accent, because it is the one nearly everybody wants and the one that
+        // cannot go wrong. Adding them all again is the way out beside it, the
+        // same shape "Don't remind me" has in the battery warning: available,
+        // not urged, and not undoable in one gesture afterwards. With none of
+        // them new there is nothing to skip, so the pair collapses back into
+        // the one button there ever was.
         neutral={
-          dupPrompt && dupPrompt.fresh.length > 0
+          hasFresh
             ? {
-                label: t('Add only the new ones'),
+                label: t('Add anyway'),
                 onPress: () => {
                   const d = dupPrompt;
                   setDupPrompt(null);
-                  void doAdd(d.playlistId, d.name, d.fresh);
+                  if (d) void doAdd(d.playlistId, d.name);
                 },
               }
             : undefined
         }
-        confirmLabel={t('Add anyway')}
+        confirmLabel={hasFresh ? t('Add the new ones') : t('Add anyway')}
         onCancel={() => setDupPrompt(null)}
         onConfirm={() => {
           const d = dupPrompt;
           setDupPrompt(null);
-          if (d) void doAdd(d.playlistId, d.name);
+          if (d) void doAdd(d.playlistId, d.name, hasFresh ? d.fresh : undefined);
         }}
       />
     </Modal>
