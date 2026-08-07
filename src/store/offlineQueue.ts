@@ -121,9 +121,44 @@ let loadingFile: string | null = null;
 let loadPromise: Promise<void> | null = null;
 let writeLock: Promise<unknown> = Promise.resolve();
 
+/**
+ * What was read off disk, plus anything that happened while it was being read.
+ *
+ * Reading the file used to replace whatever was in memory, which is right for
+ * an empty queue and wrong for a queue somebody had already added to: a listen
+ * recorded in those first seconds was overwritten by the file that did not know
+ * about it yet. Newer wins for the keyed ones, since memory holds the later
+ * intention; listens are a list, so both are kept, oldest first, and a repeat
+ * of the very same second is dropped.
+ */
+function mergePending(fromDisk: QueueData, pending: QueueData): QueueData {
+  const seen = new Set<string>();
+  const plays = [...(fromDisk.plays ?? []), ...(pending.plays ?? [])]
+    .sort((a, b) => a.at - b.at)
+    .filter((p) => {
+      const key = `${p.at}|${p.id}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(-PLAYS_MAX);
+  return {
+    favs: { ...fromDisk.favs, ...pending.favs },
+    ratings: { ...fromDisk.ratings, ...pending.ratings },
+    playlists: { ...fromDisk.playlists, ...pending.playlists },
+    songMeta: { ...fromDisk.songMeta, ...pending.songMeta },
+    plays,
+  };
+}
+
 export const useOfflineQueue = create<QueueState>((set, get) => {
   function persist() {
-    const file = get().loadedFile;
+    // `activeFile()` and not only what has been loaded: a listen can cross its
+    // threshold before the queue has been read off disk — the file is read a
+    // few seconds after launch, and a queue restored mid-song can pass the
+    // halfway mark straight away — and this used to answer that by writing
+    // nothing at all, silently (#126).
+    const file = get().loadedFile ?? activeFile();
     if (!file) return;
     const data = get().data;
     writeLock = writeLock.then(async () => {
@@ -157,7 +192,7 @@ export const useOfflineQueue = create<QueueState>((set, get) => {
         } catch {
           // Corrupt or missing file: empty queue.
         }
-        set({ data, loadedFile: file });
+        set({ data: mergePending(data, get().data), loadedFile: file });
       })().finally(() => {
         loadPromise = null;
         loadingFile = null;

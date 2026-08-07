@@ -39,6 +39,7 @@ import {
   getTopSongs,
   savePlayQueue,
   scrobble,
+  SubsonicRequestError,
   streamUrl,
   supportsTranscodeOffset,
   type Album,
@@ -834,15 +835,29 @@ function maybeScrobbleThreshold(positionSec: number) {
   const threshold = duration > 0 ? Math.min(duration * 0.5, 240) : 240;
   if (positionSec < threshold) return;
   scrobbledThisTrack = true;
+  const at = Date.now();
   const { auth, offline } = useAuthStore.getState();
-  // Offline (including a server account without connection): local count, no
-  // scrobble to server — which we wouldn't reach anyway. With an account it
-  // isn't lost either: the listen goes to the outbox, dated, and is scrobbled
-  // on reconnect (#106). The local profile has no server to tell.
+  // The listen is remembered locally whatever happens to the server: it feeds
+  // "Most played" on this phone, which is nobody else's business.
   if (offline) {
     usePlayCounts.getState().bump(song.id);
-    if (auth) useOfflineQueue.getState().addPlay(song.id, Date.now());
-  } else if (auth) scrobble(auth, song.id, true);
+    if (auth) useOfflineQueue.getState().addPlay(song.id, at);
+    return;
+  }
+  if (!auth) return; // a local profile has no server to tell
+  // Online, so it goes straight up. But "online" is only what the mode says,
+  // and the mode is a guess that takes two failed probes to change its mind:
+  // there is a window on the way out of the house, and a whole trip if
+  // nothing was downloaded to fall back to, where the app is still calling
+  // itself online and the server is not there. Every listen in it used to be
+  // handed to a promise nobody was waiting on, and lost the moment it failed
+  // (#126). A refusal from the network puts it in the same outbox an offline
+  // one goes to, dated, so it goes up on the next reconnection either way.
+  scrobble(auth, song.id, true).catch((e) => {
+    if (!(e instanceof SubsonicRequestError) || !e.network) return;
+    usePlayCounts.getState().bump(song.id);
+    useOfflineQueue.getState().addPlay(song.id, at);
+  });
 }
 
 /** Waiting to warm the next song's lyrics (see `onTrackChanged`). */

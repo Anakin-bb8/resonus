@@ -27,6 +27,23 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- A song played away from the network reaches the server when it comes back,
+  even if the app never noticed it had lost it. Listens were only put in the
+  outbox while offline mode was on, and that mode is a guess: it takes two
+  failed probes to change its mind, and it will not change it at all on a
+  profile with nothing downloaded to fall back to. Every listen in that gap
+  went to a request nobody was waiting on and disappeared the moment it failed,
+  which is a whole trip's music on a profile without downloads. A listen the
+  network refuses now goes into the same outbox an offline one goes into, with
+  the time it happened. Reported by @CraftoHohenvels and confirmed by
+  @ztx-lyghters (#126).
+
+- The outbox stops losing what it was given before it had finished loading.
+  It is read off disk a few seconds after launch, and until then it wrote
+  nothing and then replaced whatever had piled up in memory with the file that
+  did not know about it. A queue restored mid-song can cross the halfway mark
+  in those seconds, so it was a real listen each time.
+
 - On Jellyfin, a favourited artist no longer says it has no albums. Jellyfin
   does not put counts on an item unless they are asked for, and nothing asked,
   so every artist arrived without one and every row read "0 albums": in
