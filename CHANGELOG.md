@@ -34,6 +34,14 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- Lyrics opened part way through a song scroll to the line that is playing
+  straight away, instead of sitting at the top until the song moves on a line
+  and only then travelling. The scroll waits to be told where that line is, and
+  the lines report it into a place that re-renders nothing, so when the answer
+  arrived nobody was listening any more and the next line change was the first
+  thing to run it again. The measurement now says so itself, and the journey is
+  the same animated one as any other. Reported by @juananzzz.
+
 - The player stops jumping when it opens with the star rating on. The row of
   stars is measured on the first pass and its height is taken off the cover, so
   until it had been measured the cover was drawn a row too tall and then shrank,

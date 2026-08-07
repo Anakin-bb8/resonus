@@ -158,16 +158,28 @@ export function SyncedLyricsView({
   const offsets = useRef<{ y: number; h: number }[]>([]);
   const userScroll = useRef(false);
   const resumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // The first positioning jumps directly to the current line (no animation),
-  // to avoid a quick, ugly scroll from the top on open. From then on, the
-  // advance from one line to the next IS animated.
-  const didInitialScroll = useRef(false);
   const [viewH, setViewH] = useState(0);
+  /**
+   * Bumped when the line being aimed at finally reports where it is.
+   *
+   * The positioning below waits for that, and reads it out of a ref, and a ref
+   * filling up re-renders nothing: opening the lyrics part way through a song
+   * left them at the top, because by the time the line answered there was
+   * nothing listening. What ran the positioning next was the song moving on a
+   * line, so they sat still and then travelled, one line late, every time. Now
+   * the measurement says so itself.
+   */
+  const [placed, setPlaced] = useState(0);
+  /** The line already positioned for, so a measurement only speaks up once. */
+  const placedFor = useRef(-1);
+  /** What `onMeasure` needs to know without being rebuilt on every line. */
+  const currentRef = useRef(-1);
 
   // Small advance so the highlight doesn't lag behind the ear.
   const posMs = positionSec * 1000 + 300;
   let current = -1;
   for (let i = 0; i < lines.length && (lines[i].start ?? 0) <= posMs; i++) current = i;
+  currentRef.current = current;
 
   // In full screen we anchor the active line near the center (and pad
   // top/bottom) so that when the song starts, the lyrics begin centered and
@@ -176,6 +188,9 @@ export function SyncedLyricsView({
 
   const onMeasure = useCallback((index: number, y: number, h: number) => {
     offsets.current[index] = { y, h };
+    // Only the line being waited for, and only until it has been reached: one
+    // render, not one per line.
+    if (index === currentRef.current && placedFor.current !== index) setPlaced((n) => n + 1);
   }, []);
 
   // Each targetY change pushes the scroll from the UI thread.
@@ -227,21 +242,19 @@ export function SyncedLyricsView({
     if (m === undefined) return;
     const dest = Math.max(0, m.y - viewH * anchor);
     cancelAnimation(targetY);
-    if (!didInitialScroll.current) {
-      targetY.value = dest; // direct jump, without animating
-      didInitialScroll.current = true;
-      return;
-    }
+    placedFor.current = current;
     // We start from the real position (the user may have scrolled) and animate
     // ourselves: same path on any device, regardless of whether the system
-    // ignores animations.
+    // ignores animations. Opening part way through a song is the same journey
+    // as any other, taken as soon as there is somewhere to go rather than at
+    // the next line.
     targetY.value = liveY.value;
     targetY.value = withTiming(dest, {
       duration: 450,
       easing: Easing.out(Easing.cubic),
       reduceMotion: ReduceMotion.Never,
     });
-  }, [current, viewH, anchor, targetY, liveY]);
+  }, [current, viewH, anchor, targetY, liveY, placed]);
 
   useEffect(
     () => () => {
