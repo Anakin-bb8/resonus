@@ -12,12 +12,7 @@ import { ScrollView, Text } from 'react-native';
 import { SettingRow, SettingsPage, settingsStyles, SliderRow } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
 import { formatDuration } from '@/lib/format';
-import {
-  SCROBBLE_PERCENT_DEFAULT,
-  SCROBBLE_SECONDS_DEFAULT,
-  SCROBBLE_SECONDS_MAX,
-  useSettings,
-} from '@/store/settings';
+import { SCROBBLE_SECONDS_MAX, useSettings } from '@/store/settings';
 
 export default function ScrobblingSettings() {
   const t = useT();
@@ -26,9 +21,6 @@ export default function ScrobblingSettings() {
   const scrobbleSeconds = useSettings((s) => s.scrobbleSeconds);
   const setScrobbleSeconds = useSettings((s) => s.setScrobbleSeconds);
   const resetScrobbleRules = useSettings((s) => s.resetScrobbleRules);
-
-  const isDefault =
-    scrobblePercent === SCROBBLE_PERCENT_DEFAULT && scrobbleSeconds === SCROBBLE_SECONDS_DEFAULT;
 
   return (
     <SettingsPage title={t('Scrobbling')}>
@@ -65,15 +57,15 @@ export default function ScrobblingSettings() {
             {t('With both off nothing is reported, not even to your own server.')}
           </Text>
         ) : null}
-        {/* Hidden while they already are the defaults: a button that does
-            nothing still reads as one that might. */}
-        {isDefault ? null : (
-          <SettingRow
-            icon="arrow-undo-outline"
-            label={t('Restore defaults')}
-            onPress={resetScrobbleRules}
-          />
-        )}
+        {/* Always here, whether or not the rules have been touched. It is the
+            same row in the same place every time the screen opens, which is
+            what makes it findable, and appearing only once something has been
+            changed is how a way back goes unnoticed by whoever wanted it. */}
+        <SettingRow
+          icon="arrow-undo-outline"
+          label={t('Restore defaults')}
+          onPress={resetScrobbleRules}
+        />
       </ScrollView>
     </SettingsPage>
   );

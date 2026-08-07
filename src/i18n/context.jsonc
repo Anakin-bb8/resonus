@@ -538,7 +538,7 @@
     "Part of the song": "How much of a song must have played before it counts, as a percentage. One of the two scrobble rules, and it can be `Off`",
     "Time played": "How long a song must have played before it counts, as a time. The other scrobble rule, and it can be `Off` too. Whichever of the two comes first is the one that counts",
     "With both off nothing is reported, not even to your own server.": "Shown only when both scrobble rules are `Off`, since that also stops the play counts on the user's own server",
-    "Restore defaults": "Button at the end of the `Scrobbling` screen, putting both rules back to what they came as. Shown only when they are not already",
+    "Restore defaults": "Button at the end of the `Scrobbling` screen, putting both rules back to what they came as",
 
     // ── Settings › Downloads & offline ───────────────────────────────────────
     "Downloading": "Section header over the download settings. A heading, not something happening right now",

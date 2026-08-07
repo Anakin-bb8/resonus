@@ -845,7 +845,7 @@ you are actually typing into, which is easier than reading it here.
 | `How far into a song it counts as played. Whichever of the two comes first.` | At the top of the `Scrobbling` screen, over the two rows below it |
 | `Off` | A setting value meaning disabled (crossfade, normalization…) |
 | `Part of the song` | How much of a song must have played before it counts, as a percentage. One of the two scrobble rules, and it can be `Off` |
-| `Restore defaults` | Button at the end of the `Scrobbling` screen, putting both rules back to what they came as. Shown only when they are not already |
+| `Restore defaults` | Button at the end of the `Scrobbling` screen, putting both rules back to what they came as |
 | `Scrobbling` | Reporting a song as played, to the user's own server and from there to Last.fm or ListenBrainz. The title of its own screen and the row that opens it. The word comes from Last.fm and most languages keep it; use whatever those services call it in yours if they do |
 | `Time played` | How long a song must have played before it counts, as a time. The other scrobble rule, and it can be `Off` too. Whichever of the two comes first is the one that counts |
 | `With both off nothing is reported, not even to your own server.` | Shown only when both scrobble rules are `Off`, since that also stops the play counts on the user's own server |
