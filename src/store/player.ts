@@ -987,6 +987,19 @@ async function warmStream(url: string) {
 // (Spotify-like). Online only, with the setting enabled (or in radio mode) and
 // without repeating request for the same last song.
 let autoplayFetchedFor: string | null = null;
+/**
+ * The round that is fetching right now, so a second caller waits for it instead
+ * of being told there is nothing.
+ *
+ * Starting a mix asks twice within the same tick: loading the seed sends the
+ * track-change round off on its own, and `startRadio` then asks again so it can
+ * report whether anything was found. The second used to see the tail already
+ * marked and return empty-handed, `startRadio` measured a queue of one, and the
+ * app said it had found nothing to mix with while the first round was still in
+ * the air. The mix then filled in a moment later, which is what made the
+ * message so obviously wrong to anybody reading it.
+ */
+let autoplayRound: Promise<void> | null = null;
 
 /** Songs by the same artist that fit in one batch: what keeps a mix from
  *  turning into that artist's discography. */
@@ -1189,8 +1202,23 @@ async function maybeQueueAutoplay() {
   // Radio extends even if autoplay is off: you started it manually.
   if (!useSettings.getState().autoplaySimilar && !radioMode) return;
   const last = queue[queue.length - 1];
-  if (!last || last.url || autoplayFetchedFor === last.id) return;
+  if (!last || last.url) return;
+  // Already asked for this tail: if that round is still going, its answer is
+  // the answer, so wait for it rather than reporting nothing.
+  if (autoplayFetchedFor === last.id) return autoplayRound ?? undefined;
   autoplayFetchedFor = last.id;
+  autoplayRound = fetchAutoplay(auth, last, radioMode, radioSeed, queue);
+  return autoplayRound;
+}
+
+/** One round of it: asks the server and appends what is worth appending. */
+async function fetchAutoplay(
+  auth: SubsonicAuth,
+  last: Song,
+  radioMode: boolean,
+  radioSeed: Song | null,
+  queue: Song[],
+): Promise<void> {
   // A mix always extends from the track it was started on. Seeding off the tail
   // (which is what plain autoplay does, and rightly so) made every batch reseed
   // on the previous batch's last track, so the mix drifted arbitrarily far from
@@ -2368,6 +2396,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     }
     attachAppState();
     autoplayFetchedFor = null;
+    autoplayRound = null;
     // A new queue starts the artist's catalogue over, even the same artist's:
     // what was handed over before is not in this queue.
     artistFill = null;
@@ -2418,6 +2447,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       // the object the player is already loaded with.
       pushHistory();
       autoplayFetchedFor = null;
+      autoplayRound = null;
       artistFill = null;
       resetWarmed();
       set({
@@ -2963,6 +2993,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   reset: async (forProfile = false) => {
     get().cancelSleepTimer();
     autoplayFetchedFor = null;
+    autoplayRound = null;
     artistFill = null;
     similarArtistsCache = null;
     stopPeriodicSync();

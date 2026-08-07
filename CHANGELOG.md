@@ -27,6 +27,14 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- Starting a mix stops saying it found nothing while the mix plays. Loading the
+  song sends one round of the search off on its own, and "start mix" then asked
+  again so it could tell you whether anything turned up: the second ask saw the
+  first had already claimed that song and came back empty, which is what the
+  message was reporting, a moment before the first round arrived and filled the
+  queue. It now waits for the round already in the air, so the answer is the
+  real one. Reported by @juananzzz.
+
 - Shuffle stays on. Two things were turning it off by themselves: emptying the
   queue, through a rule written for changing account, where the modes belong
   with the profile that is leaving and its own saved queue; and starting any
