@@ -27,6 +27,13 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- Emptying the queue no longer turns shuffle and repeat off with it. Holding
+  Play on the mini player was resetting both, through a rule written for a
+  different job: changing account, where the modes belong with the profile that
+  is leaving and its own saved queue. They already survive closing the app,
+  which is a bigger event than clearing a queue, so this was the one thing that
+  could still forget them. Reported by @ztx-lyghters (#102).
+
 - A song played away from the network reaches the server when it comes back,
   even if the app never noticed it had lost it. Listens were only put in the
   outbox while offline mode was on, and that mode is a guess: it takes two

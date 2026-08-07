@@ -263,7 +263,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   switchProfile: async (profile) => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    await require('./player').usePlayerStore.getState().reset();
+    await require('./player').usePlayerStore.getState().reset(true);
     // Moves the chosen profile to the front (last-used ordering).
     const reordered = [profile, ...get().profiles.filter((p) => !same(p, profile))];
     if (profile._type === 'offline') {
@@ -547,7 +547,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   logout: async () => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    await require('./player').usePlayerStore.getState().reset();
+    await require('./player').usePlayerStore.getState().reset(true);
     await deleteItem(ACTIVE_KEY);
     await deleteItem(OFFLINE_KEY);
     await deleteItem(OFFLINE_AUTO_KEY);

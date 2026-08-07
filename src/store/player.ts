@@ -2254,7 +2254,12 @@ interface PlayerState {
    *  position and playback state. Called on network URL switch (the old
    *  source stopped responding). Doesn't affect radio/local/downloaded. */
   reloadCurrent: () => void;
-  reset: () => Promise<void>;
+  /**
+   * Empties the queue and lets the player go. `forProfile` is the harder
+   * version, for when the account itself is changing: it also forgets shuffle
+   * and repeat, which belong to the profile that is leaving.
+   */
+  reset: (forProfile?: boolean) => Promise<void>;
 }
 
 /** What a stream announced it is playing. Its artist is often folded into the
@@ -2935,7 +2940,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     else hardReload(index, positionSec, false);
   },
 
-  reset: async () => {
+  reset: async (forProfile = false) => {
     get().cancelSleepTimer();
     autoplayFetchedFor = null;
     artistFill = null;
@@ -2970,11 +2975,14 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       isBuffering: false,
       positionSec: 0,
       durationSec: 0,
-      shuffle: false,
-      // Next to `shuffle`, now that it is saved with the queue: another
-      // profile's is restored with that profile's queue, and one that has none
-      // saved should not inherit this one's.
-      repeat: 'off',
+      // Shuffle and repeat are how somebody listens, not something a queue
+      // owns, and they already survive closing the app (#102). Emptying the
+      // queue is a smaller event than that, so it cannot be the one that
+      // forgets them: holding Play to clear was turning both off, and turning
+      // them back on by hand afterwards is exactly the chore #102 was about.
+      // Changing account is the real exception, since the mode being restored
+      // belongs with the other profile's queue.
+      ...(forProfile ? { shuffle: false, repeat: 'off' as const } : {}),
       originalQueue: null,
       source: null,
       sourceHref: null,
