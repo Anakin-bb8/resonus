@@ -365,6 +365,10 @@
 
     // ── Lists and how they look ──────────────────────────────────────────────
     "Grid view": "Show the list as cards in a grid",
+    "View": "Title of the menu that chooses how a collection is drawn, and the label of the button that opens it. A noun: what you are looking at, not the verb",
+    "Columns": "The same menu's title on a screen that has no list to switch to, so all it chooses is the density",
+    "List": "An option in that menu: one row per item, instead of cards",
+    "{n} columns": "The other options in that menu: cards, this many across. `{n}` is 2, 3 or 4, so it is always plural",
     "List view": "Show it as rows, one under the other",
     "Show artwork": "Whether song rows carry the album's little picture",
     "Show artist photo": "Whether the artist's photo shows at the top of their screen",

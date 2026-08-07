@@ -41,14 +41,18 @@ import { useToast } from '@/store/toast';
 import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
 import { haptic } from '@/lib/haptics';
 import { listPerf } from '@/lib/listPerf';
+import { useGridColumns } from '@/hooks/useGridColumns';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { BackChevron } from '@/components/BackChevron';
 
 const PAGE = 30;
 const SONG_PAGE = 50;
-const COLUMNS = 2;
 const GAP = spacing.sm;
-const CARD = (Dimensions.get('window').width - spacing.lg * 2 - GAP * (COLUMNS - 1)) / COLUMNS;
+
+/** Card width at a given density (#109). */
+function cardWidth(columns: number): number {
+  return (Dimensions.get('window').width - spacing.lg * 2 - GAP * (columns - 1)) / columns;
+}
 
 /** Songs fetched when pressing play: the same cap as the library shuffle, for
  *  the same reason (a queue of thousands is unusable). */
@@ -67,6 +71,13 @@ export default function GenreScreen() {
   const layout = useSettings((s) => s.genreLayout);
   const setLayout = useSettings((s) => s.setGenreLayout);
   const grid = layout === 'grid';
+  // Rows or cards, and how many across, are the same question about the same
+  // screen, so one menu asks it (#109).
+  const { columns, openGridMenu, gridSheet } = useGridColumns('genre', {
+    value: layout,
+    set: setLayout,
+  });
+  const card = cardWidth(columns);
   const [tab, setTab] = useState<'albums' | 'songs'>('albums');
   // Without this, tapping and hearing nothing for half a second feels broken.
   const [starting, setStarting] = useState(false);
@@ -197,10 +208,14 @@ export default function GenreScreen() {
           <Pressable
             hitSlop={10}
             accessibilityRole="button"
-            accessibilityLabel={grid ? t('List view') : t('Grid view')}
-            onPress={() => setLayout(grid ? 'list' : 'grid')}
+            accessibilityLabel={t('View')}
+            onPress={openGridMenu}
           >
-            <Ionicons name={grid ? 'list' : 'grid-outline'} size={20} color={colors.textSecondary} />
+            {/* The icon shows what you are looking at, not what one more tap
+                would give you. It used to be the second, which is how a button
+                that flips between two states reads; it opens a menu now, and a
+                menu is opened from a thing that says where you are. */}
+            <Ionicons name={grid ? 'grid-outline' : 'list'} size={20} color={colors.textSecondary} />
           </Pressable>
         ) : null}
       </View>
@@ -248,7 +263,7 @@ export default function GenreScreen() {
         tab === 'songs' || !grid ? (
           <AlbumRowsSkeleton />
         ) : (
-          <AlbumCardsSkeleton width={CARD} count={8} />
+          <AlbumCardsSkeleton width={card} count={8} />
         )
       ) : query.isError ? (
         <Message
@@ -311,17 +326,17 @@ export default function GenreScreen() {
           data={albums}
           // Remount on layout change: FlatList reuses rows and gets stuck with
           // stale ones, and `numColumns` can't be hot-swapped either.
-          key={layout}
+          key={`${layout}-${columns}`}
           keyExtractor={(item, i) => `${item.id}-${i}`}
           {...(grid
             ? {
-                numColumns: COLUMNS,
+                numColumns: columns,
                 columnWrapperStyle: { gap: GAP },
                 contentContainerStyle: [styles.list, { paddingBottom: bottomPad }],
               }
             : { contentContainerStyle: [styles.rowList, { paddingBottom: bottomPad }] })}
           renderItem={({ item }) =>
-            grid ? <AlbumCard album={item} width={CARD} /> : <AlbumRow album={item} />
+            grid ? <AlbumCard album={item} width={card} /> : <AlbumRow album={item} />
           }
           onEndReached={() => albumsQuery.hasNextPage && albumsQuery.fetchNextPage()}
           onEndReachedThreshold={0.5}
@@ -376,6 +391,7 @@ export default function GenreScreen() {
           ]}
         />
       ) : null}
+      {gridSheet}
     </SafeAreaView>
   );
 }

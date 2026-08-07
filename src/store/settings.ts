@@ -135,6 +135,39 @@ export type LibrarySort = 'recent' | 'added' | 'alpha';
 export type ListLayout = 'list' | 'grid';
 
 /**
+ * Grids whose density can be chosen, one key per screen (#109).
+ *
+ * Per screen and not one number for the whole app, because the app does not
+ * have one grid: Library and Artists have always been three across and the
+ * rest two, and a single shared setting would have had to make one half of
+ * them wrong on the day it arrived. What is shared is the machinery.
+ */
+export type GridKey =
+  | 'genres'
+  | 'library'
+  | 'browseArtists'
+  | 'browseAlbums'
+  | 'browseSongs'
+  | 'discography'
+  | 'genre';
+
+/** Exactly what each grid looked like before it could be chosen, so nothing
+ *  moves for anybody who never opens the menu. */
+export const GRID_DEFAULT_COLUMNS: Record<GridKey, number> = {
+  genres: 2,
+  library: 3,
+  browseArtists: 3,
+  browseAlbums: 2,
+  browseSongs: 2,
+  discography: 2,
+  genre: 2,
+};
+
+/** What the menu offers. Two is a poster, four is about as far as a cover can
+ *  shrink on a phone and still be a picture of something. */
+export const GRID_COLUMN_CHOICES = [2, 3, 4];
+
+/**
  * How long a shared link lives: `never`, or a span from the moment the link is
  * made. `never` is a date far enough away to mean it, because the API has no
  * way to say "no expiry" and every value it does understand that looks like one
@@ -689,6 +722,13 @@ interface SettingsState {
   discographyLayout: ListLayout;
   /** List or grid on a genre's albums. Its own key, same reasoning. */
   genreLayout: ListLayout;
+  /**
+   * How many across each grid is, for the ones that have been changed. Only
+   * what somebody chose is kept; anything absent falls back to
+   * `GRID_DEFAULT_COLUMNS`, so the defaults stay in one place and a screen
+   * that is added later needs nothing here.
+   */
+  gridColumns: Partial<Record<GridKey, number>>;
   /** Last expiry chosen when sharing, offered again the next time. */
   shareExpiry: ShareExpiry;
   /** Whether the last share allowed downloading (Navidrome only). */
@@ -775,6 +815,7 @@ interface SettingsState {
   setBrowseSongsLayout: (value: ListLayout) => void;
   setDiscographyLayout: (value: ListLayout) => void;
   setGenreLayout: (value: ListLayout) => void;
+  setGridColumns: (key: GridKey, value: number) => void;
   setShareExpiry: (value: ShareExpiry) => void;
   setShareDownloadable: (value: boolean) => void;
   setAccentColor: (value: string) => void;
@@ -873,6 +914,7 @@ function snapshot(get: () => SettingsState) {
     browseSongsLayout: s.browseSongsLayout,
     discographyLayout: s.discographyLayout,
     genreLayout: s.genreLayout,
+    gridColumns: s.gridColumns,
     shareExpiry: s.shareExpiry,
     shareDownloadable: s.shareDownloadable,
     accentColor: s.accentColor,
@@ -970,6 +1012,7 @@ const DEFAULTS = {
   discographyLayout: 'list' as ListLayout,
   // Grid, like browsing albums: a genre is browsed by cover, not read by name.
   genreLayout: 'grid' as ListLayout,
+  gridColumns: {} as Partial<Record<GridKey, number>>,
   // Sharing a song with somebody usually means for good; the rest are there
   // for whoever wants the link to stop working.
   shareExpiry: 'never' as ShareExpiry,
@@ -1376,6 +1419,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setGridColumns: (key, value) => {
+    set({ gridColumns: { ...get().gridColumns, [key]: value } });
+    persist(snapshot(get));
+  },
+
   setAccentColor: (accentColor) => {
     applyAccent(accentColor);
     set({ accentColor });
@@ -1508,6 +1556,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           browseSongsLayout: ListLayout;
           discographyLayout: ListLayout;
           genreLayout: ListLayout;
+          gridColumns: Partial<Record<GridKey, number>>;
           shareExpiry: ShareExpiry;
           shareDownloadable: boolean;
           accentColor: string;
@@ -1807,6 +1856,18 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (parsed.genreLayout === 'list' || parsed.genreLayout === 'grid') {
           set({ genreLayout: parsed.genreLayout });
+        }
+        // Read key by key rather than taken whole: a number from a file is the
+        // one thing here that decides how a list is laid out, and a stray one
+        // would be a screen that renders with columns nobody can choose. Keys
+        // that are not grids any more simply do not survive the read.
+        if (parsed.gridColumns && typeof parsed.gridColumns === 'object') {
+          const cols: Partial<Record<GridKey, number>> = {};
+          for (const [key, value] of Object.entries(parsed.gridColumns)) {
+            if (!(key in GRID_DEFAULT_COLUMNS)) continue;
+            if (GRID_COLUMN_CHOICES.includes(value as number)) cols[key as GridKey] = value as number;
+          }
+          set({ gridColumns: cols });
         }
         if (SHARE_EXPIRIES.includes(parsed.shareExpiry as ShareExpiry)) {
           set({ shareExpiry: parsed.shareExpiry as ShareExpiry });

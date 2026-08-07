@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 602 of them.
+Every string the app can show, under the screen it shows up on. 606 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -216,12 +216,16 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
+| `{n} columns` | The other options in that menu: cards, this many across. `{n}` is 2, 3 or 4, so it is always plural |
+| `Columns` | The same menu's title on a screen that has no list to switch to, so all it chooses is the density |
 | `Couldn't load songs.` | Error on the screen, with a Retry button |
+| `List` | An option in that menu: one row per item, instead of cards |
 | `No albums in this genre` | Empty state heading |
 | `No songs in this genre` | Empty state heading |
 | `Nothing to shuffle yet` | Empty state: there is nothing here to play in random order |
 | `Songs` | Always a heading, never a count, so it wants the plain plural your language uses for a list of them ("Songs", not "of songs"). Counting songs is a different thing and goes through the plural forms |
 | `Try exploring another genre.` | Empty state subtitle on a genre screen |
+| `View` | Title of the menu that chooses how a collection is drawn, and the label of the button that opens it. A noun: what you are looking at, not the verb |
 
 ## Genres
 
