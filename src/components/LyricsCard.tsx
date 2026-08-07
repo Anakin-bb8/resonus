@@ -242,20 +242,12 @@ export function SyncedLyricsView({
     if (m === undefined) return;
     const dest = Math.max(0, m.y - viewH * anchor);
     cancelAnimation(targetY);
-    // The first one is not a journey. Opening the lyrics part way through a
-    // song is arriving somewhere, not travelling there: the line that is
-    // playing should already be in place, without a ride down past every line
-    // that has been sung. From then on, one line to the next is animated,
-    // which is what makes it read as following the song.
-    const arriving = placedFor.current === -1;
     placedFor.current = current;
-    if (arriving) {
-      targetY.value = dest;
-      return;
-    }
     // We start from the real position (the user may have scrolled) and animate
     // ourselves: same path on any device, regardless of whether the system
-    // ignores animations.
+    // ignores animations. Opening part way through a song is the same journey
+    // as any other, taken as soon as there is somewhere to go rather than at
+    // the next line.
     targetY.value = liveY.value;
     targetY.value = withTiming(dest, {
       duration: 450,
