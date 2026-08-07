@@ -28,13 +28,18 @@ import { useAuthStore } from '@/store/auth';
 import { useSettings } from '@/store/settings';
 import { colors, fontSize, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
 import { BackChevron } from '@/components/BackChevron';
+import { useGridColumns } from '@/hooks/useGridColumns';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
 // Same measurements as browsing albums: both are full-screen album grids and
-// cards of different sizes between them would look like an accident.
-const COLUMNS = 2;
+// cards of different sizes between them would look like an accident. That is
+// why they start at the same density and each keeps its own after that (#109).
 const GAP = spacing.sm;
-const CARD = (Dimensions.get('window').width - spacing.lg * 2 - GAP * (COLUMNS - 1)) / COLUMNS;
+
+/** Card width at a given density (#109). */
+function cardWidth(columns: number): number {
+  return (Dimensions.get('window').width - spacing.lg * 2 - GAP * (columns - 1)) / columns;
+}
 
 export default function DiscographyScreen() {
   const bottomPad = useScreenBottomPadding();
@@ -47,6 +52,12 @@ export default function DiscographyScreen() {
   const layout = useSettings((s) => s.discographyLayout);
   const setLayout = useSettings((s) => s.setDiscographyLayout);
   const grid = layout === 'grid';
+  // Rows or cards, and how many across, in one menu (#109).
+  const { columns, openGridMenu, gridSheet } = useGridColumns('discography', {
+    value: layout,
+    set: setLayout,
+  });
+  const card = cardWidth(columns);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['artist', id],
@@ -93,10 +104,10 @@ export default function DiscographyScreen() {
         <Pressable
           hitSlop={10}
           accessibilityRole="button"
-          accessibilityLabel={grid ? t('List view') : t('Grid view')}
-          onPress={() => setLayout(grid ? 'list' : 'grid')}
+          accessibilityLabel={t('View')}
+          onPress={openGridMenu}
         >
-          <Ionicons name={grid ? 'list' : 'grid-outline'} size={20} color={colors.textSecondary} />
+          <Ionicons name={grid ? 'grid-outline' : 'list'} size={20} color={colors.textSecondary} />
         </Pressable>
       </View>
 
@@ -116,18 +127,18 @@ export default function DiscographyScreen() {
           data={albums}
           // Remount on layout change: FlatList reuses rows and gets stuck with
           // stale ones, and `numColumns` can't be hot-swapped either.
-          key={layout}
+          key={`${layout}-${columns}`}
           keyExtractor={(item) => item.id}
           {...(grid
             ? {
-                numColumns: COLUMNS,
+                numColumns: columns,
                 columnWrapperStyle: { gap: GAP },
                 contentContainerStyle: [styles.gridList, { paddingBottom: bottomPad }],
               }
             : { contentContainerStyle: [styles.list, { paddingBottom: bottomPad }] })}
           renderItem={({ item }: { item: Album }) =>
             grid ? (
-              <AlbumCard album={item} width={CARD} />
+              <AlbumCard album={item} width={card} />
             ) : (
               <Link href={`/album/${item.id}`} asChild>
                 <Pressable style={styles.row}>
@@ -144,6 +155,7 @@ export default function DiscographyScreen() {
           }
         />
       )}
+      {gridSheet}
     </SafeAreaView>
   );
 }

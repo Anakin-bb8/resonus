@@ -134,8 +134,6 @@ you are actually typing into, which is easier than reading it here.
 | `Appears on` | Albums the artist appears on: features, compilations |
 | `Couldn't load the artist.` | Error on the screen, with a Retry button |
 | `Discography` | Everything an artist has released, albums and singles together |
-| `Grid view` | Show the list as cards in a grid |
-| `List view` | Show it as rows, one under the other |
 
 ## Browse › Albums
 
