@@ -11,6 +11,13 @@ Releases before 0.2.1 are only listed on the
 
 ### Changed
 
+- The language can be changed from the first screen, before signing in. It was
+  only in Settings, which is behind a profile, so somebody who could not read
+  the sign-in screen had to get past it in a language they do not speak in
+  order to change the language of it. The button sits in the corner and says
+  the current language in its own name, and the list gives each one in its own
+  too.
+
 - German is complete, and reads better than it did: the strings that were still
   in English are translated, and a good number of the ones that were not have
   been reworded to say the same thing in plainer German, with the technical

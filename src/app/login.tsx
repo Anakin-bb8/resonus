@@ -27,6 +27,8 @@ import { Dialog } from '@/components/Dialog';
 import { ensureAudioPermission, pickFolder } from '@/lib/localLibrary';
 import { useToast } from '@/store/toast';
 import { useT } from '@/i18n';
+import { LANGUAGES } from '@/i18n/languages';
+import { useSettings } from '@/store/settings';
 import { colors, DEFAULT_ACCENT, fontSize, radius, spacing } from '@/theme';
 
 type ServerKey = 'navidrome' | 'opensubsonic' | 'jellyfin' | 'ampache';
@@ -57,6 +59,11 @@ function isServer(p: Profile): p is ServerProfile {
 function isOffline(p: Profile): p is OfflineProfile {
   return p._type === 'offline';
 }
+
+/** Sorted by their own names, and each shown in its own: the list is read by
+ *  somebody looking for a word they know, not for the English one. */
+const SORTED_LANGUAGES = [...LANGUAGES].sort((a, b) => a.name.localeCompare(b.name));
+const LANGUAGE_NAME = Object.fromEntries(LANGUAGES.map((l) => [l.code, l.name]));
 
 function ProfileRow({ profile, onTap, onRemove }: {
   profile: Profile;
@@ -132,6 +139,9 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  const [showLanguages, setShowLanguages] = useState(false);
+  const language = useSettings((s) => s.language);
+  const setLanguage = useSettings((s) => s.setLanguage);
   // Flow for adding profile: home → choose server → credentials.
   const [step, setStep] = useState<'home' | 'server' | 'form'>('home');
 
@@ -221,7 +231,22 @@ export default function LoginScreen() {
         >
           {step === 'home' ? (
             <>
-              <View style={styles.topBar} />
+              {/* The one setting that has to be reachable from here. Everything
+                  else lives behind a profile, which is fine, but somebody who
+                  cannot read this screen cannot get past it to change the
+                  language of it. In its own native name, so it is legible to
+                  whoever is looking for it. */}
+              <View style={styles.topBar}>
+                <Pressable
+                  style={styles.langBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Language')}
+                  onPress={() => setShowLanguages(true)}
+                >
+                  <Ionicons name="globe-outline" size={16} color={colors.textSecondary} />
+                  <Text style={styles.langBtnText}>{LANGUAGE_NAME[language]}</Text>
+                </Pressable>
+              </View>
               <View style={styles.hero}>
                 <Image source={APP_ICON} style={styles.appIcon} contentFit="cover" />
                 <Text style={styles.logo}>Resonus</Text>
@@ -483,6 +508,43 @@ export default function LoginScreen() {
         </SafeAreaView>
       </Modal>
 
+      <Modal
+        visible={showLanguages}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowLanguages(false)}
+      >
+        <SafeAreaView style={styles.modalSafe} edges={['top']}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>{t('Language')}</Text>
+            <Pressable hitSlop={12} onPress={() => setShowLanguages(false)}>
+              <Text style={styles.modalDone}>{t('Close')}</Text>
+            </Pressable>
+          </View>
+          <ScrollView contentContainerStyle={styles.modalList}>
+            {SORTED_LANGUAGES.map((l) => (
+              <Pressable
+                key={l.code}
+                style={styles.langRow}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: l.code === language }}
+                onPress={() => {
+                  setLanguage(l.code);
+                  setShowLanguages(false);
+                }}
+              >
+                <Text style={styles.langRowText}>{l.name}</Text>
+                {l.code === language ? (
+                  // Fixed colour, like the chevron above: the accent here may
+                  // still be the one from a profile that is not open yet.
+                  <Ionicons name="checkmark" size={20} color={DEFAULT_ACCENT} />
+                ) : null}
+              </Pressable>
+            ))}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
       <Dialog
         visible={!!removing}
         title={t('Remove profile?')}
@@ -570,6 +632,27 @@ const styles = StyleSheet.create({
   hero: { alignItems: 'center', marginBottom: spacing.xl },
   appIcon: { width: 88, height: 88, borderRadius: 22, marginBottom: spacing.md },
   topBar: { height: 32, justifyContent: 'center', marginBottom: spacing.md },
+  langBtn: {
+    alignSelf: 'flex-end',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+  },
+  langBtnText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '600' },
+  langRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+  },
+  langRowText: { color: colors.text, fontSize: fontSize.md, fontWeight: '600' },
   backBtn: { alignSelf: 'flex-start' },
   stepTitle: {
     color: colors.text,

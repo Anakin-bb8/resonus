@@ -298,6 +298,7 @@ you are actually typing into, which is easier than reading it here.
 | `Couldn't sign in` | Error when we do not know why it failed |
 | `Couldn't sign in; check the account` | Error when the server answered and refused the credentials |
 | `Its downloads and its offline copy of the library will be deleted from this device.` | The line under that title |
+| `Language` |  |
 | `Listen to music stored on your device, without a server. Choose where from:` | The line under `Music on your device`, before the two ways of finding it |
 | `Local profile` | The on-device profile, with no server account. Its library screen is `Local music` |
 | `Media server` | The type subtitle under Jellyfin |
