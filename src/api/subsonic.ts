@@ -1183,13 +1183,15 @@ export async function getPlayQueue(auth: SubsonicAuth): Promise<SavedQueue | nul
 /**
  * `submission=false` announces "now playing" (doesn't count as play);
  * `true` registers the actual listen (counters and Last.fm/ListenBrainz).
+ *
+ * Errors are let through. This used to swallow every one of them, which read
+ * as "scrobbling is optional" and was true of the announcement but not of the
+ * listen: a listen the network refused was meant to go to the outbox and be
+ * retried, and the caller could never find out that it had to (#126). Whoever
+ * does not care about the answer says so at the call site.
  */
 export async function scrobble(auth: SubsonicAuth, id: string, submission = true): Promise<void> {
-  try {
-    await request(auth, 'scrobble.view', { id, submission: submission ? 'true' : 'false' });
-  } catch {
-    // Scrobbling is optional; ignore its errors.
-  }
+  await request(auth, 'scrobble.view', { id, submission: submission ? 'true' : 'false' });
 }
 
 /**

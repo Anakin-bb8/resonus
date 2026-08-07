@@ -532,6 +532,11 @@
     "Automatic": "A value of `Normalize volume`: let the app decide between per track and per album",
     "Pre-amp": "A gain in decibels applied on top of normalization, for when everything ends up too quiet",
     "Autoplay": "When the queue runs out, keep playing with similar songs instead of stopping",
+    "Scrobbling": "Section header: reporting a song as played, to the user's own server and from there to Last.fm or ListenBrainz. Most languages keep the word, which comes from Last.fm itself and has no translation in most of them; use whatever the scrobbling services call it in yours if they do",
+    "A song counts as played once it passes either of these. What counts goes to your server, and from there to Last.fm or ListenBrainz if you have them linked, and none of them can tell how long you actually listened: they take what arrives. Lower these and the songs you skip past will count as played.": "Under the `Scrobbling` header, explaining the two rows below it and warning what happens if they are set low",
+    "Part of the song": "How much of a song must have played before it counts, as a percentage. One of the two scrobble rules, and it can be `Off`",
+    "Time played": "How long a song must have played before it counts, as a time. The other scrobble rule, and it can be `Off` too. Whichever of the two comes first is the one that counts",
+    "With both off nothing is ever reported: not to Last.fm or ListenBrainz, and not to your own server, so these plays stop counting there too.": "Shown only when both scrobble rules are `Off`, since that also stops the play counts on the user's own server",
 
     // ── Settings › Downloads & offline ───────────────────────────────────────
     "Downloading": "Section header over the download settings. A heading, not something happening right now",

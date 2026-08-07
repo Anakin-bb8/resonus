@@ -87,6 +87,35 @@ export type TranscodeFormat = '' | 'mp3' | 'opus' | 'aac';
  *  is translated on each screen with `t('Server default')`. */
 export const TRANSCODE_FORMATS: TranscodeFormat[] = ['', 'mp3', 'opus', 'aac'];
 
+/** Ceilings for the two scrobble rules, so the sliders and the stored values
+ *  agree on what is a number somebody could have meant. */
+export const SCROBBLE_SECONDS_MAX = 600;
+
+/**
+ * How far into a song a listen counts, in seconds, or null for "never".
+ *
+ * Two rules, either of which can be off (0), and the earlier one wins: a share
+ * of the song, which needs a duration to mean anything, and a flat time, which
+ * does not. Off, or on with a duration nobody knows, a rule simply does not
+ * apply; with neither applying there is nothing to cross and the song is not
+ * scrobbled at all.
+ *
+ * The defaults (50% and 4 minutes) are what Last.fm and ListenBrainz call a
+ * listen, and they are only defaults: neither service can check the rule from
+ * its side, since what reaches them is the scrobble and never the position it
+ * was sent at, so what this returns is the whole of what decides (#126).
+ */
+export function scrobbleThresholdSec(
+  durationSec: number,
+  percent: number,
+  seconds: number,
+): number | null {
+  const rules: number[] = [];
+  if (percent > 0 && durationSec > 0) rules.push((durationSec * percent) / 100);
+  if (seconds > 0) rules.push(seconds);
+  return rules.length ? Math.min(...rules) : null;
+}
+
 // Languages live in a single place (`src/i18n/languages.ts`): adding one is
 // a single line there. Re-exported here to avoid breaking existing imports.
 export { LANGUAGE_NAMES, isLanguage };
@@ -504,6 +533,14 @@ interface SettingsState {
   /** Crossfade seconds between songs (0 = disabled). */
   crossfadeSec: number;
   /**
+   * The two scrobble rules, in percent of the song and in seconds, each 0 when
+   * it is off (see `scrobbleThresholdSec`). Both off means nothing is ever
+   * scrobbled, which is a thing somebody may well want and the reason neither
+   * has a floor of its own.
+   */
+  scrobblePercent: number;
+  scrobbleSeconds: number;
+  /**
    * Pre-warm the stream for upcoming tracks in the queue. Designed for proxies
    * like Octo Fiesta or slow origins that serve the track on the fly: requests
    * the URL ahead of time so the server has it ready when needed. Off by
@@ -675,6 +712,8 @@ interface SettingsState {
   setAutoplaySimilar: (value: boolean) => void;
   setDiagnostics: (value: boolean) => void;
   setCrossfadeSec: (value: number) => void;
+  setScrobblePercent: (value: number) => void;
+  setScrobbleSeconds: (value: number) => void;
   setPreloadUpcoming: (value: boolean) => void;
   setAutoOfflineSwitch: (value: boolean) => void;
   setHideUnavailableOffline: (value: boolean) => void;
@@ -776,6 +815,8 @@ function snapshot(get: () => SettingsState) {
     autoplaySimilar: s.autoplaySimilar,
     diagnostics: s.diagnostics,
     crossfadeSec: s.crossfadeSec,
+    scrobblePercent: s.scrobblePercent,
+    scrobbleSeconds: s.scrobbleSeconds,
     preloadUpcoming: s.preloadUpcoming,
     autoOfflineSwitch: s.autoOfflineSwitch,
     hideUnavailableOffline: s.hideUnavailableOffline,
@@ -857,6 +898,10 @@ const DEFAULTS = {
   // else was paying for a report they will never send.
   diagnostics: false,
   crossfadeSec: 0,
+  // What both services call a listen, which is also what the app did when it
+  // was the only thing it could do.
+  scrobblePercent: 50,
+  scrobbleSeconds: 240,
   preloadUpcoming: false,
   autoOfflineSwitch: true,
   hideUnavailableOffline: false,
@@ -1040,6 +1085,16 @@ export const useSettings = create<SettingsState>((set, get) => ({
 
   setCrossfadeSec: (crossfadeSec) => {
     set({ crossfadeSec });
+    persist(snapshot(get));
+  },
+
+  setScrobblePercent: (scrobblePercent) => {
+    set({ scrobblePercent });
+    persist(snapshot(get));
+  },
+
+  setScrobbleSeconds: (scrobbleSeconds) => {
+    set({ scrobbleSeconds });
     persist(snapshot(get));
   },
 
@@ -1381,6 +1436,8 @@ export const useSettings = create<SettingsState>((set, get) => ({
           autoplaySimilar: boolean;
           diagnostics: boolean;
           crossfadeSec: number;
+          scrobblePercent: number;
+          scrobbleSeconds: number;
           preloadUpcoming: boolean;
           autoOfflineSwitch: boolean;
           hideUnavailableOffline: boolean;
@@ -1518,6 +1575,17 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (typeof parsed.crossfadeSec === 'number' && parsed.crossfadeSec >= 0) {
           set({ crossfadeSec: parsed.crossfadeSec });
+        }
+        // Clamped rather than only checked: these two decide whether a listen
+        // is reported at all, and a file with a percentage of 4000 in it would
+        // otherwise turn scrobbling off in a way nothing on screen explains.
+        if (typeof parsed.scrobblePercent === 'number' && parsed.scrobblePercent >= 0) {
+          set({ scrobblePercent: Math.min(100, Math.round(parsed.scrobblePercent)) });
+        }
+        if (typeof parsed.scrobbleSeconds === 'number' && parsed.scrobbleSeconds >= 0) {
+          set({
+            scrobbleSeconds: Math.min(SCROBBLE_SECONDS_MAX, Math.round(parsed.scrobbleSeconds)),
+          });
         }
         if (typeof parsed.preloadUpcoming === 'boolean') {
           set({ preloadUpcoming: parsed.preloadUpcoming });

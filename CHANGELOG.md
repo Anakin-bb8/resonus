@@ -9,6 +9,24 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Added
+
+- When a song counts as played is now yours to set, in Settings › Quality &
+  playback › Scrobbling. Two rules, a share of the song and a plain time, either
+  of which can be turned off, and the earlier one is what fires. The defaults
+  are what the app has always done, half the song or four minutes, so nothing
+  changes for anybody who does not go looking. With both off nothing is reported
+  at all, which is also a thing somebody may want. Asked for by @ztx-lyghters
+  (#126).
+
+  There is a warning under the heading, and it is worth reading before lowering
+  them: nothing on the way checks these numbers. Your server reports whatever
+  arrives, and Last.fm and ListenBrainz do too, because what reaches them is the
+  scrobble and never how much of the song was actually heard. Their own rule,
+  half the track or four minutes, is a rule for the app to keep, not one they
+  can enforce. Set it low and the songs you skip past land in your history for
+  good.
+
 ### Changed
 
 - The language can be changed from the first screen, before signing in. It was
@@ -33,6 +51,13 @@ Releases before 0.2.1 are only listed on the
   @CraftoHohenvels (#125).
 
 ### Fixed
+
+- Listens are kept again when the connection drops mid-song. The previous
+  release had them go to the outbox instead of being dropped, and that never
+  ran: the network error it was waiting for was being swallowed one layer down,
+  in the call itself, so the listen looked as though it had gone up and nothing
+  was ever queued. The call reports what happened now, and the "now playing"
+  announcement, which really is disposable, says so where it is made.
 
 - The share button stops disappearing for the rest of the session. Whether the
   server lets an account share is asked once and then remembered, since the

@@ -1211,7 +1211,10 @@ export async function getSongLyrics(
 
 export function scrobble(id: string): Promise<void> {
   if (isOffline()) return Promise.resolve();
-  return Subsonic.scrobble(auth(), id);
+  // The backend lets its errors through now (#126). This one keeps the shape it
+  // had: the player is what decides to keep a refused listen, and it does not
+  // come through here.
+  return Subsonic.scrobble(auth(), id).catch(() => {});
 }
 
 export async function addToPlaylist(playlistId: string, songId: string): Promise<void> {

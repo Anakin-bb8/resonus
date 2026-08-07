@@ -17,11 +17,13 @@ import {
   SwitchList,
 } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
+import { formatDuration } from '@/lib/format';
 import { useAuthStore } from '@/store/auth';
 import {
   BITRATE_OPTIONS,
   clampReplayGainPreamp,
   REPLAY_GAIN_PREAMP_LIMIT,
+  SCROBBLE_SECONDS_MAX,
   TRANSCODE_FORMATS,
   useSettings,
 } from '@/store/settings';
@@ -50,6 +52,10 @@ export default function PlaybackSettings() {
   const setReplayGain = useSettings((s) => s.setReplayGain);
   const replayGainPreampDb = useSettings((s) => s.replayGainPreampDb);
   const setReplayGainPreampDb = useSettings((s) => s.setReplayGainPreampDb);
+  const scrobblePercent = useSettings((s) => s.scrobblePercent);
+  const setScrobblePercent = useSettings((s) => s.setScrobblePercent);
+  const scrobbleSeconds = useSettings((s) => s.scrobbleSeconds);
+  const setScrobbleSeconds = useSettings((s) => s.setScrobbleSeconds);
   const keepScreenAwake = useSettings((s) => s.keepScreenAwake);
   const batteryWarning = useSettings((s) => s.batteryWarning);
   const setBatteryWarning = useSettings((s) => s.setBatteryWarning);
@@ -237,6 +243,55 @@ export default function PlaybackSettings() {
             },
           ]}
         />
+
+        {/* Two rules rather than one number: the share of a song is what makes
+            a listen mean the same on a two-minute track and on a ten-minute
+            one, and the flat time is what keeps the long ones from asking for
+            five minutes before they count. Either can be turned off on its
+            own, and the earlier of the two is what fires (raised by
+            @ztx-lyghters in #126). */}
+        <Text style={settingsStyles.sectionTitle}>{t('Scrobbling')}</Text>
+        {/* The warning is not "this might not count". It is the opposite, and
+            saying it the other way round would be untrue: nothing between here
+            and Last.fm checks these numbers, because what arrives there is the
+            scrobble and never the position it was sent at. */}
+        <Text style={settingsStyles.sectionDescription}>
+          {t(
+            'A song counts as played once it passes either of these. What counts goes to your server, and from there to Last.fm or ListenBrainz if you have them linked, and none of them can tell how long you actually listened: they take what arrives. Lower these and the songs you skip past will count as played.',
+          )}
+        </Text>
+        <SliderRow
+          label={t('Part of the song')}
+          value={scrobblePercent}
+          max={100}
+          step={5}
+          formatValue={(v) => (v === 0 ? t('Off') : `${v} %`)}
+          fineTune={{ step: 1, doneLabel: t('Done') }}
+          onChange={setScrobblePercent}
+        />
+        {/* Seconds up to a minute, then minutes and seconds: "240 s" is a
+            number to work out, and "4:00" is the one people already know as
+            the rule both services describe. */}
+        <SliderRow
+          label={t('Time played')}
+          value={scrobbleSeconds}
+          max={SCROBBLE_SECONDS_MAX}
+          step={5}
+          formatValue={(v) => (v === 0 ? t('Off') : v < 60 ? `${v} s` : formatDuration(v))}
+          fineTune={{ step: 1, doneLabel: t('Done') }}
+          onChange={setScrobbleSeconds}
+        />
+        {/* Both off is a real choice, not a mistake to be corrected, so it is
+            said plainly and nothing is put back. It earns a line because the
+            play counts on the server stop too, which is further than someone
+            turning off "scrobbling" may have meant to go. */}
+        {scrobblePercent === 0 && scrobbleSeconds === 0 ? (
+          <Text style={settingsStyles.sectionDescription}>
+            {t(
+              'With both off nothing is ever reported: not to Last.fm or ListenBrainz, and not to your own server, so these plays stop counting there too.',
+            )}
+          </Text>
+        ) : null}
       </ScrollView>
     </SettingsPage>
   );

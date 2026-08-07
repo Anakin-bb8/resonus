@@ -86,7 +86,7 @@ import { useNetworkType } from './networkType';
 import { useOfflineQueue } from './offlineQueue';
 import { usePlayCounts } from './playCounts';
 import { usePlayHistory } from './playHistory';
-import { useSettings, type TranscodeFormat } from './settings';
+import { scrobbleThresholdSec, useSettings, type TranscodeFormat } from './settings';
 import { useToast } from './toast';
 import { tg } from '@/i18n';
 
@@ -827,10 +827,12 @@ function forgetHistoryOf(key: string) {
 
 // ── Honest scrobble ──────────────────────────────────────────────────────────
 // When starting a track, only "now playing" is announced (submission false);
-// the actual listen is sent when crossing the classic Last.fm threshold:
-// 50% of duration or 4 minutes, whichever comes first. This way skipping songs
-// doesn't inflate counters or the Last.fm/ListenBrainz history. The local
-// offline mode counter follows the same rule.
+// the actual listen is sent when crossing the threshold in the settings, which
+// starts out as the classic one: 50% of duration or 4 minutes, whichever comes
+// first. This way skipping songs doesn't inflate counters or the
+// Last.fm/ListenBrainz history. The local offline mode counter follows the same
+// rule, and so does the outbox, so a trip without a connection reports the same
+// listens it would have reported with one.
 let scrobbledThisTrack = false;
 
 /**
@@ -855,8 +857,11 @@ function maybeScrobbleThreshold(positionSec: number) {
   const song = st.queue[st.index];
   if (!song || song.url) return; // radios are not scrobbled
   const duration = st.durationSec || song.duration || 0;
-  const threshold = duration > 0 ? Math.min(duration * 0.5, 240) : 240;
-  if (positionSec < threshold) return;
+  const { scrobblePercent, scrobbleSeconds } = useSettings.getState();
+  const threshold = scrobbleThresholdSec(duration, scrobblePercent, scrobbleSeconds);
+  // Both rules off: nothing is ever reported, here or to the outbox, which is
+  // what somebody who turned both off asked for.
+  if (threshold === null || positionSec < threshold) return;
   scrobbledThisTrack = true;
   const at = Date.now();
   const { auth, offline } = useAuthStore.getState();
@@ -901,7 +906,10 @@ function onTrackChanged(song: Song) {
   const { auth, offline } = useAuthStore.getState();
   // Only "I'm listening to this"; playback counts only when crossing the threshold.
   // Offline not sent (server account without connection: no one to send to).
-  if (auth && !offline) scrobble(auth, song.id, false);
+  // This one really is optional: it is about a song that is playing right now,
+  // so an announcement that did not arrive is stale a few minutes later and
+  // there is nothing worth retrying. The listen is the one that is kept.
+  if (auth && !offline) scrobble(auth, song.id, false).catch(() => {});
   usePlayHistory.getState().record(song);
   // Warm up lyrics for what is playing. The next song's are warmed too, so
   // swiping in the player shows its card instantly, but a few seconds later:

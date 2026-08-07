@@ -1002,16 +1002,13 @@ export async function deleteRadioStation(_auth: SubsonicAuth, _id: string): Prom
 
 // ── Playback ──
 
-/** Marks the song as played (updates counter and date). */
+/** Marks the song as played (updates counter and date). Errors are let through,
+ *  the same as the Subsonic one and for the same reason (#126). */
 export async function scrobble(auth: SubsonicAuth, id: string, submission = true): Promise<void> {
   // Jellyfin has no cheap "now playing" (requires full playback
   // sessions); only actual playback is marked.
   if (!submission) return;
-  try {
-    await request(auth, `/Users/${auth.jfUserId}/PlayedItems/${id}`, {}, { method: 'POST' });
-  } catch {
-    // Scrobbling is optional; ignore its errors.
-  }
+  await request(auth, `/Users/${auth.jfUserId}/PlayedItems/${id}`, {}, { method: 'POST' });
 }
 
 /**

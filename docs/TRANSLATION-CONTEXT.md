@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 595 of them.
+Every string the app can show, under the screen it shows up on. 600 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -723,6 +723,7 @@ you are actually typing into, which is easier than reading it here.
 | --- | --- |
 | `“Original” is the file exactly as it is on the server, with nothing transcoded. A lower bitrate saves data and may cost audible quality.` |  |
 | `A downloaded song normally plays from the file, which costs no data. Choose otherwise if your downloads are smaller copies and you would rather stream the good one when you can. Without a connection the file is always used.` |  |
+| `A song counts as played once it passes either of these. What counts goes to your server, and from there to Last.fm or ListenBrainz if you have them linked, and none of them can tell how long you actually listened: they take what arrives. Lower these and the songs you skip past will count as played.` | Under the `Scrobbling` header, explaining the two rows below it and warning what happens if they are set low |
 | `Always` | A value of when a downloaded song is played from the file instead of streamed |
 | `Automatic` | A value of `Normalize volume`: let the app decide between per track and per album |
 | `Autoplay` | When the queue runs out, keep playing with similar songs instead of stopping |
@@ -746,12 +747,14 @@ you are actually typing into, which is easier than reading it here.
 | `On mobile data only` | A value of when a downloaded song is played from the file instead of streamed |
 | `Only if it is the original file` | One of the values of “Play downloaded songs from the phone” |
 | `Original` | Quality option: the file exactly as it is on the server, nothing transcoded. It also appears in quotes inside two descriptions on those screens, so use the same wording in all three |
+| `Part of the song` | How much of a song must have played before it counts, as a percentage. One of the two scrobble rules, and it can be `Off` |
 | `Play downloaded songs from the phone` |  |
 | `Playback` |  |
 | `Pre-amp` | A gain in decibels applied on top of normalization, for when everything ends up too quiet |
 | `Preload upcoming tracks` |  |
 | `Quality & playback` |  |
 | `Request the next few tracks ahead of time so they start instantly. Helps with proxy servers like Octo-Fiesta or slow sources that fetch tracks on demand.` | The line under “Preload upcoming tracks”, explaining it |
+| `Scrobbling` | Section header: reporting a song as played, to the user's own server and from there to Last.fm or ListenBrainz. Most languages keep the word, which comes from Last.fm itself and has no translation in most of them; use whatever the scrobbling services call it in yours if they do |
 | `Songs blend into each other when one ends.` | The line under “Crossfade”, explaining it |
 | `Sound` | Section header: normalization and the pre-amp |
 | `Streaming` | Section header: everything about music coming from the server as it plays |
@@ -760,8 +763,10 @@ you are actually typing into, which is easier than reading it here.
 | `Streaming quality (mobile data)` |  |
 | `Streaming quality (Wi-Fi)` |  |
 | `The screen never turns off while the app is visible.` | The line under “Keep screen on”, explaining it |
+| `Time played` | How long a song must have played before it counts, as a time. The other scrobble rule, and it can be `Off` too. Whichever of the two comes first is the one that counts |
 | `Tune the sound band by band.` | The line under “Equalizer”, explaining it |
 | `Warn about battery optimization` |  |
+| `With both off nothing is ever reported: not to Last.fm or ListenBrainz, and not to your own server, so these plays stop counting there too.` | Shown only when both scrobble rules are `Off`, since that also stops the play counts on the user's own server |
 
 ## Settings › Player
 
