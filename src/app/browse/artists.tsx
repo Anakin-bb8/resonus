@@ -30,16 +30,21 @@ import { useSettings } from '@/store/settings';
 import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
 import { listPerf } from '@/lib/listPerf';
 import { BackChevron } from '@/components/BackChevron';
+import { useGridColumns } from '@/hooks/useGridColumns';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
-// Three columns, like the Library grid: circles come out to ~121dp, nearly
-// the 130dp Home uses for artists. Two columns (the album grid) would go to
-// 186dp and only fit four per screen, which with 500 artists is endless
-// scrolling. An album is recognized by its cover and deserves size; an artist
-// is recognized by their face much sooner.
-const COLUMNS = 3;
+// Three across is what this screen starts as (`GRID_DEFAULT_COLUMNS`), like
+// the Library grid: circles come out to ~121dp, nearly the 130dp Home uses for
+// artists. Two (the album grid) would go to 186dp and only fit four per screen,
+// which with 500 artists is endless scrolling. An album is recognized by its
+// cover and deserves size; an artist is recognized by their face much sooner.
+// It is where the screen starts and no longer where it has to stay (#109).
 const GAP = spacing.sm;
-const CARD = (Dimensions.get('window').width - spacing.lg * 2 - GAP * (COLUMNS - 1)) / COLUMNS;
+
+/** Card width at a given density (#109). */
+function cardWidth(columns: number): number {
+  return (Dimensions.get('window').width - spacing.lg * 2 - GAP * (columns - 1)) / columns;
+}
 
 /**
  * Client-side sorting: `getArtists()` brings the full index at once and
@@ -74,6 +79,12 @@ export default function BrowseArtistsScreen() {
   const layout = useSettings((s) => s.browseArtistsLayout);
   const setLayout = useSettings((s) => s.setBrowseArtistsLayout);
   const grid = layout === 'grid';
+  // Rows or cards, and how many across, in one menu (#109).
+  const { columns, openGridMenu, gridSheet } = useGridColumns('browseArtists', {
+    value: layout,
+    set: setLayout,
+  });
+  const card = cardWidth(columns);
 
   // "Recent" blends both sources: having opened their screen and having
   // played within any queue. Neither alone tells the full story.
@@ -181,11 +192,11 @@ export default function BrowseArtistsScreen() {
           <Pressable
             hitSlop={10}
             accessibilityRole="button"
-            accessibilityLabel={grid ? t('List view') : t('Grid view')}
-            onPress={() => setLayout(grid ? 'list' : 'grid')}
+            accessibilityLabel={t('View')}
+            onPress={openGridMenu}
           >
             <Ionicons
-              name={grid ? 'list' : 'grid-outline'}
+              name={grid ? 'grid-outline' : 'list'}
               size={20}
               color={colors.textSecondary}
             />
@@ -249,7 +260,7 @@ export default function BrowseArtistsScreen() {
 
       {isLoading ? (
         grid ? (
-          <ArtistGridSkeleton width={CARD} />
+          <ArtistGridSkeleton width={card} />
         ) : (
           <ArtistListSkeleton />
         )
@@ -263,15 +274,15 @@ export default function BrowseArtistsScreen() {
           // Remount the list when changing sort or layout: otherwise FlatList
           // reuses rows and gets stuck with stale ones (numColumns also doesn't
           // support hot-swapping).
-          key={`${sort}-${layout}`}
+          key={`${sort}-${layout}-${columns}`}
           keyExtractor={(item) => item.id}
           {...(grid
-            ? { numColumns: COLUMNS, columnWrapperStyle: { gap: GAP }, contentContainerStyle: [styles.list, { paddingBottom: bottomPad }] }
+            ? { numColumns: columns, columnWrapperStyle: { gap: GAP }, contentContainerStyle: [styles.list, { paddingBottom: bottomPad }] }
             : { contentContainerStyle: [styles.rowList, { paddingBottom: bottomPad }] })}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           renderItem={({ item }: { item: Artist }) =>
-            grid ? <ArtistCard artist={item} width={CARD} /> : <ArtistRow artist={item} />
+            grid ? <ArtistCard artist={item} width={card} /> : <ArtistRow artist={item} />
           }
           ListEmptyComponent={
             query.trim() ? (
@@ -290,6 +301,7 @@ export default function BrowseArtistsScreen() {
           }
         />
       )}
+      {gridSheet}
     </SafeAreaView>
   );
 }

@@ -54,6 +54,7 @@ import { usePlayHistory } from '@/store/playHistory';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
 import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
+import { useGridColumns } from '@/hooks/useGridColumns';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { BackChevron } from '@/components/BackChevron';
 
@@ -61,9 +62,14 @@ const PAGE = 50;
 
 // The same measurements as browsing albums: both are full-screen grids of
 // covers and cards of different sizes between them would look like an accident.
-const COLUMNS = 2;
+// That is why they start at the same density and each keeps its own after
+// that: whoever changes one of them is looking at that one (#109).
 const GAP = spacing.sm;
-const CARD = (Dimensions.get('window').width - spacing.lg * 2 - GAP * (COLUMNS - 1)) / COLUMNS;
+
+/** Card width at a given density (#109). */
+function cardWidth(columns: number): number {
+  return (Dimensions.get('window').width - spacing.lg * 2 - GAP * (columns - 1)) / columns;
+}
 
 /** Bar height: the box (44) plus its gap to the chips below. */
 const SEARCH_H = 44 + spacing.md;
@@ -106,6 +112,12 @@ export default function BrowseSongsScreen() {
   const layout = useSettings((s) => s.browseSongsLayout);
   const setLayout = useSettings((s) => s.setBrowseSongsLayout);
   const grid = layout === 'grid';
+  // Rows or cards, and how many across, in one menu (#109).
+  const { columns, openGridMenu, gridSheet } = useGridColumns('browseSongs', {
+    value: layout,
+    set: setLayout,
+  });
+  const card = cardWidth(columns);
   // What this server can actually order by; the first one is what it opens on.
   const sorts = canFetch ? songListSorts() : [];
   const [sort, setSort] = useState<SongListSort>(sorts[0] ?? 'server');
@@ -220,11 +232,11 @@ export default function BrowseSongsScreen() {
             <Pressable
               hitSlop={10}
               accessibilityRole="button"
-              accessibilityLabel={grid ? t('List view') : t('Grid view')}
-              onPress={() => setLayout(grid ? 'list' : 'grid')}
+              accessibilityLabel={t('View')}
+              onPress={openGridMenu}
             >
               <Ionicons
-                name={grid ? 'list' : 'grid-outline'}
+                name={grid ? 'grid-outline' : 'list'}
                 size={20}
                 color={colors.textSecondary}
               />
@@ -314,7 +326,7 @@ export default function BrowseSongsScreen() {
 
       {(isSearch ? searchPending : isLoading) ? (
         grid ? (
-          <AlbumCardsSkeleton width={CARD} count={8} />
+          <AlbumCardsSkeleton width={card} count={8} />
         ) : (
           <AlbumRowsSkeleton />
         )
@@ -333,10 +345,10 @@ export default function BrowseSongsScreen() {
           // Remount the list when changing sort or view: otherwise FlatList
           // reuses rows and gets stuck with stale ones (numColumns can't be
           // hot-swapped either).
-          key={`${sort}-${layout}`}
+          key={`${sort}-${layout}-${columns}`}
           {...(grid
             ? {
-                numColumns: COLUMNS,
+                numColumns: columns,
                 columnWrapperStyle: { gap: GAP },
                 contentContainerStyle: [styles.grid, { paddingBottom: bottomPad }],
               }
@@ -367,7 +379,7 @@ export default function BrowseSongsScreen() {
             return grid ? (
               <SongCard
                 song={item}
-                width={CARD}
+                width={card}
                 accent={accent}
                 isCurrent={playing?.id === item.id}
                 selecting={selecting}
@@ -464,6 +476,7 @@ export default function BrowseSongsScreen() {
           ]}
         />
       ) : null}
+      {gridSheet}
     </SafeAreaView>
   );
 }

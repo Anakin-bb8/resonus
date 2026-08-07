@@ -134,6 +134,8 @@ you are actually typing into, which is easier than reading it here.
 | `Appears on` | Albums the artist appears on: features, compilations |
 | `Couldn't load the artist.` | Error on the screen, with a Retry button |
 | `Discography` | Everything an artist has released, albums and singles together |
+| `Grid view` | Show the list as cards in a grid |
+| `List view` | Show it as rows, one under the other |
 
 ## Browse › Albums
 
@@ -216,16 +218,12 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `{n} columns` | The other options in that menu: cards, this many across. `{n}` is 2, 3 or 4, so it is always plural |
-| `Columns` | The same menu's title on a screen that has no list to switch to, so all it chooses is the density |
 | `Couldn't load songs.` | Error on the screen, with a Retry button |
-| `List` | An option in that menu: one row per item, instead of cards |
 | `No albums in this genre` | Empty state heading |
 | `No songs in this genre` | Empty state heading |
 | `Nothing to shuffle yet` | Empty state: there is nothing here to play in random order |
 | `Songs` | Always a heading, never a count, so it wants the plain plural your language uses for a list of them ("Songs", not "of songs"). Counting songs is a different thing and goes through the plural forms |
 | `Try exploring another genre.` | Empty state subtitle on a genre screen |
-| `View` | Title of the menu that chooses how a collection is drawn, and the label of the button that opens it. A noun: what you are looking at, not the verb |
 
 ## Genres
 
@@ -278,6 +276,8 @@ you are actually typing into, which is easier than reading it here.
 | `Couldn't load folders.` | Error on the screen, with a Retry button |
 | `Couldn't load playlists.` | Error on the screen, with a Retry button |
 | `Create your first playlist to get started.` | The line under an empty state |
+| `Grid view` | Show the list as cards in a grid |
+| `List view` | Show it as rows, one under the other |
 | `Music` | The name given to the server's folder when it does not have one of its own, browsing by folder |
 | `No favorite albums` | Empty state heading on the favourites tab |
 | `No favorite artists` | Empty state heading on the favourites tab |
@@ -892,6 +892,7 @@ you are actually typing into, which is easier than reading it here.
 | --- | --- |
 | `“{name}” will no longer be available offline.` | The line under that title. `{name}` is the album, artist or playlist |
 | `{n} added to “{name}”` | Toast when several songs went in at once. `{n}` is a count of songs |
+| `{n} columns` | The other options in that menu: cards, this many across. `{n}` is 2, 3 or 4, so it is always plural |
 | `{n} selected` | How many songs are ticked right now |
 | `{n} songs couldn't be downloaded` | Toast: some failed, the rest are there |
 | `{n} songs deleted` | Toast after deleting downloads. `{n}` is how many files went |
@@ -913,6 +914,7 @@ you are actually typing into, which is easier than reading it here.
 | `Cancel` | The button that closes a dialog without doing anything, and the one beside a search box |
 | `Clear` | Read out by the screen reader for the small x that empties a search box. A verb |
 | `Close` | Read out by the screen reader for a button that closes what is open. A verb |
+| `Columns` | The same menu's title on a screen that has no list to switch to, so all it chooses is the density |
 | `Connect to Wi-Fi to download` | Toast: downloading over mobile data is turned off in the settings |
 | `Couldn't add to the playlist` | Toast: the server refused |
 | `Couldn't complete the action` | What the app says when it does not know what went wrong. Deliberately vague |
@@ -926,11 +928,10 @@ you are actually typing into, which is easier than reading it here.
 | `Download stopped` | Toast: the download was stopped part way |
 | `Downloading…` | Toast: the download has started. The songs arrive one by one after this |
 | `Favorites` | The songs, albums and artists you starred |
-| `Grid view` | Show the list as cards in a grid |
 | `History` | The listening history: what was played and when |
 | `Hold to go back to {tab}` | The hint on holding the back arrow. `{tab}` is Home, Search or Library |
 | `Library` | The tab with your albums, artists and playlists, and a folder in the car |
-| `List view` | Show it as rows, one under the other |
+| `List` | An option in that menu: one row per item, instead of cards |
 | `Lyrics` | The words of the song. Also a line of the storage bar, where it is their size on the phone |
 | `More options` | Read out by the screen reader for the three-dot button, which is ⋮ on a song row and in the player and ⋯ in a screen's header |
 | `New playlist` | Row at the top of the playlist picker, and the button on an empty library: make one |
@@ -964,6 +965,7 @@ you are actually typing into, which is easier than reading it here.
 | `Undo` | The button in a toast that takes back what just happened. It is there for a few seconds |
 | `Unknown album` | Fallback when the file and the server have no album |
 | `Unknown artist` | Fallback when the file and the server have no artist |
+| `View` | Title of the menu that chooses how a collection is drawn, and the label of the button that opens it. A noun: what you are looking at, not the verb |
 
 ## Left in English on purpose
 

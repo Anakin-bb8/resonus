@@ -29,12 +29,16 @@ import { useSettings } from '@/store/settings';
 import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
 import { listPerf } from '@/lib/listPerf';
 import { BackChevron } from '@/components/BackChevron';
+import { useGridColumns } from '@/hooks/useGridColumns';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
 const PAGE = 30;
-const COLUMNS = 2;
 const GAP = spacing.sm;
-const CARD = (Dimensions.get('window').width - spacing.lg * 2 - GAP * (COLUMNS - 1)) / COLUMNS;
+
+/** Card width at a given density (#109). */
+function cardWidth(columns: number): number {
+  return (Dimensions.get('window').width - spacing.lg * 2 - GAP * (columns - 1)) / columns;
+}
 
 /** Bar height: the box (44) plus its gap to the chips below. */
 const SEARCH_H = 44 + spacing.md;
@@ -69,6 +73,12 @@ export default function BrowseAlbumsScreen() {
   const layout = useSettings((s) => s.browseAlbumsLayout);
   const setLayout = useSettings((s) => s.setBrowseAlbumsLayout);
   const grid = layout === 'grid';
+  // Rows or cards, and how many across, in one menu (#109).
+  const { columns, openGridMenu, gridSheet } = useGridColumns('browseAlbums', {
+    value: layout,
+    set: setLayout,
+  });
+  const card = cardWidth(columns);
 
   const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useInfiniteQuery({
@@ -140,11 +150,11 @@ export default function BrowseAlbumsScreen() {
           <Pressable
             hitSlop={10}
             accessibilityRole="button"
-            accessibilityLabel={grid ? t('List view') : t('Grid view')}
-            onPress={() => setLayout(grid ? 'list' : 'grid')}
+            accessibilityLabel={t('View')}
+            onPress={openGridMenu}
           >
             <Ionicons
-              name={grid ? 'list' : 'grid-outline'}
+              name={grid ? 'grid-outline' : 'list'}
               size={20}
               color={colors.textSecondary}
             />
@@ -215,7 +225,7 @@ export default function BrowseAlbumsScreen() {
 
       {(isSearch ? searchPending : isLoading) ? (
         grid ? (
-          <AlbumCardsSkeleton width={CARD} count={8} />
+          <AlbumCardsSkeleton width={card} count={8} />
         ) : (
           <AlbumRowsSkeleton />
         )
@@ -231,15 +241,15 @@ export default function BrowseAlbumsScreen() {
           // Remount the list when changing sort or layout: otherwise FlatList
           // reuses rows and gets stuck with stale ones (numColumns also doesn't
           // support hot-swapping).
-          key={`${sort}-${layout}`}
+          key={`${sort}-${layout}-${columns}`}
           keyExtractor={(item, i) => `${item.id}-${i}`}
           {...(grid
-            ? { numColumns: COLUMNS, columnWrapperStyle: { gap: GAP }, contentContainerStyle: [styles.list, { paddingBottom: bottomPad }] }
+            ? { numColumns: columns, columnWrapperStyle: { gap: GAP }, contentContainerStyle: [styles.list, { paddingBottom: bottomPad }] }
             : { contentContainerStyle: [styles.rowList, { paddingBottom: bottomPad }] })}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           renderItem={({ item }: { item: Album }) =>
-            grid ? <AlbumCard album={item} width={CARD} /> : <AlbumRow album={item} />
+            grid ? <AlbumCard album={item} width={card} /> : <AlbumRow album={item} />
           }
           // Results don't paginate: they're a cap, not a window. Requesting the
           // next page at the end would bring in the normal list instead.
@@ -277,6 +287,7 @@ export default function BrowseAlbumsScreen() {
           }
         />
       )}
+      {gridSheet}
     </SafeAreaView>
   );
 }
