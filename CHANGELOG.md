@@ -11,21 +11,13 @@ Releases before 0.2.1 are only listed on the
 
 ### Added
 
-- When a song counts as played is now yours to set, in Settings › Quality &
-  playback › Scrobbling. Two rules, a share of the song and a plain time, either
-  of which can be turned off, and the earlier one is what fires. The defaults
-  are what the app has always done, half the song or four minutes, so nothing
-  changes for anybody who does not go looking. With both off nothing is reported
-  at all, which is also a thing somebody may want. Asked for by @ztx-lyghters
-  (#126).
-
-  There is a warning under the heading, and it is worth reading before lowering
-  them: nothing on the way checks these numbers. Your server reports whatever
-  arrives, and Last.fm and ListenBrainz do too, because what reaches them is the
-  scrobble and never how much of the song was actually heard. Their own rule,
-  half the track or four minutes, is a rule for the app to keep, not one they
-  can enforce. Set it low and the songs you skip past land in your history for
-  good.
+- When a song counts as played is now yours to set, on a screen of its own in
+  Settings › Quality & playback › Scrobbling. Two rules, a share of the song and
+  a plain time, either of which can be turned off, and the earlier one is what
+  fires. The defaults are what the app has always done, half the song or four
+  minutes, and there is a button to put them back. With both off nothing is
+  reported at all, not even to your own server, which is also a thing somebody
+  may want. Asked for by @ztx-lyghters (#126).
 
 ### Changed
 

@@ -248,6 +248,7 @@ export default function RootLayout() {
                 <Stack.Screen name="settings/song-menu" />
                 <Stack.Screen name="settings/home-sections" />
                 <Stack.Screen name="settings/equalizer" />
+                <Stack.Screen name="settings/scrobbling" />
                 <Stack.Screen name="settings/theme" />
                 <Stack.Screen name="settings/about" />
               </Stack.Protected>

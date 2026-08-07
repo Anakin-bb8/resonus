@@ -91,6 +91,13 @@ export const TRANSCODE_FORMATS: TranscodeFormat[] = ['', 'mp3', 'opus', 'aac'];
  *  agree on what is a number somebody could have meant. */
 export const SCROBBLE_SECONDS_MAX = 600;
 
+/** What both services call a listen, and what the app did when that was the
+ *  only thing it could do. Named because three places have to agree on them:
+ *  the defaults, what a stored file falls back to, and the button that puts
+ *  them back. */
+export const SCROBBLE_PERCENT_DEFAULT = 50;
+export const SCROBBLE_SECONDS_DEFAULT = 240;
+
 /**
  * How far into a song a listen counts, in seconds, or null for "never".
  *
@@ -714,6 +721,7 @@ interface SettingsState {
   setCrossfadeSec: (value: number) => void;
   setScrobblePercent: (value: number) => void;
   setScrobbleSeconds: (value: number) => void;
+  resetScrobbleRules: () => void;
   setPreloadUpcoming: (value: boolean) => void;
   setAutoOfflineSwitch: (value: boolean) => void;
   setHideUnavailableOffline: (value: boolean) => void;
@@ -898,10 +906,8 @@ const DEFAULTS = {
   // else was paying for a report they will never send.
   diagnostics: false,
   crossfadeSec: 0,
-  // What both services call a listen, which is also what the app did when it
-  // was the only thing it could do.
-  scrobblePercent: 50,
-  scrobbleSeconds: 240,
+  scrobblePercent: SCROBBLE_PERCENT_DEFAULT,
+  scrobbleSeconds: SCROBBLE_SECONDS_DEFAULT,
   preloadUpcoming: false,
   autoOfflineSwitch: true,
   hideUnavailableOffline: false,
@@ -1095,6 +1101,16 @@ export const useSettings = create<SettingsState>((set, get) => ({
 
   setScrobbleSeconds: (scrobbleSeconds) => {
     set({ scrobbleSeconds });
+    persist(snapshot(get));
+  },
+
+  // Both at once, and one write: put back separately, the first of the two
+  // spends a moment as a rule nobody chose next to the other one's old value.
+  resetScrobbleRules: () => {
+    set({
+      scrobblePercent: SCROBBLE_PERCENT_DEFAULT,
+      scrobbleSeconds: SCROBBLE_SECONDS_DEFAULT,
+    });
     persist(snapshot(get));
   },
 
