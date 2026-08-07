@@ -825,6 +825,21 @@ function forgetHistoryOf(key: string) {
 // offline mode counter follows the same rule.
 let scrobbledThisTrack = false;
 
+/**
+ * A list in a new order, without touching the one handed in. Fisher-Yates,
+ * shared by the shuffle button and by starting a list while shuffle is already
+ * on, because those two have to deal the same way: the second used to turn
+ * shuffle off instead of dealing at all.
+ */
+function dealt<T>(list: T[]): T[] {
+  const out = [...list];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
 /** Sends the real scrobble once per track when crossing the threshold. */
 function maybeScrobbleThreshold(positionSec: number) {
   if (scrobbledThisTrack) return;
@@ -2366,21 +2381,30 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     if (!key || key !== contextKey(get().source, get().sourceHref)) pushHistory();
     // Mark the source as recently listened (Library "Recent" order).
     if (sourceHref) useLastPlayed.getState().touch(sourceHref);
+    // Shuffle is a way of listening, not a property of one album, so a list
+    // started while it is on is dealt rather than played in order: the song
+    // that was tapped goes first and the rest follow shuffled, which is what
+    // the button itself does and what people expect from every other player.
+    // Turning shuffle off then puts the album back in its own order, which is
+    // what `originalQueue` is for.
+    const deal = get().shuffle && songs.length > 1;
+    const first = songs[startIndex];
+    const queued = deal ? [first, ...dealt(songs.filter((_, i) => i !== startIndex))] : songs;
+    const at = deal ? 0 : startIndex;
     set({
-      queue: songs,
-      index: startIndex,
+      queue: queued,
+      index: at,
       queuedCount: 0,
       positionSec: 0,
       durationSec: 0,
-      shuffle: false,
-      originalQueue: null,
+      originalQueue: deal ? songs : null,
       source: source ?? null,
       sourceHref: sourceHref ?? null,
       // Any normal queue turns off the radio; `startRadio` turns it back on.
       radioMode: false,
       radioSeed: null,
     });
-    await loadIndex(startIndex, true);
+    await loadIndex(at, true);
   },
 
   startRadio: async (seed, source) => {
@@ -2765,11 +2789,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     if (key) forgetHistoryOf(key);
 
     if (!shuffle) {
-      const rest = queue.filter((_, i) => i !== index);
-      for (let i = rest.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [rest[i], rest[j]] = [rest[j], rest[i]];
-      }
+      const rest = dealt(queue.filter((_, i) => i !== index));
       // Autoplay's mark comes off with the shuffle, the same as the "queued"
       // block does and for the same reason: it names a block at the end of the
       // queue, and there are no blocks left in here. Left on, its songs would

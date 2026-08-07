@@ -27,12 +27,15 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
-- Emptying the queue no longer turns shuffle and repeat off with it. Holding
-  Play on the mini player was resetting both, through a rule written for a
-  different job: changing account, where the modes belong with the profile that
-  is leaving and its own saved queue. They already survive closing the app,
-  which is a bigger event than clearing a queue, so this was the one thing that
-  could still forget them. Reported by @ztx-lyghters (#102).
+- Shuffle stays on. Two things were turning it off by themselves: emptying the
+  queue, through a rule written for changing account, where the modes belong
+  with the profile that is leaving and its own saved queue; and starting any
+  album or playlist, which played it in order however the button was set. So a
+  setting that survives closing the app was lost to the most ordinary thing
+  there is, which is tapping an album. A list started with shuffle on is now
+  dealt: the song you tapped plays first and the rest follow in a new order,
+  the same as the button does, and turning shuffle off puts the album back in
+  its own order. Reported by @ztx-lyghters (#102).
 
 - A song played away from the network reaches the server when it comes back,
   even if the app never noticed it had lost it. Listens were only put in the
