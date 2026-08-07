@@ -64,7 +64,12 @@ export function PlaylistPickerSheet({
   const close = () => dismiss(onClose);
   const [creating, setCreating] = useState(false);
   // "Already in the playlist" prompt pending confirmation (Spotify style).
-  const [dupPrompt, setDupPrompt] = useState<{ playlistId: string; name: string } | null>(null);
+  const [dupPrompt, setDupPrompt] = useState<{
+    playlistId: string;
+    name: string;
+    /** The ones not in that playlist yet. Empty when every one of them is. */
+    fresh: Song[];
+  } | null>(null);
 
   const { data: playlists, isLoading } = useQuery({
     queryKey: ['playlists'],
@@ -74,17 +79,20 @@ export function PlaylistPickerSheet({
 
   if (!songs || songs.length === 0) return null;
 
-  /** Actually adds (without checking duplicates) and closes with a toast. */
-  async function doAdd(playlistId: string, name: string) {
-    if (!songs) return;
+  /** Actually adds (without checking duplicates) and closes with a toast.
+   *  `which` is what to add, for when the answer to the warning was to leave
+   *  the ones that are already there alone. */
+  async function doAdd(playlistId: string, name: string, which?: Song[]) {
+    const adding = which ?? songs;
+    if (!adding || adding.length === 0) return;
     close();
     try {
-      for (const s of songs) await addToPlaylist(playlistId, s.id);
+      for (const s of adding) await addToPlaylist(playlistId, s.id);
       // Optimistic count in the Library (`songsLabel`): without this the
       // subtitle doesn't update until that screen is reloaded.
       queryClient.setQueryData<{ id: string; songCount?: number }[]>(['playlists'], (list) =>
         list?.map((p) =>
-          p.id === playlistId ? { ...p, songCount: (p.songCount ?? 0) + songs.length } : p,
+          p.id === playlistId ? { ...p, songCount: (p.songCount ?? 0) + adding.length } : p,
         ),
       );
       queryClient.invalidateQueries({ queryKey: ['playlist', playlistId] });
@@ -92,9 +100,9 @@ export function PlaylistPickerSheet({
       // If the list has auto-download, fetch the newly added songs now.
       void useAutoDownloads.getState().reconcile(playlistId, true);
       toast(
-        songs.length === 1
+        adding.length === 1
           ? t('Added to “{name}”', { name })
-          : t('{n} added to “{name}”', { n: songs.length, name }),
+          : t('{n} added to “{name}”', { n: adding.length, name }),
       );
     } catch {
       toast(t("Couldn't add to the playlist"));
@@ -108,8 +116,9 @@ export function PlaylistPickerSheet({
     try {
       const { songs: existing } = await getPlaylist(playlistId);
       const have = new Set(existing.map((s) => s.id));
-      if (songs.some((s) => have.has(s.id))) {
-        setDupPrompt({ playlistId, name });
+      const fresh = songs.filter((s) => !have.has(s.id));
+      if (fresh.length < songs.length) {
+        setDupPrompt({ playlistId, name, fresh });
         return;
       }
     } catch {
@@ -203,6 +212,12 @@ export function PlaylistPickerSheet({
         onConfirm={createAndAdd}
       />
 
+      {/* Three ways out rather than a switch inside the dialog (#132). A
+          switch would be state to read and understand before pressing a button
+          that no longer does what it says; each of these says what it does.
+          Adding only the new ones is offered when there are any: with every one
+          of them already there it would add nothing, and a button that does
+          nothing is worse than one that is not there. */}
       <Dialog
         visible={!!dupPrompt}
         title={t('Already added')}
@@ -210,7 +225,21 @@ export function PlaylistPickerSheet({
           dupPrompt
             ? songs.length === 1
               ? t('This song is already in “{name}”.', { name: dupPrompt.name })
-              : t('Some of these songs are already in “{name}”.', { name: dupPrompt.name })
+              : dupPrompt.fresh.length === 0
+                ? t('These songs are already in “{name}”.', { name: dupPrompt.name })
+                : t('Some of these songs are already in “{name}”.', { name: dupPrompt.name })
+            : undefined
+        }
+        neutral={
+          dupPrompt && dupPrompt.fresh.length > 0
+            ? {
+                label: t('Add only the new ones'),
+                onPress: () => {
+                  const d = dupPrompt;
+                  setDupPrompt(null);
+                  void doAdd(d.playlistId, d.name, d.fresh);
+                },
+              }
             : undefined
         }
         confirmLabel={t('Add anyway')}

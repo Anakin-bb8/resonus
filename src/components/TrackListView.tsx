@@ -260,21 +260,43 @@ export function TrackListView({
     });
 
   // ── Multi-select ────────────────────────────────────────────────────────
+  /**
+   * One key per row: the song's id, and which time it appears if the same song
+   * is in the list more than once. A playlist may hold the same track twice,
+   * and while these were the plain id every one of those rows was the same row
+   * as far as anything here could tell: ticking one ticked them all, and
+   * removing one removed them all, which left none (#132). The queue screen
+   * already numbers its rows this way, and for the same reason.
+   *
+   * Keyed rather than indexed because it survives what indices do not: sorting
+   * the list moves every position, and `id#0` is still the same song
+   * afterwards. Two rows of the same song do swap places with each other, and
+   * there is nothing to tell them apart by anyway.
+   */
+  const rowKeys = useMemo(() => {
+    const seen = new Map<string, number>();
+    return songs.map((s) => {
+      const n = seen.get(s.id) ?? 0;
+      seen.set(s.id, n + 1);
+      return `${s.id}#${n}`;
+    });
+  }, [songs]);
+
   // null = normal mode; a Set (even empty) = selecting.
   const [selectedIds, setSelectedIds] = useState<Set<string> | null>(null);
   const selecting = selectedIds !== null;
-  // Id that just entered selection via long-press. On release, the `onPress` of
+  // Row that just entered selection via long-press. On release, the `onPress` of
   // that same gesture arrives with `selecting` already active and would undo the
   // selection; we discard it once. Reset in `onPressIn` (start of each press),
   // so no residue remains even if `onPress` doesn't fire after the long-press.
   const justLongPressed = useRef<string | null>(null);
   const allSelected = selecting && selectedIds.size === songs.length && songs.length > 0;
 
-  function toggleSelect(id: string) {
+  function toggleSelect(key: string) {
     setSelectedIds((cur) => {
       const next = new Set(cur ?? []);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   }
@@ -284,7 +306,7 @@ export function TrackListView({
     const sel: Song[] = [];
     const indices: number[] = [];
     songs.forEach((s, i) => {
-      if (selectedIds?.has(s.id)) {
+      if (selectedIds?.has(rowKeys[i])) {
         sel.push(s);
         indices.push(playlistIndices ? playlistIndices[i] : i);
       }
@@ -393,7 +415,9 @@ export function TrackListView({
         // Disabling it here keeps them mounted within the virtual window.
         removeClippedSubviews={false}
         data={shownSongs}
-        keyExtractor={(item) => item.id}
+        // The row's own key, not the song's: the same song can be in the list
+        // twice and React was being handed the same key for both.
+        keyExtractor={(_, index) => rowKeys[filtered ? filtered[index].index : index]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         contentContainerStyle={[
@@ -623,6 +647,7 @@ export function TrackListView({
           // With an active filter, `index` is the position in results; everything
           // else (play, remove, numbering) uses the original position.
           const origIndex = filtered ? filtered[index].index : index;
+          const rowKey = rowKeys[origIndex];
           // Disc header (only when not searching, where origIndex === index).
           const discLabel = filtered ? undefined : discHeaders?.[origIndex];
           const row = (
@@ -639,7 +664,7 @@ export function TrackListView({
                   : undefined
               }
               selecting={selecting}
-              selected={!!selectedIds?.has(item.id)}
+              selected={!!selectedIds?.has(rowKey)}
               onPressIn={() => {
                 justLongPressed.current = null;
               }}
@@ -647,16 +672,16 @@ export function TrackListView({
                 selection && !selecting
                   ? () => {
                       haptic('medium');
-                      setSelectedIds(new Set([item.id]));
-                      justLongPressed.current = item.id;
+                      setSelectedIds(new Set([rowKey]));
+                      justLongPressed.current = rowKey;
                     }
                   : undefined
               }
               onPress={() => {
                 // Discards the onPress that follows the selection long-press:
                 // otherwise it would deselect the song you entered selection with.
-                if (justLongPressed.current === item.id) return;
-                if (selecting) toggleSelect(item.id);
+                if (justLongPressed.current === rowKey) return;
+                if (selecting) toggleSelect(rowKey);
                 else onPlay(origIndex);
               }}
             />
@@ -702,7 +727,7 @@ export function TrackListView({
               accessibilityRole="button"
               accessibilityLabel={t('Select all')}
               onPress={() =>
-                setSelectedIds(allSelected ? new Set() : new Set(songs.map((s) => s.id)))
+                setSelectedIds(allSelected ? new Set() : new Set(rowKeys))
               }
             >
               <Ionicons

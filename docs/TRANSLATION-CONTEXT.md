@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 606 of them.
+Every string the app can show, under the screen it shows up on. 608 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -899,6 +899,7 @@ you are actually typing into, which is easier than reading it here.
 | `{songs} will be saved to this device (about {size}).` | The same line when the size is known. `{size}` is like "340 MB" |
 | `{songs} will be saved to this device.` | The line under that title. `{songs}` is already worded and inflected, "12 songs" |
 | `Add anyway` | The confirm button of that warning: put it in a second time |
+| `Add only the new ones` | The other button of that warning, when some are already in the playlist and some are not: leave the ones that are and add the rest |
 | `Add to a playlist` | Menu action: put this song, album or selection into a playlist |
 | `Add to favorites` | Menu action and screen reader label for the heart. A verb |
 | `Add to queue` | Action: put this song at the end of the queue |
@@ -953,11 +954,12 @@ you are actually typing into, which is easier than reading it here.
 | `Select all` | Tick every song in the list at once |
 | `Server default` | Codec option meaning "let the server decide" what to transcode to |
 | `Shuffle` | Play in random order |
-| `Some of these songs are already in “{name}”.` | The same warning when adding several at once |
+| `Some of these songs are already in “{name}”.` | The same warning when adding several at once and only some of them are already there |
 | `Song downloaded` | Toast: one song finished |
 | `Songs already downloaded will be kept.` | The line under that title: stopping does not undo what already arrived |
 | `Stop` | Stop a download that is running. Not stop playback |
 | `Stop download?` | Dialog title: stop a download that is running |
+| `These songs are already in “{name}”.` | The same warning when every one of the several being added is already there |
 | `This song can't be cast` | Toast: the speaker or TV will not take this file |
 | `This song is already in “{name}”.` | The line under that title. `{name}` is the playlist |
 | `Undo` | The button in a toast that takes back what just happened. It is there for a few seconds |

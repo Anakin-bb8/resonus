@@ -397,6 +397,8 @@
   "Sleep timer (end of song)": "Temporizador (fin de canción)",
   "Sleep timer off": "Temporizador desactivado",
   "Some of these songs are already in “{name}”.": "Algunas de estas canciones ya están en «{name}».",
+  "These songs are already in “{name}”.": "Estas canciones ya están en «{name}».",
+  "Add only the new ones": "Añadir solo las nuevas",
   "Song": "Canción",
   "Song and artist names that don't fit scroll across.": "Los nombres de canción y artista que no caben se desplazan solos.",
   "Song downloaded": "Canción descargada",

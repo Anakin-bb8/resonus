@@ -11,6 +11,14 @@ Releases before 0.2.1 are only listed on the
 
 ### Added
 
+- Adding songs to a playlist that already has some of them offers to add only
+  the ones that are not in it yet. The warning had one way forward, putting
+  every one of them in a second time, so the only way to add the rest without
+  duplicating anything was to work out which were which by hand. It is a third
+  button rather than a switch inside the warning: a switch is state to read and
+  understand before pressing a button that no longer does what it says. Asked
+  for by @ztx-lyghters (#132).
+
 - When a song counts as played is now yours to set, on a screen of its own in
   Settings › Quality & playback › Scrobbling. Two rules, a share of the song and
   a plain time, either of which can be turned off, and the earlier one is what
@@ -43,6 +51,14 @@ Releases before 0.2.1 are only listed on the
   @CraftoHohenvels (#125).
 
 ### Fixed
+
+- Removing one copy of a song that is in a playlist twice removes that one,
+  not both. Selecting was done by song, not by row, so with the same track in
+  the list more than once every one of its rows was the same row: ticking one
+  ticked them all, and the remove that followed took all of them, leaving none
+  where there should have been one. Rows are told apart by which time the song
+  appears now, which is what the queue screen already did. Reported by
+  @ztx-lyghters (#132).
 
 - Listens are kept again when the connection drops mid-song. The previous
   release had them go to the outbox instead of being dropped, and that never
