@@ -496,12 +496,8 @@ you are actually typing into, which is easier than reading it here.
 | `Music on your device` | Signing in to nothing at all and playing the phone's own files |
 | `Offline · your downloads` | Settings subtitle shown in offline mode |
 | `Offline mode` | The app working with no server: downloads only |
-| `Restore` | Restore settings to their defaults |
-| `Restore default settings` | Put every setting back the way it came |
 | `Settings` | The app's settings, and the button that opens them |
-| `Settings restored` | Toast after putting the settings back to their defaults |
 | `Sign out` | Leave the account. Its downloads stay on the phone |
-| `Your preferences will go back to their defaults. Your language stays.` | The line under that dialog |
 
 ## Settings › About
 
@@ -509,9 +505,13 @@ you are actually typing into, which is easier than reading it here.
 | --- | --- |
 | `Measure performance` | Timing, not analytics: how long the app takes to do things on this phone, kept on the phone. Nothing is sent anywhere. It is turned on when somebody is being walked through a slowdown |
 | `Report a bug` | Opens a new issue on GitHub |
+| `Restore` | Restore settings to their defaults |
+| `Restore default settings` | Put every setting back the way it came |
+| `Settings restored` | Toast after putting the settings back to their defaults |
 | `Support Resonus` | The row for whoever wants to give something. The app needs nothing to work |
 | `Version` | Which version of Resonus this is. Tapping it five times opens Diagnostics |
 | `What's new` | Opens what changed in this version |
+| `Your preferences will go back to their defaults. Your language stays.` | The line under that dialog |
 
 ## Settings › Diagnostics
 

@@ -1,12 +1,15 @@
-/** Settings › About: version, repository, report bugs and community. */
+/** Settings › About: version, repository, report bugs, community, and the one
+ *  action that reaches every setting there is. */
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Linking, Pressable, ScrollView } from 'react-native';
 
+import { Dialog } from '@/components/Dialog';
 import { Field, SettingRow, SettingsPage, SwitchList, settingsStyles } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
 import { useSettings } from '@/store/settings';
+import { useToast } from '@/store/toast';
 
 const REPO_URL = 'https://github.com/juananzzz/resonus';
 const DISCORD_URL = 'https://discord.gg/pecE8MTPVr';
@@ -21,6 +24,14 @@ export default function AboutSettings() {
   const taps = useRef(0);
   const diagnostics = useSettings((s) => s.diagnostics);
   const setDiagnostics = useSettings((s) => s.setDiagnostics);
+  // Restoring every setting used to be a row in the Settings index, in among
+  // the categories and looking like one of them, a tap away from the button
+  // that puts the app in offline mode. It reaches everything, it is done once
+  // if ever, and it belongs with the app itself rather than with any of the
+  // categories it would undo, which is what put it here.
+  const resetToDefaults = useSettings((s) => s.resetToDefaults);
+  const toast = useToast((s) => s.show);
+  const [confirmReset, setConfirmReset] = useState(false);
 
   return (
     <SettingsPage title={t('About::app')}>
@@ -81,7 +92,28 @@ export default function AboutSettings() {
             },
           ]}
         />
+        {/* Last on the screen: everything above it is a link out or a switch,
+            and this is the only thing here that changes something and cannot
+            be taken back. The confirmation is what it always had. */}
+        <SettingRow
+          icon="arrow-undo-outline"
+          label={t('Restore default settings')}
+          onPress={() => setConfirmReset(true)}
+        />
       </ScrollView>
+
+      <Dialog
+        visible={confirmReset}
+        title={t('Restore default settings')}
+        message={t('Your preferences will go back to their defaults. Your language stays.')}
+        confirmLabel={t('Restore')}
+        onCancel={() => setConfirmReset(false)}
+        onConfirm={() => {
+          setConfirmReset(false);
+          resetToDefaults();
+          toast(t('Settings restored'));
+        }}
+      />
     </SettingsPage>
   );
 }

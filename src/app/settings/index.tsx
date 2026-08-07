@@ -1,15 +1,14 @@
 /**
  * Spotify-style Settings: the account at the top as a profile row (avatar +
- * name + server), categories as flat rows, restore settings, the sign out
- * pill button and a footer with the repo link.
+ * name + server), categories as flat rows, and the mode and sign out pills at
+ * the bottom. Restoring every setting is in About: sitting here it looked like
+ * one more category and was a tap away from the button that goes offline.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Dialog } from '@/components/Dialog';
 import { ScreenHeader, settingsStyles } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
@@ -25,7 +24,6 @@ export default function SettingsScreen() {
   // The avatar ring reads the store's accent to recolor when changed.
   const accentColor = useSettings((s) => s.accentColor);
   useSettings((s) => s.appFont); // re-render when font changes
-  const resetToDefaults = useSettings((s) => s.resetToDefaults);
   const logout = useAuthStore((s) => s.logout);
   const goOnline = useAuthStore((s) => s.goOnline);
   const goOffline = useAuthStore((s) => s.goOffline);
@@ -37,9 +35,6 @@ export default function SettingsScreen() {
   // library that needs it.
   const hasDownloads = useDownloads((s) => !s.hydrated || anyDownloads(s));
   const toast = useToast((s) => s.show);
-  // Restore defaults: affects all settings, that's why it lives here (in the
-  // index) and not inside a specific category.
-  const [confirmReset, setConfirmReset] = useState(false);
 
   // Server account in offline mode (auth intact) vs local profile (no auth).
   const serverOffline = offline && !!auth;
@@ -144,16 +139,6 @@ export default function SettingsScreen() {
           </Pressable>
         ))}
 
-        <Pressable
-          style={({ pressed }) => [styles.sectionRow, pressed && { opacity: 0.6 }]}
-          onPress={() => setConfirmReset(true)}
-        >
-          <Ionicons name="arrow-undo-outline" size={24} color={colors.textSecondary} />
-          <Text style={[styles.sectionRowTitle, { color: colors.textSecondary }]}>
-            {t('Restore default settings')}
-          </Text>
-        </Pressable>
-
         <View style={styles.sessionRow}>
           {/* MODE action (outline pill, left): same placement online and offline.
               Online with downloads: go offline manually; server offline: go back
@@ -197,19 +182,6 @@ export default function SettingsScreen() {
           </Pressable>
         </View>
       </ScrollView>
-
-      <Dialog
-        visible={confirmReset}
-        title={t('Restore default settings')}
-        message={t('Your preferences will go back to their defaults. Your language stays.')}
-        confirmLabel={t('Restore')}
-        onCancel={() => setConfirmReset(false)}
-        onConfirm={() => {
-          setConfirmReset(false);
-          resetToDefaults();
-          toast(t('Settings restored'));
-        }}
-      />
     </SafeAreaView>
   );
 }
