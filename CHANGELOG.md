@@ -34,17 +34,6 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
-- Lyrics opened part way through a song start at the line that is playing. They
-  were left at the very top instead, and stayed there until the song moved on a
-  line, at which point they finally travelled all the way down at once. The
-  positioning waits for the line to say where it is, and the lines report that
-  into a place that re-renders nothing, so when the answer arrived nobody was
-  listening any more and the next line change was the first thing to run it
-  again. The measurement now says so itself. A change of song is treated as a
-  first positioning too, so the jump back to the top of the new one is instant
-  rather than a long ride up from wherever the last one had reached. Reported
-  by @juananzzz.
-
 - The player stops jumping when it opens with the star rating on. The row of
   stars is measured on the first pass and its height is taken off the cover, so
   until it had been measured the cover was drawn a row too tall and then shrank,

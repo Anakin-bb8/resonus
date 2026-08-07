@@ -163,26 +163,11 @@ export function SyncedLyricsView({
   // advance from one line to the next IS animated.
   const didInitialScroll = useRef(false);
   const [viewH, setViewH] = useState(0);
-  /**
-   * Bumped when the line we are trying to reach finally reports where it is.
-   *
-   * The positioning below reads those places out of a ref, and a ref filling up
-   * re-renders nothing, so opening the lyrics part way through a song left them
-   * sitting at the very top: the view had been measured and the right line was
-   * known, but its position had not arrived yet, and nothing asked again. They
-   * stayed there until the song moved on a line, which is the next thing that
-   * runs the effect, and only then did they travel. Now the measurement itself
-   * says so, once, and only while there is still a first jump to make.
-   */
-  const [placed, setPlaced] = useState(0);
-  /** What `onMeasure` needs to know without being rebuilt on every line. */
-  const currentRef = useRef(-1);
 
   // Small advance so the highlight doesn't lag behind the ear.
   const posMs = positionSec * 1000 + 300;
   let current = -1;
   for (let i = 0; i < lines.length && (lines[i].start ?? 0) <= posMs; i++) current = i;
-  currentRef.current = current;
 
   // In full screen we anchor the active line near the center (and pad
   // top/bottom) so that when the song starts, the lyrics begin centered and
@@ -191,7 +176,6 @@ export function SyncedLyricsView({
 
   const onMeasure = useCallback((index: number, y: number, h: number) => {
     offsets.current[index] = { y, h };
-    if (!didInitialScroll.current && index === currentRef.current) setPlaced((n) => n + 1);
   }, []);
 
   // Each targetY change pushes the scroll from the UI thread.
@@ -257,16 +241,7 @@ export function SyncedLyricsView({
       easing: Easing.out(Easing.cubic),
       reduceMotion: ReduceMotion.Never,
     });
-  }, [current, viewH, anchor, targetY, liveY, placed]);
-
-  // Another song's lyrics are another first positioning: the places measured
-  // for the last one mean nothing here, and without this the jump to the top of
-  // a new song was animated as if it were a line advancing, which is a long
-  // ride up from wherever the last one had got to.
-  useEffect(() => {
-    didInitialScroll.current = false;
-    offsets.current = [];
-  }, [lines]);
+  }, [current, viewH, anchor, targetY, liveY]);
 
   useEffect(
     () => () => {
