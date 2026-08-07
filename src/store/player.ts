@@ -275,11 +275,19 @@ function playableOffline(song: Song | null | undefined): boolean {
   return !!song && (!!song.url || !!song.localUri || !!downloadedUri(song));
 }
 
-/** The same song without autoplay's mark on it: it is being put in the queue
- *  by hand, whatever it was doing there before. */
-function unmixed(song: Song): Song {
-  if (!song.fromMix) return song;
+/** The same song as it goes into the queue by hand: autoplay's mark comes off
+ *  (it is here because you put it here, whatever it was doing before) and it
+ *  takes one of its own, which is what the player announces while it plays. */
+function handAdded(song: Song): Song {
   const { fromMix: _fromMix, ...rest } = song;
+  return { ...rest, queued: true };
+}
+
+/** The same song with neither mark on it, for when the queue stops having the
+ *  blocks they name (see `toggleShuffle`). */
+function unmarked(song: Song): Song {
+  if (!song.fromMix && !song.queued) return song;
+  const { fromMix: _fromMix, queued: _queued, ...rest } = song;
   return rest;
 }
 
@@ -2340,8 +2348,21 @@ export function currentSong(state: PlayerState): Song | null {
 export function mixSeedOf(state: Pick<PlayerState, 'queue' | 'index'>): Song | null {
   if (!state.queue[state.index]?.fromMix) return null;
   let i = state.index;
-  while (i > 0 && state.queue[i - 1]?.fromMix) i--;
+  // Songs added by hand land in the middle of the block without belonging to
+  // it, so the walk goes past them: otherwise the first one found would pass
+  // for the seed and the mix would be named after a song someone queued.
+  while (i > 0 && (state.queue[i - 1]?.fromMix || state.queue[i - 1]?.queued)) i--;
   return state.queue[i - 1] ?? null;
+}
+
+/**
+ * The song playing was added to the queue by hand, so the header names the
+ * queue instead of the source (#65). Unlike a mix this undoes itself: it is a
+ * property of the song, and the next one that isn't yours puts the album back
+ * along with the way into it.
+ */
+export function playingQueued(state: Pick<PlayerState, 'queue' | 'index'>): boolean {
+  return !!state.queue[state.index]?.queued;
 }
 
 /**
@@ -2486,7 +2507,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   //
   // Adding one from the queue itself hands back the very object that is in it,
   // mark and all, so a song picked out of a mix would have carried the mark
-  // into the middle of an album and taken the header with it (`unmixed`).
+  // into the middle of an album and taken the header with it (`handAdded`).
   addToQueue: (song) => {
     const { queue, index, queuedCount } = get();
     if (queue.length === 0) {
@@ -2494,7 +2515,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       return;
     }
     const next = [...queue];
-    next.splice(Math.min(index + queuedCount + 1, next.length), 0, unmixed(song));
+    next.splice(Math.min(index + queuedCount + 1, next.length), 0, handAdded(song));
     set({ queue: next, queuedCount: queuedCount + 1 });
     scheduleSync();
   },
@@ -2506,7 +2527,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       return;
     }
     const next = [...queue];
-    next.splice(index + 1, 0, unmixed(song));
+    next.splice(index + 1, 0, handAdded(song));
     // It jumps to the front of the "queued" block; the block grows with it.
     set({ queue: next, queuedCount: queuedCount + 1 });
     scheduleSync();
@@ -2820,13 +2841,13 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
     if (!shuffle) {
       const rest = dealt(queue.filter((_, i) => i !== index));
-      // Autoplay's mark comes off with the shuffle, the same as the "queued"
-      // block does and for the same reason: it names a block at the end of the
-      // queue, and there are no blocks left in here. Left on, its songs would
-      // be scattered among the album's and the header would have flipped
-      // between the album and a mix on every track. `originalQueue` keeps the
-      // marked copies, so turning shuffle off brings the mix back with them.
-      const newQueue = (current ? [current, ...rest] : rest).map(unmixed);
+      // Both marks come off with the shuffle, the same as the "queued" block
+      // does and for the same reason: they name blocks (the mix at the end, the
+      // added songs after the current one) and there are no blocks left in
+      // here. Left on, their songs would be scattered among the album's and the
+      // header would have flipped on every track. `originalQueue` keeps the
+      // marked copies, so turning shuffle off brings them back with them.
+      const newQueue = (current ? [current, ...rest] : rest).map(unmarked);
       // The current song keeps playing; we only reorder and leave it at index 0.
       // Shuffling dissolves the "queued" block (the positions no longer exist).
       set({ shuffle: true, originalQueue: queue, queue: newQueue, index: 0, queuedCount: 0 });

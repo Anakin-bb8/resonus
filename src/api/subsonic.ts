@@ -164,6 +164,14 @@ export interface Song {
    * locally saved queue.
    */
   fromMix?: boolean;
+  /**
+   * Set by the app, never by a server: this song is in the queue because
+   * someone put it there ("add to queue" / "play next"), not because the album
+   * or playlist brought it. Marked the same way as `fromMix` and read for the
+   * same reason, except that this one is announced only while it plays: what
+   * follows still comes from the source, so the source comes back after it.
+   */
+  queued?: boolean;
   /** Song year (from ID3, offline mode). */
   year?: number;
   /** File modification timestamp in ms (offline mode). */

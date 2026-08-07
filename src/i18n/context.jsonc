@@ -551,7 +551,7 @@
     "Saved profiles": "The accounts already signed in to, to pick one",
 
     // ── Player ───────────────────────────────────────────────────────────────
-    "PLAYING FROM": "Small label above the cover, followed by the name of the album, playlist or mix. Written in capitals by the design, so it can be capitals in your language too, or not, whichever reads right",
+    "PLAYING FROM": "Small label above the cover, followed by the name of the album, playlist or mix it is playing from, or by `Queue` while the song is one that was added to the queue by hand. Written in capitals by the design, so it can be capitals in your language too, or not, whichever reads right",
     "NOW PLAYING": "Small label above the cover, in the same place and style as `PLAYING FROM`, when there is nothing to name",
     "Back {n} seconds": "Read out by the screen reader for the seek button. `{n}` is how many seconds it is set to",
     "Forward {n} seconds": "Read out by the screen reader for the seek button. `{n}` is how many seconds it is set to",

@@ -353,8 +353,9 @@ you are actually typing into, which is easier than reading it here.
 | `NOW PLAYING` | Small label above the cover, in the same place and style as `PLAYING FROM`, when there is nothing to name |
 | `Output` | The audio output device (phone, or something to cast to) |
 | `Playback stopped` | The mini player when there is nothing playing any more |
-| `PLAYING FROM` | Small label above the cover, followed by the name of the album, playlist or mix. Written in capitals by the design, so it can be capitals in your language too, or not, whichever reads right |
+| `PLAYING FROM` | Small label above the cover, followed by the name of the album, playlist or mix it is playing from, or by `Queue` while the song is one that was added to the queue by hand. Written in capitals by the design, so it can be capitals in your language too, or not, whichever reads right |
 | `Previous` | Player control: the previous track (accessibility label) |
+| `Queue` | The list of songs waiting to play. Not a playlist |
 | `Radio` | Internet radio stations. Most languages keep the word |
 | `Remove from favorites` | The same button when it is already a favourite |
 | `Repeat` | Start again at the end |

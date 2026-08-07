@@ -50,6 +50,7 @@ import { useAuthStore } from '@/store/auth';
 import {
   currentSong,
   mixSeedOf,
+  playingQueued,
   SOURCE_FAVORITES,
   SOURCE_HISTORY,
   useLiveInfo,
@@ -174,6 +175,8 @@ export default function PlayerScreen() {
   // Set once playback crosses into what autoplay added on its own: from there
   // the album or the playlist the queue started as is not what is playing.
   const mixSeed = usePlayerStore(mixSeedOf);
+  // Set only while what plays is a song someone added to the queue by hand.
+  const queuedNow = usePlayerStore(playingQueued);
   const isPlaying = usePlayerStore((s) => s.isPlaying);
   const isBuffering = usePlayerStore((s) => s.isBuffering);
   const durationSec = usePlayerStore((s) => s.durationSec);
@@ -500,27 +503,31 @@ export default function PlayerScreen() {
   // screen); `song.starred` from the queue becomes stale, so it only serves
   // as a fallback for local songs or while loading.
   const favorited = favIds ? favIds.has(song.id) : !!song.starred;
-  // What the header announces. A mix that autoplay grew takes over from
-  // whatever the queue was before it (#65); it comes first because by then the
-  // source it would otherwise show is the album that ran out. With no mix it
-  // is the source as before: a station says "Radio", the two sentinels are
-  // translated, and a queue that never had a source (one recovered from the
-  // server) leaves "NOW PLAYING" as it did.
-  const sourceLabel = mixSeed
-    ? t('Mix of “{name}”', { name: mixSeed.title })
-    : !source
-      ? null
-      : song.url
-        ? t('Radio')
-        : source === SOURCE_FAVORITES
-          ? t('Favorites')
-          : source === SOURCE_HISTORY
-            ? t('History')
-            : source;
-  // The header is a link back to where the queue came from, and a mix is not
-  // there: the songs playing are not in that album, so it stops leading
-  // anywhere until the queue goes back into it.
-  const canOpenSource = !!sourceHref && !mixSeed;
+  // What the header announces, most specific first (#65). A song added by hand
+  // is the queue's own, so the queue is what it says, and only for as long as
+  // that song plays. A mix that autoplay grew takes over next, since by then
+  // the source underneath is the album that ran out. Otherwise it is the source
+  // as before: a station says "Radio", the two sentinels are translated, and a
+  // queue that never had a source (one recovered from the server) leaves
+  // "NOW PLAYING" as it did.
+  const sourceLabel = queuedNow
+    ? t('Queue')
+    : mixSeed
+      ? t('Mix of “{name}”', { name: mixSeed.title })
+      : !source
+        ? null
+        : song.url
+          ? t('Radio')
+          : source === SOURCE_FAVORITES
+            ? t('Favorites')
+            : source === SOURCE_HISTORY
+              ? t('History')
+              : source;
+  // The header leads wherever it says it is playing from, so while it names the
+  // queue it opens the queue. A mix is the one thing with nowhere to go: the
+  // songs playing are not in that album, so it stops being a link until the
+  // queue goes back into it.
+  const canOpenSource = queuedNow || (!!sourceHref && !mixSeed);
   // Artist · Album · Year on a single line, but with two tap targets: the
   // artist name goes to the artist, and «Album · Year» to the album.
   // A radio announcing what it plays takes over both lines, same as it does
@@ -628,6 +635,14 @@ export default function PlayerScreen() {
             accessibilityRole={canOpenSource ? 'button' : undefined}
             onPress={() => {
               if (!canOpenSource) return;
+              // The queue goes on top of the player, like its own button does:
+              // you are looking at where this song sits, not leaving for
+              // another screen. Anywhere else replaces the player, since the
+              // album or the playlist is somewhere to stay.
+              if (queuedNow) {
+                router.push('/queue');
+                return;
+              }
               router.back();
               router.navigate(sourceHref as never);
             }}
