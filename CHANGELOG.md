@@ -12,12 +12,12 @@ Releases before 0.2.1 are only listed on the
 ### Added
 
 - Adding songs to a playlist that already has some of them offers to add only
-  the ones that are not in it yet, and that is now what the warning suggests.
-  It had one way forward before, putting every one of them in a second time, so
-  the only way to add the rest without duplicating anything was to work out
-  which were which by hand. It is a third button rather than a switch inside
-  the warning: a switch is state to read and understand before pressing a
-  button that no longer does what it says. Asked for by @ztx-lyghters (#132).
+  the ones that are not in it yet. The warning had one way forward, putting
+  every one of them in a second time, so the only way to add the rest without
+  duplicating anything was to work out which were which by hand. It is a third
+  button rather than a switch inside the warning: a switch is state to read and
+  understand before pressing a button that no longer does what it says. Asked
+  for by @ztx-lyghters (#132).
 
 - When a song counts as played is now yours to set, on a screen of its own in
   Settings › Quality & playback › Scrobbling. Two rules, a share of the song and

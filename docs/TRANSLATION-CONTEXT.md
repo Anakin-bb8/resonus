@@ -899,7 +899,7 @@ you are actually typing into, which is easier than reading it here.
 | `{songs} will be saved to this device (about {size}).` | The same line when the size is known. `{size}` is like "340 MB" |
 | `{songs} will be saved to this device.` | The line under that title. `{songs}` is already worded and inflected, "12 songs" |
 | `Add anyway` | The confirm button of that warning: put it in a second time |
-| `Add the new ones` | The other button of that warning, when some are already in the playlist and some are not: leave the ones that are and add the rest |
+| `Add only the new ones` | The other button of that warning, when some are already in the playlist and some are not: leave the ones that are and add the rest |
 | `Add to a playlist` | Menu action: put this song, album or selection into a playlist |
 | `Add to favorites` | Menu action and screen reader label for the heart. A verb |
 | `Add to queue` | Action: put this song at the end of the queue |
