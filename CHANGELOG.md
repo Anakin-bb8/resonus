@@ -34,6 +34,16 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- The share button stops disappearing for the rest of the session. Whether the
+  server lets an account share is asked once and then remembered, since the
+  answer does not change while the app is open, and a lookup that failed to
+  reach the server was being remembered as "this account cannot share". One bad
+  moment, and there is a window for exactly that between a server going away
+  and the app noticing, took the button off every song menu until the app was
+  reopened, in online mode with everything else working. A server that answers
+  and says no is still a no; a connection that never got there is now a failure
+  that is tried again.
+
 - Lyrics opened part way through a song scroll to the line that is playing
   straight away, instead of sitting at the top until the song moves on a line
   and only then travelling. The scroll waits to be told where that line is, and

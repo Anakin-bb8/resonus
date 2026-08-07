@@ -1447,7 +1447,16 @@ export async function hasShareRole(auth: SubsonicAuth): Promise<boolean> {
       username: auth.username,
     });
     return res.user?.shareRole === true;
-  } catch {
+  } catch (e) {
+    // A server that answered and said no is an answer, and `false` is the right
+    // one. A connection that never got there is not, and answering `false` for
+    // it is how the share button disappeared for a whole session: the caller
+    // caches this forever, since a role does not change while the app is open,
+    // and a cached "you cannot share" outlives the hiccup that caused it by
+    // hours. There is a window for exactly that, between the server going away
+    // and the app noticing (see #126). Thrown instead, so it is a failure that
+    // can be tried again rather than a fact.
+    if ((e as { network?: boolean })?.network) throw e;
     return false;
   }
 }

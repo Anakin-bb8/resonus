@@ -5,7 +5,9 @@
  *
  * Cached per profile and never refetched on its own: a role doesn't change
  * while the app is open, and this only exists to decide whether to draw a
- * button.
+ * button. Which is only safe because a failed lookup is a failure and not a
+ * `false`: cached forever, one bad moment used to take the share button away
+ * for the rest of the session (see `hasShareRole`).
  */
 import { useQuery } from '@tanstack/react-query';
 
