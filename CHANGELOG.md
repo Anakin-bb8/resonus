@@ -27,6 +27,15 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- The player stops jumping when it opens with the star rating on. The row of
+  stars is measured on the first pass and its height is taken off the cover, so
+  until it had been measured the cover was drawn a row too tall and then shrank,
+  taking the stars with it. The cover was already held back until its slot was
+  settled; the stars were not, and they were shown from the first frame, which
+  is why they were the part that visibly moved. Both now wait for the same
+  thing, and there is one place that decides when that is. Reported by
+  @juananzzz.
+
 - Starting a mix stops saying it found nothing while the mix plays. Loading the
   song sends one round of the search off on its own, and "start mix" then asked
   again so it could tell you whether anything turned up: the second ask saw the

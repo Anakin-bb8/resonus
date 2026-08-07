@@ -215,6 +215,12 @@ export default function PlayerScreen() {
   // only radio (direct url) is excluded. Hiding the card (setting) doesn't
   // disable lyrics: tapping cover art still opens the full screen.
   const canLyrics = !song?.url;
+  // Stars (setRating) are a Subsonic thing: enabled in Settings and require
+  // a non-Jellyfin server account; not applicable to radio (direct url) or
+  // the local profile (no account). Offline queues and uploads on reconnect.
+  // Read up here because the slot's measurements depend on whether this row
+  // exists, and those are settled before the screen is shown.
+  const canRate = showRating && hasAccount && serverType !== 'jellyfin' && !song?.url;
   // Whether the lyrics card is wanted for this song at all: a setting, and not
   // a radio. Whether it is actually shown is `showsLyricsCard` below, which
   // also needs there to be lyrics.
@@ -276,7 +282,6 @@ export default function PlayerScreen() {
    * keep in sync.
    */
   const [coverBoxH, setCoverBoxH] = useState(0);
-  const coverBoxHRef = useRef(0);
   /** Height of the rating row, measured so it can be subtracted from the slot. */
   const [starsH, setStarsH] = useState(0);
   // The cover's size and vertical offset both come from the measured slot
@@ -300,6 +305,18 @@ export default function PlayerScreen() {
     const id = setTimeout(() => setCoverStable(true), 300);
     return () => clearTimeout(id);
   }, []);
+  /**
+   * Everything the slot is made of has to be known before any of it is shown,
+   * and there are two measurements, not one. The page's real height is the
+   * obvious one. The other is the rating row, which starts at zero and is
+   * subtracted from the cover: until it has been measured the cover is drawn a
+   * row too tall and then shrinks, and the stars under it move up by the
+   * difference. That is the jump, and it happens on every open with the rating
+   * on, whatever the page height turns out to be.
+   */
+  useEffect(() => {
+    if (pageH > 0 && coverBoxH > 0 && (!canRate || starsH > 0)) setCoverStable(true);
+  }, [pageH, coverBoxH, starsH, canRate]);
   const coverAppearStyle = useAnimatedStyle(() => ({ opacity: coverAppear.value }));
   // The swipe-to-close gesture should only work when scrolled to the top;
   // otherwise it would steal the gesture when returning from the lyrics card.
@@ -483,10 +500,6 @@ export default function PlayerScreen() {
   // screen); `song.starred` from the queue becomes stale, so it only serves
   // as a fallback for local songs or while loading.
   const favorited = favIds ? favIds.has(song.id) : !!song.starred;
-  // Stars (setRating) are a Subsonic thing: enabled in Settings and require
-  // a non-Jellyfin server account; not applicable to radio (direct url) or
-  // the local profile (no account). Offline queues and uploads on reconnect.
-  const canRate = showRating && hasAccount && serverType !== 'jellyfin' && !song.url;
   // What the header announces. A mix that autoplay grew takes over from
   // whatever the queue was before it (#65); it comes first because by then the
   // source it would otherwise show is the album that ran out. With no mix it
@@ -574,16 +587,12 @@ export default function PlayerScreen() {
           contentContainerStyle={
             showsLyricsCard ? { paddingBottom: Math.max(insets.bottom, spacing.md) } : undefined
           }
-          onLayout={(e) => {
-            const h = e.nativeEvent.layout.height;
-            setPageH(h);
-            // If the approximation already matched, the slot won't re-lay-out
-            // (the cover's onLayout won't fire again), so its current measure is
-            // already final: reveal it now.
-            if (coverBoxHRef.current > 0 && Math.abs(h - approxPageH) < 1) {
-              setCoverStable(true);
-            }
-          }}
+          // Only the measurement. Whether the slot is ready to be shown is
+          // decided in one place above, since it takes more than this one
+          // number: revealing from here, as soon as the approximation turned
+          // out to be right, is what let the stars appear before they had been
+          // measured and then move.
+          onLayout={(e) => setPageH(e.nativeEvent.layout.height)}
           onScroll={(e) => {
             const next = e.nativeEvent.contentOffset.y <= 4;
             if (next !== atTopRef.current) {
@@ -649,16 +658,7 @@ export default function PlayerScreen() {
 
         <View
           style={[styles.coverWrap, { paddingTop: coverTopPad }]}
-          onLayout={(e) => {
-            const h = e.nativeEvent.layout.height;
-            coverBoxHRef.current = h;
-            setCoverBoxH(h);
-            // `pageH` here is the render-time value: on the first paint it's 0
-            // (this measure used the approximation, so don't reveal yet); once
-            // the real height re-renders the page, this fires again with the
-            // final measure and we reveal.
-            if (pageH > 0) setCoverStable(true);
-          }}
+          onLayout={(e) => setCoverBoxH(e.nativeEvent.layout.height)}
         >
           <GestureDetector gesture={coverGesture}>
             {/* Recycled carousel: the current cover centered and the neighbors at
@@ -698,8 +698,12 @@ export default function PlayerScreen() {
               artwork instead of from the title: the spare height falls below
               both. Its measured height is discounted from `coverSize`. */}
           {canRate ? (
-            <View
-              style={styles.belowCover}
+            // Faded in with the cover, not before it: it is measured on the
+            // first pass whatever its opacity, and showing it while the cover
+            // above it is still resolving is what put the stars on screen at
+            // one height and then moved them.
+            <Animated.View
+              style={[styles.belowCover, coverAppearStyle]}
               onLayout={(e) => setStarsH(e.nativeEvent.layout.height)}
             >
               <StarRating
@@ -708,7 +712,7 @@ export default function PlayerScreen() {
                 size={20}
                 onRated={(r) => rateSong(song.id, r)}
               />
-            </View>
+            </Animated.View>
           ) : null}
         </View>
 
