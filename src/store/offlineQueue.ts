@@ -15,6 +15,8 @@ import { create } from 'zustand';
 
 import type { Song, StarType, SubsonicAuth } from '@/api/subsonic';
 import { hashKey } from '@/lib/localLibrary';
+import type { Remap } from '@/lib/navidromeRemap';
+import { remapOutbox } from '@/lib/navidromeRemap';
 import { primaryUrl } from '@/lib/serverUrls';
 import { useAuthStore } from './auth';
 
@@ -108,6 +110,8 @@ interface QueueState {
   rememberSongs: (songs: Song[]) => void;
   /** Clears playlist edits (after flushing to server). */
   clearPlaylists: () => void;
+  /** Rewrites every queued id, after the server migrated its own (#5824). */
+  remapIds: (f: Remap) => void;
   /** Records a listen that happened offline. */
   addPlay: (id: string, at: number) => void;
   /** Drops the listens already uploaded, leaving the rest (and any that
@@ -265,6 +269,25 @@ export const useOfflineQueue = create<QueueState>((set, get) => {
       const sent = new Set(done.map((p) => `${p.at}|${p.id}`));
       const plays = (get().data.plays ?? []).filter((p) => !sent.has(`${p.at}|${p.id}`));
       set({ data: { ...get().data, plays } });
+      persist();
+    },
+
+    /**
+     * Rewrites every id after the server has renamed them all.
+     *
+     * Done in memory and persisted, rather than over the file: a listen can be
+     * recorded before the file has been read (#126), so the file is not always
+     * the whole of what is queued.
+     *
+     * This is the one part of a repair whose absence loses data instead of
+     * breaking a screen. A favourite or a listen sent against an id the server
+     * has forgotten is not an error anybody sees: the request is accepted,
+     * nothing matches, and nothing is said.
+     */
+    remapIds: (f) => {
+      const before = get().data;
+      const after = remapOutbox(before, f);
+      set({ data: after });
       persist();
     },
 

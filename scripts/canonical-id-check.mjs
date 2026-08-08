@@ -17,6 +17,7 @@ import {
   remapAlbum,
   remapIds,
   remapKeys,
+  remapOutbox,
   planRemap,
   remapPinKey,
   remapSong,
@@ -260,6 +261,35 @@ console.log('The plan refuses to lose a row');
   const both = planRemap(['a', 'b'], () => 'same');
   check('two ids onto one is a collision', both.collisions.length.toString(), '1');
   check('the first still moves', both.pairs.length.toString(), '1');
+}
+
+// The outbox is the one place where missing an id loses data instead of
+// breaking a screen: a favourite or a listen sent against an id the server has
+// forgotten is accepted, matches nothing, and reports nothing.
+console.log('The outbox has all five of its id-bearing places rewritten');
+{
+  const box = remapOutbox(
+    {
+      favs: { s1: { type: 'song', starred: true }, [TMP]: { starred: true } },
+      ratings: { s1: 5 },
+      playlists: { p1: { name: 'Mine', songIds: ['s1', 's2'] }, [TMP]: { songIds: ['s1'] } },
+      songMeta: { s1: { id: 's1', title: 'A song', albumId: 'al1', musicBrainzId: MBID } },
+      plays: [{ id: 's1', at: 1700000000000 }],
+    },
+    upper
+  );
+  check('favs keys', Object.keys(box.favs).sort().join(','), `S1,${TMP}`);
+  check('ratings keys', Object.keys(box.ratings)[0], 'S1');
+  check('playlist keys', Object.keys(box.playlists).sort().join(','), `P1,${TMP}`);
+  check('a playlist tracklist', box.playlists.P1.songIds.join(','), 'S1,S2');
+  check('a playlist name survives', box.playlists.P1.name, 'Mine');
+  check('songMeta key', Object.keys(box.songMeta)[0], 'S1');
+  check('songMeta value moved too', box.songMeta.S1.id, 'S1');
+  check('songMeta album moved', box.songMeta.S1.albumId, 'AL1');
+  check('songMeta keeps its MBID', box.songMeta.S1.musicBrainzId, MBID);
+  check('a queued listen', box.plays[0].id, 'S1');
+  check('and keeps when it happened', String(box.plays[0].at), '1700000000000');
+  check('an offline playlist keeps its temporary id', box.playlists[TMP].songIds.join(','), 'S1');
 }
 
 if (failures > 0) {

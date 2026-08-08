@@ -100,6 +100,68 @@ export function remapIds(ids: string[], f: Remap): string[] {
   return ids.map((id) => map(id, f) as string);
 }
 
+/**
+ * The outbox, described structurally rather than imported.
+ *
+ * `offlineQueue` reaches for zustand and the file system, and keeping the
+ * transform free of both is what lets it be checked on a laptop. The five
+ * places an id hides in there are listed here instead, which is also the only
+ * honest inventory of them.
+ */
+export interface OutboxShape {
+  /** Song, album and artist ids → wanted favourite state. */
+  favs?: Record<string, unknown>;
+  /** Song id → wanted rating. */
+  ratings?: Record<string, number>;
+  /** Playlist id, or a `tmp_…` for one made offline → its wanted state. */
+  playlists?: Record<string, { songIds?: string[] }>;
+  /** Song id → the whole song, kept so offline playlist edits can show it. */
+  songMeta?: Record<string, Song>;
+  /** Listens waiting to go up, each with when it happened. */
+  plays?: { id: string; at: number }[];
+}
+
+/**
+ * Every id in the outbox, rewritten.
+ *
+ * This is the one part of the repair where skipping it loses data rather than
+ * breaking a screen. A favourite or a listen uploaded against an id the server
+ * no longer knows is not an error anybody sees: the server takes the request,
+ * finds nothing, and says nothing. The listens are the ones that hurt, because
+ * they are the whole point of having kept them through a trip with no signal.
+ *
+ * A playlist made offline keeps its temporary id, which the server has never
+ * seen and so never renamed.
+ */
+export function remapOutbox<T extends OutboxShape>(data: T, f: Remap): T {
+  // Described loosely above so the shape can be stated here rather than
+  // imported; the caller's own types are narrower. Nothing below changes a
+  // value's type, only which key it sits under, so the way back is one cast at
+  // the end instead of one per field.
+  const out: OutboxShape = { ...data };
+  if (data.favs) out.favs = remapKeys(data.favs, f);
+  if (data.ratings) out.ratings = remapKeys(data.ratings, f);
+  if (data.songMeta) {
+    const songs: Record<string, Song> = {};
+    for (const [id, song] of Object.entries(data.songMeta)) {
+      const moved = remapSong(song, f);
+      songs[map(id, f) as string] = moved;
+    }
+    out.songMeta = songs;
+  }
+  if (data.playlists) {
+    const lists: Record<string, { songIds?: string[] }> = {};
+    for (const [id, list] of Object.entries(data.playlists)) {
+      lists[map(id, f) as string] = list.songIds
+        ? { ...list, songIds: remapIds(list.songIds, f) }
+        : list;
+    }
+    out.playlists = lists;
+  }
+  if (data.plays) out.plays = data.plays.map((p) => ({ ...p, id: map(p.id, f) as string }));
+  return out as T;
+}
+
 /** One id and what it becomes. */
 export interface RemapPair {
   from: string;
