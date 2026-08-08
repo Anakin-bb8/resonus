@@ -38,6 +38,44 @@ function markKey(auth: SubsonicAuth): string {
   return `resonus.idRepair.${hashKey(`${primaryUrl(auth)}|${auth.username}`)}`;
 }
 
+function versionKey(auth: SubsonicAuth): string {
+  return `${markKey(auth)}.version`;
+}
+
+/**
+ * The server said which version it is. Worth a look if that changed.
+ *
+ * This is the trigger, and the retry in the request path is the safety net
+ * under it. On its own the retry is not enough: it only fires on a request
+ * that carries an id, and the home screen, the lists and the searches carry
+ * none. All of those work perfectly against a migrated server and come back
+ * with new ids, while the download catalog still holds old ones, so nothing
+ * compares the two until something specific is opened. In that window an album
+ * that is on the phone does not read as downloaded, and it can last for days
+ * on somebody who only browses.
+ *
+ * A version is emphatically NOT proof of anything: develop builds carry a git
+ * sha, a proxy can rewrite it, and the migration will ship in a release nobody
+ * can name in advance. All a change does is spend one probe finding out. The
+ * proof is still the probe's, with its samples and its guards.
+ *
+ * It also fixes something the mark alone got wrong: a profile found not to
+ * have migrated stayed marked that way forever, so a server upgraded the week
+ * after would never have been looked at again.
+ */
+export async function noteServerVersion(auth: SubsonicAuth, version: string): Promise<void> {
+  if (!version) return;
+  const key = versionKey(auth);
+  const seen = await getItem(key);
+  if (seen === version) return;
+  await setItem(key, version).catch(() => {});
+  // First sighting of any version is not a change: there is nothing to compare
+  // it against, and every profile would probe once for no reason.
+  if (seen === null) return;
+  if ((await repairMark(auth)) === 'repaired') return;
+  void repairIfMigrated(auth).catch(() => {});
+}
+
 /** One in-flight look per profile, so several callers share the answer. */
 const running = new Map<string, Promise<Verdict>>();
 

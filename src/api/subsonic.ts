@@ -482,7 +482,21 @@ async function request<T>(
 /** The one question allowed while offline: it is how the app learns the server
  *  is back, and what the "test" button in Settings asks. */
 export async function ping(auth: SubsonicAuth): Promise<void> {
-  await request(auth, 'ping.view', {}, true);
+  const res = await request<{ serverVersion?: string; version?: string }>(
+    auth,
+    'ping.view',
+    {},
+    true,
+  );
+  // Navidrome's own version when it sends it, the Subsonic API level
+  // otherwise. Only ever compared with the last one seen, so which of the two
+  // it is does not matter as long as it is the same one each time.
+  const version = res.serverVersion ?? res.version;
+  if (version) {
+    void import('@/lib/navidromeRepair')
+      .then((m) => m.noteServerVersion(auth, version))
+      .catch(() => {});
+  }
 }
 
 export type AlbumListType =
