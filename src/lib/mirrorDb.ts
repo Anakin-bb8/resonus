@@ -19,6 +19,8 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as SQLite from 'expo-sqlite';
 
 import type { Album, Artist, Playlist, Song, Starred } from '@/api/subsonic';
+import type { Remap } from './navidromeRemap';
+import { planRemap, remapSong } from './navidromeRemap';
 import { timed } from './perfLog';
 
 export type PlaylistDetail = { playlist: Playlist; songs: Song[] };
@@ -747,5 +749,100 @@ export async function stats(dir: string, profile: string): Promise<MirrorStats> 
     artists: by('artist'),
     playlists: by('playlist'),
     starredSongs: starred?.songs?.length ?? 0,
+  };
+}
+
+/* ── Repairing the ids after a server migration ───────────────────────────── */
+
+/**
+ * Rewrites what can be rewritten in the offline mirror, and throws away what
+ * is cheaper to ask for again.
+ *
+ * Unlike the download catalog, the mirror is a cache: everything in it came
+ * from the server and the server can be asked for it again. That is what makes
+ * the split here the right one rather than a shortcut.
+ *
+ * - **Covers are remapped and not one file is re-fetched.** A cover file is
+ *   named after the id it belongs to, so moving the id would normally orphan
+ *   megabytes of artwork. It does not, because this table already has
+ *   `alias_of` for the case of several ids sharing one file: the new id keeps
+ *   the old one as its alias, and the file is still found under the name it
+ *   has always had.
+ * - **Songs are remapped**, because they are plain rows of the same shape the
+ *   catalog holds, and re-fetching them means a request per album.
+ * - **Entries are dropped.** Each holds a different structure by kind (an
+ *   album's detail, an artist's, a playlist's), and rewriting ids inside each
+ *   of those is a lot of code that would silently rot as the shapes change.
+ *   They are also the cheapest thing here to fetch again, and a repair only
+ *   ever happens at a moment when the server has just answered. What it costs
+ *   is a browse or two feeling cold straight afterwards.
+ */
+export async function remapMirrorIds(
+  dir: string,
+  profile: string,
+  f: Remap,
+): Promise<{ songs: number; covers: number; entriesDropped: number }> {
+  const db = await mirrorDb(dir, profile);
+
+  const songRows = await db.getAllAsync<{ id: string; data: string }>('SELECT id, data FROM songs');
+  const coverRows = await db.getAllAsync<{ id: string; alias_of: string | null }>(
+    'SELECT id, alias_of FROM covers',
+  );
+
+  // Same refusal as the catalog: two rows becoming one loses a row, and here
+  // it would take an album's artwork with it.
+  const songPlan = planRemap(
+    songRows.map((r) => r.id),
+    f,
+  );
+  const coverPlan = planRemap(
+    coverRows.map((r) => r.id),
+    f,
+  );
+  if (songPlan.collisions.length > 0 || coverPlan.collisions.length > 0) {
+    throw new Error(
+      `mirror remap would collide (${songPlan.collisions.length} songs, ${coverPlan.collisions.length} covers)`,
+    );
+  }
+
+  const songUpdates: { from: string; to: string; data: string }[] = [];
+  for (const row of songRows) {
+    const song = remapSong(JSON.parse(row.data) as Song, f);
+    const data = JSON.stringify(song);
+    if (song.id !== row.id || data !== row.data) {
+      songUpdates.push({ from: row.id, to: song.id, data });
+    }
+  }
+
+  const coverUpdates = coverPlan.pairs.map(({ from, to }) => ({
+    from,
+    to,
+    // The file is named after whichever id owned it. Keeping that as the alias
+    // is what leaves the artwork on disk exactly where it is.
+    alias: coverRows.find((r) => r.id === from)?.alias_of ?? from,
+  }));
+
+  const entries = await db.getFirstAsync<{ n: number }>('SELECT COUNT(*) AS n FROM entries');
+
+  await serialized(() =>
+    db.withTransactionAsync(async () => {
+      for (const u of songUpdates) {
+        await db.runAsync('UPDATE songs SET id = ?, data = ? WHERE id = ?', [u.to, u.data, u.from]);
+      }
+      for (const u of coverUpdates) {
+        await db.runAsync('UPDATE covers SET id = ?, alias_of = ? WHERE id = ?', [
+          u.to,
+          u.alias,
+          u.from,
+        ]);
+      }
+      await db.runAsync('DELETE FROM entries');
+    }),
+  );
+
+  return {
+    songs: songUpdates.length,
+    covers: coverUpdates.length,
+    entriesDropped: entries?.n ?? 0,
   };
 }
