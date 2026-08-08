@@ -9,6 +9,33 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.6.4] - 2026-08-08
+
+This one is mostly about listens, and about the app not deciding things on
+your behalf.
+
+What counts as a listen is yours to set now, on a screen of its own under
+Quality & playback, and the reporting around it has been taken apart and put
+back together. A listen the network refuses is kept instead of dropped, which
+matters most on a profile with nothing downloaded, since that one never enters
+offline mode at all and every song played away from the network used to
+disappear. The outbox no longer loses what it was handed in the seconds before
+it had finished loading. And the server hears the pause, so a song stops
+standing in the Now Playing panel long after you stopped it.
+
+Shuffle stays on. Two separate things were turning it off by themselves,
+emptying the queue and tapping any album, so a setting that survives closing
+the app was lost to the most ordinary thing there is.
+
+The rest is a lot of small ground. Playlists tell one copy of a song from
+another, so removing one row removes that row, and adding a list that overlaps
+offers to add only what is missing. Every grid gets a menu instead of a
+two-state toggle, rows or cards two, three or four across, and each screen
+keeps its own choice. The language can be changed from the sign-in screen,
+before there is a profile to change it in. German is complete, Simplified
+Chinese has arrived, and the player no longer tells you which of your files is
+the good one.
+
 ### Added
 
 - Adding songs to a playlist that already has some of them offers to add only
@@ -27,6 +54,21 @@ Releases before 0.2.1 are only listed on the
   reported at all, not even to your own server, which is also a thing somebody
   may want. Asked for by @ztx-lyghters (#126).
 
+- How a grid is laid out is a menu now, on a genre's albums, on the three chips
+  off Home and on an artist's discography. The button in the header used to
+  flip between the only two things it could say, and on a wide screen, or for
+  anybody who would rather see more at once, two across was simply the wrong
+  number. It opens rows, or cards two, three or four across, with a tick on the
+  one you are looking at, and choosing a density while the rows are showing
+  brings the cards back, so it stays one gesture. Each screen keeps its own
+  choice, and every one of them starts where it already was, so nothing moves
+  for anybody until they ask. The icon shows where you are rather than what one
+  more tap would give you, which is how a button that opens a menu reads. What
+  it costs is the flip between rows and cards, which was one tap and is two.
+  Library still has the old toggle. Asked for by @ztx-lyghters (#109).
+
+- Simplified Chinese. Thanks to @xcdmrCHP (#133).
+
 ### Changed
 
 - The language can be changed from the first screen, before signing in. It was
@@ -35,6 +77,27 @@ Releases before 0.2.1 are only listed on the
   order to change the language of it. The button sits in the corner and says
   the current language in its own name, and the list gives each one in its own
   too.
+
+- The player's header names the queue while a song you added by hand plays.
+  "Playing from" described how the queue was built rather than what is playing,
+  so queueing one song left it announcing an album that song is not in. It says
+  "Queue" for as long as that song lasts and goes back to the source, with its
+  link, on the next one that is not yours; tapping it opens the queue, since
+  that is where the header now says the song comes from. The mark goes on the
+  song rather than on the queue, so it undoes itself and survives a restart,
+  and a song added inside a mix no longer passes for the seed the mix was grown
+  from. Not the "Custom queue" that was proposed: naming the source that is
+  playing and then letting it go keeps the way back to the album for the rest
+  of the queue. Asked for by @ztx-lyghters (#65).
+
+- Restoring every setting has moved to the bottom of Settings › About. It was a
+  row in the Settings index, styled like the categories above it, which made it
+  look like one more place to go into rather than something that happens when
+  you touch it, and it sat directly over the pill that puts the app in offline
+  mode, which is the one people press on their way out of the house. About is
+  where it belongs anyway: it reaches every setting instead of any one
+  category, and the screen is already the app talking about itself. The
+  confirmation it always had comes with it.
 
 - German is complete, and reads better than it did: the strings that were still
   in English are translated, and a good number of the ones that were not have
@@ -59,6 +122,24 @@ Releases before 0.2.1 are only listed on the
   where there should have been one. Rows are told apart by which time the song
   appears now, which is what the queue screen already did. Reported by
   @ztx-lyghters (#132).
+
+- The server hears the pause too, not only the first note. The classic API can
+  only say that a track has started, so Navidrome gave that entry the rest of
+  the track to live and never heard another word: pausing, emptying the queue
+  or closing the app all left the song running in its Now Playing panel until
+  it would have ended. Servers that announce the OpenSubsonic `playbackReport`
+  extension now get the state and the position instead, and the states are read
+  from the player itself rather than hooked onto each action, so the six ways
+  of pausing that the app already has are all covered. A server without the
+  extension keeps the announcement, which is all the classic API can say, and
+  Jellyfin reports sessions its own way and is unaffected.
+
+- "Report a bug" in About opens the bug form, with the version already in it.
+  It landed on the page that asks which kind of issue this is, which is the one
+  question the button had already answered, and then asked for the version,
+  which is the form's one required field and the one thing the app knows for
+  certain. A report that arrives with a guess at it costs a round trip to find
+  out it was fixed two releases ago.
 
 - Listens are kept again when the connection drops mid-song. The previous
   release had them go to the outbox instead of being dropped, and that never
