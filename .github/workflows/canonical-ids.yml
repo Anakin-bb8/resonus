@@ -1,0 +1,47 @@
+name: Canonical ids
+
+# Navidrome 0.64 rewrites every id in its database, and we keep those ids as
+# primary keys in the download catalog and the offline mirror. The repair is a
+# port of the server's own transform (`src/lib/navidromeIds.ts`), checked here
+# against the vectors from Navidrome's test suite.
+#
+# This runs on its own rather than inside another job because of what a failure
+# means: a transform that disagrees with the server produces ids of the right
+# length and the right alphabet, so nothing downstream can notice, and what it
+# corrupts is somebody's offline library. It should be impossible to land a
+# change to this file without having been told.
+#
+# Node 24, not the 22 the translations workflow uses: the check imports the
+# TypeScript module directly rather than a copy of it, so it needs a Node that
+# strips types on its own. A second implementation to keep in step would defeat
+# the point of checking the first.
+
+on:
+  pull_request:
+    paths:
+      - 'src/lib/navidromeIds.ts'
+      - 'scripts/canonical-id-check.mjs'
+      - '.github/workflows/canonical-ids.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/lib/navidromeIds.ts'
+      - 'scripts/canonical-id-check.mjs'
+      - '.github/workflows/canonical-ids.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: canonical-ids-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node scripts/canonical-id-check.mjs
