@@ -55,6 +55,8 @@ import {
 // disk when the album is downloaded instead of an address on the server.
 import { COVER, coverArtUrl, getRandomSongs } from '@/api/data';
 import { prefetchLyrics } from '@/hooks/useLyrics';
+import type { Remap } from '@/lib/navidromeRemap';
+import { remapSong } from '@/lib/navidromeRemap';
 import { queryClient } from '@/lib/query';
 import { primaryUrl } from '@/lib/serverUrls';
 import { getItem, setItem } from '@/lib/storage';
@@ -2070,6 +2072,29 @@ function isRepeatMode(v: unknown): v is RepeatMode {
  * is waiting on the JS thread.
  */
 let queueDirty = true;
+
+/**
+ * Rewrites the ids in the queue, in memory and on disk.
+ *
+ * Without it, the first thing a migrated server does is a queue that will not
+ * start: it is restored on launch from songs whose ids the server has
+ * forgotten. Nothing is lost, and one tap on anything else gets out of it, but
+ * it is the most visible thing left after a migration.
+ *
+ * `sourceHref` is not touched. It is a route with an id inside it, and picking
+ * that apart means knowing every route shape; getting it wrong sends the
+ * "playing from" header somewhere that does not exist, which is worse than the
+ * header being right and its link stale.
+ */
+export function remapQueueIds(f: Remap) {
+  const { queue, radioSeed } = usePlayerStore.getState();
+  if (queue.length === 0 && !radioSeed) return;
+  usePlayerStore.setState({
+    queue: queue.map((s) => remapSong(s, f)),
+    radioSeed: radioSeed ? remapSong(radioSeed, f) : radioSeed,
+  });
+  saveQueueLocal(true);
+}
 
 function saveQueueLocal(force = false) {
   const key = queueStorageKey();

@@ -17,6 +17,8 @@ import { create } from 'zustand';
 import { getPlaylist, getStarred } from '@/api/data';
 import { type Playlist, type Song } from '@/api/subsonic';
 import { hashKey } from '@/lib/localLibrary';
+import type { Remap } from '@/lib/navidromeRemap';
+import { remapKeys } from '@/lib/navidromeRemap';
 import { profileScopeGuard } from '@/lib/profileScope';
 import { getItem, setItem } from '@/lib/storage';
 import { profileScopeId, useAuthStore } from '@/store/auth';
@@ -57,6 +59,9 @@ interface AutoDownloadsState {
   ids: Record<string, true>;
   /** Toggles the flag (does not reconcile; caller decides with what data). */
   toggle: (playlistId: string) => void;
+  /** Rewrites the marked playlist ids after the server renamed them (#5824).
+   *  Left behind, a playlist quietly stops being kept up to date. */
+  remapIds: (f: Remap) => void;
   /** Reconciles by requesting the current tracklist from the server. */
   reconcile: (playlistId: string, background?: boolean) => Promise<void>;
   /** Reconciles with a tracklist already in hand (avoids re-requesting from server). */
@@ -78,6 +83,13 @@ export const useAutoDownloads = create<AutoDownloadsState>((set, get) => ({
     set({ ids });
     const key = storeKey();
     // Not one profile's list under another's key (see `profileScopeGuard`).
+    if (scope.owns(key)) void setItem(key, JSON.stringify(ids));
+  },
+
+  remapIds: (f) => {
+    const ids = remapKeys(get().ids, f);
+    set({ ids });
+    const key = storeKey();
     if (scope.owns(key)) void setItem(key, JSON.stringify(ids));
   },
 

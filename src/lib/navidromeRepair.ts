@@ -27,7 +27,11 @@ import { probeCandidates, probeMigration, type Verdict } from '@/lib/navidromeMi
 import { getItem, setItem } from '@/lib/storage';
 import { pathsFor as mirrorPathsFor } from '@/store/libraryMirror';
 import { serverDir } from '@/store/downloads';
+import { useAuthStore } from '@/store/auth';
+import { useAutoDownloads } from '@/store/autoDownloads';
 import { useOfflineQueue } from '@/store/offlineQueue';
+import { remapQueueIds } from '@/store/player';
+import { usePins } from '@/store/pins';
 import { hashKey } from '@/lib/localLibrary';
 import { primaryUrl } from '@/lib/serverUrls';
 
@@ -154,6 +158,15 @@ export async function repairIfMigrated(auth: SubsonicAuth): Promise<Verdict> {
     await remapMirrorIds(mirror.dir, mirror.profile, canonicalId).catch(() => {});
 
     useOfflineQueue.getState().remapIds(canonicalId);
+
+    // The three that are only visible, after the three that hold data. Each is
+    // in memory as well as on disk and each belongs to whichever profile is
+    // loaded, so they are only right to touch when that is this one.
+    if (useAuthStore.getState().auth === auth) {
+      remapQueueIds(canonicalId);
+      usePins.getState().remapIds(canonicalId);
+      useAutoDownloads.getState().remapIds(canonicalId);
+    }
 
     await setItem(key, 'repaired').catch(() => {});
     return verdict;

@@ -6,6 +6,8 @@
 import { create } from 'zustand';
 
 import { hashKey } from '@/lib/localLibrary';
+import type { Remap } from '@/lib/navidromeRemap';
+import { remapPinKey } from '@/lib/navidromeRemap';
 import { profileScopeGuard } from '@/lib/profileScope';
 import { getItem, setItem } from '@/lib/storage';
 import { profileScopeId } from '@/store/auth';
@@ -36,6 +38,8 @@ interface PinsState {
   /** Toggles pin. Returns false if it doesn't fit (already at MAX_PINS). */
   toggle: (key: string) => boolean;
   hydrate: () => Promise<void>;
+  /** Rewrites the pinned ids after the server renamed its own (#5824). */
+  remapIds: (f: Remap) => void;
 }
 
 const scope = profileScopeGuard();
@@ -68,6 +72,14 @@ export const usePins = create<PinsState>((set, get) => ({
     set({ pins });
     scheduleSave(pins);
     return true;
+  },
+
+  /** A pin's key is a kind and an id (`album:…`), so only the id half moves. */
+  remapIds: (f) => {
+    const pins: Record<string, number> = {};
+    for (const [key, at] of Object.entries(get().pins)) pins[remapPinKey(key, f)] = at;
+    set({ pins });
+    scheduleSave(pins);
   },
 
   hydrate: async () => {
