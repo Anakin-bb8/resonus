@@ -1206,6 +1206,39 @@ export async function submitPlay(auth: SubsonicAuth, id: string, at: number): Pr
   await request(auth, 'scrobble.view', { id, submission: 'true', time: at });
 }
 
+/** What playback is doing, for `reportPlayback`. */
+export type PlaybackState = 'starting' | 'playing' | 'paused' | 'stopped';
+
+/**
+ * Tells the server what playback is doing right now (OpenSubsonic
+ * `playbackReport` extension, Navidrome 0.62 and up).
+ *
+ * `scrobble?submission=false` can only say "this started". The server keeps the
+ * entry for whatever is left of the track and never hears about a pause or a
+ * stop, so its Now Playing panel runs the song to the end no matter what the
+ * phone did: pausing, emptying the queue and closing the app all left it
+ * playing. This endpoint carries the state and the position instead.
+ *
+ * `ignoreScrobble` is not optional. Without it the server registers the listen
+ * itself once the track passes its own threshold, on top of the one we send,
+ * and the thresholds in the settings (#126) stop meaning anything. Now Playing
+ * is updated either way.
+ */
+export async function reportPlayback(
+  auth: SubsonicAuth,
+  id: string,
+  state: PlaybackState,
+  positionSec: number,
+): Promise<void> {
+  await request(auth, 'reportPlayback.view', {
+    mediaId: id,
+    mediaType: 'song',
+    positionMs: Math.max(0, Math.round(positionSec * 1000)),
+    state,
+    ignoreScrobble: 'true',
+  });
+}
+
 export interface RadioStation {
   id: string;
   name: string;

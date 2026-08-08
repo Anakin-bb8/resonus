@@ -37,12 +37,15 @@ import {
   getPlayQueue,
   getSimilarSongs,
   getTopSongs,
+  reportPlayback,
   savePlayQueue,
   scrobble,
   SubsonicRequestError,
   streamUrl,
+  supportsPlaybackReport,
   supportsTranscodeOffset,
   type Album,
+  type PlaybackState,
   type Song,
   type SubsonicAuth,
 } from '@/api/backend';
@@ -826,7 +829,7 @@ function forgetHistoryOf(key: string) {
 }
 
 // ── Honest scrobble ──────────────────────────────────────────────────────────
-// When starting a track, only "now playing" is announced (submission false);
+// Starting a track only announces that it is playing (see the section below);
 // the actual listen is sent when crossing the threshold in the settings, which
 // starts out as the classic one: 50% of duration or 4 minutes, whichever comes
 // first. This way skipping songs doesn't inflate counters or the
@@ -834,6 +837,61 @@ function forgetHistoryOf(key: string) {
 // rule, and so does the outbox, so a trip without a connection reports the same
 // listens it would have reported with one.
 let scrobbledThisTrack = false;
+
+// ── What the server's Now Playing panel shows ────────────────────────────────
+// The announcement ("now playing") is one message at the start of a track and
+// there is no second one: the server gives the entry the rest of the track to
+// live and hears nothing after that, so pausing, emptying the queue or closing
+// the app all left the song running in Navidrome's panel until it would have
+// ended. Servers with the OpenSubsonic `playbackReport` extension take
+// the state instead, so those get told about the pause and the stop as well.
+// The rest keep the announcement, which is all the classic API can say.
+
+/** Support for `playbackReport`, per profile (`reset` clears it). */
+let playbackReportSupported: boolean | null = null;
+
+/** Checks (once per profile) whether the server takes playback state. */
+async function ensurePlaybackReportSupport(auth: SubsonicAuth): Promise<boolean> {
+  if (playbackReportSupported != null) return playbackReportSupported;
+  try {
+    playbackReportSupported = await supportsPlaybackReport(auth);
+    return playbackReportSupported;
+  } catch (e) {
+    // A server that refuses the question has answered it: an old Subsonic
+    // doesn't know the method, and remembering that keeps every pause from
+    // asking again. A network failure is not an answer, and caching it would
+    // leave the whole session on the announcement over one hiccup, so that one
+    // is asked again on the next change.
+    if (e instanceof SubsonicRequestError && !e.network) playbackReportSupported = false;
+    return false;
+  }
+}
+
+/**
+ * Tells the server what playback is doing. Best effort in every sense: it is
+ * about this moment, so one that didn't arrive is stale by the time anyone
+ * could retry it. The listen (`maybeScrobbleThreshold`) is the one that is kept.
+ *
+ * A song is only reported when the server is the one it came from: radio has
+ * no id there, and a local profile has no server to tell.
+ */
+function reportState(state: PlaybackState, song: Song | undefined, positionSec: number): void {
+  if (!song || song.url) return;
+  const { auth, offline } = useAuthStore.getState();
+  if (!auth || offline) return;
+  void ensurePlaybackReportSupport(auth).then((supported) => {
+    // The account may have gone, or gone offline, while it was being asked.
+    const now = useAuthStore.getState();
+    if (now.auth !== auth || now.offline) return;
+    if (!supported) {
+      // The classic API only knows how to say "this started", so the rest is
+      // nothing it could carry.
+      if (state === 'starting') void scrobble(auth, song.id, false).catch(() => {});
+      return;
+    }
+    void reportPlayback(auth, song.id, state, positionSec).catch(() => {});
+  });
+}
 
 /**
  * A list in a new order, without touching the one handed in. Fisher-Yates,
@@ -903,13 +961,12 @@ function onTrackChanged(song: Song) {
     const p = activePlayer();
     if (p && lockOwner === p) applyLockScreen(p, song);
   }
-  const { auth, offline } = useAuthStore.getState();
-  // Only "I'm listening to this"; playback counts only when crossing the threshold.
-  // Offline not sent (server account without connection: no one to send to).
-  // This one really is optional: it is about a song that is playing right now,
-  // so an announcement that did not arrive is stale a few minutes later and
-  // there is nothing worth retrying. The listen is the one that is kept.
-  if (auth && !offline) scrobble(auth, song.id, false).catch(() => {});
+  // Only "I'm listening to this"; playback counts only when crossing the
+  // threshold. Nothing is sent offline: a server account with no connection has
+  // no one to tell. A track can also be loaded without playing (the queue
+  // restored on reopen, the undo of a stop), and that is not a listen starting.
+  const st = usePlayerStore.getState();
+  reportState(st.isPlaying ? 'starting' : 'paused', song, st.positionSec);
   usePlayHistory.getState().record(song);
   // Warm up lyrics for what is playing. The next song's are warmed too, so
   // swiping in the player shows its card instantly, but a few seconds later:
@@ -2642,9 +2699,14 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     if (remoteKind()) {
       remoteSeek(sec);
       set({ positionSec: sec });
-      return;
+    } else {
+      seekActive(sec);
     }
-    seekActive(sec);
+    // The server works out the position between reports by letting the clock
+    // run, so a jump nobody told it about leaves its panel counting from where
+    // the song no longer is.
+    const st = get();
+    reportState(st.isPlaying ? 'playing' : 'paused', st.queue[st.index], sec);
   },
 
   setVolume: (v) => {
@@ -3069,6 +3131,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       radioMode: false,
       radioSeed: null,
     });
+    // After the `set`, not before: emptying the queue is what sends the
+    // "stopped" from the subscription below, and it needs the answer this
+    // profile already gave. Support is per server, so the next account asks
+    // again.
+    playbackReportSupported = null;
   },
 }));
 
@@ -3084,6 +3151,18 @@ usePlayerStore.subscribe((st, prev) => {
     st.sleepAtSongEnd !== prev.sleepAtSongEnd
   ) {
     scheduleNextSource();
+  }
+  // Pausing, resuming and stopping, told to the server (see `reportState`).
+  // Watching the store is what makes this cover every way playback stops: the
+  // button, the notification, the headphones, the sleep timer, the car, and the
+  // long press on Play that empties the queue. Hooking the actions instead left
+  // whichever one was added last reporting nothing.
+  if (st.queue.length === 0 && prev.queue.length > 0) {
+    // The queue emptied: that is over, not paused. Read from `prev`, since
+    // there is no longer a song here to name.
+    reportState('stopped', prev.queue[prev.index], prev.positionSec);
+  } else if (st.isPlaying !== prev.isPlaying) {
+    reportState(st.isPlaying ? 'playing' : 'paused', st.queue[st.index], st.positionSec);
   }
   // What the saved queue holds, position aside (see `queueDirty`).
   if (

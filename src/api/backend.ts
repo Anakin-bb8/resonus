@@ -26,6 +26,7 @@ export type {
   GuestAlbum,
   LyricLine,
   MusicFolder,
+  PlaybackState,
   Playlist,
   RadioStation,
   SavedQueue,
@@ -237,6 +238,25 @@ export const scrobble = (auth: SubsonicAuth, id: string, submission?: boolean) =
 
 export const submitPlay = (auth: SubsonicAuth, id: string, at: number) =>
   api(auth).submitPlay(auth, id, at);
+
+/**
+ * Does the server take playback state (paused, stopped), or only "now playing"?
+ * Jellyfin reports sessions its own way, which this doesn't speak yet, so it
+ * stays on the announcement.
+ */
+export const supportsPlaybackReport = async (auth: SubsonicAuth): Promise<boolean> =>
+  auth.serverType !== 'jellyfin' &&
+  (await Subsonic.getOpenSubsonicExtensions(auth)).includes('playbackReport');
+
+export const reportPlayback = (
+  auth: SubsonicAuth,
+  id: string,
+  state: Subsonic.PlaybackState,
+  positionSec: number,
+) =>
+  auth.serverType === 'jellyfin'
+    ? Promise.resolve()
+    : Subsonic.reportPlayback(auth, id, state, positionSec);
 
 export const getRadioStations = (auth: SubsonicAuth) => api(auth).getRadioStations(auth);
 
