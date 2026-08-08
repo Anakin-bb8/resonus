@@ -46,13 +46,25 @@ Also available on [Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtai
 - **Make it yours**: reorder and show/hide Home sections and explore chips, accent colors, app fonts, configurable swipe and ⋯ menu actions
 - **Android Auto**
 - **Queue sync across devices**
-- **In 6 languages**: English, Spanish, German, Catalan, Russian, Italian
+- **In 7 languages**: English, Spanish, German, Catalan, Russian, Italian, Simplified Chinese
 
 ## Translations
 
-Available in **English, Spanish, German, Catalan, Russian, and Italian**. More languages are
-welcome via pull request. See [TRANSLATING.md](./TRANSLATING.md) for how to add
-one, plus context for the trickier strings.
+More languages are welcome via pull request. See
+[TRANSLATING.md](./TRANSLATING.md) for how to add one, plus context for the
+trickier strings.
+
+Thanks to the people who have translated the app:
+
+| Language | Contributor(s) |
+| --- | --- |
+| English | [juananzzz](https://github.com/juananzzz) |
+| Español | [juananzzz](https://github.com/juananzzz) |
+| Deutsch | [Psychotoxical](https://github.com/Psychotoxical), [CraftoHohenvels](https://github.com/CraftoHohenvels) |
+| Català | [juananzzz](https://github.com/juananzzz) |
+| Русский | [ztx-lyghters](https://github.com/ztx-lyghters) |
+| Italiano | [Anakin-bb8](https://github.com/Anakin-bb8) |
+| 简体中文 | [xcdmrCHP](https://github.com/xcdmrCHP) |
 
 ## Community
 
