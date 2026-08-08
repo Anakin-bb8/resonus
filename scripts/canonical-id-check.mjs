@@ -12,6 +12,14 @@
  * Run with `pnpm canonical:check` (Node strips the TypeScript itself).
  */
 import { canonicalId, idWouldChange } from '../src/lib/navidromeIds.ts';
+import {
+  isTemporaryId,
+  remapAlbum,
+  remapIds,
+  remapKeys,
+  remapPinKey,
+  remapSong,
+} from '../src/lib/navidromeRemap.ts';
 
 let failures = 0;
 
@@ -96,6 +104,65 @@ if (!idWouldChange(MBID)) {
   failures++;
   console.error('  ✗ an MBID came back unchanged, so this warning is now wrong');
 }
+
+// Which is why the remap enumerates its fields. This is the check that would
+// catch somebody "simplifying" it into a walk over the object: the ids move
+// and the MusicBrainz id does not.
+console.log('The remap moves ids and leaves MusicBrainz alone');
+const upper = (id) => id.toUpperCase(); // visible, and nothing like a real id
+const song = remapSong(
+  {
+    id: 'song-1',
+    title: 'A song',
+    albumId: 'album-1',
+    artistId: 'artist-1',
+    artists: [{ id: 'artist-1', name: 'Someone' }],
+    albumArtists: [{ id: 'artist-2', name: 'Someone else' }],
+    musicBrainzId: MBID,
+    localUri: 'file:///downloads/files/abc.mp3',
+  },
+  upper
+);
+check('song id', song.id, 'SONG-1');
+check('album id', song.albumId, 'ALBUM-1');
+check('artist id', song.artistId, 'ARTIST-1');
+check('artists[].id', song.artists[0].id, 'ARTIST-1');
+check('albumArtists[].id', song.albumArtists[0].id, 'ARTIST-2');
+check('artist name is untouched', song.artists[0].name, 'Someone');
+check('musicBrainzId is untouched', song.musicBrainzId, MBID);
+check('title is untouched', song.title, 'A song');
+check(
+  'localUri is untouched, so the file stays put',
+  song.localUri,
+  'file:///downloads/files/abc.mp3'
+);
+
+const album = remapAlbum(
+  { id: 'album-1', name: 'A record', artistId: 'artist-1', artists: [{ id: 'a', name: 'n' }] },
+  upper
+);
+check('album own id', album.id, 'ALBUM-1');
+check('album artistId', album.artistId, 'ARTIST-1');
+check('album name is untouched', album.name, 'A record');
+
+// A playlist made offline holds an id the server has never seen. Today the
+// underscore in `tmp_` keeps it out of the transform by accident; these say it
+// on purpose, so the day the temporary format changes this fails instead of
+// the outbox quietly pointing at a playlist that does not exist.
+console.log('Temporary offline ids are left alone');
+const TMP = 'tmp_1754500000000_ab12cd';
+check('isTemporaryId', String(isTemporaryId(TMP)), 'true');
+check('remapKeys skips it', Object.keys(remapKeys({ [TMP]: 1 }, upper))[0], TMP);
+check('remapIds skips it', remapIds([TMP, 'real'], upper)[0], TMP);
+check('remapIds still maps the rest', remapIds([TMP, 'real'], upper)[1], 'REAL');
+check('remapPinKey skips it', remapPinKey(`playlist:${TMP}`, upper), `playlist:${TMP}`);
+
+// Pin keys are a kind and an id, not an id.
+console.log('Pin keys keep their kind');
+check('album pin', remapPinKey('album:abc', upper), 'album:ABC');
+check('radio pin', remapPinKey('radio:abc', upper), 'radio:ABC');
+check('a key with no colon is left alone', remapPinKey('abc', upper), 'abc');
+check('only the first colon splits', remapPinKey('album:a:b', upper), 'album:A:B');
 
 if (failures > 0) {
   console.error(`\n${failures} check${failures === 1 ? '' : 's'} failed`);
