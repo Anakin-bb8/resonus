@@ -505,6 +505,20 @@ export async function songsByIds(dir: string, ids: string[]): Promise<Map<string
   return out;
 }
 
+/**
+ * A handful of song ids, without reading the songs.
+ *
+ * The migration probe needs six ids and nothing else. `allSongs` would parse
+ * every song in the catalog to hand them over, which on twelve thousand of
+ * them is the freeze that #50 was about, spent on a question that is almost
+ * always answered "no".
+ */
+export async function someSongIds(dir: string, limit: number): Promise<string[]> {
+  const db = await catalogDb(dir);
+  const rows = await db.getAllAsync<{ id: string }>('SELECT id FROM songs LIMIT ?', [limit]);
+  return rows.map((r) => r.id);
+}
+
 export async function allSongs(dir: string): Promise<Song[]> {
   const db = await catalogDb(dir);
   const rows = await db.getAllAsync<{ data: string }>('SELECT data FROM songs');

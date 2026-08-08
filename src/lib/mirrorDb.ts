@@ -814,12 +814,15 @@ export async function remapMirrorIds(
     }
   }
 
+  // Looked up through a map: a `find` per pair reads the whole cover table
+  // again each time, and a large library has thousands of them.
+  const aliasOf = new Map(coverRows.map((r) => [r.id, r.alias_of]));
   const coverUpdates = coverPlan.pairs.map(({ from, to }) => ({
     from,
     to,
     // The file is named after whichever id owned it. Keeping that as the alias
     // is what leaves the artwork on disk exactly where it is.
-    alias: coverRows.find((r) => r.id === from)?.alias_of ?? from,
+    alias: aliasOf.get(from) ?? from,
   }));
 
   const entries = await db.getFirstAsync<{ n: number }>('SELECT COUNT(*) AS n FROM entries');

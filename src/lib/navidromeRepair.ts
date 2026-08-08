@@ -20,12 +20,12 @@
  *   than rolled back, and the second run finishes what the first started.
  */
 import { getSong, type SubsonicAuth } from '@/api/subsonic';
-import { allSongs, remapCatalogIds } from '@/lib/downloadsDb';
+import { remapCatalogIds, someSongIds } from '@/lib/downloadsDb';
 import { remapMirrorIds } from '@/lib/mirrorDb';
 import { canonicalId } from '@/lib/navidromeIds';
 import { probeCandidates, probeMigration, type Verdict } from '@/lib/navidromeMigration';
 import { getItem, setItem } from '@/lib/storage';
-import { active as mirrorPaths } from '@/store/libraryMirror';
+import { pathsFor as mirrorPathsFor } from '@/store/libraryMirror';
 import { serverDir } from '@/store/downloads';
 import { useOfflineQueue } from '@/store/offlineQueue';
 import { hashKey } from '@/lib/localLibrary';
@@ -62,8 +62,10 @@ export async function repairMark(auth: SubsonicAuth): Promise<Mark | null> {
  */
 async function candidatesFor(auth: SubsonicAuth): Promise<string[]> {
   try {
-    const songs = await allSongs(serverDir(auth));
-    return probeCandidates(songs.map((s) => s.id));
+    // A few rows, not the catalog: enough that some of them will be ids the
+    // transform moves, cheap enough to ask on a profile that has nothing to
+    // find, which is every profile until the day one server is upgraded.
+    return probeCandidates(await someSongIds(serverDir(auth), 200));
   } catch {
     return [];
   }
@@ -107,8 +109,11 @@ export async function repairIfMigrated(auth: SubsonicAuth): Promise<Verdict> {
     // holding something that cannot simply be asked for again.
     await remapCatalogIds(serverDir(auth), canonicalId);
 
-    const mirror = mirrorPaths();
-    if (mirror) await remapMirrorIds(mirror.dir, mirror.profile, canonicalId).catch(() => {});
+    // The profile being repaired, not whichever is signed in now: this can be
+    // reached from a request that outlived a profile switch, and repairing one
+    // account's mirror under another's name is the shape of #34.
+    const mirror = mirrorPathsFor(auth);
+    await remapMirrorIds(mirror.dir, mirror.profile, canonicalId).catch(() => {});
 
     useOfflineQueue.getState().remapIds(canonicalId);
 

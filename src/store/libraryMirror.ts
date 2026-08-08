@@ -68,6 +68,12 @@ function keepCovers(profile: string, ids: (string | CoverWant | undefined)[]): v
 
 /** The folder they share and the name that tells this profile apart, or null
  *  without a session. */
+export function pathsFor(auth: SubsonicAuth): { dir: string; profile: string } {
+  // PRIMARY URL (not the active one): identifies the profile even when
+  // switching networks, same as the download directory.
+  return { dir: DIR, profile: hashKey(`${primaryUrl(auth)}|${auth.username}`) };
+}
+
 export function active(): { dir: string; profile: string } | null {
   const auth: SubsonicAuth | null = useAuthStore.getState().auth;
   if (!auth) return null;
