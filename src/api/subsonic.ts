@@ -362,15 +362,26 @@ const REQUEST_TIMEOUT_MS = 15000;
  * (offline or timeout) from "responded with error" (credentials, 4xx/5xx…):
  * the former is a network issue that can fall back to offline mode; the
  * latter is a real account issue that must be shown.
+ *
+ * `code` is Subsonic's own error code when the server sent one. It was being
+ * dropped in favour of the message, and the one that has to be told apart from
+ * the rest is 70, "the requested data was not found": a wrong password and a
+ * song that is not there are both "the server answered with an error", and
+ * only one of them is a reason to suspect the ids have moved underneath us.
  */
 export class SubsonicRequestError extends Error {
   network: boolean;
-  constructor(message: string, network: boolean) {
+  code?: number;
+  constructor(message: string, network: boolean, code?: number) {
     super(message);
     this.name = 'SubsonicRequestError';
     this.network = network;
+    this.code = code;
   }
 }
+
+/** Subsonic's "the requested data was not found". */
+export const ERR_NOT_FOUND = 70;
 
 async function request<T>(
   auth: SubsonicAuth,
@@ -413,7 +424,11 @@ async function request<T>(
   const sub = json['subsonic-response'];
   if (!sub) throw new SubsonicRequestError('Unexpected server response', false);
   if (sub.status === 'failed') {
-    throw new SubsonicRequestError(sub.error?.message ?? 'Subsonic error', false);
+    throw new SubsonicRequestError(
+      sub.error?.message ?? 'Subsonic error',
+      false,
+      typeof sub.error?.code === 'number' ? sub.error.code : undefined,
+    );
   }
   return sub as T;
 }

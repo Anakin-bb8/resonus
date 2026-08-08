@@ -21,14 +21,18 @@ on:
     paths:
       - 'src/lib/navidromeIds.ts'
       - 'src/lib/navidromeRemap.ts'
+      - 'src/lib/navidromeMigration.ts'
       - 'scripts/canonical-id-check.mjs'
+      - 'scripts/ts-re*.mjs'
       - '.github/workflows/canonical-ids.yml'
   push:
     branches: [main]
     paths:
       - 'src/lib/navidromeIds.ts'
       - 'src/lib/navidromeRemap.ts'
+      - 'src/lib/navidromeMigration.ts'
       - 'scripts/canonical-id-check.mjs'
+      - 'scripts/ts-re*.mjs'
       - '.github/workflows/canonical-ids.yml'
 
 permissions:
@@ -46,4 +50,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - run: node scripts/canonical-id-check.mjs
+      - run: node --import ./scripts/ts-register.mjs scripts/canonical-id-check.mjs

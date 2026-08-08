@@ -20,6 +20,7 @@ import {
   remapPinKey,
   remapSong,
 } from '../src/lib/navidromeRemap.ts';
+import { probeCandidates, probeMigration } from '../src/lib/navidromeMigration.ts';
 
 let failures = 0;
 
@@ -163,6 +164,80 @@ check('album pin', remapPinKey('album:abc', upper), 'album:ABC');
 check('radio pin', remapPinKey('radio:abc', upper), 'radio:ABC');
 check('a key with no colon is left alone', remapPinKey('abc', upper), 'abc');
 check('only the first colon splits', remapPinKey('album:a:b', upper), 'album:A:B');
+
+// The decision half. Every one of these is a way the probe could hand back a
+// confident answer it has no business having, and each wrong answer in the
+// "migrated" direction rewrites a working library into ids matching nothing.
+console.log('The probe only concludes on positive proof');
+
+const OLD = 'e3b7fc2ae9447bbec37a13bf916e3cf6'; // 32-hex, so the transform moves it
+const NEW = canonicalId(OLD);
+const OLD2 = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+const NEW2 = canonicalId(OLD2);
+
+/** A server that knows exactly the ids in `has`. */
+const serverWith = (...has) => {
+  const set = new Set(has);
+  return async (id) => set.has(id);
+};
+
+async function verdictOf(candidates, exists) {
+  return (await probeMigration(candidates, exists)).verdict;
+}
+
+check(
+  'answers to the new id and not the old: migrated',
+  await verdictOf([OLD], serverWith(NEW)),
+  'migrated'
+);
+check(
+  'answers to the old id: not migrated',
+  await verdictOf([OLD], serverWith(OLD)),
+  'not-migrated'
+);
+check(
+  'answers to neither: the song was deleted, nothing is concluded',
+  await verdictOf([OLD], serverWith()),
+  'inconclusive'
+);
+check(
+  'a deleted song does not stop a later sample settling it',
+  await verdictOf([OLD, OLD2], serverWith(NEW2)),
+  'migrated'
+);
+check(
+  'answers to both: impossible, so no verdict',
+  await verdictOf([OLD], serverWith(OLD, NEW)),
+  'inconclusive'
+);
+check(
+  'a server answering yes to everything gets no verdict',
+  await verdictOf([OLD, OLD2], async () => true),
+  'inconclusive'
+);
+check(
+  'a server that cannot answer gets no verdict',
+  await verdictOf([OLD, OLD2], async () => undefined),
+  'inconclusive'
+);
+check(
+  'a server that is down mid-probe is not a "no"',
+  await verdictOf([OLD], async (id) => (id === NEW ? undefined : true)),
+  'inconclusive'
+);
+check('no candidates at all: no verdict', await verdictOf([], serverWith(NEW)), 'inconclusive');
+check(
+  'an id the transform leaves alone is never evidence',
+  await verdictOf(['aB3xY9kQz1'], async () => true),
+  'inconclusive'
+);
+
+// Asking about an id that resolves the same either way spends a request to
+// learn nothing, so those never become candidates in the first place.
+console.log('Candidates are only ids that would move');
+const CANDIDATES = probeCandidates([OLD, 'aB3xY9kQz1', '', OLD, OLD2, '5cLJPkLA5DK2BADhoeotPk']);
+check('the two that move, once each', CANDIDATES.join(','), `${OLD},${OLD2}`);
+check('the cap is honoured', probeCandidates([OLD, OLD2], 1).length.toString(), '1');
 
 if (failures > 0) {
   console.error(`\n${failures} check${failures === 1 ? '' : 's'} failed`);
