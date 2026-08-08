@@ -12,6 +12,20 @@ import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
 
 const REPO_URL = 'https://github.com/juananzzz/resonus';
+/**
+ * The bug form itself, not the page that asks which kind of issue this is:
+ * whoever pressed a button called "Report a bug" has already answered that.
+ *
+ * The version goes in with it. It is the one required field of the form, the
+ * app is the only one here who knows the answer, and a report that arrives
+ * with the wrong one costs a round trip to find out it was fixed two releases
+ * ago. `version` is the field's `id` in `.github/ISSUE_TEMPLATE/bug_report.yml`:
+ * renaming it there quietly stops filling it in here.
+ */
+function bugReportUrl(version: string | undefined): string {
+  const form = `${REPO_URL}/issues/new?template=bug_report.yml`;
+  return version ? `${form}&version=${encodeURIComponent(version)}` : form;
+}
 const DISCORD_URL = 'https://discord.gg/pecE8MTPVr';
 const KOFI_URL = 'https://ko-fi.com/juananzzz';
 
@@ -22,6 +36,7 @@ export default function AboutSettings() {
   // with someone, so it is not worth a row of its own that everybody else has
   // to scroll past.
   const taps = useRef(0);
+  const version = Constants.expoConfig?.version;
   const diagnostics = useSettings((s) => s.diagnostics);
   const setDiagnostics = useSettings((s) => s.setDiagnostics);
   // Restoring every setting used to be a row in the Settings index, in among
@@ -44,10 +59,7 @@ export default function AboutSettings() {
             router.push('/settings/diagnostics');
           }}
         >
-          <Field
-            label={t('Version')}
-            value={`Resonus v${Constants.expoConfig?.version ?? '?'}`}
-          />
+          <Field label={t('Version')} value={`Resonus v${version ?? '?'}`} />
         </Pressable>
         <SettingRow
           icon="logo-github"
@@ -58,7 +70,7 @@ export default function AboutSettings() {
         <SettingRow
           icon="bug-outline"
           label={t('Report a bug')}
-          onPress={() => Linking.openURL(`${REPO_URL}/issues/new`)}
+          onPress={() => Linking.openURL(bugReportUrl(version))}
         />
         <SettingRow
           icon="sparkles-outline"
