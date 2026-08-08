@@ -20,6 +20,24 @@
  * job and it must be decided by asking the server, never inferred from an id
  * that stopped resolving: a song that was deleted looks exactly the same.
  *
+ * What actually moves, from the numbers in that PR against a real 96k-track
+ * library, because it is not what you would guess:
+ *
+ * - Artist, album, tag and folder ids **do not change** on a modern install.
+ *   They are hash-derived and already canonical: zero of 29,114 artists and
+ *   zero of 6,945 albums moved. So did `media_file.pid`, which is why scans
+ *   stay a no-op afterwards.
+ * - Song ids **mostly do**: about 87% of the random ones, since a value drawn
+ *   from the whole 62^22 space usually overflows 128 bits.
+ * - On installs old enough to have 32-hex ids, songs and albums **all** move.
+ * - Share ids are exempt, so public links keep working, and MusicBrainz ids
+ *   are excluded for the reason spelled out below.
+ *
+ * Two consequences for us. Probing with song ids is not a convenience, it is
+ * the only family that reliably moves. And the migration is irreversible on
+ * the server (its `down` is a no-op), which is what makes keeping `legacy_id`
+ * on our side the only way back for anybody who restores an older backup.
+ *
  * Two things here look like details and are not:
  *
  * - The base62 alphabet is digits, then LOWERCASE, then uppercase, which is
