@@ -583,7 +583,7 @@
     "Refresh": "Ask the server for this playlist again, in case it changed elsewhere",
     "Delete": "The confirm button of a delete dialog, for a playlist or a radio station",
     "Updated": "Toast after a change went through",
-    "{n} removed from playlist": "`{n}` is a count of songs, already worded by the plural rules",
+    "{n} removed from playlist": "`{n}` is a plain number, with no word for songs attached: English reads \"3 removed from playlist\". Put in whatever your language needs around it",
     "Turn on auto-download?": "Asks whether new songs added to this playlist should download by themselves from now on",
     "Turn on": "The confirm button of that question",
 

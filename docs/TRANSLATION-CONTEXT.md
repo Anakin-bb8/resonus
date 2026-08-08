@@ -373,7 +373,7 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `{msg} It will keep downloading songs added to this playlist later.` | `{msg}` is the ordinary download message, and this adds what auto-download means on top of it |
-| `{n} removed from playlist` | `{n}` is a count of songs, already worded by the plural rules |
+| `{n} removed from playlist` | `{n}` is a plain number, with no word for songs attached: English reads "3 removed from playlist". Put in whatever your language needs around it |
 | `Add an optional description` | Placeholder in the empty description box |
 | `Add songs from the ⋯ menu of any song.` | The line under an empty playlist, saying how to fill it |
 | `Alphabetical` | Sort option: the order of a list |

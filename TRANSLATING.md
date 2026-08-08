@@ -83,17 +83,35 @@ else.
    `{ code: '<code>', name: '<native name>', dict: <import> }`. It is the single
    source of truth: the type, the settings picker and the persistence all come
    from it, so nothing else needs touching.
-3. Only if your language needs **more than 2** plural forms, see below.
+3. Add your language's words for "song", "album" and "playlist" to `PLURALS`
+   in `src/i18n/index.ts`. Every language needs them, yours included: see
+   below.
 
 Prefer not to touch the code? Open the PR with just the `.json` and we'll add
-the row.
+the rows.
 
 ## Plurals
 
-Counted strings like "3 songs" use per-language forms, so each language inflects
-the noun properly. Most need **2** (one / other) and are already set up in
-`PLURALS` (`src/i18n/index.ts`). Some need more: Russian needs **3**, registered
-with its rule in `PLURAL_RULE`.
+Counted strings like "3 songs" are not in your `.json` file. The noun goes with
+the number, so each language keeps its own forms in `PLURALS`
+(`src/i18n/index.ts`), and **every language needs its three rows there**: one
+for `song`, one for `album` and one for `playlist`. Without them the counts
+under playlists, artists and downloads stay in English while the rest of the app
+is in your language.
+
+What is already set up for you is the *rule*, which works out when each form is
+used. The *words* are the part you add:
+
+```ts
+song: { …, es: ['canción', 'canciones'] },
+```
+
+Most languages need **2** forms, one and other, in that order. If yours does not
+change the noun at all, write the same word twice, the way German does:
+`de: ['Titel', 'Titel']`.
+
+Some need more: Russian needs **3**, and a language with more than 2 also
+registers its rule in `PLURAL_RULE`.
 
 | Category | When | Example counts |
 | --- | --- | --- |
