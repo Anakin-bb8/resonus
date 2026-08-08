@@ -17,6 +17,7 @@ import {
   remapAlbum,
   remapIds,
   remapKeys,
+  planRemap,
   remapPinKey,
   remapSong,
 } from '../src/lib/navidromeRemap.ts';
@@ -238,6 +239,28 @@ console.log('Candidates are only ids that would move');
 const CANDIDATES = probeCandidates([OLD, 'aB3xY9kQz1', '', OLD, OLD2, '5cLJPkLA5DK2BADhoeotPk']);
 check('the two that move, once each', CANDIDATES.join(','), `${OLD},${OLD2}`);
 check('the cap is honoured', probeCandidates([OLD, OLD2], 1).length.toString(), '1');
+
+// Rewriting a primary key onto one another row already holds loses that row,
+// and SQLite would report it as a constraint failure partway through the
+// transaction rather than as the impossible thing it is. The plan is worked
+// out before anything is written so the whole repair can be refused instead.
+console.log('The plan refuses to lose a row');
+{
+  const plan = planRemap([OLD, 'aB3xY9kQz1', TMP], canonicalId);
+  check('only ids that move are in the plan', plan.pairs.length.toString(), '1');
+  check('and it is the right one', `${plan.pairs[0].from}→${plan.pairs[0].to}`, `${OLD}→${NEW}`);
+  check('nothing collides', plan.collisions.length.toString(), '0');
+
+  // An id whose new form is an id the table already holds.
+  const onto = planRemap([OLD, NEW], canonicalId);
+  check('landing on an existing id is a collision', onto.collisions.length.toString(), '1');
+  check('and it is not also planned as a move', onto.pairs.length.toString(), '0');
+
+  // Two different ids that would become the same one.
+  const both = planRemap(['a', 'b'], () => 'same');
+  check('two ids onto one is a collision', both.collisions.length.toString(), '1');
+  check('the first still moves', both.pairs.length.toString(), '1');
+}
 
 if (failures > 0) {
   console.error(`\n${failures} check${failures === 1 ? '' : 's'} failed`);

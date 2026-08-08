@@ -22,6 +22,8 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as SQLite from 'expo-sqlite';
 
 import type { Album, Song } from '@/api/subsonic';
+import type { Remap, RemapPair } from './navidromeRemap';
+import { planRemap, remapAlbum, remapSong } from './navidromeRemap';
 import { timed } from './perfLog';
 
 /** Downloaded album: the server's, plus its local cover and download date. */
@@ -573,4 +575,131 @@ export async function setSongBytes(
       }
     }),
   );
+}
+
+/* ── Repairing the ids after a server migration ───────────────────────────── */
+
+/**
+ * Two ids that would become one. Never seen in practice, and fatal if ignored:
+ * rewriting one primary key onto another loses a row, and the failure would
+ * arrive as a constraint error halfway through the transaction.
+ */
+export class CatalogCollisionError extends Error {
+  constructor(readonly pairs: RemapPair[]) {
+    super(`${pairs.length} ids would collide`);
+    this.name = 'CatalogCollisionError';
+  }
+}
+
+/** Where a row's id came from, so a repair can be undone. Added on demand:
+ *  the catalog predates it and `CREATE TABLE IF NOT EXISTS` never revisits a
+ *  table that is already there. */
+async function addLegacyColumns(db: SQLite.SQLiteDatabase): Promise<void> {
+  for (const table of ['songs', 'albums']) {
+    // No IF NOT EXISTS for columns in SQLite, and asking first costs a query
+    // per table on a path that runs once.
+    await db.execAsync(`ALTER TABLE ${table} ADD COLUMN legacy_id TEXT`).catch(() => {});
+  }
+}
+
+/** Lets the screen draw between batches. A catalog of twelve thousand songs is
+ *  twelve thousand JSON parses, and doing them in one go is what made reading
+ *  the old JSON catalog a sixteen second freeze (#50). */
+const REPAIR_BATCH = 500;
+const yieldToUi = () => new Promise((r) => setTimeout(r, 0));
+
+/**
+ * Rewrites every server id in the download catalog, in one transaction.
+ *
+ * The audio files are not touched and do not move. Each row keeps its
+ * `local_uri`, which is how a downloaded file is found: nothing recomputes a
+ * path from an id, so the bytes stay where they are under the name they
+ * already have. The same goes for the covers.
+ *
+ * The expensive half is deliberately outside the transaction. Reading and
+ * re-serialising the song JSON is the part that costs seconds; the writes are
+ * fast. Holding the database for the parsing as well would block every reader
+ * for the whole of it, for no atomicity that matters: a row inserted in that
+ * window simply does not get remapped, and since this is idempotent the next
+ * pass takes it.
+ */
+export async function remapCatalogIds(
+  dir: string,
+  f: Remap,
+): Promise<{ songs: number; albums: number }> {
+  const db = await catalogDb(dir);
+  await addLegacyColumns(db);
+
+  const songRows = await db.getAllAsync<{ id: string; data: string }>('SELECT id, data FROM songs');
+  const albumRows = await db.getAllAsync<{ id: string; data: string }>(
+    'SELECT id, data FROM albums',
+  );
+
+  const collisions = [
+    ...planRemap(
+      songRows.map((r) => r.id),
+      f,
+    ).collisions,
+    ...planRemap(
+      albumRows.map((r) => r.id),
+      f,
+    ).collisions,
+  ];
+  if (collisions.length > 0) throw new CatalogCollisionError(collisions);
+
+  /** A row is rewritten if its id moves or anything inside its song did. */
+  type Update = { from: string; to: string; owner: string | null; data: string };
+  const songUpdates: Update[] = [];
+  const albumUpdates: Update[] = [];
+
+  await timed('catalog remap plan', async () => {
+    for (let i = 0; i < songRows.length; i++) {
+      if (i > 0 && i % REPAIR_BATCH === 0) await yieldToUi();
+      const row = songRows[i];
+      const song = remapSong(JSON.parse(row.data) as Song, f);
+      const data = JSON.stringify(song);
+      if (song.id !== row.id || data !== row.data) {
+        songUpdates.push({ from: row.id, to: song.id, owner: song.albumId ?? null, data });
+      }
+    }
+    for (let i = 0; i < albumRows.length; i++) {
+      if (i > 0 && i % REPAIR_BATCH === 0) await yieldToUi();
+      const row = albumRows[i];
+      const album = remapAlbum(JSON.parse(row.data) as DlAlbum, f);
+      const data = JSON.stringify(album);
+      if (album.id !== row.id || data !== row.data) {
+        albumUpdates.push({ from: row.id, to: album.id, owner: album.artistId ?? null, data });
+      }
+    }
+  });
+
+  if (songUpdates.length === 0 && albumUpdates.length === 0) return { songs: 0, albums: 0 };
+
+  await serialized(() =>
+    timed('catalog remap write', () =>
+      db.withTransactionAsync(async () => {
+        // `legacy_id` is only written the first time a row moves. A second
+        // repair (a later migration, or this one resumed) must not overwrite
+        // where the row originally came from with where it was last.
+        for (const u of songUpdates) {
+          await db.runAsync(
+            `UPDATE songs SET id = ?, album_id = ?, data = ?,
+                    legacy_id = COALESCE(legacy_id, ?)
+               WHERE id = ?`,
+            [u.to, u.owner, u.data, u.from, u.from],
+          );
+        }
+        for (const u of albumUpdates) {
+          await db.runAsync(
+            `UPDATE albums SET id = ?, artist_id = ?, data = ?,
+                    legacy_id = COALESCE(legacy_id, ?)
+               WHERE id = ?`,
+            [u.to, u.owner, u.data, u.from, u.from],
+          );
+        }
+      }),
+    ),
+  );
+
+  return { songs: songUpdates.length, albums: albumUpdates.length };
 }

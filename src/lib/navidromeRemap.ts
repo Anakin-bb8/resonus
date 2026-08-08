@@ -100,6 +100,55 @@ export function remapIds(ids: string[], f: Remap): string[] {
   return ids.map((id) => map(id, f) as string);
 }
 
+/** One id and what it becomes. */
+export interface RemapPair {
+  from: string;
+  to: string;
+}
+
+export interface RemapPlan {
+  /** Only the ids that actually move; the rest are left alone entirely. */
+  pairs: RemapPair[];
+  /**
+   * An id that would land on another row's existing id. Empty in every real
+   * case, and the reason to look is what happens if it is not: rewriting one
+   * primary key onto another destroys a row, and SQLite would report it as a
+   * constraint failure halfway through a transaction rather than as the
+   * impossible thing it is. Finding one means abandoning the repair, not
+   * working around it.
+   */
+  collisions: RemapPair[];
+}
+
+/**
+ * What a remap would do to a set of ids, worked out before anything is
+ * written.
+ *
+ * Separated from applying it so the decision is checkable on its own, and so
+ * the caller can refuse the whole thing on a collision instead of discovering
+ * it partway through.
+ */
+export function planRemap(ids: Iterable<string>, f: Remap): RemapPlan {
+  const existing = new Set(ids);
+  const pairs: RemapPair[] = [];
+  const collisions: RemapPair[] = [];
+  const taken = new Set<string>();
+
+  for (const from of existing) {
+    if (isTemporaryId(from)) continue;
+    const to = f(from);
+    if (to === from) continue;
+    // Landing on an id that is already in the table, or that another row is
+    // about to take: either way two rows would end up as one.
+    if (existing.has(to) || taken.has(to)) collisions.push({ from, to });
+    else {
+      taken.add(to);
+      pairs.push({ from, to });
+    }
+  }
+  return { pairs, collisions };
+}
+
 /**
  * A pin's key, which is not an id but a kind and an id joined by a colon
  * (`album:…`, `playlist:…`, `radio:…`). Splitting on the first colon only:
