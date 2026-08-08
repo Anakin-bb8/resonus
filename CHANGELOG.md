@@ -132,7 +132,8 @@ the good one.
   from the player itself rather than hooked onto each action, so the six ways
   of pausing that the app already has are all covered. A server without the
   extension keeps the announcement, which is all the classic API can say, and
-  Jellyfin reports sessions its own way and is unaffected.
+  Jellyfin reports sessions its own way and is unaffected. Reported by
+  CuteDragon on Discord.
 
 - "Report a bug" in About opens the bug form, with the version already in it.
   It landed on the page that asks which kind of issue this is, which is the one
