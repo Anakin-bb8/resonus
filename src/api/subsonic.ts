@@ -588,6 +588,25 @@ export async function getAlbumsByGenre(
  * live per file, so a genre's songs can sit inside albums tagged as something
  * else, and vice versa.
  */
+/**
+ * One song, or null if the server says it has no such thing.
+ *
+ * Only the migration probe asks this, which is why it swallows "not found"
+ * into a null and lets everything else through: the probe has to tell "the
+ * server does not know this id" apart from "the server could not be reached",
+ * and treating a bad moment as a definite no is how a repair runs when it
+ * should not.
+ */
+export async function getSong(auth: SubsonicAuth, id: string): Promise<Song | null> {
+  try {
+    const res = await request<{ song?: Song }>(auth, 'getSong.view', { id });
+    return res.song ?? null;
+  } catch (e) {
+    if (e instanceof SubsonicRequestError && e.code === ERR_NOT_FOUND) return null;
+    throw e;
+  }
+}
+
 export async function getSongsByGenre(
   auth: SubsonicAuth,
   genre: string,

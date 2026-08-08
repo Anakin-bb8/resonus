@@ -117,7 +117,7 @@ export interface DownloadsCatalog {
   artists: (Artist & { coverUri?: string })[];
 }
 
-function serverDir(auth: SubsonicAuth): string {
+export function serverDir(auth: SubsonicAuth): string {
   // PRIMARY URL, not the active one: when switching networks the active one
   // changes, and with it this directory, hiding downloads. The primary
   // identifies the profile.
