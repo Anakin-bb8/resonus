@@ -7,6 +7,7 @@
  */
 import * as Crypto from 'expo-crypto';
 
+import { canonicalId, idWouldChange } from '@/lib/navidromeIds';
 import { timed } from '@/lib/perfLog';
 import { assertCanRequest } from './netGate';
 
@@ -383,11 +384,54 @@ export class SubsonicRequestError extends Error {
 /** Subsonic's "the requested data was not found". */
 export const ERR_NOT_FOUND = 70;
 
+/**
+ * Retries one request with the id the server would have after migrating.
+ *
+ * This is what makes a migration invisible. Without it the first thing that
+ * happens on an upgraded server is a screen that fails, and the repair only
+ * starts once something has already gone wrong in front of somebody. With it,
+ * the answer arrives, one request later than usual, exactly once, and the
+ * repair gets going behind it.
+ *
+ * `null` for anything other than a clean success, so the caller reports the
+ * error it already had. An id the transform leaves alone never gets here: for
+ * those, "not found" means what it says.
+ *
+ * The repair is imported at the point of use, not at the top. It reaches for
+ * the catalog and the mirror, both of which reach back for this module, and
+ * the cycle is only harmless because it is resolved at the one moment it is
+ * needed rather than while the app is loading.
+ */
+async function retryWithCanonicalId<T>(
+  auth: SubsonicAuth,
+  endpoint: string,
+  extra: Record<string, string | number | undefined>,
+  allowOffline: boolean,
+): Promise<T | null> {
+  const id = extra.id;
+  if (typeof id !== 'string' || !idWouldChange(id)) return null;
+  let res: T;
+  try {
+    res = await request<T>(auth, endpoint, { ...extra, id: canonicalId(id) }, allowOffline, true);
+  } catch {
+    return null;
+  }
+  // Answering to the canonical id is the proof the probe is looking for, but
+  // it is not taken as proof here: the repair asks again, properly, with its
+  // own samples and its own guards. This only says it is worth looking.
+  void import('@/lib/navidromeRepair')
+    .then((m) => m.repairIfMigrated(auth))
+    .catch(() => {});
+  return res;
+}
+
 async function request<T>(
   auth: SubsonicAuth,
   endpoint: string,
   extra: Record<string, string | number | undefined> = {},
   allowOffline = false,
+  /** Set on the retry itself, so one failure is never retried twice. */
+  retried = false,
 ): Promise<T> {
   // Offline mode stops here, before the socket (see netGate).
   assertCanRequest(allowOffline);
@@ -424,11 +468,12 @@ async function request<T>(
   const sub = json['subsonic-response'];
   if (!sub) throw new SubsonicRequestError('Unexpected server response', false);
   if (sub.status === 'failed') {
-    throw new SubsonicRequestError(
-      sub.error?.message ?? 'Subsonic error',
-      false,
-      typeof sub.error?.code === 'number' ? sub.error.code : undefined,
-    );
+    const code = typeof sub.error?.code === 'number' ? sub.error.code : undefined;
+    if (!retried && code === ERR_NOT_FOUND) {
+      const again = await retryWithCanonicalId<T>(auth, endpoint, extra, allowOffline);
+      if (again) return again;
+    }
+    throw new SubsonicRequestError(sub.error?.message ?? 'Subsonic error', false, code);
   }
   return sub as T;
 }
