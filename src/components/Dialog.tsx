@@ -24,8 +24,11 @@ interface Props {
   input?: { placeholder?: string; initialValue?: string; secure?: boolean };
   confirmLabel: string;
   /** Optional third choice, neither confirm nor cancel (e.g. «Don't remind
-   *  me»). Goes on its own line so three labels never crowd one row. */
-  neutral?: { label: string; onPress: () => void };
+   *  me»). Goes on its own line so three labels never crowd one row.
+   *  `align` says which end of that line: 'start' for the ones that dismiss,
+   *  which stay out of the way, and 'end' to stack it over the confirm when
+   *  both are answers to the same question and get compared to each other. */
+  neutral?: { label: string; onPress: () => void; align?: 'start' | 'end' };
   destructive?: boolean;
   onCancel: () => void;
   onConfirm: (value: string) => void;
@@ -71,7 +74,14 @@ export function Dialog({
             />
           ) : null}
           {neutral ? (
-            <Pressable hitSlop={8} style={styles.neutral} onPress={neutral.onPress}>
+            <Pressable
+              hitSlop={8}
+              style={[
+                styles.neutral,
+                neutral.align === 'end' && { alignSelf: 'flex-end' },
+              ]}
+              onPress={neutral.onPress}
+            >
               <Text style={styles.cancel}>{neutral.label}</Text>
             </Pressable>
           ) : null}

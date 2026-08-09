@@ -891,6 +891,7 @@ you are actually typing into, which is easier than reading it here.
 | `“{name}” will no longer be available offline.` | The line under that title. `{name}` is the album, artist or playlist |
 | `{n} added to “{name}”` | Toast when several songs went in at once. `{n}` is a count of songs |
 | `{n} columns` | The other options in that menu: cards, this many across. `{n}` is 2, 3 or 4, so it is always plural |
+| `{n} of {songs} are already in “{name}”.` | The same warning when adding several at once and only some of them are already there. `{n}` is how many of them are, and `{songs}` already reads as a count ("12 songs"), so the sentence is like "3 of 12 songs are already in “Rock”." |
 | `{n} selected` | How many songs are ticked right now |
 | `{n} songs couldn't be downloaded` | Toast: some failed, the rest are there |
 | `{n} songs deleted` | Toast after deleting downloads. `{n}` is how many files went |
@@ -907,6 +908,7 @@ you are actually typing into, which is easier than reading it here.
 | `Added to favorites` | Toast |
 | `Added to queue` | The toast that says it worked |
 | `Albums` | A heading over a list of them, never a count |
+| `All {songs} are already in “{name}”.` | The same warning when every one of the several being added is already there. `{songs}` already reads as a count ("12 songs") |
 | `Already added` | Title of the dialog that warns the song is in that playlist already |
 | `Back` | Screen reader label for the back arrow. A direction, not a verb |
 | `Back online` | The toast shown when the server answers again and the app comes out of offline mode |
@@ -954,12 +956,10 @@ you are actually typing into, which is easier than reading it here.
 | `Select all` | Tick every song in the list at once |
 | `Server default` | Codec option meaning "let the server decide" what to transcode to |
 | `Shuffle` | Play in random order |
-| `Some of these songs are already in “{name}”.` | The same warning when adding several at once and only some of them are already there |
 | `Song downloaded` | Toast: one song finished |
 | `Songs already downloaded will be kept.` | The line under that title: stopping does not undo what already arrived |
 | `Stop` | Stop a download that is running. Not stop playback |
 | `Stop download?` | Dialog title: stop a download that is running |
-| `These songs are already in “{name}”.` | The same warning when every one of the several being added is already there |
 | `This song can't be cast` | Toast: the speaker or TV will not take this file |
 | `This song is already in “{name}”.` | The line under that title. `{name}` is the playlist |
 | `Undo` | The button in a toast that takes back what just happened. It is there for a few seconds |

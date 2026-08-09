@@ -15,9 +15,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { addToPlaylist, COVER, coverArtUrl, createPlaylist, getPlaylist, getPlaylists } from '@/api/data';
 import { type Song } from '@/api/subsonic';
 import { useBottomSheetAnim } from '@/hooks/useBottomSheetAnim';
-import { useT } from '@/i18n';
+import { songsLabel, useT } from '@/i18n';
 import { useAutoDownloads } from '@/store/autoDownloads';
 import { usePlaylistPicker } from '@/store/playlistPicker';
+import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
 import { colors, fontSize, radius, spacing } from '@/theme';
 import { Cover } from './Cover';
@@ -51,6 +52,7 @@ export function PlaylistPickerSheet({
   const queryClient = useQueryClient();
   const toast = useToast((s) => s.show);
   const t = useT();
+  const lang = useSettings((s) => s.language);
   const visible = !!songs && songs.length > 0;
   const { dismiss, pan, makePan, backdropStyle, sheetStyle, onSheetLayout } = useBottomSheetAnim(
     visible,
@@ -223,24 +225,39 @@ export function PlaylistPickerSheet({
       <Dialog
         visible={!!dupPrompt}
         title={t('Already added')}
+        // The counts are in the sentence because the two cases used to be one
+        // word apart ("some of these" against "these"), and the one where none
+        // of them are new drops the second button as well, so it came out
+        // looking like the old warning that could only be answered by putting
+        // every song in again (#132). "All" rather than "12 of 12": nothing to
+        // skip should read as its own sentence, not as arithmetic.
         message={
           dupPrompt
             ? songs.length === 1
               ? t('This song is already in “{name}”.', { name: dupPrompt.name })
-              : dupPrompt.fresh.length === 0
-                ? t('These songs are already in “{name}”.', { name: dupPrompt.name })
-                : t('Some of these songs are already in “{name}”.', { name: dupPrompt.name })
+              : hasFresh
+                ? t('{n} of {songs} are already in “{name}”.', {
+                    n: songs.length - dupPrompt.fresh.length,
+                    songs: songsLabel(songs.length, lang),
+                    name: dupPrompt.name,
+                  })
+                : t('All {songs} are already in “{name}”.', {
+                    songs: songsLabel(songs.length, lang),
+                    name: dupPrompt.name,
+                  })
             : undefined
         }
         // Adding only the new ones is the confirm, in the corner and in the
         // accent: it is the one nearly everybody wants and the only one that
-        // cannot go wrong. Adding them all again is the way out beside it, the
-        // same shape "Don't remind me" has in the battery warning: there, not
-        // urged, and not something one gesture takes back afterwards.
+        // cannot go wrong. Adding them all again sits right on top of it, not
+        // off in the left corner where "Don't remind me" goes: these two are
+        // both answers to the same question and get read one against the
+        // other, so they belong in the same column.
         neutral={
           hasFresh
             ? {
                 label: t('Add anyway'),
+                align: 'end',
                 onPress: () => {
                   const d = dupPrompt;
                   setDupPrompt(null);
