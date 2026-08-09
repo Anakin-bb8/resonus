@@ -9,6 +9,31 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.6.5-beta.2] - 2026-08-09
+
+Everything in beta.1, plus the reason nobody should stay on it: with the phone
+on vibrate or silent, the play button in the app did nothing at all. The
+notification played the same track fine, which is the clue to what it was.
+
+### Fixed
+
+- The play button, on a phone that is not on normal ringer. SDK 56 added a
+  silent-mode check inside playback that the audio mode was not answering, so
+  it returned without a word. The ringer switch is about being interrupted,
+  not about the album you just pressed play on.
+- Songs that are not on the phone no longer look playable in offline mode, in
+  any list, however it got there: a row works it out from the downloads
+  instead of trusting the list. Tapping one says so rather than failing.
+- Playing a list that cannot load no longer leaves the app showing one song
+  while the speakers are still on the last one. Both reported by
+  @ztx-lyghters.
+- The quality badge names the codec a stream is being turned into
+  ("MP3 → OPUS 256 kbps"), and shows up when a codec is forced on a file that
+  was already under the bitrate limit, which is a transcode it used to keep
+  quiet about.
+- Two questions the app asks a server on the first track are no longer asked
+  twice each.
+
 ## [0.6.5-beta.1] - 2026-08-09
 
 A beta, and it says so for a reason: underneath the fixes, this build moves
