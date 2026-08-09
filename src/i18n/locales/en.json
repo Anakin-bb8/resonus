@@ -612,5 +612,8 @@
   "Counted": "Counted",
   "What happened, rather than how long it took.": "What happened, rather than how long it took.",
   "Measure performance": "Measure performance",
-  "Measuring is off (Settings › About), so there is nothing to show.": "Measuring is off (Settings › About), so there is nothing to show."
+  "Measuring is off (Settings › About), so there is nothing to show.": "Measuring is off (Settings › About), so there is nothing to show.",
+  "Server id repair": "Server id repair",
+  "Repair the offline library": "Repair the offline library",
+  "If the server renumbers its ids, rewrite the downloads to match instead of losing them. Off until it has been tested against a server that has.": "If the server renumbers its ids, rewrite the downloads to match instead of losing them. Off until it has been tested against a server that has."
 }

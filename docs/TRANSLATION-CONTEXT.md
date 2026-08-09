@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 608 of them.
+Every string the app can show, under the screen it shows up on. 611 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -521,8 +521,11 @@ you are actually typing into, which is easier than reading it here.
 | --- | --- |
 | `Counted` | Section header on the Diagnostics screen: things that happened and how many times |
 | `Diagnostics` | The screen's title, and the row in About that opens it |
+| `If the server renumbers its ids, rewrite the downloads to match instead of losing them. Off until it has been tested against a server that has.` | The line under that switch, saying why it is off |
 | `Measuring is off (Settings › About), so there is nothing to show.` | Empty state on the Diagnostics screen when `Measure performance` has never been switched on |
 | `Profile` | Section header over what kind of server the profile is. Not a user profile |
+| `Repair the offline library` | The switch itself. Navidrome 0.64 gives every song a new id, and the downloads on the phone still hold the old ones; this is what rewrites them so the music stays playable |
+| `Server id repair` | Section title in the hidden Diagnostics screen, above the switch below |
 | `Share report` | Button: hands the numbers over as plain text, to paste into an issue |
 | `Start over` | Button: clears the measurements and starts counting again. Not "start playback" |
 | `State` | Section header on the Diagnostics screen: what the app is doing at this moment, as opposed to the timings above it |

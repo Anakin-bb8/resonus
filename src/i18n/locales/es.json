@@ -613,5 +613,8 @@
   "Counted": "Contado",
   "What happened, rather than how long it took.": "Qué ha pasado, no cuánto ha tardado.",
   "Measure performance": "Medir el rendimiento",
-  "Measuring is off (Settings › About), so there is nothing to show.": "La medición está desactivada (Ajustes › Acerca de), así que no hay nada que mostrar."
+  "Measuring is off (Settings › About), so there is nothing to show.": "La medición está desactivada (Ajustes › Acerca de), así que no hay nada que mostrar.",
+  "Server id repair": "Reparación de ids del servidor",
+  "Repair the offline library": "Reparar la biblioteca sin conexión",
+  "If the server renumbers its ids, rewrite the downloads to match instead of losing them. Off until it has been tested against a server that has.": "Si el servidor renumera sus ids, reescribe las descargas para que cuadren en vez de perderlas. Desactivado hasta que se pruebe contra un servidor que lo haya hecho."
 }

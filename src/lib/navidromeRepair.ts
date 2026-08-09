@@ -32,6 +32,7 @@ import { useAutoDownloads } from '@/store/autoDownloads';
 import { useOfflineQueue } from '@/store/offlineQueue';
 import { remapQueueIds } from '@/store/player';
 import { usePins } from '@/store/pins';
+import { useSettings } from '@/store/settings';
 import { hashKey } from '@/lib/localLibrary';
 import { primaryUrl } from '@/lib/serverUrls';
 
@@ -101,6 +102,11 @@ export function repairStatus(): string {
   return outcome;
 }
 
+/** Whether the repair is allowed to do anything at all. See the setting. */
+export function idRepairEnabled(): boolean {
+  return useSettings.getState().navidromeIdRepair;
+}
+
 /** What each profile last answered with, so the check above costs no disk. */
 const versionInMemory = new Map<string, string>();
 
@@ -145,6 +151,15 @@ async function candidatesFor(auth: SubsonicAuth): Promise<string[]> {
  * conclusion is the ordinary case, not a failure.
  */
 export async function repairIfMigrated(auth: SubsonicAuth): Promise<Verdict> {
+  // The one door, and it is here rather than at each trigger so that off means
+  // off: no probe, no requests, no mark written, nothing to undo later. It is
+  // off by default until this has been watched working against a server that
+  // really migrated, because the way to be wrong that costs anything is to run
+  // when it should not have.
+  if (!useSettings.getState().navidromeIdRepair) {
+    outcome = 'turned off';
+    return 'inconclusive';
+  }
   const key = markKey(auth);
   const already = running.get(key);
   if (already) return already;

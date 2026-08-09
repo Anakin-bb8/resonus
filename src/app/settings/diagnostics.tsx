@@ -12,7 +12,7 @@ import { useState } from 'react';
 import { ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 
 import { songListSorts } from '@/api/data';
-import { SettingRow, SettingsPage, settingsStyles } from '@/components/SettingsUI';
+import { SettingRow, SettingsPage, settingsStyles, SwitchList } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
 import { mirrorCoverState } from '@/lib/mirrorCovers';
 import { perfBlocks, perfCounts, perfOps, perfReport, perfSince, resetPerfLog } from '@/lib/perfLog';
@@ -55,6 +55,8 @@ export default function DiagnosticsSettings() {
   const ops = perfOps();
   const counts = perfCounts();
   const enabled = useSettings((s) => s.diagnostics);
+  const idRepair = useSettings((s) => s.navidromeIdRepair);
+  const setIdRepair = useSettings((s) => s.setNavidromeIdRepair);
   const covers = mirrorCoverState();
   const downloads = useDownloads((s) => Object.keys(s.files).length);
   const hydrated = useDownloads((s) => s.hydrated);
@@ -143,6 +145,24 @@ export default function DiagnosticsSettings() {
             ))}
           </>
         ) : null}
+
+        {/* Here and not in a settings page: this is not a preference, it is a
+            switch for whoever is testing the repair against a server that has
+            actually renumbered its ids. It stays off until that has been seen
+            working. */}
+        <Text style={settingsStyles.sectionTitle}>{t('Server id repair')}</Text>
+        <SwitchList
+          options={[
+            {
+              label: t('Repair the offline library'),
+              description: t(
+                'If the server renumbers its ids, rewrite the downloads to match instead of losing them. Off until it has been tested against a server that has.',
+              ),
+              value: idRepair,
+              onChange: setIdRepair,
+            },
+          ]}
+        />
 
         <SettingRow
           icon="share-outline"

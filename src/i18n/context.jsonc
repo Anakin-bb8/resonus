@@ -257,6 +257,10 @@
     "New playlist": "Row at the top of the playlist picker, and the button on an empty library: make one",
     "Added to “{name}”": "Toast. `{name}` is the playlist's name",
     "{n} added to “{name}”": "Toast when several songs went in at once. `{n}` is a count of songs",
+    // ── Diagnostics: the server id repair switch ────────────────────────────
+    "Server id repair": "Section title in the hidden Diagnostics screen, above the switch below",
+    "Repair the offline library": "The switch itself. Navidrome 0.64 gives every song a new id, and the downloads on the phone still hold the old ones; this is what rewrites them so the music stays playable",
+    "If the server renumbers its ids, rewrite the downloads to match instead of losing them. Off until it has been tested against a server that has.": "The line under that switch, saying why it is off",
     "Already added": "Title of the dialog that warns the song is in that playlist already",
     "This song is already in “{name}”.": "The line under that title. `{name}` is the playlist",
     "{n} of {songs} are already in “{name}”.": "The same warning when adding several at once and only some of them are already there. `{n}` is how many of them are, and `{songs}` already reads as a count (\"12 songs\"), so the sentence is like \"3 of 12 songs are already in “Rock”.\"",

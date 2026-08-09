@@ -605,5 +605,8 @@
   "Counted": "Comptat",
   "What happened, rather than how long it took.": "Què ha passat, no quant ha trigat.",
   "Measure performance": "Mesura el rendiment",
-  "Measuring is off (Settings › About), so there is nothing to show.": "La mesura està desactivada (Configuració › Quant a), així que no hi ha res a mostrar."
+  "Measuring is off (Settings › About), so there is nothing to show.": "La mesura està desactivada (Configuració › Quant a), així que no hi ha res a mostrar.",
+  "Server id repair": "Reparació d’ids del servidor",
+  "Repair the offline library": "Repara la biblioteca sense connexió",
+  "If the server renumbers its ids, rewrite the downloads to match instead of losing them. Off until it has been tested against a server that has.": "Si el servidor renumera els seus ids, reescriu les baixades perquè hi encaixin en lloc de perdre-les. Desactivat fins que es provi contra un servidor que ho hagi fet."
 }

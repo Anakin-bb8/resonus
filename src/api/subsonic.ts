@@ -416,6 +416,12 @@ async function retryWithCanonicalId<T>(
 ): Promise<T | null> {
   const id = extra.id;
   if (typeof id !== 'string' || !idWouldChange(id)) return null;
+  // Turned off means nothing of this runs, down to the one extra request this
+  // would spend on a song that is simply not there any more. Read through the
+  // repair module rather than the settings store so the API layer keeps its
+  // one-way dependency on it.
+  const repair = await import('@/lib/navidromeRepair').catch(() => null);
+  if (!repair?.idRepairEnabled()) return null;
   let res: T;
   try {
     res = await request<T>(auth, endpoint, { ...extra, id: canonicalId(id) }, allowOffline, true);
@@ -425,9 +431,7 @@ async function retryWithCanonicalId<T>(
   // Answering to the canonical id is the proof the probe is looking for, but
   // it is not taken as proof here: the repair asks again, properly, with its
   // own samples and its own guards. This only says it is worth looking.
-  void import('@/lib/navidromeRepair')
-    .then((m) => m.repairIfMigrated(auth))
-    .catch(() => {});
+  void repair.repairIfMigrated(auth).catch(() => {});
   return res;
 }
 
