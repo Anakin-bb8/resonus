@@ -529,7 +529,9 @@ export async function loadDeviceSongs(): Promise<Song[]> {
     let hasNext = true;
     while (hasNext && rawSongs.length < 5000) {
       const page = await MediaLibrary.getAssetsAsync({
-        mediaType: MediaLibrary.MediaType.audio,
+        // `MediaType.audio` until SDK 56, where the enum was renamed. Same
+        // value ("audio"), so nothing about the query changed.
+        mediaType: MediaLibrary.MediaType.AUDIO,
         first: 200,
         after,
       });

@@ -203,7 +203,7 @@ export function OutputSheet({ visible, onClose }: { visible: boolean; onClose: (
 }
 
 const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.5)' },
   sheet: {
     position: 'absolute',
     left: 0,

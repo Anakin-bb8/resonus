@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceHighlight,
   },
   searchInput: { flex: 1, color: colors.text, fontSize: fontSize.md, padding: 0 },
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.5)' },
   sheet: {
     position: 'absolute',
     left: 0,

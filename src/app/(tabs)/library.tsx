@@ -897,7 +897,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   sortBarText: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: '600' },
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.5)' },
   sheet: {
     position: 'absolute',
     left: 0,

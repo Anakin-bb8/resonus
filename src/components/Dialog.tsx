@@ -113,7 +113,7 @@ export function Dialog({
 }
 
 const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.6)' },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.6)' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
   card: {
     width: '100%',

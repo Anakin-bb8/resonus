@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, gap: spacing.sm },
   coverWrap: { alignItems: 'center', marginBottom: spacing.sm },
   coverOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(0,0,0,0.45)',

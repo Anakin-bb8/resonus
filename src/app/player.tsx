@@ -974,7 +974,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   // Darkens the blurred artwork so the white text keeps its contrast whatever
   // the cover is. Tuned by eye: any lighter and pale covers wash the title out.
-  coverScrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' },
+  coverScrim: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.45)' },
   // Horizontal padding lives in each section (not here): so the slider can
   // overshoot its internal margin without the ScrollView clipping the thumb.
   safe: { flex: 1 },

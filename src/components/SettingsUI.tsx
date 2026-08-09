@@ -782,7 +782,7 @@ export const settingsStyles = StyleSheet.create({
   tunableValue: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1 },
   tunableArrows: { alignItems: 'center' },
   // Pad that nudges a slider's value one step at a time.
-  padBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.6)' },
+  padBackdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.6)' },
   padCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   padCard: {
     minWidth: 200,

@@ -1,7 +1,5 @@
 /** Album and song search on the server. */
 import Ionicons from '@expo/vector-icons/Ionicons';
-import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import type { ParamListBase } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigation } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -80,7 +78,13 @@ export default function SearchScreen() {
   // tab activates, so coming from another tab the first tap doesn't focus and
   // the second one does — feels the same as a double tap. And if you're already
   // here, one is enough.
-  const navigation = useNavigation<BottomTabNavigationProp<ParamListBase>>();
+  // Typed by what is used and nothing else. `tabPress` belongs to the tab
+  // navigator, and the types for it used to come from `@react-navigation/*`,
+  // which expo-router no longer installs: the navigation API is its own now.
+  const navigation = useNavigation<{
+    addListener: (event: 'tabPress', callback: () => void) => () => void;
+    isFocused: () => boolean;
+  }>();
   const inputRef = useRef<TextInput>(null);
   useEffect(() => {
     return navigation.addListener('tabPress', () => {

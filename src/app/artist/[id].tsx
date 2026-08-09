@@ -670,7 +670,7 @@ const styles = StyleSheet.create({
   action: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg, paddingVertical: spacing.md },
   actionText: { color: colors.text, fontSize: fontSize.md },
   headerWrap: { width: WIDTH, height: HEADER_H, justifyContent: 'flex-end' },
-  headerImg: { ...StyleSheet.absoluteFillObject, width: WIDTH, height: HEADER_H },
+  headerImg: { ...StyleSheet.absoluteFill, width: WIDTH, height: HEADER_H },
   name: {
     color: colors.text,
     fontSize: fontSize.xxl,
