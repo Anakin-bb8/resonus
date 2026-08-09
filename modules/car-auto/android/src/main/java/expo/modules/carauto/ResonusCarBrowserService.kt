@@ -100,20 +100,63 @@ class ResonusCarBrowserService : MediaLibraryService() {
       pageSize: Int,
       params: LibraryParams?,
     ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
-      // Honours the controller's paging window. Every browse MediaItem can
-      // carry its local cover as bytes (scaled down), so answering a long list
-      // in one go could run past the binder transaction limit. Cutting to the
-      // page that was asked for keeps each transaction bounded; Android Auto
-      // pages with a sensible pageSize and stops when it has enough.
-      val all = BrowseTreeCache.getChildren(parentId)
+      // Paged, like the search results and for the same reason (see `pageOf`).
+      return Futures.immediateFuture(pageOf(BrowseTreeCache.getChildren(parentId), page, pageSize, params))
+    }
+
+    /**
+     * Answered from the cached tree, without asking JS: the car searches with
+     * the screen off, and that is exactly when React Native stops running
+     * timers and its requests stop coming back (#103). media3 announces to the
+     * car that search exists on its own, from the session commands, so this is
+     * the only thing that was missing.
+     *
+     * The work happens here and the results are kept, because the count
+     * reported now and the items handed over in `onGetSearchResult` have to be
+     * the same list.
+     */
+    override fun onSearch(
+      session: MediaLibrarySession,
+      browser: MediaSession.ControllerInfo,
+      query: String,
+      params: LibraryParams?,
+    ): ListenableFuture<LibraryResult<Void>> {
+      val results = resultsFor(query)
+      CarAutoLog.d("search q=$query hits=${results.size}")
+      session.notifySearchResultChanged(browser, query, results.size, params)
+      return Futures.immediateFuture(LibraryResult.ofVoid(params))
+    }
+
+    override fun onGetSearchResult(
+      session: MediaLibrarySession,
+      browser: MediaSession.ControllerInfo,
+      query: String,
+      page: Int,
+      pageSize: Int,
+      params: LibraryParams?,
+    ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> =
+      Futures.immediateFuture(pageOf(resultsFor(query), page, pageSize, params))
+
+    /**
+     * The window the controller asked for, and nothing more. Every item can
+     * carry its cover as bytes (scaled down), so answering a long list in one
+     * go could run past the binder transaction limit. Android Auto pages with
+     * a sensible pageSize and stops when it has enough.
+     */
+    private fun pageOf(
+      all: List<BrowseNode>,
+      page: Int,
+      pageSize: Int,
+      params: LibraryParams?,
+    ): LibraryResult<ImmutableList<MediaItem>> {
       val from = page.toLong() * pageSize.toLong()
-      if (from >= all.size) {
-        return Futures.immediateFuture(LibraryResult.ofItemList(ImmutableList.of(), params))
-      }
+      if (from >= all.size) return LibraryResult.ofItemList(ImmutableList.of(), params)
       val start = from.toInt()
       val end = minOf(from + pageSize.toLong(), all.size.toLong()).toInt()
-      val items = ImmutableList.copyOf(all.subList(start, end).map { it.toMediaItem() })
-      return Futures.immediateFuture(LibraryResult.ofItemList(items, params))
+      return LibraryResult.ofItemList(
+        ImmutableList.copyOf(all.subList(start, end).map { it.toMediaItem() }),
+        params,
+      )
     }
 
     override fun onAddMediaItems(
@@ -121,9 +164,13 @@ class ResonusCarBrowserService : MediaLibraryService() {
       controller: MediaSession.ControllerInfo,
       mediaItems: MutableList<MediaItem>,
     ): ListenableFuture<MutableList<MediaItem>> {
-      val first = mediaItems.firstOrNull()?.mediaId
-      if (first.isNullOrEmpty()) return Futures.immediateFuture(mediaItems)
-      return resolvePlayable(first, mediaItems)
+      val first = mediaItems.firstOrNull()
+      val id = first?.mediaId
+      if (id.isNullOrEmpty()) {
+        val spoken = spokenPick(first) ?: return Futures.immediateFuture(mediaItems)
+        return Futures.immediateFuture(mutableListOf(spoken.toMediaItem()))
+      }
+      return resolvePlayable(id, mediaItems)
     }
 
     override fun onSetMediaItems(
@@ -133,16 +180,25 @@ class ResonusCarBrowserService : MediaLibraryService() {
       startIndex: Int,
       startPositionMs: Long,
     ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
-      val first = mediaItems.firstOrNull()?.mediaId
-      if (first.isNullOrEmpty()) {
+      val first = mediaItems.firstOrNull()
+      val id = first?.mediaId
+      // "Play <something>" arrives with no id at all and what was said in the
+      // request's `searchQuery`, so the tree is searched for it. Left alone,
+      // every spoken request was dropped here (#103).
+      if (id.isNullOrEmpty()) {
+        val spoken = spokenPick(first)
         return Futures.immediateFuture(
-          MediaSession.MediaItemsWithStartPosition(mediaItems, startIndex, startPositionMs),
+          if (spoken == null) {
+            MediaSession.MediaItemsWithStartPosition(mediaItems, startIndex, startPositionMs)
+          } else {
+            MediaSession.MediaItemsWithStartPosition(mutableListOf(spoken.toMediaItem()), 0, 0L)
+          },
         )
       }
-      val node = findNode(first)
+      val node = findNode(id)
       if (node != null && node.playable) {
         jsPlayer?.applyTappedItem(node)
-        emitPlay(first)
+        emitPlay(id)
         return Futures.immediateFuture(
           MediaSession.MediaItemsWithStartPosition(
             mutableListOf(node.toMediaItem()),
@@ -162,6 +218,24 @@ class ResonusCarBrowserService : MediaLibraryService() {
     ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> =
       Futures.immediateFailedFuture(UnsupportedOperationException("no resumption state"))
 
+    /**
+     * What to start playing for a spoken request, already handed to JS.
+     *
+     * A track gets the optimistic metadata the car shows while JS resolves it,
+     * the same as a tap. A collection does not: what it puts on is its first
+     * song, and naming the album where the song goes would be a worse answer
+     * than the spinner that is already there.
+     */
+    private fun spokenPick(item: MediaItem?): BrowseNode? {
+      val query = item?.requestMetadata?.searchQuery
+      val node = BrowseTreeCache.voicePick(query?.toString())
+      CarAutoLog.d("voice q=$query pick=${node?.id}")
+      if (node == null) return null
+      if (node.playable) jsPlayer?.applyTappedItem(node)
+      emitPlay(node.id)
+      return node
+    }
+
     private fun resolvePlayable(
       mediaId: String,
       original: MutableList<MediaItem>,
@@ -180,6 +254,17 @@ class ResonusCarBrowserService : MediaLibraryService() {
       CarAutoLog.d("emitPlay id=$mediaId parent=$parentId")
       CarAutoModule.instance?.emitPlayEvent(mediaId, parentId)
     }
+  }
+
+  /** The last query answered, kept so the count reported to the car and the
+   *  items it then asks for cannot disagree. */
+  @Volatile private var lastSearch: Pair<String, List<BrowseNode>>? = null
+
+  private fun resultsFor(query: String): List<BrowseNode> {
+    lastSearch?.let { (q, results) -> if (q == query) return results }
+    val results = BrowseTreeCache.search(query)
+    lastSearch = query to results
+    return results
   }
 
   private fun findNode(mediaId: String): BrowseNode? {

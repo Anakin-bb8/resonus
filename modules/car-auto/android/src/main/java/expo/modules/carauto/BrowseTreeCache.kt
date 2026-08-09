@@ -5,6 +5,8 @@ import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.text.Normalizer
+import java.util.Locale
 
 data class BrowseNode(
   val id: String,
@@ -72,6 +74,135 @@ object BrowseTreeCache {
     val root = nodes[ROOT_ID]?.size ?: 0
     return "root=$root totalParents=${nodes.size}"
   }
+
+  // ── Search ──────────────────────────────────────────────────────────────────
+  // Answered from this cache and nowhere else. The car asks with the screen off
+  // and the phone locked, which is when React Native stops running timers and
+  // its `fetch` stops resolving, so anything that had to go through JS to
+  // answer would answer nothing at all (#103). The price is honest: it finds
+  // what the tree holds, which is the shelves plus the songs of the albums that
+  // were prefetched, not the whole library.
+
+  /** Ceiling on what a query returns. The car pages through them anyway. */
+  private const val MAX_RESULTS = 60
+
+  /**
+   * Everything in the tree matching `query`, best match first.
+   *
+   * The same album sits under several parents (a shelf and the library), and
+   * the same song under an album and its artist, so results are deduplicated:
+   * by id, and for a track by the song it points at, since its id carries the
+   * parent it was found in.
+   */
+  fun search(query: String): List<BrowseNode> {
+    val q = fold(query)
+    if (q.isEmpty()) return emptyList()
+    val tokens = q.split(' ').filter { it.isNotEmpty() }
+    val seen = HashSet<String>()
+    val hits = ArrayList<Pair<BrowseNode, Int>>()
+    for ((_, children) in nodes) {
+      for (node in children) {
+        if (!seen.add(dedupeKey(node))) continue
+        val score = score(node, q, tokens)
+        if (score > 0) hits.add(node to score)
+      }
+    }
+    // Sorting is stable, so nodes of equal worth stay in the order the tree
+    // holds them, and a collection comes before a single track: it is the
+    // shorter way to say the same thing, and one tap plays all of it.
+    return hits
+      .sortedWith(compareByDescending<Pair<BrowseNode, Int>> { it.second }.thenBy { it.first.playable })
+      .take(MAX_RESULTS)
+      .map { it.first }
+  }
+
+  /** The song a track id points at, or the node's own id. */
+  private fun dedupeKey(node: BrowseNode): String =
+    if (node.id.startsWith("track|")) node.id.substringAfter('|').substringAfter('|') else node.id
+
+  /**
+   * How well a node answers the query, 0 for not at all.
+   *
+   * What was typed against the title first, and only then against the line
+   * under it, halved: an artist's name matching a song's subtitle exactly is
+   * still worth more than an album whose title merely contains the word.
+   */
+  private fun score(node: BrowseNode, q: String, tokens: List<String>): Int {
+    val title = score(node.title, q, tokens)
+    if (title > 0) return title
+    return score(node.subtitle, q, tokens) / 2
+  }
+
+  private fun score(text: String?, q: String, tokens: List<String>): Int {
+    val t = fold(text ?: return 0)
+    if (t.isEmpty()) return 0
+    if (t == q) return 100
+    if (t.startsWith(q)) return 80
+    val words = t.split(' ')
+    // "dark side" finds "The Dark Side of the Moon", and so does "moon": every
+    // word typed has to start a word of the title, in any order.
+    if (tokens.all { tok -> words.any { it.startsWith(tok) } }) return 60
+    if (tokens.all { t.contains(it) }) return 40
+    return 0
+  }
+
+  // Hoisted: `fold` runs on every title and every subtitle in the tree, and
+  // building these inside it meant compiling two patterns a few thousand times
+  // per query.
+  private val MARKS = Regex("\\p{Mn}+")
+  private val SPACES = Regex("\\s+")
+
+  /** Lowercase, unaccented and single-spaced, so "Bjork" finds "Björk". */
+  private fun fold(s: String): String {
+    val stripped = Normalizer.normalize(s, Normalizer.Form.NFD).replace(MARKS, "")
+    return stripped.lowercase(Locale.ROOT).replace(SPACES, " ").trim()
+  }
+
+  /**
+   * The one thing to start playing for a spoken request, or null if the tree
+   * holds nothing that could answer it.
+   *
+   * Only what JS knows how to resolve: a track, an album, an artist, a playlist
+   * or the favourites. The tabs and the shelves are places to browse, not
+   * answers to "play something", and offering one would start silence.
+   */
+  fun voicePick(query: String?): BrowseNode? {
+    // "Play music", with nothing said about what. The favourites are the
+    // closest thing to an answer the tree has.
+    val hit =
+      if (query.isNullOrBlank()) firstPlayableCollection()
+      else search(query).firstOrNull { it.canBePlayed() }
+    return hit?.let { intoSomethingToPlay(it) }
+  }
+
+  /**
+   * An album or an artist becomes the first song the tree holds for it.
+   *
+   * Handed over as the collection, JS has to ask the server what is in it, and
+   * a request made with the screen off never comes back. Handed a song, it
+   * queues the collection from what it already has and plays, which is the
+   * difference between an answer and silence. A track id carries the parent it
+   * came from, so the whole album still gets queued behind it.
+   */
+  private fun intoSomethingToPlay(node: BrowseNode): BrowseNode =
+    if (node.playable) node else nodes[node.id]?.firstOrNull { it.playable } ?: node
+
+  private fun firstPlayableCollection(): BrowseNode? {
+    for ((_, children) in nodes) {
+      children.firstOrNull { it.id == "favorites" }?.let { return it }
+    }
+    for ((_, children) in nodes) {
+      children.firstOrNull { it.canBePlayed() }?.let { return it }
+    }
+    return null
+  }
+
+  private fun BrowseNode.canBePlayed(): Boolean =
+    playable ||
+      id.startsWith("album:") ||
+      id.startsWith("artist:") ||
+      id.startsWith("playlist:") ||
+      id == "favorites"
 
   private fun parse(json: String): Map<String, List<BrowseNode>>? = try {
     val root = JSONObject(json)
