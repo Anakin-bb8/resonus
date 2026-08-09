@@ -461,16 +461,18 @@ async function request<T>(
   if (!res.ok) throw new SubsonicRequestError(`Network error (${res.status})`, false);
   // Apart from the request: this is the part that runs on the JS thread, and
   // it grows with the size of the answer.
-  const json = await timed(`json ${endpoint}`, () => res.json());
-  if (__DEV__) {
-    // Size of what just had to be parsed on the JS thread. Only in
-    // development: it means reading the body twice.
-    void res
-      .clone?.()
-      ?.text()
-      .then((t) => console.log(`[perf] size ${endpoint} · ${Math.round(t.length / 1024)} KB`))
-      .catch(() => {});
-  }
+  //
+  // In development it also says how big that answer was, and it gets there by
+  // reading the body once and parsing that, rather than by cloning the
+  // response: a clone taken after `json()` has read it throws "body is already
+  // used", synchronously and outside the try above, which took every request
+  // with it. React Native's `fetch` let that pass; a spec-abiding one does not.
+  const json = await timed(`json ${endpoint}`, async () => {
+    if (!__DEV__) return res.json();
+    const text = await res.text();
+    console.log(`[perf] size ${endpoint} · ${Math.round(text.length / 1024)} KB`);
+    return JSON.parse(text);
+  });
   const sub = json['subsonic-response'];
   if (!sub) throw new SubsonicRequestError('Unexpected server response', false);
   if (sub.status === 'failed') {
