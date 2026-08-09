@@ -450,20 +450,35 @@ function needsOffsetSeek(song: Song): boolean {
   return isTranscoded(song) || sourceHasLength === false;
 }
 
+/** The answer while it is still being fetched, so two callers ask once. */
+let transcodeOffsetAsking: Promise<boolean> | null = null;
+
 /** Checks (once per profile) if the server can start a stream partway in. */
 async function ensureTranscodeOffsetSupport(): Promise<boolean> {
   if (transcodeOffsetSupported != null) return transcodeOffsetSupported;
+  // Caching the answer is not enough when two callers arrive before the first
+  // one has it: the second saw `null` and asked again. It happens on the very
+  // first track, which is where this costs a round trip on the way to playing.
+  if (transcodeOffsetAsking) return transcodeOffsetAsking;
   const auth = useAuthStore.getState().auth;
   if (!auth) return false; // no session yet: don't cache, re-check later
-  try {
-    transcodeOffsetSupported = await supportsTranscodeOffset(auth);
-    return transcodeOffsetSupported;
-  } catch {
-    // Transient network failure: do NOT cache as "not supported", or a single
-    // hiccup would leave all seeks in native mode (restart) for the rest of the
-    // session. Retried on the next seek.
-    return false;
-  }
+  transcodeOffsetAsking = (async () => {
+    try {
+      transcodeOffsetSupported = await supportsTranscodeOffset(auth);
+      return transcodeOffsetSupported;
+    } catch {
+      // Transient network failure: do NOT cache as "not supported", or a single
+      // hiccup would leave all seeks in native mode (restart) for the rest of the
+      // session. Retried on the next seek.
+      return false;
+    } finally {
+      // Only the answer is kept, never the asking: a failure that cached itself
+      // here would be the same hiccup lasting the whole session by another
+      // route.
+      transcodeOffsetAsking = null;
+    }
+  })();
+  return transcodeOffsetAsking;
 }
 
 /**
@@ -890,21 +905,30 @@ let scrobbledThisTrack = false;
 /** Support for `playbackReport`, per profile (`reset` clears it). */
 let playbackReportSupported: boolean | null = null;
 
+/** The answer while it is still being fetched. See the one above it. */
+let playbackReportAsking: Promise<boolean> | null = null;
+
 /** Checks (once per profile) whether the server takes playback state. */
 async function ensurePlaybackReportSupport(auth: SubsonicAuth): Promise<boolean> {
   if (playbackReportSupported != null) return playbackReportSupported;
-  try {
-    playbackReportSupported = await supportsPlaybackReport(auth);
-    return playbackReportSupported;
-  } catch (e) {
-    // A server that refuses the question has answered it: an old Subsonic
-    // doesn't know the method, and remembering that keeps every pause from
-    // asking again. A network failure is not an answer, and caching it would
-    // leave the whole session on the announcement over one hiccup, so that one
-    // is asked again on the next change.
-    if (e instanceof SubsonicRequestError && !e.network) playbackReportSupported = false;
-    return false;
-  }
+  if (playbackReportAsking) return playbackReportAsking;
+  playbackReportAsking = (async () => {
+    try {
+      playbackReportSupported = await supportsPlaybackReport(auth);
+      return playbackReportSupported;
+    } catch (e) {
+      // A server that refuses the question has answered it: an old Subsonic
+      // doesn't know the method, and remembering that keeps every pause from
+      // asking again. A network failure is not an answer, and caching it would
+      // leave the whole session on the announcement over one hiccup, so that one
+      // is asked again on the next change.
+      if (e instanceof SubsonicRequestError && !e.network) playbackReportSupported = false;
+      return false;
+    } finally {
+      playbackReportAsking = null;
+    }
+  })();
+  return playbackReportAsking;
 }
 
 /**
@@ -3190,8 +3214,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     setStreamOffset(0);
     sourceHasLength = null;
     scrobbledThisTrack = false;
-    // timeOffset support is per server: re-check on change.
+    // timeOffset support is per server: re-check on change. The one in flight
+    // goes with it, or the next profile would be handed this one's answer.
     transcodeOffsetSupported = null;
+    transcodeOffsetAsking = null;
     set({
       queue: [],
       index: 0,
@@ -3219,6 +3245,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     // profile already gave. Support is per server, so the next account asks
     // again.
     playbackReportSupported = null;
+    playbackReportAsking = null;
   },
 }));
 
