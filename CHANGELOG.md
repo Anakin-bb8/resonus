@@ -9,6 +9,71 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.6.5-beta.1] - 2026-08-09
+
+A beta, and it says so for a reason: underneath the fixes, this build moves
+the whole app onto Expo SDK 56 and React Native 0.85. Everything native was
+rebuilt on top of that, including the five modules Resonus has of its own and
+the patched audio engine, so the parts to try first are the ordinary ones:
+that it plays, that the notification behaves, that downloads survive a flight
+mode, that the car finds anything.
+
+The notification tells the truth about a song the server is transcoding. It
+sat at 0:00 for the whole track, because a stream that arrives without a
+length is filed as live, and nothing will say where a live stream is. Seeking
+one used to send it back to zero as well, since re-requesting the stream hands
+the player a new source that counts from nothing.
+
+Android Auto can be searched, at last, and by voice too. It is answered from
+the tree the app already keeps rather than by asking the phone's JavaScript,
+which in a car is asleep with the screen off, so it works parked or driving,
+online or not. What it finds is what that tree holds.
+
+Requests come back with the screen off. React Native's own fetch stops
+delivering answers in the background, which is a promise that never settles
+and whatever was waiting on it waiting forever: the lyrics lookup on every
+track change was the one that hung.
+
+And Shuffle went back to meaning shuffle. It was turning on the shuffle mode,
+which is remembered between sessions, so one press on an album left the next
+one you played shuffled too.
+
+### Added
+
+- Search in Android Auto, including "play <something>" by voice, answered
+  natively from the browse tree so it works with the screen off and with no
+  connection. Reported by @dayofr (#103).
+- A switch under Diagnostics for the repair that follows a server renumbering
+  its ids (Navidrome 0.64). It is off: the repair is the only thing here that
+  rewrites the whole download catalog, and it has never met a server that
+  really migrated, since none exists yet.
+
+### Changed
+
+- Expo SDK 56, React Native 0.85, React 19.2.3, and media3 1.9.0 underneath
+  the audio.
+- Shuffle on an album, playlist, artist or from a long press deals the queue
+  instead of turning on shuffle mode. The mode is left exactly as it was, and
+  stays where it belongs, in the player.
+- The lyrics card under the player controls starts off. It shows up when you
+  turn it on.
+- The warning about adding songs that are already in a playlist says the
+  numbers: "3 of 12 songs are already in X", or "All 12 songs". Which buttons
+  are on offer no longer has to be noticed to tell the two cases apart, and
+  "Add anyway" moved over the confirm. Raised by @ztx-lyghters (#132).
+
+### Fixed
+
+- The progress bar in the notification, the lock screen and anything else
+  reading the media session, for a track the server transcodes on the fly.
+  Reported by @Trip7274 (#135).
+- Seeking such a track no longer leaves the notification counting from zero
+  while the app shows the real position.
+- Requests made while the app is in the background no longer hang forever. It
+  is why a lyrics lookup could stop coming back with the screen off.
+- Android Auto is told how to draw the top level of the browse tree. The hints
+  were being set where the car never reads them.
+
 ## [0.6.4] - 2026-08-08
 
 This one is mostly about listens, and about the app not deciding things on
