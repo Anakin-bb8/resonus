@@ -256,7 +256,18 @@ async function ensureAudioMode() {
     // `shouldPlayInBackground` keeps audio when minimizing the app; without it,
     // expo-audio pauses when going to background. `doNotMix` gives exclusive focus
     // (needed for lock screen controls to associate with our player).
-    await setAudioModeAsync({ interruptionMode: 'doNotMix', shouldPlayInBackground: true });
+    //
+    // `playsInSilentMode` says out loud what a music player means: the ringer
+    // switch is about being interrupted, not about the album somebody just
+    // pressed play on. SDK 56 added a check for it inside `play()`, so leaving
+    // it to be inferred meant that on a phone set to vibrate the play button
+    // did nothing at all, silently, while the same track started fine from the
+    // notification, which reaches the player without passing through there.
+    await setAudioModeAsync({
+      interruptionMode: 'doNotMix',
+      shouldPlayInBackground: true,
+      playsInSilentMode: true,
+    });
     await setIsAudioActiveAsync(true);
   } catch {
     // ignore
