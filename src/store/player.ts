@@ -2202,7 +2202,15 @@ function saveQueueLocal(force = false) {
 function clearQueueLocal() {
   const key = queueStorageKey();
   if (!key) return;
-  const empty: StoredQueue = { queue: [], index: 0, positionSec: 0 };
+  // The tombstone carries how the person was listening, because that is not
+  // part of the queue that was emptied. Left out, shuffle and repeat were
+  // written over with nothing the moment the queue was cleared, and nothing
+  // put them back: `saveQueueLocal` gives up on an empty queue, so the next
+  // cold start read them as off. Kept on while the app is open and gone after
+  // a restart is the kind of difference nobody can explain to themselves
+  // (reported by @ztx-lyghters).
+  const { shuffle, repeat } = usePlayerStore.getState();
+  const empty: StoredQueue = { queue: [], index: 0, positionSec: 0, shuffle, repeat };
   void setItem(key, JSON.stringify(empty));
 }
 
@@ -3159,8 +3167,17 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     }
     if (!saved || !Array.isArray(saved.queue)) return false;
     // Saved empty queue = the user emptied it on purpose: nothing to
-    // restore, but the server backup should also not enter.
-    if (saved.queue.length === 0) return true;
+    // restore, but the server backup should also not enter. How they were
+    // listening does come back: it outlived the queue while the app was open,
+    // and there is no reason for it to stop doing so because the app was
+    // closed.
+    if (saved.queue.length === 0) {
+      set({
+        shuffle: saved.shuffle === true,
+        repeat: isRepeatMode(saved.repeat) ? saved.repeat : 'off',
+      });
+      return true;
+    }
     // If something already started playing in the meantime, don't override the queue.
     if (get().queue.length > 0) return true;
     const index = Math.min(Math.max(0, saved.index ?? 0), saved.queue.length - 1);
