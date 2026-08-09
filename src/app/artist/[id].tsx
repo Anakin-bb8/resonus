@@ -76,7 +76,6 @@ export default function ArtistScreen() {
   const playing = usePlayerStore(currentSong);
   const playQueue = usePlayerStore((s) => s.playQueue);
   const showListArtwork = useSettings((s) => s.showListArtwork);
-  const toggleShuffle = usePlayerStore((s) => s.toggleShuffle);
   const isPlaying = usePlayerStore((s) => s.isPlaying);
   const sourceHref = usePlayerStore((s) => s.sourceHref);
   const togglePlay = usePlayerStore((s) => s.toggle);
@@ -202,22 +201,19 @@ export default function ArtistScreen() {
     // Shuffle the artist's whole discography (own albums only; "Appears on" is
     // excluded so unrelated tracks don't land in the queue). Falls back to the
     // top tracks when there are no albums to gather.
-    // Random initial track and THEN shuffle mode, like the rest of the screens:
-    // shuffle mode only shuffles what's left to play, so starting at 0 made the
-    // first track always play first. We await playQueue (it resets `shuffle`,
-    // hence reading it fresh after).
+    // The queue goes in dealt and the shuffle mode is left alone: it used to be
+    // turned on here, and the mode is remembered, so it came back on for the
+    // next album played from anywhere else.
     if (albums.length === 0) {
       if (top.length === 0) return;
-      await playQueue(top, Math.floor(Math.random() * top.length), name, `/artist/${id}`);
-      if (!usePlayerStore.getState().shuffle) toggleShuffle();
+      await playQueue(top, 0, name, `/artist/${id}`, { shuffled: true });
       return;
     }
     setShuffling(true);
     try {
       const songs = await fetchAlbumSongs();
       if (!songs || songs.length === 0) return;
-      await playQueue(songs, Math.floor(Math.random() * songs.length), name, `/artist/${id}`);
-      if (!usePlayerStore.getState().shuffle) toggleShuffle();
+      await playQueue(songs, 0, name, `/artist/${id}`, { shuffled: true });
     } finally {
       setShuffling(false);
     }

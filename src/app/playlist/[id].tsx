@@ -347,7 +347,9 @@ export default function PlaylistScreen() {
               }
             : undefined,
         }}
-        onPlay={(start) => playQueue(displaySongs, start, data.playlist.name, `/playlist/${id}`)}
+        onPlay={(start, opts) =>
+          playQueue(displaySongs, start, data.playlist.name, `/playlist/${id}`, opts)
+        }
       />
       <PlaylistPickerSheet
         songs={addingSongs}

@@ -288,7 +288,7 @@ export default function AlbumScreen() {
               }
             : undefined,
         }}
-        onPlay={(start) => playQueue(data.songs, start, data.album.name, `/album/${id}`)}
+        onPlay={(start, opts) => playQueue(data.songs, start, data.album.name, `/album/${id}`, opts)}
       />
       <PlaylistPickerSheet songs={addingSongs} onClose={() => setAddingSongs(null)} />
       <CoverViewer

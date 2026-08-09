@@ -2343,6 +2343,16 @@ interface PlayerState {
     startIndex?: number,
     source?: string,
     sourceHref?: string,
+    opts?: {
+      /**
+       * What every "Shuffle" button asks for: this list dealt once, played in
+       * that order from the top (`startIndex` no longer means anything). It is
+       * NOT the shuffle mode, which is left exactly as it was found: the button
+       * used to turn it on, and since the mode survives restarts that made the
+       * next album you pressed play on come out shuffled too.
+       */
+      shuffled?: boolean;
+    },
   ) => Promise<void>;
   /**
    * Starts a radio from a song: plays it immediately and the queue keeps
@@ -2485,7 +2495,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   radioSeed: null,
   streamInfo: null,
 
-  playQueue: async (songs, startIndex = 0, source, sourceHref) => {
+  playQueue: async (songs, startIndex = 0, source, sourceHref, opts) => {
     if (songs.length === 0) return;
     // Discard offline-unavailable tracks (not downloaded): they can't be
     // played. The initial index is remapped to the tapped song within the
@@ -2521,16 +2531,23 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     if (!key || key !== contextKey(get().source, get().sourceHref)) pushHistory();
     // Mark the source as recently listened (Library "Recent" order).
     if (sourceHref) useLastPlayed.getState().touch(sourceHref);
-    // Shuffle is a way of listening, not a property of one album, so a list
-    // started while it is on is dealt rather than played in order: the song
-    // that was tapped goes first and the rest follow shuffled, which is what
-    // the button itself does and what people expect from every other player.
-    // Turning shuffle off then puts the album back in its own order, which is
-    // what `originalQueue` is for.
-    const deal = get().shuffle && songs.length > 1;
+    // Two different things end up shuffled here. The Shuffle button hands the
+    // whole list over dealt, with no song picked, so nothing is pinned to the
+    // front. Shuffle MODE, on the other hand, is a way of listening rather than
+    // a property of one album: a list started while it is on keeps the song
+    // that was tapped first and deals the rest, which is what the mode's own
+    // button does, and turning the mode off afterwards puts the album back in
+    // its order — that is what `originalQueue` is for. Asking for both deals
+    // everything: there was no tapped song to keep.
+    const dealAll = opts?.shuffled && songs.length > 1;
+    const deal = !dealAll && get().shuffle && songs.length > 1;
     const first = songs[startIndex];
-    const queued = deal ? [first, ...dealt(songs.filter((_, i) => i !== startIndex))] : songs;
-    const at = deal ? 0 : startIndex;
+    const queued = dealAll
+      ? dealt(songs)
+      : deal
+        ? [first, ...dealt(songs.filter((_, i) => i !== startIndex))]
+        : songs;
+    const at = dealAll || deal ? 0 : startIndex;
     set({
       queue: queued,
       index: at,

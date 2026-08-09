@@ -148,7 +148,9 @@ interface Props {
     /** Bulk download. */
     onDownload?: (songs: Song[]) => void;
   };
-  onPlay: (startIndex: number) => void | Promise<void>;
+  /** `opts` goes straight to `playQueue`: the shuffle button asks for the list
+   *  dealt, which the screen owning the songs is the one who can request. */
+  onPlay: (startIndex: number, opts?: { shuffled?: boolean }) => void | Promise<void>;
 }
 
 export function TrackListView({
@@ -191,7 +193,6 @@ export function TrackListView({
   const dominant = useDominantColor(coverUri);
   const headerColor = accentColor ?? dominant;
   const shuffle = usePlayerStore((s) => s.shuffle);
-  const toggleShuffle = usePlayerStore((s) => s.toggleShuffle);
   // The shuffle button gets tinted only if this list is the one playing;
   // otherwise, the (global) shuffle mode would also tint the buttons of
   // unrelated albums/playlists, which was confusing.
@@ -364,15 +365,12 @@ export function TrackListView({
     listRef.current?.scrollToOffset({ offset: 0, animated: false });
   }
 
-  async function shufflePlay() {
+  function shufflePlay() {
     if (songs.length === 0) return;
-    // Starts on a random track and, once loaded, enables shuffle mode. We MUST
-    // WAIT for playQueue (inside onPlay) to finish: otherwise, its async index
-    // write overwrites toggleShuffle's reordering and the player ends up showing
-    // a different song than what's playing. We read shuffle fresh with
-    // getState() because playQueue resets it to false.
-    await onPlay(Math.floor(Math.random() * songs.length));
-    if (!usePlayerStore.getState().shuffle) toggleShuffle();
+    // The queue itself comes out dealt; the shuffle mode is not touched. It
+    // used to be turned on here, and since the mode is remembered between
+    // sessions it stayed on for the next album someone pressed Play on.
+    void onPlay(0, { shuffled: true });
   }
 
   return (

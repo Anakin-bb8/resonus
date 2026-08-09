@@ -195,7 +195,7 @@ export default function FavoritesScreen() {
               }
             : undefined,
         }}
-        onPlay={(start) => playQueue(displaySongs, start, SOURCE_FAVORITES, '/favorites')}
+        onPlay={(start, opts) => playQueue(displaySongs, start, SOURCE_FAVORITES, '/favorites', opts)}
       />
       <PlaylistPickerSheet songs={addingSongs} onClose={() => setAddingSongs(null)} />
       {sortSheet}

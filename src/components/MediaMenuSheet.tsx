@@ -243,10 +243,9 @@ export function MediaMenuSheet() {
               label={t('Shuffle')}
               onPress={() =>
                 withSongs((songs) => {
-                  // Same as the screen buttons: random starting track and shuffle
-                  // mode active (playQueue resets it, hence the order).
-                  void playQueue(songs, Math.floor(Math.random() * songs.length), name, href);
-                  if (!usePlayerStore.getState().shuffle) usePlayerStore.getState().toggleShuffle();
+                  // Same as the screen buttons: the queue comes out dealt and
+                  // the shuffle mode stays as it was.
+                  void playQueue(songs, 0, name, href, { shuffled: true });
                 })
               }
             />
