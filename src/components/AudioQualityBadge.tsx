@@ -14,6 +14,7 @@ export function AudioQualityBadge({ song }: { song: Song }) {
   // Streaming quality depends on the current network (Wi-Fi or mobile data).
   const cellular = useNetworkType((s) => s.cellular);
   const maxBitRate = useSettings((s) => (cellular ? s.maxBitRateCellular : s.maxBitRate));
+  const streamFormat = useSettings((s) => (cellular ? s.streamFormatCellular : s.streamFormat));
   const dlUri = useDownloads((s) => s.files[song.id]);
   const dlBitRate = useDownloads((s) => s.dlBitRates[song.id]);
   // Subscribed so the badge follows them; the rule that reads them belongs to
@@ -23,7 +24,13 @@ export function AudioQualityBadge({ song }: { song: Song }) {
   useSettings((s) => s.preferDownloads);
   useAuthStore((s) => s.offline);
   const fromDisk = !!dlUri && !!localSourceFor(song);
-  const label = qualityLabel(song, maxBitRate, fromDisk ? dlUri : undefined, dlBitRate);
+  const label = qualityLabel(
+    song,
+    maxBitRate,
+    fromDisk ? dlUri : undefined,
+    dlBitRate,
+    streamFormat,
+  );
   if (!label) return null;
   return <Text style={styles.badge}>{label}</Text>;
 }

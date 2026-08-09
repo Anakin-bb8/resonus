@@ -25,6 +25,13 @@ export function qualityLabel(
   maxBitRate: number,
   dlUri: string | undefined,
   dlBitRate: number | undefined,
+  /**
+   * Codec the stream is being asked for, empty for the server's own. It has to
+   * be here because a forced one transcodes a file that was already under the
+   * limit, and the label read from the bitrate alone would then describe the
+   * file on the server while something else entirely was arriving.
+   */
+  streamFormat = '',
 ): string | null {
   // Without format there's nothing to show. Previously it was also hidden with
   // `localUri` (local/offline), but a downloaded song does have specs to
@@ -44,17 +51,27 @@ export function qualityLabel(
         ? `${fmt} → ${ext.toUpperCase()} ${dlBitRate} kbps`
         : `${fmt} → ${ext.toUpperCase()}`;
     }
-  } else if (
-    !song.url &&
-    !song.localUri &&
-    maxBitRate > 0 &&
-    song.bitRate != null &&
-    song.bitRate > maxBitRate
-  ) {
-    // With a quality cap active and an original that exceeds it, the server
-    // transcodes: the label reflects what actually plays, not the file, so it
-    // says the bitrate that is really arriving.
-    return `${fmt} → ${maxBitRate} kbps`;
+  } else if (!song.url && !song.localUri && maxBitRate > 0) {
+    // The same rule the player uses to decide a stream is being made on the
+    // fly (`isTranscoded`), and it has to stay the same rule: the server
+    // re-encodes either because the original is over the cap, or because a
+    // codec was asked for, which it does even to a file that already fitted.
+    // Reading the bitrate alone missed that second case entirely and left the
+    // badge describing the file on the server while Opus was arriving.
+    //
+    // Only with a cap, since the codec rides on the same request and a stream
+    // with no limit is the original file, whatever the setting says.
+    const overCap = song.bitRate != null && song.bitRate > maxBitRate;
+    if (streamFormat || overCap) {
+      // What was asked for, which is all that can honestly be said: a server
+      // may hand back something else, and with no codec named it picks its own.
+      // Naming one that matches the original would only produce "MP3 → MP3":
+      // the arrow already says it is being re-encoded, and to what is the part
+      // that has not changed.
+      const named = streamFormat && streamFormat.toLowerCase() !== song.suffix.toLowerCase();
+      const codec = named ? `${streamFormat.toUpperCase()} ` : '';
+      return `${fmt} → ${codec}${maxBitRate} kbps`;
+    }
   }
   const parts: string[] = [fmt];
 
