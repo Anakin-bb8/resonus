@@ -368,6 +368,29 @@ function sourceFor(song: Song, timeOffsetSec = 0): AudioSource {
 
 /** Real second of the stream at which the player's current source starts. */
 let streamOffsetSec = 0;
+
+/**
+ * Moves that offset, here and on the native player.
+ *
+ * The media session reads the position off the player itself, and a stream
+ * re-requested at 2:00 is a new source the player counts from zero: without
+ * telling it, the notification and the car went back to 0:00 on every seek
+ * while the app carried on (#135). Every place that installs a source goes
+ * through here, including the ones that put it back to zero, so no player is
+ * left with the offset of the song before it.
+ *
+ * `p` is the player the source belongs to, which during a crossfade is not
+ * the one still playing.
+ */
+function setStreamOffset(sec: number, p: AudioPlayer | null = activePlayer()) {
+  streamOffsetSec = sec;
+  try {
+    p?.setSessionPositionOffset(Math.round(sec * 1000));
+  } catch {
+    // Android-only, and only in a build carrying the patch.
+  }
+}
+
 /** `transcodeOffset` support of the active server (null = unchecked). */
 let transcodeOffsetSupported: boolean | null = null;
 /**
@@ -459,7 +482,7 @@ function seekActive(sec: number) {
     if (!p) return;
     pendingSeek = { sec, at: Date.now() }; // refreshes the wait window
     if (supported) {
-      streamOffsetSec = sec;
+      setStreamOffset(sec, p);
       try {
         replaceSource(p, sourceFor(song, sec));
         p.volume = effectiveVolume(song);
@@ -738,7 +761,7 @@ async function loadIndex(index: number, autoplay: boolean) {
   }
   cutCrossfade();
   pendingSeek = null;
-  streamOffsetSec = 0;
+  setStreamOffset(0);
   sourceHasLength = null; // unknown until the new source is loaded
   scrobbledThisTrack = false;
   consumeQueuedOnIndexChange(index);
@@ -748,6 +771,9 @@ async function loadIndex(index: number, autoplay: boolean) {
   if (!song) return;
   await ensureAudioMode();
   const p = ensurePlayer(activeIdx);
+  // The player may have just been created, so the reset above had nothing to
+  // reach: this source starts at the beginning either way.
+  setStreamOffset(0, p);
   // Equalizer re-attachment: when creating the player the audio session may not
   // be assigned yet. It's idempotent (native ignores duplicate sessions and id 0),
   // so it's cheap to ensure it here.
@@ -1453,7 +1479,7 @@ function onTrackTransition() {
   pushHistory();
   consumeQueuedOnIndexChange(index);
   pendingSeek = null;
-  streamOffsetSec = 0;
+  setStreamOffset(0, p);
   sourceHasLength = null; // another source: unknown until it reports
   scrobbledThisTrack = false;
   // ReplayGain is per song. Not mid-ramp (sleep fade, pause fade): setting the
@@ -1715,7 +1741,7 @@ function handoffToNewSource(index: number, song: Song, sec: number) {
       // ignore
     }
     activeIdx = 1 - activeIdx;
-    streamOffsetSec = useOffset ? startAt : 0;
+    setStreamOffset(useOffset ? startAt : 0, r);
     try {
       oldP.pause();
       oldP.volume = usePlayerStore.getState().volume;
@@ -1770,7 +1796,7 @@ function startCrossfade(index: number, fadeSec: number) {
   consumeQueuedOnIndexChange(index);
   fadingOut = out;
   activeIdx = 1 - activeIdx;
-  streamOffsetSec = 0; // the incoming track starts from the beginning
+  setStreamOffset(0, p); // the incoming track starts from the beginning
   sourceHasLength = null; // and it's another source: unknown until it loads
   scrobbledThisTrack = false;
   usePlayerStore.setState({
@@ -3146,7 +3172,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     }
     clearLockScreen();
     playedHistory = [];
-    streamOffsetSec = 0;
+    setStreamOffset(0);
     sourceHasLength = null;
     scrobbledThisTrack = false;
     // timeOffset support is per server: re-check on change.

@@ -13,7 +13,7 @@ index 4bf0f847760cd005ec81db876683f751704f48c3..e98b9cf8758dbb6b56af520237e4e9d5
 +  <uses-permission android:name="android.permission.WAKE_LOCK" />
  </manifest>
 diff --git a/android/src/main/java/expo/modules/audio/AudioModule.kt b/android/src/main/java/expo/modules/audio/AudioModule.kt
-index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..97dabb153bbe7d1f344f8a3dc8bffdfd8a9f1c2f 100644
+index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..5c5d05913193e8ad5ce2baf965dd6647ed49548c 100644
 --- a/android/src/main/java/expo/modules/audio/AudioModule.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioModule.kt
 @@ -17,6 +17,7 @@ import androidx.media3.common.C.CONTENT_TYPE_HLS
@@ -139,7 +139,22 @@ index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..97dabb153bbe7d1f344f8a3dc8bffdfd
        Function("setActiveForLockScreen") { ref: AudioPlayer, active: Boolean, metadata: Metadata?, options: AudioLockScreenOptions? ->
          runOnMain {
            ref.setActiveForLockScreen(active, metadata, options)
-@@ -780,13 +835,27 @@ class AudioModule : Module() {
+@@ -475,6 +530,14 @@ class AudioModule : Module() {
+         }
+       }
+ 
++      // Where the source loaded into this player really starts. See
++      // `AudioPlayer.sessionPositionOffsetMs`. A plain field write, so it does
++      // not need the main thread and must not wait for it: it is set right
++      // beside the `replace()` that installs the re-requested stream.
++      Function("setSessionPositionOffset") { ref: AudioPlayer, offsetMs: Double ->
++        ref.sessionPositionOffsetMs = offsetMs.toLong()
++      }
++
+       Function("setAudioSamplingEnabled") { player: AudioPlayer, enabled: Boolean ->
+         runOnMain {
+           player.setSamplingEnabled(enabled)
+@@ -780,13 +843,27 @@ class AudioModule : Module() {
  
    private fun createMediaItem(source: AudioSource?): MediaSource? = source?.uri?.let { uriString ->
      val uri = uriString.toUri()
@@ -168,7 +183,7 @@ index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..97dabb153bbe7d1f344f8a3dc8bffdfd
  
      val preloadedBytes = AudioPreloadManager.get(uriString)
      val factory: DataSource.Factory = if (preloadedBytes != null) {
-@@ -834,10 +903,32 @@ class AudioModule : Module() {
+@@ -834,10 +911,32 @@ class AudioModule : Module() {
      }
    }
  
@@ -202,7 +217,7 @@ index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..97dabb153bbe7d1f344f8a3dc8bffdfd
    }
  
    private fun retrieveStreamType(uri: Uri): Int = Util.inferContentType(uri)
-@@ -851,11 +942,37 @@ class AudioModule : Module() {
+@@ -851,11 +950,37 @@ class AudioModule : Module() {
        CONTENT_TYPE_SS -> SsMediaSource.Factory(factory)
        CONTENT_TYPE_DASH -> DashMediaSource.Factory(factory)
        CONTENT_TYPE_HLS -> HlsMediaSource.Factory(factory)
@@ -242,7 +257,7 @@ index 72a6e9e990bdc9bab549536981fc2e08eeb4837e..97dabb153bbe7d1f344f8a3dc8bffdfd
      runBlocking(appContext.mainQueue.coroutineContext) { block() }
  
 diff --git a/android/src/main/java/expo/modules/audio/AudioPlayer.kt b/android/src/main/java/expo/modules/audio/AudioPlayer.kt
-index f7c43641fc12b627c70759fb49bbe65e746c4c1d..640ecc619014e50c8c1bd78e388ef77d6ee85c54 100644
+index f7c43641fc12b627c70759fb49bbe65e746c4c1d..627298bcf56a75a00165c349fc2d104c48bc44d1 100644
 --- a/android/src/main/java/expo/modules/audio/AudioPlayer.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioPlayer.kt
 @@ -7,7 +7,9 @@ import android.media.audiofx.Visualizer
@@ -298,7 +313,29 @@ index f7c43641fc12b627c70759fb49bbe65e746c4c1d..640ecc619014e50c8c1bd78e388ef77d
      .setSeekForwardIncrementMs(SEEK_JUMP_INTERVAL_MS)
      .setSeekBackIncrementMs(SEEK_JUMP_INTERVAL_MS)
      .apply {
-@@ -114,6 +143,42 @@ class AudioPlayer(
+@@ -81,7 +110,20 @@ class AudioPlayer(
+   var isActiveForLockScreen = false
+   internal var metadata: Metadata? = null
+   internal var lockScreenOptions: AudioLockScreenOptions? = null
+-  internal var mediaSession: MediaSession = buildBasicMediaSession(context, ref)
++
++  /**
++   * Second of the track the current source begins at, in milliseconds, for
++   * whoever is reading the media session. A stream a server generates on the
++   * fly cannot be seeked, so it is re-requested starting at the second asked
++   * for; the player is handed a new source and counts it from zero, and only
++   * whoever asked for it knows what that zero means. Everything else leaves it
++   * where it is, at zero.
++   */
++  @Volatile
++  var sessionPositionOffsetMs: Long = 0L
++
++  internal var mediaSession: MediaSession =
++    buildBasicMediaSession(context, ref) { sessionPositionOffsetMs }
+   val serviceConnection = AudioPlaybackServiceConnection(WeakReference(this), appContext)
+ 
+   private var playerScope = CoroutineScope(Dispatchers.Main)
+@@ -114,6 +156,42 @@ class AudioPlayer(
      startUpdating()
    }
  
@@ -341,7 +378,7 @@ index f7c43641fc12b627c70759fb49bbe65e746c4c1d..640ecc619014e50c8c1bd78e388ef77d
    fun setActiveForLockScreen(active: Boolean, metadata: Metadata? = null, options: AudioLockScreenOptions? = null) {
      if (active) {
        this.metadata = metadata
-@@ -221,7 +286,34 @@ class AudioPlayer(
+@@ -221,7 +299,34 @@ class AudioPlayer(
          sendPlayerUpdate(updateMap)
        }
  
@@ -376,6 +413,15 @@ index f7c43641fc12b627c70759fb49bbe65e746c4c1d..640ecc619014e50c8c1bd78e388ef77d
          sendPlayerUpdate()
        }
  
+@@ -294,7 +399,7 @@ class AudioPlayer(
+ 
+   internal fun assignBasicMediaSession() {
+     mediaSession.release()
+-    mediaSession = buildBasicMediaSession(context, ref)
++    mediaSession = buildBasicMediaSession(context, ref) { sessionPositionOffsetMs }
+   }
+ 
+   private fun sendPlayerUpdate(map: Map<String, Any?>? = null) {
 diff --git a/android/src/main/java/expo/modules/audio/AudioRecords.kt b/android/src/main/java/expo/modules/audio/AudioRecords.kt
 index 1d9541e2ff3eabc621143892b0fc35e7cd728f18..815f5b0a4665c170cd9d3b6bd099bc6731c7a9a3 100644
 --- a/android/src/main/java/expo/modules/audio/AudioRecords.kt
@@ -425,11 +471,123 @@ index 1d9541e2ff3eabc621143892b0fc35e7cd728f18..815f5b0a4665c170cd9d3b6bd099bc67
  ) : Record
  
  enum class InterruptionMode(val value: String) : Enumerable {
+diff --git a/android/src/main/java/expo/modules/audio/AudioUtils.kt b/android/src/main/java/expo/modules/audio/AudioUtils.kt
+index dca91c32a2787a7bc3ecba26f0f3f2ad9cc40d3d..ac6cf621f9f61385cfef1f0293efcbdb9f3d4a45 100644
+--- a/android/src/main/java/expo/modules/audio/AudioUtils.kt
++++ b/android/src/main/java/expo/modules/audio/AudioUtils.kt
+@@ -3,6 +3,8 @@ package expo.modules.audio
+ import android.content.Context
+ import android.media.AudioDeviceInfo
+ import android.os.Bundle
++import androidx.media3.common.ForwardingPlayer
++import androidx.media3.common.Player
+ import androidx.media3.exoplayer.ExoPlayer
+ import androidx.media3.session.MediaSession
+ import java.io.File
+@@ -31,8 +33,88 @@ fun getMapFromDeviceInfo(deviceInfo: AudioDeviceInfo): Bundle {
+   return map
+ }
+ 
+-fun buildBasicMediaSession(context: Context, player: ExoPlayer): MediaSession {
+-  return MediaSession.Builder(context, player)
++/**
++ * The player as the media session should see it.
++ *
++ * A server transcoding on the fly answers without a length, and ExoPlayer
++ * files a progressive stream whose length and duration are both unknown under
++ * "live" (`ProgressiveMediaPeriod.setSeekMap`). media3 then refuses to say
++ * where such a stream is: the playback state it publishes carries position -1
++ * and speed 0, so the system's controls, the lock screen and anything reading
++ * the session sit at 0:00 for the whole song while the app's own progress
++ * moves (#135). The second play of the same track was fine, which is the
++ * confusing part of the report: by then Navidrome serves the transcode it
++ * cached, with a length.
++ *
++ * A track whose length we were told is not live, whatever the stream looks
++ * like, and saying so is all it takes to get the position back. That is
++ * exactly the case this covers: `durationMs` is set from the queue for every
++ * song and left out for a radio, which is the thing that really is live and
++ * keeps the player's own answer.
++ *
++ * It does not make the stream seekable: whether the session offers a seek
++ * comes from the player's commands, and those still come from a source with
++ * no seek table. Dragging is the app's business anyway, which re-requests the
++ * stream at the second asked for.
++ *
++ * `positionOffsetMs` is the other half of that: a stream re-requested at
++ * 2:00 is a new source, and the player counts it from zero. The app knows
++ * where it really is and says so here, so the session and the app agree on
++ * one clock instead of drifting apart at every seek. Position, buffer and
++ * duration all move with it, since they are read against each other. It
++ * stays at zero for everything else.
++ */
++private class MediaSessionPlayer(
++  player: Player,
++  private val positionOffsetMs: () -> Long,
++) : ForwardingPlayer(player) {
++  override fun isCurrentMediaItemLive(): Boolean =
++    if (currentMediaItem?.mediaMetadata?.durationMs != null) false else super.isCurrentMediaItemLive()
++
++  // What the player itself does not know stays unknown: shifting -1, or
++  // `TIME_UNSET`, by the offset would invent an answer.
++  private fun shifted(ms: Long): Long = if (ms < 0) ms else ms + positionOffsetMs()
++
++  override fun getCurrentPosition(): Long = shifted(super.getCurrentPosition())
++
++  override fun getContentPosition(): Long = shifted(super.getContentPosition())
++
++  override fun getBufferedPosition(): Long = shifted(super.getBufferedPosition())
++
++  override fun getContentBufferedPosition(): Long = shifted(super.getContentBufferedPosition())
++
++  // How long the source lasts is on the same clock as where it is, and it has
++  // to be shifted with it: the segment starting at 2:00 of a four minute song
++  // is two minutes long, so leaving it alone put a position of 2:00 on a bar
++  // that ended there. Anything past the middle of a song came out pinned to
++  // the end. A segment with no length of its own says so and the track's own
++  // duration, which the app puts in the item, answers instead.
++  override fun getDuration(): Long = shifted(super.getDuration())
++
++  override fun getContentDuration(): Long = shifted(super.getContentDuration())
++
++  // Somebody scrubbing from the car or the lock screen is pointing at the
++  // clock this reports, so the offset comes back off before the player is
++  // asked. A target before the segment even starts is the one thing it cannot
++  // serve (the seconds before it are not in this source at all) and lands at
++  // its start; the stream would have to be requested again for that, which is
++  // the app's job and not something the session can ask for.
++  override fun seekTo(positionMs: Long) = super.seekTo(positionMs - positionOffsetMs())
++
++  override fun seekTo(mediaItemIndex: Int, positionMs: Long) =
++    super.seekTo(mediaItemIndex, positionMs - positionOffsetMs())
++}
++
++/** Wraps a player for a media session. See [MediaSessionPlayer]. */
++fun playerForMediaSession(player: Player, positionOffsetMs: () -> Long = { 0L }): Player =
++  MediaSessionPlayer(player, positionOffsetMs)
++
++fun buildBasicMediaSession(
++  context: Context,
++  player: ExoPlayer,
++  positionOffsetMs: () -> Long = { 0L },
++): MediaSession {
++  return MediaSession.Builder(context, playerForMediaSession(player, positionOffsetMs))
+     .setId("ExpoAudioBasicMediaSession_${player.hashCode()}")
+     .build()
+ }
 diff --git a/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt b/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
-index f32f2d05a77fc37b9d37c4d79131cedfe003abc5..75dbec14a84612c0943997b6054db46b294d3ebb 100644
+index f32f2d05a77fc37b9d37c4d79131cedfe003abc5..23e0a2152671b7476b5ca940889c9e5fb266aa09 100644
 --- a/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
 +++ b/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
-@@ -75,6 +75,8 @@ class AudioControlsService : MediaSessionService() {
+@@ -25,6 +25,7 @@ import expo.modules.audio.AudioLockScreenOptions
+ import expo.modules.audio.AudioPlayer
+ import expo.modules.audio.Metadata
+ import expo.modules.audio.getPlaybackServiceErrorMessage
++import expo.modules.audio.playerForMediaSession
+ import expo.modules.kotlin.AppContext
+ import kotlinx.coroutines.CoroutineScope
+ import kotlinx.coroutines.Dispatchers
+@@ -75,6 +76,8 @@ class AudioControlsService : MediaSessionService() {
  
          ACTION_SEEK_FORWARD -> currentPlayerRef.seekTo(currentPlayerRef.currentPosition + SEEK_INTERVAL_MS)
          ACTION_SEEK_BACKWARD -> currentPlayerRef.seekTo(currentPlayerRef.currentPosition - SEEK_INTERVAL_MS)
@@ -438,7 +596,7 @@ index f32f2d05a77fc37b9d37c4d79131cedfe003abc5..75dbec14a84612c0943997b6054db46b
        }
      }
  
-@@ -143,6 +145,18 @@ class AudioControlsService : MediaSessionService() {
+@@ -143,6 +146,18 @@ class AudioControlsService : MediaSessionService() {
        val compactViewIndices = mutableListOf<Int>()
        var currentIndex = 0
  
@@ -457,7 +615,7 @@ index f32f2d05a77fc37b9d37c4d79131cedfe003abc5..75dbec14a84612c0943997b6054db46b
        if (currentOptions?.showSeekBackward == true) {
          builder.addAction(
            NotificationCompat.Action(
-@@ -178,6 +192,18 @@ class AudioControlsService : MediaSessionService() {
+@@ -178,6 +193,18 @@ class AudioControlsService : MediaSessionService() {
            )
          )
          compactViewIndices.add(currentIndex)
@@ -476,7 +634,7 @@ index f32f2d05a77fc37b9d37c4d79131cedfe003abc5..75dbec14a84612c0943997b6054db46b
        }
  
        style.setShowActionsInCompactView(*compactViewIndices.toIntArray())
-@@ -191,19 +217,41 @@ class AudioControlsService : MediaSessionService() {
+@@ -191,19 +218,41 @@ class AudioControlsService : MediaSessionService() {
      val session = mediaSession ?: return
      val mediaButtons = mutableListOf<CommandButton>()
  
@@ -521,7 +679,7 @@ index f32f2d05a77fc37b9d37c4d79131cedfe003abc5..75dbec14a84612c0943997b6054db46b
      mediaButtons.add(
        CommandButton.Builder(if (isPlaying) CommandButton.ICON_PAUSE else CommandButton.ICON_PLAY)
          .setDisplayName(if (isPlaying) "Pause" else "Play")
-@@ -214,13 +262,30 @@ class AudioControlsService : MediaSessionService() {
+@@ -214,13 +263,30 @@ class AudioControlsService : MediaSessionService() {
      )
  
      // Add seek forward button if enabled
@@ -554,11 +712,14 @@ index f32f2d05a77fc37b9d37c4d79131cedfe003abc5..75dbec14a84612c0943997b6054db46b
            .build()
        )
      }
-@@ -299,7 +364,12 @@ class AudioControlsService : MediaSessionService() {
+@@ -298,8 +364,14 @@ class AudioControlsService : MediaSessionService() {
+ 
        appContext?.mainQueue?.launch {
          val context = appContext?.reactContext ?: return@launch
-         val session = MediaSession.Builder(context, player.ref)
+-        val session = MediaSession.Builder(context, player.ref)
 -          .setCallback(AudioMediaSessionCallback())
++        val session =
++          MediaSession.Builder(context, playerForMediaSession(player.ref) { player.sessionPositionOffsetMs })
 +          .setCallback(
 +            AudioMediaSessionCallback(
 +              onSkipPrevious = { currentPlayer?.emitRemotePrevious() },
@@ -568,7 +729,7 @@ index f32f2d05a77fc37b9d37c4d79131cedfe003abc5..75dbec14a84612c0943997b6054db46b
            .build()
  
          // Replace the basic media session with a session connected to our playback service.
-@@ -463,6 +533,8 @@ class AudioControlsService : MediaSessionService() {
+@@ -463,6 +535,8 @@ class AudioControlsService : MediaSessionService() {
  
      const val ACTION_SEEK_FORWARD = "expo.modules.audio.action.SEEK_FORWARD"
      const val ACTION_SEEK_BACKWARD = "expo.modules.audio.action.SEEK_BACKWARD"
@@ -711,7 +872,7 @@ index a290f9aed8224d89cca6361c102d26b24feaa2ce..7008466705ffdacc2d8ab113d334b822
  //# sourceMappingURL=AudioConstants.d.ts.map
 \ No newline at end of file
 diff --git a/build/AudioModule.types.d.ts b/build/AudioModule.types.d.ts
-index 93b69010ae4cef81c18761ca4fedca8b4089f16f..34cdfb64b61d0e80f40fc9f3ebdbc30654a9bf44 100644
+index 93b69010ae4cef81c18761ca4fedca8b4089f16f..5da6485cfd0ba8b0cfce9b4d189658bd3cb8b310 100644
 --- a/build/AudioModule.types.d.ts
 +++ b/build/AudioModule.types.d.ts
 @@ -28,6 +28,11 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
@@ -741,7 +902,26 @@ index 93b69010ae4cef81c18761ca4fedca8b4089f16f..34cdfb64b61d0e80f40fc9f3ebdbc306
      /**
       * Seeks the playback by the given number of seconds.
       * @param seconds The number of seconds to seek by.
-@@ -219,6 +232,20 @@ export type AudioEvents = {
+@@ -180,6 +193,18 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
+      * This will clear the lock screen's now playing info.
+      */
+     clearLockScreenControls(): void;
++    /**
++     * Second of the track the source loaded into this player begins at, in
++     * milliseconds, for whoever is reading the media session (Android only).
++     *
++     * A stream a server generates on the fly cannot be seeked, so it is
++     * re-requested starting at the second asked for: the player is handed a
++     * new source and counts it from zero, and only whoever asked for it knows
++     * what that zero means. Set it beside that load and back to 0 when a
++     * source starts at the beginning, and the lock screen stops disagreeing
++     * with the app about where the song is.
++     */
++    setSessionPositionOffset(offsetMs: number): void;
+     /**
+      * Remove the player from memory to free up resources.
+      */
+@@ -219,6 +244,20 @@ export type AudioEvents = {
      playbackStatusUpdate(status: AudioStatus): void;
      /** Fired when audio sampling is enabled and new sample data is available. */
      audioSampleUpdate(data: AudioSample): void;
