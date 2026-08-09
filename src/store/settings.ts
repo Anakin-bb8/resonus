@@ -970,7 +970,9 @@ const DEFAULTS = {
   playerBackground: 'cover' as ScreenBackground,
   fitCoverArt: false,
   miniPlayerColorBackground: true,
-  showLyricsCard: true,
+  // Off by default: the card pushes the controls up on shorter screens, and
+  // the lyrics screen is one tap away on the cover.
+  showLyricsCard: false,
   // By default, tapping the cover opens the lyrics screen (as always).
   coverTapAction: 'screen' as CoverTapAction,
   marqueeTitles: true,
