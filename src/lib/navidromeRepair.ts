@@ -85,6 +85,22 @@ export async function noteServerVersion(auth: SubsonicAuth, version: string): Pr
   void repairIfMigrated(auth).catch(() => {});
 }
 
+/**
+ * What this session's check did, in one line, for the Diagnostics screen.
+ *
+ * Kept in memory rather than read back off disk: the report is meant to be
+ * openable when something is already wrong, and it should not depend on the
+ * storage it is reporting about. It is also the only trace this repair leaves
+ * anywhere. Everything else about it is silent by design, which is right until
+ * the day somebody says their downloads vanished and the only honest answer
+ * would otherwise be a guess.
+ */
+let outcome = 'not checked this session';
+
+export function repairStatus(): string {
+  return outcome;
+}
+
 /** What each profile last answered with, so the check above costs no disk. */
 const versionInMemory = new Map<string, string>();
 
@@ -134,7 +150,10 @@ export async function repairIfMigrated(auth: SubsonicAuth): Promise<Verdict> {
   if (already) return already;
 
   const run = (async (): Promise<Verdict> => {
-    if ((await repairMark(auth)) === 'repaired') return 'migrated';
+    if ((await repairMark(auth)) === 'repaired') {
+      outcome = 'already repaired';
+      return 'migrated';
+    }
 
     const candidates = await candidatesFor(auth);
     if (candidates.length === 0) return 'inconclusive';
@@ -150,14 +169,26 @@ export async function repairIfMigrated(auth: SubsonicAuth): Promise<Verdict> {
     });
 
     if (verdict === 'not-migrated') {
+      outcome = 'server has not migrated';
       await setItem(key, 'not-migrated').catch(() => {});
       return verdict;
     }
-    if (verdict !== 'migrated') return verdict;
+    if (verdict !== 'migrated') {
+      outcome = `no verdict (${candidates.length} candidates)`;
+      return verdict;
+    }
 
     // Proof in hand. The catalog first: it is the only one of the three
     // holding something that cannot simply be asked for again.
-    await remapCatalogIds(serverDir(auth), canonicalId);
+    let done: { songs: number; albums: number };
+    try {
+      done = await remapCatalogIds(serverDir(auth), canonicalId);
+    } catch (e) {
+      // Left unmarked on purpose, so the next attempt tries again rather than
+      // believing this one worked.
+      outcome = `catalog remap FAILED: ${e instanceof Error ? e.message : 'unknown'}`;
+      throw e;
+    }
 
     // The profile being repaired, not whichever is signed in now: this can be
     // reached from a request that outlived a profile switch, and repairing one
@@ -176,6 +207,7 @@ export async function repairIfMigrated(auth: SubsonicAuth): Promise<Verdict> {
       useAutoDownloads.getState().remapIds(canonicalId);
     }
 
+    outcome = `repaired: ${done.songs} songs, ${done.albums} albums`;
     await setItem(key, 'repaired').catch(() => {});
     return verdict;
   })().finally(() => running.delete(key));

@@ -16,6 +16,7 @@ import { SettingRow, SettingsPage, settingsStyles } from '@/components/SettingsU
 import { useT } from '@/i18n';
 import { mirrorCoverState } from '@/lib/mirrorCovers';
 import { perfBlocks, perfCounts, perfOps, perfReport, perfSince, resetPerfLog } from '@/lib/perfLog';
+import { repairStatus } from '@/lib/navidromeRepair';
 import { useAuthStore } from '@/store/auth';
 import { anyDownloads, useDownloads } from '@/store/downloads';
 import { useSettings } from '@/store/settings';
@@ -46,6 +47,9 @@ export default function DiagnosticsSettings() {
     `plain auth: ${auth?.plainAuth ? 'yes' : 'no'}`,
     `library filter: ${folderFilter ? folderFilter.join(', ') : 'none'}`,
     `offline: ${offline ? 'yes' : 'no'}`,
+    // Navidrome 0.64 renumbers every id and this is what repaired it. Silent
+    // everywhere else, so this line is the only way to tell what it did.
+    `id repair: ${repairStatus()}`,
     `song sorts: ${(auth || offline ? songListSorts() : []).join(', ') || '—'}`,
   ];
   const ops = perfOps();
