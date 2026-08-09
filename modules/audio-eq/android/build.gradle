@@ -1,25 +1,24 @@
-apply plugin: 'com.android.library'
-apply plugin: 'kotlin-android'
+// The plugin, not the old `ExpoModulesCorePlugin.gradle` helpers: since SDK 56
+// it also applies the Kotlin compiler plugin that resolves the reified types
+// the module DSL relies on. Without it a module still compiles, and then throws
+// "this function has a reified type parameter and thus can only be inlined at
+// compilation time" the moment it registers.
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
 
 group = 'expo.modules.audioeq'
 version = '0.0.1'
 
-def expoModulesCorePlugin = new File(project(":expo-modules-core").projectDir.absolutePath, "ExpoModulesCorePlugin.gradle")
-apply from: expoModulesCorePlugin
-applyKotlinExpoModulesCorePlugin()
-useCoreDependencies()
-useExpoPublishing()
-
 android {
   namespace "expo.modules.audioeq"
-  compileSdk rootProject.ext.compileSdkVersion ?: 35
   defaultConfig {
-    minSdkVersion rootProject.ext.minSdkVersion ?: 24
-    targetSdkVersion rootProject.ext.targetSdkVersion ?: 35
+    versionCode 1
+    versionName "0.0.1"
   }
 }
 
 dependencies {
-  implementation project(':expo-modules-core')
-  // El ecualizador es del framework (android.media.audiofx): sin dependencias.
+  // The equaliser is the framework's own (android.media.audiofx): nothing else.
 }

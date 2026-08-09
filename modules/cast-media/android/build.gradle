@@ -1,27 +1,23 @@
-apply plugin: 'com.android.library'
-apply plugin: 'kotlin-android'
+// See the note in modules/audio-eq/android/build.gradle: the plugin is what
+// brings the compiler plugin the module DSL needs from SDK 56 on.
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
 
 group = 'expo.modules.castmedia'
 version = '0.0.1'
 
-def expoModulesCorePlugin = new File(project(":expo-modules-core").projectDir.absolutePath, "ExpoModulesCorePlugin.gradle")
-apply from: expoModulesCorePlugin
-applyKotlinExpoModulesCorePlugin()
-useCoreDependencies()
-useExpoPublishing()
-
 android {
   namespace "expo.modules.castmedia"
-  compileSdk rootProject.ext.compileSdkVersion ?: 35
   defaultConfig {
-    minSdkVersion rootProject.ext.minSdkVersion ?: 24
-    targetSdkVersion rootProject.ext.targetSdkVersion ?: 35
+    versionCode 1
+    versionName "0.0.1"
   }
 }
 
 dependencies {
-  implementation project(':expo-modules-core')
-  // MediaSessionCompat + MediaStyle + VolumeProviderCompat (stack clásico de
-  // sesión de medios). Aislado del resto: solo lo usa el modo casting.
+  // MediaSessionCompat + MediaStyle + VolumeProviderCompat (the classic media
+  // session stack). Kept apart from the rest: only casting uses it.
   implementation "androidx.media:media:1.7.0"
 }

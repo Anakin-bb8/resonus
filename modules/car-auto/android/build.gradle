@@ -1,21 +1,18 @@
-apply plugin: 'com.android.library'
-apply plugin: 'kotlin-android'
+// See the note in modules/audio-eq/android/build.gradle: the plugin is what
+// brings the compiler plugin the module DSL needs from SDK 56 on.
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
 
 group = 'expo.modules.carauto'
 version = '0.0.1'
 
-def expoModulesCorePlugin = new File(project(":expo-modules-core").projectDir.absolutePath, "ExpoModulesCorePlugin.gradle")
-apply from: expoModulesCorePlugin
-applyKotlinExpoModulesCorePlugin()
-useCoreDependencies()
-useExpoPublishing()
-
 android {
   namespace "expo.modules.carauto"
-  compileSdk rootProject.ext.compileSdkVersion ?: 35
   defaultConfig {
-    minSdkVersion rootProject.ext.minSdkVersion ?: 24
-    targetSdkVersion rootProject.ext.targetSdkVersion ?: 35
+    versionCode 1
+    versionName "0.0.1"
   }
   buildFeatures {
     buildConfig true
@@ -23,10 +20,11 @@ android {
 }
 
 dependencies {
-  implementation project(':expo-modules-core')
-  // Media3 debe coincidir con la versión que arrastra react-native-track-player
-  // (1.8.0). Si difieren puede haber conflictos de clases/sesión en runtime.
-  implementation "androidx.media3:media3-session:1.8.0"
-  implementation "androidx.media3:media3-common:1.8.0"
-  implementation "androidx.media3:media3-exoplayer:1.8.0"
+  // Media3 has to be the same version expo-audio pulls in: the car session and
+  // the playback one live in the same process, and two copies of these classes
+  // is how they end up disagreeing at runtime.
+  def androidxMedia3Version = "1.9.0"
+  implementation "androidx.media3:media3-session:$androidxMedia3Version"
+  implementation "androidx.media3:media3-common:$androidxMedia3Version"
+  implementation "androidx.media3:media3-exoplayer:$androidxMedia3Version"
 }
