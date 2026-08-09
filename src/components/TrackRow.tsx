@@ -13,7 +13,6 @@ import { type Song } from '@/api/subsonic';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { formatDuration } from '@/lib/format';
 import { applyStarChange, resyncFavorites, unstarWithUndo } from '@/lib/favoritesCache';
-import { useAuthStore } from '@/store/auth';
 import { useDownloads } from '@/store/downloads';
 import { usePlayerStore } from '@/store/player';
 import { useSongMenu, type SongMenuContext } from '@/store/songMenu';
@@ -126,20 +125,8 @@ function TrackRowBase({
   const favIds = useFavoriteIds(showFavorite);
   const favorited = showFavorite && (favIds ? favIds.has(song.id) : !!song.starred);
   const downloaded = useDownloads((s) => !!s.files[song.id]);
-  const offline = useAuthStore((s) => s.offline);
-  /**
-   * Not playable without a connection: visible but grayed out and not playable.
-   *
-   * Worked out here rather than trusted from the song, because the mark is put
-   * on by the offline data path and a list can reach the screen without having
-   * been through it: anything the server answered before the connection went
-   * away carries no mark at all, and would sit here looking perfectly playable
-   * (@ztx-lyghters). The rule is the player's own, so the row cannot promise
-   * what the player will refuse.
-   */
-  const unavailable = offline
-    ? !song.url && !song.localUri && !downloaded
-    : !!song.unavailable;
+  // Not downloaded in the offline mirror: visible but grayed out and not playable.
+  const unavailable = !!song.unavailable;
 
   // Swipe right = configurable action (Spotify-style gesture). The row returns
   // on its own; the background strip only peaks during the gesture.

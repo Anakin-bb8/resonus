@@ -11,8 +11,6 @@ import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { COVER, songCoverUrl, type Song } from '@/api/data';
-import { useAuthStore } from '@/store/auth';
-import { useDownloads } from '@/store/downloads';
 import { colors, fontSize, radius, spacing } from '@/theme';
 import { Cover } from './Cover';
 
@@ -40,14 +38,6 @@ export const SongCard = memo(function SongCard({
   onPressIn,
   onLongPress,
 }: Props) {
-  // Worked out here rather than read off the song: see the same note in
-  // `TrackRow`. A list the server answered before the connection went away
-  // carries no mark, and would show as if it were on the phone.
-  const downloaded = useDownloads((s) => !!s.files[song.id]);
-  const offline = useAuthStore((s) => s.offline);
-  const unavailable = offline
-    ? !song.url && !song.localUri && !downloaded
-    : !!song.unavailable;
   return (
     <Pressable
       style={[styles.container, { width }]}
@@ -68,7 +58,7 @@ export const SongCard = memo(function SongCard({
         ) : null}
         {/* Dimmed rather than hidden: it is in the library, it just isn't on
             this device, same as the rows show it. */}
-        {unavailable ? <View style={[styles.veil, { width, height: width }]} /> : null}
+        {song.unavailable ? <View style={[styles.veil, { width, height: width }]} /> : null}
       </View>
       <Text style={[styles.title, isCurrent && { color: accent }]} numberOfLines={1}>
         {song.title}
