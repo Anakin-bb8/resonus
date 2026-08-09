@@ -8,6 +8,7 @@ import { useIsFocused, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  AppState,
   Dimensions,
   Pressable,
   ScrollView,
@@ -306,7 +307,26 @@ export default function PlayerScreen() {
   }, [coverStable, coverAppear]);
   useEffect(() => {
     const id = setTimeout(() => setCoverStable(true), 300);
-    return () => clearTimeout(id);
+    /**
+     * A timer is no safety net while the app is away: React Native stops
+     * firing them in the background, and no layout happens there either, so a
+     * player mounted on the way out had nothing left to reveal it. It came
+     * back with the artwork at zero opacity and stayed that way, through track
+     * changes and all, until the screen was closed and opened again, which
+     * mounts it afresh (reported by @ztx-lyghters).
+     *
+     * Coming back to the foreground is the other moment worth revealing at. By
+     * then the measurements this waits for have either happened or are about
+     * to, and the jump it exists to prevent belongs to opening the screen, not
+     * to returning to an app that was already showing it.
+     */
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') setCoverStable(true);
+    });
+    return () => {
+      clearTimeout(id);
+      sub.remove();
+    };
   }, []);
   /**
    * Everything the slot is made of has to be known before any of it is shown,
