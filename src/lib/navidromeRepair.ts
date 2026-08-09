@@ -70,7 +70,12 @@ function versionKey(auth: SubsonicAuth): string {
 export async function noteServerVersion(auth: SubsonicAuth, version: string): Promise<void> {
   if (!version) return;
   const key = versionKey(auth);
-  const seen = await getItem(key);
+  // Second line of defence for the same reason `ping` has the first: this
+  // reads SecureStore, and it is reached from the path that decides whether
+  // the app is online.
+  if (versionInMemory.get(key) === version) return;
+  const seen = versionInMemory.get(key) ?? (await getItem(key));
+  versionInMemory.set(key, version);
   if (seen === version) return;
   await setItem(key, version).catch(() => {});
   // First sighting of any version is not a change: there is nothing to compare
@@ -79,6 +84,9 @@ export async function noteServerVersion(auth: SubsonicAuth, version: string): Pr
   if ((await repairMark(auth)) === 'repaired') return;
   void repairIfMigrated(auth).catch(() => {});
 }
+
+/** What each profile last answered with, so the check above costs no disk. */
+const versionInMemory = new Map<string, string>();
 
 /** One in-flight look per profile, so several callers share the answer. */
 const running = new Map<string, Promise<Verdict>>();

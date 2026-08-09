@@ -492,12 +492,28 @@ export async function ping(auth: SubsonicAuth): Promise<void> {
   // otherwise. Only ever compared with the last one seen, so which of the two
   // it is does not matter as long as it is the same one each time.
   const version = res.serverVersion ?? res.version;
-  if (version) {
-    void import('@/lib/navidromeRepair')
-      .then((m) => m.noteServerVersion(auth, version))
-      .catch(() => {});
-  }
+  if (!version) return;
+
+  // Compared in memory first, and this is not a micro-optimisation. `ping` is
+  // how the app decides it is online: it runs at launch, on coming back to the
+  // foreground, on every network change, and `backend.ts` fires it at several
+  // candidate URLs at once while working out which one answers. Everything past
+  // this line reads SecureStore, which is an encrypted read off disk, so doing
+  // it per ping would put a Keystore round trip into the middle of the offline
+  // detection (#122). A version that has not changed since the last ping costs
+  // one map lookup and nothing else.
+  const key = `${auth.username}|${auth.serverUrl}`;
+  if (lastVersionSeen.get(key) === version) return;
+  lastVersionSeen.set(key, version);
+
+  void import('@/lib/navidromeRepair')
+    .then((m) => m.noteServerVersion(auth, version))
+    .catch(() => {});
 }
+
+/** Last version each profile answered with, this session. Only ever avoids
+ *  work: a miss costs one comparison that was going to happen anyway. */
+const lastVersionSeen = new Map<string, string>();
 
 export type AlbumListType =
   | 'newest'
