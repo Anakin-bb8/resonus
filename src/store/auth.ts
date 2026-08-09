@@ -465,12 +465,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await setItem(OFFLINE_KEY, '1');
     if (auto) await setItem(OFFLINE_AUTO_KEY, '1');
     else await deleteItem(OFFLINE_AUTO_KEY);
-    // Flip first so the refetch already reads offline mode, then invalidate
-    // (not `clear()`): views recalculate against the mirror, but inactive
-    // cache is preserved so navigating back to a screen is instant. Clearing
-    // all cache forced a massive simultaneous refetch on every transition.
+    // Flip first so what comes next already reads offline mode, then throw the
+    // cache away rather than marking it stale.
+    //
+    // Invalidating keeps the answers the server gave and shows them again on
+    // the way to refreshing them, which on the way out of a connection is not
+    // a stale list, it is a list of songs that cannot be played: they arrive
+    // without the marks the offline path puts on them, so they are neither
+    // dimmed nor hidden, and tapping one asks for a stream that is refused
+    // (reported by @ztx-lyghters). Worse when the album is not in the mirror,
+    // since the refresh then fails and the old list stays for good.
+    //
+    // The reason for preferring invalidation is real, but it belongs to the
+    // other direction: coming back online, a cleared cache means everything
+    // asking the server at once. Going offline, a refetch is a read of the
+    // local database.
     set({ offline: true, autoOffline: auto });
-    void queryClient.invalidateQueries();
+    queryClient.removeQueries();
   },
 
   goOnline: async () => {
