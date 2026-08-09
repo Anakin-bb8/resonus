@@ -757,8 +757,12 @@ function consumeQueuedOnIndexChange(next: number) {
   });
 }
 
-/** Loads the track at `index` and (optionally) plays it. */
-async function loadIndex(index: number, autoplay: boolean) {
+/**
+ * Loads the track at `index` and (optionally) plays it. Says whether it got
+ * there: a caller that has just installed a queue around this needs to know,
+ * or the app ends up showing one song and playing another.
+ */
+async function loadIndex(index: number, autoplay: boolean): Promise<boolean> {
   // Offline, a track that only exists as a server stream cannot be played:
   // we skip forward to the next downloaded one instead of getting stuck (covers
   // "previous", manual taps and queue restore). If none is playable, we stop.
@@ -781,7 +785,7 @@ async function loadIndex(index: number, autoplay: boolean) {
         // gave is how the toast ended up greeting people who open the app
         // offline.
         if (autoplay) useToast.getState().show(tg('Nothing here is downloaded'));
-        return;
+        return false;
       }
       index = target;
     }
@@ -792,10 +796,13 @@ async function loadIndex(index: number, autoplay: boolean) {
   sourceHasLength = null; // unknown until the new source is loaded
   scrobbledThisTrack = false;
   consumeQueuedOnIndexChange(index);
-  if (remoteKind()) return remoteLoadIndex(index, autoplay);
+  if (remoteKind()) {
+    await remoteLoadIndex(index, autoplay);
+    return true;
+  }
   const { queue, repeat } = usePlayerStore.getState();
   const song = queue[index];
-  if (!song) return;
+  if (!song) return false;
   await ensureAudioMode();
   const p = ensurePlayer(activeIdx);
   // The player may have just been created, so the reset above had nothing to
@@ -833,8 +840,10 @@ async function loadIndex(index: number, autoplay: boolean) {
     if (!song.url && !localSourceFor(song)) {
       void ensureTranscodeOffsetSupport();
     }
+    return true;
   } catch {
     useToast.getState().show(tg("Couldn't play the song"));
+    return false;
   }
 }
 
@@ -2613,6 +2622,24 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         ? [first, ...dealt(songs.filter((_, i) => i !== startIndex))]
         : songs;
     const at = dealAll || deal ? 0 : startIndex;
+    // What is on screen right now, kept in case the new queue never manages to
+    // play. The list goes in before it is loaded on purpose, since that is what
+    // makes tapping a song feel immediate, but a load that fails used to leave
+    // it there: the app showing one song, the speakers still on the last one,
+    // and nothing to say which was which (@ztx-lyghters). Whatever is put back
+    // is what is actually playing, so the two agree again.
+    const before = {
+      queue: get().queue,
+      index: get().index,
+      queuedCount: get().queuedCount,
+      positionSec: get().positionSec,
+      durationSec: get().durationSec,
+      originalQueue: get().originalQueue,
+      source: get().source,
+      sourceHref: get().sourceHref,
+      radioMode: get().radioMode,
+      radioSeed: get().radioSeed,
+    };
     set({
       queue: queued,
       index: at,
@@ -2626,7 +2653,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       radioMode: false,
       radioSeed: null,
     });
-    await loadIndex(at, true);
+    // Only when there was something to go back to: with nothing playing before,
+    // an empty queue says less than the one that failed, and the toast has
+    // already said what happened.
+    if (!(await loadIndex(at, true)) && before.queue.length > 0) set(before);
   },
 
   startRadio: async (seed, source) => {
