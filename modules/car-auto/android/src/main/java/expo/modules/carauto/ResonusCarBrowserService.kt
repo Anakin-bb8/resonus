@@ -75,11 +75,17 @@ class ResonusCarBrowserService : MediaLibraryService() {
             .setIsBrowsable(true)
             .setIsPlayable(false)
             .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
-            .setExtras(rootExtras)
             .build(),
         )
         .build()
-      return Futures.immediateFuture(LibraryResult.ofItem(root, params))
+      // The hints ride in the params, not in the item: what reaches the car is
+      // the bundle media3 builds out of `result.params.extras`, and anything
+      // left on the root's own metadata is dropped on the way
+      // (`MediaLibraryServiceLegacyStub.onGetRoot`). Put there, the tabs were
+      // being drawn however Android Auto felt like. The ones passed in are the
+      // browser's own request hints and are not ours to echo back.
+      val rootParams = LibraryParams.Builder().setExtras(rootExtras).build()
+      return Futures.immediateFuture(LibraryResult.ofItem(root, rootParams))
     }
 
     override fun onGetItem(
