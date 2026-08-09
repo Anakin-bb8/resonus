@@ -966,6 +966,27 @@ export async function flushOfflineQueue(auth: Subsonic.SubsonicAuth): Promise<vo
   const q = useOfflineQueue.getState();
   await q.load();
 
+  // Settle a possible id migration BEFORE anything goes up.
+  //
+  // Going back online pings, and a ping that sees a new server version starts
+  // the migration check in the background. The flush used to run right behind
+  // it, so a race that nobody would ever reproduce by hand could upload every
+  // queued favourite and listen against ids the server had just renumbered.
+  // Those are accepted, match nothing, and are then dropped from the outbox as
+  // sent: the one way this repair could lose the very data it exists to save.
+  //
+  // Only paid for when there is something to lose. On an empty outbox there is
+  // nothing to get wrong, and a profile already settled answers from its mark
+  // without a request.
+  if (!q.isEmpty()) {
+    try {
+      await (await import('@/lib/navidromeRepair')).repairIfMigrated(auth);
+    } catch {
+      // A check that could not run is not a reason to hold somebody's
+      // favourites hostage: the ids are no more wrong than they were.
+    }
+  }
+
   // Favorites.
   const favs = q.data.favs ?? {};
   const favFailed: [string, { type: Subsonic.StarType; starred: boolean }][] = [];
