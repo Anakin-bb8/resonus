@@ -18,6 +18,7 @@
  * Android Auto is not affected by crossfade: it uses its own session with
  * `JsProxyPlayer`, not the expo-audio player.)
  */
+import { fetch as expoFetch } from 'expo/fetch';
 import { AppState } from 'react-native';
 import {
   createAudioPlayer,
@@ -1076,7 +1077,10 @@ async function warmStream(url: string) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 4000);
   try {
-    await fetch(url, { headers: { Range: 'bytes=0-1' }, signal: ctrl.signal });
+    // `expoFetch`, not the global one: this runs while a song is playing, which
+    // is exactly when the app is in the background and React Native's stops
+    // answering. See the note in `src/api/subsonic.ts`.
+    await expoFetch(url, { headers: { Range: 'bytes=0-1' }, signal: ctrl.signal });
   } catch {
     // Best-effort: offline, aborted or server error, it doesn't matter.
   } finally {

@@ -7,6 +7,9 @@
  * 3. LRCLIB (lrclib.net), only if the user enables the setting: sends artist
  *    and title externally. The result is cached to disk to avoid re-fetching.
  */
+// Not the global `fetch`: it never resolves in the background. See the note
+// in `src/api/subsonic.ts`.
+import { fetch } from 'expo/fetch';
 import * as FileSystem from 'expo-file-system/legacy';
 
 import { type Song, type SongLyrics } from '@/api/subsonic';

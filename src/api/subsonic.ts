@@ -6,6 +6,12 @@
  * is never sent in the clear. See https://www.subsonic.org/pages/api.jsp
  */
 import * as Crypto from 'expo-crypto';
+// Not the global `fetch`. React Native's stops delivering answers once the app
+// is in the background: measured at eleven requests sent and none resolved or
+// rejected, which is a promise that never settles and a worker that waits for
+// it forever. That is the normal state while a song plays with the screen off.
+// This one answers there, and honours `AbortSignal` properly with it.
+import { fetch } from 'expo/fetch';
 
 import { canonicalId, idWouldChange } from '@/lib/navidromeIds';
 import { timed } from '@/lib/perfLog';

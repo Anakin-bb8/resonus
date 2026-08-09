@@ -37,6 +37,9 @@ import {
   type Starred,
   type SubsonicAuth,
 } from './subsonic';
+// Not the global `fetch`: it never resolves in the background. See the note
+// in `src/api/subsonic.ts`.
+import { fetch } from 'expo/fetch';
 import { assertCanRequest } from './netGate';
 
 const CLIENT_VERSION = '1.0';

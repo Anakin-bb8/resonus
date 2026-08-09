@@ -5,6 +5,9 @@
  * order Subsonic has no way to ask for. Requires cleartext username and
  * password to obtain a JWT (`auth.ndPassword`); see SubsonicAuth.
  */
+// Not the global `fetch`: it never resolves in the background. See the note
+// in `src/api/subsonic.ts`.
+import { fetch } from 'expo/fetch';
 import { type Song, type SubsonicAuth } from './subsonic';
 import { assertCanRequest } from './netGate';
 
