@@ -1116,13 +1116,21 @@ function onTrackChanged(song: Song) {
 
 // ── Preload upcoming tracks (warms up the stream in advance) ──────────────────
 // For proxies like Octo Fiesta or slow origins that download the track on the
-// fly: on track change, the stream URL of upcoming tracks is requested in
-// advance, so the server already has it cached when it arrives (or when
-// skipping several). The request only needs to REACH the server —it starts its
-// origin fetch even if we don't read the response—, so it's best-effort and
-// survives background: it's fired from onTrackChanged, which beats via the
-// native event. Off by default (see preloadUpcoming setting); on a normal
-// server it adds nothing and only generates extra transcodes/statistics.
+// fly: the stream URL of upcoming tracks is requested in advance, so the server
+// already has it cached when it arrives (or when skipping several). The request
+// only needs to REACH the server —it starts its origin fetch even if we don't
+// read the response—, so it's best-effort and survives background: it goes out
+// on the track change, which beats via the native event. Off by default (see
+// preloadUpcoming setting); on a normal server it adds nothing and only
+// generates extra transcodes/statistics.
+//
+// A track change is not the only moment the window moves, though. Putting a
+// song next, or at the end of the queued block, changes what is coming without
+// changing what is playing, and warming only on the change meant precisely the
+// song somebody had just asked for was the one nobody had warmed: no request
+// left the phone until playback reached it, which is the whole wait this exists
+// to remove (#137). The queue itself is watched for that, at the bottom of this
+// file, alongside the gapless memo which has the same reason to re-evaluate.
 const PRELOAD_AHEAD = 5;
 /** Already-warmed ids: as the window slides only the new one entering is warmed
  *  (~1 request per advance), not all five each time. Cleared on queue change
@@ -3461,6 +3469,14 @@ usePlayerStore.subscribe((st, prev) => {
     st.sleepAtSongEnd !== prev.sleepAtSongEnd
   ) {
     scheduleNextSource();
+    // What is coming has moved, so the warming window has too. Queueing the
+    // next source is not this: that hands the track to the player, which
+    // decides for itself when to start buffering it, and it does so near the
+    // end of the one playing. This is the request that reaches the server now,
+    // which is the point on a proxy that has to fetch the file from somewhere
+    // else first. Cheap when nothing changed: it is off unless asked for, and
+    // it remembers what it has already warmed.
+    warmUpcoming();
   }
   // Pausing, resuming and stopping, told to the server (see `reportState`).
   // Watching the store is what makes this cover every way playback stops: the
