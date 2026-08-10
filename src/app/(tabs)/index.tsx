@@ -45,9 +45,11 @@ import { useLastPlayed } from '@/store/lastPlayed';
 import { usePlayerStore } from '@/store/player';
 import { useScanProgress } from '@/store/scanProgress';
 import { useSettings, type ExploreChipKey, type HomeSectionKey } from '@/store/settings';
+import { useSongMenu } from '@/store/songMenu';
 import { colors, fontSize, radius, spacing } from '@/theme';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { listPerf } from '@/lib/listPerf';
+import { haptic } from '@/lib/haptics';
 import { bump } from '@/lib/perfLog';
 import { playShuffle } from '@/lib/playShuffle';
 
@@ -257,6 +259,7 @@ const MOST_PLAYED_SONGS = 30;
  * played.
  */
 function MostPlayedSongsSection({ title }: { title: string }) {
+  const openSongMenu = useSongMenu((s) => s.open);
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
   const playQueue = usePlayerStore((s) => s.playQueue);
   const currentId = usePlayerStore((s) => s.queue[s.index]?.id);
@@ -301,6 +304,15 @@ function MostPlayedSongsSection({ title }: { title: string }) {
             // The whole shelf goes into the queue, not the song on its own:
             // what was asked for is a list of these to listen through.
             onPress={() => void playQueue(data, index, title)}
+            // What holding an album on the shelf beside it does, for a song:
+            // its own menu, the one the ⋯ of every row opens. Holding a card
+            // in the Songs screen starts selecting instead, which is that
+            // screen's answer and needs a selection to start; here there is
+            // none, and the menu is what the gesture is for everywhere else.
+            onLongPress={() => {
+              haptic('light');
+              openSongMenu(item);
+            }}
           />
         )}
       />
