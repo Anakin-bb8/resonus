@@ -2,8 +2,8 @@
 import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import Animated, { FadeInDown, FadeOut } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { useToast } from '@/store/toast';
 import { colors, fontSize, radius, spacing } from '@/theme';
 
@@ -12,7 +12,11 @@ export function Toast() {
   const actionLabel = useToast((s) => s.actionLabel);
   const runAction = useToast((s) => s.runAction);
   const hide = useToast((s) => s.hide);
-  const insets = useSafeAreaInsets();
+  // The same room every list leaves at its foot: clear of the mini player, and
+  // of the navigation bar where there is one. The constant this replaces was
+  // 24 px short of the mini player with that bar on, so the message sat partly
+  // behind it.
+  const bottom = useScreenBottomPadding();
 
   useEffect(() => {
     if (!message) return;
@@ -27,7 +31,7 @@ export function Toast() {
     <Animated.View
       entering={FadeInDown.duration(200)}
       exiting={FadeOut.duration(150)}
-      style={[styles.pill, actionLabel ? styles.pillRow : null, { bottom: insets.bottom + 96 }]}
+      style={[styles.pill, actionLabel ? styles.pillRow : null, { bottom }]}
       // Without an action the toast is purely informational and shouldn't steal touches.
       pointerEvents={actionLabel ? 'box-none' : 'none'}
     >

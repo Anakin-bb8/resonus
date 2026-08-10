@@ -1,16 +1,23 @@
 /**
- * Floating action bar for multi-select, above the mini player (at toast
- * height). Shared so every screen with selection shows the same bar in the
- * same place: it lives here rather than in `TrackListView` because screens
- * that build their own list (a genre's songs) need it too.
+ * Floating action bar for multi-select, above the mini player and at the same
+ * height as the toast. Shared so every screen with selection shows the same
+ * bar in the same place: it lives here rather than in `TrackListView` because
+ * screens that build their own list (a genre's songs) need it too.
+ *
+ * How high is not a number of its own but the room every list already leaves
+ * at its foot, which is what "clear of the mini player, and of the navigation
+ * bar where there is one" means in one place. It used to be a constant, and it
+ * was 24 px short of the mini player once the navigation bar was on: the
+ * actions were there and partly behind it, which is the combination people
+ * actually run.
  *
  * With nothing marked the actions stay visible but dimmed and disabled: they
  * say what selecting is FOR, which an empty bar wouldn't.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { colors, fontSize, spacing } from '@/theme';
 
 export interface SelectionAction {
@@ -20,10 +27,10 @@ export interface SelectionAction {
 }
 
 export function SelectionBar({ actions, count }: { actions: SelectionAction[]; count: number }) {
-  const insets = useSafeAreaInsets();
+  const bottom = useScreenBottomPadding();
   if (actions.length === 0) return null;
   return (
-    <View style={[styles.bar, { bottom: insets.bottom + 96 }]}>
+    <View style={[styles.bar, { bottom }]}>
       {actions.map((a) => (
         <Pressable
           key={a.label}
