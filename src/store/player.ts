@@ -2369,6 +2369,15 @@ function attachAppState() {
       } catch {
         // A stale native player can throw on read; the next heartbeat recovers.
       }
+      // And say again what is playing. The notification's metadata is only ever
+      // pushed from here —nothing native refreshes it when the player moves on
+      // by itself— so a push that was missed while nobody was looking stayed
+      // missed, with the notification, the car and the watch describing an
+      // earlier track for as long as it kept playing. Coming back is the one
+      // moment we know the queue is being read again, and re-asserting it costs
+      // a single call.
+      const song = currentSong(usePlayerStore.getState());
+      if (song && lockOwner === p) applyLockScreen(p, song);
     }
   });
 }

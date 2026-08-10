@@ -915,7 +915,7 @@ index 839aaef12d7699ea1a89037b31849775daa079f4..a1fce18411843a6aa636e83576371a07
      return super.onCustomCommand(session, controller, command, args)
    }
 diff --git a/android/src/main/java/expo/modules/audio/service/MetadataInjectingPlayer.kt b/android/src/main/java/expo/modules/audio/service/MetadataInjectingPlayer.kt
-index 18203a364d17dcf3de95d22a20175308e3363889..e0c0ccf6be73227815370b089fddf4d69199637b 100644
+index 18203a364d17dcf3de95d22a20175308e3363889..77155f4f348246f218c0736725b0f690f1f31d61 100644
 --- a/android/src/main/java/expo/modules/audio/service/MetadataInjectingPlayer.kt
 +++ b/android/src/main/java/expo/modules/audio/service/MetadataInjectingPlayer.kt
 @@ -3,10 +3,20 @@ package expo.modules.audio.service
@@ -939,7 +939,66 @@ index 18203a364d17dcf3de95d22a20175308e3363889..e0c0ccf6be73227815370b089fddf4d6
  import androidx.media3.common.util.UnstableApi
  import expo.modules.audio.Metadata
  import java.util.IdentityHashMap
-@@ -79,9 +89,28 @@ internal class MetadataInjectingPlayer(
+@@ -22,6 +32,38 @@ internal class MetadataInjectingPlayer(
+   private val listeners = IdentityHashMap<Player.Listener, Player.Listener>()
+   private var injectedMetadata: Metadata? = null
+ 
++  /**
++   * The item the injected metadata was handed over for.
++   *
++   * What is injected here describes one track, and it is only ever pushed from
++   * JS. The player, though, moves on by itself: the track queued behind this
++   * one starts, and until JS hears about it and pushes again, everything
++   * reading the session — the notification, the lock screen, the car, a watch —
++   * was being told the title, the album and the cover of the track that had
++   * just ended, over audio that was already the next one. In the foreground
++   * that push lands in the same breath and nobody sees it; minimized, with a
++   * whole album auto-advancing, it is the cover from a neighbouring track that
++   * people report.
++   *
++   * So the injection is tied to what it was said about. Once the player is on
++   * another item, the item's own metadata answers instead, which is no fallback
++   * at all: every source is queued with its title, artist, album and artwork
++   * already on it (see `AudioSource.metadata`), so the session is right from
++   * the instant of the jump, whenever JS gets around to agreeing.
++   */
++  private var injectedFor: MediaItem? = null
++
++  /**
++   * Is what was injected still about the track being played?
++   *
++   * By value and not by identity: whether the player hands back the very
++   * `MediaItem` it was given is its business, and two consecutive tracks are
++   * two different addresses either way. The one case this lets through is a
++   * source queued behind an identical one, which is a song repeating itself —
++   * and the metadata of a song is still the metadata of that song.
++   */
++  private fun injectionApplies(): Boolean = injectedFor == currentMediaItem
++
+   override fun addListener(listener: Player.Listener) {
+     val forwardingListener = synchronized(listeners) {
+       listeners.getOrPut(listener) { MetadataForwardingListener(listener) }
+@@ -37,6 +79,9 @@ internal class MetadataInjectingPlayer(
+   }
+ 
+   override fun getMediaMetadata(): MediaMetadata {
++    if (!injectionApplies()) {
++      return super.getMediaMetadata()
++    }
+     val metadata = injectedMetadata
+     return super.getMediaMetadata()
+       .buildUpon()
+@@ -56,6 +101,9 @@ internal class MetadataInjectingPlayer(
+ 
+     val previousMetadata = mediaMetadata
+     injectedMetadata = metadata
++    // Said about whatever is playing right now. JS pushes this straight after
++    // installing the source, so that is the track it is describing.
++    injectedFor = currentMediaItem
+     val newMetadata = mediaMetadata
+ 
+     if (previousMetadata == newMetadata) {
+@@ -79,9 +127,28 @@ internal class MetadataInjectingPlayer(
      }
    }
  
@@ -969,7 +1028,7 @@ index 18203a364d17dcf3de95d22a20175308e3363889..e0c0ccf6be73227815370b089fddf4d6
      override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
        listener.onMediaMetadataChanged(this@MetadataInjectingPlayer.mediaMetadata)
      }
-@@ -89,5 +118,92 @@ internal class MetadataInjectingPlayer(
+@@ -89,5 +156,92 @@ internal class MetadataInjectingPlayer(
      override fun onEvents(player: Player, events: Player.Events) {
        listener.onEvents(this@MetadataInjectingPlayer, events)
      }
