@@ -232,6 +232,13 @@ function ensurePlayer(idx: number): AudioPlayer {
   // Only the session owner emits these events; there are no double skips.
   p.addListener('remotePrevious', () => usePlayerStore.getState().previous());
   p.addListener('remoteNext', () => usePlayerStore.getState().next());
+  // Dragging the bar of the notification, the lock screen or the car on a
+  // stream the player cannot seek by itself. It reaches us instead of the
+  // player, and `seekTo` is the one that knows how: ask the server for the
+  // stream starting there (see `seekActive`).
+  p.addListener('remoteSeek', ({ positionMs }) => {
+    if (activePlayer() === p) usePlayerStore.getState().seekTo(positionMs / 1000);
+  });
   // Gapless: the player jumped by itself to the track queued behind this one.
   p.addListener('trackTransition', () => {
     if (activePlayer() === p) onTrackTransition();

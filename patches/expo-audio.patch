@@ -256,7 +256,7 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..374015037c228f762129e43418e47df4
      runBlocking(appContext.mainQueue.coroutineContext) { block() }
  
 diff --git a/android/src/main/java/expo/modules/audio/AudioPlayer.kt b/android/src/main/java/expo/modules/audio/AudioPlayer.kt
-index c76a9fd2a53743a691782e0f67d0d71401df58f6..b230960950fee578d7ea50d58b196ffbfb6e8bb5 100644
+index c76a9fd2a53743a691782e0f67d0d71401df58f6..e3140c63b3f338b95b5f95ac62246440aa034864 100644
 --- a/android/src/main/java/expo/modules/audio/AudioPlayer.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioPlayer.kt
 @@ -8,6 +8,8 @@ import android.util.Log
@@ -268,18 +268,19 @@ index c76a9fd2a53743a691782e0f67d0d71401df58f6..b230960950fee578d7ea50d58b196ffb
  import androidx.media3.common.PlaybackException
  import androidx.media3.common.PlaybackParameters
  import androidx.media3.common.Player
-@@ -24,6 +26,10 @@ import java.lang.ref.WeakReference
+@@ -24,6 +26,11 @@ import java.lang.ref.WeakReference
  
  private const val PLAYBACK_STATUS_UPDATE = "playbackStatusUpdate"
  private const val AUDIO_SAMPLE_UPDATE = "audioSampleUpdate"
 +private const val REMOTE_PREVIOUS = "remotePrevious"
 +private const val REMOTE_NEXT = "remoteNext"
++private const val REMOTE_SEEK = "remoteSeek"
 +private const val TRACK_TRANSITION = "trackTransition"
 +private const val STREAM_METADATA = "streamMetadata"
  private const val SEEK_JUMP_INTERVAL_MS: Long = 10_000
  
  @UnstableApi
-@@ -36,7 +42,30 @@ class AudioPlayer(
+@@ -36,7 +43,30 @@ class AudioPlayer(
  ) : BaseAudioPlayer(
    player = ExoPlayer.Builder(context)
      .setLooper(context.mainLooper)
@@ -311,7 +312,7 @@ index c76a9fd2a53743a691782e0f67d0d71401df58f6..b230960950fee578d7ea50d58b196ffb
      .setSeekForwardIncrementMs(SEEK_JUMP_INTERVAL_MS)
      .setSeekBackIncrementMs(SEEK_JUMP_INTERVAL_MS)
      .apply {
-@@ -64,7 +93,20 @@ class AudioPlayer(
+@@ -64,7 +94,20 @@ class AudioPlayer(
    var isActiveForLockScreen = false
    internal var metadata: Metadata? = null
    internal var lockScreenOptions: AudioLockScreenOptions? = null
@@ -329,11 +330,11 @@ index c76a9fd2a53743a691782e0f67d0d71401df58f6..b230960950fee578d7ea50d58b196ffb
 +  var sessionPositionOffsetMs: Long = 0L
 +
 +  internal var mediaSession: MediaSession =
-+    buildBasicMediaSession(context, ref) { sessionPositionOffsetMs }
++    buildBasicMediaSession(context, ref, { sessionPositionOffsetMs }, { emitRemoteSeek(it) })
    val serviceConnection = AudioPlaybackServiceConnection(WeakReference(this), appContext)
  
    val isLive: Boolean
-@@ -85,11 +127,46 @@ class AudioPlayer(
+@@ -85,11 +128,46 @@ class AudioPlayer(
  
    init {
      installPlayerListeners()
@@ -380,12 +381,20 @@ index c76a9fd2a53743a691782e0f67d0d71401df58f6..b230960950fee578d7ea50d58b196ffb
    fun setMediaSource(source: MediaSource) {
      previousPlaybackState = Player.STATE_IDLE
      ref.setMediaSource(source)
-@@ -97,6 +174,42 @@ class AudioPlayer(
+@@ -97,6 +175,50 @@ class AudioPlayer(
      startUpdating()
    }
  
 +  fun emitRemotePrevious() = emit(REMOTE_PREVIOUS)
 +  fun emitRemoteNext() = emit(REMOTE_NEXT)
++
++  /**
++   * Somebody dragged the progress bar somewhere the source cannot go on its
++   * own (see `playerForMediaSession`). Only whoever queued the track can serve
++   * that, by asking for the stream again, so the second asked for is handed to
++   * JS instead of to the player.
++   */
++  fun emitRemoteSeek(positionMs: Long) = emit(REMOTE_SEEK, mapOf("positionMs" to positionMs))
 +
 +  /**
 +   * Gapless: queues the track that comes after the current one, so ExoPlayer
@@ -423,12 +432,13 @@ index c76a9fd2a53743a691782e0f67d0d71401df58f6..b230960950fee578d7ea50d58b196ffb
    fun setActiveForLockScreen(active: Boolean, metadata: Metadata? = null, options: AudioLockScreenOptions? = null) {
      if (active) {
        this.metadata = metadata
-@@ -221,7 +334,7 @@ class AudioPlayer(
+@@ -221,7 +343,8 @@ class AudioPlayer(
  
    internal fun assignBasicMediaSession() {
      mediaSession.release()
 -    mediaSession = buildBasicMediaSession(context, ref)
-+    mediaSession = buildBasicMediaSession(context, ref) { sessionPositionOffsetMs }
++    mediaSession =
++      buildBasicMediaSession(context, ref, { sessionPositionOffsetMs }, { emitRemoteSeek(it) })
    }
  
    private fun sendAudioSampleUpdate(sample: List<Float>) {
@@ -482,7 +492,7 @@ index 86880d92fd5b6413e8596e1b2b8ae28f2981addd..63796ed7d97d73e1f3c38cceab7790a6
  
  enum class InterruptionMode(val value: String) : Enumerable {
 diff --git a/android/src/main/java/expo/modules/audio/AudioUtils.kt b/android/src/main/java/expo/modules/audio/AudioUtils.kt
-index dca91c32a2787a7bc3ecba26f0f3f2ad9cc40d3d..ac6cf621f9f61385cfef1f0293efcbdb9f3d4a45 100644
+index dca91c32a2787a7bc3ecba26f0f3f2ad9cc40d3d..089dcee0b9fe6a369f0809ecdf99a1fa42ea9ef3 100644
 --- a/android/src/main/java/expo/modules/audio/AudioUtils.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioUtils.kt
 @@ -3,6 +3,8 @@ package expo.modules.audio
@@ -494,7 +504,7 @@ index dca91c32a2787a7bc3ecba26f0f3f2ad9cc40d3d..ac6cf621f9f61385cfef1f0293efcbdb
  import androidx.media3.exoplayer.ExoPlayer
  import androidx.media3.session.MediaSession
  import java.io.File
-@@ -31,8 +33,88 @@ fun getMapFromDeviceInfo(deviceInfo: AudioDeviceInfo): Bundle {
+@@ -31,8 +33,124 @@ fun getMapFromDeviceInfo(deviceInfo: AudioDeviceInfo): Bundle {
    return map
  }
  
@@ -519,10 +529,13 @@ index dca91c32a2787a7bc3ecba26f0f3f2ad9cc40d3d..ac6cf621f9f61385cfef1f0293efcbdb
 + * song and left out for a radio, which is the thing that really is live and
 + * keeps the player's own answer.
 + *
-+ * It does not make the stream seekable: whether the session offers a seek
-+ * comes from the player's commands, and those still come from a source with
-+ * no seek table. Dragging is the app's business anyway, which re-requests the
-+ * stream at the second asked for.
++ * Nor can the player seek such a source, and it says so: the commands it
++ * offers carry no seek, so the system's controls, the car and the watch drew
++ * a bar nobody could drag while the app's own slider worked. The app is what
++ * makes those seeks work — it asks the server for the stream starting where
++ * you pointed — so the session offers the seek on its behalf
++ * (`onSeek`) whenever the track has a length to seek within. A radio, which
++ * has none, keeps the player's answer and stays undraggable, as it should.
 + *
 + * `positionOffsetMs` is the other half of that: a stream re-requested at
 + * 2:00 is a new source, and the player counts it from zero. The app knows
@@ -534,9 +547,25 @@ index dca91c32a2787a7bc3ecba26f0f3f2ad9cc40d3d..ac6cf621f9f61385cfef1f0293efcbdb
 +private class MediaSessionPlayer(
 +  player: Player,
 +  private val positionOffsetMs: () -> Long,
++  private val onSeek: ((Long) -> Unit)?,
 +) : ForwardingPlayer(player) {
++  /** Does whoever queued this track know how long it is? (a radio does not) */
++  private fun hasKnownDuration(): Boolean = currentMediaItem?.mediaMetadata?.durationMs != null
++
 +  override fun isCurrentMediaItemLive(): Boolean =
-+    if (currentMediaItem?.mediaMetadata?.durationMs != null) false else super.isCurrentMediaItemLive()
++    if (hasKnownDuration()) false else super.isCurrentMediaItemLive()
++
++  /** Can the source itself be seeked, or does it have to be asked for again? */
++  private fun playerCanSeek(): Boolean =
++    super.getAvailableCommands().contains(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)
++
++  override fun getAvailableCommands(): Player.Commands {
++    val commands = super.getAvailableCommands()
++    if (onSeek == null || !hasKnownDuration()) {
++      return commands
++    }
++    return commands.buildUpon().add(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM).build()
++  }
 +
 +  // What the player itself does not know stays unknown: shifting -1, or
 +  // `TIME_UNSET`, by the offset would invent an answer.
@@ -562,31 +591,48 @@ index dca91c32a2787a7bc3ecba26f0f3f2ad9cc40d3d..ac6cf621f9f61385cfef1f0293efcbdb
 +
 +  // Somebody scrubbing from the car or the lock screen is pointing at the
 +  // clock this reports, so the offset comes back off before the player is
-+  // asked. A target before the segment even starts is the one thing it cannot
-+  // serve (the seconds before it are not in this source at all) and lands at
-+  // its start; the stream would have to be requested again for that, which is
-+  // the app's job and not something the session can ask for.
-+  override fun seekTo(positionMs: Long) = super.seekTo(positionMs - positionOffsetMs())
++  // asked. A source that cannot be seeked at all is handed over instead: the
++  // app knows how to get there, by asking the server for the stream starting
++  // at that second, and it is also the one place that knows what the seconds
++  // before the current segment even are.
++  override fun seekTo(positionMs: Long) {
++    val seek = onSeek
++    if (seek != null && !playerCanSeek()) {
++      seek(positionMs)
++      return
++    }
++    super.seekTo(positionMs - positionOffsetMs())
++  }
 +
-+  override fun seekTo(mediaItemIndex: Int, positionMs: Long) =
++  override fun seekTo(mediaItemIndex: Int, positionMs: Long) {
++    val seek = onSeek
++    if (seek != null && !playerCanSeek() && mediaItemIndex == currentMediaItemIndex) {
++      seek(positionMs)
++      return
++    }
 +    super.seekTo(mediaItemIndex, positionMs - positionOffsetMs())
++  }
 +}
 +
 +/** Wraps a player for a media session. See [MediaSessionPlayer]. */
-+fun playerForMediaSession(player: Player, positionOffsetMs: () -> Long = { 0L }): Player =
-+  MediaSessionPlayer(player, positionOffsetMs)
++fun playerForMediaSession(
++  player: Player,
++  positionOffsetMs: () -> Long = { 0L },
++  onSeek: ((Long) -> Unit)? = null,
++): Player = MediaSessionPlayer(player, positionOffsetMs, onSeek)
 +
 +fun buildBasicMediaSession(
 +  context: Context,
 +  player: ExoPlayer,
 +  positionOffsetMs: () -> Long = { 0L },
++  onSeek: ((Long) -> Unit)? = null,
 +): MediaSession {
-+  return MediaSession.Builder(context, playerForMediaSession(player, positionOffsetMs))
++  return MediaSession.Builder(context, playerForMediaSession(player, positionOffsetMs, onSeek))
      .setId("ExpoAudioBasicMediaSession_${player.hashCode()}")
      .build()
  }
 diff --git a/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt b/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
-index 196a5d57f887c2667a88543bd2f6a80044a044f2..5514730a76d5ef627307feb0f30b22a17815ffc2 100644
+index 196a5d57f887c2667a88543bd2f6a80044a044f2..f017a6da7498fff92bc5ea9cda1df8cb555489a8 100644
 --- a/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
 +++ b/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
 @@ -27,6 +27,7 @@ import expo.modules.audio.AudioLockScreenOptions
@@ -722,7 +768,7 @@ index 196a5d57f887c2667a88543bd2f6a80044a044f2..5514730a76d5ef627307feb0f30b22a1
            .build()
        )
      }
-@@ -321,12 +387,17 @@ class AudioControlsService : MediaSessionService() {
+@@ -321,12 +387,21 @@ class AudioControlsService : MediaSessionService() {
    }
  
    private fun resolveSessionPlayer(player: AudioPlayer, options: AudioLockScreenOptions?): Player {
@@ -730,7 +776,11 @@ index 196a5d57f887c2667a88543bd2f6a80044a044f2..5514730a76d5ef627307feb0f30b22a1
 +    // re-requested stream really is, and that a track we were told the length
 +    // of is not live however the stream looks (see `playerForMediaSession`).
 +    // Upstream's own wrapper goes on top of it, and both forward.
-+    val base = playerForMediaSession(player.ref) { player.sessionPositionOffsetMs }
++    val base = playerForMediaSession(
++      player.ref,
++      { player.sessionPositionOffsetMs },
++      { positionMs -> player.emitRemoteSeek(positionMs) }
++    )
      val isLive = options?.isLiveStream ?: player.isLive
      if (!isLive) {
 -      return player.ref
@@ -742,7 +792,7 @@ index 196a5d57f887c2667a88543bd2f6a80044a044f2..5514730a76d5ef627307feb0f30b22a1
        override fun getAvailableCommands(): Player.Commands {
          return super.getAvailableCommands().buildUpon()
            .remove(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)
-@@ -371,7 +442,12 @@ class AudioControlsService : MediaSessionService() {
+@@ -371,7 +446,12 @@ class AudioControlsService : MediaSessionService() {
            updateMetadata(metadata)
          }
          val session = MediaSession.Builder(context, sessionPlayer)
@@ -756,7 +806,7 @@ index 196a5d57f887c2667a88543bd2f6a80044a044f2..5514730a76d5ef627307feb0f30b22a1
            .build()
  
          // Replace the basic media session with a session connected to our playback service.
-@@ -452,7 +528,12 @@ class AudioControlsService : MediaSessionService() {
+@@ -452,7 +532,12 @@ class AudioControlsService : MediaSessionService() {
            updateMetadata(metadata)
          }
          val session = MediaSession.Builder(context, sessionPlayer)
@@ -770,7 +820,7 @@ index 196a5d57f887c2667a88543bd2f6a80044a044f2..5514730a76d5ef627307feb0f30b22a1
            .build()
  
          player.mediaSession.release()
-@@ -558,6 +639,8 @@ class AudioControlsService : MediaSessionService() {
+@@ -558,6 +643,8 @@ class AudioControlsService : MediaSessionService() {
  
      const val ACTION_SEEK_FORWARD = "expo.modules.audio.action.SEEK_FORWARD"
      const val ACTION_SEEK_BACKWARD = "expo.modules.audio.action.SEEK_BACKWARD"
@@ -864,6 +914,154 @@ index 839aaef12d7699ea1a89037b31849775daa079f4..a1fce18411843a6aa636e83576371a07
      }
      return super.onCustomCommand(session, controller, command, args)
    }
+diff --git a/android/src/main/java/expo/modules/audio/service/MetadataInjectingPlayer.kt b/android/src/main/java/expo/modules/audio/service/MetadataInjectingPlayer.kt
+index 18203a364d17dcf3de95d22a20175308e3363889..e0c0ccf6be73227815370b089fddf4d69199637b 100644
+--- a/android/src/main/java/expo/modules/audio/service/MetadataInjectingPlayer.kt
++++ b/android/src/main/java/expo/modules/audio/service/MetadataInjectingPlayer.kt
+@@ -3,10 +3,20 @@ package expo.modules.audio.service
+ import android.os.Handler
+ import android.os.Looper
+ import androidx.core.net.toUri
++import androidx.media3.common.AudioAttributes
++import androidx.media3.common.DeviceInfo
+ import androidx.media3.common.FlagSet
+ import androidx.media3.common.ForwardingPlayer
++import androidx.media3.common.MediaItem
+ import androidx.media3.common.MediaMetadata
++import androidx.media3.common.PlaybackException
++import androidx.media3.common.PlaybackParameters
+ import androidx.media3.common.Player
++import androidx.media3.common.Timeline
++import androidx.media3.common.TrackSelectionParameters
++import androidx.media3.common.Tracks
++import androidx.media3.common.VideoSize
++import androidx.media3.common.text.CueGroup
+ import androidx.media3.common.util.UnstableApi
+ import expo.modules.audio.Metadata
+ import java.util.IdentityHashMap
+@@ -79,9 +89,28 @@ internal class MetadataInjectingPlayer(
+     }
+   }
+ 
++  /**
++   * Everything the player says, said again to the listener, with the metadata
++   * swapped for the injected one.
++   *
++   * Every method of `Player.Listener` is a Java `default`, and Kotlin's `by`
++   * delegation writes no forwarder for a member that already has a body: it
++   * inherits the empty default instead. So `: Player.Listener by listener`
++   * compiled down to a listener that answers to the two methods below and
++   * silently swallows the other thirty-odd. The listener being swallowed here
++   * is the media session's own, which is how the session stopped hearing
++   * anything the player did by itself: repeating a track and moving to the one
++   * queued behind it both left the notification's progress bar sitting where
++   * the song had ended. Whatever the app asked for (play, pause, a new source)
++   * still came through, because the service reacts to those on a listener of
++   * its own, which is what made this look like a bug about repeat.
++   *
++   * Hence the long list. Deprecated callbacks are left out: media3 raises the
++   * current ones alongside them.
++   */
+   private inner class MetadataForwardingListener(
+     private val listener: Player.Listener
+-  ) : Player.Listener by listener {
++  ) : Player.Listener {
+     override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
+       listener.onMediaMetadataChanged(this@MetadataInjectingPlayer.mediaMetadata)
+     }
+@@ -89,5 +118,92 @@ internal class MetadataInjectingPlayer(
+     override fun onEvents(player: Player, events: Player.Events) {
+       listener.onEvents(this@MetadataInjectingPlayer, events)
+     }
++
++    override fun onTimelineChanged(timeline: Timeline, reason: Int) =
++      listener.onTimelineChanged(timeline, reason)
++
++    override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) =
++      listener.onMediaItemTransition(mediaItem, reason)
++
++    override fun onTracksChanged(tracks: Tracks) = listener.onTracksChanged(tracks)
++
++    override fun onPlaylistMetadataChanged(mediaMetadata: MediaMetadata) =
++      listener.onPlaylistMetadataChanged(mediaMetadata)
++
++    override fun onIsLoadingChanged(isLoading: Boolean) = listener.onIsLoadingChanged(isLoading)
++
++    override fun onAvailableCommandsChanged(availableCommands: Player.Commands) =
++      listener.onAvailableCommandsChanged(availableCommands)
++
++    override fun onTrackSelectionParametersChanged(parameters: TrackSelectionParameters) =
++      listener.onTrackSelectionParametersChanged(parameters)
++
++    override fun onPlaybackStateChanged(playbackState: Int) =
++      listener.onPlaybackStateChanged(playbackState)
++
++    override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) =
++      listener.onPlayWhenReadyChanged(playWhenReady, reason)
++
++    override fun onPlaybackSuppressionReasonChanged(reason: Int) =
++      listener.onPlaybackSuppressionReasonChanged(reason)
++
++    override fun onIsPlayingChanged(isPlaying: Boolean) = listener.onIsPlayingChanged(isPlaying)
++
++    override fun onRepeatModeChanged(repeatMode: Int) = listener.onRepeatModeChanged(repeatMode)
++
++    override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) =
++      listener.onShuffleModeEnabledChanged(shuffleModeEnabled)
++
++    override fun onPlayerError(error: PlaybackException) = listener.onPlayerError(error)
++
++    override fun onPlayerErrorChanged(error: PlaybackException?) =
++      listener.onPlayerErrorChanged(error)
++
++    override fun onPositionDiscontinuity(
++      oldPosition: Player.PositionInfo,
++      newPosition: Player.PositionInfo,
++      reason: Int
++    ) = listener.onPositionDiscontinuity(oldPosition, newPosition, reason)
++
++    override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) =
++      listener.onPlaybackParametersChanged(playbackParameters)
++
++    override fun onSeekBackIncrementChanged(seekBackIncrementMs: Long) =
++      listener.onSeekBackIncrementChanged(seekBackIncrementMs)
++
++    override fun onSeekForwardIncrementChanged(seekForwardIncrementMs: Long) =
++      listener.onSeekForwardIncrementChanged(seekForwardIncrementMs)
++
++    override fun onMaxSeekToPreviousPositionChanged(maxSeekToPreviousPositionMs: Long) =
++      listener.onMaxSeekToPreviousPositionChanged(maxSeekToPreviousPositionMs)
++
++    override fun onAudioSessionIdChanged(audioSessionId: Int) =
++      listener.onAudioSessionIdChanged(audioSessionId)
++
++    override fun onAudioAttributesChanged(audioAttributes: AudioAttributes) =
++      listener.onAudioAttributesChanged(audioAttributes)
++
++    override fun onVolumeChanged(volume: Float) = listener.onVolumeChanged(volume)
++
++    override fun onSkipSilenceEnabledChanged(skipSilenceEnabled: Boolean) =
++      listener.onSkipSilenceEnabledChanged(skipSilenceEnabled)
++
++    override fun onDeviceInfoChanged(deviceInfo: DeviceInfo) =
++      listener.onDeviceInfoChanged(deviceInfo)
++
++    override fun onDeviceVolumeChanged(volume: Int, muted: Boolean) =
++      listener.onDeviceVolumeChanged(volume, muted)
++
++    override fun onVideoSizeChanged(videoSize: VideoSize) = listener.onVideoSizeChanged(videoSize)
++
++    override fun onSurfaceSizeChanged(width: Int, height: Int) =
++      listener.onSurfaceSizeChanged(width, height)
++
++    override fun onRenderedFirstFrame() = listener.onRenderedFirstFrame()
++
++    override fun onCues(cueGroup: CueGroup) = listener.onCues(cueGroup)
++
++    override fun onMetadata(metadata: androidx.media3.common.Metadata) =
++      listener.onMetadata(metadata)
+   }
+ }
 diff --git a/build/Audio.types.d.ts b/build/Audio.types.d.ts
 index 25604783649fe9b64f6655172f08471a5efcbf45..85f23b9cc401f784f988177a88c6eff56c1f7bbc 100644
 --- a/build/Audio.types.d.ts
@@ -913,7 +1111,7 @@ index cfd92ad0ff5765254c4e6db974fe44bce34aad06..78fa084cf34a5f56743d636b6501f909
  //# sourceMappingURL=AudioConstants.d.ts.map
 \ No newline at end of file
 diff --git a/build/AudioModule.types.d.ts b/build/AudioModule.types.d.ts
-index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..f18ade41c81850251dcfb9c5de55081418b7bcda 100644
+index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..90a5811df35aa1ef06fa7743e2c0eca571f41430 100644
 --- a/build/AudioModule.types.d.ts
 +++ b/build/AudioModule.types.d.ts
 @@ -31,6 +31,11 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
@@ -962,7 +1160,7 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..f18ade41c81850251dcfb9c5de550814
      /**
       * Remove the player from memory to free up resources.
       */
-@@ -222,6 +247,20 @@ export type AudioEvents = {
+@@ -222,6 +247,27 @@ export type AudioEvents = {
      playbackStatusUpdate(status: AudioStatus): void;
      /** Fired when audio sampling is enabled and new sample data is available. */
      audioSampleUpdate(data: AudioSample): void;
@@ -970,6 +1168,13 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..f18ade41c81850251dcfb9c5de550814
 +    remotePrevious(): void;
 +    /** Fired when the user taps skip-next on the lock screen / notification. */
 +    remoteNext(): void;
++    /** Fired when the progress bar of the lock screen / notification / car is
++     *  dragged on a source the player cannot seek by itself (a stream a server
++     *  generates on the fly). Whoever queued the track is expected to get
++     *  there its own way. Android only. */
++    remoteSeek(event: {
++        positionMs: number;
++    }): void;
 +    /** Fired when the player moves on by itself to the source queued with
 +     *  `setNextSource` (gapless advance). */
 +    trackTransition(): void;
