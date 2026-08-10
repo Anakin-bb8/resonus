@@ -1514,7 +1514,10 @@ function scheduleNextSource(force = false) {
   // itself, so the track never ends. Letting it end instead worked, but the
   // notification showed the end of the song for the instant it took to ask for
   // it again, and the silence of that request was audible.
-  const restartSelf = st.repeat === 'one' && streamOffsetSec > 0 && !remoteKind();
+  // Not with "stop at end of song" pending: that one waits for the track to
+  // end for real, and joining another source behind it means it never does.
+  const restartSelf =
+    st.repeat === 'one' && streamOffsetSec > 0 && !st.sleepAtSongEnd && !remoteKind();
   const ni = restartSelf ? st.index : gaplessReady() ? nextIndex(false) : null;
   const next = ni == null ? null : st.queue[ni];
   if (ni == null || !next || next.url) {
