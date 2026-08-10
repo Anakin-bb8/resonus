@@ -133,7 +133,11 @@ export const getSongsByGenre = (
   count?: number,
   offset?: number,
   musicFolderId?: string,
-) => api(auth).getSongsByGenre(auth, genre, count, offset, musicFolderId);
+  // Only Jellyfin reads it: `getSongsByGenre` is a Subsonic endpoint that takes
+  // no order, which is the whole reason the genre screen asks the data layer
+  // what each server can do before it offers a menu (see `genreSongSorts`).
+  sort?: SongListSort,
+) => api(auth).getSongsByGenre(auth, genre, count, offset, musicFolderId, sort);
 
 export const getAlbum = (auth: SubsonicAuth, id: string) => api(auth).getAlbum(auth, id);
 

@@ -422,12 +422,21 @@ export async function getSongList(
   return (res.Items ?? []).map(toSong);
 }
 
+/**
+ * The songs of a genre, record by record unless asked otherwise.
+ *
+ * `Album,ParentIndexNumber,IndexNumber` is album, then disc, then track: the
+ * useful way through a heap of songs off dozens of records, and what the app
+ * asks of every backend that can answer it. Anything else the caller names is
+ * one of the orders this server already knows for songs.
+ */
 export async function getSongsByGenre(
   auth: SubsonicAuth,
   genre: string,
   count = 50,
   offset = 0,
   _musicFolderId?: string,
+  sort: SongListSort = 'server',
 ): Promise<Song[]> {
   const res = await request<JfItems>(auth, `/Users/${auth.jfUserId}/Items`, {
     IncludeItemTypes: 'Audio',
@@ -435,8 +444,10 @@ export async function getSongsByGenre(
     Genres: genre,
     Limit: count,
     StartIndex: offset,
-    SortBy: 'Album,ParentIndexNumber,IndexNumber',
     Fields: SONG_FIELDS,
+    ...(sort === 'server'
+      ? { SortBy: 'Album,ParentIndexNumber,IndexNumber' }
+      : SONG_SORT[sort]),
   });
   return (res.Items ?? []).map(toSong);
 }

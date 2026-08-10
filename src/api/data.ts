@@ -590,18 +590,22 @@ function ndGenreMap(a: Subsonic.SubsonicAuth): Promise<Map<string, string>> {
  * The orders a genre's songs can be asked for in.
  *
  * Empty means the server has none to give, and the screen shows no control at
- * all rather than one that would sort what is on screen and nothing else. Only
- * Navidrome through its own API can do this today: Jellyfin sorts songs but is
- * not wired to filter them by genre here, and plain Subsonic sorts nothing.
+ * all rather than one that would sort what is on screen and nothing else.
  *
- * The first is what the screen opens on, and here it is by album rather than
- * by whatever the server would have said (see `ND_GENRE_DEFAULT`), so the
- * screen calls it that.
+ * Two backends can: Jellyfin, which filters items by genre and sorts them in
+ * the same request, and Navidrome through its own API. What is left is plain
+ * Subsonic and Ampache, where `getSongsByGenre` takes a genre, a count and an
+ * offset and no order at all, so there is nothing to offer and nothing to
+ * pretend.
+ *
+ * The first is what the screen opens on, and on both of them it is by album
+ * rather than by whatever the server would have said on its own, so the screen
+ * names it for that.
  */
 export function genreSongSorts(): Subsonic.SongListSort[] {
   if (isOffline()) return [];
   const a = auth();
-  if (!canListNative(a)) return [];
+  if (a.serverType !== 'jellyfin' && !canListNative(a)) return [];
   return ['server', 'alpha', 'added', 'recent', 'frequent', 'random'];
 }
 
@@ -611,12 +615,18 @@ export function genreSongSorts(): Subsonic.SongListSort[] {
  * A genre is a heap of songs off dozens of records, and the useful way through
  * it is record by record: the album's songs together, in the order they were
  * meant to be heard. Navidrome's `album` sort is exactly that — it expands to
- * the album's sort name, then disc, then track — so what it hands back reads
- * like the Albums tab with each record opened out.
+ * the album's sort name, then disc, then track — and Jellyfin answers the same
+ * shape from `Album,ParentIndexNumber,IndexNumber`, which it has always done
+ * here. So what both hand back reads like the Albums tab with each record
+ * opened out.
  *
- * `getSongsByGenre` sorts by nothing at all, so on a plain Subsonic server the
- * default stays whatever that server felt like and there is no menu to change
- * it with.
+ * Plain Subsonic's `getSongsByGenre` sorts by nothing at all. Its list stays
+ * complete and paged, in whatever order that server felt like, and there is no
+ * menu to change it with. Deriving the order there —asking for the genre's
+ * albums and expanding each one, the way the Songs screen arrives at "recently
+ * added"— would cost more than it gives: that route is a capped list rather
+ * than a window, so a genre would quietly stop after a dozen records, and it
+ * is the same call the download walks to gather everything.
  */
 const ND_GENRE_DEFAULT: Navidrome.NdSongSort = 'album';
 
@@ -645,7 +655,7 @@ export function getSongsByGenre(
         return subsonicGenreSongs(a, genre, count, offset);
       });
   }
-  return subsonicGenreSongs(a, genre, count, offset);
+  return subsonicGenreSongs(a, genre, count, offset, sort);
 }
 
 function subsonicGenreSongs(
@@ -653,13 +663,19 @@ function subsonicGenreSongs(
   genre: string,
   count: number,
   offset: number,
+  // Carried through for Jellyfin, which is the one backend behind this door
+  // that can order a genre. A Subsonic server ignores it, which is why the
+  // screen is never offered the choice there.
+  sort: Subsonic.SongListSort = 'server',
 ): Promise<Subsonic.Song[]> {
   const ids = enabledFolderIds(a);
-  if (!ids) return Subsonic.getSongsByGenre(a, genre, count, offset);
-  if (ids.length === 1) return Subsonic.getSongsByGenre(a, genre, count, offset, ids[0]);
-  return Promise.all(ids.map((id) => Subsonic.getSongsByGenre(a, genre, count, offset, id))).then(
-    (lists) => dedupeById(lists.flat()).slice(0, count),
-  );
+  if (!ids) return Subsonic.getSongsByGenre(a, genre, count, offset, undefined, sort);
+  if (ids.length === 1) {
+    return Subsonic.getSongsByGenre(a, genre, count, offset, ids[0], sort);
+  }
+  return Promise.all(
+    ids.map((id) => Subsonic.getSongsByGenre(a, genre, count, offset, id, sort)),
+  ).then((lists) => dedupeById(lists.flat()).slice(0, count));
 }
 
 // ── Folder navigation (Subsonic servers only; the UI hides it on
