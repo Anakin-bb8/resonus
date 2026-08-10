@@ -72,6 +72,24 @@ const ops = new Map<string, OpStat>();
 const running: string[] = [];
 
 /**
+ * Is the app in the foreground?
+ *
+ * Watched from module scope, and not from inside `startPerfLog`, because the
+ * heartbeat below is not the only instrument that needs to know: the player's
+ * own beat is measured precisely when this is false. One listener and a
+ * boolean, so it costs the same whether or not anything is being measured.
+ */
+let awake = AppState.currentState === 'active';
+AppState.addEventListener('change', (state) => {
+  const wasAwake = awake;
+  awake = state === 'active';
+  // Whatever happened out there is not ours to measure, and the clock starts
+  // again here.
+  lastTick = Date.now();
+  if (!wasAwake && awake) onReturn();
+});
+
+/**
  * Starts the heartbeat (idempotent).
  *
  * The app being in the background is not a block. Android stops handing the
@@ -84,13 +102,6 @@ export function startPerfLog(): void {
   if (timer || !enabled) return;
   startedAt = Date.now();
   lastTick = Date.now();
-  let awake = AppState.currentState === 'active';
-  AppState.addEventListener('change', (state) => {
-    awake = state === 'active';
-    // Whatever happened out there is not ours to measure, and the clock starts
-    // again here.
-    lastTick = Date.now();
-  });
   timer = setInterval(() => {
     const now = Date.now();
     const late = now - lastTick - TICK_MS;
@@ -175,6 +186,98 @@ export function bump(tag: string, by = 1): void {
   counts.set(tag, (counts.get(tag) ?? 0) + by);
 }
 
+// ── The player's own beat ───────────────────────────────────────────────────
+// Everything above this line measures the app while somebody is looking at it,
+// and stops measuring the moment they stop: Android takes the JS timer away in
+// the background, so a heartbeat driven by one has nothing to say about the
+// twenty minutes an album takes to play with the screen off. Which is exactly
+// where the reports are (a notification stuck mid-song, a cover from the track
+// before, ten seconds of a frozen screen on returning).
+//
+// The native player keeps beating out there — it is a coroutine on Android's
+// main thread, not a JS timer — and every beat it sends reaches `onStatus`,
+// which is what feeds the position, the notification and the queue's advance.
+// So the beat itself is the instrument: if it arrives while the app is away,
+// whatever went stale did so on the way to the screen; if it does not, nothing
+// downstream of it could have been right either. `beat()` says nothing about
+// how the app looks, and that is the point — it is the one clock that tells
+// those two apart.
+
+/** Under this a late beat is ordinary jitter around the 500 ms it asks for. */
+const BEAT_GAP_MS = 2000;
+
+/** When the last beat arrived, whatever state the app was in. */
+let lastBeat = 0;
+/** Beats are only judged once one has been seen; the first has no gap. */
+let beatSeen = false;
+/**
+ * Was the player playing when it last beat?
+ *
+ * A player that is paused has nothing to say and stops saying it, so the
+ * silence that follows a pause in the background is the player behaving. Left
+ * unasked, every session where somebody paused before putting the phone away
+ * came back reporting a silence the length of the walk home, and a measurement
+ * that cries wolf is worse than no measurement — it is what the foreground
+ * heartbeat above already had to learn.
+ */
+let beatPlaying = false;
+/**
+ * Kept apart from `ops`, which ranks by total time and answers "what is the app
+ * spending its life on". A silence of twenty minutes is not time spent on
+ * anything and would sit on top of that list saying nothing true.
+ */
+const away = new Map<string, OpStat>();
+
+function recordAway(tag: string, ms: number): void {
+  const cur = away.get(tag);
+  if (cur) {
+    cur.count++;
+    cur.totalMs += ms;
+    if (ms > cur.maxMs) cur.maxMs = ms;
+    return;
+  }
+  away.set(tag, { tag, count: 1, totalMs: ms, maxMs: ms });
+}
+
+/**
+ * A beat from the native player. Called from the status listener, which is the
+ * only thing that keeps running while the app is away. `playing` is what that
+ * status says, and it decides whether the next silence is worth anything.
+ */
+export function beat(playing: boolean): void {
+  if (!enabled) return;
+  const now = Date.now();
+  const prev = lastBeat;
+  const wasPlaying = beatPlaying;
+  lastBeat = now;
+  beatPlaying = playing;
+  if (!beatSeen) {
+    beatSeen = true;
+    return;
+  }
+  if (awake || !wasPlaying) return;
+  bump('away · beats');
+  // Asked for every half second. Anything past a couple of them is the player
+  // going quiet, not jitter, and the size of the silence is the whole answer.
+  const gap = now - prev;
+  if (gap >= BEAT_GAP_MS) recordAway('silence between beats', gap);
+}
+
+/**
+ * Back to the foreground. How old the last beat is right now is the number the
+ * whole section exists for: measured before anything else runs, it says how
+ * stale what the screen is about to draw already was.
+ */
+function onReturn(): void {
+  if (!enabled || !beatSeen || !beatPlaying) return;
+  recordAway('on return, last beat was this old', Date.now() - lastBeat);
+}
+
+/** Worst first: one long silence is the finding, not the average. */
+export function perfAway(): OpStat[] {
+  return [...away.values()].sort((a, b) => b.maxMs - a.maxMs);
+}
+
 /** Biggest first, which is where the surprises are. */
 export function perfCounts(): { tag: string; n: number }[] {
   return [...counts.entries()]
@@ -202,6 +305,10 @@ export function resetPerfLog(): void {
   counts.clear();
   startedAt = Date.now();
   lastTick = Date.now();
+  away.clear();
+  // The next beat is the first one again: the gap across a reset belongs to
+  // neither session.
+  beatSeen = false;
 }
 
 /** The whole thing as text, to paste into an issue. */
@@ -212,6 +319,13 @@ export function perfReport(): string {
   const bs = perfBlocks();
   if (bs.length === 0) lines.push('  none over 120 ms');
   for (const b of bs) lines.push(`  ${b.ms} ms · during ${b.during}`);
+  const aw = perfAway();
+  if (aw.length > 0) {
+    lines.push('', 'While the app was away (the player is the only clock there):');
+    for (const a of aw) {
+      lines.push(`  ${a.tag}: ${a.count}× · ${a.maxMs} ms worst`);
+    }
+  }
   const cs = perfCounts();
   if (cs.length > 0) {
     lines.push('', 'Counted:');

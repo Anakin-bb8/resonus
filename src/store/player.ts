@@ -58,6 +58,7 @@ import { COVER, coverArtUrl, getRandomSongs } from '@/api/data';
 import { prefetchLyrics } from '@/hooks/useLyrics';
 import type { Remap } from '@/lib/navidromeRemap';
 import { remapSong } from '@/lib/navidromeRemap';
+import { beat, bump } from '@/lib/perfLog';
 import { queryClient } from '@/lib/query';
 import { primaryUrl } from '@/lib/serverUrls';
 import { getItem, setItem } from '@/lib/storage';
@@ -1576,6 +1577,12 @@ function onTrackTransition() {
   const queued = queuedNext;
   queuedNext = null;
   const p = activePlayer();
+  // The player moved to a track JS had already forgotten queueing. Nothing here
+  // can fix it —there is no telling which song it went to— but it is worth
+  // counting: from this moment the store, the notification and the car are all
+  // describing the track before the one being heard, which is what a cover from
+  // a neighbouring song looks like from the outside.
+  if (!queued) bump('player · transition with no memo');
   if (!queued || !p) return;
   const st = usePlayerStore.getState();
   // Follow the song, not the position: the queue may have been reordered while
@@ -1585,7 +1592,10 @@ function onTrackTransition() {
     index = st.queue.findIndex((s) => s.id === queued.id);
     // It was removed from the queue while playing: there's no index to move to,
     // so the state stays put and the track end takes the normal path.
-    if (index === -1) return;
+    if (index === -1) {
+      bump('player · transition to a song no longer queued');
+      return;
+    }
   }
   const song = st.queue[index];
   // A song repeating itself is not something to walk back to: ⏮️ would have
@@ -2062,6 +2072,10 @@ function maybeDetectStall(intendPlay: boolean, buffering: boolean, positionSec: 
 }
 
 function onStatus(status: AudioStatus) {
+  // Before anything can decide not to use it. This beat is the only clock that
+  // survives the app being minimized, so whether it arrives is the first thing
+  // worth knowing about the minutes nobody was watching (see `beat`).
+  beat(status.playing);
   // With remote output (UPnP/DLNA) the local player is paused and its
   // states should not override those coming from the remote device.
   if (remoteKind()) return;

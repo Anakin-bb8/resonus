@@ -606,6 +606,8 @@
   "State": "Estat",
   "Counted": "Comptat",
   "What happened, rather than how long it took.": "Què ha passat, no quant ha trigat.",
+  "While minimized": "Amb l'app minimitzada",
+  "The player keeps beating twice a second while the app is away. Long silences here mean the app stopped following what it was playing.": "El reproductor batega dues vegades per segon encara que l'app estigui minimitzada. Un silenci llarg aquí vol dir que l'app va deixar de seguir el que sonava.",
   "Measure performance": "Mesura el rendiment",
   "Measuring is off (Settings › About), so there is nothing to show.": "La mesura està desactivada (Configuració › Quant a), així que no hi ha res a mostrar.",
   "Server id repair": "Reparació d’ids del servidor",

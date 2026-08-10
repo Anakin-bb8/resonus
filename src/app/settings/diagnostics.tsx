@@ -15,7 +15,15 @@ import { songListSorts } from '@/api/data';
 import { SettingRow, SettingsPage, settingsStyles, SwitchList } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
 import { mirrorCoverState } from '@/lib/mirrorCovers';
-import { perfBlocks, perfCounts, perfOps, perfReport, perfSince, resetPerfLog } from '@/lib/perfLog';
+import {
+  perfAway,
+  perfBlocks,
+  perfCounts,
+  perfOps,
+  perfReport,
+  perfSince,
+  resetPerfLog,
+} from '@/lib/perfLog';
 import { repairStatus } from '@/lib/navidromeRepair';
 import { useAuthStore } from '@/store/auth';
 import { anyDownloads, useDownloads } from '@/store/downloads';
@@ -53,6 +61,7 @@ export default function DiagnosticsSettings() {
     `song sorts: ${(auth || offline ? songListSorts() : []).join(', ') || '—'}`,
   ];
   const ops = perfOps();
+  const away = perfAway();
   const counts = perfCounts();
   const enabled = useSettings((s) => s.diagnostics);
   const idRepair = useSettings((s) => s.navidromeIdRepair);
@@ -128,6 +137,27 @@ export default function DiagnosticsSettings() {
             </View>
           ))
         )}
+
+        {away.length > 0 ? (
+          <>
+            <Text style={settingsStyles.sectionTitle}>{t('While minimized')}</Text>
+            <Text style={settingsStyles.sectionDescription}>
+              {t(
+                'The player keeps beating twice a second while the app is away. Long silences here mean the app stopped following what it was playing.',
+              )}
+            </Text>
+            {away.map((a) => (
+              <View key={a.tag} style={styles.row}>
+                <Text style={styles.tag} numberOfLines={2}>
+                  {a.tag}
+                </Text>
+                <Text style={styles.value}>
+                  {a.count}× · {a.maxMs} ms
+                </Text>
+              </View>
+            ))}
+          </>
+        ) : null}
 
         {counts.length > 0 ? (
           <>
