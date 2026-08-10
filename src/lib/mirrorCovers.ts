@@ -367,6 +367,27 @@ export function mirrorCoverState(): { saved: number; aliases: number } {
 }
 
 /**
+ * How one cover id resolves here, in words, for the Diagnostics screen.
+ *
+ * Three answers, and only one of them can hand back a picture that is not the
+ * one asked for: a file saved under a DIFFERENT id, which this index points at
+ * on purpose so twenty songs off one record share one download. Which id it
+ * borrowed from is the part worth reading, since that is the picture that ends
+ * up on screen.
+ *
+ * Read on demand and nowhere else. Counting this on every call would mean a
+ * tally per row per render, on the thread drawing the list, for a question
+ * nobody is asking unless they have this screen open (#50).
+ */
+export function coverSourceOf(id: string | undefined): string {
+  if (!id) return 'none asked for';
+  const from = aliases.get(id);
+  if (from) return `alias of ${from}`;
+  if (known.has(id)) return 'its own file';
+  return 'not saved here';
+}
+
+/**
  * Forgets one cover, so the next time its entry is written to the mirror it is
  * fetched again. For when the app itself changes it: a playlist's picture can
  * be replaced from here, and the copy on disk would otherwise be the old one

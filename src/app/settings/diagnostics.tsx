@@ -11,10 +11,10 @@ import { useRootNavigationState } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 
-import { songListSorts } from '@/api/data';
+import { COVER, songCoverUrl, songListSorts } from '@/api/data';
 import { SettingRow, SettingsPage, settingsStyles, SwitchList } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
-import { mirrorCoverState } from '@/lib/mirrorCovers';
+import { coverSourceOf, mirrorCoverState } from '@/lib/mirrorCovers';
 import {
   perfAway,
   perfBlocks,
@@ -27,6 +27,7 @@ import {
 import { repairStatus } from '@/lib/navidromeRepair';
 import { useAuthStore } from '@/store/auth';
 import { anyDownloads, useDownloads } from '@/store/downloads';
+import { currentSong, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
 import { enabledFolderIds } from '@/store/libraries';
 import { colors, fontSize, spacing } from '@/theme';
@@ -74,10 +75,45 @@ export default function DiagnosticsSettings() {
   // going back instant and what made the app slow down the more you opened
   // before they were frozen: a number here would have said so in a sentence.
   const navState = useRootNavigationState();
+  /**
+   * How the cover of what is playing was arrived at.
+   *
+   * A wrong cover over the right title is not the queue being wrong, it is the
+   * picture being looked up by an id that leads somewhere else. Three things
+   * can happen and the app kept no record of which: the file saved under this
+   * very id, a file saved under ANOTHER id that this one borrows, or nothing
+   * local and the server asked directly. Only the middle one can hand back a
+   * picture that belongs to something else, so the id it borrowed from is the
+   * answer.
+   *
+   * `coverId` is worked out the way `songCoverUrl` works it out, which is the
+   * whole point: reading a different id here would describe a lookup nobody
+   * made.
+   */
+  const playing = usePlayerStore(currentSong);
+  const coverId = playing
+    ? (playing.coverArt ?? (playing.url ? undefined : playing.albumId))
+    : undefined;
+  const coverUrl = playing ? songCoverUrl(playing, COVER.card) : undefined;
+  const coverLines = playing
+    ? [
+        `playing: ${playing.title}${playing.album ? ` · ${playing.album}` : ''}`,
+        `cover id: ${coverId ?? '—'} (${coverSourceOf(coverId)})`,
+        `cover from: ${
+          coverUrl
+            ? coverUrl.startsWith('file://')
+              ? `file ${coverUrl.split('/').pop()}`
+              : 'the server'
+            : 'nothing'
+        }`,
+        `song ids: coverArt ${playing.coverArt ?? '—'} · album ${playing.albumId ?? '—'}`,
+      ]
+    : [];
   const stateLines = [
     `downloads: ${hydrated ? downloads : 'loading'}${anyDl && !hydrated ? ' (some)' : ''}`,
     `mirror covers: ${covers.saved} saved, ${covers.aliases} other names`,
     `screens open: ${navState?.routes?.length ?? '—'}`,
+    ...coverLines,
   ];
   const minutes = Math.max(1, Math.round((Date.now() - perfSince()) / 60000));
 
