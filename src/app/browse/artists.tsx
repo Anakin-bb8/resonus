@@ -1,6 +1,7 @@
 /** Browse all artists on the server, with quick filter. */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery } from '@tanstack/react-query';
+import { useLocalSearchParams } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
@@ -75,7 +76,12 @@ export default function BrowseArtistsScreen() {
   const t = useT();
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
   const [query, setQuery] = useState('');
-  const [sort, setSort] = useState<ArtistSort>('recent');
+  /** Same as the Albums and Songs screens: a Home shelf can say which order it
+   *  was showing, and anything unrecognised is ignored. */
+  const { sort: sortParam } = useLocalSearchParams<{ sort?: string }>();
+  const [sort, setSort] = useState<ArtistSort>(
+    SORTS.some((s) => s.key === sortParam) ? (sortParam as ArtistSort) : 'recent',
+  );
   const layout = useSettings((s) => s.browseArtistsLayout);
   const setLayout = useSettings((s) => s.setBrowseArtistsLayout);
   const grid = layout === 'grid';

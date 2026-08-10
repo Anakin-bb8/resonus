@@ -16,6 +16,7 @@
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -120,7 +121,16 @@ export default function BrowseSongsScreen() {
   const card = cardWidth(columns);
   // What this server can actually order by; the first one is what it opens on.
   const sorts = canFetch ? songListSorts() : [];
-  const [sort, setSort] = useState<SongListSort>(sorts[0] ?? 'server');
+  /**
+   * Arrived at from a Home shelf, this says which one. Only the value it opens
+   * on: each visit is its own screen, so there is nothing to keep in step. An
+   * order this server cannot give is ignored rather than shown as a chip that
+   * does nothing.
+   */
+  const { sort: sortParam } = useLocalSearchParams<{ sort?: string }>();
+  const [sort, setSort] = useState<SongListSort>(
+    (sorts.find((s) => s === sortParam) ?? sorts[0] ?? 'server') as SongListSort,
+  );
 
   // When the last song played changes, "Recent" is a different list: it is the
   // key so the list follows along instead of sitting in the cache until

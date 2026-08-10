@@ -284,7 +284,7 @@ function MostPlayedSongsSection({ title }: { title: string }) {
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <SectionHeader title={title} href="/browse/songs?sort=frequent" />
       <FlatList
         {...listPerf}
         horizontal
@@ -406,7 +406,7 @@ function ArtistSection({ title, reshuffleKey }: { title: string; reshuffleKey: n
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <SectionHeader title={title} href="/browse/artists?sort=random" />
       <FlatList
         {...listPerf}
         horizontal
