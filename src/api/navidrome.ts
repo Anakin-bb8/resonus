@@ -172,9 +172,12 @@ export function naturalSongDir(sort: NdSongSort): SortDirection {
     : 'asc';
 }
 
-/** The same question for albums; only the year and the arrival read backwards. */
+/** The same question for albums: the year, the arrival and the tally read
+ *  backwards; the rest are lists and read forwards. */
 export function naturalAlbumDir(sort: NdAlbumSort): SortDirection {
-  return sort === 'recently_added' || sort === 'max_year' ? 'desc' : 'asc';
+  return sort === 'recently_added' || sort === 'max_year' || sort === 'play_count'
+    ? 'desc'
+    : 'asc';
 }
 
 /** The fields of a media file this app has any use for. */
@@ -312,12 +315,21 @@ export async function listSongs(
 }
 
 /**
- * What Navidrome's REST layer accepts for ordering albums. A shorter list than
- * the songs one, and deliberately only the names its own sort mappings
- * declare: an unknown one falls through to a column name, which either works
- * or sorts by nothing, and neither is worth offering as a menu entry.
+ * What Navidrome's REST layer accepts for ordering albums.
+ *
+ * Mostly the names its own sort mappings declare, since an unknown one falls
+ * through to a column and may well sort by nothing. `play_count` is the
+ * exception and it is not a guess: Navidrome's own album table sorts by it
+ * (the Play Count column sends `playCount`, which snake-cases to this), so the
+ * column is there to be ordered by.
  */
-export type NdAlbumSort = 'name' | 'artist' | 'max_year' | 'recently_added' | 'random';
+export type NdAlbumSort =
+  | 'name'
+  | 'artist'
+  | 'max_year'
+  | 'recently_added'
+  | 'play_count'
+  | 'random';
 
 /** The fields of an album this app has any use for. */
 interface NdAlbum {

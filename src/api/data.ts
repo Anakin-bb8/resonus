@@ -311,7 +311,14 @@ export function getGenres(): Promise<Subsonic.Genre[]> {
  * both, so a plain Subsonic server has exactly one order to give and no menu
  * is shown.
  */
-export type AlbumListSort = 'server' | 'alpha' | 'artist' | 'year' | 'added' | 'random';
+export type AlbumListSort =
+  | 'server'
+  | 'alpha'
+  | 'frequent'
+  | 'artist'
+  | 'year'
+  | 'added'
+  | 'random';
 
 const ND_ALBUM_SORT: Record<AlbumListSort, Navidrome.NdAlbumSort> = {
   // Only reachable when a direction was picked without a field, since `server`
@@ -319,6 +326,7 @@ const ND_ALBUM_SORT: Record<AlbumListSort, Navidrome.NdAlbumSort> = {
   // server would have sorted by anyway.
   server: 'name',
   alpha: 'name',
+  frequent: 'play_count',
   artist: 'artist',
   year: 'max_year',
   added: 'recently_added',
@@ -334,7 +342,7 @@ export function genreAlbumSorts(): AlbumListSort[] {
   // ways of saying one thing, and one of them saying nothing about itself.
   // `server` stays in the type because it is still what a server that cannot
   // sort answers, and that one is never offered a menu.
-  return ['alpha', 'artist', 'year', 'added', 'random'];
+  return ['alpha', 'frequent', 'artist', 'year', 'added', 'random'];
 }
 
 export function getAlbumsByGenre(
@@ -622,14 +630,14 @@ export function genreSongDir(sort: Subsonic.SongListSort): Subsonic.SortDirectio
 }
 
 export function genreAlbumDir(sort: AlbumListSort): Subsonic.SortDirection {
-  return sort === 'added' || sort === 'year' ? 'desc' : 'asc';
+  return sort === 'added' || sort === 'year' || sort === 'frequent' ? 'desc' : 'asc';
 }
 
 export function genreSongSorts(): Subsonic.SongListSort[] {
   if (isOffline()) return [];
   const a = auth();
   if (a.serverType !== 'jellyfin' && !canListNative(a)) return [];
-  return ['server', 'alpha', 'added', 'recent', 'frequent', 'random'];
+  return ['server', 'frequent', 'alpha', 'added', 'recent', 'random'];
 }
 
 /**
