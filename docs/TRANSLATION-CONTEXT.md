@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 611 of them.
+Every string the app can show, under the screen it shows up on. 613 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -258,6 +258,8 @@ you are actually typing into, which is easier than reading it here.
 | `Good night` | Home's greeting, for the small hours. Spanish uses the same words as for the evening, which is fine |
 | `Loading covers…` | Still pulling the pictures out of the phone's own files |
 | `Looking for music…` | Reading the phone's own files, before anything can be shown |
+| `Most played albums` | A section of Home: the records played most |
+| `Most played songs` | A section of Home: the songs played most, as songs |
 | `Nothing to shuffle yet` | Empty state: there is nothing here to play in random order |
 | `Random albums` | A section of Home: albums picked at random, to happen upon something |
 | `Random artists` | A section of Home: artists picked at random |
@@ -611,6 +613,7 @@ you are actually typing into, which is easier than reading it here.
 | --- | --- |
 | `Drag to reorder, toggle to show or hide.` |  |
 | `Home sections` | Reorder which sections appear on Home |
+| `Most played albums` | A section of Home: the records played most |
 | `Random albums` | A section of Home: albums picked at random, to happen upon something |
 | `Reorder` | Enter drag-to-reorder mode |
 

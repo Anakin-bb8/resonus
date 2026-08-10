@@ -20,10 +20,12 @@ import {
   coverArtUrl,
   getAlbumList,
   getArtists,
+  getSongList,
   getPlaylists,
   type Album,
   type Artist,
   type Playlist,
+  type Song,
   COVER,
 } from '@/api/data';
 import { AlbumCard } from '@/components/AlbumCard';
@@ -34,11 +36,13 @@ import { Cover } from '@/components/Cover';
 import { FavoritesArt } from '@/components/FavoritesArt';
 import { Message } from '@/components/Message';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
+import { SongCard } from '@/components/SongCard';
 import { songsLabel, useT } from '@/i18n';
 import { greetingHours } from '@/i18n/languages';
 import { useAuthStore } from '@/store/auth';
 import { checkAutoUrlNow } from '@/store/autoUrl';
 import { useLastPlayed } from '@/store/lastPlayed';
+import { usePlayerStore } from '@/store/player';
 import { useScanProgress } from '@/store/scanProgress';
 import { useSettings, type ExploreChipKey, type HomeSectionKey } from '@/store/settings';
 import { colors, fontSize, radius, spacing } from '@/theme';
@@ -207,6 +211,72 @@ function AlbumSection({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.rowContent}
         renderItem={({ item }) => <AlbumCard album={item} />}
+      />
+    </View>
+  );
+}
+
+/** How many songs the "Most played" shelf holds, and plays. */
+const MOST_PLAYED_SONGS = 30;
+
+/**
+ * The songs played most, as songs.
+ *
+ * The shelf beside it answers the same question with records, which is the only
+ * thing a Subsonic server can sort, and reads wrong for anyone who does not
+ * listen to albums whole: a record turns up there because one of its songs is
+ * on repeat (reported by @Sikkka). This is the other half of that answer, and
+ * it is a queue rather than a place to go — tapping a song plays the shelf from
+ * it, in the order it is drawn in, which is the order of how much each was
+ * played.
+ */
+function MostPlayedSongsSection({ title }: { title: string }) {
+  const canFetch = useAuthStore((s) => !!s.auth || s.offline);
+  const playQueue = usePlayerStore((s) => s.playQueue);
+  const currentId = usePlayerStore((s) => s.queue[s.index]?.id);
+  const accent = useSettings((s) => s.accentColor);
+  // Through the same door the Songs screen uses for this order, and not
+  // through `getMostPlayedSongs`: Navidrome and Jellyfin sort songs by plays
+  // themselves, one request, and only a server that can do neither pays for
+  // the fifteen albums the answer has to be built out of (#50). That is also
+  // why this shelf is off until someone turns it on.
+  const { data, isLoading } = useQuery({
+    queryKey: ['browseSongs', 'frequent', MOST_PLAYED_SONGS],
+    queryFn: () => getSongList('frequent', MOST_PLAYED_SONGS),
+    enabled: canFetch,
+  });
+
+  if (isLoading) {
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        <AlbumCardsSkeleton horizontal />
+      </View>
+    );
+  }
+  if (!data || data.length === 0) return null;
+
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      <FlatList
+        {...listPerf}
+        horizontal
+        data={data}
+        keyExtractor={(item: Song) => item.id}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.rowContent}
+        renderItem={({ item, index }) => (
+          <SongCard
+            song={item}
+            width={150}
+            accent={accent}
+            isCurrent={item.id === currentId}
+            // The whole shelf goes into the queue, not the song on its own:
+            // what was asked for is a list of these to listen through.
+            onPress={() => void playQueue(data, index, title)}
+          />
+        )}
       />
     </View>
   );
@@ -506,12 +576,14 @@ function ScanningPanel() {
 /** Title (i18n key) and list type for the sections that use AlbumSection.
  *  «discover» and «randomArtists» are drawn by components of their own. */
 const HOME_ALBUM_CONFIG: Record<
-  Exclude<HomeSectionKey, 'randomArtists' | 'discover' | 'playlists'>,
+  Exclude<HomeSectionKey, 'randomArtists' | 'discover' | 'playlists' | 'mostPlayedSongs'>,
   { title: string; type: 'newest' | 'recent' | 'frequent' | 'random' }
 > = {
   recentlyAdded: { title: 'Recently added', type: 'newest' },
   recentlyPlayed: { title: 'Recently played', type: 'recent' },
-  mostPlayed: { title: 'Most played', type: 'frequent' },
+  // Named for what it holds now that the songs have a shelf of their own next
+  // to it, or the two would read as the same thing twice.
+  mostPlayed: { title: 'Most played albums', type: 'frequent' },
   randomAlbums: { title: 'Random albums', type: 'random' },
 };
 
@@ -704,6 +776,9 @@ export default function HomeScreen() {
               }
               if (s.key === 'playlists') {
                 return <PlaylistsSection key={s.key} title={t('Playlists')} />;
+              }
+              if (s.key === 'mostPlayedSongs') {
+                return <MostPlayedSongsSection key={s.key} title={t('Most played songs')} />;
               }
               const cfg = HOME_ALBUM_CONFIG[s.key];
               return <AlbumSection key={s.key} title={t(cfg.title)} type={cfg.type} />;

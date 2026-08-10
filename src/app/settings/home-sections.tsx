@@ -23,7 +23,8 @@ import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 const LABEL: Record<HomeSectionKey, string> = {
   recentlyAdded: 'Recently added',
   recentlyPlayed: 'Recently played',
-  mostPlayed: 'Most played',
+  mostPlayed: 'Most played albums',
+  mostPlayedSongs: 'Most played songs',
   discover: 'Discover',
   playlists: 'Playlists',
   randomAlbums: 'Random albums',
