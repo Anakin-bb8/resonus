@@ -9,6 +9,49 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.6.5] - 2026-08-10
+
+Everything the three betas above carried, and a last round on what the app
+tells the notification and the car. The one worth reading about is the cover:
+with gapless on, the track queued behind the current one starts by itself, and
+what the lock screen, the car and the watch were being told about it was
+whatever had been said about the song before. In the foreground the correction
+lands in the same breath and nobody sees it. Minimized, with an album
+advancing on its own, it is the cover of a neighbouring song, which is exactly
+how it was reported.
+
+There is also a new page in the hidden Diagnostics screen, for a report that
+has resisted three weeks of reading the code. Everything measured so far
+stopped measuring the moment the app was minimized, which is where that report
+lives.
+
+### Added
+
+- Genres can be saved, ordered and counted. A genre page now says how many
+  albums and songs it holds, offers the same actions row every album and
+  playlist has, and can be downloaded whole: it reads the genre song by song
+  before asking, so the dialog counts real songs and estimates what they weigh
+  rather than asking you to accept a number nobody knows.
+- Ordering a genre's songs and albums, where the server can do it. Subsonic
+  has no way to order either list, so this is Navidrome only, through its own
+  API, and the control is simply absent elsewhere: an order that only sorts the
+  page you happen to have loaded is not an order.
+- A "While minimized" section in Diagnostics (Settings › About, five taps on
+  the version). It measures the player's own heartbeat, which is the one clock
+  that keeps running out there, and above all how stale it was at the moment
+  you came back. Needs "Measure performance" turned on.
+
+### Fixed
+
+- The notification, the lock screen and the car no longer show the cover,
+  title and album of the track that has just ended when the player moves on to
+  the one queued behind it by itself.
+- A song put next, or added to the queue, is now warmed up in advance like the
+  rest. Preloading only ever went out when the track changed, so the one song
+  somebody had just asked for was precisely the one nobody had requested ahead
+  of time, and on a proxy that fetches from elsewhere that is the whole wait
+  this setting exists to remove. Reported by a user (#137).
+
 ## [0.6.5-beta.3] - 2026-08-10
 
 Mostly about what the app was telling the notification, the car and the lock
