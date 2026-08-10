@@ -6,7 +6,7 @@
  * album that isn't. Albums alone would only ever show half the picture.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import {
@@ -19,21 +19,33 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useShallow } from 'zustand/react/shallow';
 
-import { getAlbumsByGenre, getSongsByGenre } from '@/api/data';
+import {
+  genreAlbumSorts,
+  genreSongSorts,
+  getAlbumsByGenre,
+  getGenres,
+  getSongsByGenre,
+  type AlbumListSort,
+} from '@/api/data';
 import { type Song } from '@/api/subsonic';
 import { playShuffle } from '@/lib/playShuffle';
 import { AlbumCard } from '@/components/AlbumCard';
 import { AlbumCardsSkeleton } from '@/components/AlbumCardsSkeleton';
 import { AlbumRow } from '@/components/AlbumRow';
 import { AlbumRowsSkeleton } from '@/components/AlbumRowsSkeleton';
+import { Dialog } from '@/components/Dialog';
 import { EmptyState } from '@/components/EmptyState';
 import { Message } from '@/components/Message';
 import { SelectionBar } from '@/components/SelectionBar';
+import { SheetModal } from '@/components/SheetModal';
 import { TrackRow } from '@/components/TrackRow';
-import { useT } from '@/i18n';
+import { useDownloadMessage } from '@/hooks/useDownloadMessage';
+import { useServerSort } from '@/hooks/useServerSort';
+import { albumsLabel, songsLabel, useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
-import { useDownloads } from '@/store/downloads';
+import { groupDownloadState, useDownloads } from '@/store/downloads';
 import { usePlaylistPicker } from '@/store/playlistPicker';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
@@ -58,6 +70,10 @@ function cardWidth(columns: number): number {
  *  the same reason (a queue of thousands is unusable). */
 const PLAY_SIZE = 200;
 
+/** Page size and ceiling when reading a whole genre to download it. */
+const GATHER_PAGE = 200;
+const GATHER_CAP = 5000;
+
 export default function GenreScreen() {
   const bottomPad = useScreenBottomPadding();
   const { name } = useLocalSearchParams<{ name: string }>();
@@ -79,11 +95,45 @@ export default function GenreScreen() {
   });
   const card = cardWidth(columns);
   const [tab, setTab] = useState<'albums' | 'songs'>('albums');
+  const lang = useSettings((s) => s.language);
+  /** Opens the ⋯ menu: what is too rare or too destructive for the row. */
+  const menuRef = useRef<() => void>(() => {});
   // Without this, tapping and hearing nothing for half a second feels broken.
   const [starting, setStarting] = useState(false);
   const offline = useAuthStore((s) => s.offline);
   const downloadSongs = useDownloads((s) => s.downloadSongs);
   const addToQueue = usePlayerStore((s) => s.addToQueue);
+
+  // ── Order ────────────────────────────────────────────────────────────────
+  // The server's, always. This list arrives a page at a time, so reordering
+  // what is loaded would promise an order it cannot keep (see `useServerSort`).
+  // A server with nothing to offer shows no control rather than a broken one.
+  // Asked only with a session in hand: the data layer answers for the server
+  // that is connected, and there isn't one yet on the way in.
+  const { sort, openSort, sortSheet } = useServerSort(auth ? genreSongSorts() : []);
+  const {
+    sort: albumSort,
+    openSort: openAlbumSort,
+    sortSheet: albumSortSheet,
+  } = useServerSort<AlbumListSort>(auth ? genreAlbumSorts() : []);
+  // One slot in the toolbar, whichever list is under it.
+  const openListSort = tab === 'albums' ? openAlbumSort : openSort;
+
+  // ── Download the genre ───────────────────────────────────────────────────
+  // With `songIds` empty on purpose, like the artist's discography: this screen
+  // holds a window into the genre, not all of it, so it cannot say "downloaded"
+  // by comparing against disk. The button is two-valued, 'none' and 'active'.
+  const download = useDownloads(useShallow((s) => groupDownloadState(s, `genre:${genre}`, [])));
+  const downloadGenre = useDownloads((s) => s.downloadGenre);
+  const cancelDownload = useDownloads((s) => s.cancelDownload);
+  const deleteSongs = useDownloads((s) => s.deleteSongs);
+  const [confirmDownload, setConfirmDownload] = useState(false);
+  const [confirmStop, setConfirmStop] = useState(false);
+  /** While reading the genre's songs off the server, before downloading any. */
+  const [gathering, setGathering] = useState(false);
+  /** Songs already gathered, waiting for the dialog to be answered. */
+  const [pending, setPending] = useState<Song[] | null>(null);
+  const downloadMsg = useDownloadMessage(pending ?? []);
   // The picker is mounted once in the root layout; screens just hand it songs.
   const openPlaylistPicker = usePlaylistPicker((s) => s.open);
 
@@ -114,14 +164,84 @@ export default function GenreScreen() {
 
   const href = `/genre/${encodeURIComponent(genre)}`;
 
+  /**
+   * Every song of the genre, page by page until the server runs out.
+   *
+   * The confirmation dialog counts real songs and estimates what they weigh,
+   * which is the only thing that makes a download this size a decision rather
+   * than a leap: a genre is not a playlist somebody assembled, and "Rock" can
+   * be most of a library. Reading it costs a handful of requests, which is why
+   * it happens on the press and not on the way in.
+   *
+   * The cap is there because this has to end: a library where one genre runs
+   * past it is one where the answer to "download all of Rock" was never going
+   * to be yes, and the dialog still says what it is about to save.
+   */
+  async function gatherGenreSongs(): Promise<Song[] | null> {
+    setGathering(true);
+    try {
+      const all: Song[] = [];
+      for (;;) {
+        // Always the server's own order, whatever is chosen on screen. A
+        // download is a set and has none, and paging through a random order
+        // would hand back the same song twice and miss others: what is being
+        // walked here has to hold still while it is walked.
+        const page = await getSongsByGenre(genre, GATHER_PAGE, all.length);
+        all.push(...page);
+        if (page.length < GATHER_PAGE || all.length >= GATHER_CAP) break;
+      }
+      return all;
+    } catch {
+      toast(t("Couldn't load songs."));
+      return null;
+    } finally {
+      setGathering(false);
+    }
+  }
+
+  async function onDownloadPress() {
+    if (gathering) return;
+    if (download.status === 'active') {
+      setConfirmStop(true);
+      return;
+    }
+    const gathered = await gatherGenreSongs();
+    if (!gathered || gathered.length === 0) {
+      if (gathered) toast(t('No songs in this genre'));
+      return;
+    }
+    setPending(gathered);
+    setConfirmDownload(true);
+  }
+
+  async function addGenreToPlaylist() {
+    const gathered = await gatherGenreSongs();
+    if (gathered && gathered.length > 0) openPlaylistPicker(gathered);
+  }
+
+  /** Removes every downloaded song of the genre, from the same reading of it
+   *  the download uses. */
+  async function deleteGenreDownloads() {
+    const gathered = await gatherGenreSongs();
+    if (!gathered) return;
+    const files = useDownloads.getState().files;
+    const ids = gathered.filter((s) => files[s.id]).map((s) => s.id);
+    if (ids.length === 0) {
+      toast(t('Nothing here is downloaded'));
+      return;
+    }
+    await deleteSongs(ids);
+    toast(t('{n} songs deleted', { n: ids.length }));
+  }
+
   /** Play and shuffle draw from the SAME pool (the genre's songs), one in the
-   *  server's order and the other at random, so both mean the same thing in
+   *  order on screen and the other at random, so both mean the same thing in
    *  either tab and neither has to expand album by album. */
   async function onPlay() {
     if (starting) return;
     setStarting(true);
     try {
-      const songs = await getSongsByGenre(genre, PLAY_SIZE, 0);
+      const songs = await getSongsByGenre(genre, PLAY_SIZE, 0, sort);
       if (songs.length === 0) {
         toast(t('Nothing to shuffle yet'));
         return;
@@ -145,16 +265,18 @@ export default function GenreScreen() {
   }
 
   const albumsQuery = useInfiniteQuery({
-    queryKey: ['genreAlbums', genre],
-    queryFn: ({ pageParam }) => getAlbumsByGenre(genre, PAGE, pageParam),
+    queryKey: ['genreAlbums', genre, albumSort],
+    queryFn: ({ pageParam }) => getAlbumsByGenre(genre, PAGE, pageParam, albumSort),
     initialPageParam: 0,
     getNextPageParam: (last, pages) => (last.length === PAGE ? pages.length * PAGE : undefined),
     enabled: !!auth && !!genre && tab === 'albums',
   });
 
   const songsQuery = useInfiniteQuery({
-    queryKey: ['genreSongs', genre],
-    queryFn: ({ pageParam }) => getSongsByGenre(genre, SONG_PAGE, pageParam),
+    // The order is part of what is being asked for, so changing it starts the
+    // paging again instead of appending a differently sorted page to the list.
+    queryKey: ['genreSongs', genre, sort],
+    queryFn: ({ pageParam }) => getSongsByGenre(genre, SONG_PAGE, pageParam, sort),
     initialPageParam: 0,
     getNextPageParam: (last, pages) =>
       last.length === SONG_PAGE ? pages.length * SONG_PAGE : undefined,
@@ -164,6 +286,24 @@ export default function GenreScreen() {
   const albums = albumsQuery.data?.pages.flat() ?? [];
   const songs = songsQuery.data?.pages.flat() ?? [];
   const query = tab === 'albums' ? albumsQuery : songsQuery;
+
+  // How big this genre is, said once at the top. It comes from the same list
+  // the genre cards are drawn from, so on the way in from there it is already
+  // in hand; arriving from a song's genre chip costs one request, which is the
+  // whole list of genres and counts.
+  const { data: genres } = useQuery({
+    queryKey: ['genres'],
+    queryFn: getGenres,
+    enabled: !!auth,
+  });
+  const counts = genres?.find((g) => g.value === genre);
+  const meta = [
+    t('Genre'),
+    counts?.albumCount ? albumsLabel(counts.albumCount, lang) : null,
+    counts?.songCount ? songsLabel(counts.songCount, lang) : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -202,27 +342,96 @@ export default function GenreScreen() {
             />
           </Pressable>
         ) : null}
-        {/* Only for the albums: the song list is a list, there's no other way
-            to draw it. */}
-        {!selecting && tab === 'albums' ? (
-          <Pressable
-            hitSlop={10}
-            accessibilityRole="button"
-            accessibilityLabel={t('View')}
-            onPress={openGridMenu}
-          >
-            {/* The icon shows what you are looking at, not what one more tap
-                would give you. It used to be the second, which is how a button
-                that flips between two states reads; it opens a menu now, and a
-                menu is opened from a thing that says where you are. */}
-            <Ionicons name={grid ? 'grid-outline' : 'list'} size={20} color={colors.textSecondary} />
-          </Pressable>
-        ) : null}
       </View>
 
-      {/* What you're looking at on the left, what it does on the right. The
-          play button used to be a bare icon in the corner, which said nothing
-          about what it would play. */}
+      {/* What the genre is, in the terms the rest of the app uses for a list.
+          Without it the screen was a title and nothing else: no way to tell two
+          albums from four hundred, which is the first thing worth knowing here
+          and the thing that makes "download this" a decision instead of a
+          leap. */}
+      {!selecting && meta ? <Text style={styles.meta}>{meta}</Text> : null}
+
+      {/* The same row an album and a playlist have, in the same order: what you
+          do TO this thing on the left, what starts it on the right. It is the
+          app's own arrangement and the reason to keep it here is that somebody
+          who has learnt one list screen has learnt this one. Saving a genre had
+          ended up hidden inside the ⋯ for a while, which is nowhere near where
+          anyone would look for it. */}
+      {!selecting ? (
+        <View style={styles.actions}>
+          <View style={styles.actionsLeft}>
+            {!offline ? (
+              <Pressable
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel={t('Download')}
+                onPress={() => void onDownloadPress()}
+                style={styles.downloadWrap}
+              >
+                {gathering ? (
+                  <ActivityIndicator size="small" color={colors.textSecondary} />
+                ) : download.status === 'active' ? (
+                  <>
+                    <ActivityIndicator size="small" color={colors.accent} />
+                    <Text style={styles.downloadProgress}>
+                      {Math.round(download.progress * 100)}%
+                    </Text>
+                  </>
+                ) : (
+                  <Ionicons
+                    name="arrow-down-circle-outline"
+                    size={26}
+                    color={colors.textSecondary}
+                  />
+                )}
+              </Pressable>
+            ) : null}
+            {/* Sorts whichever list the tab is showing, which is why it sits
+                here and not next to the tabs: it is an action on this genre,
+                same as the two beside it. */}
+            {openListSort ? (
+              <Pressable
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel={t('Sort')}
+                onPress={openListSort}
+              >
+                <Ionicons name="swap-vertical" size={24} color={colors.textSecondary} />
+              </Pressable>
+            ) : null}
+            <Pressable
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={t('More options')}
+              onPress={() => menuRef.current()}
+            >
+              <Ionicons name="ellipsis-horizontal" size={26} color={colors.textSecondary} />
+            </Pressable>
+          </View>
+          <View style={styles.playRow}>
+            <Pressable hitSlop={10} onPress={onShuffle} accessibilityLabel={t('Shuffle')}>
+              <Ionicons name="shuffle" size={24} color={colors.textSecondary} />
+            </Pressable>
+            <Pressable
+              style={styles.playButton}
+              onPress={onPlay}
+              accessibilityRole="button"
+              accessibilityLabel={t('Play')}
+            >
+              {starting ? (
+                <ActivityIndicator color="#000" />
+              ) : (
+                <Ionicons name="play" size={22} color="#000" />
+              )}
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
+
+      {/* Which of the two lists you are looking at, and, for the albums, how
+          they are drawn. Right up against the list because that is what both
+          are about; the row above is about the genre. Right-aligned so the view
+          control appearing and disappearing with the tab moves nothing. */}
       <View style={styles.toolbar}>
         <View style={styles.tabs}>
           {(['albums', 'songs'] as const).map((key) => (
@@ -240,23 +449,20 @@ export default function GenreScreen() {
             </Pressable>
           ))}
         </View>
-        <View style={styles.playRow}>
-          <Pressable hitSlop={10} onPress={onShuffle} accessibilityLabel={t('Shuffle')}>
-            <Ionicons name="shuffle" size={24} color={colors.textSecondary} />
-          </Pressable>
+        {tab === 'albums' ? (
           <Pressable
-            style={styles.playButton}
-            onPress={onPlay}
+            hitSlop={10}
             accessibilityRole="button"
-            accessibilityLabel={t('Play')}
+            accessibilityLabel={t('View')}
+            onPress={openGridMenu}
           >
-            {starting ? (
-              <ActivityIndicator color="#000" />
-            ) : (
-              <Ionicons name="play" size={22} color="#000" />
-            )}
+            {/* The icon shows what you are looking at, not what one more tap
+                would give you. It used to be the second, which is how a button
+                that flips between two states reads; it opens a menu now, and a
+                menu is opened from a thing that says where you are. */}
+            <Ionicons name={grid ? 'grid-outline' : 'list'} size={22} color={colors.textSecondary} />
           </Pressable>
-        </View>
+        ) : null}
       </View>
 
       {query.isLoading ? (
@@ -392,6 +598,67 @@ export default function GenreScreen() {
         />
       ) : null}
       {gridSheet}
+      {sortSheet}
+      {albumSortSheet}
+
+      <SheetModal openRef={menuRef}>
+        {(close) => (
+          <>
+            <Pressable
+              style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+              onPress={() => {
+                close();
+                void addGenreToPlaylist();
+              }}
+            >
+              <Ionicons name="add-circle-outline" size={22} color={colors.text} />
+              <Text style={styles.actionText}>{t('Add to a playlist')}</Text>
+            </Pressable>
+            {/* Shown whatever is on disk: this screen holds a window into the
+                genre, so it cannot know whether any of it is downloaded without
+                reading the whole thing, and reading it to decide whether to draw
+                a row is a handful of requests for nothing. It says so when
+                pressed instead. */}
+            <Pressable
+              style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+              onPress={() => {
+                close();
+                void deleteGenreDownloads();
+              }}
+            >
+              <Ionicons name="trash-outline" size={22} color={colors.danger} />
+              <Text style={[styles.actionText, { color: colors.danger }]}>
+                {t('Delete downloads')}
+              </Text>
+            </Pressable>
+          </>
+        )}
+      </SheetModal>
+
+      <Dialog
+        visible={confirmDownload}
+        title={t('Download “{name}”?', { name: genre })}
+        message={downloadMsg.message}
+        confirmLabel={t('Download')}
+        onCancel={() => setConfirmDownload(false)}
+        onConfirm={() => {
+          setConfirmDownload(false);
+          const songs = pending;
+          if (songs) void downloadGenre(genre, songs);
+        }}
+      />
+      <Dialog
+        visible={confirmStop}
+        title={t('Stop download?')}
+        message={t('Songs already downloaded will be kept.')}
+        confirmLabel={t('Stop')}
+        destructive
+        onCancel={() => setConfirmStop(false)}
+        onConfirm={() => {
+          setConfirmStop(false);
+          cancelDownload(`genre:${genre}`);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -406,6 +673,21 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   title: { flex: 1, color: colors.text, fontSize: fontSize.lg, fontWeight: '800' },
+  // Under the title and to the same margin, like the meta line of an album or
+  // a playlist.
+  meta: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+  },
+  action: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  actionText: { color: colors.text, fontSize: fontSize.md },
   toolbar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -434,6 +716,24 @@ const styles = StyleSheet.create({
   },
   chipTextActive: { color: '#000' },
   playRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  // The same row the album and playlist headers have, to the same margins.
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+  },
+  actionsLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
+  // The spinner and the percentage sit side by side where the icon was, so the
+  // row doesn't jump when a download starts.
+  downloadWrap: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  downloadProgress: {
+    color: colors.accent,
+    fontSize: fontSize.xs,
+    fontWeight: '600',
+    minWidth: 32,
+  },
   playButton: {
     width: 40,
     height: 40,

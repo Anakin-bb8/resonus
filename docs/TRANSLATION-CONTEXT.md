@@ -25,7 +25,6 @@ you are actually typing into, which is easier than reading it here.
 | `Find in playlist` | Placeholder of the search box hidden above a tracklist, for finding a song within it |
 | `More from {artist}` | Heading under an album: their other records. `{artist}` is the name |
 | `Show all` | Opens the full list of what the row is showing a few of |
-| `Sort` | Read out by the screen reader for the button that opens the sort options. A verb |
 | `View cover` | The same as `View image`, for album and playlist artwork |
 
 ## Anywhere in the app
@@ -139,7 +138,6 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `A-Z` | Sort option: the order of a list |
 | `Find an album` | The search box's placeholder on that screen |
 | `No albums yet` | Empty state heading |
 | `Nothing played yet` | Empty state: this phone has not played anything yet |
@@ -151,7 +149,6 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `A-Z` | Sort option: the order of a list |
 | `Artists` | A heading over a list of them, never a count |
 | `Couldn't load artists.` | Error on the screen, with a Retry button |
 | `Filter artists` | Search box that narrows the list as you type, rather than a filter you set |
@@ -170,7 +167,6 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `A-Z` | Sort option: the order of a list |
 | `Couldn't load songs.` | Error on the screen, with a Retry button |
 | `Default` | Sorting pill: what you get when nothing is sorted, which is the order the server keeps its songs in. Not alphabetical, and not Resonus deciding |
 | `Find a song` | The search box's placeholder on that screen |
@@ -197,8 +193,6 @@ you are actually typing into, which is easier than reading it here.
 | `Find in favorites` | Placeholder of the search box that narrows the favourites already shown |
 | `Find in playlist` | Placeholder of the search box hidden above a tracklist, for finding a song within it |
 | `No favorites yet` | Empty state heading |
-| `Sort` | Read out by the screen reader for the button that opens the sort options. A verb |
-| `Sort by` | Heading over the sort options |
 | `Tap the heart on songs to see them here.` | The line under an empty state, saying how to fill it |
 | `View cover` | The same as `View image`, for album and playlist artwork |
 
@@ -217,6 +211,8 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `Couldn't load songs.` | Error on the screen, with a Retry button |
+| `Default` | Sorting pill: what you get when nothing is sorted, which is the order the server keeps its songs in. Not alphabetical, and not Resonus deciding |
+| `Genre` | Label of a field in the song information sheet |
 | `No albums in this genre` | Empty state heading |
 | `No songs in this genre` | Empty state heading |
 | `Nothing to shuffle yet` | Empty state: there is nothing here to play in random order |
@@ -284,7 +280,6 @@ you are actually typing into, which is easier than reading it here.
 | `Playlist created` | The toast after making one |
 | `Recents` | Library section: recently opened items |
 | `Search` | The search tab, and the action of searching |
-| `Sort by` | Heading over the sort options |
 | `Star albums to see them here.` | The line under an empty state, saying how to fill it |
 | `Star artists to see them here.` | The line under an empty state, saying how to fill it |
 
@@ -409,8 +404,6 @@ you are actually typing into, which is easier than reading it here.
 | `Reorder` | Enter drag-to-reorder mode |
 | `Save` | The confirm button of an edit sheet. A verb |
 | `Share` | Make a link on the server that others can open. Getting the file itself out is `Export` |
-| `Sort` | Read out by the screen reader for the button that opens the sort options. A verb |
-| `Sort by` | Heading over the sort options |
 | `This playlist is empty` | Empty state heading |
 | `Turn on` | The confirm button of that question |
 | `Turn on auto-download?` | Asks whether new songs added to this playlist should download by themselves from now on |
@@ -904,6 +897,7 @@ you are actually typing into, which is easier than reading it here.
 | `{songs} need about {size}, but only {free} is free. The download may stop partway.` | The same line when the phone is nearly full |
 | `{songs} will be saved to this device (about {size}).` | The same line when the size is known. `{size}` is like "340 MB" |
 | `{songs} will be saved to this device.` | The line under that title. `{songs}` is already worded and inflected, "12 songs" |
+| `A-Z` | Sort option: the order of a list |
 | `Add anyway` | The confirm button of that warning: put it in a second time |
 | `Add only the new ones` | The other button of that warning, when some are already in the playlist and some are not: leave the ones that are and add the rest |
 | `Add to a playlist` | Menu action: put this song, album or selection into a playlist |
@@ -964,6 +958,8 @@ you are actually typing into, which is easier than reading it here.
 | `Shuffle` | Play in random order |
 | `Song downloaded` | Toast: one song finished |
 | `Songs already downloaded will be kept.` | The line under that title: stopping does not undo what already arrived |
+| `Sort` | Read out by the screen reader for the button that opens the sort options. A verb |
+| `Sort by` | Heading over the sort options |
 | `Stop` | Stop a download that is running. Not stop playback |
 | `Stop download?` | Dialog title: stop a download that is running |
 | `This song can't be cast` | Toast: the speaker or TV will not take this file |
