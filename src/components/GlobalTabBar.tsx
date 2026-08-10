@@ -25,7 +25,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTabBarShown } from '@/hooks/useTabBar';
 import { useT } from '@/i18n';
-import { rememberTab, tabOrigin, TABS } from '@/lib/tabOrigin';
+import { rememberTab, reselectTab, tabOrigin, TABS } from '@/lib/tabOrigin';
 import { useSettings } from '@/store/settings';
 import { colors, TAB_BAR_HEIGHT } from '@/theme';
 
@@ -81,7 +81,13 @@ export function GlobalTabBar() {
             accessibilityRole="button"
             accessibilityState={{ selected: here }}
             accessibilityLabel={t(tab.label)}
-            onPress={() => go(tab.href)}
+            onPress={() => {
+              // Already here: this is the second press, which is a screen's to
+              // answer (Search puts the cursor in its box). Still navigates,
+              // since there may be a stack on top to drop.
+              if (here) reselectTab(tab.segment);
+              go(tab.href);
+            }}
           >
             <View style={styles.iconBox}>
               <Ionicons

@@ -41,3 +41,34 @@ export function tabOriginHref(): string {
 export function tabOriginLabel(): string {
   return TABS.find((tb) => tb.segment === origin)?.label ?? 'Home';
 }
+
+// ── Tapping the tab you are already on ──────────────────────────────────────
+// The tabs navigator raises `tabPress` for this, and Search listens for it to
+// put the cursor in its box. But with "Always show the navigation bar" on the
+// navigator draws no bar at all: the one on screen is `GlobalTabBar`, which
+// moves by asking the router, and the router has no idea a tab was re-pressed.
+// So the event went missing exactly for the people who turned that setting on,
+// and going to Search from Search quietly did nothing.
+//
+// Said here rather than through the navigator because both bars can say it and
+// only this module is above the two of them.
+
+const reselectListeners = new Map<TabSegment, Set<() => void>>();
+
+/** The tab already on screen was pressed again. */
+export function reselectTab(segment: TabSegment): void {
+  for (const fn of reselectListeners.get(segment) ?? []) fn();
+}
+
+/** Listens for that, and hands back the way to stop. */
+export function onTabReselect(segment: TabSegment, fn: () => void): () => void {
+  let set = reselectListeners.get(segment);
+  if (!set) {
+    set = new Set();
+    reselectListeners.set(segment, set);
+  }
+  set.add(fn);
+  return () => {
+    set.delete(fn);
+  };
+}

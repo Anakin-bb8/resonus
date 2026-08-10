@@ -30,6 +30,7 @@ import { TrackRow } from '@/components/TrackRow';
 import { useDebounce } from '@/hooks/useDebounce';
 import { songsLabel, useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
+import { onTabReselect } from '@/lib/tabOrigin';
 import { bump } from '@/lib/perfLog';
 import { useAuthStore } from '@/store/auth';
 import { useMediaMenu } from '@/store/mediaMenu';
@@ -87,9 +88,17 @@ export default function SearchScreen() {
   }>();
   const inputRef = useRef<TextInput>(null);
   useEffect(() => {
-    return navigation.addListener('tabPress', () => {
+    const focusBox = () => {
       if (navigation.isFocused()) inputRef.current?.focus();
-    });
+    };
+    // Two bars can raise this and only one of them is the navigator's: see
+    // `onTabReselect`.
+    const stopTabPress = navigation.addListener('tabPress', focusBox);
+    const stopReselect = onTabReselect('search', focusBox);
+    return () => {
+      stopTabPress();
+      stopReselect();
+    };
   }, [navigation]);
 
   const { data, isFetching, isError, refetch } = useQuery({
