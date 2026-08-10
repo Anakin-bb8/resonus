@@ -33,6 +33,7 @@ import {
   type Song,
   type SongListSort,
   type SongLyrics,
+  type SortDirection,
   type StarType,
   type Starred,
   type SubsonicAuth,
@@ -378,6 +379,8 @@ export async function getAlbumsByGenre(
   size = 30,
   offset = 0,
   _musicFolderId?: string,
+  sort: AlbumListType = 'alphabeticalByName',
+  dir?: SortDirection,
 ): Promise<Album[]> {
   const res = await request<JfItems>(auth, `/Users/${auth.jfUserId}/Items`, {
     IncludeItemTypes: 'MusicAlbum',
@@ -385,8 +388,9 @@ export async function getAlbumsByGenre(
     Genres: genre,
     Limit: size,
     StartIndex: offset,
-    SortBy: 'SortName',
     Fields: ALBUM_FIELDS,
+    ...ALBUM_SORT[sort],
+    ...(dir ? { SortOrder: dir === 'asc' ? 'Ascending' : 'Descending' } : {}),
   });
   return (res.Items ?? []).map(toAlbum);
 }
@@ -437,7 +441,10 @@ export async function getSongsByGenre(
   offset = 0,
   _musicFolderId?: string,
   sort: SongListSort = 'server',
+  dir?: SortDirection,
 ): Promise<Song[]> {
+  const base =
+    sort === 'server' ? { SortBy: 'Album,ParentIndexNumber,IndexNumber' } : SONG_SORT[sort];
   const res = await request<JfItems>(auth, `/Users/${auth.jfUserId}/Items`, {
     IncludeItemTypes: 'Audio',
     Recursive: true,
@@ -445,9 +452,9 @@ export async function getSongsByGenre(
     Limit: count,
     StartIndex: offset,
     Fields: SONG_FIELDS,
-    ...(sort === 'server'
-      ? { SortBy: 'Album,ParentIndexNumber,IndexNumber' }
-      : SONG_SORT[sort]),
+    ...base,
+    // Whatever the order reads as by default, the menu can turn it round.
+    ...(dir ? { SortOrder: dir === 'asc' ? 'Ascending' : 'Descending' } : {}),
   });
   return (res.Items ?? []).map(toSong);
 }

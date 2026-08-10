@@ -8,7 +8,7 @@
 // Not the global `fetch`: it never resolves in the background. See the note
 // in `src/api/subsonic.ts`.
 import { fetch } from 'expo/fetch';
-import { type Album, type Song, type SubsonicAuth } from './subsonic';
+import { type Album, type Song, type SortDirection, type SubsonicAuth } from './subsonic';
 import { assertCanRequest } from './netGate';
 
 /** Typed error to provide useful messages in the UI. */
@@ -158,6 +158,25 @@ export type NdSongSort =
   | 'play_count'
   | 'random';
 
+/**
+ * Which way round an order is meant to be read, before anybody says otherwise.
+ *
+ * A-Z for the ones that read as a list, newest first for the ones about time.
+ * `album` is the first kind: it expands, server side, to the album's sort name
+ * and then disc and track, so ascending is the record played in order. Only a
+ * default: the menu can flip any of them.
+ */
+export function naturalSongDir(sort: NdSongSort): SortDirection {
+  return sort === 'recently_added' || sort === 'play_date' || sort === 'play_count'
+    ? 'desc'
+    : 'asc';
+}
+
+/** The same question for albums; only the year and the arrival read backwards. */
+export function naturalAlbumDir(sort: NdAlbumSort): SortDirection {
+  return sort === 'recently_added' || sort === 'max_year' ? 'desc' : 'asc';
+}
+
 /** The fields of a media file this app has any use for. */
 interface NdSong {
   id: string;
@@ -268,14 +287,9 @@ export async function listSongs(
   offset = 0,
   libraryIds?: string[],
   genreId?: string,
+  dir?: SortDirection,
 ): Promise<Song[]> {
-  // A-Z for the orders that read as a list, newest first for the ones about
-  // time. `album` is the first kind: it expands, server side, to the album's
-  // sort name and then disc and track, so ascending is the record played in
-  // order.
-  const order = sort === 'recently_added' || sort === 'play_date' || sort === 'play_count'
-    ? 'DESC'
-    : 'ASC';
+  const order = (dir ?? naturalSongDir(sort)) === 'asc' ? 'ASC' : 'DESC';
   const q = new URLSearchParams({
     _sort: sort,
     _order: order,
@@ -358,9 +372,9 @@ export async function listAlbums(
   offset = 0,
   libraryIds?: string[],
   genreId?: string,
+  dir?: SortDirection,
 ): Promise<Album[]> {
-  // Newest first for the orders that are about time; A-Z for the rest.
-  const order = sort === 'recently_added' || sort === 'max_year' ? 'DESC' : 'ASC';
+  const order = (dir ?? naturalAlbumDir(sort)) === 'asc' ? 'ASC' : 'DESC';
   const q = new URLSearchParams({
     _sort: sort,
     _order: order,

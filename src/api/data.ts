@@ -334,9 +334,10 @@ export function getAlbumsByGenre(
   size?: number,
   offset?: number,
   sort: AlbumListSort = 'server',
+  dir?: Subsonic.SortDirection,
 ): Promise<Subsonic.Album[]> {
   const a = auth();
-  if (sort !== 'server' && canListNative(a)) {
+  if ((sort !== 'server' || dir) && canListNative(a)) {
     return ndGenreMap(a)
       .then((byName) => {
         const id = byName.get(genre.toLowerCase());
@@ -348,6 +349,7 @@ export function getAlbumsByGenre(
           offset ?? 0,
           enabledFolderIds(a),
           id,
+          dir,
         );
       })
       .catch(() => {
@@ -602,6 +604,19 @@ function ndGenreMap(a: Subsonic.SubsonicAuth): Promise<Map<string, string>> {
  * rather than by whatever the server would have said on its own, so the screen
  * names it for that.
  */
+/**
+ * Which way round each of those reads before anybody says otherwise. The
+ * server's own idea of each one: A-Z for the ones that read as a list, newest
+ * or most first for the ones about time and counting.
+ */
+export function genreSongDir(sort: Subsonic.SongListSort): Subsonic.SortDirection {
+  return sort === 'added' || sort === 'recent' || sort === 'frequent' ? 'desc' : 'asc';
+}
+
+export function genreAlbumDir(sort: AlbumListSort): Subsonic.SortDirection {
+  return sort === 'added' || sort === 'year' ? 'desc' : 'asc';
+}
+
 export function genreSongSorts(): Subsonic.SongListSort[] {
   if (isOffline()) return [];
   const a = auth();
@@ -635,6 +650,7 @@ export function getSongsByGenre(
   count = 50,
   offset = 0,
   sort: Subsonic.SongListSort = 'server',
+  dir?: Subsonic.SortDirection,
 ): Promise<Subsonic.Song[]> {
   const a = auth();
   if (canListNative(a)) {
@@ -645,17 +661,17 @@ export function getSongsByGenre(
         // guessing would list the whole library under one genre's heading.
         if (!id) throw new Error('unknown genre');
         const nd = sort === 'server' ? ND_GENRE_DEFAULT : ND_SORT[sort];
-        return Navidrome.listSongs(a, nd, count, offset, enabledFolderIds(a), id);
+        return Navidrome.listSongs(a, nd, count, offset, enabledFolderIds(a), id, dir);
       })
       .catch(() => {
         // Counted like the library listing's own fallback: a server where this
         // quietly fails looks exactly like one that never offered the orders,
         // except it offered them.
         bump('genre songs · native failed');
-        return subsonicGenreSongs(a, genre, count, offset);
+        return subsonicGenreSongs(a, genre, count, offset, sort, dir);
       });
   }
-  return subsonicGenreSongs(a, genre, count, offset, sort);
+  return subsonicGenreSongs(a, genre, count, offset, sort, dir);
 }
 
 function subsonicGenreSongs(
@@ -667,14 +683,15 @@ function subsonicGenreSongs(
   // that can order a genre. A Subsonic server ignores it, which is why the
   // screen is never offered the choice there.
   sort: Subsonic.SongListSort = 'server',
+  dir?: Subsonic.SortDirection,
 ): Promise<Subsonic.Song[]> {
   const ids = enabledFolderIds(a);
-  if (!ids) return Subsonic.getSongsByGenre(a, genre, count, offset, undefined, sort);
+  if (!ids) return Subsonic.getSongsByGenre(a, genre, count, offset, undefined, sort, dir);
   if (ids.length === 1) {
-    return Subsonic.getSongsByGenre(a, genre, count, offset, ids[0], sort);
+    return Subsonic.getSongsByGenre(a, genre, count, offset, ids[0], sort, dir);
   }
   return Promise.all(
-    ids.map((id) => Subsonic.getSongsByGenre(a, genre, count, offset, id, sort)),
+    ids.map((id) => Subsonic.getSongsByGenre(a, genre, count, offset, id, sort, dir)),
   ).then((lists) => dedupeById(lists.flat()).slice(0, count));
 }
 

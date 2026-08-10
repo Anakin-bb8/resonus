@@ -14,14 +14,10 @@
  * server is connected, and an empty answer means the screen shows no control
  * at all rather than one that promises an order nobody can deliver.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { memo, type ReactNode, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { type ReactNode, useRef, useState } from 'react';
 
-import { type SongListSort } from '@/api/subsonic';
-import { SheetModal } from '@/components/SheetModal';
-import { useT } from '@/i18n';
-import { colors, fontSize, spacing } from '@/theme';
+import { type SongListSort, type SortDirection } from '@/api/subsonic';
+import { SortSheet } from '@/components/SortSheet';
 
 /**
  * Same words the library's song browser uses, since it is the same question.
@@ -41,7 +37,8 @@ const SORT_LABEL: Record<string, string> = {
 interface SortResult<T> {
   /** The chosen order, to put in the request and in the query key. */
   sort: T;
-  setSort: (next: T) => void;
+  /** And which way round, which goes into the request just the same. */
+  dir: SortDirection;
   /** Opens the menu. Undefined when there is nothing to choose between. */
   openSort: (() => void) | undefined;
   /** The menu, to render in the tree. */
@@ -49,107 +46,58 @@ interface SortResult<T> {
 }
 
 /**
- * In its own component, like the other sort sheet: opening or closing it then
- * re-renders the modal instead of the screen and the long list inside it.
- */
-const ServerSortSheet = memo(function ServerSortSheet({
-  sorts,
-  labels,
-  sort,
-  onPick,
-  openRef,
-}: {
-  // Plain strings here on purpose: `memo` erases a generic, and the union is
-  // the caller's business anyway. The hook below puts it back on.
-  sorts: string[];
-  labels: Record<string, string>;
-  sort: string;
-  onPick: (next: string) => void;
-  openRef: React.MutableRefObject<() => void>;
-}) {
-  const t = useT();
-  return (
-    <SheetModal openRef={openRef}>
-      {(close) => (
-        <>
-          <Text style={styles.sheetTitle}>{t('Sort by')}</Text>
-          {sorts.map((key) => {
-            const active = key === sort;
-            return (
-              <Pressable
-                key={key}
-                style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
-                onPress={() => {
-                  onPick(key);
-                  close();
-                }}
-              >
-                <Text style={[styles.actionText, active && { color: colors.accent }]}>
-                  {t(labels[key] ?? key)}
-                </Text>
-                {active ? (
-                  <Ionicons
-                    name="checkmark"
-                    size={20}
-                    color={colors.accent}
-                    style={{ marginLeft: 'auto' }}
-                  />
-                ) : null}
-              </Pressable>
-            );
-          })}
-        </>
-      )}
-    </SheetModal>
-  );
-});
-
-/**
  * `sorts` is what the server offers, in the order it should be shown; the first
  * is what the screen opens on. One option, or none, is not a choice, and then
  * there is no menu to open.
+ *
+ * The menu itself is the one the playlists use, the same component: where the
+ * answer goes is this hook's business, what it looks like is not.
  */
 export function useServerSort<T extends string = SongListSort>(
   sorts: T[],
   labels: Partial<Record<T, string>> = {},
+  /**
+   * Which way round each order reads before anybody says otherwise. Without it
+   * every one of them would open ascending, and "recently added" oldest first
+   * is not an order anybody wants: what the server means by each is the right
+   * place to start.
+   */
+  naturalDir: (sort: T) => SortDirection = () => 'asc',
 ): SortResult<T> {
   const fallback = (sorts[0] ?? 'server') as T;
-  const [sort, setSort] = useState<T>(fallback);
+  const [pref, setPref] = useState<{ sort: T; dir: SortDirection }>({
+    sort: fallback,
+    dir: naturalDir(fallback),
+  });
   const openRef = useRef<() => void>(() => {});
   // Not persisted, and neither is the library's song browser: an order picked
   // inside one genre is about that visit, and coming back to a screen sorted by
   // something chosen days ago is the kind of surprise nobody asked for.
   if (sorts.length < 2) {
-    return { sort: fallback, setSort, openSort: undefined, sortSheet: null };
+    return { sort: fallback, dir: naturalDir(fallback), openSort: undefined, sortSheet: null };
   }
+  const text = { ...SORT_LABEL, ...labels } as Record<string, string>;
   return {
-    sort,
-    setSort,
+    sort: pref.sort,
+    dir: pref.dir,
     openSort: () => openRef.current(),
     sortSheet: (
-      <ServerSortSheet
-        sorts={sorts}
-        labels={{ ...SORT_LABEL, ...labels }}
-        sort={sort}
-        onPick={(next) => setSort(next as T)}
+      <SortSheet
+        options={sorts.map((key) => ({ key, label: text[key] ?? key }))}
+        field={pref.sort}
+        dir={pref.dir}
+        onPick={(next, dir) =>
+          setPref((cur) =>
+            // A different order arrives the way it is meant to be read. The
+            // direction is only carried over when the direction is what was
+            // picked.
+            next === cur.sort
+              ? { sort: cur.sort, dir }
+              : { sort: next as T, dir: naturalDir(next as T) },
+          )
+        }
         openRef={openRef}
       />
     ),
   };
 }
-
-const styles = StyleSheet.create({
-  sheetTitle: {
-    color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    fontWeight: '700',
-    marginBottom: spacing.sm,
-  },
-  action: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  actionText: { color: colors.text, fontSize: fontSize.md },
-});

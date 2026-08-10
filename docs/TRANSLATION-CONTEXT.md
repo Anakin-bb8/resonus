@@ -210,8 +210,11 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
+| `Ascending` | Sort option: the order of a list |
 | `Couldn't load songs.` | Error on the screen, with a Retry button |
 | `Default` | Sorting pill: what you get when nothing is sorted, which is the order the server keeps its songs in. Not alphabetical, and not Resonus deciding |
+| `Descending` | Sort option: the order of a list |
+| `Direction` | Sort sheet: the ascending vs descending toggle. Not a compass direction |
 | `Genre` | Label of a field in the song information sheet |
 | `No albums in this genre` | Empty state heading |
 | `No songs in this genre` | Empty state heading |

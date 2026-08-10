@@ -527,6 +527,10 @@ export async function ping(auth: SubsonicAuth): Promise<void> {
  *  work: a miss costs one comparison that was going to happen anyway. */
 const lastVersionSeen = new Map<string, string>();
 
+/** Which way round an order is read. It goes into the request, so it lives
+ *  here with the rest of what a request can say. */
+export type SortDirection = 'asc' | 'desc';
+
 export type AlbumListType =
   | 'newest'
   | 'recent'

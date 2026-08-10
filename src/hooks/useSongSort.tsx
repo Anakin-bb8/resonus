@@ -7,22 +7,12 @@
  * a node to render. With `persistKey` the chosen sort is saved to disk and
  * remembered across visits.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { memo, type ReactNode, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { type ReactNode, useMemo, useRef, useState } from 'react';
 
 import { type Song } from '@/api/subsonic';
-import { SheetModal } from '@/components/SheetModal';
-import { useT } from '@/i18n';
+import { SortSheet } from '@/components/SortSheet';
 import { useDownloads } from '@/store/downloads';
-import {
-  DEFAULT_SORT,
-  useSortPrefs,
-  type SortDir,
-  type SortField,
-  type SortPref,
-} from '@/store/sortPrefs';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { DEFAULT_SORT, useSortPrefs, type SortField, type SortPref } from '@/store/sortPrefs';
 
 const SORT_LABEL: Record<SortField, string> = {
   recent: 'Recent',
@@ -59,97 +49,6 @@ interface SortResult {
   /** Changes the sort preference (e.g. force manual order). */
   setSort: (pref: SortPref) => void;
 }
-
-/**
- * The menu lives in its own component (SheetModal, with its state inside):
- * opening or closing it only re-renders the modal, not the screen (with its
- * list) that uses the hook. That re-render was a visible delay when pressing
- * "Sort".
- */
-const SortSheet = memo(function SortSheet({
-  fields,
-  labels,
-  field,
-  dir,
-  update,
-  openRef,
-}: {
-  fields: SortField[];
-  labels?: Partial<Record<SortField, string>>;
-  field: SortField;
-  dir: SortDir;
-  update: (next: SortPref) => void;
-  openRef: React.MutableRefObject<() => void>;
-}) {
-  const t = useT();
-  const labelFor = (f: SortField) => t(labels?.[f] ?? SORT_LABEL[f]);
-
-  return (
-    <SheetModal openRef={openRef}>
-      {/* Choosing closes it. Both halves are a finished answer on their own, and
-          leaving it up afterwards asked for a second gesture to dismiss what had
-          already been decided. Changing the field AND the direction takes two
-          openings now, which is the rarer errand of the two. */}
-      {(close) => (
-        <>
-        <Text style={styles.sheetTitle}>{t('Sort by')}</Text>
-        {fields.map((f) => {
-          const active = field === f;
-          return (
-            <Pressable
-              key={f}
-              style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
-              onPress={() => {
-                update({ field: f, dir });
-                close();
-              }}
-            >
-              <Text style={[styles.actionText, active && { color: colors.accent }]}>
-                {labelFor(f)}
-              </Text>
-              {active ? (
-                <Ionicons
-                  name="checkmark"
-                  size={20}
-                  color={colors.accent}
-                  style={{ marginLeft: 'auto' }}
-                />
-              ) : null}
-            </Pressable>
-          );
-        })}
-
-        <View style={styles.divider} />
-        <Text style={styles.sheetTitle}>{t('Direction')}</Text>
-        <View style={styles.dirRow}>
-          {(['asc', 'desc'] as SortDir[]).map((d) => {
-            const active = dir === d;
-            return (
-              <Pressable
-                key={d}
-                style={[styles.dirChip, active && { backgroundColor: colors.accent }]}
-                onPress={() => {
-                  update({ field, dir: d });
-                  close();
-                }}
-              >
-                <Ionicons
-                  name={d === 'asc' ? 'arrow-up' : 'arrow-down'}
-                  size={16}
-                  color={active ? '#000' : colors.text}
-                />
-                <Text style={[styles.dirChipText, active && { color: '#000' }]}>
-                  {d === 'asc' ? t('Ascending') : t('Descending')}
-                </Text>
-              </Pressable>
-            );
-          })}
-          </View>
-        </>
-      )}
-    </SheetModal>
-  );
-});
 
 /** Stable stand-in for the downloads map when the sort doesn't look at it: a
  *  fresh `{}` each time would defeat the whole point. */
@@ -214,11 +113,10 @@ export function useSongSort(
 
   const sortSheet = (
     <SortSheet
-      fields={fields}
-      labels={options?.labels}
+      options={fields.map((f) => ({ key: f, label: options?.labels?.[f] ?? SORT_LABEL[f] }))}
       field={field}
       dir={dir}
-      update={update}
+      onPick={(next, d) => update({ field: next as SortField, dir: d })}
       openRef={openRef}
     />
   );
@@ -236,35 +134,3 @@ export function useSongSort(
     setSort: update,
   };
 }
-
-const styles = StyleSheet.create({
-  sheetTitle: {
-    color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    fontWeight: '700',
-    marginBottom: spacing.sm,
-  },
-  action: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  actionText: { color: colors.text, fontSize: fontSize.md },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.border,
-    marginVertical: spacing.md,
-  },
-  dirRow: { flexDirection: 'row', gap: spacing.sm },
-  dirChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surfaceHighlight,
-  },
-  dirChipText: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
-});

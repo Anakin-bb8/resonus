@@ -22,7 +22,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useShallow } from 'zustand/react/shallow';
 
 import {
+  genreAlbumDir,
   genreAlbumSorts,
+  genreSongDir,
   genreSongSorts,
   getAlbumsByGenre,
   getGenres,
@@ -112,14 +114,17 @@ export default function GenreScreen() {
   // that is connected, and there isn't one yet on the way in.
   // The first order is by album here, not by whatever the server would have
   // answered, so it is named for what it does (see `ND_GENRE_DEFAULT`).
-  const { sort, openSort, sortSheet } = useServerSort(auth ? genreSongSorts() : [], {
-    server: 'By album',
-  });
+  const { sort, dir, openSort, sortSheet } = useServerSort(
+    auth ? genreSongSorts() : [],
+    { server: 'By album' },
+    genreSongDir,
+  );
   const {
     sort: albumSort,
+    dir: albumDir,
     openSort: openAlbumSort,
     sortSheet: albumSortSheet,
-  } = useServerSort<AlbumListSort>(auth ? genreAlbumSorts() : []);
+  } = useServerSort<AlbumListSort>(auth ? genreAlbumSorts() : [], {}, genreAlbumDir);
   // One slot in the toolbar, whichever list is under it.
   const openListSort = tab === 'albums' ? openAlbumSort : openSort;
 
@@ -245,7 +250,7 @@ export default function GenreScreen() {
     if (starting) return;
     setStarting(true);
     try {
-      const songs = await getSongsByGenre(genre, PLAY_SIZE, 0, sort);
+      const songs = await getSongsByGenre(genre, PLAY_SIZE, 0, sort, dir);
       if (songs.length === 0) {
         toast(t('Nothing to shuffle yet'));
         return;
@@ -269,8 +274,8 @@ export default function GenreScreen() {
   }
 
   const albumsQuery = useInfiniteQuery({
-    queryKey: ['genreAlbums', genre, albumSort],
-    queryFn: ({ pageParam }) => getAlbumsByGenre(genre, PAGE, pageParam, albumSort),
+    queryKey: ['genreAlbums', genre, albumSort, albumDir],
+    queryFn: ({ pageParam }) => getAlbumsByGenre(genre, PAGE, pageParam, albumSort, albumDir),
     initialPageParam: 0,
     getNextPageParam: (last, pages) => (last.length === PAGE ? pages.length * PAGE : undefined),
     enabled: !!auth && !!genre && tab === 'albums',
@@ -279,8 +284,8 @@ export default function GenreScreen() {
   const songsQuery = useInfiniteQuery({
     // The order is part of what is being asked for, so changing it starts the
     // paging again instead of appending a differently sorted page to the list.
-    queryKey: ['genreSongs', genre, sort],
-    queryFn: ({ pageParam }) => getSongsByGenre(genre, SONG_PAGE, pageParam, sort),
+    queryKey: ['genreSongs', genre, sort, dir],
+    queryFn: ({ pageParam }) => getSongsByGenre(genre, SONG_PAGE, pageParam, sort, dir),
     initialPageParam: 0,
     getNextPageParam: (last, pages) =>
       last.length === SONG_PAGE ? pages.length * SONG_PAGE : undefined,

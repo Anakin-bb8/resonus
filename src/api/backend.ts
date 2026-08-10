@@ -11,6 +11,7 @@ import * as Subsonic from './subsonic';
 import {
   type AlbumListType,
   type SongListSort,
+  type SortDirection,
   type StarType,
   type SubsonicAuth,
 } from './subsonic';
@@ -34,6 +35,7 @@ export type {
   SearchResult,
   Song,
   SongListSort,
+  SortDirection,
   SongLyrics,
   StarType,
   Starred,
@@ -110,7 +112,11 @@ export const getAlbumsByGenre = (
   size?: number,
   offset?: number,
   musicFolderId?: string,
-) => api(auth).getAlbumsByGenre(auth, genre, size, offset, musicFolderId);
+  // Jellyfin's alone, like the songs below: `getAlbumList2` takes one of its
+  // own fixed types OR a genre, never both.
+  sort?: AlbumListType,
+  dir?: SortDirection,
+) => api(auth).getAlbumsByGenre(auth, genre, size, offset, musicFolderId, sort, dir);
 
 export const getSongList = (
   auth: SubsonicAuth,
@@ -137,7 +143,8 @@ export const getSongsByGenre = (
   // no order, which is the whole reason the genre screen asks the data layer
   // what each server can do before it offers a menu (see `genreSongSorts`).
   sort?: SongListSort,
-) => api(auth).getSongsByGenre(auth, genre, count, offset, musicFolderId, sort);
+  dir?: SortDirection,
+) => api(auth).getSongsByGenre(auth, genre, count, offset, musicFolderId, sort, dir);
 
 export const getAlbum = (auth: SubsonicAuth, id: string) => api(auth).getAlbum(auth, id);
 
