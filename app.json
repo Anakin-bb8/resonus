@@ -20,7 +20,7 @@
       "package": "com.juananzzz.resonus",
       "versionCode": 35,
       "adaptiveIcon": {
-        "backgroundColor": "#18CD67",
+        "backgroundColor": "#1CD667",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
