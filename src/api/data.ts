@@ -556,11 +556,11 @@ function subsonicSongList(
  * covers everything.
  */
 export function songListSorts(): Subsonic.SongListSort[] {
-  const full: Subsonic.SongListSort[] = ['recent', 'added', 'alpha', 'frequent', 'random'];
+  const full: Subsonic.SongListSort[] = ['recent', 'frequent', 'added', 'alpha', 'random'];
   if (isOffline()) return full;
   const a = auth();
   if (a.serverType === 'jellyfin' || canListNative(a)) return full;
-  return ['recent', 'added', 'server', 'frequent', 'random'];
+  return ['recent', 'frequent', 'added', 'server', 'random'];
 }
 
 // ── A genre's songs, in an order somebody chose ─────────────────────────────

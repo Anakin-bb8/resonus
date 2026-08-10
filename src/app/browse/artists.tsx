@@ -58,9 +58,9 @@ type ArtistSort = 'alpha' | 'recent' | 'newest' | 'frequent' | 'random';
 // here): they're sibling screens and seeing them ordered differently felt jarring.
 const SORTS: { key: ArtistSort; label: string }[] = [
   { key: 'recent', label: 'Recent' },
+  { key: 'frequent', label: 'Most played' },
   { key: 'newest', label: 'Recently added' },
   { key: 'alpha', label: 'A-Z' },
-  { key: 'frequent', label: 'Most played' },
   { key: 'random', label: 'Shuffle' },
 ];
 

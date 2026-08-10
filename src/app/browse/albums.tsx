@@ -60,9 +60,9 @@ const DEBOUNCE_MS = 300;
 // by artist is exactly what A-Z already does.
 const SORTS: { key: AlbumListType; label: string }[] = [
   { key: 'recent', label: 'Recent' },
+  { key: 'frequent', label: 'Most played' },
   { key: 'newest', label: 'Recently added' },
   { key: 'alphabeticalByName', label: 'A-Z' },
-  { key: 'frequent', label: 'Most played' },
   { key: 'random', label: 'Shuffle' },
 ];
 
