@@ -25,6 +25,8 @@ import { setOfflineMode } from '@/api/netGate';
 import { queryClient } from '@/lib/query';
 import { deleteItem, getItem, setItem } from '@/lib/storage';
 
+import { useLastPlayed } from './lastPlayed';
+
 const ACTIVE_KEY = 'resonus.auth';
 const PROFILES_KEY = 'resonus.profiles';
 const OFFLINE_KEY = 'resonus.offline';
@@ -264,6 +266,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   switchProfile: async (profile) => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     await require('./player').usePlayerStore.getState().reset(true);
+    useLastPlayed.getState().forgetNames();
     // Moves the chosen profile to the front (last-used ordering).
     const reordered = [profile, ...get().profiles.filter((p) => !same(p, profile))];
     if (profile._type === 'offline') {

@@ -80,6 +80,7 @@ function QuickGrid() {
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
   const offline = useAuthStore((s) => s.offline);
   const times = useLastPlayed((s) => s.times);
+  const names = useLastPlayed((s) => s.names);
   const t = useT();
   // Configurable sources and size (Settings → Appearance → Quick grid). Each
   // source is only queried if active; size is the total tile count (Favorites
@@ -133,8 +134,29 @@ function QuickGrid() {
           };
         })
       : [];
-    return [...al, ...pl].sort((x, y) => y.ts - x.ts).slice(0, dynamicCount);
-  }, [playlists, albums, times, withPlaylists, withAlbums, dynamicCount]);
+    // What was played and neither list mentions. The order here has always
+    // been what YOU listened to, but what could be sorted was whatever the
+    // server had handed over: its "recent" albums are the ones it has a play
+    // date for, so an album whose scrobble never landed — or that was played
+    // with no connection at all — had no tile to rise to the top, and the
+    // grid looked like it updated for some things and not for others. The
+    // name was written down when it played and the cover comes from the id,
+    // so nothing else has to be asked for.
+    const known = new Set([...pl, ...al].map((it) => it.href));
+    const played: Item[] = Object.entries(times)
+      .filter(([href]) => !known.has(href))
+      .map(([href, ts]): Item | null => {
+        const [, kind, id] = href.split('/');
+        const name = names[href];
+        if (!name || !id) return null;
+        if (kind === 'album' ? !withAlbums : kind === 'playlist' ? !withPlaylists : true) {
+          return null;
+        }
+        return { key: href, href, name, cover: coverArtUrl(id, COVER.thumb), ts };
+      })
+      .filter((it): it is Item => it !== null);
+    return [...al, ...pl, ...played].sort((x, y) => y.ts - x.ts).slice(0, dynamicCount);
+  }, [playlists, albums, times, names, withPlaylists, withAlbums, dynamicCount]);
 
   // Without active sources there's nothing to show (the master toggle still
   // decides if the block mounts; this covers "all off" from here).

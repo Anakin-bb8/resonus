@@ -2664,8 +2664,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     const key = contextKey(source ?? null, sourceHref ?? null);
     if (key) forgetHistoryOf(key);
     if (!key || key !== contextKey(get().source, get().sourceHref)) pushHistory();
-    // Mark the source as recently listened (Library "Recent" order).
-    if (sourceHref) useLastPlayed.getState().touch(sourceHref);
+    // Mark the source as recently listened (Library "Recent" order, Home grid).
+    // Its name travels with it: what was played is drawn from this alone when
+    // no list from the server happens to include it.
+    if (sourceHref) useLastPlayed.getState().touch(sourceHref, source);
     // Two different things end up shuffled here. The Shuffle button hands the
     // whole list over dealt, with no song picked, so nothing is pinned to the
     // front. Shuffle MODE, on the other hand, is a way of listening rather than
