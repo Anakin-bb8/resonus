@@ -314,6 +314,9 @@ export function getGenres(): Promise<Subsonic.Genre[]> {
 export type AlbumListSort = 'server' | 'alpha' | 'artist' | 'year' | 'added' | 'random';
 
 const ND_ALBUM_SORT: Record<AlbumListSort, Navidrome.NdAlbumSort> = {
+  // Only reachable when a direction was picked without a field, since `server`
+  // is not in the menu (see `genreAlbumSorts`); it is the same album name the
+  // server would have sorted by anyway.
   server: 'name',
   alpha: 'name',
   artist: 'artist',
@@ -326,7 +329,12 @@ export function genreAlbumSorts(): AlbumListSort[] {
   if (isOffline()) return [];
   const a = auth();
   if (!canListNative(a)) return [];
-  return ['server', 'alpha', 'artist', 'year', 'added', 'random'];
+  // No "default" here. On a server that can sort, the order it would have
+  // given for a genre IS the album's name, which is the next entry down: two
+  // ways of saying one thing, and one of them saying nothing about itself.
+  // `server` stays in the type because it is still what a server that cannot
+  // sort answers, and that one is never offered a menu.
+  return ['alpha', 'artist', 'year', 'added', 'random'];
 }
 
 export function getAlbumsByGenre(
