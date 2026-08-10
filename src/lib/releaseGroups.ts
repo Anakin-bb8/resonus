@@ -7,12 +7,13 @@
  * tag and OpenSubsonic hands it over as `releaseTypes`, which arrives with the
  * albums the artist screen already asks for. Nothing extra is fetched here.
  *
- * What it is NOT is a guess. A library nobody tagged, and every server that
- * does not send the field, come back with no groups at all, and the screen
- * shows the one discography it always did. Splitting records by track count,
- * or by anything else we could measure ourselves, would put them in the wrong
- * heap with nothing to explain it: a three track EP and a three track single
- * are the same shape and only the tag knows which is which.
+ * What it is NOT is a guess about the records themselves. Splitting them by
+ * track count, or by anything else we could measure here, would put them in
+ * the wrong heap with nothing to explain it: a three track EP and a three
+ * track single are the same shape and only the tag knows which is which. A
+ * record that says nothing is taken for an album, which is not the same thing
+ * — it is the value MusicBrainz itself defaults to, and it is what the client
+ * this was compared against does.
  */
 import { type Album } from '@/api/subsonic';
 
@@ -32,7 +33,7 @@ export const RELEASE_GROUP_TITLE: Record<ReleaseGroup, string> = {
 };
 
 /**
- * Which shelf a record belongs on.
+ * Which shelf a record belongs on. Every record lands on one.
  *
  * Secondary types win over the primary one, and that is the one real decision
  * in here: a live album is tagged `["album", "live"]`, and somebody looking
@@ -44,48 +45,46 @@ export const RELEASE_GROUP_TITLE: Record<ReleaseGroup, string> = {
  * record repeated eight times down the screen is not a better answer than a
  * row called Other, and these are rare enough that most artists would get
  * exactly that.
+ *
+ * A record that says nothing is an album. This started out refusing to sort a
+ * discography where anything was untagged, so as not to drop it out of every
+ * shelf — but one untagged record in forty then undid the whole split, which
+ * is what half-tagged libraries actually look like. Calling it an album loses
+ * nothing, is the type MusicBrainz defaults to, and is right far more often
+ * than not.
  */
-export function releaseGroupOf(album: Album): ReleaseGroup | undefined {
+export function releaseGroupOf(album: Album): ReleaseGroup {
   const types = (album.releaseTypes ?? []).map((t) => t.trim().toLowerCase()).filter(Boolean);
   // Says the same thing as a secondary type and does not need the tag, so a
   // server that only sends this still gets its compilations out of the way.
   if (album.isCompilation) return 'compilation';
-  if (types.length === 0) return undefined;
   if (types.includes('live')) return 'live';
   if (types.includes('compilation')) return 'compilation';
   if (types.includes('ep')) return 'ep';
   if (types.includes('single')) return 'single';
   if (types.includes('album')) return 'album';
-  return 'other';
+  return types.length > 0 ? 'other' : 'album';
 }
 
 /**
  * The artist's records by shelf, empty shelves left out and in the order
  * above.
  *
- * An empty answer means there is nothing to go on — no server field, or no
- * tags — and the caller shows its single discography instead. So does a split
- * that comes out as one shelf: dividing a discography into a heap called
- * "Albums" is a heading where there used to be none and nothing else.
+ * An empty answer means there was nothing to divide: everything landed in one
+ * heap, which is what a library with no tags at all comes to, and what every
+ * server that does not send the field comes to. Calling that one heap "Albums"
+ * would be a heading where there used to be none and nothing else, so the
+ * caller shows its single discography instead.
  */
 export function groupArtistAlbums(albums: Album[]): { key: ReleaseGroup; albums: Album[] }[] {
   const byGroup = new Map<ReleaseGroup, Album[]>();
-  let untagged = false;
   for (const album of albums) {
     const group = releaseGroupOf(album);
-    // A record nobody tagged does not go to Other, where it would look
-    // deliberate. Its presence is enough to call the whole split off: a partly
-    // tagged library would otherwise drop it out of every shelf, and losing
-    // records is worse than not sorting them.
-    if (!group) {
-      untagged = true;
-      break;
-    }
     const bucket = byGroup.get(group);
     if (bucket) bucket.push(album);
     else byGroup.set(group, [album]);
   }
-  if (untagged || byGroup.size < 2) return [];
+  if (byGroup.size < 2) return [];
   return RELEASE_GROUPS.filter((key) => byGroup.has(key)).map((key) => ({
     key,
     albums: byGroup.get(key)!,
