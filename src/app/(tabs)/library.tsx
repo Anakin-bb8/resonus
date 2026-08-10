@@ -3,7 +3,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useRouter } from 'expo-router';
-import { useMemo, useRef, useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -661,7 +661,6 @@ export default function LibraryScreen() {
   // your lists): no server round-trip, unlike browsing the whole collection.
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const searchRef = useRef<TextInput>(null);
   const filter = normQ(query.trim());
 
   function toggleSearch() {
@@ -670,9 +669,13 @@ export default function LibraryScreen() {
       setQuery('');
       setSearchOpen(false);
     } else {
+      // The bar opens focused and typing, which is what tapping a magnifier
+      // asks for. `autoFocus` on the input rather than a `focus()` from here:
+      // the input mounts with the render this schedules, and Android decides
+      // whether to raise the keyboard when the field is attached to the
+      // window, which is later. Asking before that only moved the caret, and
+      // the bar sat there needing a second tap to type in.
       setSearchOpen(true);
-      // The input mounts with this render; focusing it right away saves a tap.
-      setTimeout(() => searchRef.current?.focus(), 0);
     }
   }
 
@@ -736,10 +739,10 @@ export default function LibraryScreen() {
           <View style={styles.searchBar}>
             <Ionicons name="search" size={18} color={colors.textMuted} />
             <TextInput
-              ref={searchRef}
               style={styles.searchInput}
               placeholder={t('Search')}
               placeholderTextColor={colors.textMuted}
+              autoFocus
               autoCapitalize="none"
               autoCorrect={false}
               value={query}

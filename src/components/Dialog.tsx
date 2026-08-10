@@ -3,7 +3,7 @@
  * Cancel/Confirm buttons. Used for create/rename (with input) and to confirm
  * destructive actions (without input).
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -47,6 +47,7 @@ export function Dialog({
 }: Props) {
   const t = useT();
   const [value, setValue] = useState(input?.initialValue ?? '');
+  const inputRef = useRef<TextInput>(null);
 
   // Reset the text every time it opens.
   useEffect(() => {
@@ -56,7 +57,20 @@ export function Dialog({
   const canConfirm = input ? value.trim().length > 0 : true;
 
   return (
-    <Modal transparent visible={visible} animationType="fade" onRequestClose={onCancel}>
+    <Modal
+      transparent
+      visible={visible}
+      animationType="fade"
+      onRequestClose={onCancel}
+      // A dialog that asks for a word opens ready to be typed in. Focusing
+      // once it is on screen, and not with `autoFocus`: a modal lives in a
+      // window of its own, and the field is attached to it before that window
+      // takes the focus, so Android had nowhere to raise the keyboard for and
+      // the caret sat in a field that needed tapping. By `onShow` the window
+      // is up and it does. Anything else that focuses inside a modal has the
+      // same problem.
+      onShow={() => inputRef.current?.focus()}
+    >
       <Pressable style={styles.backdrop} onPress={onCancel} />
       <View style={styles.center} pointerEvents="box-none">
         <View style={styles.card}>
@@ -64,13 +78,13 @@ export function Dialog({
           {message ? <Text style={styles.message}>{message}</Text> : null}
           {input ? (
             <TextInput
+              ref={inputRef}
               style={styles.input}
               placeholder={input.placeholder}
               placeholderTextColor={colors.textMuted}
               value={value}
               onChangeText={setValue}
               secureTextEntry={input.secure}
-              autoFocus
             />
           ) : null}
           {neutral ? (
