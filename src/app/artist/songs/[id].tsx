@@ -13,44 +13,67 @@
  * minute ago costs nothing. Bounded, complete, and the same on every backend,
  * which is what a genre's songs could never be.
  *
+ * Laid out like a genre rather than like a playlist: a compact heading, what
+ * it is underneath, and the row of actions the album and playlist screens
+ * have. It is a list somebody arrived at, not a record with a cover.
+ *
  * And because the whole list ends up here rather than arriving a page at a
  * time, it sorts like a playlist does — the menu with a direction, and
  * "Downloaded" among the fields, neither of which a paged list can honestly
  * offer.
  */
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
-import { View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useShallow } from 'zustand/react/shallow';
 
-import { COVER, coverArtUrl, getAlbum, getArtist, getAppearsOn, type Song } from '@/api/data';
-import { BackButton } from '@/components/BackButton';
+import { getAlbum, getAppearsOn, getArtist, type Song } from '@/api/data';
+import { BackChevron } from '@/components/BackChevron';
+import { Dialog } from '@/components/Dialog';
+import { EmptyState } from '@/components/EmptyState';
 import { Message } from '@/components/Message';
+import { SelectionBar } from '@/components/SelectionBar';
+import { SheetModal } from '@/components/SheetModal';
 import { TrackListSkeleton } from '@/components/TrackListSkeleton';
-import { TrackListView } from '@/components/TrackListView';
+import { TrackRow } from '@/components/TrackRow';
+import { useDownloadMessage } from '@/hooks/useDownloadMessage';
+import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { useSongSort } from '@/hooks/useSongSort';
 import { songsLabel, useT } from '@/i18n';
 import { splitArtistAlbums } from '@/lib/artistAlbums';
 import { formatTotalDuration } from '@/lib/format';
+import { haptic } from '@/lib/haptics';
+import { listPerf } from '@/lib/listPerf';
 import { queryClient } from '@/lib/query';
 import { useAuthStore } from '@/store/auth';
-import { useDownloads } from '@/store/downloads';
+import { groupDownloadState, useDownloads } from '@/store/downloads';
 import { usePlaylistPicker } from '@/store/playlistPicker';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
-import { colors } from '@/theme';
+import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
 
 export default function ArtistSongsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const t = useT();
+  const bottomPad = useScreenBottomPadding();
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
+  const offline = useAuthStore((s) => s.offline);
   const lang = useSettings((s) => s.language);
   const showListArtwork = useSettings((s) => s.showListArtwork);
   const playing = usePlayerStore(currentSong);
   const playQueue = usePlayerStore((s) => s.playQueue);
+  const addToQueue = usePlayerStore((s) => s.addToQueue);
   const downloadSongs = useDownloads((s) => s.downloadSongs);
+  const deleteSongs = useDownloads((s) => s.deleteSongs);
+  const downloadArtist = useDownloads((s) => s.downloadArtist);
+  const cancelDownload = useDownloads((s) => s.cancelDownload);
   const openPlaylistPicker = usePlaylistPicker((s) => s.open);
   const toast = useToast((s) => s.show);
+  const menuRef = useRef<() => void>(() => {});
 
   // The same two queries, under the same keys, the artist screen filled on the
   // way here: arriving from its link costs nothing.
@@ -67,7 +90,7 @@ export default function ArtistSongsScreen() {
   });
   // The artist's own records, not the ones they only play on: those belong to
   // somebody else, and pulling a whole album in because this artist sings on
-  // one track of it is not what was asked for.
+  // one track of it is not what "all their songs" means.
   const albums = artist ? splitArtistAlbums(artist.albums, appearsOn ?? []).own : [];
 
   const {
@@ -103,21 +126,74 @@ export default function ArtistSongsScreen() {
   } = useSongSort(all, `artistSongs:${id}`, {
     // 'recent' is the order they were gathered in: the discography newest
     // first, each record in its own running order. Named for what that is.
-    fields: ['recent', 'alpha', 'downloaded'],
+    fields: ['recent', 'alpha', 'album', 'downloaded'],
     labels: { recent: 'By album' },
   });
 
+  // ── Download ─────────────────────────────────────────────────────────────
+  // The very group the artist screen's own button uses, so the two say the
+  // same thing: it is one download of one discography, reached from two places.
+  const download = useDownloads(useShallow((s) => groupDownloadState(s, `artist:${id}`, [])));
+  const [confirmDownload, setConfirmDownload] = useState(false);
+  const [confirmStop, setConfirmStop] = useState(false);
+  const downloadMsg = useDownloadMessage(all);
+  const onDownloadPress = useCallback(() => {
+    if (download.status === 'active') setConfirmStop(true);
+    else setConfirmDownload(true);
+  }, [download.status]);
+
+  // ── Multi-select ─────────────────────────────────────────────────────────
+  const [selectedIds, setSelectedIds] = useState<Set<string> | null>(null);
+  const selecting = selectedIds !== null;
+  const justLongPressed = useRef<string | null>(null);
+
+  function toggleSelect(sid: string) {
+    setSelectedIds((cur) => {
+      const next = new Set(cur ?? []);
+      if (next.has(sid)) next.delete(sid);
+      else next.add(sid);
+      return next;
+    });
+  }
+
+  function runSelection(fn: (sel: Song[]) => void) {
+    const sel = shown.filter((s) => selectedIds?.has(s.id));
+    setSelectedIds(null);
+    if (sel.length > 0) fn(sel);
+  }
+
+  async function deleteArtistDownloads() {
+    const files = useDownloads.getState().files;
+    const ids = all.filter((s) => files[s.id]).map((s) => s.id);
+    if (ids.length === 0) {
+      toast(t('Nothing here is downloaded'));
+      return;
+    }
+    await deleteSongs(ids);
+    toast(t('{n} songs deleted', { n: ids.length }));
+  }
+
   if (isLoading || (!artist && canFetch)) return <TrackListSkeleton />;
 
-  if (!songs || songs.length === 0) {
+  if (all.length === 0) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <BackButton />
-        <Message
-          text={isError ? t("Couldn't load songs.") : t('No songs here yet')}
-          onRetry={() => void refetch()}
-        />
-      </View>
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <View style={styles.header}>
+          <BackChevron />
+          <Text style={styles.title} numberOfLines={1}>
+            {name ?? ''}
+          </Text>
+        </View>
+        {isError ? (
+          <Message text={t("Couldn't load songs.")} onRetry={() => void refetch()} />
+        ) : (
+          <EmptyState
+            icon="musical-notes-outline"
+            title={t('No songs here yet')}
+            subtitle={t('Try exploring another artist.')}
+          />
+        )}
+      </SafeAreaView>
     );
   }
 
@@ -127,27 +203,286 @@ export default function ArtistSongsScreen() {
     .join(' · ');
 
   return (
-    <>
-      <TrackListView
-        title={name ?? ''}
-        meta={meta}
-        coverUri={coverArtUrl(id, COVER.card)}
-        songs={shown}
-        currentId={playing?.id}
-        showArtwork={showListArtwork}
-        searchable
-        searchPlaceholder={t('Find a song')}
-        onSort={all.length > 1 ? openSort : undefined}
-        selection={{
-          onAddTo: (sel) => openPlaylistPicker(sel),
-          onDownload: (sel) => {
-            void downloadSongs(sel);
-            toast(t('Downloading…'));
-          },
-        }}
-        onPlay={(start, opts) => playQueue(shown, start, name, `/artist/${id}`, opts)}
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <View style={styles.header}>
+        {selecting ? (
+          <Pressable hitSlop={10} onPress={() => setSelectedIds(null)} accessibilityLabel={t('Close')}>
+            <Ionicons name="close" size={26} color={colors.text} />
+          </Pressable>
+        ) : (
+          <BackChevron />
+        )}
+        <Text style={styles.title} numberOfLines={1}>
+          {selecting ? t('{n} selected', { n: selectedIds.size }) : (name ?? '')}
+        </Text>
+        {selecting ? (
+          <Pressable
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={t('Select all')}
+            onPress={() =>
+              setSelectedIds(
+                selectedIds.size === shown.length ? new Set() : new Set(shown.map((s) => s.id)),
+              )
+            }
+          >
+            <Ionicons
+              name="checkmark-done"
+              size={24}
+              color={
+                shown.length > 0 && selectedIds.size === shown.length ? colors.accent : colors.text
+              }
+            />
+          </Pressable>
+        ) : null}
+      </View>
+
+      {!selecting ? <Text style={styles.meta}>{meta}</Text> : null}
+
+      {/* The row every list screen has, in the same order: what you do to this
+          thing on the left, what starts it on the right. */}
+      {!selecting ? (
+        <View style={styles.actions}>
+          <View style={styles.actionsLeft}>
+            {!offline ? (
+              <Pressable
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel={t('Download')}
+                onPress={onDownloadPress}
+                style={styles.downloadWrap}
+              >
+                {download.status === 'active' ? (
+                  <>
+                    <ActivityIndicator size="small" color={colors.accent} />
+                    <Text style={styles.downloadProgress}>
+                      {Math.round(download.progress * 100)}%
+                    </Text>
+                  </>
+                ) : (
+                  <Ionicons
+                    name="arrow-down-circle-outline"
+                    size={26}
+                    color={colors.textSecondary}
+                  />
+                )}
+              </Pressable>
+            ) : null}
+            {all.length > 1 ? (
+              <Pressable
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel={t('Sort')}
+                onPress={openSort}
+              >
+                <Ionicons name="swap-vertical" size={24} color={colors.textSecondary} />
+              </Pressable>
+            ) : null}
+            <Pressable
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={t('More options')}
+              onPress={() => menuRef.current()}
+            >
+              <Ionicons name="ellipsis-horizontal" size={26} color={colors.textSecondary} />
+            </Pressable>
+          </View>
+          <View style={styles.playRow}>
+            <Pressable
+              hitSlop={10}
+              accessibilityLabel={t('Shuffle')}
+              onPress={() => void playQueue(shown, 0, name, `/artist/${id}`, { shuffled: true })}
+            >
+              <Ionicons name="shuffle" size={24} color={colors.textSecondary} />
+            </Pressable>
+            <Pressable
+              style={styles.playButton}
+              accessibilityRole="button"
+              accessibilityLabel={t('Play')}
+              onPress={() => void playQueue(shown, 0, name, `/artist/${id}`)}
+            >
+              <Ionicons name="play" size={22} color="#000" />
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
+
+      <FlatList
+        {...listPerf}
+        data={shown}
+        keyExtractor={(item, i) => `${item.id}-${i}`}
+        contentContainerStyle={[styles.list, { paddingBottom: bottomPad }]}
+        extraData={selectedIds}
+        renderItem={({ item, index }) => (
+          <TrackRow
+            song={item}
+            isCurrent={playing?.id === item.id}
+            showArtwork={showListArtwork}
+            selecting={selecting}
+            selected={!!selectedIds?.has(item.id)}
+            onPressIn={() => {
+              justLongPressed.current = null;
+            }}
+            onLongPress={
+              selecting
+                ? undefined
+                : () => {
+                    haptic('medium');
+                    setSelectedIds(new Set([item.id]));
+                    justLongPressed.current = item.id;
+                  }
+            }
+            onPress={() => {
+              if (justLongPressed.current === item.id) return;
+              if (selecting) toggleSelect(item.id);
+              else void playQueue(shown, index, name, `/artist/${id}`);
+            }}
+          />
+        )}
       />
+
+      {selecting ? (
+        <SelectionBar
+          count={selectedIds.size}
+          actions={[
+            {
+              icon: 'add-circle-outline',
+              label: t('Add to a playlist'),
+              onPress: () => runSelection(openPlaylistPicker),
+            },
+            {
+              icon: 'list',
+              label: t('Add to queue'),
+              onPress: () =>
+                runSelection((sel) => {
+                  // In reverse: each one goes right after the current song, so
+                  // queueing them backwards leaves them in the order you see.
+                  [...sel].reverse().forEach(addToQueue);
+                  toast(t('Added to queue'));
+                }),
+            },
+            ...(offline
+              ? []
+              : [
+                  {
+                    icon: 'download-outline' as const,
+                    label: t('Download'),
+                    onPress: () =>
+                      runSelection((sel) => {
+                        void downloadSongs(sel);
+                        toast(t('Downloading…'));
+                      }),
+                  },
+                ]),
+          ]}
+        />
+      ) : null}
       {sortSheet}
-    </>
+
+      <SheetModal openRef={menuRef}>
+        {(close) => (
+          <>
+            <Pressable
+              style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+              onPress={() => {
+                close();
+                openPlaylistPicker(all);
+              }}
+            >
+              <Ionicons name="add-circle-outline" size={22} color={colors.text} />
+              <Text style={styles.actionText}>{t('Add to a playlist')}</Text>
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+              onPress={() => {
+                close();
+                void deleteArtistDownloads();
+              }}
+            >
+              <Ionicons name="trash-outline" size={22} color={colors.danger} />
+              <Text style={[styles.actionText, { color: colors.danger }]}>
+                {t('Delete downloads')}
+              </Text>
+            </Pressable>
+          </>
+        )}
+      </SheetModal>
+
+      <Dialog
+        visible={confirmDownload}
+        title={t('Download “{name}”?', { name: name ?? '' })}
+        message={downloadMsg.message}
+        confirmLabel={t('Download')}
+        onCancel={() => setConfirmDownload(false)}
+        onConfirm={() => {
+          setConfirmDownload(false);
+          void downloadArtist(id, all, albums);
+        }}
+      />
+      <Dialog
+        visible={confirmStop}
+        title={t('Stop download?')}
+        message={t('Songs already downloaded will be kept.')}
+        confirmLabel={t('Stop')}
+        destructive
+        onCancel={() => setConfirmStop(false)}
+        onConfirm={() => {
+          setConfirmStop(false);
+          cancelDownload(`artist:${id}`);
+        }}
+      />
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.background },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  title: { flex: 1, color: colors.text, fontSize: fontSize.lg, fontWeight: '800' },
+  meta: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+  },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+  },
+  actionsLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
+  downloadWrap: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  downloadProgress: {
+    color: colors.accent,
+    fontSize: fontSize.xs,
+    fontWeight: '600',
+    minWidth: 32,
+  },
+  playRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  playButton: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  action: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  actionText: { color: colors.text, fontSize: fontSize.md },
+  // Same side margin as the album and playlist song lists: `TrackRow` brings
+  // no horizontal padding of its own.
+  list: { paddingHorizontal: spacing.lg, paddingBottom: SCREEN_BOTTOM_PADDING },
+});

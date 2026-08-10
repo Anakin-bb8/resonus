@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 621 of them.
+Every string the app can show, under the screen it shows up on. 622 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -22,7 +22,9 @@ you are actually typing into, which is easier than reading it here.
 | `Album` | In search results, the little word under a result saying what kind of thing it is |
 | `Couldn't load the album.` | Error on the screen, with a Retry button |
 | `Disc {n}` | Heading over the songs of one disc of a multi-disc album. `{n}` is its number |
+| `Find in playlist` | Placeholder of the search box hidden above a tracklist, for finding a song within it |
 | `More from {artist}` | Heading under an album: their other records. `{artist}` is the name |
+| `View cover` | The same as `View image`, for album and playlist artwork |
 
 ## Anywhere in the app
 
@@ -143,8 +145,8 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `Find a song` | The search box's placeholder on that screen |
 | `No songs here yet` |  |
+| `Try exploring another artist.` |  |
 
 ## Browse › Albums
 
@@ -200,8 +202,10 @@ you are actually typing into, which is easier than reading it here.
 | `Auto-download on` | The toast that says it was turned on |
 | `Couldn't load favorites.` | Error on the screen, with a Retry button |
 | `Find in favorites` | Placeholder of the search box that narrows the favourites already shown |
+| `Find in playlist` | Placeholder of the search box hidden above a tracklist, for finding a song within it |
 | `No favorites yet` | Empty state heading |
 | `Tap the heart on songs to see them here.` | The line under an empty state, saying how to fill it |
+| `View cover` | The same as `View image`, for album and playlist artwork |
 
 ## Favorites add
 
@@ -388,6 +392,7 @@ you are actually typing into, which is easier than reading it here.
 | `Description` | The playlist's own description: what whoever made it wrote about it |
 | `Done` | The button that leaves drag-to-reorder, or accepts a fine-tuned number |
 | `Edit playlist` | Menu action, and the title of the sheet it opens |
+| `Find in playlist` | Placeholder of the search box hidden above a tracklist, for finding a song within it |
 | `Name` | The Name field when editing a playlist or a station |
 | `Password` | The password field, on the login screen and wherever the server asks again |
 | `Playlist` | A list saved on the server. Not the queue |
@@ -405,6 +410,7 @@ you are actually typing into, which is easier than reading it here.
 | `Turn on` | The confirm button of that question |
 | `Turn on auto-download?` | Asks whether new songs added to this playlist should download by themselves from now on |
 | `Updated` | Toast after a change went through |
+| `View cover` | The same as `View image`, for album and playlist artwork |
 | `Visible to other users on the server` | The line under `Public playlist` |
 | `Wrong password` | The password typed to confirm a cover change was not right |
 | `Your password is needed to upload images and will be stored securely.` | The line explaining why the password is asked for again |
@@ -927,7 +933,6 @@ you are actually typing into, which is easier than reading it here.
 | `Download stopped` | Toast: the download was stopped part way |
 | `Downloading…` | Toast: the download has started. The songs arrive one by one after this |
 | `Favorites` | The songs, albums and artists you starred |
-| `Find in playlist` | Placeholder of the search box hidden above a tracklist, for finding a song within it |
 | `History` | The listening history: what was played and when |
 | `Hold to go back to {tab}` | The hint on holding the back arrow. `{tab}` is Home, Search or Library |
 | `Library` | The tab with your albums, artists and playlists, and a folder in the car |
@@ -970,7 +975,6 @@ you are actually typing into, which is easier than reading it here.
 | `Unknown album` | Fallback when the file and the server have no album |
 | `Unknown artist` | Fallback when the file and the server have no artist |
 | `View` | Title of the menu that chooses how a collection is drawn, and the label of the button that opens it. A noun: what you are looking at, not the verb |
-| `View cover` | The same as `View image`, for album and playlist artwork |
 
 ## Left in English on purpose
 
