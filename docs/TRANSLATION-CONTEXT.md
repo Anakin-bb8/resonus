@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 615 of them.
+Every string the app can show, under the screen it shows up on. 619 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -113,15 +113,19 @@ you are actually typing into, which is easier than reading it here.
 | --- | --- |
 | `About` | The heading over an artist's biography, and the name of the settings page about the app. Two very different uses of one English word, so `About::artist` and `About::app` exist for a language that needs two words |
 | `Appears on` | Albums the artist appears on: features, compilations |
+| `Compilations` |  |
 | `Couldn't load the artist.` | Error on the screen, with a Retry button |
 | `Discography` | Everything an artist has released, albums and singles together |
 | `Downloaded` | Badge on something whose files are on the phone |
+| `EPs` |  |
+| `Live` |  |
 | `Play discography` | Play the lot, in order |
 | `Popular` | The artist's popular / top tracks |
 | `Remove from favorites` | The same button when it is already a favourite |
 | `Show less` | Folds it back |
 | `Show more` | Unfolds the rest of a text that was cut short |
 | `Similar artists` | Related artists |
+| `Singles` |  |
 | `View image` | Artist screen: opens the artist photo full screen, since the header crops it |
 
 ## Artist › Discography
@@ -129,8 +133,12 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `Appears on` | Albums the artist appears on: features, compilations |
+| `Compilations` |  |
 | `Couldn't load the artist.` | Error on the screen, with a Retry button |
 | `Discography` | Everything an artist has released, albums and singles together |
+| `EPs` |  |
+| `Live` |  |
+| `Singles` |  |
 
 ## Browse › Albums
 

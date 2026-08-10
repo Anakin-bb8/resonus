@@ -223,6 +223,21 @@ export interface Album {
   /** Record labels (OpenSubsonic extension; Navidrome sends them). */
   recordLabels?: { name: string }[];
   /**
+   * What kind of release this is (OpenSubsonic; Navidrome fills it from the
+   * files' `RELEASETYPE` tag, which is MusicBrainz's).
+   *
+   * A list, not a word: MusicBrainz separates a primary type (album, single,
+   * ep, broadcast, other) from secondaries that can pile on top of it (live,
+   * compilation, remix, soundtrack, demo…), so a record can arrive as
+   * `["album", "live"]`. Absent on servers that do not send it and on files
+   * nobody tagged, and the app shows one undivided discography there rather
+   * than guessing (see `lib/releaseGroups`).
+   */
+  releaseTypes?: string[];
+  /** True if the album is a compilation (OpenSubsonic). Says on its own what a
+   *  secondary release type would also say, and arrives without the tag. */
+  isCompilation?: boolean;
+  /**
    * Disc titles by number (OpenSubsonic extension; optional). In multi-disc
    * albums allows showing the name of each disc (tag `discsubtitle`);
    * the fallback is "Disc N". May be missing or only include some discs.

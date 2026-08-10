@@ -23,6 +23,11 @@ import { Cover } from '@/components/Cover';
 import { Message } from '@/components/Message';
 import { useT } from '@/i18n';
 import { splitArtistAlbums } from '@/lib/artistAlbums';
+import {
+  RELEASE_GROUP_TITLE,
+  RELEASE_GROUPS,
+  releaseGroupOf,
+} from '@/lib/releaseGroups';
 import { listPerf } from '@/lib/listPerf';
 import { useAuthStore } from '@/store/auth';
 import { useSettings } from '@/store/settings';
@@ -43,8 +48,14 @@ function cardWidth(columns: number): number {
 
 export default function DiscographyScreen() {
   const bottomPad = useScreenBottomPadding();
-  const { id, section } = useLocalSearchParams<{ id: string; section?: string }>();
+  const { id, section, group } = useLocalSearchParams<{
+    id: string;
+    section?: string;
+    group?: string;
+  }>();
   const guestsOnly = section === 'appears-on';
+  /** Which shelf of the artist screen this came from, when it came from one. */
+  const only = RELEASE_GROUPS.find((g) => g === group);
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
   const t = useT();
   // Its own preference, not the one from browsing albums: the button on one
@@ -82,7 +93,16 @@ export default function DiscographyScreen() {
   });
 
   const split = splitArtistAlbums(data?.albums ?? [], appearsOn ?? []);
-  const albums = guestsOnly ? split.guest : split.own;
+  // Kept to the kind of record the row that opened this was showing, so "Show
+  // all" on the EPs answers with the EPs.
+  const own = only ? split.own.filter((a) => releaseGroupOf(a) === only) : split.own;
+  const albums = guestsOnly ? split.guest : own;
+  /** What this list is, under the artist's name. */
+  const what = guestsOnly
+    ? t('Appears on')
+    : only
+      ? t(RELEASE_GROUP_TITLE[only])
+      : t('Discography');
   const loading = isLoading || loadingGuests;
 
   return (
@@ -91,13 +111,13 @@ export default function DiscographyScreen() {
         <BackChevron label={t('Close')} />
         <View style={{ flex: 1 }}>
           <Text style={styles.title} numberOfLines={1}>
-            {data?.artist.name ?? (guestsOnly ? t('Appears on') : t('Discography'))}
+            {data?.artist.name ?? what}
           </Text>
           {/* With the artist's name up there, which of the two lists this is
               would otherwise only be told by the albums themselves. */}
           {data ? (
             <Text style={styles.subtitle} numberOfLines={1}>
-              {guestsOnly ? t('Appears on') : t('Discography')}
+              {what}
             </Text>
           ) : null}
         </View>

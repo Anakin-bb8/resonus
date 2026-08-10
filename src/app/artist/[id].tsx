@@ -44,6 +44,7 @@ import { useDownloadMessage } from '@/hooks/useDownloadMessage';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { useT } from '@/i18n';
 import { splitArtistAlbums } from '@/lib/artistAlbums';
+import { groupArtistAlbums, RELEASE_GROUP_TITLE } from '@/lib/releaseGroups';
 import { listPerf } from '@/lib/listPerf';
 import { useAuthStore } from '@/store/auth';
 import { anyDownloads, groupDownloadState, useDownloads } from '@/store/downloads';
@@ -193,6 +194,7 @@ export default function ArtistScreen() {
   // and it's shuffled — same "reflects the live state" idea as the play button.
   const shuffleActive = isCurrentArtistQueue && playerShuffle;
   const { own: albums, guest: guestAlbums } = splitArtistAlbums(data.albums, appearsOn ?? []);
+  const releaseGroups = groupArtistAlbums(albums);
   const headerUri =
     info?.imageUrl ?? coverArtUrl( data.artist.coverArt ?? data.artist.id, COVER.full);
 
@@ -478,7 +480,20 @@ export default function ArtistScreen() {
           </View>
         ) : null}
 
-        {albums.length > 0 ? (
+        {/* One shelf per kind of record where the library says what they are,
+            and the single undivided discography where it does not. See
+            `groupArtistAlbums`: it answers with nothing rather than with a
+            split it cannot stand behind. */}
+        {releaseGroups.length > 0 ? (
+          releaseGroups.map((g) => (
+            <AlbumRow
+              key={g.key}
+              title={t(RELEASE_GROUP_TITLE[g.key])}
+              albums={g.albums}
+              href={`/artist/discography/${id}?group=${g.key}`}
+            />
+          ))
+        ) : albums.length > 0 ? (
           <AlbumRow title={t('Discography')} albums={albums} href={`/artist/discography/${id}`} />
         ) : null}
 
