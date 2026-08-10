@@ -20,13 +20,18 @@ import { type SongListSort, type SortDirection } from '@/api/subsonic';
 import { SortSheet } from '@/components/SortSheet';
 
 /**
- * Same words the library's song browser uses, since it is the same question.
- * Album orders it has no name for bring their own (see `labels`).
+ * The same words the playlists use, since it is now the same menu.
+ *
+ * "Alphabetical" and not "A-Z", which is what the browse chips say: those have
+ * no direction to set, so A-Z is the whole truth there. Here it sits above an
+ * Ascending / Descending pair, and a label reading A-Z over a list running Z-A
+ * contradicts itself. Orders the playlists have no name for bring their own
+ * (see `labels`).
  */
 const SORT_LABEL: Record<string, string> = {
   server: 'Default',
   recent: 'Recent',
-  alpha: 'A-Z',
+  alpha: 'Alphabetical',
   added: 'Recently added',
   frequent: 'Most played',
   random: 'Shuffle',

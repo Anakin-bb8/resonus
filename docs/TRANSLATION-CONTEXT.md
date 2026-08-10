@@ -138,6 +138,7 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
+| `A-Z` | Sort option: the order of a list |
 | `Find an album` | The search box's placeholder on that screen |
 | `No albums yet` | Empty state heading |
 | `Nothing played yet` | Empty state: this phone has not played anything yet |
@@ -149,6 +150,7 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
+| `A-Z` | Sort option: the order of a list |
 | `Artists` | A heading over a list of them, never a count |
 | `Couldn't load artists.` | Error on the screen, with a Retry button |
 | `Filter artists` | Search box that narrows the list as you type, rather than a filter you set |
@@ -167,6 +169,7 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
+| `A-Z` | Sort option: the order of a list |
 | `Couldn't load songs.` | Error on the screen, with a Retry button |
 | `Default` | Sorting pill: what you get when nothing is sorted, which is the order the server keeps its songs in. Not alphabetical, and not Resonus deciding |
 | `Find a song` | The search box's placeholder on that screen |
@@ -182,7 +185,6 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `{n} removed from favorites` | Toast. `{n}` is a count of songs |
-| `Alphabetical` | Sort option: the order of a list |
 | `Ascending` | Sort option: the order of a list |
 | `Auto-download` | Keep this playlist downloaded by itself as songs are added to it |
 | `Auto-download off` | The toast that says it was turned off |
@@ -269,7 +271,6 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `Alphabetical` | Sort option: the order of a list |
 | `Couldn't load artists.` | Error on the screen, with a Retry button |
 | `Couldn't load folders.` | Error on the screen, with a Retry button |
 | `Couldn't load playlists.` | Error on the screen, with a Retry button |
@@ -375,7 +376,6 @@ you are actually typing into, which is easier than reading it here.
 | `{n} removed from playlist` | `{n}` is a plain number, with no word for songs attached: English reads "3 removed from playlist". Put in whatever your language needs around it |
 | `Add an optional description` | Placeholder in the empty description box |
 | `Add songs from the ⋯ menu of any song.` | The line under an empty playlist, saying how to fill it |
-| `Alphabetical` | Sort option: the order of a list |
 | `Artwork upload is disabled on the server` | The server can do it but has it turned off |
 | `Ascending` | Sort option: the order of a list |
 | `Auto-download` | Keep this playlist downloaded by itself as songs are added to it |
@@ -900,7 +900,6 @@ you are actually typing into, which is easier than reading it here.
 | `{songs} need about {size}, but only {free} is free. The download may stop partway.` | The same line when the phone is nearly full |
 | `{songs} will be saved to this device (about {size}).` | The same line when the size is known. `{size}` is like "340 MB" |
 | `{songs} will be saved to this device.` | The line under that title. `{songs}` is already worded and inflected, "12 songs" |
-| `A-Z` | Sort option: the order of a list |
 | `Add anyway` | The confirm button of that warning: put it in a second time |
 | `Add only the new ones` | The other button of that warning, when some are already in the playlist and some are not: leave the ones that are and add the rest |
 | `Add to a playlist` | Menu action: put this song, album or selection into a playlist |
@@ -911,6 +910,7 @@ you are actually typing into, which is easier than reading it here.
 | `Added to queue` | The toast that says it worked |
 | `Albums` | A heading over a list of them, never a count |
 | `All {songs} are already in “{name}”.` | The same warning when every one of the several being added is already there. `{songs}` already reads as a count ("12 songs") |
+| `Alphabetical` | Sort option: the order of a list |
 | `Already added` | Title of the dialog that warns the song is in that playlist already |
 | `Back` | Screen reader label for the back arrow. A direction, not a verb |
 | `Back online` | The toast shown when the server answers again and the app comes out of offline mode |
