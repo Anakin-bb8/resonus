@@ -150,7 +150,13 @@ export async function deleteCoverImage(
  * endpoint that lists songs in any order at all, and this one sorts and pages
  * like any other list, which is the whole reason to come down here.
  */
-export type NdSongSort = 'title' | 'recently_added' | 'play_date' | 'play_count' | 'random';
+export type NdSongSort =
+  | 'title'
+  | 'album'
+  | 'recently_added'
+  | 'play_date'
+  | 'play_count'
+  | 'random';
 
 /** The fields of a media file this app has any use for. */
 interface NdSong {
@@ -263,7 +269,13 @@ export async function listSongs(
   libraryIds?: string[],
   genreId?: string,
 ): Promise<Song[]> {
-  const order = sort === 'title' || sort === 'random' ? 'ASC' : 'DESC';
+  // A-Z for the orders that read as a list, newest first for the ones about
+  // time. `album` is the first kind: it expands, server side, to the album's
+  // sort name and then disc and track, so ascending is the record played in
+  // order.
+  const order = sort === 'recently_added' || sort === 'play_date' || sort === 'play_count'
+    ? 'DESC'
+    : 'ASC';
   const q = new URLSearchParams({
     _sort: sort,
     _order: order,

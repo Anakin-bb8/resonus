@@ -110,7 +110,11 @@ export default function GenreScreen() {
   // A server with nothing to offer shows no control rather than a broken one.
   // Asked only with a session in hand: the data layer answers for the server
   // that is connected, and there isn't one yet on the way in.
-  const { sort, openSort, sortSheet } = useServerSort(auth ? genreSongSorts() : []);
+  // The first order is by album here, not by whatever the server would have
+  // answered, so it is named for what it does (see `ND_GENRE_DEFAULT`).
+  const { sort, openSort, sortSheet } = useServerSort(auth ? genreSongSorts() : [], {
+    server: 'By album',
+  });
   const {
     sort: albumSort,
     openSort: openAlbumSort,

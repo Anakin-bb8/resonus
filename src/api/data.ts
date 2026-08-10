@@ -593,6 +593,10 @@ function ndGenreMap(a: Subsonic.SubsonicAuth): Promise<Map<string, string>> {
  * all rather than one that would sort what is on screen and nothing else. Only
  * Navidrome through its own API can do this today: Jellyfin sorts songs but is
  * not wired to filter them by genre here, and plain Subsonic sorts nothing.
+ *
+ * The first is what the screen opens on, and here it is by album rather than
+ * by whatever the server would have said (see `ND_GENRE_DEFAULT`), so the
+ * screen calls it that.
  */
 export function genreSongSorts(): Subsonic.SongListSort[] {
   if (isOffline()) return [];
@@ -601,6 +605,21 @@ export function genreSongSorts(): Subsonic.SongListSort[] {
   return ['server', 'alpha', 'added', 'recent', 'frequent', 'random'];
 }
 
+/**
+ * What the genre opens on, where the server can be asked for an order.
+ *
+ * A genre is a heap of songs off dozens of records, and the useful way through
+ * it is record by record: the album's songs together, in the order they were
+ * meant to be heard. Navidrome's `album` sort is exactly that — it expands to
+ * the album's sort name, then disc, then track — so what it hands back reads
+ * like the Albums tab with each record opened out.
+ *
+ * `getSongsByGenre` sorts by nothing at all, so on a plain Subsonic server the
+ * default stays whatever that server felt like and there is no menu to change
+ * it with.
+ */
+const ND_GENRE_DEFAULT: Navidrome.NdSongSort = 'album';
+
 export function getSongsByGenre(
   genre: string,
   count = 50,
@@ -608,16 +627,15 @@ export function getSongsByGenre(
   sort: Subsonic.SongListSort = 'server',
 ): Promise<Subsonic.Song[]> {
   const a = auth();
-  // 'server' is what the Subsonic endpoint answers on its own, so it never
-  // needs the detour, and it is the order the screen opens on.
-  if (sort !== 'server' && canListNative(a)) {
+  if (canListNative(a)) {
     return ndGenreMap(a)
       .then((byName) => {
         const id = byName.get(genre.toLowerCase());
         // The server knows no genre by that name: nothing to filter by, and
         // guessing would list the whole library under one genre's heading.
         if (!id) throw new Error('unknown genre');
-        return Navidrome.listSongs(a, ND_SORT[sort], count, offset, enabledFolderIds(a), id);
+        const nd = sort === 'server' ? ND_GENRE_DEFAULT : ND_SORT[sort];
+        return Navidrome.listSongs(a, nd, count, offset, enabledFolderIds(a), id);
       })
       .catch(() => {
         // Counted like the library listing's own fallback: a server where this
