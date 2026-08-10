@@ -403,6 +403,25 @@ function setStreamOffset(sec: number, p: AudioPlayer | null = activePlayer()) {
   }
 }
 
+/**
+ * Points the native `loop` at the source the player holds.
+ *
+ * Repeating one song is the player's own `loop`, which repeats THE SOURCE. A
+ * stream re-requested at 3:25 is a source that starts there, so looping it
+ * replayed the last few seconds of the song over and over and the track never
+ * ended. Whoever installs a source says here what it is: only a source that
+ * starts at the beginning is the whole song. The rest end for real, and their
+ * `didJustFinish` restarts the song from zero (see `onStatus`).
+ */
+function applyLoop(p: AudioPlayer | null, offsetSec = streamOffsetSec) {
+  if (!p) return;
+  try {
+    p.loop = usePlayerStore.getState().repeat === 'one' && offsetSec === 0;
+  } catch {
+    // ignore
+  }
+}
+
 /** `transcodeOffset` support of the active server (null = unchecked). */
 let transcodeOffsetSupported: boolean | null = null;
 /**
@@ -512,6 +531,7 @@ function seekActive(sec: number) {
       setStreamOffset(sec, p);
       try {
         replaceSource(p, sourceFor(song, sec));
+        applyLoop(p); // a segment is not the song: it must end to be repeated
         p.volume = effectiveVolume(song);
         if (usePlayerStore.getState().isPlaying) p.play();
         // The new source came with an empty tail: re-queue what comes next.
@@ -800,7 +820,7 @@ async function loadIndex(index: number, autoplay: boolean): Promise<boolean> {
     await remoteLoadIndex(index, autoplay);
     return true;
   }
-  const { queue, repeat } = usePlayerStore.getState();
+  const { queue } = usePlayerStore.getState();
   const song = queue[index];
   if (!song) return false;
   await ensureAudioMode();
@@ -814,7 +834,7 @@ async function loadIndex(index: number, autoplay: boolean): Promise<boolean> {
   useEqualizer.getState().attach(p.audioSessionId);
   try {
     replaceSource(p, sourceFor(song));
-    p.loop = repeat === 'one';
+    applyLoop(p);
     // Effective volume of THIS song (user × ReplayGain).
     p.volume = effectiveVolume(song);
     usePlayerStore.setState({
@@ -1480,8 +1500,16 @@ function gaplessReady(): boolean {
 function scheduleNextSource(force = false) {
   const p = activePlayer();
   if (!p) return;
-  const ni = gaplessReady() ? nextIndex(false) : null;
-  const next = ni == null ? null : usePlayerStore.getState().queue[ni];
+  const st = usePlayerStore.getState();
+  // Repeating one song is the native `loop`, which a source holding only part
+  // of the song cannot do (see `applyLoop`). What comes after that source is
+  // the same song from the beginning: queued here, the player joins them by
+  // itself, so the track never ends. Letting it end instead worked, but the
+  // notification showed the end of the song for the instant it took to ask for
+  // it again, and the silence of that request was audible.
+  const restartSelf = st.repeat === 'one' && streamOffsetSec > 0 && !remoteKind();
+  const ni = restartSelf ? st.index : gaplessReady() ? nextIndex(false) : null;
+  const next = ni == null ? null : st.queue[ni];
   if (ni == null || !next || next.url) {
     if (queuedNext) {
       queuedNext = null;
@@ -1524,10 +1552,15 @@ function onTrackTransition() {
     if (index === -1) return;
   }
   const song = st.queue[index];
-  pushHistory();
+  // A song repeating itself is not something to walk back to: ⏮️ would have
+  // spent one press per lap on the song already playing.
+  if (index !== st.index) pushHistory();
   consumeQueuedOnIndexChange(index);
   pendingSeek = null;
   setStreamOffset(0, p);
+  // Whole song again: from here the repeat is the native `loop`, and nothing
+  // else needs queueing behind it.
+  applyLoop(p);
   sourceHasLength = null; // another source: unknown until it reports
   scrobbledThisTrack = false;
   // ReplayGain is per song. Not mid-ramp (sleep fade, pause fade): setting the
@@ -1741,7 +1774,7 @@ function handoffToNewSource(index: number, song: Song, sec: number) {
   handoffReserve = r;
   try {
     replaceSource(r, sourceFor(song, startAt));
-    r.loop = usePlayerStore.getState().repeat === 'one';
+    applyLoop(r, startAt);
     r.volume = 0; // inaudible until the switch; the old one keeps playing from its buffer
     r.play();
     if (!useOffset && sec > 0) r.seekTo(sec);
@@ -2054,6 +2087,16 @@ function onStatus(status: AudioStatus) {
   if (!pendingSeek) maybeStartCrossfade(status);
   if (status.didJustFinish) {
     if (handleSleepAtSongEnd()) return;
+    // Repeating one song is normally the native `loop` and never gets here. A
+    // source that only holds part of the song (re-requested with `timeOffset`)
+    // cannot be looped, though — it would replay that part — so it ends for
+    // real and the song is asked for again from the beginning, which restores
+    // the native loop for the plays after this one.
+    const st = usePlayerStore.getState();
+    if (st.repeat === 'one') {
+      void loadIndex(st.index, true);
+      return;
+    }
     const ni = nextIndex(false);
     if (ni == null) {
       usePlayerStore.setState({ isPlaying: false });
@@ -3087,8 +3130,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     const order: RepeatMode[] = ['off', 'one', 'all'];
     const repeat = order[(order.indexOf(get().repeat) + 1) % order.length];
     set({ repeat });
-    const p = activePlayer();
-    if (p) p.loop = repeat === 'one';
+    applyLoop(activePlayer());
     // It travels with the queue now, so it is written down like the rest of it
     // instead of waiting for the next thing that happens to save.
     scheduleSync();
