@@ -3,7 +3,7 @@
  * Subsonic API directly. The module automatically decides whether to read
  * from the server or the local catalog based on the mode (online/offline).
  */
-import { useAuthStore } from '@/store/auth';
+import { profileScopeId, useAuthStore } from '@/store/auth';
 import { getDownloadShelf, getDownloadsCatalog, useDownloads } from '@/store/downloads';
 import {
   enabledFolderIds,
@@ -305,8 +305,65 @@ export function getGenres(): Promise<Subsonic.Genre[]> {
   return Subsonic.getGenres(auth());
 }
 
-export function getAlbumsByGenre(genre: string, size?: number, offset?: number): Promise<Subsonic.Album[]> {
+/**
+ * The orders a genre's albums can be asked for in, on the same terms as its
+ * songs: `getAlbumList2` takes one of its own fixed types OR a genre, never
+ * both, so a plain Subsonic server has exactly one order to give and no menu
+ * is shown.
+ */
+export type AlbumListSort = 'server' | 'alpha' | 'artist' | 'year' | 'added' | 'random';
+
+const ND_ALBUM_SORT: Record<AlbumListSort, Navidrome.NdAlbumSort> = {
+  server: 'name',
+  alpha: 'name',
+  artist: 'artist',
+  year: 'max_year',
+  added: 'recently_added',
+  random: 'random',
+};
+
+export function genreAlbumSorts(): AlbumListSort[] {
+  if (isOffline()) return [];
   const a = auth();
+  if (!canListNative(a)) return [];
+  return ['server', 'alpha', 'artist', 'year', 'added', 'random'];
+}
+
+export function getAlbumsByGenre(
+  genre: string,
+  size?: number,
+  offset?: number,
+  sort: AlbumListSort = 'server',
+): Promise<Subsonic.Album[]> {
+  const a = auth();
+  if (sort !== 'server' && canListNative(a)) {
+    return ndGenreMap(a)
+      .then((byName) => {
+        const id = byName.get(genre.toLowerCase());
+        if (!id) throw new Error('unknown genre');
+        return Navidrome.listAlbums(
+          a,
+          ND_ALBUM_SORT[sort],
+          size ?? 30,
+          offset ?? 0,
+          enabledFolderIds(a),
+          id,
+        );
+      })
+      .catch(() => {
+        bump('genre albums · native failed');
+        return subsonicGenreAlbums(a, genre, size, offset);
+      });
+  }
+  return subsonicGenreAlbums(a, genre, size, offset);
+}
+
+function subsonicGenreAlbums(
+  a: Subsonic.SubsonicAuth,
+  genre: string,
+  size?: number,
+  offset?: number,
+): Promise<Subsonic.Album[]> {
   const ids = enabledFolderIds(a);
   if (!ids) return Subsonic.getAlbumsByGenre(a, genre, size, offset);
   if (ids.length === 1) return Subsonic.getAlbumsByGenre(a, genre, size, offset, ids[0]);
@@ -496,8 +553,89 @@ export function songListSorts(): Subsonic.SongListSort[] {
   return ['recent', 'added', 'server', 'frequent', 'random'];
 }
 
-export function getSongsByGenre(genre: string, count = 50, offset = 0): Promise<Subsonic.Song[]> {
+// ── A genre's songs, in an order somebody chose ─────────────────────────────
+// `getSongsByGenre` is a Subsonic endpoint that takes a genre, a count and an
+// offset, and no order at all. Sorting the page that happens to be loaded is
+// not an answer: "alphabetical" over the fifty songs the server sent first is
+// not the fifty songs that come first alphabetically, and the list would
+// reshuffle itself every time another page arrived. So the order has to be the
+// server's, and only a server that can give one gets asked (`genreSongSorts`).
+
+/**
+ * Genre name to the id Navidrome's own filters take, per profile.
+ *
+ * One request for the whole list, kept for the session. The key carries the
+ * profile so a second account does not inherit the first one's ids, which are
+ * not the same numbers on another server.
+ */
+const ndGenreIds = new Map<string, Promise<Map<string, string>>>();
+
+function ndGenreMap(a: Subsonic.SubsonicAuth): Promise<Map<string, string>> {
+  const key = profileScopeId();
+  const known = ndGenreIds.get(key);
+  if (known) return known;
+  const asking = Navidrome.listGenres(a)
+    .then((list) => new Map(list.map((g) => [g.name.toLowerCase(), g.id])))
+    .catch((e: unknown) => {
+      // Not cached: a hiccup here would send every genre listing down the
+      // unsorted path for the rest of the session.
+      ndGenreIds.delete(key);
+      throw e;
+    });
+  ndGenreIds.set(key, asking);
+  return asking;
+}
+
+/**
+ * The orders a genre's songs can be asked for in.
+ *
+ * Empty means the server has none to give, and the screen shows no control at
+ * all rather than one that would sort what is on screen and nothing else. Only
+ * Navidrome through its own API can do this today: Jellyfin sorts songs but is
+ * not wired to filter them by genre here, and plain Subsonic sorts nothing.
+ */
+export function genreSongSorts(): Subsonic.SongListSort[] {
+  if (isOffline()) return [];
   const a = auth();
+  if (!canListNative(a)) return [];
+  return ['server', 'alpha', 'added', 'recent', 'frequent', 'random'];
+}
+
+export function getSongsByGenre(
+  genre: string,
+  count = 50,
+  offset = 0,
+  sort: Subsonic.SongListSort = 'server',
+): Promise<Subsonic.Song[]> {
+  const a = auth();
+  // 'server' is what the Subsonic endpoint answers on its own, so it never
+  // needs the detour, and it is the order the screen opens on.
+  if (sort !== 'server' && canListNative(a)) {
+    return ndGenreMap(a)
+      .then((byName) => {
+        const id = byName.get(genre.toLowerCase());
+        // The server knows no genre by that name: nothing to filter by, and
+        // guessing would list the whole library under one genre's heading.
+        if (!id) throw new Error('unknown genre');
+        return Navidrome.listSongs(a, ND_SORT[sort], count, offset, enabledFolderIds(a), id);
+      })
+      .catch(() => {
+        // Counted like the library listing's own fallback: a server where this
+        // quietly fails looks exactly like one that never offered the orders,
+        // except it offered them.
+        bump('genre songs · native failed');
+        return subsonicGenreSongs(a, genre, count, offset);
+      });
+  }
+  return subsonicGenreSongs(a, genre, count, offset);
+}
+
+function subsonicGenreSongs(
+  a: Subsonic.SubsonicAuth,
+  genre: string,
+  count: number,
+  offset: number,
+): Promise<Subsonic.Song[]> {
   const ids = enabledFolderIds(a);
   if (!ids) return Subsonic.getSongsByGenre(a, genre, count, offset);
   if (ids.length === 1) return Subsonic.getSongsByGenre(a, genre, count, offset, ids[0]);

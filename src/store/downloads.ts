@@ -540,6 +540,8 @@ interface DownloadsState {
    */
   downloadArtist: (artistId: string, songs: Song[], albums: Album[]) => Promise<void>;
   /** Downloads all favorite songs (group 'favorites'). */
+  /** Every song of a genre, gathered by the screen that asks (see the genre page). */
+  downloadGenre: (genre: string, songs: Song[]) => Promise<void>;
   downloadFavorites: (songs: Song[]) => Promise<void>;
   downloadSong: (song: Song) => Promise<void>;
   /** Downloads a loose batch of songs (multiple selection). */
@@ -836,6 +838,19 @@ export const useDownloads = create<DownloadsState>((set, get) => {
           playlist.comment,
         );
       }
+    },
+
+    downloadGenre: async (genre, songs) => {
+      // Involved albums: those of the songs (partial entry if needed).
+      const byId = new Map<string, Album>();
+      for (const s of songs) {
+        const al = albumFromSong(s);
+        if (!byId.has(al.id)) byId.set(al.id, al);
+      }
+      // Keyed by name, which is what a genre is: the servers give it no id of
+      // their own that every backend agrees on, and it is what the screen is
+      // routed by.
+      await downloadGroup(`genre:${genre}`, songs, Array.from(byId.values()));
     },
 
     downloadFavorites: async (songs) => {

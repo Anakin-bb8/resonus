@@ -1,14 +1,14 @@
 /**
  * Minimal Navidrome native API client (non-Subsonic). Only used for what the
  * Subsonic API doesn't cover: custom cover art for playlists (≥ 0.61) and for
- * radio stations, whether a share allows downloading, and listing songs in an
- * order Subsonic has no way to ask for. Requires cleartext username and
- * password to obtain a JWT (`auth.ndPassword`); see SubsonicAuth.
+ * radio stations, whether a share allows downloading, and listing songs and
+ * albums in an order Subsonic has no way to ask for. Requires cleartext
+ * username and password to obtain a JWT (`auth.ndPassword`); see SubsonicAuth.
  */
 // Not the global `fetch`: it never resolves in the background. See the note
 // in `src/api/subsonic.ts`.
 import { fetch } from 'expo/fetch';
-import { type Song, type SubsonicAuth } from './subsonic';
+import { type Album, type Song, type SubsonicAuth } from './subsonic';
 import { assertCanRequest } from './netGate';
 
 /** Typed error to provide useful messages in the UI. */
@@ -261,6 +261,7 @@ export async function listSongs(
   count = 50,
   offset = 0,
   libraryIds?: string[],
+  genreId?: string,
 ): Promise<Song[]> {
   const order = sort === 'title' || sort === 'random' ? 'ASC' : 'DESC';
   const q = new URLSearchParams({
@@ -269,6 +270,11 @@ export async function listSongs(
     _start: String(offset),
     _end: String(offset + count),
   });
+  // Narrowing to one genre is the same list with a filter on it, which is what
+  // makes a genre's songs sortable at all: Subsonic's own endpoint for them
+  // takes no order, so the only alternative was to sort the page that happened
+  // to be loaded and call it alphabetical.
+  if (genreId) q.set('genre_id', genreId);
   // Navidrome's own name for what Subsonic calls a music folder, and the ids
   // are the same ones, so a library turned off in the app stays off here.
   // Repeated, one per library: the REST layer turns a parameter given more than
@@ -277,4 +283,101 @@ export async function listSongs(
   for (const id of libraryIds ?? []) q.append('library_id', id);
   const rows = await ndJson<NdSong[]>(auth, `/api/song?${q.toString()}`);
   return Array.isArray(rows) ? rows.map(toSong) : [];
+}
+
+/**
+ * What Navidrome's REST layer accepts for ordering albums. A shorter list than
+ * the songs one, and deliberately only the names its own sort mappings
+ * declare: an unknown one falls through to a column name, which either works
+ * or sorts by nothing, and neither is worth offering as a menu entry.
+ */
+export type NdAlbumSort = 'name' | 'artist' | 'max_year' | 'recently_added' | 'random';
+
+/** The fields of an album this app has any use for. */
+interface NdAlbum {
+  id: string;
+  name?: string;
+  albumArtist?: string;
+  albumArtistId?: string;
+  artist?: string;
+  artistId?: string;
+  maxYear?: number;
+  minYear?: number;
+  songCount?: number;
+  createdAt?: string;
+  playCount?: number;
+  playDate?: string;
+  genre?: string;
+}
+
+function toAlbum(a: NdAlbum): Album {
+  return {
+    id: a.id,
+    name: a.name ?? '',
+    // The album artist is what an album is filed under; `artist` on this model
+    // is the track artist and would put a compilation under whoever happened to
+    // sing first.
+    artist: a.albumArtist ?? a.artist,
+    artistId: a.albumArtistId ?? a.artistId,
+    // Same ids as Subsonic, so covers keep coming from the usual endpoint.
+    coverArt: a.id,
+    songCount: a.songCount,
+    // The year an album is shown by is the one it finished on, which is what
+    // Subsonic's `year` means here too.
+    year: a.maxYear ?? a.minYear,
+    created: a.createdAt,
+    played: a.playDate,
+    playCount: a.playCount,
+    genre: a.genre,
+  };
+}
+
+/**
+ * A page of albums, ordered by the server, optionally narrowed to one genre.
+ *
+ * Same reasoning as `listSongs`: Subsonic's `getAlbumList2` takes one of its
+ * own fixed types OR a genre, never both, so a genre's albums arrive in
+ * whatever order that server felt like and no client can ask for another.
+ */
+export async function listAlbums(
+  auth: SubsonicAuth,
+  sort: NdAlbumSort = 'name',
+  count = 30,
+  offset = 0,
+  libraryIds?: string[],
+  genreId?: string,
+): Promise<Album[]> {
+  // Newest first for the orders that are about time; A-Z for the rest.
+  const order = sort === 'recently_added' || sort === 'max_year' ? 'DESC' : 'ASC';
+  const q = new URLSearchParams({
+    _sort: sort,
+    _order: order,
+    _start: String(offset),
+    _end: String(offset + count),
+  });
+  for (const id of libraryIds ?? []) q.append('library_id', id);
+  if (genreId) q.set('genre_id', genreId);
+  const rows = await ndJson<NdAlbum[]>(auth, `/api/album?${q.toString()}`);
+  return Array.isArray(rows) ? rows.map(toAlbum) : [];
+}
+
+/** A genre as this server names it. The id is what its own filters take. */
+export interface NdGenre {
+  id: string;
+  name: string;
+}
+
+/**
+ * Every genre the server knows.
+ *
+ * Subsonic hands back genre NAMES and nothing else, which is what the app
+ * routes by, and Navidrome's own lists filter by id. So the name has to be
+ * turned into one before a genre's songs can be asked for in any order. The
+ * whole list comes in one request and is small enough to keep: a library with
+ * a thousand distinct genres is already unusual, and this is a name and an id
+ * each.
+ */
+export async function listGenres(auth: SubsonicAuth): Promise<NdGenre[]> {
+  const rows = await ndJson<NdGenre[]>(auth, '/api/genre?_sort=name&_start=0&_end=1000');
+  return Array.isArray(rows) ? rows.filter((g) => g?.id && g?.name) : [];
 }
