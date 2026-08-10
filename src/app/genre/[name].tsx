@@ -116,7 +116,7 @@ export default function GenreScreen() {
   // answered, so it is named for what it does (see `ND_GENRE_DEFAULT`).
   const { sort, dir, openSort, sortSheet } = useServerSort(
     auth ? genreSongSorts() : [],
-    { server: 'By album' },
+    { server: 'By album', frequent: 'Most played::songs' },
     genreSongDir,
   );
   const {
@@ -124,7 +124,11 @@ export default function GenreScreen() {
     dir: albumDir,
     openSort: openAlbumSort,
     sortSheet: albumSortSheet,
-  } = useServerSort<AlbumListSort>(auth ? genreAlbumSorts() : [], {}, genreAlbumDir);
+  } = useServerSort<AlbumListSort>(
+    auth ? genreAlbumSorts() : [],
+    { frequent: 'Most played::albums' },
+    genreAlbumDir,
+  );
   // One slot in the toolbar, whichever list is under it.
   const openListSort = tab === 'albums' ? openAlbumSort : openSort;
 

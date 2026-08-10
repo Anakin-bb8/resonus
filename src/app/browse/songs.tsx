@@ -88,7 +88,7 @@ const SORT_LABEL: Record<SongListSort, string> = {
   recent: 'Recent',
   alpha: 'A-Z',
   added: 'Recently added',
-  frequent: 'Most played',
+  frequent: 'Most played::songs',
   random: 'Shuffle',
 };
 
