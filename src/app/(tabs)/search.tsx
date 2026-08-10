@@ -83,7 +83,7 @@ export default function SearchScreen() {
   // navigator, and the types for it used to come from `@react-navigation/*`,
   // which expo-router no longer installs: the navigation API is its own now.
   const navigation = useNavigation<{
-    addListener: (event: 'tabPress', callback: () => void) => () => void;
+    addListener: (event: 'tabPress' | 'blur', callback: () => void) => () => void;
     isFocused: () => boolean;
   }>();
   const inputRef = useRef<TextInput>(null);
@@ -95,9 +95,19 @@ export default function SearchScreen() {
     // `onTabReselect`.
     const stopTabPress = navigation.addListener('tabPress', focusBox);
     const stopReselect = onTabReselect('search', focusBox);
+    // Leaving the tab gives the box up.
+    //
+    // Nothing does it otherwise: the tab is never unmounted, only frozen, so
+    // the input keeps the focus it had while you are away. Asking an input
+    // that already has focus to take it does nothing at all, keyboard
+    // included, so the gesture worked once and then never again for the rest
+    // of the session. It also left the screen showing the recent searches, on
+    // the strength of a focus nobody could see.
+    const stopBlur = navigation.addListener('blur', () => inputRef.current?.blur());
     return () => {
       stopTabPress();
       stopReselect();
+      stopBlur();
     };
   }, [navigation]);
 
