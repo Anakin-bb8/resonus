@@ -68,7 +68,7 @@ export function PlaylistReorder({
   const t = useT();
   const bottomPad = useScreenBottomPadding();
   const [list, setList] = useState(songs);
-  useSettings((s) => s.accentColor); // re-render al cambiar el acento
+  useSettings((s) => s.accentColor); // re-render when the accent changes
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
