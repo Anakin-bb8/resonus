@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 619 of them.
+Every string the app can show, under the screen it shows up on. 621 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -22,9 +22,7 @@ you are actually typing into, which is easier than reading it here.
 | `Album` | In search results, the little word under a result saying what kind of thing it is |
 | `Couldn't load the album.` | Error on the screen, with a Retry button |
 | `Disc {n}` | Heading over the songs of one disc of a multi-disc album. `{n}` is its number |
-| `Find in playlist` | Placeholder of the search box hidden above a tracklist, for finding a song within it |
 | `More from {artist}` | Heading under an album: their other records. `{artist}` is the name |
-| `View cover` | The same as `View image`, for album and playlist artwork |
 
 ## Anywhere in the app
 
@@ -112,6 +110,7 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `About` | The heading over an artist's biography, and the name of the settings page about the app. Two very different uses of one English word, so `About::artist` and `About::app` exist for a language that needs two words |
+| `All songs` |  |
 | `Appears on` | Albums the artist appears on: features, compilations |
 | `Compilations` |  |
 | `Couldn't load the artist.` | Error on the screen, with a Retry button |
@@ -139,6 +138,13 @@ you are actually typing into, which is easier than reading it here.
 | `EPs` |  |
 | `Live` |  |
 | `Singles` |  |
+
+## Artist › Songs
+
+| String | What it is |
+| --- | --- |
+| `Find a song` | The search box's placeholder on that screen |
+| `No songs here yet` |  |
 
 ## Browse › Albums
 
@@ -176,12 +182,10 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `A-Z` | Sort option: the order of a list |
-| `Couldn't load songs.` | Error on the screen, with a Retry button |
 | `Default` | Sorting pill: what you get when nothing is sorted, which is the order the server keeps its songs in. Not alphabetical, and not Resonus deciding |
 | `Find a song` | The search box's placeholder on that screen |
 | `No songs yet` | Empty state when the library has no songs |
 | `Nothing played yet` | Empty state: this phone has not played anything yet |
-| `Songs` | Always a heading, never a count, so it wants the plain plural your language uses for a list of them ("Songs", not "of songs"). Counting songs is a different thing and goes through the plural forms |
 | `Your library looks empty.` | Empty state: the server answered, and had nothing |
 | `Your most played songs will show up here.` | Empty state, before anything has been played |
 | `Your recently played songs will show up here.` | Empty state, before anything has been played |
@@ -191,18 +195,13 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `{n} removed from favorites` | Toast. `{n}` is a count of songs |
-| `Ascending` | Sort option: the order of a list |
 | `Auto-download` | Keep this playlist downloaded by itself as songs are added to it |
 | `Auto-download off` | The toast that says it was turned off |
 | `Auto-download on` | The toast that says it was turned on |
 | `Couldn't load favorites.` | Error on the screen, with a Retry button |
-| `Descending` | Sort option: the order of a list |
-| `Direction` | Sort sheet: the ascending vs descending toggle. Not a compass direction |
 | `Find in favorites` | Placeholder of the search box that narrows the favourites already shown |
-| `Find in playlist` | Placeholder of the search box hidden above a tracklist, for finding a song within it |
 | `No favorites yet` | Empty state heading |
 | `Tap the heart on songs to see them here.` | The line under an empty state, saying how to fill it |
-| `View cover` | The same as `View image`, for album and playlist artwork |
 
 ## Favorites add
 
@@ -218,16 +217,11 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `Ascending` | Sort option: the order of a list |
-| `Couldn't load songs.` | Error on the screen, with a Retry button |
 | `Default` | Sorting pill: what you get when nothing is sorted, which is the order the server keeps its songs in. Not alphabetical, and not Resonus deciding |
-| `Descending` | Sort option: the order of a list |
-| `Direction` | Sort sheet: the ascending vs descending toggle. Not a compass direction |
 | `Genre` | Label of a field in the song information sheet |
 | `No albums in this genre` | Empty state heading |
 | `No songs in this genre` | Empty state heading |
 | `Nothing to shuffle yet` | Empty state: there is nothing here to play in random order |
-| `Songs` | Always a heading, never a count, so it wants the plain plural your language uses for a list of them ("Songs", not "of songs"). Counting songs is a different thing and goes through the plural forms |
 | `Try exploring another genre.` | Empty state subtitle on a genre screen |
 
 ## Genres
@@ -256,7 +250,6 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `Couldn't load songs.` | Error on the screen, with a Retry button |
 | `Couldn't reach the server. Check your connection.` | Error on Home when the server does not answer at all |
 | `Discover` | Home section: discovery suggestions |
 | `Good afternoon` | Home's greeting. The hours it changes at are part of the language too, see TRANSLATING.md |
@@ -382,7 +375,6 @@ you are actually typing into, which is easier than reading it here.
 | `Add an optional description` | Placeholder in the empty description box |
 | `Add songs from the ⋯ menu of any song.` | The line under an empty playlist, saying how to fill it |
 | `Artwork upload is disabled on the server` | The server can do it but has it turned off |
-| `Ascending` | Sort option: the order of a list |
 | `Auto-download` | Keep this playlist downloaded by itself as songs are added to it |
 | `Auto-download off` | The toast that says it was turned off |
 | `Auto-download on` | The toast that says it was turned on |
@@ -393,12 +385,9 @@ you are actually typing into, which is easier than reading it here.
 | `Delete` | The confirm button of a delete dialog, for a playlist or a radio station |
 | `Delete “{name}”?` | Dialog title. `{name}` is the playlist or station |
 | `Delete playlist` | Menu action, in red |
-| `Descending` | Sort option: the order of a list |
 | `Description` | The playlist's own description: what whoever made it wrote about it |
-| `Direction` | Sort sheet: the ascending vs descending toggle. Not a compass direction |
 | `Done` | The button that leaves drag-to-reorder, or accepts a fine-tuned number |
 | `Edit playlist` | Menu action, and the title of the sheet it opens |
-| `Find in playlist` | Placeholder of the search box hidden above a tracklist, for finding a song within it |
 | `Name` | The Name field when editing a playlist or a station |
 | `Password` | The password field, on the login screen and wherever the server asks again |
 | `Playlist` | A list saved on the server. Not the queue |
@@ -416,7 +405,6 @@ you are actually typing into, which is easier than reading it here.
 | `Turn on` | The confirm button of that question |
 | `Turn on auto-download?` | Asks whether new songs added to this playlist should download by themselves from now on |
 | `Updated` | Toast after a change went through |
-| `View cover` | The same as `View image`, for album and playlist artwork |
 | `Visible to other users on the server` | The line under `Public playlist` |
 | `Wrong password` | The password typed to confirm a cover change was not right |
 | `Your password is needed to upload images and will be stored securely.` | The line explaining why the password is asked for again |
@@ -487,7 +475,6 @@ you are actually typing into, which is easier than reading it here.
 | `Radio` | Internet radio stations. Most languages keep the word |
 | `Recent searches` | What was searched for before, kept on the phone |
 | `Song` | In search results, the little word under a result saying what kind of thing it is |
-| `Songs` | Always a heading, never a count, so it wants the plain plural your language uses for a list of them ("Songs", not "of songs"). Counting songs is a different thing and goes through the plural forms |
 | `What do you want to listen to?` | The placeholder in the search box, worded as a question |
 
 ## Settings
@@ -917,6 +904,7 @@ you are actually typing into, which is easier than reading it here.
 | `All {songs} are already in “{name}”.` | The same warning when every one of the several being added is already there. `{songs}` already reads as a count ("12 songs") |
 | `Alphabetical` | Sort option: the order of a list |
 | `Already added` | Title of the dialog that warns the song is in that playlist already |
+| `Ascending` | Sort option: the order of a list |
 | `Back` | Screen reader label for the back arrow. A direction, not a verb |
 | `Back online` | The toast shown when the server answers again and the app comes out of offline mode |
 | `Cancel` | The button that closes a dialog without doing anything, and the one beside a search box |
@@ -928,14 +916,18 @@ you are actually typing into, which is easier than reading it here.
 | `Couldn't complete the action` | What the app says when it does not know what went wrong. Deliberately vague |
 | `Couldn't create the playlist` | Toast: the server refused |
 | `Couldn't load albums.` | Error on the screen, with a Retry button |
+| `Couldn't load songs.` | Error on the screen, with a Retry button |
 | `Couldn't play the song` | Toast: the app could not start it at all |
 | `Create` | The confirm button of the new-playlist dialog. A verb |
 | `Delete downloads` | Menu action: delete the downloaded files of everything here |
+| `Descending` | Sort option: the order of a list |
+| `Direction` | Sort sheet: the ascending vs descending toggle. Not a compass direction |
 | `Download` | The confirm button of the download dialog, and what the screen reader calls the download button. A verb |
 | `Download “{name}”?` | Dialog title. `{name}` is an album, artist or playlist |
 | `Download stopped` | Toast: the download was stopped part way |
 | `Downloading…` | Toast: the download has started. The songs arrive one by one after this |
 | `Favorites` | The songs, albums and artists you starred |
+| `Find in playlist` | Placeholder of the search box hidden above a tracklist, for finding a song within it |
 | `History` | The listening history: what was played and when |
 | `Hold to go back to {tab}` | The hint on holding the back arrow. `{tab}` is Home, Search or Library |
 | `Library` | The tab with your albums, artists and playlists, and a folder in the car |
@@ -966,6 +958,7 @@ you are actually typing into, which is easier than reading it here.
 | `Show all` | Opens the full list of what the row is showing a few of |
 | `Shuffle` | Play in random order |
 | `Song downloaded` | Toast: one song finished |
+| `Songs` | Always a heading, never a count, so it wants the plain plural your language uses for a list of them ("Songs", not "of songs"). Counting songs is a different thing and goes through the plural forms |
 | `Songs already downloaded will be kept.` | The line under that title: stopping does not undo what already arrived |
 | `Sort` | Read out by the screen reader for the button that opens the sort options. A verb |
 | `Sort by` | Heading over the sort options |
@@ -977,6 +970,7 @@ you are actually typing into, which is easier than reading it here.
 | `Unknown album` | Fallback when the file and the server have no album |
 | `Unknown artist` | Fallback when the file and the server have no artist |
 | `View` | Title of the menu that chooses how a collection is drawn, and the label of the button that opens it. A noun: what you are looking at, not the verb |
+| `View cover` | The same as `View image`, for album and playlist artwork |
 
 ## Left in English on purpose
 

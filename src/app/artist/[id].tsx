@@ -451,7 +451,16 @@ export default function ArtistScreen() {
 
         {top.length > 0 ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('Popular')}</Text>
+            {/* "All songs" and not "Show all": what is above is the twenty the
+                server thinks are worth hearing first, and what the link opens
+                is every song there is. "Show all" beside "Popular" would read
+                as all the popular ones. */}
+            <Link href={`/artist/songs/${id}`} asChild>
+              <Pressable style={styles.sectionHeader}>
+                <Text style={styles.sectionHeaderTitle}>{t('Popular')}</Text>
+                <Text style={styles.showAll}>{t('All songs')}</Text>
+              </Pressable>
+            </Link>
             {/* Same horizontal margin as the lists (album/playlist) so the
                 rows —and the three-dot button— don't stick to the edge. */}
             <View style={styles.popularRows}>
