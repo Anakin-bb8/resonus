@@ -354,6 +354,33 @@ export default function PlayerScreen() {
   useEffect(() => {
     if (pageH > 0 && coverBoxH > 0 && (!canRate || starsH > 0)) setCoverStable(true);
   }, [pageH, coverBoxH, starsH, canRate]);
+  /**
+   * Coming back to the player from the queue or the lyrics screen, which open
+   * on top of it as native modals. The player is not unmounted there, so
+   * everything it had worked out is still worked out — but Android detaches the
+   * screen under a modal, and what came back was a player with no artwork in it
+   * and swipes that seemed to do nothing, because the covers were being dragged
+   * around invisible. Written straight, with no fade: this cover was already on
+   * screen before leaving, so there is nothing to reveal, only to re-assert.
+   * The first focus is the screen opening and belongs to the reveal above.
+   */
+  const wasFocused = useRef(false);
+  const wasBlurred = useRef(false);
+  useEffect(() => {
+    if (!isFocused) {
+      // Only after the screen has been focused once: the first focus is this
+      // one opening, whenever it arrives, and revealing there would skip the
+      // wait that keeps the cover from settling into place.
+      if (wasFocused.current) wasBlurred.current = true;
+      return;
+    }
+    const returning = wasFocused.current && wasBlurred.current;
+    wasFocused.current = true;
+    wasBlurred.current = false;
+    if (!returning) return;
+    setCoverStable(true);
+    coverAppear.set(1);
+  }, [isFocused, coverAppear]);
   const coverAppearStyle = useAnimatedStyle(() => ({ opacity: coverAppear.value }));
   // The swipe-to-close gesture should only work when scrolled to the top;
   // otherwise it would steal the gesture when returning from the lyrics card.
