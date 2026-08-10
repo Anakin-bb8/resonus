@@ -784,12 +784,21 @@ function consumeQueuedOnIndexChange(next: number) {
   });
 }
 
+/** Which load is in charge, so an older one can tell it has been overtaken. */
+let loadToken = 0;
+
 /**
- * Loads the track at `index` and (optionally) plays it. Says whether it got
- * there: a caller that has just installed a queue around this needs to know,
- * or the app ends up showing one song and playing another.
+ * Loads the track at `index` and (optionally) plays it.
+ *
+ * False means nothing was installed and whatever was playing before still is,
+ * which is what lets a caller that installed a queue around this put back the
+ * one it replaced. Anything that goes wrong AFTER the source is in the player
+ * says true: by then what was playing is gone, and a screen put back to
+ * describe it would be describing nothing. That is the one thing this must
+ * never do — show one song while another one sounds.
  */
 async function loadIndex(index: number, autoplay: boolean): Promise<boolean> {
+  const token = ++loadToken;
   // Offline, a track that only exists as a server stream cannot be played:
   // we skip forward to the next downloaded one instead of getting stuck (covers
   // "previous", manual taps and queue restore). If none is playable, we stop.
@@ -827,10 +836,16 @@ async function loadIndex(index: number, autoplay: boolean): Promise<boolean> {
     await remoteLoadIndex(index, autoplay);
     return true;
   }
-  const { queue } = usePlayerStore.getState();
-  const song = queue[index];
-  if (!song) return false;
   await ensureAudioMode();
+  // Loading waits, and a queue can be rewritten while it does: another tap,
+  // the mix filling itself in, the shuffle being dealt again. Reading the song
+  // before the wait and installing it after handed the player a song from the
+  // queue that no longer exists, while the screen went on describing the one
+  // that does — the report was tapping a song and being shown a different one,
+  // with the right audio. Whoever came last owns playback; this one is done.
+  if (token !== loadToken) return true;
+  const song = usePlayerStore.getState().queue[index];
+  if (!song) return false;
   const p = ensurePlayer(activeIdx);
   // The player may have just been created, so the reset above had nothing to
   // reach: this source starts at the beginning either way.
@@ -841,16 +856,24 @@ async function loadIndex(index: number, autoplay: boolean): Promise<boolean> {
   useEqualizer.getState().attach(p.audioSessionId);
   try {
     replaceSource(p, sourceFor(song));
+  } catch {
+    useToast.getState().show(tg("Couldn't play the song"));
+    return false;
+  }
+  // The player is holding this song now and whatever it held before is gone,
+  // so the screen follows it here and not one line later: everything below can
+  // fail, and none of it can put the old song back.
+  usePlayerStore.setState({
+    index,
+    positionSec: 0,
+    durationSec: song.duration ?? 0,
+    isPlaying: autoplay,
+    isBuffering: autoplay,
+  });
+  try {
     applyLoop(p);
     // Effective volume of THIS song (user × ReplayGain).
     p.volume = effectiveVolume(song);
-    usePlayerStore.setState({
-      index,
-      positionSec: 0,
-      durationSec: song.duration ?? 0,
-      isPlaying: autoplay,
-      isBuffering: autoplay,
-    });
     if (autoplay) p.play();
     applyLockScreen(p, song);
     onTrackChanged(song);
@@ -867,11 +890,13 @@ async function loadIndex(index: number, autoplay: boolean): Promise<boolean> {
     if (!song.url && !localSourceFor(song)) {
       void ensureTranscodeOffsetSupport();
     }
-    return true;
   } catch {
+    // The song is in the player: say so, whatever went wrong on the way to
+    // making it sound. Answering false here is what left the screen describing
+    // the song before it while this one played.
     useToast.getState().show(tg("Couldn't play the song"));
-    return false;
   }
+  return true;
 }
 
 // ── "Back" history, Spotify-style ────────────────────────────────────────────
@@ -3205,6 +3230,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     });
     // Load the track (without playing) and leave the position ready.
     await loadIndex(index, false);
+    // A tap that landed while this was loading owns the player now (`loadToken`
+    // saw to that). What is left here belongs to the queue being restored, and
+    // running it against another one would drop somebody else's song at the
+    // position this one was left at, paused.
+    if (get().queue !== songs) return;
     if (positionSec > 0) seekActive(positionSec);
     usePlayerStore.setState({ positionSec, isPlaying: false });
   },
@@ -3262,6 +3292,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       repeat: isRepeatMode(saved.repeat) ? saved.repeat : 'off',
     });
     await loadIndex(index, false);
+    // Same as the server restore above: only if this queue is still the one.
+    if (get().queue !== saved.queue) return true;
     if (positionSec > 0) seekActive(positionSec);
     usePlayerStore.setState({ positionSec, isPlaying: false });
     return true;
