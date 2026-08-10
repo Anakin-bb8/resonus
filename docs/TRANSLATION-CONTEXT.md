@@ -259,7 +259,6 @@ you are actually typing into, which is easier than reading it here.
 | `Loading covers…` | Still pulling the pictures out of the phone's own files |
 | `Looking for music…` | Reading the phone's own files, before anything can be shown |
 | `Nothing to shuffle yet` | Empty state: there is nothing here to play in random order |
-| `Playlists` | A section on Home and in the library, and a folder in the car |
 | `Random albums` | A section of Home: albums picked at random, to happen upon something |
 | `Random artists` | A section of Home: artists picked at random |
 | `Scanning your music…` | Going through the phone's own files |
@@ -482,7 +481,6 @@ you are actually typing into, which is easier than reading it here.
 | `Browse all` | Opens the full list |
 | `Clear all` | Throw away the whole list: the history, the queue, or what you searched for |
 | `Couldn't reach the server. Check your connection.` | Error on Home when the server does not answer at all |
-| `Playlists` | A section on Home and in the library, and a folder in the car |
 | `Radio` | Internet radio stations. Most languages keep the word |
 | `Recent searches` | What was searched for before, kept on the phone |
 | `Song` | In search results, the little word under a result saying what kind of thing it is |
@@ -834,7 +832,6 @@ you are actually typing into, which is easier than reading it here.
 | `{n} cards` | How many tiles fit across the quick grid. `{n}` is a number of columns |
 | `Keep the Favorites tile first.` | The line under “Pin favorites”, explaining it |
 | `Pin favorites` | Pin favourites to the quick grid |
-| `Playlists` | A section on Home and in the library, and a folder in the car |
 | `Quick grid` | The grid of shortcut tiles on Home |
 | `Recent albums` | A source the quick grid can draw its tiles from |
 | `Show quick grid` | Whether the grid of shortcut tiles shows on Home |
@@ -948,6 +945,7 @@ you are actually typing into, which is easier than reading it here.
 | `Play` | Read out by the screen reader for the play button. A verb |
 | `Playing next` | The toast that says `Play next` worked. Not the same string, and not a heading |
 | `Playlist name` | The name field when making or renaming a playlist |
+| `Playlists` | A section on Home and in the library, and a folder in the car |
 | `Rate {n} stars` | Read out by the screen reader for each star. `{n}` is which star it is |
 | `Recent` | A sort order: what you opened most recently first |
 | `Recently added` | A sort order, and a section: newest in the library first |
