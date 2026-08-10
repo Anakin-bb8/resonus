@@ -11,190 +11,101 @@ Releases before 0.2.1 are only listed on the
 
 ## [0.6.5] - 2026-08-10
 
-Everything the three betas above carried, and a last round on what the app
-tells the notification and the car. The one worth reading about is the cover:
-with gapless on, the track queued behind the current one starts by itself, and
-what the lock screen, the car and the watch were being told about it was
-whatever had been said about the song before. In the foreground the correction
-lands in the same breath and nobody sees it. Minimized, with an album
-advancing on its own, it is the cover of a neighbouring song, which is exactly
-how it was reported.
+Underneath everything else, this release moves the whole app onto Expo SDK 56
+and React Native 0.85. Everything native was rebuilt on top of that, including
+the five modules Resonus has of its own and the patched audio engine.
 
-There is also a new page in the hidden Diagnostics screen, for a report that
-has resisted three weeks of reading the code. Everything measured so far
-stopped measuring the moment the app was minimized, which is where that report
-lives.
-
-### Added
-
-- Genres can be saved, ordered and counted. A genre page now says how many
-  albums and songs it holds, offers the same actions row every album and
-  playlist has, and can be downloaded whole: it reads the genre song by song
-  before asking, so the dialog counts real songs and estimates what they weigh
-  rather than asking you to accept a number nobody knows.
-- Ordering a genre's songs and albums, where the server can do it. Subsonic
-  has no way to order either list, so this is Navidrome only, through its own
-  API, and the control is simply absent elsewhere: an order that only sorts the
-  page you happen to have loaded is not an order.
-- A "While minimized" section in Diagnostics (Settings › About, five taps on
-  the version). It measures the player's own heartbeat, which is the one clock
-  that keeps running out there, and above all how stale it was at the moment
-  you came back. Needs "Measure performance" turned on.
-
-### Fixed
-
-- The notification, the lock screen and the car no longer show the cover,
-  title and album of the track that has just ended when the player moves on to
-  the one queued behind it by itself.
-- A song put next, or added to the queue, is now warmed up in advance like the
-  rest. Preloading only ever went out when the track changed, so the one song
-  somebody had just asked for was precisely the one nobody had requested ahead
-  of time, and on a proxy that fetches from elsewhere that is the whole wait
-  this setting exists to remove. Reported by a user (#137).
-
-## [0.6.5-beta.3] - 2026-08-10
-
-Mostly about what the app was telling the notification, the car and the lock
-screen, which turned out to be nothing at all whenever the player decided
-something by itself. A track repeating or a gapless jump left their progress
-bar sitting at the end of the song while the music carried on. The cause is
-upstream and worth knowing if you write Kotlin: a listener wrapped with `by`
-delegation over a Java interface whose methods all have default bodies forwards
-none of them, and compiles without a word.
-
-### Added
-
-- Playlists in the car's Library, next to Favorites, albums and artists, with
-  the songs inside each one so they can be browsed and not only played whole.
-- A Home shelf for the songs played most, as songs. "Most played" answers with
-  albums because sorting albums by plays is the one thing a Subsonic server can
-  do, and for anyone who does not listen to records whole it reads wrong: an
-  album turns up there because one of its songs is on repeat. Off until you turn
-  it on, in Settings › Home sections. Asked for by a user.
-- Seeking from the notification, the car and the lock screen on a stream a
-  server transcodes on the fly. Such a stream has no seek table, so the player
-  says it cannot be seeked and those controls drew a bar nobody could drag; the
-  app can get there by asking the server for the stream starting at that second,
-  and now does it on their behalf.
-
-### Fixed
-
-- The progress bar of the notification and the car no longer sits at the end of
-  a song that is repeating, or of one the player joined the next track to.
-- Repeating one song over a transcoded stream no longer replays only its last
-  few seconds forever. The native loop repeats the source it holds, and a stream
-  re-requested partway in is not the song: it is the tail of it.
-- "Stop at end of song" is no longer skipped by a song repeating itself.
-- Tapping a song no longer shows one and plays another, which happened when a
-  queue was rewritten while the track was being loaded, and when a load that had
-  already started playing reported failure.
-- The Library's search bar and the new-playlist dialog open with the keyboard
-  up.
-- The quick grid on Home now shows what you played even when the server has not
-  caught up with it: the order was yours, but what could be sorted was only what
-  the server listed.
-- The player no longer settles into place a moment after opening.
-- The artwork no longer disappears from the player after coming back from the
-  queue or the lyrics, taking the swipe between tracks with it.
-- The shuffle button of an album or a playlist lights up when what is playing is
-  that list, shuffled.
-- The cover comes back when the app does, instead of leaving the player empty
-  until it is closed and opened again. Reported by @ztx-lyghters.
-- Emptying the queue no longer forgets shuffle and repeat after a restart.
-- The icon and the launcher show the same drawing at the same size. The layer a
-  launcher composes over the green was a quarter bigger than the icon itself and
-  pressed against the edge of what is visible, which is why the same icon looked
-  cut on the home screen and fine everywhere else.
-
-## [0.6.5-beta.2] - 2026-08-09
-
-Everything in beta.1, plus the reason nobody should stay on it: with the phone
-on vibrate or silent, the play button in the app did nothing at all. The
-notification played the same track fine, which is the clue to what it was.
-
-### Fixed
-
-- The play button, on a phone that is not on normal ringer. SDK 56 added a
-  silent-mode check inside playback that the audio mode was not answering, so
-  it returned without a word. The ringer switch is about being interrupted,
-  not about the album you just pressed play on.
-- Songs that are not on the phone no longer look playable in offline mode, in
-  any list, however it got there: a row works it out from the downloads
-  instead of trusting the list. Tapping one says so rather than failing.
-- Playing a list that cannot load no longer leaves the app showing one song
-  while the speakers are still on the last one. Both reported by
-  @ztx-lyghters.
-- The quality badge names the codec a stream is being turned into
-  ("MP3 → OPUS 256 kbps"), and shows up when a codec is forced on a file that
-  was already under the bitrate limit, which is a transcode it used to keep
-  quiet about.
-- Two questions the app asks a server on the first track are no longer asked
-  twice each.
-
-## [0.6.5-beta.1] - 2026-08-09
-
-A beta, and it says so for a reason: underneath the fixes, this build moves
-the whole app onto Expo SDK 56 and React Native 0.85. Everything native was
-rebuilt on top of that, including the five modules Resonus has of its own and
-the patched audio engine, so the parts to try first are the ordinary ones:
-that it plays, that the notification behaves, that downloads survive a flight
-mode, that the car finds anything.
-
-The notification tells the truth about a song the server is transcoding. It
-sat at 0:00 for the whole track, because a stream that arrives without a
-length is filed as live, and nothing will say where a live stream is. Seeking
-one used to send it back to zero as well, since re-requesting the stream hands
-the player a new source that counts from nothing.
-
-Android Auto can be searched, at last, and by voice too. It is answered from
-the tree the app already keeps rather than by asking the phone's JavaScript,
-which in a car is asleep with the screen off, so it works parked or driving,
-online or not. What it finds is what that tree holds.
-
-Requests come back with the screen off. React Native's own fetch stops
-delivering answers in the background, which is a promise that never settles
-and whatever was waiting on it waiting forever: the lyrics lookup on every
-track change was the one that hung.
-
-And Shuffle went back to meaning shuffle. It was turning on the shuffle mode,
-which is remembered between sessions, so one press on an album left the next
-one you played shuffled too.
+The rest is mostly what the app was telling the notification, the lock screen
+and the car, which for a while was nothing at all whenever the player decided
+something by itself. A track the server transcodes sat at 0:00 for its whole
+length, a repeat or a gapless jump left the progress bar at the end of the
+song, and the cover could be the one from the track that had just finished.
+Android Auto can be searched now, and Shuffle went back to meaning shuffle.
 
 ### Added
 
 - Search in Android Auto, including "play <something>" by voice, answered
   natively from the browse tree so it works with the screen off and with no
   connection. Reported by @dayofr (#103).
+- Playlists in the car's Library, with the songs inside each one, so they can
+  be browsed and not only played whole.
+- A Home shelf for the songs played most, as songs rather than as the records
+  they came from. Off until you turn it on, in Settings › Home sections. Asked
+  for by a user.
+- Seeking from the notification, the car and the lock screen on a stream the
+  server transcodes on the fly. Such a stream has no seek table, so those
+  controls drew a bar nobody could drag; the app gets there by asking the
+  server for the stream starting at that second.
+- Genres can be saved, ordered and counted. A genre page says how many albums
+  and songs it holds, has the same actions row as an album or a playlist, and
+  can be downloaded whole after counting what it really weighs.
+- Ordering a genre's songs and albums, where the server can do it, which today
+  means Navidrome through its own API. Elsewhere the control is simply absent:
+  an order that only sorts the page you happen to have loaded is not one.
+- A "While minimized" section in Diagnostics, measuring the player's own
+  heartbeat and how stale it was the moment you came back. Needs "Measure
+  performance" turned on.
 - A switch under Diagnostics for the repair that follows a server renumbering
-  its ids (Navidrome 0.64). It is off: the repair is the only thing here that
-  rewrites the whole download catalog, and it has never met a server that
-  really migrated, since none exists yet.
+  its ids (Navidrome 0.64). Off until it has met a server that really migrated.
 
 ### Changed
 
 - Expo SDK 56, React Native 0.85, React 19.2.3, and media3 1.9.0 underneath
   the audio.
 - Shuffle on an album, playlist, artist or from a long press deals the queue
-  instead of turning on shuffle mode. The mode is left exactly as it was, and
-  stays where it belongs, in the player.
+  instead of turning on shuffle mode, which is remembered between sessions and
+  left the next thing you played shuffled too. The mode stays in the player.
 - The lyrics card under the player controls starts off. It shows up when you
   turn it on.
-- The warning about adding songs that are already in a playlist says the
-  numbers: "3 of 12 songs are already in X", or "All 12 songs". Which buttons
-  are on offer no longer has to be noticed to tell the two cases apart, and
+- The warning about adding songs already in a playlist says the numbers, and
   "Add anyway" moved over the confirm. Raised by @ztx-lyghters (#132).
+- The quality badge names the codec a stream is being turned into, and shows
+  up when a codec is forced on a file that was already under the bitrate
+  limit, which is a transcode it used to keep quiet about.
 
 ### Fixed
 
 - The progress bar in the notification, the lock screen and anything else
   reading the media session, for a track the server transcodes on the fly.
-  Reported by @Trip7274 (#135).
-- Seeking such a track no longer leaves the notification counting from zero
-  while the app shows the real position.
-- Requests made while the app is in the background no longer hang forever. It
-  is why a lyrics lookup could stop coming back with the screen off.
+  Seeking one no longer leaves it counting from zero either. Reported by
+  @Trip7274 (#135).
+- The notification, the lock screen and the car no longer show the cover,
+  title and album of the track that has just ended when the player moves on to
+  the one queued behind it by itself.
+- The progress bar no longer sits at the end of a song that is repeating, or
+  of one the player joined the next track to.
+- Repeating one song over a transcoded stream no longer replays only its last
+  few seconds forever, and no longer skips "stop at end of song".
+- The play button, on a phone that is not on normal ringer. The ringer switch
+  is about being interrupted, not about the album you just pressed play on.
+- Requests made while the app is in the background no longer hang forever,
+  which is why a lyrics lookup could stop coming back with the screen off.
+- A song put next, or added to the queue, is warmed up in advance like the
+  rest. Preloading only ever went out on a track change, so the song somebody
+  had just asked for was the one nobody had requested ahead. Reported by a
+  user (#137).
+- Tapping a song no longer shows one and plays another, which happened when a
+  queue was rewritten while the track was loading.
+- Songs that are not on the phone no longer look playable in offline mode, in
+  any list, and playing a list that cannot load no longer leaves the app
+  showing one song while the speakers are still on the last one. Both reported
+  by @ztx-lyghters.
+- The cover comes back when the app does, and no longer disappears from the
+  player after coming back from the queue or the lyrics, taking the swipe
+  between tracks with it. Reported by @ztx-lyghters.
+- The Library's search bar and the new-playlist dialog open with the keyboard
+  up.
+- The quick grid on Home shows what you played even when the server has not
+  caught up with it.
+- The player no longer settles into place a moment after opening.
+- The shuffle button of an album or a playlist lights up when what is playing
+  is that list, shuffled.
+- Emptying the queue no longer forgets shuffle and repeat after a restart.
 - Android Auto is told how to draw the top level of the browse tree. The hints
   were being set where the car never reads them.
+- The icon and the launcher show the same drawing at the same size.
+- Two questions the app asks a server on the first track are no longer asked
+  twice each.
 
 ## [0.6.4] - 2026-08-08
 
