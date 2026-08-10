@@ -9,6 +9,60 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.6.5-beta.3] - 2026-08-10
+
+Mostly about what the app was telling the notification, the car and the lock
+screen, which turned out to be nothing at all whenever the player decided
+something by itself. A track repeating or a gapless jump left their progress
+bar sitting at the end of the song while the music carried on. The cause is
+upstream and worth knowing if you write Kotlin: a listener wrapped with `by`
+delegation over a Java interface whose methods all have default bodies forwards
+none of them, and compiles without a word.
+
+### Added
+
+- Playlists in the car's Library, next to Favorites, albums and artists, with
+  the songs inside each one so they can be browsed and not only played whole.
+- A Home shelf for the songs played most, as songs. "Most played" answers with
+  albums because sorting albums by plays is the one thing a Subsonic server can
+  do, and for anyone who does not listen to records whole it reads wrong: an
+  album turns up there because one of its songs is on repeat. Off until you turn
+  it on, in Settings › Home sections. Asked for by a user.
+- Seeking from the notification, the car and the lock screen on a stream a
+  server transcodes on the fly. Such a stream has no seek table, so the player
+  says it cannot be seeked and those controls drew a bar nobody could drag; the
+  app can get there by asking the server for the stream starting at that second,
+  and now does it on their behalf.
+
+### Fixed
+
+- The progress bar of the notification and the car no longer sits at the end of
+  a song that is repeating, or of one the player joined the next track to.
+- Repeating one song over a transcoded stream no longer replays only its last
+  few seconds forever. The native loop repeats the source it holds, and a stream
+  re-requested partway in is not the song: it is the tail of it.
+- "Stop at end of song" is no longer skipped by a song repeating itself.
+- Tapping a song no longer shows one and plays another, which happened when a
+  queue was rewritten while the track was being loaded, and when a load that had
+  already started playing reported failure.
+- The Library's search bar and the new-playlist dialog open with the keyboard
+  up.
+- The quick grid on Home now shows what you played even when the server has not
+  caught up with it: the order was yours, but what could be sorted was only what
+  the server listed.
+- The player no longer settles into place a moment after opening.
+- The artwork no longer disappears from the player after coming back from the
+  queue or the lyrics, taking the swipe between tracks with it.
+- The shuffle button of an album or a playlist lights up when what is playing is
+  that list, shuffled.
+- The cover comes back when the app does, instead of leaving the player empty
+  until it is closed and opened again. Reported by @ztx-lyghters.
+- Emptying the queue no longer forgets shuffle and repeat after a restart.
+- The icon and the launcher show the same drawing at the same size. The layer a
+  launcher composes over the green was a quarter bigger than the icon itself and
+  pressed against the edge of what is visible, which is why the same icon looked
+  cut on the home screen and fine everywhere else.
+
 ## [0.6.5-beta.2] - 2026-08-09
 
 Everything in beta.1, plus the reason nobody should stay on it: with the phone

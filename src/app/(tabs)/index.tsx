@@ -225,9 +225,9 @@ const MOST_PLAYED_SONGS = 30;
  * The shelf beside it answers the same question with records, which is the only
  * thing a Subsonic server can sort, and reads wrong for anyone who does not
  * listen to albums whole: a record turns up there because one of its songs is
- * on repeat (reported by @Sikkka). This is the other half of that answer, and
- * it is a queue rather than a place to go — tapping a song plays the shelf from
- * it, in the order it is drawn in, which is the order of how much each was
+ * on repeat, which is how a user put it. This is the other half of that answer,
+ * and it is a queue rather than a place to go — tapping a song plays the shelf
+ * from it, in the order it is drawn in, which is the order of how much each was
  * played.
  */
 function MostPlayedSongsSection({ title }: { title: string }) {
