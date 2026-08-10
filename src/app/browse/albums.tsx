@@ -1,6 +1,7 @@
 /** Browse all server albums, with sort, search and infinite scroll. */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -65,11 +66,23 @@ const SORTS: { key: AlbumListType; label: string }[] = [
   { key: 'random', label: 'Shuffle' },
 ];
 
+/** What the route may ask to open on, when it knows (see Home's shelves). */
+function sortFromParam(value: string | undefined): AlbumListType | undefined {
+  return SORTS.some((s) => s.key === value) ? (value as AlbumListType) : undefined;
+}
+
 export default function BrowseAlbumsScreen() {
   const bottomPad = useScreenBottomPadding();
   const t = useT();
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
-  const [sort, setSort] = useState<AlbumListType>('recent');
+  /**
+   * Arrived at from a Home shelf, this says which one: "Most played albums"
+   * opens the same albums under the same heading rather than dropping you at
+   * the top of a list you then have to sort yourself. Only the initial value —
+   * each visit is its own screen, so there is nothing here to keep in step.
+   */
+  const { sort: sortParam } = useLocalSearchParams<{ sort?: string }>();
+  const [sort, setSort] = useState<AlbumListType>(sortFromParam(sortParam) ?? 'recent');
   const layout = useSettings((s) => s.browseAlbumsLayout);
   const setLayout = useSettings((s) => s.setBrowseAlbumsLayout);
   const grid = layout === 'grid';

@@ -176,6 +176,32 @@ function QuickGrid() {
   );
 }
 
+/**
+ * The heading of a shelf, with the way through to everything behind it.
+ *
+ * The whole row is the target, not just the words on the right: the title is
+ * what you are reaching for, and a two word link beside it is a smaller thing
+ * to hit than the thing it belongs to.
+ */
+function SectionHeader({ title, href }: { title: string; href: string }) {
+  const t = useT();
+  return (
+    <Link href={href} asChild>
+      <Pressable style={styles.sectionHeader}>
+        <Text style={styles.sectionHeaderTitle}>{title}</Text>
+        <Text style={styles.showAll}>{t('Show all')}</Text>
+      </Pressable>
+    </Link>
+  );
+}
+
+/**
+ * A shelf of albums, and the way through to the rest of them.
+ *
+ * Where it goes is not a generic list: "Most played albums" opens the Albums
+ * screen already under Most played, so what you tapped is what you get rather
+ * than a list you then have to sort yourself.
+ */
 function AlbumSection({
   title,
   type,
@@ -202,7 +228,7 @@ function AlbumSection({
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <SectionHeader title={title} href={`/browse/albums?sort=${type}`} />
       <FlatList
         {...listPerf}
         horizontal
@@ -854,6 +880,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   section: { marginBottom: spacing.xl },
+  // Same shape as the artist's shelves: title on the left, the way in on the
+  // right, and the whole row pressable.
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  sectionHeaderTitle: { color: colors.text, fontSize: fontSize.lg, fontWeight: '700' },
+  showAll: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '600' },
   sectionTitle: {
     color: colors.text,
     fontSize: fontSize.lg,

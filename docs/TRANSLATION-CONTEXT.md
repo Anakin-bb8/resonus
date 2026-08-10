@@ -24,7 +24,6 @@ you are actually typing into, which is easier than reading it here.
 | `Disc {n}` | Heading over the songs of one disc of a multi-disc album. `{n}` is its number |
 | `Find in playlist` | Placeholder of the search box hidden above a tracklist, for finding a song within it |
 | `More from {artist}` | Heading under an album: their other records. `{artist}` is the name |
-| `Show all` | Opens the full list of what the row is showing a few of |
 | `View cover` | The same as `View image`, for album and playlist artwork |
 
 ## Anywhere in the app
@@ -120,7 +119,6 @@ you are actually typing into, which is easier than reading it here.
 | `Play discography` | Play the lot, in order |
 | `Popular` | The artist's popular / top tracks |
 | `Remove from favorites` | The same button when it is already a favourite |
-| `Show all` | Opens the full list of what the row is showing a few of |
 | `Show less` | Folds it back |
 | `Show more` | Unfolds the rest of a text that was cut short |
 | `Similar artists` | Related artists |
@@ -312,7 +310,6 @@ you are actually typing into, which is easier than reading it here.
 | `Saved profiles` | The accounts already signed in to, to pick one |
 | `Scan the whole phone` | The other way: look everywhere for audio files |
 | `Sends the password directly instead of a salted token. Only enable it if your server sits behind a reverse proxy or SSO that requires it.` |  |
-| `Show all` | Opens the full list of what the row is showing a few of |
 | `Sign in` | The button that signs in. A verb |
 | `Subsonic server` | The type subtitle under Navidrome's logo, the same kind of line as `Media server` |
 | `Subsonic-compatible` | The subtitle under OpenSubsonic / Ampache |
@@ -958,6 +955,7 @@ you are actually typing into, which is easier than reading it here.
 | `Retry` | The button on an error message: try again. A verb |
 | `Select all` | Tick every song in the list at once |
 | `Server default` | Codec option meaning "let the server decide" what to transcode to |
+| `Show all` | Opens the full list of what the row is showing a few of |
 | `Shuffle` | Play in random order |
 | `Song downloaded` | Toast: one song finished |
 | `Songs already downloaded will be kept.` | The line under that title: stopping does not undo what already arrived |
