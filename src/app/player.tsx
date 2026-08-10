@@ -81,6 +81,19 @@ const COVER_MIN = 200;
 const COVER_TOP_SHARE = 0.4;
 const SWIPE_THRESHOLD = SCREEN_W * 0.25;
 const DISMISS_THRESHOLD = 120;
+/**
+ * What the scrolling area measured the last time the player was open.
+ *
+ * The first page is drawn as tall as that area, which nobody knows until it has
+ * been laid out, so the first paint went with an estimate from the safe area and
+ * everything settled a few pixels once the real number arrived — top bar, title,
+ * slider and controls, all at once and only when the estimate happened to be
+ * wrong, which is why it looked random. The number belongs to the screen and not
+ * to the song, so the one measured before is right for every open after it, and
+ * there is nothing left to settle. It outlives the screen on purpose: the whole
+ * point is to have it before the first render.
+ */
+let lastPageH = 0;
 // How much of the lyrics card peeks below the first page (invites swipe).
 const LYRICS_PEEK = 56;
 
@@ -268,14 +281,15 @@ export default function PlayerScreen() {
 
   // The player is scrollable (like Spotify): the first "page" fills the
   // screen and the lyrics card peeks below. The real height comes from the
-  // ScrollView's onLayout; until then, approximate it from the safe-area insets.
-  // Only the top one: the ScrollView runs to the bottom edge of the screen so
-  // the lyrics card does too, and it is the controls that keep clear of the
-  // navigation bar (see `styles.bottom` below). A close-enough first guess keeps
-  // the controls from dropping into place once measured.
+  // ScrollView's onLayout, or from the open before this one (`lastPageH`).
+  // Only on the very first open of a run is there nothing to go on, and then
+  // it is approximated from the safe-area inset: the top one only, since the
+  // ScrollView runs to the bottom edge of the screen so the lyrics card does
+  // too, and it is the controls that keep clear of the navigation bar (see
+  // `styles.bottom` below).
   const insets = useSafeAreaInsets();
   const approxPageH = SCREEN_H - insets.top;
-  const [pageH, setPageH] = useState(0);
+  const [pageH, setPageH] = useState(lastPageH);
   /**
    * Height left over for the cover once everything else has taken its share.
    * The cover is the ONLY elastic piece of the player: the title, the optional
@@ -619,7 +633,10 @@ export default function PlayerScreen() {
           // number: revealing from here, as soon as the approximation turned
           // out to be right, is what let the stars appear before they had been
           // measured and then move.
-          onLayout={(e) => setPageH(e.nativeEvent.layout.height)}
+          onLayout={(e) => {
+            lastPageH = e.nativeEvent.layout.height;
+            setPageH(lastPageH);
+          }}
           onScroll={(e) => {
             const next = e.nativeEvent.contentOffset.y <= 4;
             if (next !== atTopRef.current) {
