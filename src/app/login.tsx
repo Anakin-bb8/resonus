@@ -33,7 +33,11 @@ import { colors, DEFAULT_ACCENT, fontSize, radius, spacing } from '@/theme';
 
 type ServerKey = 'navidrome' | 'opensubsonic' | 'jellyfin' | 'ampache';
 
-const APP_ICON = require('@/assets/images/icon.png');
+// The icon as it was before the bars were given room to breathe. Here and
+// nowhere else: this one is drawn at 88 points inside a rounded square of its
+// own, with nothing cutting into it, and at that size the fuller waveform reads
+// better than the one a launcher needs.
+const APP_ICON = require('@/assets/images/icon-login.png');
 
 const SERVERS: {
   key: ServerKey;
