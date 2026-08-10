@@ -193,12 +193,19 @@ export function TrackListView({
   const dominant = useDominantColor(coverUri);
   const headerColor = accentColor ?? dominant;
   const shuffle = usePlayerStore((s) => s.shuffle);
+  const queueDealt = usePlayerStore((s) => s.queueDealt);
   // The shuffle button gets tinted only if this list is the one playing;
   // otherwise, the (global) shuffle mode would also tint the buttons of
   // unrelated albums/playlists, which was confusing.
+  //
+  // The mode is not the only way to end up listening shuffled: this button
+  // hands the list over dealt without touching the mode (see `shufflePlay`),
+  // and reading the mode alone meant pressing it lit nothing at all. What it
+  // says is "what you are hearing is this list, shuffled", however it got that
+  // way, so tapping a song in the list afterwards puts it out again.
   const shuffleActive = useMemo(
-    () => shuffle && !!currentId && songs.some((s) => s.id === currentId),
-    [shuffle, currentId, songs],
+    () => (shuffle || queueDealt) && !!currentId && songs.some((s) => s.id === currentId),
+    [shuffle, queueDealt, currentId, songs],
   );
   const openArtistPicker = useArtistPicker((s) => s.open);
   const subtitleTargets = artistTargets({ artistId, artists });

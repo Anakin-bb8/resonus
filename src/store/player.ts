@@ -912,16 +912,17 @@ type HistoryEntry = {
   sourceHref: string | null;
   originalQueue: Song[] | null;
   shuffle: boolean;
+  queueDealt: boolean;
 };
 const HISTORY_MAX = 100;
 let playedHistory: HistoryEntry[] = [];
 
 /** Pushes the current context before advancing or skipping to another track. */
 function pushHistory() {
-  const { queue, index, source, sourceHref, originalQueue, shuffle } =
+  const { queue, index, source, sourceHref, originalQueue, shuffle, queueDealt } =
     usePlayerStore.getState();
   if (!queue[index]) return;
-  playedHistory.push({ queue, index, source, sourceHref, originalQueue, shuffle });
+  playedHistory.push({ queue, index, source, sourceHref, originalQueue, shuffle, queueDealt });
   if (playedHistory.length > HISTORY_MAX) playedHistory.shift();
 }
 
@@ -2204,6 +2205,8 @@ interface StoredQueue {
    */
   shuffle?: boolean;
   repeat?: RepeatMode;
+  /** The queue was dealt when it was started (see `queueDealt`). */
+  dealt?: boolean;
 }
 
 /** Guards what comes back from disk: the file is ours, but an older version's
@@ -2251,8 +2254,18 @@ export function remapQueueIds(f: Remap) {
 function saveQueueLocal(force = false) {
   const key = queueStorageKey();
   if (!key) return;
-  const { queue, index, positionSec, radioMode, radioSeed, source, sourceHref, shuffle, repeat } =
-    usePlayerStore.getState();
+  const {
+    queue,
+    index,
+    positionSec,
+    radioMode,
+    radioSeed,
+    source,
+    sourceHref,
+    shuffle,
+    queueDealt,
+    repeat,
+  } = usePlayerStore.getState();
   if (queue.length === 0) return;
   if (!force && !queueDirty && AppState.currentState === 'active') return;
   queueDirty = false;
@@ -2266,6 +2279,7 @@ function saveQueueLocal(force = false) {
     source,
     sourceHref,
     shuffle,
+    dealt: queueDealt,
     repeat,
   };
   void setItem(key, JSON.stringify(payload));
@@ -2469,6 +2483,14 @@ interface PlayerState {
   durationSec: number;
   volume: number;
   shuffle: boolean;
+  /**
+   * What is playing was dealt when it was started: the Shuffle button of an
+   * album or a playlist, which hands its list over shuffled once without
+   * turning the shuffle MODE on (see `playQueue`). The mode is the only thing
+   * that used to be known, so that button lit nothing and looked broken to
+   * whoever had just pressed it.
+   */
+  queueDealt: boolean;
   repeat: RepeatMode;
   originalQueue: Song[] | null;
   /** When the sleep timer expires (ms epoch), or null if none. */
@@ -2645,6 +2667,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   durationSec: 0,
   volume: 1,
   shuffle: false,
+  queueDealt: false,
   repeat: 'off',
   originalQueue: null,
   sleepEndsAt: null,
@@ -2723,6 +2746,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       positionSec: get().positionSec,
       durationSec: get().durationSec,
       originalQueue: get().originalQueue,
+      queueDealt: get().queueDealt,
       source: get().source,
       sourceHref: get().sourceHref,
       radioMode: get().radioMode,
@@ -2735,6 +2759,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       positionSec: 0,
       durationSec: 0,
       originalQueue: deal ? songs : null,
+      // Both ways of dealing count: the Shuffle button of the list (`dealAll`)
+      // and tapping a song with the mode already on.
+      queueDealt: dealAll || deal,
       source: source ?? null,
       sourceHref: sourceHref ?? null,
       // Any normal queue turns off the radio; `startRadio` turns it back on.
@@ -2766,6 +2793,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         index: 0,
         queuedCount: 0,
         shuffle: false,
+        queueDealt: false,
         originalQueue: null,
         source,
         sourceHref: null,
@@ -2908,6 +2936,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         sourceHref: entry.sourceHref,
         originalQueue: entry.originalQueue,
         shuffle: entry.shuffle,
+        queueDealt: entry.queueDealt,
         queuedCount: 0,
         positionSec: 0,
         durationSec: 0,
@@ -3145,18 +3174,26 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       const newQueue = (current ? [current, ...rest] : rest).map(unmarked);
       // The current song keeps playing; we only reorder and leave it at index 0.
       // Shuffling dissolves the "queued" block (the positions no longer exist).
-      set({ shuffle: true, originalQueue: queue, queue: newQueue, index: 0, queuedCount: 0 });
+      set({
+        shuffle: true,
+        queueDealt: true,
+        originalQueue: queue,
+        queue: newQueue,
+        index: 0,
+        queuedCount: 0,
+      });
     } else if (originalQueue && current) {
       const newIndex = Math.max(0, originalQueue.findIndex((s) => s.id === current.id));
       set({
         shuffle: false,
+        queueDealt: false,
         queue: originalQueue,
         index: newIndex,
         originalQueue: null,
         queuedCount: 0,
       });
     } else {
-      set({ shuffle: false, originalQueue: null, queuedCount: 0 });
+      set({ shuffle: false, queueDealt: false, originalQueue: null, queuedCount: 0 });
     }
     scheduleSync();
   },
@@ -3224,9 +3261,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       sourceHref: null,
       // The server queue is pure Subsonic: it has no place to carry this, so
       // a radio recovered from there stops being one. The local copy does save
-      // it, and it's tried first (see `restoreQueue`).
+      // it, and it's tried first (see `restoreQueue`). Same for a queue that
+      // was dealt: what comes back is an order, with nothing to say it was one.
       radioMode: false,
       radioSeed: null,
+      queueDealt: false,
     });
     // Load the track (without playing) and leave the position ready.
     await loadIndex(index, false);
@@ -3258,6 +3297,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     if (saved.queue.length === 0) {
       set({
         shuffle: saved.shuffle === true,
+        queueDealt: false,
         repeat: isRepeatMode(saved.repeat) ? saved.repeat : 'off',
       });
       return true;
@@ -3289,6 +3329,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       // nothing is reordered on the way back in. `originalQueue` stays null
       // (see `StoredQueue`), which turning shuffle off handles on its own.
       shuffle: saved.shuffle === true,
+      queueDealt: saved.dealt === true,
       repeat: isRepeatMode(saved.repeat) ? saved.repeat : 'off',
     });
     await loadIndex(index, false);
@@ -3367,6 +3408,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       // Changing account is the real exception, since the mode being restored
       // belongs with the other profile's queue.
       ...(forProfile ? { shuffle: false, repeat: 'off' as const } : {}),
+      // Not one of those two: this is about the queue that is going away, not
+      // about how somebody listens.
+      queueDealt: false,
       originalQueue: null,
       source: null,
       sourceHref: null,
