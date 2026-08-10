@@ -10,10 +10,11 @@
  * Adapted from the wavio pattern (github.com/Joel-Mercier/wavio, MIT).
  */
 import * as data from '@/api/data';
-import { type Album, type Artist, type Song } from '@/api/subsonic';
-import { tg } from '@/i18n';
+import { type Album, type Artist, type Playlist, type Song } from '@/api/subsonic';
+import { songsLabel, tg } from '@/i18n';
 import { queryClient } from '@/lib/query';
 import { usePlayerStore } from '@/store/player';
+import { useSettings } from '@/store/settings';
 import { type CarNode, type CarTree } from './carAuto';
 
 const ROOT = 'root';
@@ -24,6 +25,11 @@ const HOME_SIZE = 15;
 function albumDetail(id: string): Promise<{ songs: Song[] }> {
   return queryClient.fetchQuery({ queryKey: ['album', id], queryFn: () => data.getAlbum(id) });
 }
+
+/** The same, for a playlist and the playlist screen's query. */
+function playlistDetail(id: string): Promise<{ songs: Song[] }> {
+  return queryClient.fetchQuery({ queryKey: ['playlist', id], queryFn: () => data.getPlaylist(id) });
+}
 const CONCURRENCY = 4;
 /**
  * Ceilings for what gets fetched ahead of a car that may never be plugged in.
@@ -32,6 +38,7 @@ const CONCURRENCY = 4;
  */
 const MAX_PREFETCH_ALBUMS = 40;
 const MAX_PREFETCH_ARTISTS = 15;
+const MAX_PREFETCH_PLAYLISTS = 20;
 const MAX_ARTIST_ALBUMS = 5;
 
 // ── Snapshot to resolve taps without refetching data ─────────────────────────
@@ -77,6 +84,18 @@ function albumNode(a: Album): CarNode {
     title: a.name,
     subtitle: a.artist,
     artworkUrl: art(a.coverArt ?? a.id),
+    playable: false,
+    contentStyle: 'list',
+  };
+}
+
+function playlistNode(p: Playlist): CarNode {
+  return {
+    id: `playlist:${p.id}`,
+    title: p.name,
+    subtitle:
+      p.songCount != null ? songsLabel(p.songCount, useSettings.getState().language) : undefined,
+    artworkUrl: art(p.coverArt ?? p.id),
     playable: false,
     contentStyle: 'list',
   };
@@ -148,16 +167,28 @@ export async function buildBrowseTree(deep = true): Promise<CarTree> {
     }),
   );
 
-  // Library → Favorites (songs) + Starred albums + Starred artists.
-  const starred = await queryClient
-    .fetchQuery({ queryKey: ['starred'], queryFn: () => data.getStarred() })
-    .catch(() => ({ songs: [] as Song[], albums: [] as Album[], artists: [] as Artist[] }));
+  // Library → Favorites (songs) + Playlists + Starred albums + Starred artists.
+  // Same order the Library tab uses on the phone, minus Folders, which is a
+  // handful of server roots and nothing to hand a driver.
+  const [starred, playlists] = await Promise.all([
+    queryClient
+      .fetchQuery({ queryKey: ['starred'], queryFn: () => data.getStarred() })
+      .catch(() => ({ songs: [] as Song[], albums: [] as Album[], artists: [] as Artist[] })),
+    // The same query the Library and the Home grid ask for: in the car it is
+    // free, since by the time this runs somebody has usually paid for it.
+    queryClient
+      .fetchQuery({ queryKey: ['playlists'], queryFn: () => data.getPlaylists() })
+      .catch(() => [] as Playlist[]),
+  ]);
 
   tree['tab:library'] = [
     { id: 'favorites', title: tg('Favorites'), playable: false, contentStyle: 'list' },
+    { id: 'lib:playlists', title: tg('Playlists'), playable: false, contentStyle: 'list' },
     { id: 'lib:albums', title: tg('Albums'), playable: false, contentStyle: 'grid' },
     { id: 'lib:artists', title: tg('Artists'), playable: false, contentStyle: 'list' },
   ];
+
+  tree['lib:playlists'] = playlists.map(playlistNode);
 
   tree['favorites'] = starred.songs.map((s) => songNode(s, 'favorites'));
   parentTracks.set('favorites', tree['favorites'].map((n) => n.id));
@@ -168,6 +199,24 @@ export async function buildBrowseTree(deep = true): Promise<CarTree> {
   tree['lib:artists'] = starred.artists.map(artistNode);
 
   if (!deep) return { nodes: tree };
+
+  // The songs of each playlist, so they can be browsed and not only played
+  // whole. Capped like everything else here: a car that is never plugged in
+  // should not cost a request per playlist on every launch (#50).
+  await mapConcurrent(
+    playlists.slice(0, MAX_PREFETCH_PLAYLISTS).map((p) => p.id),
+    CONCURRENCY,
+    async (id) => {
+      const parent = `playlist:${id}`;
+      try {
+        const { songs } = await playlistDetail(id);
+        tree[parent] = songs.map((s) => songNode(s, parent));
+        parentTracks.set(parent, tree[parent].map((n) => n.id));
+      } catch {
+        tree[parent] = [];
+      }
+    },
+  );
 
   // Prefetch songs for each album (to browse them in the car), up to a point.
   // Measured on a real account: fifty eight favourite artists meant six
@@ -254,7 +303,7 @@ export async function handleBrowsePlay(mediaId: string, parentId?: string): Prom
   let songs: Song[] = [];
   try {
     if (prefix === 'album') songs = (await albumDetail(id)).songs;
-    else if (prefix === 'playlist') songs = (await data.getPlaylist(id)).songs;
+    else if (prefix === 'playlist') songs = (await playlistDetail(id)).songs;
     else if (prefix === 'favorites') songs = (await data.getStarred()).songs;
     else if (prefix === 'artist') {
       const { artist } = await data.getArtist(id);
