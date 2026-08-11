@@ -3,12 +3,12 @@
  *
  * Once a day at most, on a launch: the throttle lives in `checkForUpdate`, and
  * a launch is the one moment somebody is looking at the app itself rather than
- * at a list they came for. A version that was skipped is filtered in the store,
- * not here, so the button in Settings can still bring it back.
+ * at a list they came for.
  *
- * «Later» asks again tomorrow. «Skip this version» holds back only that one, so
- * the next release still gets through, which is what makes it safe to press;
- * the switch in Settings › About is the one that stops all of it.
+ * Closing it asks again tomorrow, and the switch in Settings › About is the one
+ * that stops all of it. There is no per-version dismissal: one day of quiet is
+ * short enough not to need one, and a release somebody said no to once is the
+ * release they are still on when they report the bug it fixed.
  *
  * The download has its own window rather than living in the dialog: 57 MB needs
  * a progress bar and a way out, and `Dialog` is built for a question.
@@ -33,7 +33,6 @@ export function UpdatePrompt() {
   const t = useT();
   const accent = useAccent();
   const enabled = useSettings((s) => s.updateCheck);
-  const setSkipped = useSettings((s) => s.setUpdateSkipped);
   const hydrated = useSettings((s) => s.hydrated);
   const offline = useAuthStore((s) => s.offline);
   const cellular = useNetworkType((s) => s.cellular);
@@ -44,7 +43,6 @@ export function UpdatePrompt() {
   const start = useUpdate((s) => s.start);
   const resume = useUpdate((s) => s.resume);
   const close = useUpdate((s) => s.close);
-  const demo = useUpdate((s) => s.demo);
 
   // Only once the settings are read from disk: before that `updateCheck` is its
   // default (on), and someone who had turned it off would be checked on anyway.
@@ -90,17 +88,6 @@ export function UpdatePrompt() {
               })
         }
         confirmLabel={t('Update')}
-        neutral={{
-          label: t('Skip this version'),
-          onPress: () => {
-            // The simulated version is the next real one by construction
-            // (current + 1), so remembering it as skipped here would quietly
-            // swallow the release it is pretending to be. TEMPORARY, with the
-            // rest of `demo`.
-            if (version && !demo) setSkipped(version);
-            close();
-          },
-        }}
         onCancel={close}
         onConfirm={start}
       />

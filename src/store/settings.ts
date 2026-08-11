@@ -583,11 +583,6 @@ interface SettingsState {
    */
   updateCheck: boolean;
   /**
-   * A version the user answered "not this one" to. Only that one is held back;
-   * the next release asks again, which is what makes skipping safe to press.
-   */
-  updateSkipped: string;
-  /**
    * Whether to repair the offline library when the server renumbers its ids
    * (Navidrome 0.64 rewrites every one of them).
    *
@@ -793,7 +788,6 @@ interface SettingsState {
   setAutoplaySimilar: (value: boolean) => void;
   setDiagnostics: (value: boolean) => void;
   setUpdateCheck: (value: boolean) => void;
-  setUpdateSkipped: (value: string) => void;
   setNavidromeIdRepair: (value: boolean) => void;
   setCrossfadeSec: (value: number) => void;
   setScrobblePercent: (value: number) => void;
@@ -901,7 +895,6 @@ function snapshot(get: () => SettingsState) {
     autoplaySimilar: s.autoplaySimilar,
     diagnostics: s.diagnostics,
     updateCheck: s.updateCheck,
-    updateSkipped: s.updateSkipped,
     navidromeIdRepair: s.navidromeIdRepair,
     crossfadeSec: s.crossfadeSec,
     scrobblePercent: s.scrobblePercent,
@@ -989,7 +982,6 @@ const DEFAULTS = {
   diagnostics: false,
   // On: see the note on the field. Nothing is downloaded by it.
   updateCheck: true,
-  updateSkipped: '',
   // Off until it has been watched doing its job against a migrated server.
   navidromeIdRepair: false,
   crossfadeSec: 0,
@@ -1176,11 +1168,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
 
   setUpdateCheck: (updateCheck) => {
     set({ updateCheck });
-    persist(snapshot(get));
-  },
-
-  setUpdateSkipped: (updateSkipped) => {
-    set({ updateSkipped });
     persist(snapshot(get));
   },
 
@@ -1562,7 +1549,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
           autoplaySimilar: boolean;
           diagnostics: boolean;
           updateCheck?: boolean;
-          updateSkipped?: string;
           navidromeIdRepair?: boolean;
           crossfadeSec: number;
           scrobblePercent: number;
@@ -1705,9 +1691,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (typeof parsed.updateCheck === 'boolean') {
           set({ updateCheck: parsed.updateCheck });
-        }
-        if (typeof parsed.updateSkipped === 'string') {
-          set({ updateSkipped: parsed.updateSkipped });
         }
         if (typeof parsed.autoplaySimilar === 'boolean') {
           set({ autoplaySimilar: parsed.autoplaySimilar });

@@ -23,7 +23,6 @@ import {
   RELEASES_PAGE,
   type Release,
 } from '@/lib/appUpdate';
-import { useSettings } from './settings';
 import { useToast } from './toast';
 
 /**
@@ -69,7 +68,7 @@ interface UpdateState {
   start: () => void;
   /** Called when the system screen has been answered, either way. */
   resume: () => void;
-  /** Later, skipping a version, or cancelling a download: all of them end here. */
+  /** Dismissing the prompt or cancelling a download: both end here. */
   close: () => void;
   /** TEMPORARY: see `demo`. Shows the prompt for a release that isn't there. */
   demo: boolean;
@@ -88,14 +87,7 @@ export const useUpdate = create<UpdateState>((set, get) => ({
     try {
       const release = await checkForUpdate(force);
       // A download already running outranks the news that started it.
-      if (release && get().phase === 'idle') {
-        // A version answered "not this one" is held here rather than in the
-        // prompt: leaving the phase on `offered` with nothing drawn would wedge
-        // the button in Settings, which has to be able to show the same release
-        // somebody skipped. Asking for it counts as changing your mind.
-        const skipped = useSettings.getState().updateSkipped;
-        set(force || skipped !== release.version ? { release, phase: 'offered' } : { release });
-      }
+      if (release && get().phase === 'idle') set({ release, phase: 'offered' });
       return { ok: true, release };
     } catch {
       return { ok: false, release: null };
@@ -155,7 +147,7 @@ export const useUpdate = create<UpdateState>((set, get) => ({
 
   close: () => {
     // Aborting is a no-op when nothing is downloading, which is what lets one
-    // method answer Later, Skip and Cancel alike.
+    // method answer both the prompt and the progress bar.
     abort?.abort();
     abort = null;
     stopDemo();
