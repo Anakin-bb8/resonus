@@ -359,6 +359,19 @@ export default function GenreScreen() {
               }
             />
           </Pressable>
+        ) : tab === 'albums' ? (
+          <Pressable
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={t('View')}
+            onPress={openGridMenu}
+          >
+            {/* The icon shows what you are looking at, not what one more tap
+                would give you. It used to be the second, which is how a button
+                that flips between two states reads; it opens a menu now, and a
+                menu is opened from a thing that says where you are. */}
+            <Ionicons name={grid ? 'grid-outline' : 'list'} size={22} color={colors.textSecondary} />
+          </Pressable>
         ) : null}
       </View>
 
@@ -446,10 +459,11 @@ export default function GenreScreen() {
         </View>
       ) : null}
 
-      {/* Which of the two lists you are looking at, and, for the albums, how
-          they are drawn. Right up against the list because that is what both
-          are about; the row above is about the genre. Right-aligned so the view
-          control appearing and disappearing with the tab moves nothing. */}
+      {/* Which of the two lists you are looking at. Right up against the list
+          because that is what it is about; the row above is about the genre.
+          How the albums are drawn used to sit at the right-hand end of this
+          row and is now in the header, where every other grid in the app keeps
+          it. */}
       <View style={styles.toolbar}>
         <View style={styles.tabs}>
           {(['albums', 'songs'] as const).map((key) => (
@@ -467,20 +481,6 @@ export default function GenreScreen() {
             </Pressable>
           ))}
         </View>
-        {tab === 'albums' ? (
-          <Pressable
-            hitSlop={10}
-            accessibilityRole="button"
-            accessibilityLabel={t('View')}
-            onPress={openGridMenu}
-          >
-            {/* The icon shows what you are looking at, not what one more tap
-                would give you. It used to be the second, which is how a button
-                that flips between two states reads; it opens a menu now, and a
-                menu is opened from a thing that says where you are. */}
-            <Ionicons name={grid ? 'grid-outline' : 'list'} size={22} color={colors.textSecondary} />
-          </Pressable>
-        ) : null}
       </View>
 
       {query.isLoading ? (
@@ -644,10 +644,10 @@ export default function GenreScreen() {
                 void deleteGenreDownloads();
               }}
             >
-              <Ionicons name="trash-outline" size={22} color={colors.danger} />
-              <Text style={[styles.actionText, { color: colors.danger }]}>
-                {t('Delete downloads')}
-              </Text>
+              {/* Last, but not in red: a download comes back with one tap, and
+                  red is kept for what does not, like deleting a playlist. */}
+              <Ionicons name="trash-outline" size={22} color={colors.text} />
+              <Text style={styles.actionText}>{t('Delete downloads')}</Text>
             </Pressable>
           </>
         )}
@@ -709,7 +709,6 @@ const styles = StyleSheet.create({
   toolbar: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
   },
