@@ -2,10 +2,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useRouter } from 'expo-router';
-import { useMemo, useState, type ReactNode } from 'react';
+import { Link, useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
+  BackHandler,
   Dimensions,
   FlatList,
   Keyboard,
@@ -663,11 +664,34 @@ export default function LibraryScreen() {
   const [query, setQuery] = useState('');
   const filter = normQ(query.trim());
 
+  const closeSearch = useCallback(() => {
+    Keyboard.dismiss();
+    setQuery('');
+    setSearchOpen(false);
+  }, []);
+
+  // Leaving the screen puts the bar away: going to another tab, or opening one
+  // of the results and coming back. The X was the only way out of it, which
+  // meant a filter typed once stayed on the Library for the rest of the
+  // session.
+  useFocusEffect(useCallback(() => closeSearch, [closeSearch]));
+
+  // And Back closes it before it leaves, the way Android expects. Only while
+  // the bar is open, so the tab keeps its own behaviour the rest of the time.
+  // With the keyboard up the system eats the first press to lower it and this
+  // never sees it; that press is the keyboard's, not ours to take.
+  useEffect(() => {
+    if (!searchOpen) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      closeSearch();
+      return true;
+    });
+    return () => sub.remove();
+  }, [searchOpen, closeSearch]);
+
   function toggleSearch() {
     if (searchOpen) {
-      Keyboard.dismiss();
-      setQuery('');
-      setSearchOpen(false);
+      closeSearch();
     } else {
       // The bar opens focused and typing, which is what tapping a magnifier
       // asks for. `autoFocus` on the input rather than a `focus()` from here:
@@ -733,7 +757,8 @@ export default function LibraryScreen() {
 
       {/* Hidden on Folders along with its button, so the bar can't be left
           open with no way to close it. Its text survives: coming back to the
-          other tabs finds the filter as you left it. */}
+          other segments finds the filter as you left it, which is the point of
+          filtering the same word across lists, albums and artists. */}
       {searchOpen && activeSegment !== 'folders' ? (
         <View style={styles.searchRow}>
           <View style={styles.searchBar}>
