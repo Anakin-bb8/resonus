@@ -68,26 +68,11 @@ export default function AboutSettings() {
         >
           <Field label={t('Version')} value={`Resonus v${version ?? '?'}`} />
         </Pressable>
-        <SettingRow
-          icon="logo-github"
-          label="GitHub"
-          description="juananzzz/resonus"
-          onPress={() => Linking.openURL(REPO_URL)}
-        />
-        <SettingRow
-          icon="bug-outline"
-          label={t('Report a bug')}
-          onPress={() => Linking.openURL(bugReportUrl(version))}
-        />
-        <SettingRow
-          icon="sparkles-outline"
-          label={t("What's new")}
-          onPress={() => Linking.openURL(`${REPO_URL}/releases`)}
-        />
-        {/* Right under the version it answers about. Saying "you are on the
-            latest" out loud matters as much as the other answer: without it a
-            check that finds nothing is indistinguishable from one that
-            failed. */}
+        {/* The version, whether there is a newer one and what changed in it are
+            one question asked in three steps, so they sit together under the
+            number they are about. Checking used to be further down, between
+            two links, which left the four ways out of the app with a button in
+            the middle of them. */}
         <SettingRow
           icon={checking ? 'hourglass-outline' : 'cloud-download-outline'}
           label={t('Check for updates')}
@@ -101,6 +86,23 @@ export default function AboutSettings() {
               else if (!release) toast(t("You're on the latest version"));
             });
           }}
+        />
+        <SettingRow
+          icon="sparkles-outline"
+          label={t("What's new")}
+          onPress={() => Linking.openURL(`${REPO_URL}/releases`)}
+        />
+        {/* Everything from here to Ko-fi leaves the app. */}
+        <SettingRow
+          icon="logo-github"
+          label="GitHub"
+          description="juananzzz/resonus"
+          onPress={() => Linking.openURL(REPO_URL)}
+        />
+        <SettingRow
+          icon="bug-outline"
+          label={t('Report a bug')}
+          onPress={() => Linking.openURL(bugReportUrl(version))}
         />
         <SettingRow
           icon="logo-discord"
