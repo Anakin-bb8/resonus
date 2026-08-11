@@ -441,7 +441,7 @@ export default function GenreScreen() {
           </View>
           <View style={styles.playRow}>
             <Pressable hitSlop={10} onPress={onShuffle} accessibilityLabel={t('Shuffle')}>
-              <Ionicons name="shuffle" size={24} color={colors.textSecondary} />
+              <Ionicons name="shuffle" size={26} color={colors.textSecondary} />
             </Pressable>
             <Pressable
               style={[styles.playButton, { backgroundColor: accent }]}
@@ -452,7 +452,7 @@ export default function GenreScreen() {
               {starting ? (
                 <ActivityIndicator color="#000" />
               ) : (
-                <Ionicons name="play" size={22} color="#000" />
+                <Ionicons name="play" size={28} color="#000" style={{ marginLeft: 3 }} />
               )}
             </Pressable>
           </View>
@@ -732,7 +732,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'center',
   },
   chipTextActive: { color: '#000' },
-  playRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  playRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   // The same row the album and playlist headers have, to the same margins.
   actions: {
     flexDirection: 'row',
@@ -751,9 +751,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     minWidth: 32,
   },
+  // Same measurements as `TrackListView`, which is what an album and a playlist
+  // draw: the button an album starts with cannot be smaller here.
   playButton: {
-    width: 40,
-    height: 40,
+    width: 56,
+    height: 56,
     borderRadius: radius.pill,
     backgroundColor: colors.accent,
     alignItems: 'center',

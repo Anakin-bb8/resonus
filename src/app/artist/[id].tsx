@@ -429,7 +429,7 @@ export default function ArtistScreen() {
             {shuffling ? (
               <ActivityIndicator size="small" color={colors.text} />
             ) : (
-              <Ionicons name="shuffle" size={28} color={shuffleActive ? colors.accent : colors.text} />
+              <Ionicons name="shuffle" size={26} color={shuffleActive ? colors.accent : colors.text} />
             )}
           </Pressable>
           <Pressable
