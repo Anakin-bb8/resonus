@@ -578,7 +578,12 @@ export default function ArtistScreen() {
           pointerEvents="none"
           style={[StyleSheet.absoluteFill, { backgroundColor: dominant, opacity: barBgOpacity }]}
         />
-        <BackChevron style={styles.back} label={t('Close')} />
+        {/* The same chevron, at the same size, as the album and playlist bars.
+            What it keeps of its own is the disc behind it: those screens open
+            on a cover of the app's own making, and this one on a photo from
+            the server that may be pale, or missing entirely, leaving the way
+            out to be guessed at. */}
+        <BackChevron size={28} style={styles.back} label={t('Close')} />
         <Animated.Text style={[styles.barTitle, { opacity: barContentOpacity }]} numberOfLines={1}>
           {data.artist.name}
         </Animated.Text>
