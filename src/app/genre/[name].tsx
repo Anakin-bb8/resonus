@@ -354,9 +354,11 @@ export default function GenreScreen() {
             <Ionicons
               name="checkmark-done"
               size={24}
-              // The chosen accent, not the one baked into `colors`: this tick
-              // is the same widget the artist's song list draws, and there it
-              // followed the setting while here it stayed purple.
+              // From the setting, like the artist's song list draws the same
+              // tick. `colors.accent` would have been the right colour too,
+              // since `applyAccent` hot-swaps it, but only from the next render
+              // onwards and nothing makes that render happen: the hook is what
+              // subscribes.
               color={songs.length > 0 && selectedIds.size === songs.length ? accent : colors.text}
             />
           </Pressable>
