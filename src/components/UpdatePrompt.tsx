@@ -104,6 +104,9 @@ export function UpdatePrompt() {
           // what changed and then pressing Update is the point of it. Same
           // words as the row in Settings › About that opens the same page.
           label: t("What's new"),
+          // Otherwise it is one more grey line among grey lines, and nothing
+          // says it is a place to go rather than something being told to you.
+          icon: 'open-outline',
           onPress: () => void Linking.openURL(release?.pageUrl ?? RELEASES_PAGE),
         }}
         onCancel={close}

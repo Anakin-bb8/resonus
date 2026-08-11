@@ -3,6 +3,7 @@
  * Cancel/Confirm buttons. Used for create/rename (with input) and to confirm
  * destructive actions (without input).
  */
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useRef, useState } from 'react';
 import {
   Modal,
@@ -27,8 +28,16 @@ interface Props {
    *  me»). Goes on its own line so three labels never crowd one row.
    *  `align` says which end of that line: 'start' for the ones that dismiss,
    *  which stay out of the way, and 'end' to stack it over the confirm when
-   *  both are answers to the same question and get compared to each other. */
-  neutral?: { label: string; onPress: () => void; align?: 'start' | 'end' };
+   *  both are answers to the same question and get compared to each other.
+   *  `icon` sits after the label, for the ones a word alone does not describe:
+   *  a line of grey text among grey text reads as a label, and `open-outline`
+   *  is what says this one leaves the app. */
+  neutral?: {
+    label: string;
+    onPress: () => void;
+    align?: 'start' | 'end';
+    icon?: keyof typeof Ionicons.glyphMap;
+  };
   destructive?: boolean;
   onCancel: () => void;
   onConfirm: (value: string) => void;
@@ -97,6 +106,9 @@ export function Dialog({
               onPress={neutral.onPress}
             >
               <Text style={styles.cancel}>{neutral.label}</Text>
+              {neutral.icon ? (
+                <Ionicons name={neutral.icon} size={15} color={colors.textSecondary} />
+              ) : null}
             </Pressable>
           ) : null}
           <View style={styles.actions}>
@@ -152,7 +164,13 @@ const styles = StyleSheet.create({
     gap: spacing.xl,
     marginTop: spacing.sm,
   },
-  neutral: { alignSelf: 'flex-start', marginTop: spacing.sm },
+  neutral: {
+    alignSelf: 'flex-start',
+    marginTop: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs + 2,
+  },
   cancel: { color: colors.textSecondary, fontSize: fontSize.md, fontWeight: '600' },
   confirm: { color: colors.accent, fontSize: fontSize.md, fontWeight: '700' },
 });
