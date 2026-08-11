@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import Animated, { FadeInDown, FadeOut } from 'react-native-reanimated';
 
-import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
+import { useFloatingBottom } from '@/hooks/useScreenBottomPadding';
 import { useToast } from '@/store/toast';
 import { colors, fontSize, radius, spacing } from '@/theme';
 
@@ -12,11 +12,11 @@ export function Toast() {
   const actionLabel = useToast((s) => s.actionLabel);
   const runAction = useToast((s) => s.runAction);
   const hide = useToast((s) => s.hide);
-  // The same room every list leaves at its foot: clear of the mini player, and
-  // of the navigation bar where there is one. The constant this replaces was
-  // 24 px short of the mini player with that bar on, so the message sat partly
-  // behind it.
-  const bottom = useScreenBottomPadding();
+  // Clear of the mini player while there is one, and of the navigation bar
+  // where there is one. The constant this replaces was 24 px short of the mini
+  // player with that bar on, so the message sat partly behind it; the same
+  // height the multi-select bar uses, so the two never disagree.
+  const bottom = useFloatingBottom();
 
   useEffect(() => {
     if (!message) return;

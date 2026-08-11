@@ -4,12 +4,14 @@
  * bar in the same place: it lives here rather than in `TrackListView` because
  * screens that build their own list (a genre's songs) need it too.
  *
- * How high is not a number of its own but the room every list already leaves
- * at its foot, which is what "clear of the mini player, and of the navigation
- * bar where there is one" means in one place. It used to be a constant, and it
- * was 24 px short of the mini player once the navigation bar was on: the
- * actions were there and partly behind it, which is the combination people
- * actually run.
+ * How high is not a number of its own but `useFloatingBottom`, which is what
+ * "clear of the mini player while there is one, and of the navigation bar
+ * where there is one" means in one place. It used to be a constant, and it was
+ * 24 px short of the mini player once the navigation bar was on: the actions
+ * were there and partly behind it, which is the combination people actually
+ * run. Then it followed the padding the lists reserve, which always keeps the
+ * mini player's room whether or not anything is playing, and on a quiet screen
+ * left the bar floating with a hole under it.
  *
  * With nothing marked the actions stay visible but dimmed and disabled: they
  * say what selecting is FOR, which an empty bar wouldn't.
@@ -17,7 +19,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
+import { useFloatingBottom } from '@/hooks/useScreenBottomPadding';
 import { colors, fontSize, spacing } from '@/theme';
 
 export interface SelectionAction {
@@ -27,7 +29,7 @@ export interface SelectionAction {
 }
 
 export function SelectionBar({ actions, count }: { actions: SelectionAction[]; count: number }) {
-  const bottom = useScreenBottomPadding();
+  const bottom = useFloatingBottom();
   if (actions.length === 0) return null;
   return (
     <View style={[styles.bar, { bottom }]}>

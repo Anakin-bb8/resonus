@@ -9,7 +9,7 @@ import { useEffect, useRef } from 'react';
 import { Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useTabBarShown } from '@/hooks/useTabBar';
+import { NO_MINI_PLAYER, useTabBarShown } from '@/hooks/useTabBar';
 import { spacing, TAB_BAR_HEIGHT } from '@/theme';
 import { MiniPlayer } from './MiniPlayer';
 
@@ -21,13 +21,10 @@ export function GlobalMiniPlayer() {
   // is nearly everywhere and not only inside the tabs (see `useTabBarShown`).
   const withBar = useTabBarShown();
 
-  // favorites-add too: its search bar lives at the bottom and the mini would cover it.
-  const visible = !(
-    root === 'player' ||
-    root === 'queue' ||
-    root === 'lyrics' ||
-    root === 'favorites-add'
-  );
+  // favorites-add too: its search bar lives at the bottom and the mini would
+  // cover it. The list is shared because whatever floats at the bottom (the
+  // toast, the multi-select bar) has to know where the mini is not.
+  const visible = !NO_MINI_PLAYER.includes(root as string);
   const bottom = withBar ? TAB_BAR_HEIGHT + insets.bottom : insets.bottom + spacing.sm;
 
   // Keep the last visible position so it doesn't jump while fading out

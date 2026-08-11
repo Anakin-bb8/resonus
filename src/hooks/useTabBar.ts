@@ -11,10 +11,14 @@
  */
 import { useSegments } from 'expo-router';
 
+import { currentSong, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
 
 /** Screens that never take the bar, whatever the setting says. */
 const NO_BAR = ['player', 'queue', 'lyrics', 'favorites-add', 'login'];
+
+/** Screens that cover the MiniPlayer. `GlobalMiniPlayer` fades it out on these. */
+export const NO_MINI_PLAYER = ['player', 'queue', 'lyrics', 'favorites-add'];
 
 export function useTabBarShown(): boolean {
   const always = useSettings((s) => s.alwaysShowTabs);
@@ -24,4 +28,16 @@ export function useTabBarShown(): boolean {
   const inTabs = root === '(tabs)' || root === undefined;
   if (inTabs) return true;
   return always && !NO_BAR.includes(root as string);
+}
+
+/**
+ * Whether the MiniPlayer is on screen right now: something has to be playing
+ * (`MiniPlayer` draws nothing without a song) and the screen has to be one
+ * that doesn't cover it. Two conditions, and the bar it draws is 60 px that
+ * anything floating at the bottom has to clear only while they both hold.
+ */
+export function useMiniPlayerShown(): boolean {
+  const segments = useSegments();
+  const hasSong = usePlayerStore((s) => currentSong(s) !== null);
+  return hasSong && !NO_MINI_PLAYER.includes(segments[0] as string);
 }
