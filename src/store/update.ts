@@ -16,6 +16,7 @@ import {
   canInstallApks,
   canInstallNow,
   checkForUpdate,
+  currentVersion,
   downloadApk,
   installApk,
   openInstallSettings,
@@ -37,6 +38,20 @@ export type UpdatePhase = 'idle' | 'offered' | 'permission' | 'downloading';
 /** Outside the state: cancelling is not something anything renders. */
 let abort: AbortController | null = null;
 
+/**
+ * TEMPORARY, and `__DEV__` only: the button in Settings › About that shows the
+ * prompt without there being a release to show. Everything an update does that
+ * leaves a mark (the permission, the 57 MB, the installer) is skipped, so the
+ * only thing it exercises is the look of it. Delete `simulate`, `demo` and the
+ * row that calls it together.
+ */
+let demoTimer: ReturnType<typeof setInterval> | null = null;
+
+function stopDemo() {
+  if (demoTimer) clearInterval(demoTimer);
+  demoTimer = null;
+}
+
 interface UpdateState {
   phase: UpdatePhase;
   release: Release | null;
@@ -56,6 +71,9 @@ interface UpdateState {
   resume: () => void;
   /** Later, skipping a version, or cancelling a download: all of them end here. */
   close: () => void;
+  /** TEMPORARY: see `demo`. Shows the prompt for a release that isn't there. */
+  demo: boolean;
+  simulate: () => void;
 }
 
 export const useUpdate = create<UpdateState>((set, get) => ({
@@ -87,6 +105,24 @@ export const useUpdate = create<UpdateState>((set, get) => ({
   },
 
   start: () => {
+    // TEMPORARY: the simulated one stops here. No permission, no download, no
+    // installer; just the bar moving, which is the part there is to look at.
+    if (get().demo) {
+      set({ phase: 'downloading', progress: 0 });
+      stopDemo();
+      demoTimer = setInterval(() => {
+        const next = get().progress + 0.04;
+        if (next < 1) {
+          set({ progress: next });
+          return;
+        }
+        stopDemo();
+        set({ phase: 'idle', progress: 0, demo: false });
+        // Not translated on purpose: it goes when the button does.
+        useToast.getState().show('Simulation only, nothing was downloaded');
+      }, 120);
+      return;
+    }
     const release = get().release;
     // No APK on the release, or a build without the native module: the release
     // page still does the job, one tap further away.
@@ -122,7 +158,24 @@ export const useUpdate = create<UpdateState>((set, get) => ({
     // method answer Later, Skip and Cancel alike.
     abort?.abort();
     abort = null;
-    set({ phase: 'idle', progress: 0 });
+    stopDemo();
+    set({ phase: 'idle', progress: 0, demo: false });
+  },
+
+  // TEMPORARY, `__DEV__` only. See the note by `demoTimer`.
+  demo: false,
+  simulate: () => {
+    const [major = 0, minor = 0, patch = 0] = currentVersion().split('.').map(Number);
+    set({
+      demo: true,
+      phase: 'offered',
+      progress: 0,
+      release: {
+        version: `${major}.${minor}.${patch + 1}`,
+        size: 57_000_000,
+        pageUrl: RELEASES_PAGE,
+      },
+    });
   },
 }));
 

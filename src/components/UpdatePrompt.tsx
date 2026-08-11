@@ -44,6 +44,7 @@ export function UpdatePrompt() {
   const start = useUpdate((s) => s.start);
   const resume = useUpdate((s) => s.resume);
   const close = useUpdate((s) => s.close);
+  const demo = useUpdate((s) => s.demo);
 
   // Only once the settings are read from disk: before that `updateCheck` is its
   // default (on), and someone who had turned it off would be checked on anyway.
@@ -92,7 +93,11 @@ export function UpdatePrompt() {
         neutral={{
           label: t('Skip this version'),
           onPress: () => {
-            if (version) setSkipped(version);
+            // The simulated version is the next real one by construction
+            // (current + 1), so remembering it as skipped here would quietly
+            // swallow the release it is pretending to be. TEMPORARY, with the
+            // rest of `demo`.
+            if (version && !demo) setSkipped(version);
             close();
           },
         }}
