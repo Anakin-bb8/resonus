@@ -14,11 +14,20 @@
  * a progress bar and a way out, and `Dialog` is built for a question.
  */
 import { useEffect } from 'react';
-import { ActivityIndicator, AppState, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  AppState,
+  Linking,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 import { useAccent } from '@/hooks/useAccent';
 import { useT } from '@/i18n';
-import { clearDownloadedApk, currentVersion } from '@/lib/appUpdate';
+import { clearDownloadedApk, currentVersion, RELEASES_PAGE } from '@/lib/appUpdate';
 import { useAuthStore } from '@/store/auth';
 import { useNetworkType } from '@/store/networkType';
 import { useSettings } from '@/store/settings';
@@ -88,6 +97,15 @@ export function UpdatePrompt() {
               })
         }
         confirmLabel={t('Update')}
+        neutral={{
+          // What changed is the one thing that answers "should I?", and the
+          // notes are written per release and far too long for a dialog. Not a
+          // third answer to the question: it closes nothing, because reading
+          // what changed and then pressing Update is the point of it. Same
+          // words as the row in Settings › About that opens the same page.
+          label: t("What's new"),
+          onPress: () => void Linking.openURL(release?.pageUrl ?? RELEASES_PAGE),
+        }}
         onCancel={close}
         onConfirm={start}
       />

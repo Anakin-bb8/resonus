@@ -106,6 +106,7 @@ you are actually typing into, which is easier than reading it here.
 | `Unpin` | Stop keeping it at the top of its list |
 | `Update` | The button that installs a newer version of Resonus. A verb, not a noun: `Update it`, not `An update` |
 | `Update available` |  |
+| `What's new` | Opens what changed in this version |
 | `When the song ends` | A value of the sleep timer: stop when this song finishes, however long that is |
 | `Will pause in {n} min` | Toast when it is set |
 | `Will pause when the song ends` | Toast when it is set to the end of the song |
