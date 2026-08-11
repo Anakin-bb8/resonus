@@ -1117,12 +1117,15 @@ function onTrackChanged(song: Song) {
 // ── Preload upcoming tracks (warms up the stream in advance) ──────────────────
 // For proxies like Octo Fiesta or slow origins that download the track on the
 // fly: the stream URL of upcoming tracks is requested in advance, so the server
-// already has it cached when it arrives (or when skipping several). The request
-// only needs to REACH the server —it starts its origin fetch even if we don't
-// read the response—, so it's best-effort and survives background: it goes out
-// on the track change, which beats via the native event. Off by default (see
-// preloadUpcoming setting); on a normal server it adds nothing and only
-// generates extra transcodes/statistics.
+// already has it cached when it arrives (or when skipping several). It goes out
+// on the track change, which beats via the native event, and it survives
+// background. Off by default (see preloadUpcoming setting); on a normal server
+// it adds nothing and only generates extra transcodes/statistics.
+//
+// Reaching the server is NOT enough, which is what the first two goes at this
+// assumed. The request has to be held open until the server answers: Octo
+// Fiesta cancels the provider download when the client hangs up, and throws
+// away what it had written. See `WARM_TIMEOUT_MS`.
 //
 // A track change is not the only moment the window moves, though. Putting a
 // song next, or at the end of the queued block, changes what is coming without
@@ -1163,32 +1166,66 @@ function warmUpcoming() {
     // later uses, thus preserving seek (with the identical stream URL, that
     // first request would make it non-seekable and dragging would restart the
     // track). On a normal server, it also avoids extra transcodes.
-    void warmStream(streamUrl(auth, song.id));
+    warmStream(song.id, streamUrl(auth, song.id));
   }
 }
 
 /**
- * Single warming point. Requests only the first byte (`Range`) to avoid wasting
- * mobile data: the proxy just needs that request to download and cache the entire
- * track on its side. The AbortController bounds the worst case —a server that
- * ignores `Range` and sends the full file— to a few seconds, enough to have
- * fired the origin fetch. If testing against a real Octo Fiesta proves
- * insufficient, the Range can be increased here or switch to reading/discarding
- * the entire response.
+ * How long a warm may sit waiting for the first byte. It used to be four
+ * seconds, which is what made all of this do nothing on the proxy it was
+ * written for (#137): Octo Fiesta's `/rest/stream` only answers once it has
+ * pulled the whole track from the provider, and it hands the download the
+ * request's own cancellation token. Hanging up at four seconds cancelled the
+ * download and deleted the half-written file, so nothing was cached and the
+ * track was fetched from scratch when playback reached it. Waiting costs
+ * nothing: until those headers arrive the server has sent no bytes.
  */
-async function warmStream(url: string) {
+const WARM_TIMEOUT_MS = 120_000;
+
+/**
+ * Single warming point, and only one at a time.
+ *
+ * The request is what matters, not the answer: on a proxy that fetches from a
+ * provider, being asked for the track is what makes it go and get it. `Range`
+ * keeps the reply to two bytes on a server that honours it, and the body is
+ * never read on any server, so this stays cheap in data however long it waits.
+ *
+ * Serial because of what waiting means now. The phone holds a handful of
+ * connections to the server at once, and five speculative requests each able
+ * to hold one for two minutes would sit in front of the covers and the lists
+ * the screens are waiting for, which is the very thing #50 was about. One at a
+ * time, in window order, so the song coming next is the one warming.
+ */
+let warmChain: Promise<void> = Promise.resolve();
+
+function warmStream(id: string, url: string) {
+  warmChain = warmChain.then(() => warmRequest(id, url));
+}
+
+async function warmRequest(id: string, url: string) {
   // Nothing is warmed offline: there is no stream to fetch, and the request
   // would be one more thing reaching the network behind someone's back.
   if (useAuthStore.getState().offline) return;
+  bump('preload · asked the server');
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 4000);
+  const timer = setTimeout(() => ctrl.abort(), WARM_TIMEOUT_MS);
   try {
     // `expoFetch`, not the global one: this runs while a song is playing, which
     // is exactly when the app is in the background and React Native's stops
     // answering. See the note in `src/api/subsonic.ts`.
     await expoFetch(url, { headers: { Range: 'bytes=0-1' }, signal: ctrl.signal });
+    // Headers back: whatever the server had to do to have this track ready is
+    // done, and the file it wrote outlives the connection. `expo/fetch` hands
+    // the body over as a stream nobody reads, so hanging up here is what keeps
+    // a server that ignores `Range` from streaming a whole track at us.
+    ctrl.abort();
+    bump('preload · server ready');
   } catch {
-    // Best-effort: offline, aborted or server error, it doesn't matter.
+    // Best-effort, but not forgotten: a warm that timed out left the server
+    // with nothing cached (it deletes what it had half-written), so the id goes
+    // back in the hat and the next time the window moves it is tried again.
+    bump('preload · no answer');
+    warmedIds.delete(id);
   } finally {
     clearTimeout(timer);
   }
