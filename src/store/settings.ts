@@ -574,6 +574,20 @@ interface SettingsState {
    */
   diagnostics: boolean;
   /**
+   * Whether to ask GitHub, once a day, if there is a newer release.
+   *
+   * On, unlike everything else that reaches the network on its own. The app is
+   * not on a store and there is nothing to tell somebody a version came out:
+   * off by default would leave the check to the people who already knew where
+   * to look, who are exactly the ones who did not need it.
+   */
+  updateCheck: boolean;
+  /**
+   * A version the user answered "not this one" to. Only that one is held back;
+   * the next release asks again, which is what makes skipping safe to press.
+   */
+  updateSkipped: string;
+  /**
    * Whether to repair the offline library when the server renumbers its ids
    * (Navidrome 0.64 rewrites every one of them).
    *
@@ -778,6 +792,8 @@ interface SettingsState {
   setShowListRating: (value: boolean) => void;
   setAutoplaySimilar: (value: boolean) => void;
   setDiagnostics: (value: boolean) => void;
+  setUpdateCheck: (value: boolean) => void;
+  setUpdateSkipped: (value: string) => void;
   setNavidromeIdRepair: (value: boolean) => void;
   setCrossfadeSec: (value: number) => void;
   setScrobblePercent: (value: number) => void;
@@ -884,6 +900,8 @@ function snapshot(get: () => SettingsState) {
     showListRating: s.showListRating,
     autoplaySimilar: s.autoplaySimilar,
     diagnostics: s.diagnostics,
+    updateCheck: s.updateCheck,
+    updateSkipped: s.updateSkipped,
     navidromeIdRepair: s.navidromeIdRepair,
     crossfadeSec: s.crossfadeSec,
     scrobblePercent: s.scrobblePercent,
@@ -969,6 +987,9 @@ const DEFAULTS = {
   // Off: measuring is for somebody who is being asked to measure. Everyone
   // else was paying for a report they will never send.
   diagnostics: false,
+  // On: see the note on the field. Nothing is downloaded by it.
+  updateCheck: true,
+  updateSkipped: '',
   // Off until it has been watched doing its job against a migrated server.
   navidromeIdRepair: false,
   crossfadeSec: 0,
@@ -1150,6 +1171,16 @@ export const useSettings = create<SettingsState>((set, get) => ({
   setDiagnostics: (diagnostics) => {
     set({ diagnostics });
     setPerfEnabled(diagnostics);
+    persist(snapshot(get));
+  },
+
+  setUpdateCheck: (updateCheck) => {
+    set({ updateCheck });
+    persist(snapshot(get));
+  },
+
+  setUpdateSkipped: (updateSkipped) => {
+    set({ updateSkipped });
     persist(snapshot(get));
   },
 
@@ -1530,6 +1561,8 @@ export const useSettings = create<SettingsState>((set, get) => ({
           showListRating: boolean;
           autoplaySimilar: boolean;
           diagnostics: boolean;
+          updateCheck?: boolean;
+          updateSkipped?: string;
           navidromeIdRepair?: boolean;
           crossfadeSec: number;
           scrobblePercent: number;
@@ -1669,6 +1702,12 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (typeof parsed.diagnostics === 'boolean') {
           set({ diagnostics: parsed.diagnostics });
+        }
+        if (typeof parsed.updateCheck === 'boolean') {
+          set({ updateCheck: parsed.updateCheck });
+        }
+        if (typeof parsed.updateSkipped === 'string') {
+          set({ updateSkipped: parsed.updateSkipped });
         }
         if (typeof parsed.autoplaySimilar === 'boolean') {
           set({ autoplaySimilar: parsed.autoplaySimilar });

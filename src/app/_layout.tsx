@@ -23,6 +23,7 @@ import { BatteryWarning } from '@/components/BatteryWarning';
 import { SongInfoSheet } from '@/components/SongInfoSheet';
 import { SongMenuSheet } from '@/components/SongMenuSheet';
 import { Toast } from '@/components/Toast';
+import { UpdatePrompt } from '@/components/UpdatePrompt';
 import { installAppFont, setAppFont } from '@/lib/appFont';
 import { startPerfLog } from '@/lib/perfLog';
 import { queryClient } from '@/lib/query';
@@ -301,6 +302,10 @@ export default function RootLayout() {
             {auth || offline ? <GlobalShareSheet /> : null}
             {auth || offline ? <CarAutoSync /> : null}
             {auth || offline ? <BatteryWarning /> : null}
+            {/* Not behind the profile guard on a whim: the check reaches
+                GitHub, not the music server, and somebody stuck on the login
+                screen because a two-release-old bug is exactly who needs it. */}
+            <UpdatePrompt />
             <Toast />
           </View>
           </ErrorBoundary>

@@ -653,7 +653,14 @@
     "Try exploring another genre.": "Empty state subtitle on a genre screen",
     "Unknown artist": "Fallback when the file and the server have no artist",
     "Unknown album": "Fallback when the file and the server have no album",
-    "Unknown title": "Fallback when the file and the server have no title"
+    "Unknown title": "Fallback when the file and the server have no title",
+
+    // ── Updating the app itself ──────────────────────────────────────────────
+    "Update": "The button that installs a newer version of Resonus. A verb, not a noun: `Update it`, not `An update`",
+    "Skip this version": "Don't ask about THIS release again. The next one still asks, so it is not the same as turning updates off",
+    "Check for updates": "Ask GitHub now whether a newer Resonus is out",
+    "You're on the latest version": "Answer when that check finds nothing newer",
+    "Installing updates needs permission": "Shown when the user came back from Android's «install unknown apps» screen without granting it"
   },
 
   // Strings that are meant to stay in English, and are not counted as missing.

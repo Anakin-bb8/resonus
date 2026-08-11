@@ -626,5 +626,18 @@
   "Measuring is off (Settings › About), so there is nothing to show.": "Measuring is off (Settings › About), so there is nothing to show.",
   "Server id repair": "Server id repair",
   "Repair the offline library": "Repair the offline library",
-  "If the server renumbers its ids, rewrite the downloads to match instead of losing them. Off until it has been tested against a server that has.": "If the server renumbers its ids, rewrite the downloads to match instead of losing them. Off until it has been tested against a server that has."
+  "If the server renumbers its ids, rewrite the downloads to match instead of losing them. Off until it has been tested against a server that has.": "If the server renumbers its ids, rewrite the downloads to match instead of losing them. Off until it has been tested against a server that has.",
+  "Update available": "Update available",
+  "Resonus {new} is out. You have {old}.": "Resonus {new} is out. You have {old}.",
+  "Resonus {new} is out. You have {old}. The download is about {mb} MB.": "Resonus {new} is out. You have {old}. The download is about {mb} MB.",
+  "Update": "Update",
+  "Skip this version": "Skip this version",
+  "Downloading Resonus {version}": "Downloading Resonus {version}",
+  "Check for updates": "Check for updates",
+  "You're on the latest version": "You're on the latest version",
+  "Check for updates automatically": "Check for updates automatically",
+  "Asks GitHub once a day. Nothing is downloaded until you say so.": "Asks GitHub once a day. Nothing is downloaded until you say so.",
+  "Installing updates needs permission": "Installing updates needs permission",
+  "Couldn't open the installer": "Couldn't open the installer",
+  "Couldn't download the update": "Couldn't download the update"
 }

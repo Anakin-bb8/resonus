@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 622 of them.
+Every string the app can show, under the screen it shows up on. 635 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -55,6 +55,7 @@ you are actually typing into, which is easier than reading it here.
 | `Disc {n}` | Heading over the songs of one disc of a multi-disc album. `{n}` is its number |
 | `Don't remind me` | Its other button: never show this again |
 | `Download removed` | Toast: the file was deleted, the song stays in the library |
+| `Downloading Resonus {version}` |  |
 | `Duration` | Label of a field in the song information sheet: how long the song is |
 | `Export` | Get the downloaded file itself out of the app, as a file. Not the same as `Share`, which makes a link on the server |
 | `Export “{name}”?` | Confirms getting the files of an album or playlist out of the app |
@@ -78,6 +79,8 @@ you are actually typing into, which is easier than reading it here.
 | `Remove from favorites` | The same button when it is already a favourite |
 | `Remove from playlist` | Menu action: take this song out of the playlist it was opened from |
 | `Removed from playlist` | Toast, with an undo button next to it |
+| `Resonus {new} is out. You have {old}.` |  |
+| `Resonus {new} is out. You have {old}. The download is about {mb} MB.` |  |
 | `Sample rate` | A property of the audio, in kHz |
 | `Save to a folder` | A value of `Export`: write the file somewhere on the phone |
 | `Saved as “{name}”` | Where the exported file ended up. `{name}` is the file's name |
@@ -88,6 +91,7 @@ you are actually typing into, which is easier than reading it here.
 | `Share` | Make a link on the server that others can open. Getting the file itself out is `Export` |
 | `Share “{name}”` | The sheet's title, with what is being shared |
 | `Size` | The size of the quick grid tiles |
+| `Skip this version` | Don't ask about THIS release again. The next one still asks, so it is not the same as turning updates off |
 | `Sleep timer` | Stop playing after a while, for falling asleep to |
 | `Sleep timer ({n} min left)` | The menu row while it is counting down. `{n}` is minutes still to go |
 | `Sleep timer (end of song)` | The same row when it is set to stop at the end of this song |
@@ -101,6 +105,8 @@ you are actually typing into, which is easier than reading it here.
 | `Turn off` | Turn off the sleep timer |
 | `Unknown title` | Fallback when the file and the server have no title |
 | `Unpin` | Stop keeping it at the top of its list |
+| `Update` | The button that installs a newer version of Resonus. A verb, not a noun: `Update it`, not `An update` |
+| `Update available` |  |
 | `When the song ends` | A value of the sleep timer: stop when this song finishes, however long that is |
 | `Will pause in {n} min` | Toast when it is set |
 | `Will pause when the song ends` | Toast when it is set to the end of the song |
@@ -500,6 +506,12 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
+| `Asks GitHub once a day. Nothing is downloaded until you say so.` | The line under “Check for updates automatically”, explaining it |
+| `Check for updates` | Ask GitHub now whether a newer Resonus is out |
+| `Check for updates automatically` |  |
+| `Couldn't download the update` |  |
+| `Couldn't open the installer` |  |
+| `Installing updates needs permission` | Shown when the user came back from Android's «install unknown apps» screen without granting it |
 | `Measure performance` | Timing, not analytics: how long the app takes to do things on this phone, kept on the phone. Nothing is sent anywhere. It is turned on when somebody is being walked through a slowdown |
 | `Report a bug` | Opens a new issue on GitHub |
 | `Restore` | Restore settings to their defaults |
@@ -508,6 +520,7 @@ you are actually typing into, which is easier than reading it here.
 | `Support Resonus` | The row for whoever wants to give something. The app needs nothing to work |
 | `Version` | Which version of Resonus this is. Tapping it five times opens Diagnostics |
 | `What's new` | Opens what changed in this version |
+| `You're on the latest version` | Answer when that check finds nothing newer |
 | `Your preferences will go back to their defaults. Your language stays.` | The line under that dialog |
 
 ## Settings › Diagnostics

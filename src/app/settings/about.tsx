@@ -10,6 +10,7 @@ import { Field, SettingRow, SettingsPage, SwitchList, settingsStyles } from '@/c
 import { useT } from '@/i18n';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
+import { useUpdate } from '@/store/update';
 
 const REPO_URL = 'https://github.com/juananzzz/resonus';
 /**
@@ -39,6 +40,12 @@ export default function AboutSettings() {
   const version = Constants.expoConfig?.version;
   const diagnostics = useSettings((s) => s.diagnostics);
   const setDiagnostics = useSettings((s) => s.setDiagnostics);
+  const updateCheck = useSettings((s) => s.updateCheck);
+  const setUpdateCheck = useSettings((s) => s.setUpdateCheck);
+  // The prompt itself is global (`UpdatePrompt`): this only starts the check
+  // and reports the one answer that has nowhere else to appear.
+  const check = useUpdate((s) => s.check);
+  const checking = useUpdate((s) => s.checking);
   // Restoring every setting used to be a row in the Settings index, in among
   // the categories and looking like one of them, a tap away from the button
   // that puts the app in offline mode. It reaches everything, it is done once
@@ -77,6 +84,20 @@ export default function AboutSettings() {
           label={t("What's new")}
           onPress={() => Linking.openURL(`${REPO_URL}/releases`)}
         />
+        {/* Right under the version it answers about. Saying "you are on the
+            latest" out loud matters as much as the other answer: without it a
+            check that finds nothing is indistinguishable from one that
+            failed. */}
+        <SettingRow
+          icon={checking ? 'hourglass-outline' : 'cloud-download-outline'}
+          label={t('Check for updates')}
+          onPress={() => {
+            if (checking) return;
+            void check(true).then((release) => {
+              if (!release) toast(t("You're on the latest version"));
+            });
+          }}
+        />
         <SettingRow
           icon="logo-discord"
           label="Discord"
@@ -97,6 +118,14 @@ export default function AboutSettings() {
             conversation. */}
         <SwitchList
           options={[
+            {
+              // On by default, and the only thing here that reaches the
+              // network by itself, so it says what it does.
+              label: t('Check for updates automatically'),
+              description: t('Asks GitHub once a day. Nothing is downloaded until you say so.'),
+              value: updateCheck,
+              onChange: setUpdateCheck,
+            },
             {
               label: t('Measure performance'),
               value: diagnostics,

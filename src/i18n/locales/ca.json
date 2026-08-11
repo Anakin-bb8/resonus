@@ -620,5 +620,18 @@
   "Measuring is off (Settings › About), so there is nothing to show.": "La mesura està desactivada (Configuració › Quant a), així que no hi ha res a mostrar.",
   "Server id repair": "Reparació d’ids del servidor",
   "Repair the offline library": "Repara la biblioteca sense connexió",
-  "If the server renumbers its ids, rewrite the downloads to match instead of losing them. Off until it has been tested against a server that has.": "Si el servidor renumera els seus ids, reescriu les baixades perquè hi encaixin en lloc de perdre-les. Desactivat fins que es provi contra un servidor que ho hagi fet."
+  "If the server renumbers its ids, rewrite the downloads to match instead of losing them. Off until it has been tested against a server that has.": "Si el servidor renumera els seus ids, reescriu les baixades perquè hi encaixin en lloc de perdre-les. Desactivat fins que es provi contra un servidor que ho hagi fet.",
+  "Update available": "Hi ha una actualització",
+  "Resonus {new} is out. You have {old}.": "Ja està disponible Resonus {new}. Tens la {old}.",
+  "Resonus {new} is out. You have {old}. The download is about {mb} MB.": "Ja està disponible Resonus {new}. Tens la {old}. La baixada ocupa uns {mb} MB.",
+  "Update": "Actualitza",
+  "Skip this version": "Omet aquesta versió",
+  "Downloading Resonus {version}": "Baixant Resonus {version}",
+  "Check for updates": "Cerca actualitzacions",
+  "You're on the latest version": "Ja tens l’última versió",
+  "Check for updates automatically": "Cerca actualitzacions automàticament",
+  "Asks GitHub once a day. Nothing is downloaded until you say so.": "Pregunta a GitHub un cop al dia. No es baixa res fins que tu ho diguis.",
+  "Installing updates needs permission": "Instal·lar actualitzacions necessita permís",
+  "Couldn't open the installer": "No s’ha pogut obrir l’instal·lador",
+  "Couldn't download the update": "No s’ha pogut baixar l’actualització"
 }
