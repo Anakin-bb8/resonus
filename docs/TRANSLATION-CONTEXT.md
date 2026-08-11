@@ -73,7 +73,7 @@ you are actually typing into, which is easier than reading it here.
 | `Play next` | Action: put this song right after the one playing, without clearing the rest |
 | `Playback stopped` | The mini player when there is nothing playing any more |
 | `Plays` | How many times the song has been played |
-| `Rate` | Verb: rate the song with stars. Not "bitrate" |
+| `Rate` | Verb: give it stars. Used for a song and for an artist. Not "bitrate" |
 | `Rating` | The stars given to the song. Not a bitrate, not a review |
 | `Remove from favorites` | The same button when it is already a favourite |
 | `Remove from playlist` | Menu action: take this song out of the playlist it was opened from |
@@ -122,6 +122,7 @@ you are actually typing into, which is easier than reading it here.
 | `Live` |  |
 | `Play discography` | Play the lot, in order |
 | `Popular` | The artist's popular / top tracks |
+| `Rate` | Verb: give it stars. Used for a song and for an artist. Not "bitrate" |
 | `Remove from favorites` | The same button when it is already a favourite |
 | `Show less` | Folds it back |
 | `Show more` | Unfolds the rest of a text that was cut short |

@@ -29,7 +29,7 @@ import {
   getTopSongs,
   COVER,
 } from '@/api/data';
-import { type Album, type Song } from '@/api/subsonic';
+import { type Album, type Artist, type Song } from '@/api/subsonic';
 import { AlbumCard } from '@/components/AlbumCard';
 import { Cover } from '@/components/Cover';
 import { CoverViewer } from '@/components/CoverViewer';
@@ -38,6 +38,7 @@ import { FavoriteButton } from '@/components/FavoriteButton';
 import { BackButton } from '@/components/BackButton';
 import { Message } from '@/components/Message';
 import { SheetModal } from '@/components/SheetModal';
+import { StarRating } from '@/components/StarRating';
 import { TrackRow } from '@/components/TrackRow';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useDownloadMessage } from '@/hooks/useDownloadMessage';
@@ -86,6 +87,15 @@ export default function ArtistScreen() {
   const [photoOpen, setPhotoOpen] = useState(false);
   // ⋯ menu (imperative: opening/closing doesn't re-render the screen).
   const menuRef = useRef<() => void>(() => {});
+  // The stars take over the sheet rather than sitting among the actions, the
+  // same way the song menu does it: five targets in a row need the width, and
+  // a rating is a thing you set, not an action you fire and dismiss.
+  const [menuMode, setMenuMode] = useState<'actions' | 'rating'>('actions');
+  // Rating is Subsonic's `setRating`, which Jellyfin has no answer for. Offline
+  // it is recorded and sent on reconnect, so it stays; a local profile has no
+  // account and never gets here.
+  const serverType = useAuthStore((s) => s.auth?.serverType);
+  const canRate = useAuthStore((s) => !!s.auth) && serverType !== 'jellyfin';
   const dominant = useDominantColor(canFetch ? coverArtUrl(id, COVER.thumb) : undefined);
 
   // ── Download the discography ────────────────────────────────────────────
@@ -398,7 +408,12 @@ export default function ArtistScreen() {
               hitSlop={10}
               accessibilityRole="button"
               accessibilityLabel={t('More options')}
-              onPress={() => menuRef.current()}
+              onPress={() => {
+                // Always on the actions: a sheet reopening on the stars because
+                // that is where it was left reads as the wrong menu.
+                setMenuMode('actions');
+                menuRef.current();
+              }}
             >
               <Ionicons name="ellipsis-horizontal" size={26} color={colors.text} />
             </Pressable>
@@ -614,46 +629,86 @@ export default function ArtistScreen() {
       />
 
       <SheetModal openRef={menuRef}>
-        {(close) => (
-          <>
-            <Pressable
-              style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
-              onPress={() => {
-                close();
-                void playDiscography();
-              }}
-            >
-              <Ionicons name="play" size={24} color={colors.text} />
-              <Text style={styles.actionText}>{t('Play discography')}</Text>
-            </Pressable>
-            <Pressable
-              style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
-              onPress={() => {
-                close();
-                void addToPlaylist();
-              }}
-            >
-              <Ionicons name="add" size={24} color={colors.text} />
-              <Text style={styles.actionText}>{t('Add to a playlist')}</Text>
-            </Pressable>
-            {/* Clearing a whole discography had no path at all offline, where
-                the download button isn't there — nor online for a partially
-                downloaded artist, since that button only offers to delete once
-                everything is in (#47). */}
-            {hasDownloads ? (
+        {(close) =>
+          menuMode === 'rating' ? (
+            <View>
+              <Pressable style={styles.action} onPress={() => setMenuMode('actions')}>
+                <Ionicons name="chevron-back" size={24} color={colors.text} />
+                <Text style={styles.actionText}>{t('Rate')}</Text>
+              </Pressable>
+              <View style={styles.ratingRow}>
+                <StarRating
+                  id={data.artist.id}
+                  rating={data.artist.userRating}
+                  size={34}
+                  // Written back where the screen reads it from, so the stars
+                  // keep what was just set instead of springing back to what
+                  // the server said when the page was opened.
+                  onRated={(r) =>
+                    queryClient.setQueryData<{ artist: Artist; albums: Album[] }>(
+                      ['artist', id],
+                      (old) =>
+                        old ? { ...old, artist: { ...old.artist, userRating: r } } : old,
+                    )
+                  }
+                />
+              </View>
+            </View>
+          ) : (
+            <>
               <Pressable
                 style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
                 onPress={() => {
                   close();
-                  setConfirmDeleteDl(true);
+                  void playDiscography();
                 }}
               >
-                <Ionicons name="trash-outline" size={24} color={colors.text} />
-                <Text style={styles.actionText}>{t('Delete downloads')}</Text>
+                <Ionicons name="play" size={24} color={colors.text} />
+                <Text style={styles.actionText}>{t('Play discography')}</Text>
               </Pressable>
-            ) : null}
-          </>
-        )}
+              <Pressable
+                style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+                onPress={() => {
+                  close();
+                  void addToPlaylist();
+                }}
+              >
+                <Ionicons name="add" size={24} color={colors.text} />
+                <Text style={styles.actionText}>{t('Add to a playlist')}</Text>
+              </Pressable>
+              {canRate ? (
+                <Pressable
+                  style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+                  onPress={() => setMenuMode('rating')}
+                >
+                  <Ionicons name="star-outline" size={24} color={colors.text} />
+                  <Text style={styles.actionText}>{t('Rate')}</Text>
+                </Pressable>
+              ) : null}
+              {/* Last, because it is the only thing here that takes something
+                  away, but not in red: a download comes back with one tap, and
+                  red is kept for what does not come back, like deleting a
+                  playlist or a station.
+
+                  Clearing a whole discography had no path at all offline, where
+                  the download button isn't there — nor online for a partially
+                  downloaded artist, since that button only offers to delete once
+                  everything is in (#47). */}
+              {hasDownloads ? (
+                <Pressable
+                  style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+                  onPress={() => {
+                    close();
+                    setConfirmDeleteDl(true);
+                  }}
+                >
+                  <Ionicons name="trash-outline" size={24} color={colors.text} />
+                  <Text style={styles.actionText}>{t('Delete downloads')}</Text>
+                </Pressable>
+              ) : null}
+            </>
+          )
+        }
       </SheetModal>
     </View>
   );
@@ -693,6 +748,8 @@ const styles = StyleSheet.create({
   // ⋯ menu row (same look as the playlist / media menu).
   action: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg, paddingVertical: spacing.md },
   actionText: { color: colors.text, fontSize: fontSize.md },
+  // Same as the song menu's, so the stars sit where they do there.
+  ratingRow: { alignItems: 'center', paddingVertical: spacing.sm, marginBottom: spacing.sm },
   headerWrap: { width: WIDTH, height: HEADER_H, justifyContent: 'flex-end' },
   headerImg: { ...StyleSheet.absoluteFill, width: WIDTH, height: HEADER_H },
   name: {

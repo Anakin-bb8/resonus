@@ -117,7 +117,7 @@
     "Pin favorites": "Pin favourites to the quick grid",
 
     // ── Actions & verbs (easy to translate as the wrong part of speech) ──────
-    "Rate": "Verb: rate the song with stars. Not \"bitrate\"",
+    "Rate": "Verb: give it stars. Used for a song and for an artist. Not \"bitrate\"",
     "Restore": "Restore settings to their defaults",
     "Reorder": "Enter drag-to-reorder mode",
     "Turn off": "Turn off the sleep timer",
