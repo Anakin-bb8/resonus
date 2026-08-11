@@ -402,10 +402,10 @@ export default function ArtistSongsScreen() {
                 void deleteArtistDownloads();
               }}
             >
-              <Ionicons name="trash-outline" size={22} color={colors.danger} />
-              <Text style={[styles.actionText, { color: colors.danger }]}>
-                {t('Delete downloads')}
-              </Text>
+              {/* Last, but not in red: a download comes back with one tap, and
+                  red is kept for what does not, like deleting a playlist. */}
+              <Ionicons name="trash-outline" size={22} color={colors.text} />
+              <Text style={styles.actionText}>{t('Delete downloads')}</Text>
             </Pressable>
           </>
         )}
