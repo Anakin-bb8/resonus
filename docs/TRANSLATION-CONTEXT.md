@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 636 of them.
+Every string the app can show, under the screen it shows up on. 635 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -506,7 +506,6 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `Asks GitHub once a day. Nothing is downloaded until you say so.` | The line under “Check for updates automatically”, explaining it |
 | `Check for updates` | Ask GitHub now whether a newer Resonus is out |
 | `Check for updates automatically` |  |
 | `Couldn't check for updates` |  |

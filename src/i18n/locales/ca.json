@@ -630,7 +630,6 @@
   "Check for updates": "Cerca actualitzacions",
   "You're on the latest version": "Ja tens l’última versió",
   "Check for updates automatically": "Cerca actualitzacions automàticament",
-  "Asks GitHub once a day. Nothing is downloaded until you say so.": "Pregunta a GitHub un cop al dia. No es baixa res fins que tu ho diguis.",
   "Installing updates needs permission": "Instal·lar actualitzacions necessita permís",
   "Couldn't open the installer": "No s’ha pogut obrir l’instal·lador",
   "Couldn't download the update": "No s’ha pogut baixar l’actualització",

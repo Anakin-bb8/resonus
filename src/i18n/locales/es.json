@@ -638,7 +638,6 @@
   "Check for updates": "Buscar actualizaciones",
   "You're on the latest version": "Ya tienes la última versión",
   "Check for updates automatically": "Buscar actualizaciones automáticamente",
-  "Asks GitHub once a day. Nothing is downloaded until you say so.": "Pregunta a GitHub una vez al día. No se descarga nada hasta que tú lo digas.",
   "Installing updates needs permission": "Instalar actualizaciones necesita permiso",
   "Couldn't open the installer": "No se pudo abrir el instalador",
   "Couldn't download the update": "No se pudo descargar la actualización",

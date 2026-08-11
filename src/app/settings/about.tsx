@@ -123,10 +123,7 @@ export default function AboutSettings() {
         <SwitchList
           options={[
             {
-              // On by default, and the only thing here that reaches the
-              // network by itself, so it says what it does.
               label: t('Check for updates automatically'),
-              description: t('Asks GitHub once a day. Nothing is downloaded until you say so.'),
               value: updateCheck,
               onChange: setUpdateCheck,
             },
