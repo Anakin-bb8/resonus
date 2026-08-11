@@ -3,7 +3,9 @@
  *
  * "Popular" is what the server thinks is worth hearing first, twenty tracks of
  * it. This is the rest: everything the artist has here, in one place, to be
- * sorted, searched, played, shuffled or picked through.
+ * sorted, played, shuffled, downloaded or picked through. No search box: a
+ * genre's list has none either, and the two are meant to be the same screen
+ * with different contents.
  *
  * Where the songs come from is the interesting part. No server has an endpoint
  * for "every song by this artist" that all four of them share, but every one
