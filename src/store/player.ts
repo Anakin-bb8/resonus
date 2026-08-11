@@ -2074,6 +2074,42 @@ function runFade(
 const PAUSE_FADE_MS = 180;
 let pauseFadeTimer: ReturnType<typeof setInterval> | null = null;
 
+/** The ramp in flight, so it can be closed out before its timer stops running. */
+let pendingFade: { p: AudioPlayer; to: number; onDone?: () => void } | null = null;
+
+/**
+ * Whether a volume ramp can be run at all.
+ *
+ * It is a `setInterval`, and JS timers do not run reliably once Android has put
+ * the app in the background. A ramp that stalls half way through is not a
+ * cosmetic loss: what pauses the player lives in its completion, so the
+ * speakers keep playing while everything on screen says paused, and on the way
+ * back in the volume stays at zero, so the song runs silently with its progress
+ * bar moving (#140). Backgrounded, the change is made outright.
+ */
+function canFade(): boolean {
+  return AppState.currentState === 'active';
+}
+
+/** Ends the ramp in flight where it was headed, and runs what was waiting on
+ *  it. For the moment the app leaves the foreground: whatever is left of a ramp
+ *  from then on may never run. */
+function settleFade() {
+  const fade = pendingFade;
+  if (!fade) return;
+  if (pauseFadeTimer) {
+    clearInterval(pauseFadeTimer);
+    pauseFadeTimer = null;
+  }
+  pendingFade = null;
+  try {
+    fade.p.volume = fade.to;
+  } catch {
+    // ignore
+  }
+  fade.onDone?.();
+}
+
 /** Linear ramp of `p`'s volume from `from` to `to` in PAUSE_FADE_MS; when done
  *  calls `onDone`. Cancels any previous pause/resume ramp. */
 function fadeVolume(p: AudioPlayer, from: number, to: number, onDone?: () => void) {
@@ -2081,6 +2117,7 @@ function fadeVolume(p: AudioPlayer, from: number, to: number, onDone?: () => voi
     clearInterval(pauseFadeTimer);
     pauseFadeTimer = null;
   }
+  pendingFade = { p, to, onDone };
   const t0 = Date.now();
   pauseFadeTimer = setInterval(() => {
     const x = Math.min(1, (Date.now() - t0) / PAUSE_FADE_MS);
@@ -2092,6 +2129,7 @@ function fadeVolume(p: AudioPlayer, from: number, to: number, onDone?: () => voi
     if (x >= 1) {
       if (pauseFadeTimer) clearInterval(pauseFadeTimer);
       pauseFadeTimer = null;
+      pendingFade = null;
       onDone?.();
     }
   }, 25);
@@ -2438,6 +2476,11 @@ function attachAppState() {
   appStateAttached = true;
   AppState.addEventListener('change', (st) => {
     if (st !== 'active') {
+      // A ramp started an instant ago is about to lose its timer, and with it
+      // whatever was waiting on the end of it (the pause, most of all). This is
+      // the last moment anything of ours is certain to run, so it is closed out
+      // here rather than left hanging (#140).
+      settleFade();
       // Leaving the foreground is the last chance to write down where playback
       // was, so this one is not up for skipping.
       syncQueueNow(true);
@@ -2975,10 +3018,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       // Pausing mid-fade cuts the outgoing: on resume only the current track
       // should play, at normal volume.
       cutCrossfade();
-      // Lower volume and pause when done; leaves volume restored so a later
-      // play (including system/lock screen) sounds normal.
       set({ isPlaying: false });
-      fadeVolume(p, vol, 0, () => {
+      const stop = () => {
         try {
           p.pause();
           // Reconcile in case volume changed during the ramp; this way a later
@@ -2988,23 +3029,32 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
           // ignore
         }
         scheduleSync(); // the "on pause" sync that onStatus does
-      });
+      };
+      // Lower volume and pause when done; leaves volume restored so a later
+      // play (including system/lock screen) sounds normal. Backgrounded there
+      // is no ramp to wait on: the pause is what matters and it happens now.
+      if (canFade()) fadeVolume(p, vol, 0, stop);
+      else stop();
     } else {
-      // Start silent and ramp up: fade-in on resume.
+      const ramp = canFade();
+      // Start silent and ramp up: fade-in on resume. Backgrounded it starts at
+      // its own volume instead, because nothing would raise it afterwards.
       try {
-        p.volume = 0;
+        p.volume = ramp ? 0 : vol;
       } catch {
         // ignore
       }
       p.play();
       set({ isPlaying: true });
-      fadeVolume(p, 0, vol, () => {
-        try {
-          p.volume = effectiveVolume(currentSong(get()));
-        } catch {
-          // ignore
-        }
-      });
+      if (ramp) {
+        fadeVolume(p, 0, vol, () => {
+          try {
+            p.volume = effectiveVolume(currentSong(get()));
+          } catch {
+            // ignore
+          }
+        });
+      }
     }
   },
 
