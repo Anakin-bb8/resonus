@@ -59,6 +59,7 @@ const PLURALS: Record<string, Partial<Record<Language, string[]>>> = {
   song: { es: ['canción', 'canciones'], en: ['song', 'songs'], de: ['Titel', 'Titel'], ca: ['cançó', 'cançons'], ru: ['композиция', 'композиции', 'композиций'], it: ['canzone', 'canzoni'] },
   album: { es: ['álbum', 'álbumes'], en: ['album', 'albums'], de: ['Album', 'Alben'], ca: ['àlbum', 'àlbums'], ru: ['альбом', 'альбома', 'альбомов'], it: ['album', 'album']  },
   playlist: { es: ['lista', 'listas'], en: ['playlist', 'playlists'], de: ['Playlist', 'Playlists'], ca: ['llista', 'llistes'], ru: ['плейлист', 'плейлиста', 'плейлистов'], it: ['playlist', 'playlist'] },
+  artist: { es: ['artista', 'artistas'], en: ['artist', 'artists'], ca: ['artista', 'artistes'] },
 };
 
 /**
@@ -104,4 +105,9 @@ export function albumsLabel(n: number, lang: Language): string {
 /** "N playlist/playlists" (or equivalent) per language. */
 export function playlistsLabel(n: number, lang: Language): string {
   return countLabel('playlist', n, lang);
+}
+
+/** "N artist/artists" (or equivalent) per language. */
+export function artistsLabel(n: number, lang: Language): string {
+  return countLabel('artist', n, lang);
 }

@@ -15,6 +15,7 @@ data class BrowseNode(
   val artworkUrl: String?,
   val playable: Boolean,
   val contentStyle: String?, // "list" | "grid" | null
+  val mediaType: String?, // "album" | "artist" | "playlist" | null
 )
 
 object BrowseTreeCache {
@@ -231,6 +232,7 @@ object BrowseTreeCache {
           artworkUrl = o.optString("artworkUrl").takeIf { it.isNotEmpty() },
           playable = o.optBoolean("playable", false),
           contentStyle = o.optString("contentStyle").takeIf { it.isNotEmpty() },
+          mediaType = o.optString("mediaType").takeIf { it.isNotEmpty() },
         )
       )
     }

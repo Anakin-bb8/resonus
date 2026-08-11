@@ -28,6 +28,12 @@ export interface CarNode {
   playable: boolean;
   /** How to render children of a browsable node: "list" | "grid". */
   contentStyle?: 'list' | 'grid';
+  /**
+   * What the item is. The car draws each kind its own way — an artist's cover
+   * comes out round, an album's square — and without this everything browsable
+   * is a folder to it. Left out, it falls back to that.
+   */
+  mediaType?: 'album' | 'artist' | 'playlist';
 }
 
 /** Tree: parentId → children map. Root is the "root" key. */

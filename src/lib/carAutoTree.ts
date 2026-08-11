@@ -13,6 +13,7 @@ import * as data from '@/api/data';
 import { type Album, type Artist, type Playlist, type Song } from '@/api/subsonic';
 import { songsLabel, tg } from '@/i18n';
 import { queryClient } from '@/lib/query';
+import { useLastPlayed } from '@/store/lastPlayed';
 import { usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
 import { type CarNode, type CarTree } from './carAuto';
@@ -67,6 +68,17 @@ function art(id: string | undefined): string | undefined {
   return data.coverArtUrl(id, data.COVER.card);
 }
 
+/**
+ * One of our own icons for a row that leads somewhere rather than to a song.
+ * The native side turns this into a resource uri of the running package, and
+ * the car tints the white drawable to whatever its theme is (`VD-2`). Without
+ * one, a category row is bare text, and telling four of those apart at a
+ * glance means reading them.
+ */
+function icon(name: string): string {
+  return `res://${name}`;
+}
+
 function songNode(s: Song, parentId: string): CarNode {
   songById.set(s.id, s);
   return {
@@ -86,6 +98,7 @@ function albumNode(a: Album): CarNode {
     artworkUrl: art(a.coverArt ?? a.id),
     playable: false,
     contentStyle: 'list',
+    mediaType: 'album',
   };
 }
 
@@ -93,11 +106,16 @@ function playlistNode(p: Playlist): CarNode {
   return {
     id: `playlist:${p.id}`,
     title: p.name,
+    // Who it belongs to, which is what tells two lists of the same name apart
+    // on a shared server. Falls back to the length for servers that send no
+    // owner at all.
     subtitle:
-      p.songCount != null ? songsLabel(p.songCount, useSettings.getState().language) : undefined,
+      p.owner ||
+      (p.songCount != null ? songsLabel(p.songCount, useSettings.getState().language) : undefined),
     artworkUrl: art(p.coverArt ?? p.id),
     playable: false,
     contentStyle: 'list',
+    mediaType: 'playlist',
   };
 }
 
@@ -108,14 +126,70 @@ function artistNode(a: Artist): CarNode {
     artworkUrl: art(a.coverArt ?? a.id),
     playable: false,
     contentStyle: 'list',
+    mediaType: 'artist',
   };
 }
 
+/**
+ * Newest played first, and whatever was never played keeps the order the
+ * server sent. The car's lists are long and what you put on last week is a
+ * better guess at what you want now than wherever the alphabet left it.
+ */
+function byLastPlayed<T>(items: T[], href: (item: T) => string): T[] {
+  const { times } = useLastPlayed.getState();
+  return items
+    .map((item, i) => ({ item, i, ts: times[href(item)] ?? 0 }))
+    .sort((a, b) => b.ts - a.ts || a.i - b.i)
+    .map((x) => x.item);
+}
+
+/** How many go in the Recents tab. A screenful is three rows of five. */
+const RECENTS_SIZE = 20;
+
+/** What each kind of source is called under its tile. */
+const KIND_LABEL = { album: 'Album', artist: 'Artist', playlist: 'Playlist' } as const;
+
+/**
+ * The Recents tab: what was last played, newest first, whatever kind it is.
+ *
+ * Read straight from the store the Library's "Recent" order and Home's grid
+ * already use, so it needs nothing from the server: the name was written down
+ * when it played and the cover comes from the id inside the href. Songs are
+ * left out — what gets played again is the album or the playlist it came from,
+ * and a car full of single tracks is a worse thing to steer through.
+ */
+function recentNodes(): CarNode[] {
+  const { times, names } = useLastPlayed.getState();
+  const nodes: CarNode[] = [];
+  for (const [href] of Object.entries(times).sort((a, b) => b[1] - a[1])) {
+    if (nodes.length >= RECENTS_SIZE) break;
+    const [, kind, id] = href.split('/');
+    const name = names[href];
+    if (!name || !id || !(kind in KIND_LABEL)) continue;
+    const type = kind as keyof typeof KIND_LABEL;
+    nodes.push({
+      id: `${type}:${id}`,
+      title: name,
+      subtitle: tg(KIND_LABEL[type]),
+      artworkUrl: art(id),
+      playable: false,
+      contentStyle: 'list',
+      mediaType: type,
+    });
+  }
+  return nodes;
+}
+
 // Title is resolved inside buildBrowseTree (i18n already loaded), not here.
-const HOME_SECTIONS: { id: string; titleKey: string; type: 'newest' | 'frequent' | 'random' }[] = [
-  { id: 'home:newest', titleKey: 'Recently added', type: 'newest' },
-  { id: 'home:frequent', titleKey: 'Most played', type: 'frequent' },
-  { id: 'home:random', titleKey: 'Shuffle', type: 'random' },
+const HOME_SECTIONS: {
+  id: string;
+  titleKey: string;
+  type: 'newest' | 'frequent' | 'random';
+  icon: string;
+}[] = [
+  { id: 'home:newest', titleKey: 'Recently added', type: 'newest', icon: 'ic_car_recent' },
+  { id: 'home:frequent', titleKey: 'Most played', type: 'frequent', icon: 'ic_car_trending' },
+  { id: 'home:random', titleKey: 'Shuffle', type: 'random', icon: 'ic_car_shuffle' },
 ];
 
 /**
@@ -136,21 +210,33 @@ export async function buildBrowseTree(deep = true): Promise<CarTree> {
   parentTracks.clear();
   const tree: Record<string, CarNode[]> = {};
 
-  // Root: Home / Library tabs.
+  // Root: the four tabs Android Auto draws, and no more than four. What goes
+  // inside each one is still being decided, so they are empty on purpose; the
+  // collections below are built all the same and are waiting to be hung off
+  // whichever tab ends up owning them.
   tree[ROOT] = [
-    { id: 'tab:home', title: tg('Home'), playable: false, contentStyle: 'list' },
-    { id: 'tab:library', title: tg('Library'), playable: false, contentStyle: 'list' },
+    { id: 'tab:home', title: tg('Home'), playable: false, contentStyle: 'list', artworkUrl: icon('ic_car_home') },
+    { id: 'tab:recents', title: tg('Recents'), playable: false, contentStyle: 'grid', artworkUrl: icon('ic_car_recent') },
+    { id: 'tab:library', title: tg('Library'), playable: false, contentStyle: 'list', artworkUrl: icon('ic_car_library') },
+  ];
+  tree['tab:home'] = [];
+  tree['tab:recents'] = recentNodes();
+  // Library: two ways in, each opening onto a grid of covers. A list of two
+  // rows is cheap to read at a glance, which a grid of two tiles would not be.
+  tree['tab:library'] = [
+    { id: 'lib:playlists', title: tg('Playlists'), playable: false, contentStyle: 'grid', artworkUrl: icon('ic_car_playlists') },
+    { id: 'lib:albums', title: tg('Albums'), playable: false, contentStyle: 'grid', artworkUrl: icon('ic_car_albums') },
   ];
 
-  const albumIds = new Set<string>();
+  // Recents first, so what was last played is what gets its songs fetched
+  // ahead of anything else: it is the likeliest thing to be tapped, and an
+  // album whose tracks never arrived opens onto nothing.
+  const albumIds = new Set<string>(
+    tree['tab:recents'].filter((n) => n.mediaType === 'album').map((n) => n.id.slice('album:'.length)),
+  );
 
-  // Home → album sections.
-  tree['tab:home'] = HOME_SECTIONS.map((s) => ({
-    id: s.id,
-    title: tg(s.titleKey),
-    playable: false,
-    contentStyle: 'grid',
-  }));
+  // Home → album sections. Its own rows are built further down, once the
+  // counts that go under them are known.
   // Through the query cache, with the keys the screens use: Home asks for these
   // very lists, and the car was asking again for its own copy on every launch.
   // Whoever gets there first pays; the other reads it.
@@ -167,9 +253,9 @@ export async function buildBrowseTree(deep = true): Promise<CarTree> {
     }),
   );
 
-  // Library → Favorites (songs) + Playlists + Starred albums + Starred artists.
-  // Same order the Library tab uses on the phone, minus Folders, which is a
-  // handful of server roots and nothing to hand a driver.
+  // What the tabs land on: favourite songs, playlists, starred albums and
+  // starred artists. Folders are left out, as they were before: a handful of
+  // server roots is nothing to hand a driver.
   const [starred, playlists] = await Promise.all([
     queryClient
       .fetchQuery({ queryKey: ['starred'], queryFn: () => data.getStarred() })
@@ -181,19 +267,25 @@ export async function buildBrowseTree(deep = true): Promise<CarTree> {
       .catch(() => [] as Playlist[]),
   ]);
 
-  tree['tab:library'] = [
-    { id: 'favorites', title: tg('Favorites'), playable: false, contentStyle: 'list' },
-    { id: 'lib:playlists', title: tg('Playlists'), playable: false, contentStyle: 'list' },
-    { id: 'lib:albums', title: tg('Albums'), playable: false, contentStyle: 'grid' },
-    { id: 'lib:artists', title: tg('Artists'), playable: false, contentStyle: 'list' },
+  // Favourites lead the playlists: they are the one list nobody made and
+  // everybody plays, and on a phone they sit above them too.
+  tree['lib:playlists'] = [
+    {
+      id: 'favorites',
+      title: tg('Favorites'),
+      subtitle: songsLabel(starred.songs.length, useSettings.getState().language),
+      artworkUrl: icon('ic_car_favorites'),
+      playable: false,
+      contentStyle: 'list',
+      mediaType: 'playlist',
+    },
+    ...byLastPlayed(playlists, (p) => `/playlist/${p.id}`).map(playlistNode),
   ];
-
-  tree['lib:playlists'] = playlists.map(playlistNode);
 
   tree['favorites'] = starred.songs.map((s) => songNode(s, 'favorites'));
   parentTracks.set('favorites', tree['favorites'].map((n) => n.id));
 
-  tree['lib:albums'] = starred.albums.map(albumNode);
+  tree['lib:albums'] = byLastPlayed(starred.albums, (a) => `/album/${a.id}`).map(albumNode);
   starred.albums.forEach((a) => albumIds.add(a.id));
 
   tree['lib:artists'] = starred.artists.map(artistNode);
@@ -202,9 +294,13 @@ export async function buildBrowseTree(deep = true): Promise<CarTree> {
 
   // The songs of each playlist, so they can be browsed and not only played
   // whole. Capped like everything else here: a car that is never plugged in
-  // should not cost a request per playlist on every launch (#50).
+  // should not cost a request per playlist on every launch (#50). The cap
+  // follows the order they are shown in, so what it pays for is what a driver
+  // sees first and not whatever the server happened to send first.
   await mapConcurrent(
-    playlists.slice(0, MAX_PREFETCH_PLAYLISTS).map((p) => p.id),
+    byLastPlayed(playlists, (p) => `/playlist/${p.id}`)
+      .slice(0, MAX_PREFETCH_PLAYLISTS)
+      .map((p) => p.id),
     CONCURRENCY,
     async (id) => {
       const parent = `playlist:${id}`;

@@ -76,6 +76,7 @@ you are actually typing into, which is easier than reading it here.
 | `Plays` | How many times the song has been played |
 | `Rate` | Verb: give it stars. Used for a song and for an artist. Not "bitrate" |
 | `Rating` | The stars given to the song. Not a bitrate, not a review |
+| `Recents` | Library section: recently opened items |
 | `Remove from favorites` | The same button when it is already a favourite |
 | `Remove from playlist` | Menu action: take this song out of the playlist it was opened from |
 | `Removed from playlist` | Toast, with an undo button next to it |
@@ -292,7 +293,6 @@ you are actually typing into, which is easier than reading it here.
 | `No favorite artists` | Empty state heading on the favourites tab |
 | `No playlists yet` | Empty state heading |
 | `Playlist created` | The toast after making one |
-| `Recents` | Library section: recently opened items |
 | `Search` | The search tab, and the action of searching |
 | `Star albums to see them here.` | The line under an empty state, saying how to fill it |
 | `Star artists to see them here.` | The line under an empty state, saying how to fill it |

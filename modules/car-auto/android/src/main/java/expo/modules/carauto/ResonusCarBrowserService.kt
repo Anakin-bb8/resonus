@@ -30,6 +30,7 @@ class ResonusCarBrowserService : MediaLibraryService() {
 
   override fun onCreate() {
     super.onCreate()
+    CarArtwork.init(applicationContext)
     BrowseTreeCache.loadFromDiskIfNeeded(applicationContext)
     val player = JsProxyPlayer().also {
       jsPlayer = it
@@ -144,10 +145,18 @@ class ResonusCarBrowserService : MediaLibraryService() {
       Futures.immediateFuture(pageOf(resultsFor(query), page, pageSize, params))
 
     /**
-     * The window the controller asked for, and nothing more. Every item can
-     * carry its cover as bytes (scaled down), so answering a long list in one
-     * go could run past the binder transaction limit. Android Auto pages with
-     * a sensible pageSize and stops when it has enough.
+     * The window the controller asked for, and nothing more.
+     *
+     * Local covers travel as bytes, because the host cannot read a `file://`
+     * of ours, and a page of them adds up: a library kept offline has every
+     * cover local, and twenty-odd of them at full size is most of the binder's
+     * one megabyte. Over that limit the whole answer is dropped on the way and
+     * the car draws an empty list, which is what it was doing for playlists,
+     * starred albums and the results of a search (#140).
+     *
+     * So they go at tile size, and past a byte budget the rest fall back to
+     * their uri: a local one the host cannot draw, but the item itself still
+     * arrives. A list missing some covers beats a list missing everything.
      */
     private fun pageOf(
       all: List<BrowseNode>,
@@ -156,13 +165,22 @@ class ResonusCarBrowserService : MediaLibraryService() {
       params: LibraryParams?,
     ): LibraryResult<ImmutableList<MediaItem>> {
       val from = page.toLong() * pageSize.toLong()
-      if (from >= all.size) return LibraryResult.ofItemList(ImmutableList.of(), params)
+      if (from !in 0 until all.size.toLong()) {
+        return LibraryResult.ofItemList(ImmutableList.of(), params)
+      }
       val start = from.toInt()
       val end = minOf(from + pageSize.toLong(), all.size.toLong()).toInt()
-      return LibraryResult.ofItemList(
-        ImmutableList.copyOf(all.subList(start, end).map { it.toMediaItem() }),
-        params,
-      )
+      val items = ImmutableList.builder<MediaItem>()
+      var budget = ART_BUDGET_BYTES
+      var dropped = 0
+      for (node in all.subList(start, end)) {
+        val (item, used) = node.toMediaItemWithArt(embed = budget > 0)
+        if (used == 0 && node.artworkUrl != null && budget <= 0) dropped++
+        budget -= used
+        items.add(item)
+      }
+      CarAutoLog.d("children n=${end - start} artBytes=${ART_BUDGET_BYTES - budget} noArt=$dropped")
+      return LibraryResult.ofItemList(items.build(), params)
     }
 
     override fun onAddMediaItems(
@@ -292,11 +310,22 @@ class ResonusCarBrowserService : MediaLibraryService() {
   companion object {
     @Volatile var activePlayer: JsProxyPlayer? = null
       private set
+
+    /**
+     * How much cover art one page of browse results may carry. Below the
+     * binder's one megabyte with room to spare for the rest of the parcel:
+     * the titles, the ids and the extras of every item ride in it too.
+     */
+    private const val ART_BUDGET_BYTES = 512 * 1024
   }
 }
 
 @OptIn(UnstableApi::class)
-private fun BrowseNode.toMediaItem(): MediaItem {
+private fun BrowseNode.toMediaItem(): MediaItem = toMediaItemWithArt(embed = true).first
+
+/** The item, and how many bytes of cover art it ended up carrying. */
+@OptIn(UnstableApi::class)
+private fun BrowseNode.toMediaItemWithArt(embed: Boolean): Pair<MediaItem, Int> {
   val extras = Bundle()
   // contentStyle on a browsable node tells AA how to draw *its children*.
   if (!playable) {
@@ -313,14 +342,23 @@ private fun BrowseNode.toMediaItem(): MediaItem {
     .setSubtitle(subtitle)
     .setIsBrowsable(!playable)
     .setIsPlayable(playable)
+    // The kind matters to how the car draws it: an artist comes out as a
+    // circle and an album as a square, and a folder is what it falls back to
+    // for anything that does not say what it is.
     .setMediaType(
-      if (playable) MediaMetadata.MEDIA_TYPE_MUSIC
-      else MediaMetadata.MEDIA_TYPE_FOLDER_MIXED,
+      when {
+        playable -> MediaMetadata.MEDIA_TYPE_MUSIC
+        mediaType == "artist" -> MediaMetadata.MEDIA_TYPE_ARTIST
+        mediaType == "album" -> MediaMetadata.MEDIA_TYPE_ALBUM
+        mediaType == "playlist" -> MediaMetadata.MEDIA_TYPE_PLAYLIST
+        else -> MediaMetadata.MEDIA_TYPE_FOLDER_MIXED
+      },
     )
     .setExtras(extras)
-  CarArtwork.apply(builder, artworkUrl)
-  return MediaItem.Builder()
+  val artBytes = CarArtwork.apply(builder, artworkUrl, embed, CarArtwork.THUMB_DIM)
+  val item = MediaItem.Builder()
     .setMediaId(id)
     .setMediaMetadata(builder.build())
     .build()
+  return item to artBytes
 }
