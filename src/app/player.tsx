@@ -458,7 +458,10 @@ export default function PlayerScreen() {
       return;
     }
     setSpins((n) => n + advance);
-    jumpTo(to);
+    // A swipe across the cover is ⏭ with a finger, not picking a song out of a
+    // list, and it is the very gesture #110 is about: stepping past a track in
+    // the car without the room hearing it.
+    jumpTo(to, 'skip');
   };
   const coverPan = Gesture.Pan()
     .activeOffsetX([-20, 20])

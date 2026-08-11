@@ -60,6 +60,8 @@ export default function PlayerSettings() {
   const setSeekButtonsSec = useSettings((s) => s.setSeekButtonsSec);
   const previousButtonMode = useSettings((s) => s.previousButtonMode);
   const setPreviousButtonMode = useSettings((s) => s.setPreviousButtonMode);
+  const keepPausedOnSkip = useSettings((s) => s.keepPausedOnSkip);
+  const setKeepPausedOnSkip = useSettings((s) => s.setKeepPausedOnSkip);
 
   return (
     <SettingsPage title={t('Player')}>
@@ -196,6 +198,21 @@ export default function PlayerSettings() {
           ]}
           value={seekButtonsSec}
           onChange={setSeekButtonsSec}
+        />
+        {/* With the skip buttons rather than with the queue: it is about what
+            ⏭ and ⏮ do, and about the swipe across the cover, which is the same
+            thing with a finger. */}
+        <SwitchList
+          options={[
+            {
+              label: t('Keep paused when skipping'),
+              description: t(
+                'Skipping while paused shows the next song without playing it. Tapping a song in the queue still plays it.',
+              ),
+              value: keepPausedOnSkip,
+              onChange: setKeepPausedOnSkip,
+            },
+          ]}
         />
         <SelectList<PreviousButtonMode>
           label={t('Previous button')}

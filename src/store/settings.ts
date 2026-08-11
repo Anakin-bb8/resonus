@@ -699,6 +699,15 @@ interface SettingsState {
   seekButtonsSec: number;
   /** "Previous" button behavior (restart track or always go to previous). */
   previousButtonMode: PreviousButtonMode;
+  /**
+   * Whether skipping while paused leaves it paused (#110).
+   *
+   * Off, which is what the app has always done. Every other player, and media3
+   * underneath, stays paused: skipping is moving through the queue, not
+   * starting it. It is a setting rather than the new behaviour because people
+   * have four years of muscle memory in which ⏭ means "play the next one".
+   */
+  keepPausedOnSkip: boolean;
   /** Action when swiping a song right in lists. */
   swipeAction: SwipeAction;
   /** Action when swiping a song left in lists. */
@@ -818,6 +827,7 @@ interface SettingsState {
   setShowDevicesButton: (value: boolean) => void;
   setSeekButtonsSec: (value: number) => void;
   setPreviousButtonMode: (value: PreviousButtonMode) => void;
+  setKeepPausedOnSkip: (value: boolean) => void;
   setSwipeAction: (value: SwipeAction) => void;
   setSwipeLeftAction: (value: SwipeAction) => void;
   setHomeSection: (key: HomeSectionKey, value: boolean) => void;
@@ -924,6 +934,7 @@ function snapshot(get: () => SettingsState) {
     showDevicesButton: s.showDevicesButton,
     seekButtonsSec: s.seekButtonsSec,
     previousButtonMode: s.previousButtonMode,
+    keepPausedOnSkip: s.keepPausedOnSkip,
     swipeAction: s.swipeAction,
     swipeLeftAction: s.swipeLeftAction,
     homeSections: s.homeSections,
@@ -1017,6 +1028,7 @@ const DEFAULTS = {
   showDevicesButton: true,
   seekButtonsSec: 0,
   previousButtonMode: 'restart' as PreviousButtonMode,
+  keepPausedOnSkip: false,
   // By default, swiping right queues (previous behavior) and left does
   // nothing (opt-in).
   swipeAction: 'queue' as SwipeAction,
@@ -1334,6 +1346,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setKeepPausedOnSkip: (keepPausedOnSkip) => {
+    set({ keepPausedOnSkip });
+    persist(snapshot(get));
+  },
+
   setSwipeLeftAction: (swipeLeftAction) => {
     set({ swipeLeftAction });
     persist(snapshot(get));
@@ -1581,6 +1598,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           showDevicesButton: boolean;
           seekButtonsSec: number;
           previousButtonMode: PreviousButtonMode;
+          keepPausedOnSkip?: boolean;
           swipeAction: SwipeAction;
           swipeLeftAction: SwipeAction;
           homeSections: unknown;
@@ -1818,6 +1836,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (parsed.previousButtonMode === 'restart' || parsed.previousButtonMode === 'always') {
           set({ previousButtonMode: parsed.previousButtonMode });
+        }
+        if (typeof parsed.keepPausedOnSkip === 'boolean') {
+          set({ keepPausedOnSkip: parsed.keepPausedOnSkip });
         }
         if (
           parsed.swipeAction === 'off' ||

@@ -640,5 +640,7 @@
   "Installing updates needs permission": "Instalar actualizaciones necesita permiso",
   "Couldn't open the installer": "No se pudo abrir el instalador",
   "Couldn't download the update": "No se pudo descargar la actualización",
-  "Couldn't check for updates": "No se pudo comprobar si hay actualizaciones"
+  "Couldn't check for updates": "No se pudo comprobar si hay actualizaciones",
+  "Keep paused when skipping": "Seguir en pausa al cambiar de canción",
+  "Skipping while paused shows the next song without playing it. Tapping a song in the queue still plays it.": "Pasar de canción con la reproducción en pausa muestra la siguiente sin reproducirla. Tocar una canción en la cola sí la reproduce."
 }

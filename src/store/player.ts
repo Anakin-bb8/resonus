@@ -925,6 +925,29 @@ type HistoryEntry = {
 const HISTORY_MAX = 100;
 let playedHistory: HistoryEntry[] = [];
 
+/**
+ * Why the queue is moving, which decides whether paused stays paused.
+ *
+ * `skip` is stepping through: ⏭, ⏮ and the swipe across the player's cover.
+ * `pick` is choosing one, out of the queue or the car's list, and that is an
+ * instruction to play it whatever the setting says.
+ */
+export type JumpKind = 'pick' | 'skip';
+
+/**
+ * Whether a skip should start playback.
+ *
+ * `true` always, until somebody turns the setting on: skipping has started the
+ * music here since the first version, and media3 underneath does the opposite
+ * (`seekToNext` never touches `playWhenReady`), so this is the app's own doing
+ * and four years of muscle memory rest on it. With it on, a skip carries the
+ * playing state across, which is what ⏭ means everywhere else and what somebody
+ * pausing to step past a track in the car is asking for (#110).
+ */
+function skipAutoplay(playing: boolean): boolean {
+  return useSettings.getState().keepPausedOnSkip ? playing : true;
+}
+
 /** Pushes the current context before advancing or skipping to another track. */
 function pushHistory() {
   const { queue, index, source, sourceHref, originalQueue, shuffle, queueDealt } =
@@ -2629,7 +2652,7 @@ interface PlayerState {
   previous: () => void;
   seekTo: (sec: number) => void;
   setVolume: (v: number) => void;
-  jumpTo: (index: number) => void;
+  jumpTo: (index: number, kind?: JumpKind) => void;
   /** Removes the song at `index`. Returns a function that reinserts it in its
    *  place (for the "Undo" toast), except when removing the current one or
    *  emptying. */
@@ -2989,7 +3012,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     const ni = nextIndex(true);
     if (ni != null) {
       pushHistory();
-      void loadIndex(ni, true);
+      void loadIndex(ni, skipAutoplay(get().isPlaying));
     }
   },
 
@@ -3002,6 +3025,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       return;
     }
     // Returns to the previous song in history, even if from another list/album.
+    const playing = get().isPlaying;
     const entry = playedHistory.pop();
     if (entry) {
       set({
@@ -3016,10 +3040,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         positionSec: 0,
         durationSec: 0,
       });
-      void loadIndex(entry.index, true);
+      void loadIndex(entry.index, skipAutoplay(playing));
       return;
     }
-    if (index > 0) void loadIndex(index - 1, true);
+    if (index > 0) void loadIndex(index - 1, skipAutoplay(playing));
     else get().seekTo(0);
   },
 
@@ -3050,12 +3074,12 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     }
   },
 
-  jumpTo: (index) => {
+  jumpTo: (index, kind = 'pick') => {
     const { queue } = get();
     if (index < 0 || index >= queue.length) return;
     // Forward jump like any other: "previous" must be able to return.
     pushHistory();
-    void loadIndex(index, true);
+    void loadIndex(index, kind === 'skip' ? skipAutoplay(get().isPlaying) : true);
   },
 
   removeAt: async (index) => {

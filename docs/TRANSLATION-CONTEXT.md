@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 634 of them.
+Every string the app can show, under the screen it shows up on. 636 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -796,6 +796,7 @@ you are actually typing into, which is easier than reading it here.
 | `Elements` | Which player elements to show |
 | `Fit cover art` | Show the whole cover even if it is not square, instead of cropping it to fill |
 | `Jump back or forward next to the play button.` | The line under “Skip buttons”, explaining it |
+| `Keep paused when skipping` |  |
 | `Keep the tracks before the current one in the queue, dimmed. Tap one to go back.` |  |
 | `Lyrics background` | What is drawn behind the lyrics screen, the full screen one |
 | `Lyrics card background` | What is drawn behind the small lyrics card that peeks under the player. Not the same thing as `Lyrics background` |
@@ -827,6 +828,7 @@ you are actually typing into, which is easier than reading it here.
 | `Show the album name and release year next to the artist.` | The line under “Show album & year”, explaining it |
 | `Show the whole artwork instead of cropping it to a square.` | The line under “Fit cover art”, explaining it |
 | `Skip buttons` | The seek forward / back buttons setting |
+| `Skipping while paused shows the next song without playing it. Tapping a song in the queue still plays it.` |  |
 | `Song and artist names that don't fit scroll across.` | The line under “Scroll long titles”, explaining it |
 | `Swap favorite and menu` | Exchange the places of those two buttons in the player, for whichever hand you hold the phone in |
 | `The card that peeks below the player controls.` | The line under “Lyrics card background”, explaining it |
