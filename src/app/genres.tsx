@@ -24,25 +24,17 @@ import { useAuthStore } from '@/store/auth';
 import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
 import { listPerf } from '@/lib/listPerf';
 import { BackChevron } from '@/components/BackChevron';
-import { useGridColumns } from '@/hooks/useGridColumns';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
-/** Width of each card at a given density, so the skeleton matches the cards. */
-function cardWidth(columns: number): number {
-  return (Dimensions.get('window').width - spacing.lg * 2 - spacing.sm * (columns - 1)) / columns;
-}
+// Width of each card in the 2-column grid (same as in Search), so the loading
+// skeleton matches the actual cards exactly.
+const GENRE_W = (Dimensions.get('window').width - spacing.lg * 2 - spacing.sm) / 2;
 
 export default function GenresScreen() {
   const bottomPad = useScreenBottomPadding();
   const t = useT();
   const auth = useAuthStore((s) => s.auth);
   const [query, setQuery] = useState('');
-  // How many across, in the same menu from the same corner as every other grid
-  // in the app (#109). No rows option: a genre here is a coloured card and
-  // there is no list form of it to switch to, so the menu is about density
-  // alone, which is exactly what the hook does when it is given no layout.
-  const { columns, openGridMenu, gridSheet } = useGridColumns('genres');
-  const card = cardWidth(columns);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['genres'],
@@ -61,14 +53,7 @@ export default function GenresScreen() {
       <View style={styles.header}>
         <BackChevron />
         <Text style={styles.title}>{t('Genres')}</Text>
-        <Pressable
-          hitSlop={10}
-          accessibilityRole="button"
-          accessibilityLabel={t('View')}
-          onPress={openGridMenu}
-        >
-          <Ionicons name="grid-outline" size={20} color={colors.textSecondary} />
-        </Pressable>
+        <View style={{ width: 26 }} />
       </View>
 
       <View style={styles.searchBar}>
@@ -91,7 +76,7 @@ export default function GenresScreen() {
 
       {isLoading ? (
         <View style={styles.skeleton}>
-          <GenreGridSkeleton width={card} />
+          <GenreGridSkeleton width={GENRE_W} />
         </View>
       ) : isError ? (
         <Message text={t("Couldn't load genres.")} onRetry={() => refetch()} />
@@ -99,14 +84,11 @@ export default function GenresScreen() {
         <FlatList
         {...listPerf}
           data={genres}
-          // Remount on a density change: FlatList reuses rows and cannot swap
-          // `numColumns` in place.
-          key={columns}
           keyExtractor={(item) => item.value}
-          numColumns={columns}
+          numColumns={2}
           columnWrapperStyle={{ gap: spacing.sm }}
           contentContainerStyle={[styles.list, { paddingBottom: bottomPad }]}
-          renderItem={({ item }: { item: Genre }) => <GenreCard name={item.value} width={card} />}
+          renderItem={({ item }: { item: Genre }) => <GenreCard name={item.value} />}
           ListEmptyComponent={
             <EmptyState
               icon="pricetags-outline"
@@ -116,7 +98,6 @@ export default function GenresScreen() {
           }
         />
       )}
-      {gridSheet}
     </SafeAreaView>
   );
 }
