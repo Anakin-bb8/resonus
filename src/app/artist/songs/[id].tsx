@@ -296,7 +296,7 @@ export default function ArtistSongsScreen() {
               accessibilityLabel={t('Shuffle')}
               onPress={() => void playQueue(shown, 0, name, `/artist/${id}`, { shuffled: true })}
             >
-              <Ionicons name="shuffle" size={24} color={colors.textSecondary} />
+              <Ionicons name="shuffle" size={26} color={colors.textSecondary} />
             </Pressable>
             <Pressable
               style={[styles.playButton, { backgroundColor: accent }]}
@@ -304,7 +304,7 @@ export default function ArtistSongsScreen() {
               accessibilityLabel={t('Play')}
               onPress={() => void playQueue(shown, 0, name, `/artist/${id}`)}
             >
-              <Ionicons name="play" size={22} color="#000" />
+              <Ionicons name="play" size={28} color="#000" style={{ marginLeft: 3 }} />
             </Pressable>
           </View>
         </View>
@@ -469,10 +469,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     minWidth: 32,
   },
-  playRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  playRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
+  // The same measurements as `TrackListView`, which is what an album and a
+  // playlist draw. This screen was laid out from the genre one back when that
+  // had a smaller button of its own, and inherited it.
   playButton: {
-    width: 40,
-    height: 40,
+    width: 56,
+    height: 56,
     borderRadius: radius.pill,
     backgroundColor: colors.accent,
     alignItems: 'center',
