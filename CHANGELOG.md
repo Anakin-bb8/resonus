@@ -9,6 +9,91 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.7.0-beta.1] - 2026-08-11
+
+A beta, and what to try first is the car. Android Auto was taken apart and
+rebuilt from the root down: three tabs instead of two, covers instead of lists
+of words, and every row that leads somewhere carrying an icon. Home is a
+shuffle button that plays on the tap and two shelves of records underneath.
+Recents is what you listened to last, whatever kind of thing it was. What
+needs a real car to confirm is the pausing and the resuming, so try those
+before anything else.
+
+Playlists and starred albums were reaching the car empty. A library kept
+offline has every cover stored as a local file, and those cannot be read from
+outside the app, so each one travels inside the item that carries it; twenty
+of them at full size is more than a single transaction can hold, and the
+system drops the whole answer rather than part of it. They go at tile size
+now, within a budget, so a long list arrives even if the last covers in it do
+not.
+
+Pausing from the car stopped nothing but the screen. The pause is what waits
+on the end of the volume fade, and a fade is a timer, and timers stop running
+once the phone puts the app to sleep in your pocket. So the head unit said
+paused while the speakers kept going, and pressing play afterwards started the
+song at volume zero, with the progress bar moving and nothing coming out.
+
+Resonus also tells you when there is a new version, and installs it for you.
+And the artist screen holds every song by an artist in one list, with albums,
+EPs and singles as shelves of their own.
+
+### Added
+
+- Android Auto: a Home tab that starts music without choosing anything, a
+  Recents tab of what was played last, and a Library of playlists and starred
+  albums as grids of covers.
+- Shuffle and repeat on the car's playback screen, lit to match what the
+  player is actually doing.
+- Resonus checks for new versions and installs them from inside the app. The
+  prompt links to what changed. Under Settings › About, and it can be turned
+  off.
+- Every song by an artist in one list, and their records split into Albums,
+  EPs and Singles.
+- Rate an artist from its ⋯ menu, and reach the artist from an album's.
+- Keep playback paused when skipping tracks, off by default, in Settings ›
+  Player.
+- Order the albums of a genre the way playlists are ordered, direction and
+  all, on Navidrome and on Jellyfin. Most played is among the options here and
+  in Albums, Songs and Artists.
+- Home shelves say Show all and land on the list they came from. Most played
+  songs and Random artists lead somewhere too, and holding a song opens its
+  menu.
+- Diagnostics says how the cover of what is playing was arrived at.
+
+### Changed
+
+- The car's browse tree is three tabs rather than a menu of four words, and
+  what a driver taps is covers rather than the names of folders.
+- Playlists and starred albums are ordered by what was played last, and the
+  songs fetched ahead of time follow that same order.
+- Playing something from the car is written down as recently played, which it
+  never was, so it shows up in Recents, in the Library's order and in the
+  phone's grid.
+
+### Fixed
+
+- Playlists, starred albums and search results opened onto nothing in the car
+  when the covers were stored offline (#140).
+- Pausing from the car left the speakers playing, and resuming from it played
+  silently with the progress bar moving (#140).
+- Every track reached the car, the watch and the Bluetooth stack under the
+  same empty name, so a head unit that decides whether to fetch the cover
+  again by that name never fetched a second one (#139).
+- Warming the next track hung up at four seconds, which on some servers
+  undid the warm entirely and left the track to be fetched from scratch
+  (#137).
+- The player could show the cover of the track that had just finished after a
+  spell away from the app.
+- One untagged record no longer undoes the whole split of an artist's
+  releases.
+- The multi-select bar and the toast sit above the mini player instead of
+  under it, and the bar no longer hangs in the air when nothing is playing.
+- The play button follows the chosen accent again, and so does the select-all
+  tick on a genre.
+- The search box gives up focus when you leave the tab, and pressing Search
+  while already there puts the cursor back in it.
+- Most played agrees with what it is counting.
+
 ## [0.6.5] - 2026-08-10
 
 Underneath everything else, this release moves the whole app onto Expo SDK 56
