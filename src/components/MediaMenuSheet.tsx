@@ -6,6 +6,7 @@
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -19,10 +20,12 @@ import { useCanShare } from '@/hooks/useCanShare';
 import { useDownloadMessage } from '@/hooks/useDownloadMessage';
 import { exportManyToFolder, totalBytes } from '@/lib/exportSong';
 import { formatBytes } from '@/lib/format';
+import { artistTargets } from '@/lib/artistNav';
 import { pickFolder } from '@/lib/localLibrary';
 import { queryClient } from '@/lib/query';
 import { useSharePicker } from '@/store/sharePicker';
 import { songsLabel, useT } from '@/i18n';
+import { useArtistPicker } from '@/store/artistPicker';
 import { useAuthStore } from '@/store/auth';
 import { anyDownloads, useDownloads } from '@/store/downloads';
 import { useMediaMenu, type MediaMenuItem } from '@/store/mediaMenu';
@@ -87,6 +90,8 @@ export function MediaMenuSheet() {
   const togglePin = usePins((s) => s.toggle);
   const playQueue = usePlayerStore((s) => s.playQueue);
   const addToQueue = usePlayerStore((s) => s.addToQueue);
+  const router = useRouter();
+  const openArtistPicker = useArtistPicker((s) => s.open);
   const [confirmDelete, setConfirmDelete] = useState(false);
   /** Songs gathered for the download dialog (its size needs them). */
   const [pending, setPending] = useState<Song[] | null>(null);
@@ -273,21 +278,9 @@ export function MediaMenuSheet() {
                 onPress={() => void askDownload()}
               />
             ) : null}
-            {/* The header button only turns into "delete" once EVERYTHING is
-                downloaded, and offline there is no header button at all — so a
-                half-downloaded album could only be cleared song by song (#47).
-                Shown whenever this profile has downloads; whether these songs are
-                among them takes fetching them, which is what the press does. */}
-            {hasDownloads ? (
-              <Action
-                icon="trash-outline"
-                label={t('Delete downloads')}
-                onPress={() => setConfirmDelete(true)}
-              />
-            ) : null}
-            {/* Same condition as deleting: what is downloaded is what can be
-                exported, and whether these songs are among this profile's
-                downloads takes fetching them, which is what the press does. */}
+            {/* What is downloaded is what can be exported, and whether these
+                songs are among this profile's downloads takes fetching them,
+                which is what the press does. */}
             {hasDownloads ? (
               <Action icon="save-outline" label={t('Export')} onPress={() => void askExport()} />
             ) : null}
@@ -301,6 +294,30 @@ export function MediaMenuSheet() {
                 onPress={() => {
                   close();
                   useSharePicker.getState().open({ id: album ? album.id : playlist!.id, name });
+                }}
+              />
+            ) : null}
+            {/* Albums only: a playlist is nobody's. The song menu has had this
+                since always and an album is the one thing on screen that names
+                an artist without offering a way to them. */}
+            {album && artistTargets(album).length > 0 ? (
+              <Action
+                icon="person"
+                label={t('Go to artist')}
+                onPress={() => {
+                  const targets = artistTargets(album);
+                  if (targets.length > 1) {
+                    // The sheet goes first and the picker opens after its exit
+                    // animation: two Modals visible at once is the thing to
+                    // avoid, same as in the song menu.
+                    dismiss(() => {
+                      closeNow();
+                      openArtistPicker(targets);
+                    });
+                    return;
+                  }
+                  close();
+                  router.push(`/artist/${targets[0].id}`);
                 }}
               />
             ) : null}
@@ -332,6 +349,23 @@ export function MediaMenuSheet() {
                 />
                 <Text style={styles.actionText}>{pinned ? t('Unpin') : t('Pin to top')}</Text>
               </Pressable>
+            ) : null}
+            {/* Last, because it is the only thing here that takes something
+                away, but not in red: the files come back with one tap and red
+                is kept for what does not, like deleting a playlist itself.
+
+                The header button on an album's own screen only turns into
+                "delete" once EVERYTHING is downloaded, and offline there is no
+                header button at all — so a half-downloaded album could only be
+                cleared song by song (#47). For an album `hasDownloads` is about
+                this album; for a playlist, whose songs are not known without
+                fetching them, it is only about the profile. */}
+            {hasDownloads ? (
+              <Action
+                icon="trash-outline"
+                label={t('Delete downloads')}
+                onPress={() => setConfirmDelete(true)}
+              />
             ) : null}
           </Animated.View>
         </GestureDetector>
