@@ -93,8 +93,12 @@ export default function AboutSettings() {
           label={t('Check for updates')}
           onPress={() => {
             if (checking) return;
-            void check(true).then((release) => {
-              if (!release) toast(t("You're on the latest version"));
+            void check(true).then(({ ok, release }) => {
+              // An update opens the prompt and speaks for itself. The other two
+              // answers have nowhere else to appear, and they are different
+              // answers: "nothing newer" is not "could not look".
+              if (!ok) toast(t("Couldn't check for updates"));
+              else if (!release) toast(t("You're on the latest version"));
             });
           }}
         />

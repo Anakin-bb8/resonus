@@ -633,5 +633,6 @@
   "Asks GitHub once a day. Nothing is downloaded until you say so.": "Pregunta a GitHub un cop al dia. No es baixa res fins que tu ho diguis.",
   "Installing updates needs permission": "Instal·lar actualitzacions necessita permís",
   "Couldn't open the installer": "No s’ha pogut obrir l’instal·lador",
-  "Couldn't download the update": "No s’ha pogut baixar l’actualització"
+  "Couldn't download the update": "No s’ha pogut baixar l’actualització",
+  "Couldn't check for updates": "No s’ha pogut comprovar si hi ha actualitzacions"
 }

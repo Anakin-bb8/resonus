@@ -44,16 +44,18 @@ interface UpdateState {
   progress: number;
   /** A check somebody is waiting for, so the button can say it is working. */
   checking: boolean;
-  /** Returns what it found, for the caller that wants to say "up to date". */
-  check: (force?: boolean) => Promise<Release | null>;
+  /**
+   * `ok` is whether GitHub answered at all, which is not the same as finding
+   * nothing: a button that says "you're on the latest version" because the
+   * request failed is worse than one that admits it could not look.
+   */
+  check: (force?: boolean) => Promise<{ ok: boolean; release: Release | null }>;
   /** Pressing Update: permission first, then the download. */
   start: () => void;
   /** Called when the system screen has been answered, either way. */
   resume: () => void;
-  /** Not this version. It stops asking until the next one. */
-  skip: () => void;
-  /** Later, or cancelling the download. */
-  dismiss: () => void;
+  /** Later, skipping a version, or cancelling a download: all of them end here. */
+  close: () => void;
 }
 
 export const useUpdate = create<UpdateState>((set, get) => ({
@@ -63,7 +65,7 @@ export const useUpdate = create<UpdateState>((set, get) => ({
   checking: false,
 
   check: async (force = false) => {
-    if (get().checking) return null;
+    if (get().checking) return { ok: false, release: null };
     set({ checking: true });
     try {
       const release = await checkForUpdate(force);
@@ -76,9 +78,9 @@ export const useUpdate = create<UpdateState>((set, get) => ({
         const skipped = useSettings.getState().updateSkipped;
         set(force || skipped !== release.version ? { release, phase: 'offered' } : { release });
       }
-      return release;
+      return { ok: true, release };
     } catch {
-      return null;
+      return { ok: false, release: null };
     } finally {
       set({ checking: false });
     }
@@ -115,11 +117,9 @@ export const useUpdate = create<UpdateState>((set, get) => ({
     useToast.getState().show(tg('Installing updates needs permission'));
   },
 
-  skip: () => {
-    set({ phase: 'idle' });
-  },
-
-  dismiss: () => {
+  close: () => {
+    // Aborting is a no-op when nothing is downloading, which is what lets one
+    // method answer Later, Skip and Cancel alike.
     abort?.abort();
     abort = null;
     set({ phase: 'idle', progress: 0 });

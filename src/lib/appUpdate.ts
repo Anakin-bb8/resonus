@@ -66,20 +66,51 @@ export function compareVersions(a: string, b: string): number {
   if (left.pre === right.pre) return 0;
   if (!left.pre) return 1;
   if (!right.pre) return -1;
-  return left.pre < right.pre ? -1 : 1;
+  return comparePre(left.pre, right.pre);
 }
 
 /**
- * The newest published release, or null if GitHub says nothing useful.
+ * Two prerelease tags, `beta.3` against `beta.10`.
+ *
+ * Segment by segment, and a segment made of digits compares as a number, or
+ * `beta.10` would sort below `beta.9` the way any two strings do. Nothing
+ * reaches this today: `/releases/latest` never hands back a prerelease, so one
+ * side of every comparison is a plain version. It is here for the day someone
+ * adds a beta channel and does not think to look.
+ */
+function comparePre(a: string, b: string): -1 | 0 | 1 {
+  const left = a.split('.');
+  const right = b.split('.');
+  for (let i = 0; i < Math.max(left.length, right.length); i++) {
+    const x = left[i];
+    const y = right[i];
+    if (x === undefined) return -1;
+    if (y === undefined) return 1;
+    if (x === y) continue;
+    const numeric = /^\d+$/.test(x) && /^\d+$/.test(y);
+    if (numeric) return Number(x) < Number(y) ? -1 : 1;
+    return x < y ? -1 : 1;
+  }
+  return 0;
+}
+
+/**
+ * The newest published release.
  *
  * `/releases/latest` leaves pre-releases out by itself, so the betas this
  * project publishes never reach anybody who did not go looking for them.
+ *
+ * Throws when GitHub could not be reached or refused (it rate-limits by IP,
+ * and a phone behind a busy NAT can meet that). Not the same as finding
+ * nothing, which is what `null` is for: telling someone they are on the latest
+ * version when in fact nobody managed to ask is the one answer here that is
+ * worse than no answer.
  */
 async function fetchLatest(): Promise<Release | null> {
   const res = await fetch(RELEASES_API, {
     headers: { Accept: 'application/vnd.github+json' },
   });
-  if (!res.ok) return null;
+  if (!res.ok) throw new Error(`GitHub answered ${res.status}`);
   const body = (await res.json()) as {
     tag_name?: string;
     html_url?: string;
@@ -97,11 +128,11 @@ async function fetchLatest(): Promise<Release | null> {
 }
 
 /**
- * The release worth telling someone about, or null.
+ * The release worth telling someone about, or null when this is already it.
  *
- * `force` is the button in Settings, which answers now and says so either way;
- * without it the day's throttle applies and a failure is silent, because
- * nobody asked.
+ * Throws if the asking failed, which the caller that has somebody waiting for
+ * an answer needs to tell apart. `force` is the button in Settings; without it
+ * the day's throttle applies and nobody is waiting.
  */
 export async function checkForUpdate(force = false): Promise<Release | null> {
   if (!force) {

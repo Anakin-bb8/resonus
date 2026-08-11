@@ -1,9 +1,10 @@
 /**
  * Says that a newer Resonus is out, and installs it.
  *
- * Once per launch at most, and never for a version that was skipped: the check
- * itself only reaches GitHub once a day (see `checkForUpdate`), but a launch is
- * the one moment somebody is looking at the app and not at a list they came for.
+ * Once a day at most, on a launch: the throttle lives in `checkForUpdate`, and
+ * a launch is the one moment somebody is looking at the app itself rather than
+ * at a list they came for. A version that was skipped is filtered in the store,
+ * not here, so the button in Settings can still bring it back.
  *
  * «Later» asks again tomorrow. «Skip this version» holds back only that one, so
  * the next release still gets through, which is what makes it safe to press;
@@ -42,8 +43,7 @@ export function UpdatePrompt() {
   const check = useUpdate((s) => s.check);
   const start = useUpdate((s) => s.start);
   const resume = useUpdate((s) => s.resume);
-  const skip = useUpdate((s) => s.skip);
-  const dismiss = useUpdate((s) => s.dismiss);
+  const close = useUpdate((s) => s.close);
 
   // Only once the settings are read from disk: before that `updateCheck` is its
   // default (on), and someone who had turned it off would be checked on anyway.
@@ -93,10 +93,10 @@ export function UpdatePrompt() {
           label: t('Skip this version'),
           onPress: () => {
             if (version) setSkipped(version);
-            skip();
+            close();
           },
         }}
-        onCancel={skip}
+        onCancel={close}
         onConfirm={start}
       />
 
@@ -106,7 +106,7 @@ export function UpdatePrompt() {
         visible={phase === 'downloading'}
         transparent
         animationType="fade"
-        onRequestClose={dismiss}
+        onRequestClose={close}
       >
         <View style={styles.backdrop}>
           <View style={styles.card}>
@@ -132,7 +132,7 @@ export function UpdatePrompt() {
             </View>
             <Pressable
               accessibilityRole="button"
-              onPress={dismiss}
+              onPress={close}
               style={({ pressed }) => [styles.cancel, pressed && { opacity: 0.6 }]}
             >
               <Text style={styles.cancelLabel}>{t('Cancel')}</Text>
