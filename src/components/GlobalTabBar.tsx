@@ -20,7 +20,13 @@
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter, useSegments } from 'expo-router';
+import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTabBarShown } from '@/hooks/useTabBar';
@@ -51,8 +57,32 @@ export function GlobalTabBar() {
   if (inTabs) rememberTab(segments[1]);
   const origin = tabOrigin();
   const current = inTabs ? origin : null;
+  /**
+   * Going, rather than gone.
+   *
+   * This bar is drawn after the Stack, so it is over everything, the player
+   * included — which is why it has to take itself off screen for the screens
+   * that cover the app. It used to do that the instant the route changed,
+   * while the modal still had its ~165 ms of animation to run: the strip it
+   * had been covering was left showing the list rows underneath, and the way
+   * into the player began with a hole.
+   *
+   * Fading rather than timing the disappearance to the animation. A fixed wait
+   * is wrong in both directions and only one of them is recoverable: too short
+   * leaves the hole again, too long puts the navigation bar on top of the
+   * player. Fading, being early or late by a few frames costs a little more or
+   * a little less of something already almost transparent.
+   */
+  const fade = useSharedValue(shown ? 1 : 0);
+  useEffect(() => {
+    // Straight back on the way in: coming out of the player the bar was there
+    // before and belongs there again, and until the modal finishes dismissing
+    // nobody can see it anyway.
+    fade.value = shown ? 1 : withTiming(0, { duration: 150 });
+  }, [shown, fade]);
+  const fadeStyle = useAnimatedStyle(() => ({ opacity: fade.value }));
 
-  if (!always || !shown) return null;
+  if (!always) return null;
 
   /** Leaves for a tab, dropping the screens piled on top of it. */
   const go = (href: string) => {
@@ -64,8 +94,15 @@ export function GlobalTabBar() {
   };
 
   return (
-    <View
-      style={[styles.bar, { height: TAB_BAR_HEIGHT + insets.bottom, paddingBottom: insets.bottom }]}
+    <Animated.View
+      // Nothing to press once it is on its way out, so a tap meant for the
+      // screen taking over does not land on a bar that is no longer there.
+      pointerEvents={shown ? 'auto' : 'none'}
+      style={[
+        styles.bar,
+        { height: TAB_BAR_HEIGHT + insets.bottom, paddingBottom: insets.bottom },
+        fadeStyle,
+      ]}
     >
       {TABS.map((tab) => {
         // On a tab screen the bar says which one you are on. Off the tabs
@@ -102,7 +139,7 @@ export function GlobalTabBar() {
           </Pressable>
         );
       })}
-    </View>
+    </Animated.View>
   );
 }
 
