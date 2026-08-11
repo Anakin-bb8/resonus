@@ -46,8 +46,6 @@ export default function AboutSettings() {
   // and reports the one answer that has nowhere else to appear.
   const check = useUpdate((s) => s.check);
   const checking = useUpdate((s) => s.checking);
-  // TEMPORARY, see the row that uses it.
-  const simulate = useUpdate((s) => s.simulate);
   // Restoring every setting used to be a row in the Settings index, in among
   // the categories and looking like one of them, a tap away from the button
   // that puts the app in offline mode. It reaches everything, it is done once
@@ -118,18 +116,6 @@ export default function AboutSettings() {
             });
           }}
         />
-        {/* TEMPORARY, and only in a development build so it can never reach
-            anybody: shows the update prompt for a version that does not exist.
-            Nothing is downloaded and nothing is installed. Delete this row
-            together with `simulate` and `demo` in the update store. */}
-        {__DEV__ ? (
-          <SettingRow
-            icon="flask-outline"
-            label="Simulate an update"
-            description="Development build only. Downloads nothing."
-            onPress={simulate}
-          />
-        ) : null}
         {/* Measuring is out in the open, unlike the screen it feeds: it is
             turned on when somebody is being walked through a slowdown, and it
             has to be as easy to turn back off. No description, for the same
