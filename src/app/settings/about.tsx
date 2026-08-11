@@ -70,37 +70,6 @@ export default function AboutSettings() {
         >
           <Field label={t('Version')} value={`Resonus v${version ?? '?'}`} />
         </Pressable>
-        {/* The version, whether there is a newer one and what changed in it are
-            one question asked in three steps, so they sit together under the
-            number they are about. Checking used to be further down, between
-            two links, which left the four ways out of the app with a button in
-            the middle of them. */}
-        <SettingRow
-          icon={checking ? 'hourglass-outline' : 'cloud-download-outline'}
-          label={t('Check for updates')}
-          onPress={() => {
-            if (checking) return;
-            void check(true).then(({ ok, release }) => {
-              // An update opens the prompt and speaks for itself. The other two
-              // answers have nowhere else to appear, and they are different
-              // answers: "nothing newer" is not "could not look".
-              if (!ok) toast(t("Couldn't check for updates"));
-              else if (!release) toast(t("You're on the latest version"));
-            });
-          }}
-        />
-        {/* TEMPORARY, and only in a development build so it can never reach
-            anybody: shows the update prompt for a version that does not exist.
-            Nothing is downloaded and nothing is installed. Delete this row
-            together with `simulate` and `demo` in the update store. */}
-        {__DEV__ ? (
-          <SettingRow
-            icon="flask-outline"
-            label="Simulate an update"
-            description="Development build only. Downloads nothing."
-            onPress={simulate}
-          />
-        ) : null}
         <SettingRow
           icon="sparkles-outline"
           label={t("What's new")}
@@ -131,11 +100,41 @@ export default function AboutSettings() {
           label={t('Support Resonus')}
           onPress={() => Linking.openURL(KOFI_URL)}
         />
-        {/* Out in the open, unlike the screen it feeds: it is turned on when
-            somebody is being walked through a slowdown, and it has to be as
-            easy to turn back off. No description, for the same reason the
-            screen has no row: it means nothing to anyone not in that
-            conversation. */}
+        {/* Asking now sits against the switch that asks by itself: same
+            question, one of them answered on the spot and the other left
+            standing. Nothing between them, so the switch reads as the
+            automatic version of the button above it. */}
+        <SettingRow
+          icon={checking ? 'hourglass-outline' : 'cloud-download-outline'}
+          label={t('Check for updates')}
+          onPress={() => {
+            if (checking) return;
+            void check(true).then(({ ok, release }) => {
+              // An update opens the prompt and speaks for itself. The other two
+              // answers have nowhere else to appear, and they are different
+              // answers: "nothing newer" is not "could not look".
+              if (!ok) toast(t("Couldn't check for updates"));
+              else if (!release) toast(t("You're on the latest version"));
+            });
+          }}
+        />
+        {/* TEMPORARY, and only in a development build so it can never reach
+            anybody: shows the update prompt for a version that does not exist.
+            Nothing is downloaded and nothing is installed. Delete this row
+            together with `simulate` and `demo` in the update store. */}
+        {__DEV__ ? (
+          <SettingRow
+            icon="flask-outline"
+            label="Simulate an update"
+            description="Development build only. Downloads nothing."
+            onPress={simulate}
+          />
+        ) : null}
+        {/* Measuring is out in the open, unlike the screen it feeds: it is
+            turned on when somebody is being walked through a slowdown, and it
+            has to be as easy to turn back off. No description, for the same
+            reason the screen has no row: it means nothing to anyone not in
+            that conversation. */}
         <SwitchList
           options={[
             {
