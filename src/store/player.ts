@@ -368,14 +368,21 @@ export function localSourceFor(song: Song): string | undefined {
 
 function sourceFor(song: Song, timeOffsetSec = 0): AudioSource {
   const metadata = itemMetadataFor(song);
-  if (song.url) return { uri: song.url, metadata };
+  // What the media session calls this track. Without it every item goes out as
+  // `MediaItem.DEFAULT_MEDIA_ID`, the empty string, so a car reading the
+  // session was told the same name for the whole album (#139). The song's id
+  // and not the stream URL: this reaches every connected controller, and the
+  // URL carries the credentials.
+  const mediaId = song.id;
+  if (song.url) return { uri: song.url, metadata, mediaId };
   const local = localSourceFor(song);
-  if (local) return { uri: local, metadata };
+  if (local) return { uri: local, metadata, mediaId };
   const auth = useAuthStore.getState().auth!;
   const format = effectiveStreamFormat();
   return {
     uri: streamUrl(auth, song.id, effectiveMaxBitRate(), timeOffsetSec, format),
     metadata,
+    mediaId,
   };
 }
 

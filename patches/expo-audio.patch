@@ -12,7 +12,7 @@ index 36a19f2d9c4a979a940ab681a1fb844ce45f7c75..3509de4747f3ebdda1a014f05fb02f07
 +  <uses-permission android:name="android.permission.WAKE_LOCK" />
  </manifest>
 diff --git a/android/src/main/java/expo/modules/audio/AudioModule.kt b/android/src/main/java/expo/modules/audio/AudioModule.kt
-index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..374015037c228f762129e43418e47df4f3e4c01e 100644
+index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..b15e810b171b94d219d6f3ad5b049b54ac939260 100644
 --- a/android/src/main/java/expo/modules/audio/AudioModule.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioModule.kt
 @@ -18,6 +18,7 @@ import androidx.media3.common.C.CONTENT_TYPE_HLS
@@ -153,7 +153,7 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..374015037c228f762129e43418e47df4
        Function("setAudioSamplingEnabled") { player: AudioPlayer, enabled: Boolean ->
          runOnMain {
            player.setSamplingEnabled(enabled)
-@@ -860,13 +923,27 @@ class AudioModule : Module() {
+@@ -860,13 +923,29 @@ class AudioModule : Module() {
  
    private fun createMediaItem(source: AudioSource?): MediaSource? = source?.uri?.let { uriString ->
      val uri = uriString.toUri()
@@ -165,11 +165,13 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..374015037c228f762129e43418e47df4
        }
        else -> MediaItem.fromUri(uri)
      }
++    // Named, so that one track is not the next one. See `AudioSource.mediaId`.
++    val identified = source.mediaId?.let { baseItem.buildUpon().setMediaId(it).build() } ?: baseItem
 +    // The item's own metadata wins over the tags read out of the stream, which
 +    // is the point: a transcode arrives stripped of them, and the cover can be
 +    // a file on disk that the stream never had.
 +    val mediaItem = source.metadata?.let { meta ->
-+      baseItem.buildUpon().setMediaMetadata(
++      identified.buildUpon().setMediaMetadata(
 +        MediaMetadata.Builder()
 +          .setTitle(meta.title)
 +          .setArtist(meta.artist)
@@ -178,11 +180,11 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..374015037c228f762129e43418e47df4
 +          .setDurationMs(meta.durationMs)
 +          .build()
 +      ).build()
-+    } ?: baseItem
++    } ?: identified
  
      val preloadedBytes = AudioPreloadManager.get(uriString)
      val factory: DataSource.Factory = if (preloadedBytes != null) {
-@@ -914,10 +991,32 @@ class AudioModule : Module() {
+@@ -914,10 +993,32 @@ class AudioModule : Module() {
      }
    }
  
@@ -216,7 +218,7 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..374015037c228f762129e43418e47df4
    }
  
    private fun retrieveStreamType(uri: Uri): Int = Util.inferContentType(uri)
-@@ -931,11 +1030,37 @@ class AudioModule : Module() {
+@@ -931,11 +1032,37 @@ class AudioModule : Module() {
        CONTENT_TYPE_SS -> SsMediaSource.Factory(factory)
        CONTENT_TYPE_DASH -> DashMediaSource.Factory(factory)
        CONTENT_TYPE_HLS -> HlsMediaSource.Factory(factory)
@@ -443,10 +445,10 @@ index c76a9fd2a53743a691782e0f67d0d71401df58f6..e3140c63b3f338b95b5f95ac62246440
  
    private fun sendAudioSampleUpdate(sample: List<Float>) {
 diff --git a/android/src/main/java/expo/modules/audio/AudioRecords.kt b/android/src/main/java/expo/modules/audio/AudioRecords.kt
-index 86880d92fd5b6413e8596e1b2b8ae28f2981addd..63796ed7d97d73e1f3c38cceab7790a6a9a320c3 100644
+index 86880d92fd5b6413e8596e1b2b8ae28f2981addd..34044354b228072c1020dfbde62fee049d1521fe 100644
 --- a/android/src/main/java/expo/modules/audio/AudioRecords.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioRecords.kt
-@@ -12,7 +12,15 @@ import expo.modules.kotlin.types.OptimizedRecord
+@@ -12,7 +12,27 @@ import expo.modules.kotlin.types.OptimizedRecord
  class AudioSource(
    @Field val uri: String?,
    @Field val headers: Map<String, String>?,
@@ -459,11 +461,23 @@ index 86880d92fd5b6413e8596e1b2b8ae28f2981addd..63796ed7d97d73e1f3c38cceab7790a6
 +   * get is whatever tags the stream happens to carry — none, once a server
 +   * transcodes it.
 +   */
-+  @Field val metadata: Metadata? = null
++  @Field val metadata: Metadata? = null,
++  /**
++   * What identifies this track to whoever is reading the session.
++   *
++   * `MediaItem.fromUri` leaves the media id as `MediaItem.DEFAULT_MEDIA_ID`,
++   * the empty string, and that is what media3 hands the platform session as
++   * `METADATA_KEY_MEDIA_ID`. Every track this app plays therefore reached a
++   * car, a watch or the Bluetooth stack under the same name, and a head unit
++   * that decides whether to fetch the cover again by looking at that name had
++   * no reason to fetch it a second time. Not the stream URL: the media id goes
++   * out to every connected controller and the URL carries the credentials.
++   */
++  @Field val mediaId: String? = null
  ) : Record
  
  enum class LoopMode(val value: String) : Enumerable {
-@@ -55,7 +63,15 @@ class Metadata(
+@@ -55,7 +75,15 @@ class Metadata(
    @Field val title: String?,
    @Field val artist: String?,
    @Field val albumTitle: String?,
@@ -480,7 +494,7 @@ index 86880d92fd5b6413e8596e1b2b8ae28f2981addd..63796ed7d97d73e1f3c38cceab7790a6
  ) : Record
  
  enum class AndroidOutputFormat(val value: String) : Enumerable {
-@@ -110,7 +126,9 @@ enum class AndroidAudioEncoder(val value: String) : Enumerable {
+@@ -110,7 +138,9 @@ enum class AndroidAudioEncoder(val value: String) : Enumerable {
  class AudioLockScreenOptions(
    @Field val showSeekForward: Boolean,
    @Field val showSeekBackward: Boolean,
@@ -1122,10 +1136,10 @@ index 18203a364d17dcf3de95d22a20175308e3363889..77155f4f348246f218c0736725b0f690
    }
  }
 diff --git a/build/Audio.types.d.ts b/build/Audio.types.d.ts
-index 25604783649fe9b64f6655172f08471a5efcbf45..85f23b9cc401f784f988177a88c6eff56c1f7bbc 100644
+index 25604783649fe9b64f6655172f08471a5efcbf45..69dd0038102a3a309ab3515ed4ade66d21e386ac 100644
 --- a/build/Audio.types.d.ts
 +++ b/build/Audio.types.d.ts
-@@ -34,6 +34,13 @@ export type AudioSource = string | number | null | {
+@@ -34,6 +34,20 @@ export type AudioSource = string | number | null | {
       * Useful for showing track names in a queue or playlist UI.
       */
      name?: string;
@@ -1136,10 +1150,17 @@ index 25604783649fe9b64f6655172f08471a5efcbf45..85f23b9cc401f784f988177a88c6eff5
 +     * carried by the stream — which a transcode arrives without. Android only.
 +     */
 +    metadata?: AudioMetadata;
++    /**
++     * What identifies this track to whoever is reading the media session.
++     * Without it every item is `MediaItem.DEFAULT_MEDIA_ID`, the empty string,
++     * and a car cannot tell one track from the next. Never the stream URL: it
++     * goes out to every connected controller. Android only.
++     */
++    mediaId?: string;
  };
  /**
   * Options for configuring audio player behavior.
-@@ -618,6 +625,14 @@ export type AudioMetadata = {
+@@ -618,6 +632,14 @@ export type AudioMetadata = {
      artist?: string;
      albumTitle?: string;
      artworkUrl?: string;
