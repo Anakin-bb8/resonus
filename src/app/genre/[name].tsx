@@ -43,6 +43,7 @@ import { Message } from '@/components/Message';
 import { SelectionBar } from '@/components/SelectionBar';
 import { SheetModal } from '@/components/SheetModal';
 import { TrackRow } from '@/components/TrackRow';
+import { useAccent } from '@/hooks/useAccent';
 import { useDownloadMessage } from '@/hooks/useDownloadMessage';
 import { useServerSort } from '@/hooks/useServerSort';
 import { albumsLabel, songsLabel, useT } from '@/i18n';
@@ -81,6 +82,10 @@ export default function GenreScreen() {
   const { name } = useLocalSearchParams<{ name: string }>();
   const genre = decodeURIComponent(name ?? '');
   const t = useT();
+  // Read at render time: the accent baked into `styles` is whatever it was when
+  // this module loaded, which is the default green if that happened before the
+  // saved settings came back from disk.
+  const accent = useAccent();
   const auth = useAuthStore((s) => s.auth);
   const toast = useToast((s) => s.show);
   const playing = usePlayerStore(currentSong);
@@ -385,8 +390,8 @@ export default function GenreScreen() {
                   <ActivityIndicator size="small" color={colors.textSecondary} />
                 ) : download.status === 'active' ? (
                   <>
-                    <ActivityIndicator size="small" color={colors.accent} />
-                    <Text style={styles.downloadProgress}>
+                    <ActivityIndicator size="small" color={accent} />
+                    <Text style={[styles.downloadProgress, { color: accent }]}>
                       {Math.round(download.progress * 100)}%
                     </Text>
                   </>
@@ -426,7 +431,7 @@ export default function GenreScreen() {
               <Ionicons name="shuffle" size={24} color={colors.textSecondary} />
             </Pressable>
             <Pressable
-              style={styles.playButton}
+              style={[styles.playButton, { backgroundColor: accent }]}
               onPress={onPlay}
               accessibilityRole="button"
               accessibilityLabel={t('Play')}
@@ -450,7 +455,7 @@ export default function GenreScreen() {
           {(['albums', 'songs'] as const).map((key) => (
             <Pressable
               key={key}
-              style={[styles.chip, tab === key && { backgroundColor: colors.accent }]}
+              style={[styles.chip, tab === key && { backgroundColor: accent }]}
               onPress={() => {
                 setTab(key);
                 setSelectedIds(null);

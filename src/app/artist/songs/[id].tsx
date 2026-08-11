@@ -39,6 +39,7 @@ import { SelectionBar } from '@/components/SelectionBar';
 import { SheetModal } from '@/components/SheetModal';
 import { TrackListSkeleton } from '@/components/TrackListSkeleton';
 import { TrackRow } from '@/components/TrackRow';
+import { useAccent } from '@/hooks/useAccent';
 import { useDownloadMessage } from '@/hooks/useDownloadMessage';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { useSongSort } from '@/hooks/useSongSort';
@@ -59,6 +60,10 @@ import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/them
 export default function ArtistSongsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const t = useT();
+  // Read at render time: the accent baked into `styles` is whatever it was when
+  // this module loaded, which is the default green if that happened before the
+  // saved settings came back from disk.
+  const accent = useAccent();
   const bottomPad = useScreenBottomPadding();
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
   const offline = useAuthStore((s) => s.offline);
@@ -229,9 +234,7 @@ export default function ArtistSongsScreen() {
             <Ionicons
               name="checkmark-done"
               size={24}
-              color={
-                shown.length > 0 && selectedIds.size === shown.length ? colors.accent : colors.text
-              }
+              color={shown.length > 0 && selectedIds.size === shown.length ? accent : colors.text}
             />
           </Pressable>
         ) : null}
@@ -254,8 +257,8 @@ export default function ArtistSongsScreen() {
               >
                 {download.status === 'active' ? (
                   <>
-                    <ActivityIndicator size="small" color={colors.accent} />
-                    <Text style={styles.downloadProgress}>
+                    <ActivityIndicator size="small" color={accent} />
+                    <Text style={[styles.downloadProgress, { color: accent }]}>
                       {Math.round(download.progress * 100)}%
                     </Text>
                   </>
@@ -296,7 +299,7 @@ export default function ArtistSongsScreen() {
               <Ionicons name="shuffle" size={24} color={colors.textSecondary} />
             </Pressable>
             <Pressable
-              style={styles.playButton}
+              style={[styles.playButton, { backgroundColor: accent }]}
               accessibilityRole="button"
               accessibilityLabel={t('Play')}
               onPress={() => void playQueue(shown, 0, name, `/artist/${id}`)}
