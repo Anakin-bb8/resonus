@@ -46,6 +46,8 @@ const MAX_ARTIST_ALBUMS = 5;
 const songById = new Map<string, Song>();
 /** parentId → track mediaIds (in order) to queue the collection on tap. */
 const parentTracks = new Map<string, string[]>();
+/** Collection id → what it is called, to name the source a car started. */
+const nodeTitles = new Map<string, string>();
 
 /** Runs `fn` over `items` with at most `n` in parallel (avoids 429). */
 async function mapConcurrent<T>(items: T[], n: number, fn: (item: T) => Promise<void>): Promise<void> {
@@ -91,6 +93,7 @@ function songNode(s: Song, parentId: string): CarNode {
 }
 
 function albumNode(a: Album): CarNode {
+  nodeTitles.set(`album:${a.id}`, a.name);
   return {
     id: `album:${a.id}`,
     title: a.name,
@@ -103,6 +106,7 @@ function albumNode(a: Album): CarNode {
 }
 
 function playlistNode(p: Playlist): CarNode {
+  nodeTitles.set(`playlist:${p.id}`, p.name);
   return {
     id: `playlist:${p.id}`,
     title: p.name,
@@ -120,6 +124,7 @@ function playlistNode(p: Playlist): CarNode {
 }
 
 function artistNode(a: Artist): CarNode {
+  nodeTitles.set(`artist:${a.id}`, a.name);
   return {
     id: `artist:${a.id}`,
     title: a.name,
@@ -167,6 +172,7 @@ function recentNodes(): CarNode[] {
     const name = names[href];
     if (!name || !id || !(kind in KIND_LABEL)) continue;
     const type = kind as keyof typeof KIND_LABEL;
+    nodeTitles.set(`${type}:${id}`, name);
     nodes.push({
       id: `${type}:${id}`,
       title: name,
@@ -180,17 +186,25 @@ function recentNodes(): CarNode[] {
   return nodes;
 }
 
-// Title is resolved inside buildBrowseTree (i18n already loaded), not here.
-const HOME_SECTIONS: {
-  id: string;
-  titleKey: string;
-  type: 'newest' | 'frequent' | 'random';
-  icon: string;
-}[] = [
-  { id: 'home:newest', titleKey: 'Recently added', type: 'newest', icon: 'ic_car_recent' },
-  { id: 'home:frequent', titleKey: 'Most played', type: 'frequent', icon: 'ic_car_trending' },
-  { id: 'home:random', titleKey: 'Shuffle', type: 'random', icon: 'ic_car_shuffle' },
+/**
+ * Home's shelves. Their covers are shown straight, under a heading, instead of
+ * behind a folder each: a driver reaching for music should be looking at the
+ * records, not at the names of two drawers.
+ *
+ * Titles are resolved inside buildBrowseTree (i18n is loaded by then).
+ */
+const HOME_SHELVES: { type: 'newest' | 'frequent'; titleKey: string }[] = [
+  { type: 'newest', titleKey: 'Recently added' },
+  { type: 'frequent', titleKey: 'Most played' },
 ];
+
+/** How many covers each shelf puts on Home. The tab is scrolled, not read. */
+const HOME_SHELF_SIZE = 10;
+
+/** Plays songs picked at random, resolved only when it is tapped. */
+const SHUFFLE_ID = 'shuffle:all';
+/** How many it queues. Enough for a drive without asking again. */
+const SHUFFLE_SONGS = 100;
 
 /**
  * The whole browse tree, or only its lists.
@@ -208,6 +222,7 @@ const HOME_SECTIONS: {
 export async function buildBrowseTree(deep = true): Promise<CarTree> {
   songById.clear();
   parentTracks.clear();
+  nodeTitles.clear();
   const tree: Record<string, CarNode[]> = {};
 
   // Root: the four tabs Android Auto draws, and no more than four. What goes
@@ -235,21 +250,19 @@ export async function buildBrowseTree(deep = true): Promise<CarTree> {
     tree['tab:recents'].filter((n) => n.mediaType === 'album').map((n) => n.id.slice('album:'.length)),
   );
 
-  // Home → album sections. Its own rows are built further down, once the
-  // counts that go under them are known.
-  // Through the query cache, with the keys the screens use: Home asks for these
-  // very lists, and the car was asking again for its own copy on every launch.
-  // Whoever gets there first pays; the other reads it.
-  await Promise.all(
-    HOME_SECTIONS.map(async (s) => {
+  // Home's shelves. Through the query cache, with the keys the screens use:
+  // Home asks for these very lists, and the car was asking again for its own
+  // copy on every launch. Whoever gets there first pays; the other reads it.
+  const shelves = await Promise.all(
+    HOME_SHELVES.map(async (s) => {
       const albums = await queryClient
         .fetchQuery({
           queryKey: ['albumList', s.type],
           queryFn: () => data.getAlbumList(s.type, HOME_SIZE),
         })
         .catch(() => [] as Album[]);
-      tree[s.id] = albums.map(albumNode);
       albums.forEach((a) => albumIds.add(a.id));
+      return { title: tg(s.titleKey), albums: albums.slice(0, HOME_SHELF_SIZE) };
     }),
   );
 
@@ -289,6 +302,31 @@ export async function buildBrowseTree(deep = true): Promise<CarTree> {
   starred.albums.forEach((a) => albumIds.add(a.id));
 
   tree['lib:artists'] = starred.artists.map(artistNode);
+
+  // Home. Two things that need no choosing, and then the records themselves.
+  // Shuffle leads because it is the answer to the only question anyone asks
+  // with the engine running, and it plays on the tap: it is a leaf, not a
+  // folder, and nothing is fetched for it until somebody presses it.
+  tree['tab:home'] = [
+    {
+      id: SHUFFLE_ID,
+      title: tg('Shuffle'),
+      artworkUrl: icon('ic_car_shuffle'),
+      playable: true,
+    },
+    {
+      id: 'favorites',
+      title: tg('Favorites'),
+      subtitle: songsLabel(starred.songs.length, useSettings.getState().language),
+      artworkUrl: icon('ic_car_favorites'),
+      playable: false,
+      contentStyle: 'list',
+      mediaType: 'playlist',
+    },
+    ...shelves.flatMap((shelf) =>
+      shelf.albums.map((a) => ({ ...albumNode(a), group: shelf.title })),
+    ),
+  ];
 
   if (!deep) return { nodes: tree };
 
@@ -367,12 +405,40 @@ function songIdFromTrackMediaId(mediaId: string): string {
 }
 
 /**
+ * Where a car started playing from, in the app's own terms: the href of the
+ * screen that collection has on the phone, and what it is called.
+ *
+ * Handed to `playQueue`, which is what writes the source down as recently
+ * played. Without it a car left no trace at all: the Recents tab is built out
+ * of exactly that store, so for anyone who only ever plays from the car it
+ * stayed empty no matter how much they listened.
+ */
+function sourceOf(collectionId: string | undefined): [string, string] | [] {
+  if (!collectionId) return [];
+  if (collectionId === 'favorites') return [tg('Favorites'), '/favorites'];
+  const [prefix, ...rest] = collectionId.split(':');
+  const id = rest.join(':');
+  if (!id || (prefix !== 'album' && prefix !== 'playlist' && prefix !== 'artist')) return [];
+  return [nodeTitles.get(collectionId) ?? '', `/${prefix}/${id}`];
+}
+
+/**
  * Handles a car tap: if it's a track within a collection, queues the whole
  * collection starting from the tapped one; if it's an album/playlist/artist/favorites,
  * plays everything.
  */
 export async function handleBrowsePlay(mediaId: string, parentId?: string): Promise<void> {
   const store = usePlayerStore.getState();
+
+  // Asked for only now, which is the point of it: a shelf of random albums
+  // would have to be fetched on every rebuild to sit there unplayed. No source
+  // href goes with it, because there is no screen to go back to and a handful
+  // of songs picked at random is not a thing to list among the recents.
+  if (mediaId === SHUFFLE_ID) {
+    const songs = await data.getRandomSongs(SHUFFLE_SONGS).catch(() => [] as Song[]);
+    if (songs.length > 0) await store.playQueue(songs, 0, tg('Shuffle'));
+    return;
+  }
 
   if (mediaId.startsWith('track|')) {
     const parts = mediaId.split('|');
@@ -385,7 +451,8 @@ export async function handleBrowsePlay(mediaId: string, parentId?: string): Prom
         .filter((s): s is Song => !!s);
       const startIndex = Math.max(0, ids.indexOf(mediaId));
       if (songs.length > 0) {
-        await store.playQueue(songs, Math.min(startIndex, songs.length - 1));
+        const [name, href] = sourceOf(parent);
+        await store.playQueue(songs, Math.min(startIndex, songs.length - 1), name, href);
         return;
       }
     }
@@ -408,5 +475,8 @@ export async function handleBrowsePlay(mediaId: string, parentId?: string): Prom
   } catch {
     songs = [];
   }
-  if (songs.length > 0) await store.playQueue(songs, 0);
+  if (songs.length > 0) {
+    const [name, href] = sourceOf(mediaId);
+    await store.playQueue(songs, 0, name, href);
+  }
 }

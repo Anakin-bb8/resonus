@@ -34,6 +34,12 @@ export interface CarNode {
    * is a folder to it. Left out, it falls back to that.
    */
   mediaType?: 'album' | 'artist' | 'playlist';
+  /**
+   * The heading this item sits under. Consecutive items sharing one are drawn
+   * as a group beneath it, which is how a tab holds several shelves without
+   * spending a screen on each.
+   */
+  group?: string;
 }
 
 /** Tree: parentId → children map. Root is the "root" key. */

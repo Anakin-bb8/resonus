@@ -22,6 +22,7 @@ import {
 } from '@/lib/carAuto';
 import { buildBrowseTree, handleBrowsePlay } from '@/lib/carAutoTree';
 import { useAuthStore } from '@/store/auth';
+import { useLastPlayed } from '@/store/lastPlayed';
 import { usePlayerStore, type StreamInfo } from '@/store/player';
 
 const REBUILD_DEBOUNCE_MS = 600;
@@ -77,6 +78,12 @@ export function CarAutoSync() {
       rebuild(false);
       scheduleDeep();
     });
+    // Starting an album or a playlist writes it down as recently played, and
+    // the car's Recents tab is built out of exactly that. Without this the tab
+    // only ever knew what had been played before the app opened. Deep on
+    // purpose: a shallow rebuild replaces the tree with the lists alone, and
+    // that would drop the songs already fetched into it.
+    const unsubRecent = useLastPlayed.subscribe(() => scheduleDeep());
 
     // ── Mirror playback state ──
     const pushNowPlaying = () => {
@@ -170,6 +177,7 @@ export function CarAutoSync() {
       if (deepTimer) clearTimeout(deepTimer);
       clearInterval(interval);
       unsubAuth();
+      unsubRecent();
       unsubPlayer();
       playSub?.remove();
       transportSub?.remove();

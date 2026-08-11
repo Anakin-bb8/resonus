@@ -10,7 +10,14 @@ import android.util.Log
  */
 object CarAutoLog {
   private const val TAG = "CarAuto"
-  var verbose: Boolean = false
+
+  /**
+   * On for debug builds. What goes wrong here goes wrong inside a car, where
+   * there is nothing to look at and no way to ask, so the trace of what the
+   * head unit asked for and what it was handed has to be there already when
+   * somebody finally plugs a cable in.
+   */
+  var verbose: Boolean = BuildConfig.DEBUG
 
   fun d(msg: String) {
     if (verbose) Log.d(TAG, msg)

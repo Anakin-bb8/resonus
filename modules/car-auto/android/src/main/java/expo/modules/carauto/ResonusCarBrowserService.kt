@@ -5,7 +5,9 @@ import android.os.Bundle
 import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.session.CommandButton
 import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaConstants
 import androidx.media3.session.MediaLibraryService
@@ -38,7 +40,59 @@ class ResonusCarBrowserService : MediaLibraryService() {
     }
     session = MediaLibrarySession.Builder(this, player, LibraryCallback())
       .setId("ResonusCarBrowserSession")
+      .setMediaButtonPreferences(modeButtons(player))
       .build()
+    // Each of those two buttons carries the state it will put the player in,
+    // so its icon has to be rebuilt whenever the state changes: shuffle turned
+    // on from the phone has to come out lit in the car, and pressing it there
+    // has to turn it off rather than on again.
+    player.addListener(object : Player.Listener {
+      override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) = refreshModeButtons()
+      override fun onRepeatModeChanged(repeatMode: Int) = refreshModeButtons()
+    })
+  }
+
+  private fun refreshModeButtons() {
+    val player = jsPlayer ?: return
+    session?.setMediaButtonPreferences(modeButtons(player))
+  }
+
+  /**
+   * Shuffle and repeat for the car's playback screen.
+   *
+   * Both are plain player commands rather than commands of our own, so the
+   * host acts on the session directly and it lands in `JsProxyPlayer`, which
+   * already forwards both to JS. Each carries the value to move to: without a
+   * parameter media3 toggles shuffle by reading the player back, and cycling
+   * repeat is ours to define anyway (off, all, one).
+   */
+  private fun modeButtons(player: Player): ImmutableList<CommandButton> {
+    val shuffleOn = player.shuffleModeEnabled
+    val nextRepeat = when (player.repeatMode) {
+      Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
+      Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
+      else -> Player.REPEAT_MODE_OFF
+    }
+    return ImmutableList.of(
+      CommandButton.Builder(
+        if (shuffleOn) CommandButton.ICON_SHUFFLE_ON else CommandButton.ICON_SHUFFLE_OFF,
+      )
+        .setPlayerCommand(Player.COMMAND_SET_SHUFFLE_MODE, !shuffleOn)
+        .setDisplayName(getString(R.string.car_shuffle))
+        .setSlots(CommandButton.SLOT_BACK_SECONDARY, CommandButton.SLOT_OVERFLOW)
+        .build(),
+      CommandButton.Builder(
+        when (player.repeatMode) {
+          Player.REPEAT_MODE_ONE -> CommandButton.ICON_REPEAT_ONE
+          Player.REPEAT_MODE_ALL -> CommandButton.ICON_REPEAT_ALL
+          else -> CommandButton.ICON_REPEAT_OFF
+        },
+      )
+        .setPlayerCommand(Player.COMMAND_SET_REPEAT_MODE, nextRepeat)
+        .setDisplayName(getString(R.string.car_repeat))
+        .setSlots(CommandButton.SLOT_FORWARD_SECONDARY, CommandButton.SLOT_OVERFLOW)
+        .build(),
+    )
   }
 
   override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? = session
@@ -107,8 +161,10 @@ class ResonusCarBrowserService : MediaLibraryService() {
       pageSize: Int,
       params: LibraryParams?,
     ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
+      val children = BrowseTreeCache.getChildren(parentId)
+      CarAutoLog.d("children of=$parentId have=${children.size} page=$page pageSize=$pageSize")
       // Paged, like the search results and for the same reason (see `pageOf`).
-      return Futures.immediateFuture(pageOf(BrowseTreeCache.getChildren(parentId), page, pageSize, params))
+      return Futures.immediateFuture(pageOf(children, page, pageSize, params))
     }
 
     /**
@@ -336,6 +392,11 @@ private fun BrowseNode.toMediaItemWithArt(embed: Boolean): Pair<MediaItem, Int> 
     }
     extras.putInt(MediaConstants.EXTRAS_KEY_CONTENT_STYLE_BROWSABLE, styleValue)
     extras.putInt(MediaConstants.EXTRAS_KEY_CONTENT_STYLE_PLAYABLE, styleValue)
+  }
+  // Neighbours carrying the same heading are drawn as one group under it, so a
+  // tab can hold several shelves without spending a screen on each of them.
+  if (group != null) {
+    extras.putString(MediaConstants.EXTRAS_KEY_CONTENT_STYLE_GROUP_TITLE, group)
   }
   val builder = MediaMetadata.Builder()
     .setTitle(title)
