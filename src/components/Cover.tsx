@@ -1,8 +1,8 @@
 /** Square cover art with placeholder when no image. */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image, type ImageContentFit, type ImageStyle } from 'expo-image';
-import { useEffect, useState } from 'react';
-import { View, type StyleProp, type ViewStyle } from 'react-native';
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { AppState, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { CACHED_COVER, COVER } from '@/api/data';
 import { bump } from '@/lib/perfLog';
@@ -86,6 +86,109 @@ async function cachedPath(url: string): Promise<string | undefined> {
   return found;
 }
 
+/**
+ * Covers still waiting to draw the picture they were last given, so they can be
+ * told to ask again when the app comes back.
+ *
+ * A load started while the app is away does not finish there: the image loader
+ * is tied to the activity and holds its requests until it is on screen again.
+ * That on its own would be harmless —the request would run on the way back—
+ * except that the view has already written down which source it is loading, so
+ * nothing on the way back looks like a change to it, and it goes on showing the
+ * last picture it managed to draw. Playing a playlist with the player open and
+ * the phone in a pocket, that is a cover from some song several tracks ago,
+ * under the right title, until something makes the view load again.
+ *
+ * `reloadAsync` is that something, and it is the only thing that is: it asks
+ * for the same source the view believes it already has, which a re-render by
+ * itself will not do. One subscription for all of them, since a list on screen
+ * is thirty of these and the answer to the question is the same for every one.
+ */
+const waiting = new Set<() => void>();
+AppState.addEventListener('change', (state) => {
+  if (state !== 'active') return;
+  for (const askAgain of [...waiting]) askAgain();
+});
+
+/**
+ * Ties one `expo-image` view to the above: give it the view's `ref`, put the
+ * `onDisplay` it hands back on the same view, and it will ask again for
+ * anything it was given while the app was away and never got to draw.
+ *
+ * Exported because the player's blurred backdrop is an `Image` of its own,
+ * outside this component and deliberately so (it keeps the previous artwork up
+ * while the next one decodes, which is what stops a black frame between
+ * songs), and it goes stale by exactly the same route.
+ */
+export function useRedrawOnReturn(
+  ref: RefObject<Image | null>,
+  shown: string | undefined,
+): { nonce: number; onDisplay: () => void } {
+  // Which picture the view has actually drawn, which is not the same question
+  // as which one it was asked for.
+  const drawn = useRef<string | undefined>(undefined);
+  /**
+   * Whether this view was handed a different picture while nobody was looking.
+   *
+   * Asking only when the view never reported drawing was not enough, and the
+   * report is why: the covers here are files on the phone, so the loader
+   * answers out there without a network and says it drew — and the screen still
+   * comes back showing the picture before it. So what decides is not what the
+   * view claims, it is whether the question changed while the app was away.
+   * That is true of the player's cover and of nothing else on screen: a list
+   * does not scroll in a pocket.
+   */
+  const changedWhileAway = useRef(false);
+  useEffect(() => {
+    if (AppState.currentState !== 'active') changedWhileAway.current = true;
+  }, [shown]);
+  /**
+   * Bumped to build the view again: a fresh one remembers nothing — no source
+   * it believes it has already loaded, no picture left over from before. It is
+   * what leaving the player and opening it once more does, which is the one
+   * thing the report confirms comes back right.
+   *
+   * It is used rather than merely asking the view to load again whenever the
+   * picture changed out there, and the reason is that the view's own account
+   * of itself cannot be checked from here. It already said it had drawn a
+   * cover it was not showing, which is how the first attempt at this went
+   * wrong; deciding whether asking had worked would mean believing the same
+   * claim twice. The blink it costs falls inside the system's own animation
+   * for opening the app, and it is one view, once, on the way back.
+   */
+  const [nonce, setNonce] = useState(0);
+  useEffect(() => {
+    const askAgain = () => {
+      if (!shown) return;
+      const changed = changedWhileAway.current;
+      changedWhileAway.current = false;
+      // Counted three ways, because "it still happens" cannot say which of
+      // these ran, and they want different fixes.
+      if (changed) {
+        bump('cover · rebuilt on return');
+        setNonce((n) => n + 1);
+      } else if (drawn.current !== shown) {
+        // Never drew what it was given, and the picture is still the same one:
+        // asking is enough here and does not blink.
+        bump('cover · asked again on return');
+        void ref.current?.reloadAsync().catch(() => {});
+      } else {
+        bump('cover · looked fine on return');
+      }
+    };
+    waiting.add(askAgain);
+    return () => {
+      waiting.delete(askAgain);
+    };
+  }, [ref, shown]);
+  // Fired when a picture is put on screen, and only for the real source: a
+  // placeholder is not an answer to the question above.
+  const onDisplay = useCallback(() => {
+    drawn.current = shown;
+  }, [shown]);
+  return { nonce, onDisplay };
+}
+
 export function Cover({
   uri,
   size,
@@ -109,21 +212,31 @@ export function Cover({
   // it can be read, so a playlist or a favourite whose cover was never seen
   // simply keeps its placeholder.
   const cacheOnly = uri?.startsWith(CACHED_COVER) ?? false;
-  const [cached, setCached] = useState<string | undefined>(undefined);
+  /**
+   * What was looked up, and for which `uri`. Both halves matter: the answer on
+   * its own outlives the question. This held the path alone and only wrote it
+   * down on a hit, so the same instance moving to a cover that is NOT on the
+   * phone — a list recycling a row, the player moving to the next song — kept
+   * painting the picture resolved for the song before it. The right title over
+   * somebody else's artwork, and it stayed that way until a cover that did
+   * resolve came along. Keeping the question next to the answer means a stale
+   * pair is simply not used, whether it lost by a miss or by still being in
+   * flight.
+   */
+  const [cached, setCached] = useState<{ uri: string; path?: string } | undefined>(undefined);
   useEffect(() => {
-    if (!uri || !uri.startsWith(CACHED_COVER)) {
-      setCached(undefined);
-      return;
-    }
+    if (!uri || !uri.startsWith(CACHED_COVER)) return;
     let alive = true;
     void cachedPath(uri.slice(CACHED_COVER.length)).then((path) => {
-      if (alive && path) setCached(path);
+      if (alive) setCached({ uri, path });
     });
     return () => {
       alive = false;
     };
   }, [uri]);
-  const shown = cacheOnly ? cached : uri;
+  const shown = cacheOnly ? (cached && cached.uri === uri ? cached.path : undefined) : uri;
+  const imageRef = useRef<Image>(null);
+  const redraw = useRedrawOnReturn(imageRef, shown);
   const borderRadius = rounded ? size / 2 : radius.md;
   if (!shown || failed) {
     return (
@@ -150,11 +263,14 @@ export function Cover({
   }
   return (
     <Image
+      key={redraw.nonce}
+      ref={imageRef}
       source={{ uri: shown }}
       style={[{ width: size, height: size, borderRadius }, style as StyleProp<ImageStyle>]}
       contentFit={contentFit}
       transition={transition}
       recyclingKey={shown}
+      onDisplay={redraw.onDisplay}
       // expo-image defaults to 'disk', which keeps the file but not the decoded
       // image: scrolling a list back up decoded every cover again. Covers are
       // small and the same handful come round constantly, which is what a

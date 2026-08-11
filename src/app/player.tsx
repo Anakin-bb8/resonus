@@ -34,7 +34,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 
 import { COVER, songCoverUrl, type Song } from '@/api/data';
 import { AudioQualityBadge } from '@/components/AudioQualityBadge';
-import { Cover } from '@/components/Cover';
+import { Cover, useRedrawOnReturn } from '@/components/Cover';
 import { FavoriteButton } from '@/components/FavoriteButton';
 import { StarRating } from '@/components/StarRating';
 import { CoverLyrics, LyricsCard } from '@/components/LyricsCard';
@@ -257,6 +257,12 @@ export default function PlayerScreen() {
   // a fixed overlay (same look as animating the gradient, which can't be done).
   const background = useSettings((s) => s.playerBackground);
   const colorBackground = background === 'color';
+  // The backdrop holds the previous artwork on purpose while the next decodes,
+  // so on its own it cannot tell "not decoded yet" from "never will be". Coming
+  // back from the background is the second case (see `useRedrawOnReturn`), and
+  // here it would be the whole screen wearing another song's colours.
+  const backdropRef = useRef<Image>(null);
+  const backdrop = useRedrawOnReturn(backdropRef, cover);
   const dominant = useDominantColor(colorBackground ? cover : undefined);
   // Under the blurred artwork the flat colour is irrelevant, but it still
   // paints the frame before the image decodes, so it stays dark rather than
@@ -630,11 +636,14 @@ export default function PlayerScreen() {
                 Left alone, the previous one stays up until the new one has
                 decoded and the transition dissolves between the two. */}
             <Image
+              key={backdrop.nonce}
+              ref={backdropRef}
               source={{ uri: cover }}
               style={StyleSheet.absoluteFill}
               contentFit="cover"
               blurRadius={60}
               transition={600}
+              onDisplay={backdrop.onDisplay}
             />
             {/* Scrim: blurring alone doesn't guarantee contrast — a bright or
                 busy cover would swallow the white text. */}
