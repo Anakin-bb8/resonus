@@ -10,6 +10,7 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
@@ -22,7 +23,6 @@ import android.support.v4.media.session.PlaybackStateCompat
 import androidx.core.app.NotificationCompat
 import androidx.media.VolumeProviderCompat
 import androidx.media.app.NotificationCompat.MediaStyle
-import java.net.HttpURLConnection
 import java.net.URL
 
 /**
@@ -172,7 +172,11 @@ class CastMediaService : Service() {
       .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, info.artist ?: "")
       .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, info.album ?: "")
       .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, info.durationMs.coerceAtLeast(0))
-    artBitmap?.let { meta.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, it) }
+    artBitmap?.let {
+      meta.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, it)
+      meta.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, it)
+      meta.putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON, it)
+    }
     session?.setMetadata(meta.build())
   }
 
@@ -209,19 +213,8 @@ class CastMediaService : Service() {
 
   private fun buildNotification(): Notification {
     val token = session?.sessionToken
-    val playPauseAction = if (info.isPlaying) {
-      NotificationCompat.Action(
-        android.R.drawable.ic_media_pause,
-        "Pause",
-        servicePendingIntent(ACTION_PAUSE),
-      )
-    } else {
-      NotificationCompat.Action(
-        android.R.drawable.ic_media_play,
-        "Play",
-        servicePendingIntent(ACTION_PLAY),
-      )
-    }
+    val playPauseAction = if (info.isPlaying) mediaAction(android.R.drawable.ic_media_pause, "Pause", ACTION_PAUSE)
+    else mediaAction(android.R.drawable.ic_media_play, "Play", ACTION_PLAY)
     val style = MediaStyle().setShowActionsInCompactView(0, 1, 2)
     if (token != null) style.setMediaSession(token)
 
@@ -236,43 +229,33 @@ class CastMediaService : Service() {
       .setOngoing(true)
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
       .setContentIntent(contentPendingIntent())
-      .addAction(
-        android.R.drawable.ic_media_previous,
-        "Previous",
-        servicePendingIntent(ACTION_PREV),
-      )
+      .addAction(mediaAction(android.R.drawable.ic_media_previous, "Previous", ACTION_PREV))
       .addAction(playPauseAction)
-      .addAction(
-        android.R.drawable.ic_media_next,
-        "Next",
-        servicePendingIntent(ACTION_NEXT),
-      )
+      .addAction(mediaAction(android.R.drawable.ic_media_next, "Next", ACTION_NEXT))
       .setStyle(style)
     artBitmap?.let { builder.setLargeIcon(it) }
     return builder.build()
   }
 
+  private fun mediaAction(icon: Int, title: String, action: String): NotificationCompat.Action =
+    NotificationCompat.Action(icon, title, servicePendingIntent(action))
+
   private fun servicePendingIntent(action: String): PendingIntent {
     val intent = Intent(this, CastMediaService::class.java).setAction(action)
-    val flags =
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-      } else {
-        PendingIntent.FLAG_UPDATE_CURRENT
-      }
-    return PendingIntent.getService(this, action.hashCode(), intent, flags)
+    return PendingIntent.getService(this, action.hashCode(), intent, pendingIntentFlags())
   }
 
   private fun contentPendingIntent(): PendingIntent? {
     val launch = packageManager.getLaunchIntentForPackage(packageName) ?: return null
-    val flags =
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-      } else {
-        PendingIntent.FLAG_UPDATE_CURRENT
-      }
-    return PendingIntent.getActivity(this, 0, launch, flags)
+    return PendingIntent.getActivity(this, 0, launch, pendingIntentFlags())
   }
+
+  private fun pendingIntentFlags(): Int =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    } else {
+      PendingIntent.FLAG_UPDATE_CURRENT
+    }
 
   private fun ensureChannel() {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
@@ -292,14 +275,7 @@ class CastMediaService : Service() {
     if (url == lastArtUrl && artBitmap != null) return
     lastArtUrl = url
     Thread {
-      val bmp = runCatching {
-        val conn = URL(url).openConnection() as HttpURLConnection
-        conn.connectTimeout = 8000
-        conn.readTimeout = 8000
-        conn.doInput = true
-        conn.connect()
-        conn.inputStream.use { BitmapFactory.decodeStream(it) }
-      }.getOrNull() ?: return@Thread
+      val bmp = runCatching { decodeArtwork(url) }.getOrNull() ?: return@Thread
       mainHandler.post {
         // The track may have changed while it downloaded: only apply it if it
         // is still the one playing.
@@ -310,6 +286,21 @@ class CastMediaService : Service() {
       }
     }.start()
   }
+
+  private fun decodeArtwork(url: String): Bitmap? =
+    when {
+      url.startsWith("content://") -> {
+        contentResolver.openInputStream(Uri.parse(url))?.use { BitmapFactory.decodeStream(it) }
+      }
+      else -> {
+        val conn = URL(url).openConnection()
+        conn.connectTimeout = 8000
+        conn.readTimeout = 8000
+        conn.doInput = true
+        conn.connect()
+        conn.getInputStream().use { BitmapFactory.decodeStream(it) }
+      }
+    }
 
   private inner class SessionCallback : MediaSessionCompat.Callback() {
     /**
