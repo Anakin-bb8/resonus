@@ -5,7 +5,7 @@ import Slider from '@react-native-community/slider';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useIsFocused, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   AppState,
@@ -36,18 +36,20 @@ import { COVER, songCoverUrl, type Song } from '@/api/data';
 import { AudioQualityBadge } from '@/components/AudioQualityBadge';
 import { Cover, useRedrawOnReturn } from '@/components/Cover';
 import { FavoriteButton } from '@/components/FavoriteButton';
-import { StarRating } from '@/components/StarRating';
 import { CoverLyrics, LyricsCard } from '@/components/LyricsCard';
 import { MarqueeText } from '@/components/MarqueeText';
 import { OutputSheet } from '@/components/OutputSheet';
+import { StarRating } from '@/components/StarRating';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { useLyrics } from '@/hooks/useLyrics';
+import { useT } from '@/i18n';
 import { artistTargets } from '@/lib/artistNav';
-import { formatDuration } from '@/lib/format';
+import { formatDuration, formatGroupedDeviceLabel } from '@/lib/format';
 import { haptic } from '@/lib/haptics';
 import { useArtistPicker } from '@/store/artistPicker';
 import { useAuthStore } from '@/store/auth';
+import { useJukebox } from '@/store/jukebox';
 import {
   currentSong,
   mixSeedOf,
@@ -60,9 +62,7 @@ import {
 import { useSettings } from '@/store/settings';
 import { useSongMenu } from '@/store/songMenu';
 import { useToast } from '@/store/toast';
-import { useJukebox } from '@/store/jukebox';
 import { useUpnp } from '@/store/upnp';
-import { useT } from '@/i18n';
 import { colors, fontSize, spacing } from '@/theme';
 
 const SCREEN_W = Dimensions.get('window').width;
@@ -224,7 +224,22 @@ export default function PlayerScreen() {
   const offline = useAuthStore((s) => s.offline);
   const serverType = useAuthStore((s) => s.auth?.serverType);
   const hasAccount = useAuthStore((s) => !!s.auth);
-  const upnpDevice = useUpnp((s) => (s.connected ? s.deviceName : null));
+  const upnpDevices = useUpnp((s) => s.devices);
+  const upnpConnectedDevice = useUpnp((s) =>
+    s.connected ? s.devices.find((device) => device.id === s.deviceId) ?? null : null,
+  );
+  const upnpDevice = useMemo(() => {
+    if (!upnpConnectedDevice) return null;
+    if (!upnpConnectedDevice.isSonos) return upnpConnectedDevice.name;
+    const groupKey = upnpConnectedDevice.groupId ?? upnpConnectedDevice.id;
+    const groupName = formatGroupedDeviceLabel(
+      upnpDevices
+        .filter((device) => device.isSonos && (device.groupId ?? device.id) === groupKey)
+        .map((device) => device.name),
+    );
+    if (groupName) return groupName;
+    return upnpConnectedDevice.name;
+  }, [upnpConnectedDevice, upnpDevices]);
   const jukeboxActive = useJukebox((s) => s.active);
   const remoteDevice = upnpDevice ?? (jukeboxActive ? t('Server speakers (Jukebox)') : null);
   const [outputOpen, setOutputOpen] = useState(false);

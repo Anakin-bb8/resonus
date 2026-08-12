@@ -17,6 +17,7 @@ android {
 }
 
 dependencies {
-  // SSDP discovery + AVTransport control (the modern stand-in for Cling).
-  implementation "com.yinnho.upnpcast:upnpcast:1.1.2"
+  // SSDP, SOAP and DIDL-Lite are implemented in this module so the session can
+  // switch to a Sonos group coordinator and keep sending every later command
+  // there as well.
 }
