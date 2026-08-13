@@ -1,6 +1,15 @@
 /**
- * Audio output picker (Spotify Connect style): this phone or a UPnP/DLNA
- * renderer on the network.
+ * Audio output picker (Spotify Connect style): this phone, the server's own
+ * speakers or a UPnP/DLNA renderer on the network. When opened it searches for
+ * renderers and keeps searching while it is up.
+ *
+ * Sonos speakers are the reason this is more than a list. They arrive one per
+ * room and can be played as a group, so while a Sonos session is on, the list
+ * turns into the rooms of that system with a control each to bring a room into
+ * the group or take it out; the rest of the time each group is one row, named
+ * after its rooms. All of that is worked out below and none of it changes what
+ * a row looks like: a row is an icon, a name, and a tick when it is the one
+ * playing, the same as in every other sheet in the app.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -47,7 +56,13 @@ export function OutputSheet({ visible, onClose }: { visible: boolean; onClose: (
     visible,
     onClose,
   );
+  // Animated close: the sheet slides down and then notifies the parent (which hides the Modal).
   const close = () => dismiss(onClose);
+  // The list scrolls once there are a few speakers on the network, so the drag
+  // that dismisses the sheet only takes over at the top of it — the same deal
+  // the song menu makes, and for the same reason: otherwise the two gestures
+  // fight and scrolling up pulls the sheet down with it.
+  const [atTop, setAtTop] = useState(true);
 
   const activeUpnpDevice = useMemo(
     () => (upnpId ? devices.find((device) => device.id === upnpId) ?? null : null),
@@ -119,36 +134,24 @@ export function OutputSheet({ visible, onClose }: { visible: boolean; onClose: (
       .sort((a, b) => normalizeOutputDisplayName(a.name).localeCompare(normalizeOutputDisplayName(b.name)));
   }, [activeSonosGroupMode, devices, isSonosSession, upnpId]);
 
-  const currentOutput = phoneActive
-    ? {
-        icon: <Ionicons name="phone-portrait-outline" size={22} color={colors.accent} />,
-        title: t('This phone'),
-      }
+  /** What the phone is playing through, named the way the row would name it. */
+  const currentLabel = phoneActive
+    ? t('This phone')
     : jukeboxActive
-      ? {
-          icon: <Ionicons name="server-outline" size={22} color={colors.accent} />,
-          title: t('Server speakers (Jukebox)'),
-        }
-      : activeUpnpDevice?.isSonos && activeSonosGroupMode
-        ? {
-            icon: <MaterialIcons name="speaker-group" size={22} color={colors.accent} />,
-            title: formatGroupedDeviceLabel(activeGroupMembers.map((device) => device.name)),
-          }
-        : {
-            icon: activeUpnpDevice?.isTV ? (
-              <Ionicons name="tv-outline" size={22} color={colors.accent} />
-            ) : activeUpnpDevice ? (
-              <MaterialIcons name="speaker" size={22} color={colors.accent} />
-            ) : (
-              <Ionicons name="phone-portrait-outline" size={22} color={colors.accent} />
-            ),
-            title: activeUpnpDevice ? normalizeOutputDisplayName(activeUpnpDevice.name) : t('This phone'),
-          };
+      ? t('Server speakers (Jukebox)')
+      : activeSonosGroupMode
+        ? formatGroupedDeviceLabel(activeGroupMembers.map((device) => device.name))
+        : activeUpnpDevice
+          ? normalizeOutputDisplayName(activeUpnpDevice.name)
+          : t('This phone');
 
   useEffect(() => {
     if (!visible) return;
     void upnpSearch();
     void refreshJukeboxAvailability();
+    // Re-scan periodically while the sheet is open: SSDP is lossy, so repeating
+    // the search lets renderers that missed the first round appear on their own
+    // (upnpSearch merges results and no-ops if a scan is still running).
     const id = setInterval(() => void upnpSearch(), 10000);
     return () => clearInterval(id);
   }, [visible]);
@@ -211,6 +214,12 @@ export function OutputSheet({ visible, onClose }: { visible: boolean; onClose: (
     });
   }
 
+  /**
+   * One output. The tick and the accent name the one that is playing, which is
+   * how every list in the app says "this one"; `action` is the extra control a
+   * Sonos room gets, and it sits where the tick would be because a room that
+   * can be grouped is never the room already playing.
+   */
   function Row({
     icon,
     label,
@@ -230,63 +239,72 @@ export function OutputSheet({ visible, onClose }: { visible: boolean; onClose: (
         disabled={!onPress}
         onPress={onPress}
       >
-        <View style={styles.rowMain}>
-          <View style={styles.rowLabelWrap}>
-            {icon}
-            <Text style={styles.actionText} numberOfLines={1}>
-              {label}
-            </Text>
-          </View>
-        </View>
-        <View style={styles.rowActionWrap}>
+        {icon}
+        <Text style={[styles.actionText, active && { color: colors.accent }]} numberOfLines={1}>
+          {label}
+        </Text>
+        <View style={styles.trailing}>
           {action ?? (active ? <Ionicons name="checkmark" size={20} color={colors.accent} /> : null)}
         </View>
       </Pressable>
     );
   }
 
+  /** The icon for an output, by what it is. */
+  const outputIcon = (kind: 'phone' | 'server' | 'group' | 'tv' | 'speaker', active?: boolean) => {
+    const color = active ? colors.accent : colors.text;
+    if (kind === 'phone') return <Ionicons name="phone-portrait-outline" size={22} color={color} />;
+    if (kind === 'server') return <Ionicons name="server-outline" size={22} color={color} />;
+    if (kind === 'group') return <MaterialIcons name="speaker-group" size={22} color={color} />;
+    if (kind === 'tv') return <Ionicons name="tv-outline" size={22} color={color} />;
+    return <MaterialIcons name="speaker" size={22} color={color} />;
+  };
+
   return (
     <Modal transparent visible={visible} animationType="none" onRequestClose={close}>
+      {/* Gestures inside an RN Modal need a root view of their own: the
+          Modal renders in a native hierarchy outside the app's. */}
       <GestureHandlerRootView style={StyleSheet.absoluteFill}>
         <Animated.View style={[styles.backdrop, backdropStyle]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={close} />
         </Animated.View>
-        <GestureDetector gesture={pan}>
+        <GestureDetector gesture={pan.enabled(atTop)}>
           <Animated.View
             style={[styles.sheet, { paddingBottom: insets.bottom + spacing.md }, sheetStyle]}
             onLayout={onSheetLayout}
           >
+            {/* Spotify-style grabber: the visual cue that the sheet can be
+                dragged down to dismiss. */}
             <View style={styles.grabber} />
+            {/* The title says what the sheet is; the line under it says where the
+                sound is going, which is the one thing you came to check and the
+                answer is a whole sentence for a Sonos group. The list below
+                still marks it, so this is a summary and not the only mark. */}
+            <Text style={styles.sheetTitle}>{t('Output')}</Text>
+            <Text style={styles.currentLine} numberOfLines={1}>
+              {t('Currently playing on')}: {currentLabel}
+            </Text>
+
             <ScrollView
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.content}
+              onScroll={(e) => setAtTop(e.nativeEvent.contentOffset.y <= 4)}
+              scrollEventThrottle={16}
               bounces={false}
             >
-              <View style={styles.currentCard}>
-                <Text style={styles.currentLabel}>{t('Currently playing on')}</Text>
-                <View style={styles.currentRow}>
-                  <View style={styles.currentIconWrap}>{currentOutput.icon}</View>
-                  <View style={styles.currentTextWrap}>
-                    <Text style={styles.currentTitle} numberOfLines={1}>
-                      {currentOutput.title}
-                    </Text>
-                  </View>
-                </View>
-              </View>
+              <Row
+                icon={outputIcon('phone', phoneActive)}
+                label={t('This phone')}
+                active={phoneActive}
+                onPress={phoneActive ? undefined : () => void pickPhone()}
+              />
 
-              {!phoneActive ? (
+              {jukeboxAvailable ? (
                 <Row
-                  icon={<Ionicons name="phone-portrait-outline" size={22} color={colors.text} />}
-                  label={t('This phone')}
-                  onPress={() => void pickPhone()}
-                />
-              ) : null}
-
-              {jukeboxAvailable && !jukeboxActive ? (
-                <Row
-                  icon={<Ionicons name="server-outline" size={22} color={colors.text} />}
+                  icon={outputIcon('server', jukeboxActive)}
                   label={t('Server speakers (Jukebox)')}
-                  onPress={() => void pickJukebox()}
+                  active={jukeboxActive}
+                  onPress={jukeboxActive ? undefined : () => void pickJukebox()}
                 />
               ) : null}
 
@@ -300,10 +318,17 @@ export function OutputSheet({ visible, onClose }: { visible: boolean; onClose: (
                       const canUngroup = inActiveGroup && (activeSonosGroupMode || !isActiveCoordinator);
                       const actionKey = canJoin ? `join:${device.id}` : `ungroup:${device.id}`;
                       const actionBusy = busyAction === actionKey;
+                      // Secondary to the row it sits on: pressing the name moves
+                      // the music, pressing this only changes who else is in the
+                      // group, so it is drawn the way every other secondary
+                      // action in the app is and not in a colour of its own.
                       const action = device.isSonos && (canJoin || canUngroup) ? (
                         <Pressable
-                          style={({ pressed }) => [styles.actionButton, { opacity: actionBusy ? 0.8 : pressed ? 0.9 : 1 }]}
-                          disabled={actionBusy || busyAction != null}
+                          hitSlop={10}
+                          style={({ pressed }) => [pressed && { opacity: 0.6 }]}
+                          disabled={busyAction != null}
+                          accessibilityRole="button"
+                          accessibilityLabel={canJoin ? t('Add to the group') : t('Remove from the group')}
                           onPress={(event) => {
                             event.stopPropagation();
                             if (canJoin) {
@@ -315,12 +340,12 @@ export function OutputSheet({ visible, onClose }: { visible: boolean; onClose: (
                           }}
                         >
                           {actionBusy ? (
-                            <ActivityIndicator size="small" color={canJoin ? colors.success : colors.danger} />
+                            <ActivityIndicator size="small" color={colors.textSecondary} />
                           ) : (
                             <Ionicons
                               name={canJoin ? 'add-circle-outline' : 'remove-circle-outline'}
                               size={22}
-                              color={canJoin ? colors.success : colors.danger}
+                              color={colors.textSecondary}
                             />
                           )}
                         </Pressable>
@@ -329,49 +354,53 @@ export function OutputSheet({ visible, onClose }: { visible: boolean; onClose: (
                       return (
                         <Row
                           key={device.id}
-                          icon={
-                            device.isTV ? (
-                              <Ionicons name="tv-outline" size={22} color={colors.text} />
-                            ) : (
-                              <MaterialIcons name="speaker" size={22} color={colors.text} />
-                            )
-                          }
-                          label={device.name}
+                          icon={outputIcon(device.isTV ? 'tv' : 'speaker', active)}
+                          label={normalizeOutputDisplayName(device.name)}
                           active={active}
                           onPress={() => void switchToSonosDevice(device)}
                           action={action}
                         />
                       );
                     })
-                  : groupedUpnpRows.map((row) => {
-                      const icon = row.groupSize > 1 ? (
-                        <MaterialIcons name="speaker-group" size={22} color={colors.text} />
-                      ) : row.device.isTV ? (
-                        <Ionicons name="tv-outline" size={22} color={colors.text} />
-                      ) : (
-                        <MaterialIcons name="speaker" size={22} color={colors.text} />
-                      );
-
-                      return (
-                        <Row
-                          key={row.key}
-                          icon={icon}
-                          label={row.label}
-                          active={row.active}
-                          onPress={() => void pickDevice(row.device)}
-                        />
-                      );
-                    })
+                  : groupedUpnpRows.map((row) => (
+                      <Row
+                        key={row.key}
+                        icon={outputIcon(
+                          row.groupSize > 1 ? 'group' : row.device.isTV ? 'tv' : 'speaker',
+                          row.active,
+                        )}
+                        label={row.label}
+                        active={row.active}
+                        onPress={() => void pickDevice(row.device)}
+                      />
+                    ))
                 : null}
 
-              <View style={styles.footerArea}>
-                <View style={styles.footerRow}>
-                  <View style={styles.footerIconSlot}>
-                    <ActivityIndicator size="small" color={colors.textSecondary} animating={scanning} />
-                  </View>
-                  <Text style={styles.footerLabel}>{t('Searching for devices…')}</Text>
+              {/* What the search is doing, and only while it is doing it: a line
+                  that says it is searching whether or not it is says nothing at
+                  all. When it has finished and found nothing, that is the news,
+                  and the way to try again goes with it. */}
+              {scanning ? (
+                <View style={styles.scanRow}>
+                  <ActivityIndicator size="small" color={colors.textSecondary} />
+                  <Text style={styles.scanText}>{t('Searching for devices…')}</Text>
                 </View>
-              </View>
+              ) : upnpAvailable ? (
+                <>
+                  {devices.length === 0 ? (
+                    <Text style={styles.scanText}>{t('No devices found')}</Text>
+                  ) : null}
+                  <Pressable
+                    style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+                    onPress={() => void upnpSearch()}
+                  >
+                    <Ionicons name="refresh" size={20} color={colors.textSecondary} />
+                    <Text style={[styles.actionText, { color: colors.textSecondary }]}>
+                      {t('Search again')}
+                    </Text>
+                  </Pressable>
+                </>
+              ) : null}
             </ScrollView>
           </Animated.View>
         </GestureDetector>
@@ -403,102 +432,34 @@ const styles = StyleSheet.create({
     opacity: 0.5,
     marginBottom: spacing.md,
   },
-  content: {
-    gap: spacing.sm,
-    paddingBottom: spacing.sm,
+  sheetTitle: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
   },
-  currentCard: {
-    borderRadius: 16,
-    backgroundColor: colors.surfaceHighlight,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    padding: spacing.md,
-    gap: spacing.sm,
-    marginBottom: spacing.xs,
-  },
-  currentLabel: {
+  currentLine: {
     color: colors.textMuted,
-    fontSize: fontSize.xs,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    fontWeight: '700',
+    fontSize: fontSize.sm,
+    marginTop: 2,
+    marginBottom: spacing.sm,
   },
-  currentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  currentIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: `${colors.accent}22`,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  currentTextWrap: {
-    flex: 1,
-    gap: 2,
-  },
-  currentTitle: {
-    color: colors.text,
-    fontSize: fontSize.md,
-    fontWeight: '700',
-  },
+  content: { paddingBottom: spacing.sm },
   action: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.md,
     paddingVertical: spacing.sm,
     minHeight: 34,
   },
-  rowMain: {
-    flex: 3,
-    minWidth: 0,
-  },
-  rowLabelWrap: {
+  actionText: { color: colors.text, fontSize: fontSize.md, flexShrink: 1 },
+  // Fixed width so the ticks and the group controls line up down the sheet
+  // whatever the names are, and the names all get cut at the same place.
+  trailing: { marginLeft: 'auto', minWidth: 22, alignItems: 'flex-end' },
+  scanRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    minWidth: 0,
-    flex: 1,
+    paddingVertical: spacing.sm,
   },
-  rowActionWrap: {
-    flex: 1,
-    alignItems: 'stretch',
-    justifyContent: 'center',
-    minHeight: 34,
-  },
-  actionText: { color: colors.text, fontSize: fontSize.md, flexShrink: 1 },
-  actionButton: {
-    marginLeft: 'auto',
-    minWidth: 62,
-    minHeight: 30,
-    paddingHorizontal: 14,
-    paddingVertical: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  footerArea: {
-    minHeight: 32,
-    marginTop: 0,
-    justifyContent: 'center',
-  },
-  footerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 28,
-  },
-  footerIconSlot: {
-    width: 20,
-    marginRight: spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  footerLabel: {
-    color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    fontWeight: '500',
-    lineHeight: fontSize.sm * 1.2,
-  },
+  scanText: { color: colors.textSecondary, fontSize: fontSize.sm },
 });
