@@ -15,6 +15,8 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
 
@@ -36,11 +38,48 @@ class TrackInfo(
  * session and sent to JS as a "state" event.
  */
 class UpnpCastModule : Module() {
+  private data class QueueRequest(
+    val tracks: List<Track>,
+    val currentIndex: Int,
+    val positionMs: Long,
+    val playMode: String,
+    val autoplay: Boolean,
+  )
+
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
   @Volatile private var pollJob: Job? = null
+  private val transportMutex = Mutex()
 
   private val known = ConcurrentHashMap<String, RendererSession>()
   @Volatile private var session: RendererSession? = null
+
+  private fun parseQueueRequest(payloadJson: String): QueueRequest {
+    val payload = JSONObject(payloadJson)
+    val tracksJson = payload.getJSONArray("tracks")
+    val tracks = mutableListOf<Track>()
+    for (i in 0 until tracksJson.length()) {
+      val item = tracksJson.getJSONObject(i)
+      tracks.add(
+        Track(
+          url = item.getString("url"),
+          mime = item.optString("mime", "audio/mpeg"),
+          title = item.optString("title", ""),
+          artist = item.optString("artist").takeIf { it.isNotBlank() },
+          albumArtist = item.optString("albumArtist").takeIf { it.isNotBlank() },
+          album = item.optString("album").takeIf { it.isNotBlank() },
+          artworkUrl = item.optString("artworkUrl").takeIf { it.isNotBlank() },
+          durationSeconds = item.optInt("durationSec", 0)
+        )
+      )
+    }
+    return QueueRequest(
+      tracks = tracks,
+      currentIndex = payload.optInt("currentIndex", 0),
+      positionMs = payload.optDouble("positionMs", 0.0).toLong(),
+      playMode = payload.optString("playMode", "NORMAL"),
+      autoplay = payload.optBoolean("autoplay", false),
+    )
+  }
 
   override fun definition() = ModuleDefinition {
     Name("UpnpCast")
@@ -126,18 +165,20 @@ class UpnpCastModule : Module() {
         return@AsyncFunction
       }
       scope.launch {
-        val ok = current.load(
-          Track(
-            url = url,
-            mime = track.mime,
-            title = track.title,
-            artist = track.artist,
-            albumArtist = track.albumArtist,
-            album = track.album,
-            artworkUrl = track.artworkUrl,
-            durationSeconds = (track.durationSec ?: 0.0).toInt()
+        val ok = transportMutex.withLock {
+          current.load(
+            Track(
+              url = url,
+              mime = track.mime,
+              title = track.title,
+              artist = track.artist,
+              albumArtist = track.albumArtist,
+              album = track.album,
+              artworkUrl = track.artworkUrl,
+              durationSeconds = (track.durationSec ?: 0.0).toInt()
+            )
           )
-        )
+        }
         promise.resolve(ok)
       }
     }
@@ -150,31 +191,40 @@ class UpnpCastModule : Module() {
       }
       scope.launch {
         try {
-          val payload = JSONObject(payloadJson)
-          val tracksJson = payload.getJSONArray("tracks")
-          val tracks = mutableListOf<Track>()
-          for (i in 0 until tracksJson.length()) {
-            val item = tracksJson.getJSONObject(i)
-            tracks.add(
-              Track(
-                url = item.getString("url"),
-                mime = item.optString("mime", "audio/mpeg"),
-                title = item.optString("title", ""),
-                artist = item.optString("artist").takeIf { it.isNotBlank() },
-                albumArtist = item.optString("albumArtist").takeIf { it.isNotBlank() },
-                album = item.optString("album").takeIf { it.isNotBlank() },
-                artworkUrl = item.optString("artworkUrl").takeIf { it.isNotBlank() },
-                durationSeconds = item.optInt("durationSec", 0)
-              )
+          val request = parseQueueRequest(payloadJson)
+          val ok = transportMutex.withLock {
+            current.loadQueue(
+              tracks = request.tracks,
+              currentIndex = request.currentIndex,
+              autoplay = request.autoplay,
+              positionMs = request.positionMs,
+              playMode = request.playMode
             )
           }
-          val ok = current.loadQueue(
-            tracks = tracks,
-            currentIndex = payload.optInt("currentIndex", 0),
-            autoplay = payload.optBoolean("autoplay", false),
-            positionMs = payload.optDouble("positionMs", 0.0).toLong(),
-            playMode = payload.optString("playMode", "NORMAL")
-          )
+          promise.resolve(ok)
+        } catch (e: Exception) {
+          promise.resolve(false)
+        }
+      }
+    }
+
+    AsyncFunction("syncQueue") { payloadJson: String, promise: Promise ->
+      val current = session
+      if (current == null) {
+        promise.resolve(false)
+        return@AsyncFunction
+      }
+      scope.launch {
+        try {
+          val request = parseQueueRequest(payloadJson)
+          val ok = transportMutex.withLock {
+            current.syncQueue(
+              tracks = request.tracks,
+              currentIndex = request.currentIndex,
+              positionMs = request.positionMs,
+              playMode = request.playMode
+            )
+          }
           promise.resolve(ok)
         } catch (e: Exception) {
           promise.resolve(false)
@@ -202,6 +252,11 @@ class UpnpCastModule : Module() {
       scope.launch { promise.resolve(session?.setPlayMode(playMode) ?: false) }
     }
 
+    AsyncFunction("setSleepTimer") { durationSec: Double, promise: Promise ->
+      val seconds = durationSec.toInt().coerceAtLeast(0)
+      scope.launch { promise.resolve(session?.setSleepTimer(seconds) ?: false) }
+    }
+
     AsyncFunction("disconnect") { promise: Promise ->
       val current = session
       pollJob?.cancel()
@@ -221,6 +276,7 @@ class UpnpCastModule : Module() {
         val state = session?.state()
         if (state != null) {
           val currentTrackNumber = state.trackNumber
+          val playMode = state.playMode
           val playbackState = when {
             state.playbackState.equals("PLAYING", ignoreCase = true) -> "PLAYING"
             state.playbackState.equals("TRANSITIONING", ignoreCase = true) -> "BUFFERING"
@@ -236,6 +292,7 @@ class UpnpCastModule : Module() {
               "positionMs" to state.positionMs.toDouble(),
               "durationMs" to state.durationMs.toDouble(),
               "trackNumber" to (currentTrackNumber?.toDouble() ?: 0.0),
+              "playMode" to (playMode ?: ""),
             ),
           )
         }

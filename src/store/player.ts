@@ -92,6 +92,7 @@ import {
   upnpPause,
   upnpPlay,
   upnpSeek,
+  upnpSetSleepTimer,
   upnpSetVolume,
   type RemoteEvents,
 } from './upnp';
@@ -2553,7 +2554,7 @@ export function initRemoteIntegration() {
   const events: RemoteEvents = {
     onConnected: () => {
       // Transfers the current track to the device and silences the local player.
-      const { queue, index, positionSec, isPlaying } = usePlayerStore.getState();
+      const { queue, index, positionSec, isPlaying, sleepEndsAt } = usePlayerStore.getState();
       cutCrossfade();
       try {
         activePlayer()?.pause();
@@ -2562,6 +2563,10 @@ export function initRemoteIntegration() {
       }
       resetUpnpRemoteSyncState();
       clearLockScreen();
+      if (sleepEndsAt) {
+        const remainingSec = Math.max(0, Math.round((sleepEndsAt - Date.now()) / 1000));
+        void upnpSetSleepTimer(remainingSec);
+      }
       if (queue[index]) void remoteLoadIndex(index, isPlaying, positionSec);
     },
     onTrackChanged: (index, positionSec, durationSec) => {
@@ -2605,6 +2610,13 @@ export function initRemoteIntegration() {
       }
       // Reflects play/pause in the casting media session.
       if (isUpnpConnected()) castSetState(isPlaying, usePlayerStore.getState().positionSec * 1000);
+    },
+    onRepeatChanged: (repeat) => {
+      const current = usePlayerStore.getState().repeat;
+      if (repeat === current) return;
+      usePlayerStore.setState({ repeat });
+      applyLoop(activePlayer());
+      scheduleSync();
     },
     onFinished: () => {
       if (handleSleepAtSongEnd()) return;
@@ -3407,6 +3419,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     if (sleepTimeout) clearTimeout(sleepTimeout);
     sleepTimeout = setTimeout(fireSleepTimer, minutes * 60_000);
     armSleepFade(minutes * 60_000);
+    if (remoteKind() === 'upnp') void upnpSetSleepTimer(minutes * 60);
     set({ sleepEndsAt: Date.now() + minutes * 60_000, sleepAtSongEnd: false });
   },
 
@@ -3416,6 +3429,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     // No fade: the song ends on its own, and fading its end would ruin exactly
     // what was asked to be heard in full.
     abortSleepFade();
+    if (remoteKind() === 'upnp') void upnpSetSleepTimer(null);
     set({ sleepEndsAt: null, sleepAtSongEnd: true });
   },
 
@@ -3423,6 +3437,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     if (sleepTimeout) clearTimeout(sleepTimeout);
     sleepTimeout = null;
     abortSleepFade();
+    if (remoteKind() === 'upnp') void upnpSetSleepTimer(null);
     set({ sleepEndsAt: null, sleepAtSongEnd: false });
   },
 
