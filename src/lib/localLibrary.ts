@@ -29,6 +29,7 @@ import { StorageAccessFramework } from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library/legacy';
 
 import { type Song } from '@/api/subsonic';
+import { bump } from '@/lib/perfLog';
 import { useScanProgress } from '@/store/scanProgress';
 import { base64ToUint8, parseID3, type ID3Tags } from './id3';
 import * as Db from './localDb';
@@ -145,6 +146,54 @@ const TAG_CAP = 2_500_000;
 const TEXT_TAG_BYTES = 16_384;
 
 /**
+ * Reads `length` bytes from `position`, however many goes it takes.
+ *
+ * The read underneath is a single `InputStream.read(buffer, 0, length)`, and
+ * that call is allowed to hand back fewer bytes than asked for: what comes
+ * back is one chunk of whatever stream the file happens to be behind. Nothing
+ * about it is visible from up here, because a short read is not an error, it
+ * is simply a smaller buffer — and what gets cut off is the end of the tag,
+ * which is where the cover lives.
+ *
+ * It used to be papered over by asking for a third more than was needed. That
+ * cushion is proportional to the request, so it is generous for a few KB of
+ * text frames and nothing at all for a 300 KB picture. Reading until the bytes
+ * are actually there costs one round trip per chunk and cannot come up short.
+ *
+ * Whether this was ever the reason a cover went missing is not established:
+ * `tag read · came up short` in Diagnostics is there to say whether it happens
+ * on real files and on which source, since it cannot be seen from a
+ * screenshot. A read that returns nothing is the end of the file, and the only
+ * way out of the loop that is not "we have it all".
+ */
+async function readBytes(uri: string, position: number, length: number): Promise<Uint8Array> {
+  const parts: Uint8Array[] = [];
+  let got = 0;
+  while (got < length) {
+    const b64 = await FileSystem.readAsStringAsync(uri, {
+      encoding: FileSystem.EncodingType.Base64,
+      position: position + got,
+      length: length - got,
+    });
+    const chunk = base64ToUint8(b64, length - got);
+    if (chunk.length === 0) break;
+    parts.push(chunk);
+    got += chunk.length;
+    // Counted: if a report still says the covers are missing and this reads
+    // zero, the reading is not where to look.
+    if (got < length) bump('tag read · came up short');
+  }
+  if (parts.length === 1) return parts[0];
+  const out = new Uint8Array(got);
+  let at = 0;
+  for (const part of parts) {
+    out.set(part, at);
+    at += part.length;
+  }
+  return out;
+}
+
+/**
  * Reads the ID3v2 tag buffer: the 10-byte header first and, if there is a tag,
  * up to `maxBytes` of the rest. Byte reads only, no `stat`, which is an
  * expensive hop into native and is only needed for the ID3v1 fallback, dealt
@@ -152,28 +201,12 @@ const TEXT_TAG_BYTES = 16_384;
  */
 async function readTagBuffer(uri: string, maxBytes: number): Promise<Uint8Array | null> {
   try {
-    const headB64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: FileSystem.EncodingType.Base64,
-      length: 10,
-      position: 0,
-    });
-    const head = base64ToUint8(headB64);
+    const head = await readBytes(uri, 0, 10);
     if (head.length < 10 || head[0] !== 0x49 || head[1] !== 0x44 || head[2] !== 0x33) {
       return head;
     }
     const tagSize = ((head[6] & 0x7f) << 21) | ((head[7] & 0x7f) << 14) | ((head[8] & 0x7f) << 7) | (head[9] & 0x7f);
-    const want = Math.min(10 + tagSize, maxBytes);
-    // Asked for with room to spare (×4/3 plus a cushion): over SAF a partial
-    // read can come up short and cut the embedded cover (APIC), which usually
-    // sits at the end of the tag. Reading too much is harmless, and the excess
-    // is trimmed when decoding.
-    const limit = Math.ceil(want * (4 / 3)) + 4096;
-    const fullB64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: FileSystem.EncodingType.Base64,
-      length: limit,
-      position: 0,
-    });
-    return base64ToUint8(fullB64, want);
+    return await readBytes(uri, 0, Math.min(10 + tagSize, maxBytes));
   } catch {
     return null;
   }
@@ -210,12 +243,7 @@ export async function readTags(uri: string, maxBytes = TAG_CAP): Promise<ID3Tags
       const info = await FileSystem.getInfoAsync(uri);
       const fileSize = info.exists ? ((info as any).size as number) || 0 : 0;
       if (fileSize > 128) {
-        const tailB64 = await FileSystem.readAsStringAsync(uri, {
-          encoding: FileSystem.EncodingType.Base64,
-          length: 128,
-          position: fileSize - 128,
-        });
-        const v1 = parseID3(base64ToUint8(tailB64));
+        const v1 = parseID3(await readBytes(uri, fileSize - 128, 128));
         if (v1.title) {
           tags.title = v1.title;
           tags.artist = tags.artist || v1.artist;
