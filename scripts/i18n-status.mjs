@@ -125,7 +125,13 @@ if (keepEnglish.size) {
 }
 // A note for a key that no longer exists is the drift this file is meant to
 // stop, so it says so rather than waiting to be noticed.
-const orphaned = Object.keys(notes).filter((k) => !(k in en));
+//
+// Judged by the base key, the way `i18n:check` judges it. An override
+// ("Never::expiry") is a real string with a real note, and it is never in
+// en.json by design: English needs one word where another language may need
+// two. Asked the other way, this reported every one of them as gone, which is
+// a warning that trains you to ignore warnings.
+const orphaned = Object.keys(notes).filter((k) => !(baseKey(k) in en));
 if (orphaned.length) {
   console.log(`\n⚠ context.jsonc describes ${orphaned.length} keys that are gone: ${orphaned.join(', ')}`);
 }
