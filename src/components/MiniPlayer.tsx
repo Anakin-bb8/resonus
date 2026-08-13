@@ -22,7 +22,6 @@ import { useDominantColor } from '@/hooks/useDominantColor';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
-import { useAuthStore } from '@/store/auth';
 import { currentSong, useLiveInfo, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
@@ -132,8 +131,9 @@ export function MiniPlayer() {
     : undefined;
   const dominant = useDominantColor(miniColor ? colorSource : undefined);
   const bg = miniColor ? dominant : colors.surfaceHighlight;
-  const offline = useAuthStore((s) => s.offline);
-  const favIds = useFavoriteIds(!!song && (!song.localUri || offline));
+  // Not "unless the file is on the phone": see the player screen, which had the
+  // same test in the same two places and the same hole under it.
+  const favIds = useFavoriteIds(!!song);
 
   if (!song) return null;
 
@@ -163,9 +163,7 @@ export function MiniPlayer() {
           ) : null}
         </View>
       </Animated.View>
-      {(song.localUri && !offline) ? null : (
-        <FavoriteButton id={song.id} starred={favorited} size={24} />
-      )}
+      <FavoriteButton id={song.id} starred={favorited} size={24} />
       <Pressable
         hitSlop={12}
         accessibilityRole="button"
