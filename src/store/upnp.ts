@@ -427,12 +427,42 @@ async function loadSonosQueue(
   )) as boolean;
 }
 
+/** Bitrate for the MP3 fallback below when streaming at original quality: a
+ *  lossless track has no bitrate to inherit, and 320 is as good as MP3 gets. */
+const CAST_MP3_BITRATE = 320;
+
 async function loadGenericUpnpTrack(song: Song, autoplay: boolean, startTimeSec: number): Promise<boolean> {
   const payload = buildUpnpTrackPayload(song);
   if (!payload) return false;
-  const ok = (await native.load(payload.url, payload, autoplay)) as boolean;
+  let ok = (await native.load(payload.url, payload, autoplay)) as boolean;
+  // A renderer that won't take the format says so, and the answer to that is
+  // to ask the server for the one nothing refuses. Only after being turned
+  // down: the ones that do take FLAC keep getting it. Sonos never comes
+  // through here, so this is the same second chance the TVs and speakers had
+  // before the queue path existed (#70).
+  if (!ok) {
+    const mp3Url = mp3StreamUrl(song);
+    if (mp3Url && mp3Url !== payload.url) {
+      ok = (await native.load(mp3Url, { ...payload, url: mp3Url, mime: 'audio/mpeg' }, autoplay)) as boolean;
+    }
+  }
   if (ok && startTimeSec > 0) void native.seek(startTimeSec * 1000);
   return ok;
+}
+
+/** The same song asked for as MP3, or undefined when the server isn't the one
+ *  serving it (a downloaded file, a URL of its own). */
+function mp3StreamUrl(song: Song): string | undefined {
+  const auth = useAuthStore.getState().auth;
+  if (!auth || song.url || song.localUri) return undefined;
+  const settings = useSettings.getState();
+  return streamUrl(
+    auth,
+    song.id,
+    settings.maxBitRate > 0 ? settings.maxBitRate : CAST_MP3_BITRATE,
+    0,
+    'mp3',
+  );
 }
 
 export async function upnpJoinDevice(deviceId: string, targetDeviceId: string): Promise<boolean> {
