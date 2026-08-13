@@ -123,6 +123,13 @@ export default function PlaylistScreen() {
 
   // In playlists 'recent' = order saved on the server = manual order, so it's
   // labeled "Custom"; 'added' = addition order ("Recent").
+  //
+  // `Custom::order` and not plain `Custom`: the equalizer calls its
+  // user-made preset the same word, and English is happy to. A language where
+  // the word bends to what it describes is not, and an order and a preset are
+  // not the same thing to bend to. The suffix is never shown; a language that
+  // wants one word for both simply leaves it alone and both fall back to
+  // `Custom`.
   const {
     songs: displaySongs,
     indices: playlistIndices,
@@ -131,7 +138,7 @@ export default function PlaylistScreen() {
     setSort,
   } = useSongSort(data?.songs ?? [], `playlist:${id}`, {
     fields: ['recent', 'added', 'alpha', 'artist', 'album', 'downloaded'],
-    labels: { recent: 'Custom', added: 'Recent' },
+    labels: { recent: 'Custom::order', added: 'Recent' },
     // Like Spotify: default "Custom" (the list's manual order, new items added
     // at the bottom); "Recent" puts the latest added at the top.
     defaultSort: { field: 'recent', dir: 'asc' },

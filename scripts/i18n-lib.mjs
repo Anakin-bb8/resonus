@@ -106,7 +106,13 @@ export function callSites() {
     // in a table of sort labels twenty lines under such a comment.
     for (const m of withoutComments(src).matchAll(LITERAL)) {
       const key = unescapeLiteral(m[2]);
-      if (key in en && !placed.has(key)) add(key, file);
+      // By the base key too, since an override is never in en.json: English
+      // needs one word where another language may need two. A sort label is
+      // handed over as data (`labels: { recent: 'Custom::order' }`) and only
+      // reaches `t()` inside the hook, so this pass is the only one that can
+      // see it — and without this it saw nothing, leaving the override real at
+      // runtime and invisible to every translator.
+      if ((key in en || baseKey(key) in en) && !placed.has(key)) add(key, file);
     }
   }
   // A base key whose every use asks for a context ("About" is only ever called
