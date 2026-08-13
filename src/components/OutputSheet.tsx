@@ -13,7 +13,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomSheetAnim } from '@/hooks/useBottomSheetAnim';
 import { useT } from '@/i18n';
 import { formatGroupedDeviceLabel, normalizeOutputDisplayName } from '@/lib/format';
-import { jukeboxDisconnect, refreshJukeboxAvailability, useJukebox } from '@/store/jukebox';
+import {
+  jukeboxConnect,
+  jukeboxDisconnect,
+  refreshJukeboxAvailability,
+  useJukebox,
+} from '@/store/jukebox';
 import { useToast } from '@/store/toast';
 import {
     upnpAvailable,
@@ -36,6 +41,7 @@ export function OutputSheet({ visible, onClose }: { visible: boolean; onClose: (
   const devices = useUpnp((s) => s.devices);
   const scanning = useUpnp((s) => s.scanning);
   const jukeboxActive = useJukebox((s) => s.active);
+  const jukeboxAvailable = useJukebox((s) => s.available);
   const phoneActive = !upnpId && !jukeboxActive;
   const { dismiss, pan, backdropStyle, sheetStyle, onSheetLayout } = useBottomSheetAnim(
     visible,
@@ -158,6 +164,14 @@ export function OutputSheet({ visible, onClose }: { visible: boolean; onClose: (
     if (!ok) toast(t("Couldn't complete the action"));
   }
 
+  async function pickJukebox() {
+    if (jukeboxActive) return;
+    // Silent handoff between remote outputs (does not resume on local in between).
+    if (upnpId) await upnpDisconnect(true);
+    const ok = await jukeboxConnect();
+    if (!ok) toast(t("Couldn't complete the action"));
+  }
+
   async function runGroupAction(key: string, action: () => Promise<boolean>) {
     setBusyAction(key);
     try {
@@ -265,6 +279,14 @@ export function OutputSheet({ visible, onClose }: { visible: boolean; onClose: (
                   icon={<Ionicons name="phone-portrait-outline" size={22} color={colors.text} />}
                   label={t('This phone')}
                   onPress={() => void pickPhone()}
+                />
+              ) : null}
+
+              {jukeboxAvailable && !jukeboxActive ? (
+                <Row
+                  icon={<Ionicons name="server-outline" size={22} color={colors.text} />}
+                  label={t('Server speakers (Jukebox)')}
+                  onPress={() => void pickJukebox()}
                 />
               ) : null}
 
