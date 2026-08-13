@@ -308,7 +308,6 @@
   "Remove “{name}” from your server?": "Vols eliminar «{name}» del teu servidor?",
   "The stream URL must start with http:// or https://": "L'URL de l'stream ha de començar per http:// o https://",
   "Rate {n} stars": "Puntua amb {n} estrelles",
-  "Recent": "Recent",
   "Recent searches": "Cerques recents",
   "Drag to reorder, toggle to show or hide.": "Arrossega per reordenar, activa per mostrar o amagar.",
   "Show, hide and reorder the album rows on Home.": "Mostra, amaga i reordena les files d'àlbums d'Inici.",

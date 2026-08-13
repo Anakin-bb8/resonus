@@ -1,6 +1,6 @@
 /**
  * Last time each source was played (album/playlist/artist), key = its
- * `sourceHref` ('/album/x', '/playlist/y'…). Feeds the "Recent" sort order in
+ * `sourceHref` ('/album/x', '/playlist/y'…). Feeds the "Recents" sort order in
  * the Library, Spotify style: what you last listened to, at the top.
  */
 import { create } from 'zustand';

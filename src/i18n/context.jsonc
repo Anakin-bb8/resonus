@@ -106,7 +106,7 @@
 
     // ── Home & personalization ───────────────────────────────────────────────
     "Discover": "Home section: discovery suggestions",
-    "Recents": "Library section: recently opened items",
+    "Recents": "Library section and its sort order: recently opened items",
     "Greeting": "Home's \"Good morning\" line",
     "Custom greeting": "A greeting of your own, replacing Home's \"Good morning\" line",
     "Quick grid": "The grid of shortcut tiles on Home",
@@ -343,7 +343,6 @@
     "Remove download": "Delete the downloaded file, keeping the song in the library",
     "Sort": "Read out by the screen reader for the button that opens the sort options. A verb",
     "Sort by": "Heading over the sort options",
-    "Recent": "A sort order: what you opened most recently first",
     "Share": "Make a link on the server that others can open. Getting the file itself out is `Export`",
     "Export “{name}”?": "Confirms getting the files of an album or playlist out of the app",
     "Exit": "Leave the local profile and go back to choosing a server",
@@ -495,11 +494,11 @@
     "Playlists": "A section on Home and in the library, and a folder in the car",
     "Random albums": "A section of Home: albums picked at random, to happen upon something",
     "Random artists": "A section of Home: artists picked at random",
-    "Recently added": "A sort order, and a section: newest in the library first",
+    "Recently added": "A sort order, and a section: newest first (in Favorites, last favorited first)",
     "Most played": "Sorted by how many times they were played",
     "Most played albums": "A section of Home: the records played most",
     "Most played songs": "A section of Home: the songs played most, as songs",
-    "Recently played": "Sorted by when they were last played",
+    "Recently played": "A sort order and a chip: by when they were last played",
     "Suggestions": "Things the app offers when you are picking favourites to pin",
 
     // ── Home while the phone's own music is being read ───────────────────────

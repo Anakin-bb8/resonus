@@ -59,7 +59,7 @@ const DEBOUNCE_MS = 300;
 // for this reason, by symmetry: it has no equivalent in Artists, where sorting
 // by artist is exactly what A-Z already does.
 const SORTS: { key: AlbumListType; label: string }[] = [
-  { key: 'recent', label: 'Recent' },
+  { key: 'recent', label: 'Recently played' },
   { key: 'frequent', label: 'Most played::albums' },
   { key: 'newest', label: 'Recently added' },
   { key: 'alphabeticalByName', label: 'A-Z' },

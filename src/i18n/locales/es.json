@@ -319,7 +319,6 @@
   "Remove “{name}” from your server?": "¿Eliminar «{name}» de tu servidor?",
   "The stream URL must start with http:// or https://": "La URL del stream debe empezar por http:// o https://",
   "Rate {n} stars": "Puntuar con {n} estrellas",
-  "Recent": "Recientes",
   "Recent searches": "Búsquedas recientes",
   "Drag to reorder, toggle to show or hide.": "Arrastra para reordenar, activa para mostrar u ocultar.",
   "Show, hide and reorder the album rows on Home.": "Muestra, oculta y reordena las filas de álbumes de Inicio.",

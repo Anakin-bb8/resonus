@@ -1046,6 +1046,21 @@ async function mirrorPlaylists(): Promise<Subsonic.Playlist[]> {
   return out;
 }
 
+/**
+ * Whether the favorites arrive newest-favorited first, which decides what the
+ * Favorites screen calls its first order.
+ *
+ * Subsonic's `getStarred` is sorted by when each thing was starred, so what
+ * comes back already is "recently added" and can say so. Jellyfin has no such
+ * sort —being a favorite is a flag on the item, without a date to order by—
+ * and answers in its own order, so there the list is only "however this server
+ * keeps them". The local profile does keep the order they were marked in, and
+ * `localQueries.getStarred` hands them back that way round.
+ */
+export function starredByDate(): boolean {
+  return useAuthStore.getState().auth?.serverType !== 'jellyfin';
+}
+
 export function getStarred(): Promise<Subsonic.Starred> {
   if (isOffline()) {
     if (serverOffline()) return mirrorStarred();

@@ -1,6 +1,6 @@
 /**
- * Reusable sort for a song list (Recent/Alphabetical + direction) with its
- * bottom sheet menu. Used by playlist and favorites.
+ * Reusable sort for a song list (the order it came in / Alphabetical…, plus
+ * direction) with its bottom sheet menu. Used by playlist and favorites.
  *
  * Returns the already-sorted list, the mapping to original indices (for actions
  * like "remove from list"), a trigger to open the menu, and the menu itself as
@@ -14,8 +14,14 @@ import { SortSheet } from '@/components/SortSheet';
 import { useDownloads } from '@/store/downloads';
 import { DEFAULT_SORT, useSortPrefs, type SortField, type SortPref } from '@/store/sortPrefs';
 
+/**
+ * `recent` is the order the list arrived in, which is what "Default" says
+ * everywhere else in the app. It is not "Recent": that word is taken, and it
+ * means what you played or opened last. Screens where the order it arrived in
+ * has a name of its own give it one (see `labels`).
+ */
 const SORT_LABEL: Record<SortField, string> = {
-  recent: 'Recent',
+  recent: 'Default',
   added: 'Recently added',
   alpha: 'Alphabetical',
   artist: 'Artist',

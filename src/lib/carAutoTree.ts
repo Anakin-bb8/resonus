@@ -157,7 +157,7 @@ const KIND_LABEL = { album: 'Album', artist: 'Artist', playlist: 'Playlist' } as
 /**
  * The Recents tab: what was last played, newest first, whatever kind it is.
  *
- * Read straight from the store the Library's "Recent" order and Home's grid
+ * Read straight from the store the Library's "Recents" order and Home's grid
  * already use, so it needs nothing from the server: the name was written down
  * when it played and the cover comes from the id inside the href. Songs are
  * left out — what gets played again is the album or the playlist it came from,

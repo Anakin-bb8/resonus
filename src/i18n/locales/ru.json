@@ -266,7 +266,6 @@
   "Remove “{name}” from your server?": "Удалить “{name}” с сервера?",
   "The stream URL must start with http:// or https://": "Ссылка на поток вещания должна начинаться с http:// или https://",
   "Rate {n} stars": "Оценить в {n} звёзд",
-  "Recent": "Недавнее",
   "Recent searches": "Недавние запросы",
   "Drag to reorder, toggle to show or hide.": "Зажмите и перетащите, чтобы изменить порядок.",
   "Show, hide and reorder the album rows on Home.": "Изменить видимость или порядок секций на домашнем экране.",

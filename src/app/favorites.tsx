@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
 
-import { getStarred, unstar } from '@/api/data';
+import { getStarred, starredByDate, unstar } from '@/api/data';
 import { type Song } from '@/api/subsonic';
 import { Dialog } from '@/components/Dialog';
 import { EmptyState } from '@/components/EmptyState';
@@ -93,7 +93,21 @@ export default function FavoritesScreen() {
     else if (download.status === 'active') setConfirmStop(true);
   }, [download.status]);
 
-  const { songs: displaySongs, openSort, sortSheet } = useSongSort(data?.songs ?? [], 'favorites');
+  /**
+   * The first order is the one the list arrives in, and here that is by when
+   * each song was favorited, newest first — so it says "Recently added", the
+   * name that order has on every other screen. It used to say "Recent", which
+   * in this app means something else entirely: what you played or opened last
+   * (the Library's own sort), and that is not what this is.
+   *
+   * On a server that cannot order them that way it falls back to "Default",
+   * the word the playlists use for "however this list came" (see `starredByDate`).
+   */
+  const { songs: displaySongs, openSort, sortSheet } = useSongSort(
+    data?.songs ?? [],
+    'favorites',
+    { labels: { recent: starredByDate() ? 'Recently added' : 'Default' } },
+  );
   // Over `displaySongs`: this is what `downloadFavorites` downloads, and with a
   // filter applied it's not the same as `data.songs`.
   const downloadMsg = useDownloadMessage(displaySongs);

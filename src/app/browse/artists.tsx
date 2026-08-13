@@ -58,7 +58,7 @@ type ArtistSort = 'alpha' | 'recent' | 'newest' | 'frequent' | 'random';
 // Same order as the Album chips (without 'Artist', which doesn't make sense
 // here): they're sibling screens and seeing them ordered differently felt jarring.
 const SORTS: { key: ArtistSort; label: string }[] = [
-  { key: 'recent', label: 'Recent' },
+  { key: 'recent', label: 'Recently played' },
   { key: 'frequent', label: 'Most played' },
   { key: 'newest', label: 'Recently added' },
   { key: 'alpha', label: 'A-Z' },
@@ -92,8 +92,10 @@ export default function BrowseArtistsScreen() {
   });
   const card = cardWidth(columns);
 
-  // "Recent" blends both sources: having opened their screen and having
-  // played within any queue. Neither alone tells the full story.
+  // "Recently played" blends both sources: having opened their screen and
+  // having played within any queue. Neither alone tells the full story, and
+  // opening an artist without pressing play is rare enough that the chip is
+  // named for what the two of them are mostly made of.
   const times = useLastPlayed((s) => s.times);
   const { byArtist } = useHistoryTimes();
 

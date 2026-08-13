@@ -107,7 +107,7 @@ function QuickGrid() {
   });
 
   // Spotify-style dynamic grid: mixes playlists and recent albums sorted by
-  // last play (same store as "Recent" in the Library). What you just listened
+  // last play (same store as "Recents" in the Library). What you just listened
   // to rises; the rest is filled with recent albums (server order) and fresh
   // playlists (by modification date). Favorites is always pinned first, outside
   // this sorting.

@@ -86,7 +86,7 @@ const DEBOUNCE_MS = 300;
 
 const SORT_LABEL: Record<SongListSort, string> = {
   server: 'Default',
-  recent: 'Recent',
+  recent: 'Recently played',
   alpha: 'A-Z',
   added: 'Recently added',
   frequent: 'Most played::songs',
@@ -132,8 +132,8 @@ export default function BrowseSongsScreen() {
     (sorts.find((s) => s === sortParam) ?? sorts[0] ?? 'server') as SongListSort,
   );
 
-  // When the last song played changes, "Recent" is a different list: it is the
-  // key so the list follows along instead of sitting in the cache until
+  // When the last song played changes, "Recently played" is a different list:
+  // it is the key so the list follows along instead of sitting in the cache until
   // something else happens to clear it (playing something used to show up here
   // only after refreshing Home). The other orders don't move with a play, so
   // they don't carry it.
@@ -147,8 +147,8 @@ export default function BrowseSongsScreen() {
       initialPageParam: 0,
       getNextPageParam: (last, pages) => (last.length === PAGE ? pages.length * PAGE : undefined),
       enabled: canFetch,
-      // "Recent" is this phone's own play history and costs nothing to rebuild,
-      // so it is rebuilt every time the screen opens. "Most played" is not:
+      // "Recently played" is this phone's own play history and costs nothing to
+      // rebuild, so it is rebuilt every time the screen opens. "Most played" is not:
       // the server only sorts albums, so that list is fifteen album requests,
       // and asking for them again on every visit was most of the traffic of a
       // session. It goes back to the ordinary five minutes, and the album
