@@ -21,14 +21,14 @@ import {
 } from '@/store/jukebox';
 import { useToast } from '@/store/toast';
 import {
-    upnpAvailable,
-    upnpConnect,
-    upnpDisconnect,
-    upnpJoinDevice,
-    upnpSearch,
-    upnpUngroupDevice,
-    useUpnp,
-    type UpnpDevice,
+  upnpAvailable,
+  upnpConnect,
+  upnpDisconnect,
+  upnpJoinDevice,
+  upnpSearch,
+  upnpUngroupDevice,
+  useUpnp,
+  type UpnpDevice,
 } from '@/store/upnp';
 import { colors, fontSize, spacing } from '@/theme';
 
