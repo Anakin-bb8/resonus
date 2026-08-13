@@ -122,7 +122,7 @@ function resetPlaybackSession(): void {
 }
 
 interface JfClientCapabilities {
-  PlayableMediaTypes: Array<'Audio' | 'Video' | 'Book' | 'Photo'>;
+  PlayableMediaTypes: ('Audio' | 'Video' | 'Book' | 'Photo')[];
   SupportsMediaControl: boolean;
   SupportsPersistentIdentifier: boolean;
   SupportedCommands: string[];
@@ -263,8 +263,19 @@ export async function makeAuth(
  */
 export async function ping(auth: SubsonicAuth): Promise<void> {
   await request(auth, '/Users/Me', {}, {}, true);
-  // Best effort: lets Jellyfin keep this device/session presence metadata up to date.
-  await request(auth, '/Sessions/Capabilities/Full', {}, {
+  /**
+   * Lets Jellyfin keep this device's session metadata up to date, and not
+   * waited for on purpose.
+   *
+   * What this function answers is whether the server is there, and `reachable`
+   * asks it against a four second clock covering everything it does. Awaited,
+   * a server that answers the question perfectly well but is slow to take this
+   * would come back as unreachable — at login, at a profile switch and on the
+   * test button, and once per candidate URL, since that is where reachability
+   * is decided between several. It is best effort in the first place: nothing
+   * downstream reads it and a failure is already swallowed.
+   */
+  void request(auth, '/Sessions/Capabilities/Full', {}, {
     method: 'POST',
     body: CLIENT_CAPABILITIES,
   }).catch(() => {});
