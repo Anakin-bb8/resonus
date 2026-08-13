@@ -14,11 +14,44 @@
  * record that says nothing is taken for an album, which is not the same thing
  * — it is the value MusicBrainz itself defaults to, and it is what the client
  * this was compared against does.
+ *
+ * Every type MusicBrainz defines has a shelf here, primary and secondary
+ * alike. It did not start that way: everything past live and compilation went
+ * to Other, on the grounds that a row of one record repeated down the screen
+ * is worse than a row called Other. What makes the whole set affordable is
+ * that empty shelves are never drawn (see `groupArtistAlbums`), so nobody sees
+ * a heading for a kind of record their library does not have — an artist with
+ * one demo and one remix album gets those two rows and no others, and the tag
+ * is the only thing that can put a record on either.
  */
 import { type Album } from '@/api/subsonic';
 
-/** The shelves, in the order they are shown. */
-export const RELEASE_GROUPS = ['album', 'ep', 'single', 'live', 'compilation', 'other'] as const;
+/**
+ * The shelves, in the order they are shown.
+ *
+ * Records first and in the order a discography is usually read, then the ones
+ * that are a record of something else (a broadcast, a reading, an interview),
+ * and Other last because it is where the unplaceable goes.
+ */
+export const RELEASE_GROUPS = [
+  'album',
+  'ep',
+  'single',
+  'live',
+  'compilation',
+  'soundtrack',
+  'remix',
+  'djmix',
+  'mixtape',
+  'demo',
+  'broadcast',
+  'spokenword',
+  'interview',
+  'audiobook',
+  'audiodrama',
+  'fieldrecording',
+  'other',
+] as const;
 
 export type ReleaseGroup = (typeof RELEASE_GROUPS)[number];
 
@@ -29,22 +62,75 @@ export const RELEASE_GROUP_TITLE: Record<ReleaseGroup, string> = {
   single: 'Singles',
   live: 'Live',
   compilation: 'Compilations',
+  soundtrack: 'Soundtracks',
+  remix: 'Remixes',
+  djmix: 'DJ-mixes',
+  mixtape: 'Mixtapes',
+  demo: 'Demos',
+  broadcast: 'Broadcasts',
+  spokenword: 'Spoken word',
+  interview: 'Interviews',
+  audiobook: 'Audiobooks',
+  audiodrama: 'Audio dramas',
+  fieldrecording: 'Field recordings',
   other: 'Other',
 };
 
 /**
+ * The tag as written, down to what can be compared.
+ *
+ * MusicBrainz spells four of these with something in the middle — `DJ-mix`,
+ * `Mixtape/Street`, `Audio drama`, `Field recording` — and a tag travels
+ * through a tagger, a file format and a server before it gets here, any of
+ * which may have picked a different one. Dropping everything that is not a
+ * letter or a digit makes the spelling stop mattering, and none of the types
+ * collide once it is gone.
+ */
+function token(type: string): string {
+  return type.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+/**
+ * Which shelf wins, tried in this order.
+ *
+ * A record carries one primary type and as many secondary ones as apply —
+ * MusicBrainz asks for every one that does — so a live compilation is
+ * `["album", "compilation", "live"]` and something has to break the tie. The
+ * rule is that the secondary types come first, because they are the ones that
+ * say what the record IS to somebody reading a discography: the studio albums
+ * belong under Albums without a live record among them.
+ *
+ * Among the secondary ones, the more particular claim wins. The spoken ones
+ * lead because a book read aloud is not filed with music at all whatever else
+ * it says. Then `mixtape` over `djmix` and `djmix` over `compilation`, which
+ * is MusicBrainz's own reading: it separates mixtapes from commercial DJ mixes
+ * and says those are usually compilations too. `live` stays directly above
+ * `compilation`, where it has always been, so nothing that used to be on one
+ * of those two moves unless it carries a more particular tag than both.
+ */
+const SHELF_ORDER: { key: ReleaseGroup; tags: string[] }[] = [
+  { key: 'audiobook', tags: ['audiobook'] },
+  { key: 'audiodrama', tags: ['audiodrama'] },
+  { key: 'interview', tags: ['interview'] },
+  { key: 'spokenword', tags: ['spokenword'] },
+  { key: 'fieldrecording', tags: ['fieldrecording'] },
+  { key: 'soundtrack', tags: ['soundtrack'] },
+  { key: 'mixtape', tags: ['mixtapestreet', 'mixtape'] },
+  { key: 'djmix', tags: ['djmix'] },
+  { key: 'remix', tags: ['remix'] },
+  { key: 'demo', tags: ['demo'] },
+  { key: 'live', tags: ['live'] },
+  { key: 'compilation', tags: ['compilation'] },
+  // The primary types, which only get a look in once nothing above has
+  // claimed the record.
+  { key: 'ep', tags: ['ep'] },
+  { key: 'single', tags: ['single'] },
+  { key: 'broadcast', tags: ['broadcast'] },
+  { key: 'album', tags: ['album'] },
+];
+
+/**
  * Which shelf a record belongs on. Every record lands on one.
- *
- * Secondary types win over the primary one, and that is the one real decision
- * in here: a live album is tagged `["album", "live"]`, and somebody looking
- * through a discography wants the studio records under Albums, with the live
- * ones somewhere of their own. The same for a compilation.
- *
- * Everything past those two — remixes, soundtracks, demos, dj-mixes, radio
- * broadcasts — goes to Other rather than earning a shelf each. A row of one
- * record repeated eight times down the screen is not a better answer than a
- * row called Other, and these are rare enough that most artists would get
- * exactly that.
  *
  * A record that says nothing is an album. This started out refusing to sort a
  * discography where anything was untagged, so as not to drop it out of every
@@ -54,16 +140,17 @@ export const RELEASE_GROUP_TITLE: Record<ReleaseGroup, string> = {
  * than not.
  */
 export function releaseGroupOf(album: Album): ReleaseGroup {
-  const types = (album.releaseTypes ?? []).map((t) => t.trim().toLowerCase()).filter(Boolean);
-  // Says the same thing as a secondary type and does not need the tag, so a
-  // server that only sends this still gets its compilations out of the way.
-  if (album.isCompilation) return 'compilation';
-  if (types.includes('live')) return 'live';
-  if (types.includes('compilation')) return 'compilation';
-  if (types.includes('ep')) return 'ep';
-  if (types.includes('single')) return 'single';
-  if (types.includes('album')) return 'album';
-  return types.length > 0 ? 'other' : 'album';
+  const types = new Set((album.releaseTypes ?? []).map(token).filter(Boolean));
+  // OpenSubsonic's own flag says exactly what the secondary type says and does
+  // not need the tag, so a server that only sends this still gets its
+  // compilations out of the way. Read as the tag rather than ahead of it: it
+  // used to be answered first, which meant a live compilation went to Live when
+  // it was tagged and to Compilations when it was flagged, for the same record.
+  if (album.isCompilation) types.add('compilation');
+  for (const shelf of SHELF_ORDER) {
+    if (shelf.tags.some((tag) => types.has(tag))) return shelf.key;
+  }
+  return types.size > 0 ? 'other' : 'album';
 }
 
 /**
