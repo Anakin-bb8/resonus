@@ -610,7 +610,7 @@ you are actually typing into, which is easier than reading it here.
 | --- | --- |
 | `Apply the equalizer to the app audio.` | The line under “Equalizer”, explaining it |
 | `Bands` | The equalizer's frequency sliders |
-| `Custom` | An equalizer preset the user made themselves |
+| `Custom` | Two places, and the sense is the same in both: made by the user rather than given. In Settings › Equalizer it is the first option of the preset list, meaning none of the presets below it and the bands left wherever you dragged them. On a playlist it is the name of the list's own manual order, the one you made by dragging songs, and it is the order a playlist opens in. If your language would inflect the word differently for a preset and for an order, this is one string doing both |
 | `Equalizer` |  |
 | `Preset` | An equalizer preset. Not a bitrate |
 | `Reset bands` | Put the equalizer's frequency sliders back to flat |
