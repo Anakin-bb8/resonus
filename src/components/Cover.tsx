@@ -189,6 +189,95 @@ export function useRedrawOnReturn(
   return { nonce, onDisplay };
 }
 
+/**
+ * How long a source is given to appear before the next one is let through.
+ *
+ * The wait below ends when the picture is drawn, and one that has to be fetched
+ * can be a while — that part is fine and is the whole point. This is for the
+ * one that never arrives at all: a cover that is neither on the phone nor
+ * reachable, or a load the system is sitting on because the app is in the
+ * background. Without a cap those would hold the queue for good and leave the
+ * view a song behind.
+ */
+const SETTLE_CAP = 4000;
+
+/**
+ * Hands an `expo-image` view one source at a time, holding the next one back
+ * until the fade into the current one has finished.
+ *
+ * expo-image crossfades between two views of its own, and it chooses which one
+ * to draw into by asking whether the other still holds a picture. Halfway
+ * through a fade both of them do, so a source arriving there is written into
+ * the view that is fading IN: the picture it was carrying is dropped without
+ * ever being seen, the one underneath is snapped back to full opacity, and the
+ * new fade starts from that. The view it reuses is also the one whose fade-out
+ * was about to clear it, and that clearing still runs, so some of those land on
+ * an empty view instead.
+ *
+ * On the player's backdrop, which is a full-screen blurred cover with a long
+ * fade, that is what skipping through a queue looks like: the background jumps
+ * back to the cover you started from, or flashes to nothing, before settling on
+ * the one you stopped at.
+ *
+ * So the target is kept here and only handed over once nothing is in flight. At
+ * worst the view is one picture behind for a moment and then catches up in a
+ * single clean fade, which is the right thing to look at while somebody is
+ * still skipping.
+ */
+export function useSettledSource(
+  uri: string | undefined,
+  fade: number,
+): { shown: string | undefined; onDisplay: () => void } {
+  const [shown, setShown] = useState(uri);
+  /** Bumped when a fade is over, to run the effect below again. */
+  const [settled, setSettled] = useState(0);
+  const fading = useRef(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const release = useCallback((ms: number) => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      timer.current = null;
+      fading.current = false;
+      setSettled((n) => n + 1);
+    }, ms);
+  }, []);
+  useEffect(() => {
+    if (fading.current || uri === shown) return;
+    setShown(uri);
+    // Nothing to fade into and nothing to wait for. A song with no artwork
+    // between two that have some would otherwise hold the next cover back for
+    // the whole cap: no picture is ever drawn for an empty source, so the only
+    // thing that could end the wait is the cap itself.
+    if (!uri) return;
+    fading.current = true;
+    release(SETTLE_CAP);
+  }, [uri, shown, settled, release]);
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
+  /**
+   * Coming back from the background, where the timers above do not run (see the
+   * player's cover) and a load does not finish either. Whatever was in flight
+   * when the app went away is not going to report now, so the wait is dropped
+   * and the current source goes in — which is also when it matters most, the
+   * song having moved on several times in a pocket.
+   */
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active' && fading.current) release(0);
+    });
+    return () => sub.remove();
+  }, [release]);
+  // The fade starts when the picture goes up, not when the source is set.
+  const onDisplay = useCallback(() => {
+    if (fading.current) release(fade);
+  }, [fade, release]);
+  return { shown, onDisplay };
+}
+
 export function Cover({
   uri,
   size,
