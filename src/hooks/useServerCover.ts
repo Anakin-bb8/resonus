@@ -16,7 +16,9 @@ import { forgetMirrorCover } from '@/lib/mirrorCovers';
 import { useAuthStore } from '@/store/auth';
 import { useLibraryMirror } from '@/store/libraryMirror';
 
-type PickedImage = { uri: string; name: string; type: string };
+// No filename: the upload streams the file the picker wrote, and its name on
+// disk carries the extension already.
+type PickedImage = { uri: string; type: string };
 
 /** Cover action pending a password (older profiles). */
 type CoverAction = { kind: 'upload'; image: PickedImage } | { kind: 'remove' };
@@ -66,11 +68,7 @@ export function useServerCover({
     if (res.canceled || !asset) return;
     await runAction({
       kind: 'upload',
-      image: {
-        uri: asset.uri,
-        name: asset.fileName ?? 'cover.jpg',
-        type: asset.mimeType ?? 'image/jpeg',
-      },
+      image: { uri: asset.uri, type: asset.mimeType ?? 'image/jpeg' },
     });
   }
 
@@ -144,7 +142,14 @@ export function useServerCover({
       } else if (e instanceof NavidromeError && e.kind === 'forbidden') {
         setError(t('Artwork upload is disabled on the server'));
       } else {
-        setError(t("Couldn't update the cover"));
+        // Everything that is not one of the three the app can explain. The
+        // status goes in brackets when there is one: this message on its own
+        // says nothing a report can be worked from, and it is the message the
+        // one bug in this path spent weeks hiding behind.
+        const status = e instanceof NavidromeError ? e.status : undefined;
+        setError(
+          status ? `${t("Couldn't update the cover")} (${status})` : t("Couldn't update the cover"),
+        );
       }
     } finally {
       setUploading(false);
