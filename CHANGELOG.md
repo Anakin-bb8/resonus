@@ -11,82 +11,20 @@ Releases before 0.2.1 are only listed on the
 
 ## [0.7.0] - 2026-08-13
 
-Sonos works. It never had, and the reason was not a bug so much as a wrong
+What to try first is the car. Android Auto was taken apart and rebuilt from the
+root down: three tabs instead of two, covers instead of lists of words, and
+every row that leads somewhere carrying an icon. Home is a shuffle button that
+plays on the tap and two shelves of records underneath. Recents is what you
+listened to last, whatever kind of thing it was. What needs a real car to
+confirm is the pausing and the resuming, so try those before anything else.
+
+Sonos works too, and it never had. The reason was not a bug so much as a wrong
 assumption: a speaker that is not the coordinator of its group refuses to be
 told what to play, and Resonus was telling whichever one you tapped. The whole
 UPnP layer was rebuilt around that — finding devices, talking to them and
 reading a Sonos system's own idea of which rooms are grouped with which — by
 @garrit-schroeder, who also brought Jellyfin's session reporting. Rooms can now
 be joined to what is playing and taken out again from the output sheet itself.
-
-Two things had been quietly broken for days. Scanning the whole phone in the
-local profile found nothing at all, on every phone, since the move to Expo SDK
-56: the media library kept the old function names as stubs that warn and then
-throw, so nothing stopped compiling and the scan simply came back empty.
-Changing the cover of a playlist or a radio station failed the same way, from
-the same kind of change — the multipart upload was built with React Native's
-own file part, which the new networking layer does not accept, and the failure
-looked exactly like the server being unreachable.
-
-On Jellyfin the app now appears in the server's dashboard while it plays, with
-its position, and a track counts as played when it crosses the threshold you
-set rather than whenever playback stops.
-
-A discography sorts into every kind of record MusicBrainz defines rather than
-six, and empty shelves are never drawn, so an artist with one demo and one
-remix album gets those two rows and no others.
-
-### Added
-
-- Casting to Sonos, and grouping: a room can be added to whatever is playing or
-  taken out of the group, from the output sheet (#121).
-- Jellyfin reports what is playing to the server, so Resonus shows up in its
-  dashboard, and plays are counted against the app's own listen threshold.
-- Every MusicBrainz release type has a shelf of its own in a discography:
-  soundtracks, remixes, DJ-mixes, mixtapes, demos, broadcasts, spoken word,
-  interviews, audiobooks, audio dramas and field recordings, alongside the ones
-  that were already there.
-- Russian, German and Catalan are complete for this release.
-
-### Changed
-
-- The output picker looks like the rest of the app again: outputs are a list
-  with the one playing marked, and the search line only claims to be searching
-  while it is.
-- A playlist's sort says Default and Recently added, which is what those two
-  orders are called everywhere else. Default is honest about smart playlists
-  too, where the order is the server's and not yours.
-- Restoring the default settings is drawn in red, like the other actions that
-  cannot be taken back.
-- The update prompt hands the version number over bare, so a language can put
-  its own word for "version" in front of it.
-
-### Fixed
-
-- Scanning the whole phone in the local profile found no music at all, on any
-  phone, since 0.6.5.
-- The cover of a playlist or a radio station could not be changed, on any
-  server.
-- The heart and the ⋯ menu disappeared from the player, and stayed gone until
-  the queue was replaced.
-- The blurred background jumped back to the cover you started from when
-  skipping through a queue.
-- The server's own speakers had no row in the output sheet, so jukebox mode
-  could not be reached.
-- A renderer that rejects FLAC gets offered MP3 instead of being given up on
-  (#70).
-- A tag read that came back short left the cover out of a scanned file.
-- Reading whether a Jellyfin server is there is one request again, not two.
-
-## [0.7.0-beta.1] - 2026-08-11
-
-A beta, and what to try first is the car. Android Auto was taken apart and
-rebuilt from the root down: three tabs instead of two, covers instead of lists
-of words, and every row that leads somewhere carrying an icon. Home is a
-shuffle button that plays on the tap and two shelves of records underneath.
-Recents is what you listened to last, whatever kind of thing it was. What
-needs a real car to confirm is the pausing and the resuming, so try those
-before anything else.
 
 Playlists and starred albums were reaching the car empty. A library kept
 offline has every cover stored as a local file, and those cannot be read from
@@ -102,9 +40,20 @@ once the phone puts the app to sleep in your pocket. So the head unit said
 paused while the speakers kept going, and pressing play afterwards started the
 song at volume zero, with the progress bar moving and nothing coming out.
 
+Two more things had been quietly broken. Scanning the whole phone in the local
+profile found nothing at all, on every phone, since the move to Expo SDK 56:
+the media library kept the old function names as stubs that warn and then
+throw, so nothing stopped compiling and the scan simply came back empty.
+Changing the cover of a playlist or a radio station failed the same way, from
+the same kind of change — the multipart upload was built with React Native's
+own file part, which the new networking layer does not accept, and the failure
+looked exactly like the server being unreachable.
+
 Resonus also tells you when there is a new version, and installs it for you.
-And the artist screen holds every song by an artist in one list, with albums,
-EPs and singles as shelves of their own.
+The artist screen holds every song by an artist in one list. And a discography
+sorts into every kind of record MusicBrainz defines rather than six, with empty
+shelves never drawn, so an artist with one demo and one remix album gets those
+two rows and no others.
 
 ### Added
 
@@ -113,11 +62,17 @@ EPs and singles as shelves of their own.
   albums as grids of covers.
 - Shuffle and repeat on the car's playback screen, lit to match what the
   player is actually doing.
+- Casting to Sonos, and grouping: a room can be added to whatever is playing or
+  taken out of the group, from the output sheet (#121).
+- Jellyfin reports what is playing to the server, so Resonus shows up in its
+  dashboard, and plays are counted against the app's own listen threshold.
 - Resonus checks for new versions and installs them from inside the app. The
   prompt links to what changed. Under Settings › About, and it can be turned
   off.
-- Every song by an artist in one list, and their records split into Albums,
-  EPs and Singles.
+- Every song by an artist in one list, and their records split into shelves:
+  albums, EPs and singles, and every other release type MusicBrainz defines —
+  soundtracks, remixes, DJ-mixes, mixtapes, demos, broadcasts, spoken word,
+  interviews, audiobooks, audio dramas and field recordings.
 - Rate an artist from its ⋯ menu, and reach the artist from an album's.
 - Keep playback paused when skipping tracks, off by default, in Settings ›
   Player.
@@ -127,7 +82,9 @@ EPs and singles as shelves of their own.
 - Home shelves say Show all and land on the list they came from. Most played
   songs and Random artists lead somewhere too, and holding a song opens its
   menu.
-- Diagnostics says how the cover of what is playing was arrived at.
+- Diagnostics says how the cover of what is playing was arrived at, and what
+  the player was doing while the app was minimized.
+- Russian, German and Catalan are complete for this release.
 
 ### Changed
 
@@ -138,6 +95,16 @@ EPs and singles as shelves of their own.
 - Playing something from the car is written down as recently played, which it
   never was, so it shows up in Recents, in the Library's order and in the
   phone's grid.
+- The output picker looks like the rest of the app: outputs are a list with the
+  one playing marked, and the search line only claims to be searching while it
+  is.
+- A playlist's sort says Default and Recently added, which is what those two
+  orders are called everywhere else. Default is honest about smart playlists
+  too, where the order is the server's and not yours.
+- Restoring the default settings is drawn in red, like the other actions that
+  cannot be taken back.
+- The update prompt hands the version number over bare, so a language can put
+  its own word for "version" in front of it.
 
 ### Fixed
 
@@ -151,8 +118,21 @@ EPs and singles as shelves of their own.
 - Warming the next track hung up at four seconds, which on some servers
   undid the warm entirely and left the track to be fetched from scratch
   (#137).
-- The player could show the cover of the track that had just finished after a
-  spell away from the app.
+- Scanning the whole phone in the local profile found no music at all, on any
+  phone, since 0.6.5.
+- The cover of a playlist or a radio station could not be changed, on any
+  server.
+- The heart and the ⋯ menu disappeared from the player, and stayed gone until
+  the queue was replaced.
+- The blurred background jumped back to the cover you started from when
+  skipping through a queue, and the player could show the cover of the track
+  that had just finished after a spell away from the app.
+- The server's own speakers had no row in the output sheet, so jukebox mode
+  could not be reached.
+- A renderer that rejects FLAC gets offered MP3 instead of being given up on
+  (#70).
+- A tag read that came back short left the cover out of a scanned file.
+- Reading whether a Jellyfin server is there is one request again, not two.
 - One untagged record no longer undoes the whole split of an artist's
   releases.
 - The multi-select bar and the toast sit above the mini player instead of
