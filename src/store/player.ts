@@ -1088,6 +1088,16 @@ function flushCurrentAlbumProgress(force = false): void {
   rememberAlbumProgress(st.queue[st.index], st.positionSec, force);
 }
 
+function clearFinishedAudiobookAlbumProgress(): void {
+  const st = usePlayerStore.getState();
+  if (!st.sourceHref?.startsWith('/album/')) return;
+  if (!useSettings.getState().saveAudiobookProgress) return;
+  const song = st.queue[st.index];
+  if (!song?.albumId || !isAudiobookSongCached(song)) return;
+  const { auth, offline } = useAuthStore.getState();
+  useAlbumProgress.getState().clearAlbum(auth, offline, song.albumId);
+}
+
 /**
  * A list in a new order, without touching the one handed in. Fisher-Yates,
  * shared by the shuffle button and by starting a list while shuffle is already
@@ -2308,6 +2318,7 @@ function onStatus(status: AudioStatus) {
     }
     const ni = nextIndex(false);
     if (ni == null) {
+      clearFinishedAudiobookAlbumProgress();
       usePlayerStore.setState({ isPlaying: false });
     } else {
       pushHistory();
@@ -2651,7 +2662,10 @@ export function initRemoteIntegration() {
         return;
       }
       const ni = nextIndex(false);
-      if (ni == null) usePlayerStore.setState({ isPlaying: false });
+      if (ni == null) {
+        clearFinishedAudiobookAlbumProgress();
+        usePlayerStore.setState({ isPlaying: false });
+      }
       else void loadIndex(ni, true);
     },
   };

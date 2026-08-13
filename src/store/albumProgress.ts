@@ -178,6 +178,11 @@ interface AlbumProgressState {
   hydrated: boolean;
   hydrate: () => Promise<void>;
   clearAll: () => void;
+  clearAlbum: (
+    auth: SubsonicAuth | null | undefined,
+    offline: boolean,
+    albumId: string,
+  ) => void;
   remember: (
     auth: SubsonicAuth | null | undefined,
     offline: boolean,
@@ -304,6 +309,16 @@ export const useAlbumProgress = create<AlbumProgressState>((set, get) => ({
     saveTimer = null;
     set({ byProfile: {} });
     void setItem(STORAGE_KEY, JSON.stringify({}));
+  },
+
+  clearAlbum: (auth, offline, albumId) => {
+    const key = profileKey(auth, offline);
+    const prevProfile = get().byProfile[key];
+    if (!prevProfile?.[albumId]) return;
+    const { [albumId]: _removed, ...nextProfile } = prevProfile;
+    const byProfile = { ...get().byProfile, [key]: nextProfile };
+    set({ byProfile });
+    scheduleSave(byProfile);
   },
 
   hydrate: async () => {
