@@ -108,10 +108,10 @@ export function callSites() {
       const key = unescapeLiteral(m[2]);
       // By the base key too, since an override is never in en.json: English
       // needs one word where another language may need two. A sort label is
-      // handed over as data (`labels: { recent: 'Custom::order' }`) and only
+      // handed over as data (`{ frequent: 'Most played::songs' }`) and only
       // reaches `t()` inside the hook, so this pass is the only one that can
-      // see it — and without this it saw nothing, leaving the override real at
-      // runtime and invisible to every translator.
+      // see it — and without this it saw nothing, which is how two of those
+      // sat in the code for months without being offered to a translator.
       if ((key in en || baseKey(key) in en) && !placed.has(key)) add(key, file);
     }
   }

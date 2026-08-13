@@ -214,7 +214,7 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `A-Z` | Sort option: the order of a list |
-| `Default` | Sorting pill: what you get when nothing is sorted, which is the order the server keeps its songs in. Not alphabetical, and not Resonus deciding |
+| `Default` | Sorting pill: what you get when nothing is sorted, which is the order the server keeps its songs in. Not alphabetical, and not Resonus deciding. On a playlist it is the order the list came in, which is the one you made by dragging the songs if it is an ordinary playlist and the one its rules produced if it is a smart one — hence a word that is true of both rather than "custom" or "pre-defined" |
 | `Find a song` | The search box's placeholder on that screen |
 | `No songs yet` | Empty state when the library has no songs |
 | `Nothing played yet` | Empty state: this phone has not played anything yet |
@@ -251,7 +251,7 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `Default` | Sorting pill: what you get when nothing is sorted, which is the order the server keeps its songs in. Not alphabetical, and not Resonus deciding |
+| `Default` | Sorting pill: what you get when nothing is sorted, which is the order the server keeps its songs in. Not alphabetical, and not Resonus deciding. On a playlist it is the order the list came in, which is the one you made by dragging the songs if it is an ordinary playlist and the one its rules produced if it is a smart one — hence a word that is true of both rather than "custom" or "pre-defined" |
 | `Genre` | Label of a field in the song information sheet |
 | `No albums in this genre` | Empty state heading |
 | `No songs in this genre` | Empty state heading |
@@ -418,6 +418,7 @@ you are actually typing into, which is easier than reading it here.
 | `Confirm your password` | Changing a cover on the server needs the password again. It is not a new password being set |
 | `Couldn't load the playlist.` | Error on the screen, with a Retry button |
 | `Couldn't update the cover` | Toast: the upload failed |
+| `Default` | Sorting pill: what you get when nothing is sorted, which is the order the server keeps its songs in. Not alphabetical, and not Resonus deciding. On a playlist it is the order the list came in, which is the one you made by dragging the songs if it is an ordinary playlist and the one its rules produced if it is a smart one — hence a word that is true of both rather than "custom" or "pre-defined" |
 | `Delete` | The confirm button of a delete dialog, for a playlist or a radio station |
 | `Delete “{name}”?` | Dialog title. `{name}` is the playlist or station |
 | `Delete playlist` | Menu action, in red |
@@ -610,7 +611,7 @@ you are actually typing into, which is easier than reading it here.
 | --- | --- |
 | `Apply the equalizer to the app audio.` | The line under “Equalizer”, explaining it |
 | `Bands` | The equalizer's frequency sliders |
-| `Custom` | Settings › Equalizer, the first option of the preset list: none of the presets below it, the bands left wherever you dragged them. The playlist sort uses the same word in English and has its own key, `Custom::order`, so a language that bends the word to what it describes can have two |
+| `Custom` | Settings › Equalizer, the first option of the preset list: none of the presets below it, the bands left wherever you dragged them. The only place this word is used |
 | `Equalizer` |  |
 | `Preset` | An equalizer preset. Not a bitrate |
 | `Reset bands` | Put the equalizer's frequency sliders back to flat |

@@ -121,15 +121,24 @@ export default function PlaylistScreen() {
     else if (download.status === 'active') setConfirmStop(true);
   }, [download.status]);
 
-  // In playlists 'recent' = order saved on the server = manual order, so it's
-  // labeled "Custom"; 'added' = addition order ("Recent").
-  //
-  // `Custom::order` and not plain `Custom`: the equalizer calls its
-  // user-made preset the same word, and English is happy to. A language where
-  // the word bends to what it describes is not, and an order and a preset are
-  // not the same thing to bend to. The suffix is never shown; a language that
-  // wants one word for both simply leaves it alone and both fall back to
-  // `Custom`.
+  /**
+   * In a playlist `recent` is the order the server keeps the songs in, which
+   * is what "Default" means everywhere else in the app (see `useServerSort`),
+   * so it says Default here too.
+   *
+   * It used to say "Custom", and that was only ever half true. Where the order
+   * comes from depends on what kind of list it is: drag the songs around in an
+   * ordinary playlist and this is what you dragged, but a smart playlist is
+   * ordered by the rules it was built with on the server and there is nothing
+   * of yours in it. "Custom" is wrong for the second kind and "Pre-defined"
+   * would be wrong for the first; the order simply is what the list came with,
+   * whoever decided it, and that is what Default says.
+   *
+   * `added` keeps the name it has on every other screen, "Recently added",
+   * rather than being called "Recent" only here — which is a third thing again,
+   * since "Recent" elsewhere is about what YOU played, not about when a song
+   * joined a list.
+   */
   const {
     songs: displaySongs,
     indices: playlistIndices,
@@ -138,9 +147,9 @@ export default function PlaylistScreen() {
     setSort,
   } = useSongSort(data?.songs ?? [], `playlist:${id}`, {
     fields: ['recent', 'added', 'alpha', 'artist', 'album', 'downloaded'],
-    labels: { recent: 'Custom::order', added: 'Recent' },
-    // Like Spotify: default "Custom" (the list's manual order, new items added
-    // at the bottom); "Recent" puts the latest added at the top.
+    labels: { recent: 'Default' },
+    // The list opens in the order it came in, new items at the bottom;
+    // "Recently added" puts the latest at the top.
     defaultSort: { field: 'recent', dir: 'asc' },
   });
 
