@@ -135,12 +135,15 @@ export default function AboutSettings() {
             },
           ]}
         />
-        {/* Last on the screen: everything above it is a link out or a switch,
-            and this is the only thing here that changes something and cannot
-            be taken back. The confirmation is what it always had. */}
+        {/* Last on the screen, and the only thing here that changes something
+            and cannot be taken back: everything above it is a link out or a
+            switch. So it is marked the way the app marks those, in the same red
+            as deleting a playlist or the downloads, and the confirmation it
+            always had stays. */}
         <SettingRow
           icon="arrow-undo-outline"
           label={t('Restore default settings')}
+          destructive
           onPress={() => setConfirmReset(true)}
         />
       </ScrollView>

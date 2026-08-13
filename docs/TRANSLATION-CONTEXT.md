@@ -377,7 +377,7 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `Add to the group` |  |
+| `Add to the group` | Read out by the screen reader, never shown: the + beside a Sonos room in the output sheet, which sets that room playing along with the one already playing. Sonos only, and `group` is a group of SPEAKERS in the sense Sonos itself uses — rooms playing the same thing together. Whatever word Sonos uses in your language is the one |
 | `Back {n} seconds` | Read out by the screen reader for the seek button. `{n}` is how many seconds it is set to |
 | `Currently playing on` | Heading above the output the music is coming out of right now, at the top of the output sheet |
 | `Devices` | The audio output devices to cast to |
@@ -393,7 +393,7 @@ you are actually typing into, which is easier than reading it here.
 | `Queue` | The list of songs waiting to play. Not a playlist |
 | `Radio` | Internet radio stations. Most languages keep the word |
 | `Remove from favorites` | The same button when it is already a favourite |
-| `Remove from the group` |  |
+| `Remove from the group` | The − beside `Add to the group`, and the same in reverse: it takes that room out of the group so it stops playing along. Read out by the screen reader, never shown, and Sonos only |
 | `Repeat` | Start again at the end |
 | `Search again` |  |
 | `Searching for devices…` | In the output sheet: looking for speakers and TVs to cast to |

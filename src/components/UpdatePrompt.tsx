@@ -85,15 +85,22 @@ export function UpdatePrompt() {
         message={
           // The size only when it is somebody's data plan. On Wi-Fi it is a
           // number that answers a question nobody asked.
+          //
+          // The number goes in bare, with no `v` in front of it. That letter is
+          // English shorthand and it was being glued on here, which made it
+          // every language's whether they wanted it or not: a translator who
+          // would rather write the word for "version" got "version v0.7.0" and
+          // no way to do anything about it. Now the sentence decides, which is
+          // where a decision about wording belongs.
           cellular && megabytes > 0
             ? t('Resonus {new} is out. You have {old}. The download is about {mb} MB.', {
-                new: `v${version}`,
-                old: `v${currentVersion()}`,
+                new: version ?? '',
+                old: currentVersion(),
                 mb: megabytes,
               })
             : t('Resonus {new} is out. You have {old}.', {
-                new: `v${version}`,
-                old: `v${currentVersion()}`,
+                new: version ?? '',
+                old: currentVersion(),
               })
         }
         confirmLabel={t('Update')}
@@ -124,7 +131,7 @@ export function UpdatePrompt() {
         <View style={styles.backdrop}>
           <View style={styles.card}>
             <Text style={styles.title}>
-              {t('Downloading Resonus {version}', { version: `v${version ?? ''}` })}
+              {t('Downloading Resonus {version}', { version: version ?? '' })}
             </Text>
             <View style={styles.track}>
               <View
