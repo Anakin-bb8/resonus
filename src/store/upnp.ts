@@ -9,10 +9,8 @@
 import { requireOptionalNativeModule } from 'expo-modules-core';
 import { create } from 'zustand';
 
-import { streamUrl, type Song } from '@/api/backend';
-// The data layer's: it resolves a downloaded cover to the file on disk, which
-// is filtered out below since only this phone can reach it.
-import { COVER, coverArtUrl } from '@/api/data';
+import { coverArtUrl as serverCoverArtUrl, streamUrl, type Song } from '@/api/backend';
+import { COVER } from '@/api/data';
 import { useAuthStore } from './auth';
 import { castStop } from './castMedia';
 import { useSettings } from './settings';
@@ -23,6 +21,8 @@ export interface RemoteEvents {
   onConnected: () => void;
   /** Session ended: return to the local player at this position. */
   onDisconnected: (lastPositionSec: number) => void;
+  /** Renderer advanced to a different track in its queue. */
+  onTrackChanged: (index: number, positionSec: number, durationSec: number) => void;
   onProgress: (positionSec: number, durationSec: number) => void;
   onPlayingChanged: (isPlaying: boolean, isBuffering: boolean) => void;
   /** Track finished naturally on the renderer. */
@@ -34,12 +34,14 @@ export interface UpnpDevice {
   name: string;
   address: string;
   isTV: boolean;
+  isSonos?: boolean;
+  groupId?: string | null;
+  coordinatorId?: string | null;
 }
 
 interface UpnpStoreState {
   connected: boolean;
   deviceId: string | null;
-  deviceName: string | null;
   /** Renderers found in the last search. */
   devices: UpnpDevice[];
   scanning: boolean;
@@ -48,7 +50,6 @@ interface UpnpStoreState {
 export const useUpnp = create<UpnpStoreState>(() => ({
   connected: false,
   deviceId: null,
-  deviceName: null,
   devices: [],
   scanning: false,
 }));
@@ -57,6 +58,7 @@ interface NativeState {
   playbackState: 'IDLE' | 'PLAYING' | 'PAUSED' | 'STOPPED' | 'BUFFERING' | 'ERROR';
   positionMs: number;
   durationMs: number;
+  trackNumber?: number;
 }
 
 const native = requireOptionalNativeModule('UpnpCast');
@@ -75,9 +77,24 @@ let loading = false;
 let wasPlaying = false;
 /** We requested the pause ourselves: a STOPPED after this is not a track end. */
 let pausedByUs = false;
+let lastNativeTrackNumber = 0;
+
+interface CachedDevice {
+  device: UpnpDevice;
+  expiresAtMs: number;
+}
+
+const discoveredDeviceCache = new Map<string, CachedDevice>();
+const DEFAULT_DEVICE_CACHE_TTL_MS = 15_000;
+let deviceCacheTtlMs = DEFAULT_DEVICE_CACHE_TTL_MS;
 
 export function isUpnpConnected(): boolean {
   return useUpnp.getState().connected;
+}
+
+function currentUpnpDevice(): UpnpDevice | null {
+  const state = useUpnp.getState();
+  return state.deviceId ? state.devices.find((device) => device.id === state.deviceId) ?? null : null;
 }
 
 /** Registers player events. Call only once (from the player). */
@@ -89,8 +106,16 @@ function onNativeState(e: NativeState) {
   if (!isUpnpConnected()) return;
   const pos = (e.positionMs ?? 0) / 1000;
   const dur = (e.durationMs ?? 0) / 1000;
+  const trackNumber = Math.floor(e.trackNumber ?? 0);
   if (pos > 0) lastPositionSec = pos;
   if (dur > 0) lastDurationSec = dur;
+  if (trackNumber > 0) {
+    const changed = trackNumber !== lastNativeTrackNumber;
+    lastNativeTrackNumber = trackNumber;
+    if (changed && !loading) {
+      events?.onTrackChanged(trackNumber - 1, pos, dur || lastDurationSec);
+    }
+  }
   switch (e.playbackState) {
     case 'PLAYING':
       loading = false;
@@ -133,14 +158,11 @@ function onNativeState(e: NativeState) {
 }
 
 /**
- * Searches for renderers on the network (~5 s) and merges them into the list.
+ * Searches for renderers on the network (~5 s) and refreshes the visible list.
  *
- * SSDP discovery runs over UDP and is lossy: a device that didn't answer this
- * round would vanish if we replaced the list, then reappear on the next scan
- * (the flakiness users report). So we MERGE by id and keep everything seen this
- * session; a re-answer refreshes the entry. Truly-gone devices just fail to
- * connect (handled gracefully) and are forgotten when the app is: the list is
- * only ever held in memory.
+ * Devices that are seen are updated immediately. Devices that are missed on one
+ * round stay visible until the cache TTL expires, which smooths over SSDP loss
+ * while still eventually removing stale entries.
  */
 /** A name the library made up out of the address, not the device's own. */
 function looksRaw(name: string): boolean {
@@ -169,11 +191,25 @@ export async function upnpSearch(): Promise<void> {
   if (!native || useUpnp.getState().scanning) return;
   useUpnp.setState({ scanning: true });
   try {
-    const found = (await native.search(5000)) as UpnpDevice[];
-    useUpnp.setState((s) => {
-      const byId = new Map(s.devices.map((d) => [d.id, d]));
-      for (const d of found) byId.set(d.id, d);
-      return { devices: dedupeDevices(Array.from(byId.values())) };
+    const now = Date.now();
+    const found = dedupeDevices((await native.search(5000)) as UpnpDevice[]);
+    const seen = new Set<string>();
+
+    for (const device of found) {
+      seen.add(device.id);
+      discoveredDeviceCache.set(device.id, {
+        device,
+        expiresAtMs: now + deviceCacheTtlMs,
+      });
+    }
+
+    for (const [id, cached] of discoveredDeviceCache) {
+      if (!seen.has(id) && cached.expiresAtMs <= now) discoveredDeviceCache.delete(id);
+    }
+
+    const visible = dedupeDevices(Array.from(discoveredDeviceCache.values()).map((v) => v.device));
+    useUpnp.setState({
+      devices: visible,
     });
   } catch {
     // keep the previous list
@@ -184,16 +220,23 @@ export async function upnpSearch(): Promise<void> {
 
 export async function upnpConnect(device: UpnpDevice): Promise<boolean> {
   if (!native) return false;
+  const current = useUpnp.getState();
+  // Remote-to-remote handoff: stop the previous renderer first so playback
+  // doesn't continue there while the new device takes over.
+  if (current.connected && current.deviceId && current.deviceId !== device.id) {
+    await upnpDisconnect(true);
+  }
   const ok = (await native.connect(device.id)) as boolean;
   if (!ok) return false;
   lastPositionSec = 0;
   lastDurationSec = 0;
+  lastNativeTrackNumber = 0;
   finishedFired = false;
   wasPlaying = false;
   pausedByUs = false;
   stateSub?.remove();
   stateSub = native.addListener('state', onNativeState);
-  useUpnp.setState({ connected: true, deviceId: device.id, deviceName: device.name });
+  useUpnp.setState({ connected: true, deviceId: device.id });
   events?.onConnected();
   return true;
 }
@@ -206,7 +249,10 @@ export async function upnpDisconnect(silent = false): Promise<void> {
   // Closes the casting media session on any disconnect path
   // (including silent ones: output switch, reset), not just the normal one.
   castStop();
-  useUpnp.setState({ connected: false, deviceId: null, deviceName: null });
+  useUpnp.setState({ connected: false, deviceId: null });
+  lastNativeTrackNumber = 0;
+  lastPositionSec = 0;
+  lastDurationSec = 0;
   try {
     await native?.disconnect();
   } catch {
@@ -215,9 +261,61 @@ export async function upnpDisconnect(silent = false): Promise<void> {
   if (!silent) events?.onDisconnected(lastPositionSec);
 }
 
-/** Bitrate for the MP3 fallback below when streaming at original quality: a
- *  lossless track has no bitrate to inherit, and 320 is as good as MP3 gets. */
-const CAST_MP3_BITRATE = 320;
+function firstNonBlank(...values: (string | undefined | null)[]): string | undefined {
+  return values.find((value) => value?.trim())?.trim();
+}
+
+function buildUpnpTrackInfo(song: Song) {
+  const auth = useAuthStore.getState().auth;
+  const listedArtists = firstNonBlank(song.artists?.map((a) => a.name).filter(Boolean).join(', '));
+  const listedAlbumArtists = firstNonBlank(song.albumArtists?.map((a) => a.name).filter(Boolean).join(', '));
+  return {
+    title: song.title,
+    artist: firstNonBlank(song.artist, listedArtists, listedAlbumArtists),
+    albumArtist: listedAlbumArtists,
+    album: firstNonBlank(song.album),
+    artworkUrl: auth ? serverCoverArtUrl(auth, song.albumId ?? song.coverArt, COVER.card) : undefined,
+    durationSec: song.duration ?? 0,
+  };
+}
+
+function buildUpnpTrackUrl(song: Song): string | undefined {
+  const auth = useAuthStore.getState().auth;
+  if (song.url) return song.url;
+  if (!song.localUri && auth) {
+    const settings = useSettings.getState();
+    return streamUrl(auth, song.id, settings.maxBitRate, 0, settings.streamFormat);
+  }
+  return undefined;
+}
+
+function buildUpnpQueuePayload(queue: Song[]) {
+  const tracks = queue.map((song) => {
+    const url = buildUpnpTrackUrl(song);
+    if (!url) return null;
+    const info = buildUpnpTrackInfo(song);
+    const settings = useSettings.getState();
+    return {
+      url,
+      mime: castMime(song, settings.maxBitRate > 0 ? settings.streamFormat : undefined),
+      ...info,
+    };
+  });
+  if (tracks.some((track) => track == null)) return null;
+  return tracks as (ReturnType<typeof buildUpnpTrackInfo> & { url: string; mime: string })[];
+}
+
+function buildUpnpTrackPayload(song: Song) {
+  const url = buildUpnpTrackUrl(song);
+  if (!url) return null;
+  const info = buildUpnpTrackInfo(song);
+  const settings = useSettings.getState();
+  return {
+    url,
+    mime: castMime(song, settings.maxBitRate > 0 ? settings.streamFormat : undefined),
+    ...info,
+  };
+}
 
 /**
  * What to tell the renderer this track is.
@@ -262,59 +360,27 @@ function castMime(song: Song, transcodedTo?: string): string {
  * Loads a track on the renderer. Returns false if there is no session or the song
  * is not castable (local files: the renderer cannot reach them).
  */
-export async function upnpLoad(song: Song, autoplay: boolean, startTimeSec = 0): Promise<boolean> {
+export async function upnpLoad(
+  queue: Song[],
+  index: number,
+  autoplay: boolean,
+  startTimeSec = 0,
+  playMode: string,
+): Promise<boolean> {
   if (!native || !isUpnpConnected()) return false;
-  const auth = useAuthStore.getState().auth;
-  let url: string | undefined;
-  if (song.url) url = song.url;
-  // The Wi-Fi settings on purpose, quality and codec both: casting over UPnP
-  // means being on the same network as the renderer.
-  else if (!song.localUri && auth) {
-    const st = useSettings.getState();
-    url = streamUrl(auth, song.id, st.maxBitRate, 0, st.streamFormat);
-  }
-  if (!url) return false;
-  // Fallback for renderers that turn the original down (see below); only makes
-  // sense for songs the server streams.
-  const s = useSettings.getState();
-  const mp3Url =
-    auth && !song.url && !song.localUri
-      ? streamUrl(auth, song.id, s.maxBitRate > 0 ? s.maxBitRate : CAST_MP3_BITRATE, 0, 'mp3')
-      : undefined;
+  const current = queue[index];
+  if (!current) return false;
   loading = true;
   finishedFired = false;
   wasPlaying = false;
   pausedByUs = false;
   lastPositionSec = startTimeSec;
-  lastDurationSec = song.duration ?? 0;
-  // Two of them: the one line the fallback path can show, and the fields for
-  // the metadata we send ourselves, where each has its own place.
-  const oneLine = [song.title, song.artist].filter(Boolean).join(' — ');
-  const info = {
-    title: song.title,
-    artist: song.artist ?? undefined,
-    album: song.album ?? undefined,
-    // The renderer gets the same picture the lock screen gets, as long as it is
-    // an address it can reach: a downloaded cover lives on this phone only.
-    artworkUrl: coverArtUrl(song.coverArt ?? (song.url ? undefined : song.albumId), COVER.card),
-    durationSec: song.duration ?? 0,
-  };
+  lastDurationSec = current.duration ?? 0;
   try {
-    let ok = (await native.load(url, oneLine, startTimeSec * 1000, {
-      ...info,
-      // Original quality: the file arrives as it is, unless the server was
-      // asked for something else.
-      mime: castMime(song, s.maxBitRate > 0 ? s.streamFormat : undefined),
-    })) as boolean;
-    // A renderer that won't take the format says so, and the answer to that is
-    // to ask the server for the one nothing refuses. Only after being turned
-    // down: the ones that do take FLAC keep getting it.
-    if (!ok && mp3Url && mp3Url !== url) {
-      ok = (await native.load(mp3Url, oneLine, startTimeSec * 1000, {
-        ...info,
-        mime: 'audio/mpeg',
-      })) as boolean;
-    }
+    const ok = currentUpnpDevice()?.isSonos
+      ? await loadSonosQueue(queue, index, autoplay, startTimeSec, playMode)
+      : await loadGenericUpnpTrack(current, autoplay, startTimeSec);
+    if (ok && startTimeSec > 0) void native.seek(startTimeSec * 1000);
     // Not every renderer starts on its own after being handed a URI: Sonos
     // waits for an explicit Play and otherwise sits silent while the app
     // believes it's playing. Sending it always is harmless — one that already
@@ -327,6 +393,92 @@ export async function upnpLoad(song: Song, autoplay: boolean, startTimeSec = 0):
     return ok;
   } catch {
     loading = false;
+    return false;
+  }
+}
+
+export async function upnpSetPlayMode(playMode: string): Promise<boolean> {
+  if (!native || !isUpnpConnected()) return false;
+  if (!currentUpnpDevice()?.isSonos) return true;
+  try {
+    return (await native.setPlayMode(playMode)) as boolean;
+  } catch {
+    return false;
+  }
+}
+
+async function loadSonosQueue(
+  queue: Song[],
+  index: number,
+  autoplay: boolean,
+  startTimeSec: number,
+  playMode: string,
+): Promise<boolean> {
+  const payload = buildUpnpQueuePayload(queue);
+  if (!payload) return false;
+  return (await native.loadQueue(
+    JSON.stringify({
+      tracks: payload,
+      currentIndex: index,
+      autoplay,
+      positionMs: startTimeSec * 1000,
+      playMode,
+    }),
+  )) as boolean;
+}
+
+/** Bitrate for the MP3 fallback below when streaming at original quality: a
+ *  lossless track has no bitrate to inherit, and 320 is as good as MP3 gets. */
+const CAST_MP3_BITRATE = 320;
+
+async function loadGenericUpnpTrack(song: Song, autoplay: boolean, startTimeSec: number): Promise<boolean> {
+  const payload = buildUpnpTrackPayload(song);
+  if (!payload) return false;
+  let ok = (await native.load(payload.url, payload, autoplay)) as boolean;
+  // A renderer that won't take the format says so, and the answer to that is
+  // to ask the server for the one nothing refuses. Only after being turned
+  // down: the ones that do take FLAC keep getting it. Sonos never comes
+  // through here, so this is the same second chance the TVs and speakers had
+  // before the queue path existed (#70).
+  if (!ok) {
+    const mp3Url = mp3StreamUrl(song);
+    if (mp3Url && mp3Url !== payload.url) {
+      ok = (await native.load(mp3Url, { ...payload, url: mp3Url, mime: 'audio/mpeg' }, autoplay)) as boolean;
+    }
+  }
+  if (ok && startTimeSec > 0) void native.seek(startTimeSec * 1000);
+  return ok;
+}
+
+/** The same song asked for as MP3, or undefined when the server isn't the one
+ *  serving it (a downloaded file, a URL of its own). */
+function mp3StreamUrl(song: Song): string | undefined {
+  const auth = useAuthStore.getState().auth;
+  if (!auth || song.url || song.localUri) return undefined;
+  const settings = useSettings.getState();
+  return streamUrl(
+    auth,
+    song.id,
+    settings.maxBitRate > 0 ? settings.maxBitRate : CAST_MP3_BITRATE,
+    0,
+    'mp3',
+  );
+}
+
+export async function upnpJoinDevice(deviceId: string, targetDeviceId: string): Promise<boolean> {
+  if (!native) return false;
+  try {
+    return (await native.join(deviceId, targetDeviceId)) as boolean;
+  } catch {
+    return false;
+  }
+}
+
+export async function upnpUngroupDevice(deviceId: string): Promise<boolean> {
+  if (!native) return false;
+  try {
+    return (await native.ungroup(deviceId)) as boolean;
+  } catch {
     return false;
   }
 }

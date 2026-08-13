@@ -18,8 +18,6 @@
  * Android Auto is not affected by crossfade: it uses its own session with
  * `JsProxyPlayer`, not the expo-audio player.)
  */
-import { fetch as expoFetch } from 'expo/fetch';
-import { AppState } from 'react-native';
 import {
   createAudioPlayer,
   setAudioModeAsync,
@@ -29,6 +27,8 @@ import {
   type AudioSource,
   type AudioStatus,
 } from 'expo-audio';
+import { fetch as expoFetch } from 'expo/fetch';
+import { AppState } from 'react-native';
 import { create } from 'zustand';
 
 import {
@@ -41,8 +41,8 @@ import {
   reportPlayback,
   savePlayQueue,
   scrobble,
-  SubsonicRequestError,
   streamUrl,
+  SubsonicRequestError,
   supportsPlaybackReport,
   supportsTranscodeOffset,
   type Album,
@@ -56,6 +56,7 @@ import {
 // disk when the album is downloaded instead of an address on the server.
 import { COVER, coverArtUrl, getRandomSongs } from '@/api/data';
 import { prefetchLyrics } from '@/hooks/useLyrics';
+import { tg } from '@/i18n';
 import type { Remap } from '@/lib/navidromeRemap';
 import { remapSong } from '@/lib/navidromeRemap';
 import { beat, bump } from '@/lib/perfLog';
@@ -64,19 +65,9 @@ import { primaryUrl } from '@/lib/serverUrls';
 import { getItem, setItem } from '@/lib/storage';
 import { useAuthStore } from './auth';
 import { checkAutoUrlNow } from './autoUrl';
+import { castSetState, castSetVolumeLevel, castUpdate, initCastMedia } from './castMedia';
+import { useDownloads } from './downloads';
 import { useEqualizer } from './equalizer';
-import { useLastPlayed } from './lastPlayed';
-import {
-  initUpnp,
-  isUpnpConnected,
-  upnpDisconnect,
-  upnpLoad,
-  upnpPause,
-  upnpPlay,
-  upnpSeek,
-  upnpSetVolume,
-  type RemoteEvents,
-} from './upnp';
 import {
   initJukebox,
   isJukeboxActive,
@@ -87,15 +78,28 @@ import {
   jukeboxSeek,
   jukeboxSetVolume,
 } from './jukebox';
-import { castSetState, castSetVolumeLevel, castUpdate, initCastMedia } from './castMedia';
-import { useDownloads } from './downloads';
+import { useLastPlayed } from './lastPlayed';
 import { useNetworkType } from './networkType';
 import { useOfflineQueue } from './offlineQueue';
 import { usePlayCounts } from './playCounts';
 import { usePlayHistory } from './playHistory';
 import { scrobbleThresholdSec, useSettings, type TranscodeFormat } from './settings';
 import { useToast } from './toast';
-import { tg } from '@/i18n';
+import {
+  initUpnp,
+  isUpnpConnected,
+  upnpDisconnect,
+  upnpPause,
+  upnpPlay,
+  upnpSeek,
+  upnpSetVolume,
+  type RemoteEvents,
+} from './upnp';
+import {
+  loadUpnpRemoteTrack,
+  resetUpnpRemoteSyncState,
+  syncUpnpRemoteQueue,
+} from './upnpRemoteSync';
 
 export type RepeatMode = 'off' | 'all' | 'one';
 
@@ -758,12 +762,23 @@ function syncCastMedia(): void {
 
 /** Loads the track at `index` into the remote output and syncs state. */
 async function remoteLoadIndex(index: number, autoplay: boolean, startSec = 0) {
-  const song = usePlayerStore.getState().queue[index];
+  const state = usePlayerStore.getState();
+  const song = state.queue[index];
   if (!song) return;
   scrobbledThisTrack = false;
   const ok = isJukeboxActive()
     ? await jukeboxLoad(song, autoplay, startSec)
-    : await upnpLoad(song, autoplay, startSec);
+    : await loadUpnpRemoteTrack(
+        {
+          queue: state.queue,
+          index,
+          positionSec: startSec,
+          isPlaying: autoplay,
+          shuffle: state.shuffle,
+          repeat: state.repeat,
+        },
+        autoplay,
+      );
   if (!ok) {
     useToast.getState().show(tg("This song can't be cast"));
     usePlayerStore.setState({ index, isPlaying: false, isBuffering: false });
@@ -2439,20 +2454,34 @@ let syncInterval: ReturnType<typeof setInterval> | null = null;
 let appStateAttached = false;
 
 /** Saves the queue on this device and, if there is a session, on the server. */
-function syncQueueNow(force = false) {
+function syncQueueNow(force = false, syncRemote = true) {
   saveQueueLocal(force);
   // The local copy above is the one that matters offline, and it is the only
   // one written there: the server's copy is a request, and offline mode makes
   // none. Without this the queue was pushed every twenty seconds and on every
   // trip to the background, which is a phone using data its owner said not to.
   const { auth, offline } = useAuthStore.getState();
-  if (!auth || offline) return;
   const { queue, index, positionSec } = usePlayerStore.getState();
   const current = queue[index];
-  if (!current || current.url || current.localUri) return;
-  const ids = queue.filter((s) => !s.url && !s.localUri).map((s) => s.id);
-  if (ids.length === 0) return;
-  void savePlayQueue(auth, ids, current.id, Math.floor(positionSec * 1000));
+  if (auth && !offline && current && !current.url && !current.localUri) {
+    const ids = queue.filter((s) => !s.url && !s.localUri).map((s) => s.id);
+    if (ids.length > 0) {
+      void savePlayQueue(auth, ids, current.id, Math.floor(positionSec * 1000));
+    }
+  }
+  if (syncRemote && remoteKind() === 'upnp') {
+    void syncUpnpRemoteQueue(
+      {
+        queue,
+        index,
+        positionSec,
+        isPlaying: usePlayerStore.getState().isPlaying,
+        shuffle: usePlayerStore.getState().shuffle,
+        repeat: usePlayerStore.getState().repeat,
+      },
+      force,
+    );
+  }
 }
 
 function scheduleSync() {
@@ -2482,8 +2511,10 @@ function attachAppState() {
       // here rather than left hanging (#140).
       settleFade();
       // Leaving the foreground is the last chance to write down where playback
-      // was, so this one is not up for skipping.
-      syncQueueNow(true);
+      // was, so this one is not up for skipping. For remote playback this must
+      // not force a queue rewrite: minimizing the app should not touch the
+      // current Sonos transport state.
+      syncQueueNow(true, false);
       return;
     }
     // Back to foreground. The native `playbackStatusUpdate` heartbeat that feeds
@@ -2529,13 +2560,26 @@ export function initRemoteIntegration() {
       } catch {
         // ignore
       }
+      resetUpnpRemoteSyncState();
       clearLockScreen();
       if (queue[index]) void remoteLoadIndex(index, isPlaying, positionSec);
+    },
+    onTrackChanged: (index, positionSec, durationSec) => {
+      const state = usePlayerStore.getState();
+      const song = state.queue[index];
+      if (!song) return;
+      usePlayerStore.setState({
+        index,
+        positionSec,
+        durationSec: durationSec || song.duration || state.durationSec,
+      });
+      onTrackChanged(song);
     },
     onDisconnected: (lastPositionSec) => {
       // The casting media session is already closed by `upnpDisconnect` (covers
       // silent disconnects too). Here we just return to the local player.
       const { queue, index } = usePlayerStore.getState();
+      resetUpnpRemoteSyncState();
       if (!queue[index]) return;
       void (async () => {
         await loadIndex(index, false);

@@ -80,8 +80,8 @@
     "Off": "A setting value meaning disabled (crossfade, normalization…)",
 
     // ── Player, output & queue ───────────────────────────────────────────────
-    "Output": "The audio output device (phone, or something to cast to)",
     "Devices": "The audio output devices to cast to",
+    "Currently playing on": "Heading above the output the music is coming out of right now, at the top of the output sheet",
     "Colored mini player": "Tint the mini player with the colour of the cover art",
     "Cover color": "The colour taken from the cover art",
     "Player background": "What is drawn behind the player: the blurred artwork, or a flat tint",
@@ -358,6 +358,32 @@
     "Genres": "A heading over a list of them, never a count",
     "Folders": "A heading: browsing the server by folder instead of by album",
     "Show all": "Opens the full list of what the row is showing a few of",
+
+    // ── The shelves of a discography ─────────────────────────────────────────
+    // Every one of these is a heading over the records of one kind on an
+    // artist's page, and the kinds are MusicBrainz's own release types, read off
+    // the files' `RELEASETYPE` tag. So each is a category of record and never a
+    // count, an adjective or a verb, and the word your language already uses for
+    // that kind of record is the right one. The full definitions, which are
+    // worth a look for the odd ones, are at
+    // https://musicbrainz.org/doc/Release_Group/Type
+    "EPs": "Shelf heading: records longer than a single and shorter than an album",
+    "Singles": "Shelf heading: records built around one song",
+    "Live": "Shelf heading: records of a performance in front of an audience. Not the verb, and not “currently playing”",
+    "Compilations": "Shelf heading: records collecting older recordings, a “best of” or a various-artists collection",
+    "Soundtracks": "Shelf heading: the music of a film, a series, a play or a game",
+    "Remixes": "Shelf heading: records that are mostly remixed material. `Remixes` is widely used as-is in several languages; keep it if that is true of yours",
+    "DJ-mixes": "Shelf heading: recordings of several tracks blended one into the next by a DJ. Kept as-is in Spanish and Catalan, since the term travels",
+    "Mixtapes": "Shelf heading: MusicBrainz's “Mixtape/Street”, promotional records with new material, common in rap and hip hop. Kept as-is where the term travels",
+    "Demos": "Shelf heading: rough recordings made to be passed around rather than released. Kept as-is in Spanish and Catalan, though a language with its own word for these should use it",
+    "Broadcasts": "Shelf heading: records of something first put out on radio, television or as a podcast",
+    "Spoken word": "Shelf heading: records of speech rather than music. Not a count, so no plural is needed if yours would be awkward",
+    "Interviews": "Shelf heading: records of somebody being interviewed, usually the artist",
+    "Audiobooks": "Shelf heading: a book read aloud by one narrator, no music",
+    "Audio dramas": "Shelf heading: a play performed for the ear, with several voices rather than one narrator. Radio drama is the same thing where that name is the familiar one",
+    "Field recordings": "Shelf heading: records made of the world itself, nature or a city, rather than of performed music",
+    // `Other` is the last shelf too, and it is described further down, where it
+    // was already explained for the storage bar. One string, one note.
     "Browse all": "Opens the full list",
     "Show more": "Unfolds the rest of a text that was cut short",
     "Show less": "Folds it back",
@@ -576,9 +602,7 @@
     "Forward {n} seconds": "Read out by the screen reader for the seek button. `{n}` is how many seconds it is set to",
     "View queue": "Read out by the screen reader for the button that opens the queue",
     "Server speakers (Jukebox)": "Playing out of the speakers attached to the server itself, rather than the phone. Subsonic calls this jukebox mode",
-    "No devices found": "In the output sheet: no speaker or TV answered on this network",
     "Searching for devices…": "In the output sheet: looking for speakers and TVs to cast to",
-    "Search again": "In the output sheet: look for speakers and TVs once more",
     "Radio": "Internet radio stations. Most languages keep the word",
 
     // ── Playlist ─────────────────────────────────────────────────────────────
@@ -647,7 +671,7 @@
     "Show the playlist description under its name.": "The line under `Show playlist description`. The description is the text whoever made the playlist wrote about it",
     "Playlist covers": "One line of the storage breakdown in Settings › Downloads: how much room the playlist cover images take. It is a size, not a setting",
     "Free": "Free disk space in the storage bar (Other / Downloads / Free). Not \"free of charge\"",
-    "Other": "In that same storage bar: space used by things other than downloads",
+    "Other": "Two places, and the same word does for both: in that storage bar, the space used by things other than downloads; and on an artist's page, the last shelf of the discography, holding the records that fit none of the kinds above it",
     "Library metadata copy": "The offline copy of the library: the album, artist and playlist lists kept so the app works with no connection. Not the songs themselves, which are the downloads",
     "Nothing here is downloaded": "Toast when playing something that is not downloaded, offline",
     "Try exploring another genre.": "Empty state subtitle on a genre screen",

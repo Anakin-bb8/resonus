@@ -1,6 +1,5 @@
 package expo.modules.upnpcast
 
-import com.yinnho.upnpcast.DLNACast
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
@@ -8,26 +7,24 @@ import expo.modules.kotlin.records.Field
 import expo.modules.kotlin.records.Record
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import org.json.JSONObject
+import java.util.concurrent.ConcurrentHashMap
 
 /** What the renderer is told about the track it is about to play. */
 class TrackInfo(
-  /** The real MIME type (audio/flac, audio/mpeg…). Without it a speaker turns
-   *  the track down, because the library announces it as video (see
-   *  AvTransport). */
-  @Field val mime: String? = null,
-  /** The title on its own; the one passed as an argument carries the artist
-   *  too, which is all the fallback path knows how to show. */
-  @Field val title: String? = null,
+  @Field val mime: String = "audio/mpeg",
+  @Field val title: String = "",
   @Field val artist: String? = null,
+  @Field val albumArtist: String? = null,
   @Field val album: String? = null,
-  /** The cover, only when it is a URL the device can reach. */
   @Field val artworkUrl: String? = null,
   @Field val durationSec: Double? = null
 ) : Record
@@ -40,24 +37,18 @@ class TrackInfo(
  */
 class UpnpCastModule : Module() {
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-  private var pollJob: Job? = null
+  @Volatile private var pollJob: Job? = null
 
-  /** What the last search found, by id, so a device can be connected to by id. */
-  private var devices: Map<String, DLNACast.Device> = emptyMap()
-  private var current: DLNACast.Device? = null
+  private val known = ConcurrentHashMap<String, RendererSession>()
+  @Volatile private var session: RendererSession? = null
 
   override fun definition() = ModuleDefinition {
     Name("UpnpCast")
 
     Events("state")
 
-    OnCreate {
-      appContext.reactContext?.applicationContext?.let { DLNACast.init(it) }
-    }
-
     OnDestroy {
       pollJob?.cancel()
-      runCatching { DLNACast.cleanup() }
       scope.cancel()
     }
 
@@ -74,101 +65,150 @@ class UpnpCastModule : Module() {
      */
     AsyncFunction("search") { timeoutMs: Double, promise: Promise ->
       scope.launch {
-        // Both searches speak SSDP and both are mostly spent waiting, so they
-        // wait together: asking what each device is costs no extra seconds.
-        val locations = async { runCatching { AvTransport.locations() }.getOrDefault(emptyMap()) }
-        val found = runCatching { DLNACast.search(timeoutMs.toLong()) }.getOrDefault(emptyList())
-        val verdicts = runCatching { AvTransport.renderers(found.map { it.address }, locations.await()) }
-          .getOrDefault(emptyMap())
-        val playable = found.filter { verdicts[it.address] != false }
-        devices = devices + playable.associateBy { it.id }
-        promise.resolve(
-          playable.map {
-            mapOf("id" to it.id, "name" to it.name, "address" to it.address, "isTV" to it.isTV)
-          },
-        )
+        val found = Ssdp.discover(timeoutMs.toLong())
+        val devices = found.map { (location, address) ->
+          async {
+            val description = Soap.fetch(location)?.let { DeviceDescription.parse(it, location) }
+            if (description == null || !description.isRenderer) return@async null
+            val sonos = SonosTopology.describe(description)
+            val id = (description.udn?.removePrefix("uuid:")?.trim()?.takeIf(String::isNotEmpty)
+              ?.let { if (description.isSonos) it.uppercase() else it }) ?: address
+            known[id] = RendererSession(id, address, location, description)
+            mapOf(
+              "id" to id,
+              "name" to (sonos?.name ?: description.displayName() ?: address),
+              "address" to address,
+              "isTV" to description.isTv,
+              "isSonos" to description.isSonos,
+              "groupId" to sonos?.groupId,
+              "coordinatorId" to sonos?.coordinatorId,
+            )
+          }
+        }.awaitAll().filterNotNull()
+        promise.resolve(devices)
       }
     }
 
     AsyncFunction("connect") { deviceId: String, promise: Promise ->
-      val device = devices[deviceId]
-      if (device == null) {
+      val target = known[deviceId]
+      if (target == null) {
         promise.resolve(false)
         return@AsyncFunction
       }
-      current = device
+      session = target
       startPolling()
       promise.resolve(true)
     }
 
-    /**
-     * Loads a URL on the connected renderer. It always starts playing; with
-     * startMs > 0 that position is sought as soon as it does.
-     *
-     * The handover is `AvTransport`'s, which tells the device what it is being
-     * sent; the library stays as the fallback for when we cannot make ourselves
-     * understood (see #70).
-     */
-    AsyncFunction("load") { url: String, title: String, startMs: Double, track: TrackInfo?, promise: Promise ->
-      val device = current
+    AsyncFunction("join") { deviceId: String, targetDeviceId: String, promise: Promise ->
+      val device = known[deviceId]
+      val target = known[targetDeviceId]
+      if (device == null || target == null) {
+        promise.resolve(false)
+        return@AsyncFunction
+      }
+      scope.launch { promise.resolve(device.join(target)) }
+    }
+
+    AsyncFunction("ungroup") { deviceId: String, promise: Promise ->
+      val device = known[deviceId]
       if (device == null) {
         promise.resolve(false)
         return@AsyncFunction
       }
+      scope.launch { promise.resolve(device.ungroup()) }
+    }
+
+    AsyncFunction("load") { url: String, track: TrackInfo, autoplay: Boolean, promise: Promise ->
+      val current = session
+      if (current == null) {
+        promise.resolve(false)
+        return@AsyncFunction
+      }
       scope.launch {
-        val ours = track?.let {
-          runCatching {
-            AvTransport.play(
-              device.address,
-              AvTransport.Track(
-                url = url,
-                mime = it.mime ?: "audio/mpeg",
-                title = it.title ?: title,
-                artist = it.artist,
-                album = it.album,
-                artworkUrl = it.artworkUrl,
-                durationSec = (it.durationSec ?: 0.0).toInt()
-              )
-            )
-          }.getOrDefault(false)
-        } ?: false
-        val ok = ours || runCatching { DLNACast.castToDevice(device, url, title) }.getOrDefault(false)
-        if (ok && startMs > 0) {
-          delay(800)
-          runCatching { DLNACast.seek(startMs.toLong()) }
-        }
+        val ok = current.load(
+          Track(
+            url = url,
+            mime = track.mime,
+            title = track.title,
+            artist = track.artist,
+            albumArtist = track.albumArtist,
+            album = track.album,
+            artworkUrl = track.artworkUrl,
+            durationSeconds = (track.durationSec ?: 0.0).toInt()
+          )
+        )
         promise.resolve(ok)
       }
     }
 
+    AsyncFunction("loadQueue") { payloadJson: String, promise: Promise ->
+      val current = session
+      if (current == null) {
+        promise.resolve(false)
+        return@AsyncFunction
+      }
+      scope.launch {
+        try {
+          val payload = JSONObject(payloadJson)
+          val tracksJson = payload.getJSONArray("tracks")
+          val tracks = mutableListOf<Track>()
+          for (i in 0 until tracksJson.length()) {
+            val item = tracksJson.getJSONObject(i)
+            tracks.add(
+              Track(
+                url = item.getString("url"),
+                mime = item.optString("mime", "audio/mpeg"),
+                title = item.optString("title", ""),
+                artist = item.optString("artist").takeIf { it.isNotBlank() },
+                albumArtist = item.optString("albumArtist").takeIf { it.isNotBlank() },
+                album = item.optString("album").takeIf { it.isNotBlank() },
+                artworkUrl = item.optString("artworkUrl").takeIf { it.isNotBlank() },
+                durationSeconds = item.optInt("durationSec", 0)
+              )
+            )
+          }
+          val ok = current.loadQueue(
+            tracks = tracks,
+            currentIndex = payload.optInt("currentIndex", 0),
+            autoplay = payload.optBoolean("autoplay", false),
+            positionMs = payload.optDouble("positionMs", 0.0).toLong(),
+            playMode = payload.optString("playMode", "NORMAL")
+          )
+          promise.resolve(ok)
+        } catch (e: Exception) {
+          promise.resolve(false)
+        }
+      }
+    }
+
     AsyncFunction("play") { promise: Promise ->
-      scope.launch { promise.resolve(runCatching { DLNACast.play() }.getOrDefault(false)) }
+      scope.launch { promise.resolve(session?.play() ?: false) }
     }
 
     AsyncFunction("pause") { promise: Promise ->
-      scope.launch { promise.resolve(runCatching { DLNACast.pause() }.getOrDefault(false)) }
+      scope.launch { promise.resolve(session?.pause() ?: false) }
     }
 
     AsyncFunction("seek") { positionMs: Double, promise: Promise ->
-      scope.launch {
-        promise.resolve(runCatching { DLNACast.seek(positionMs.toLong()) }.getOrDefault(false))
-      }
+      scope.launch { promise.resolve(session?.seek(positionMs.toLong()) ?: false) }
     }
 
-    /** The renderer's volume, 0..100. */
     AsyncFunction("setVolume") { volume: Int, promise: Promise ->
-      scope.launch {
-        promise.resolve(runCatching { DLNACast.setVolume(volume) }.getOrDefault(false))
-      }
+      scope.launch { promise.resolve(session?.setVolume(volume) ?: false) }
+    }
+
+    AsyncFunction("setPlayMode") { playMode: String, promise: Promise ->
+      scope.launch { promise.resolve(session?.setPlayMode(playMode) ?: false) }
     }
 
     AsyncFunction("disconnect") { promise: Promise ->
+      val current = session
       pollJob?.cancel()
       pollJob = null
-      current = null
-      AvTransport.forget()
+      session = null
       scope.launch {
-        runCatching { DLNACast.stop() }
+        current?.stop()
         promise.resolve(true)
       }
     }
@@ -178,15 +218,24 @@ class UpnpCastModule : Module() {
     pollJob?.cancel()
     pollJob = scope.launch {
       while (isActive) {
-        val state = runCatching { DLNACast.getState() }.getOrNull()
-        val progress = runCatching { DLNACast.getProgressRealtime() }.getOrNull()
+        val state = session?.state()
         if (state != null) {
+          val currentTrackNumber = state.trackNumber
+          val playbackState = when {
+            state.playbackState.equals("PLAYING", ignoreCase = true) -> "PLAYING"
+            state.playbackState.equals("TRANSITIONING", ignoreCase = true) -> "BUFFERING"
+            state.playbackState.startsWith("PAUSED", ignoreCase = true) -> "PAUSED"
+            state.playbackState.equals("NO_MEDIA_PRESENT", ignoreCase = true) -> "IDLE"
+            state.playbackState.equals("STOPPED", ignoreCase = true) -> "STOPPED"
+            else -> state.playbackState
+          }
           sendEvent(
             "state",
             mapOf(
-              "playbackState" to state.playbackState.name,
-              "positionMs" to (progress?.first ?: 0L).toDouble(),
-              "durationMs" to (progress?.second ?: 0L).toDouble(),
+              "playbackState" to playbackState,
+              "positionMs" to state.positionMs.toDouble(),
+              "durationMs" to state.durationMs.toDouble(),
+              "trackNumber" to (currentTrackNumber?.toDouble() ?: 0.0),
             ),
           )
         }

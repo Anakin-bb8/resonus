@@ -5,7 +5,7 @@ import Slider from '@react-native-community/slider';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useIsFocused, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   AppState,
@@ -34,20 +34,22 @@ import { scheduleOnRN } from 'react-native-worklets';
 
 import { COVER, songCoverUrl, type Song } from '@/api/data';
 import { AudioQualityBadge } from '@/components/AudioQualityBadge';
-import { Cover, useRedrawOnReturn } from '@/components/Cover';
+import { Cover, useRedrawOnReturn, useSettledSource } from '@/components/Cover';
 import { FavoriteButton } from '@/components/FavoriteButton';
-import { StarRating } from '@/components/StarRating';
 import { CoverLyrics, LyricsCard } from '@/components/LyricsCard';
 import { MarqueeText } from '@/components/MarqueeText';
 import { OutputSheet } from '@/components/OutputSheet';
+import { StarRating } from '@/components/StarRating';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { useLyrics } from '@/hooks/useLyrics';
+import { useT } from '@/i18n';
 import { artistTargets } from '@/lib/artistNav';
-import { formatDuration } from '@/lib/format';
+import { formatDuration, formatGroupedDeviceLabel } from '@/lib/format';
 import { haptic } from '@/lib/haptics';
 import { useArtistPicker } from '@/store/artistPicker';
 import { useAuthStore } from '@/store/auth';
+import { useJukebox } from '@/store/jukebox';
 import {
   currentSong,
   mixSeedOf,
@@ -60,9 +62,7 @@ import {
 import { useSettings } from '@/store/settings';
 import { useSongMenu } from '@/store/songMenu';
 import { useToast } from '@/store/toast';
-import { useJukebox } from '@/store/jukebox';
 import { useUpnp } from '@/store/upnp';
-import { useT } from '@/i18n';
 import { colors, fontSize, spacing } from '@/theme';
 
 const SCREEN_W = Dimensions.get('window').width;
@@ -96,6 +96,13 @@ const DISMISS_THRESHOLD = 120;
 let lastPageH = 0;
 // How much of the lyrics card peeks below the first page (invites swipe).
 const LYRICS_PEEK = 56;
+/**
+ * Crossfade between one blurred backdrop and the next. Long on purpose: the
+ * background changing is not an event, it is the room's light following the
+ * song. Nothing is ever asked to fade while this one is still running (see
+ * `useSettledSource`).
+ */
+const BACKDROP_FADE = 600;
 
 function CircleButton({
   name,
@@ -224,7 +231,22 @@ export default function PlayerScreen() {
   const offline = useAuthStore((s) => s.offline);
   const serverType = useAuthStore((s) => s.auth?.serverType);
   const hasAccount = useAuthStore((s) => !!s.auth);
-  const upnpDevice = useUpnp((s) => (s.connected ? s.deviceName : null));
+  const upnpDevices = useUpnp((s) => s.devices);
+  const upnpConnectedDevice = useUpnp((s) =>
+    s.connected ? s.devices.find((device) => device.id === s.deviceId) ?? null : null,
+  );
+  const upnpDevice = useMemo(() => {
+    if (!upnpConnectedDevice) return null;
+    if (!upnpConnectedDevice.isSonos) return upnpConnectedDevice.name;
+    const groupKey = upnpConnectedDevice.groupId ?? upnpConnectedDevice.id;
+    const groupName = formatGroupedDeviceLabel(
+      upnpDevices
+        .filter((device) => device.isSonos && (device.groupId ?? device.id) === groupKey)
+        .map((device) => device.name),
+    );
+    if (groupName) return groupName;
+    return upnpConnectedDevice.name;
+  }, [upnpConnectedDevice, upnpDevices]);
   const jukeboxActive = useJukebox((s) => s.active);
   const remoteDevice = upnpDevice ?? (jukeboxActive ? t('Server speakers (Jukebox)') : null);
   const [outputOpen, setOutputOpen] = useState(false);
@@ -242,7 +264,22 @@ export default function PlayerScreen() {
   // a radio. Whether it is actually shown is `showsLyricsCard` below, which
   // also needs there to be lyrics.
   const wantsLyricsCard = canLyrics && showLyricsCard;
-  const favIds = useFavoriteIds(!!song && (!song?.localUri || offline));
+  /**
+   * The heart's state, and it does not ask whether the file is on the phone.
+   *
+   * That question used to be in here as `!song.localUri || offline`, and it is
+   * not the same one: `markUnplayableOffline` stamps `localUri` onto every
+   * downloaded song in a list built offline, so a server song wears the mark
+   * too, and the queue is saved with it on. Once the network is back the mark
+   * stays and `offline` does not, and this went quiet against a song that has a
+   * server and a starred list like any other — leaving the heart on whatever
+   * `song.starred` said whenever the queue happened to be recorded.
+   *
+   * Where to fetch a starred list from at all is the hook's own question (it
+   * takes the local profile's), so all that is left to ask here is whether
+   * there is a song.
+   */
+  const favIds = useFavoriteIds(!!song);
 
   // The data layer resolves the cover: from the server (online) or from the
   // local index by album (offline). Base64 is no longer stored per song.
@@ -262,7 +299,14 @@ export default function PlayerScreen() {
   // back from the background is the second case (see `useRedrawOnReturn`), and
   // here it would be the whole screen wearing another song's colours.
   const backdropRef = useRef<Image>(null);
-  const backdrop = useRedrawOnReturn(backdropRef, cover);
+  // One cover at a time, and never mid-fade: skipping through a queue is faster
+  // than the fade is long, and handing them over as they come is what made the
+  // background jump back to the cover you started from.
+  const backdropSource = useSettledSource(
+    background === 'cover' ? cover : undefined,
+    BACKDROP_FADE,
+  );
+  const backdrop = useRedrawOnReturn(backdropRef, backdropSource.shown);
   const dominant = useDominantColor(colorBackground ? cover : undefined);
   // Under the blurred artwork the flat colour is irrelevant, but it still
   // paints the frame before the image decodes, so it stays dark rather than
@@ -568,7 +612,6 @@ export default function PlayerScreen() {
 
   if (!song) return null;
 
-  const isLocal = !!song.localUri;
   // The central list wins when loaded (refreshes when starred from any
   // screen); `song.starred` from the queue becomes stale, so it only serves
   // as a fallback for local songs or while loading.
@@ -631,7 +674,7 @@ export default function PlayerScreen() {
     <GestureDetector gesture={dismissPan}>
       <Animated.View style={[styles.root, rootStyle]}>
         <Animated.View style={[StyleSheet.absoluteFill, bgStyle]} />
-        {background === 'cover' && cover ? (
+        {background === 'cover' && backdropSource.shown ? (
           <>
             {/* The artwork itself, blurred, filling the screen. No
                 `recyclingKey`: it blanks the view the moment the song changes,
@@ -641,12 +684,15 @@ export default function PlayerScreen() {
             <Image
               key={backdrop.nonce}
               ref={backdropRef}
-              source={{ uri: cover }}
+              source={{ uri: backdropSource.shown }}
               style={StyleSheet.absoluteFill}
               contentFit="cover"
               blurRadius={60}
-              transition={600}
-              onDisplay={backdrop.onDisplay}
+              transition={BACKDROP_FADE}
+              onDisplay={() => {
+                backdrop.onDisplay();
+                backdropSource.onDisplay();
+              }}
             />
             {/* Scrim: blurring alone doesn't guarantee contrast — a bright or
                 busy cover would swallow the white text. */}
@@ -734,9 +780,24 @@ export default function PlayerScreen() {
               <Text style={styles.topTitle}>{t('NOW PLAYING')}</Text>
             )}
           </Pressable>
-          {isLocal && !offline ? (
-            <View style={{ width: 40 }} />
-          ) : swapButtons ? (
+          {/* Both of these used to sit behind `song.localUri && !offline`, meant
+              to read as "the phone's own library, which has no server to favourite
+              against or open a menu on". It never read as that. `markUnplayableOffline`
+              puts `localUri` on every downloaded song in a list built offline, so a
+              server song carries it too and the queue is saved with it on; that is
+              what the `&& !offline` was patched in for when the ⋯ went missing
+              offline. What it left is the same thing the other way round: a queue
+              built offline, the network back, `offline` false and the mark still
+              there — and then the corner button and the one under the title both
+              disappear, together, for as long as those songs are queued. Nothing
+              takes the mark off, so closing the player and opening it again shows
+              exactly the same thing.
+
+              There is no condition left because there was never a real one: the
+              phone's own library is a profile with no account, and that profile is
+              always in offline mode (see `switchProfile`), so the old test could
+              only ever be true about a song it was wrong about. */}
+          {swapButtons ? (
             // Swapped: the heart takes the corner. It only reports state here —
             // tapping it still works, it's just the awkward spot to reach.
             <View style={styles.topFavorite}>
@@ -863,7 +924,7 @@ export default function PlayerScreen() {
                 );
               })()}
             </View>
-            {isLocal && !offline ? null : swapButtons ? (
+            {swapButtons ? (
               <CircleButton
                 name="ellipsis-vertical"
                 label={t('More options')}

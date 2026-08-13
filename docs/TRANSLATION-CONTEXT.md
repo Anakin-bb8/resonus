@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 636 of them.
+Every string the app can show, under the screen it shows up on. 650 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -121,20 +121,31 @@ you are actually typing into, which is easier than reading it here.
 | `About` | The heading over an artist's biography, and the name of the settings page about the app. Two very different uses of one English word, so `About::artist` and `About::app` exist for a language that needs two words |
 | `All songs` |  |
 | `Appears on` | Albums the artist appears on: features, compilations |
-| `Compilations` |  |
+| `Audio dramas` | Shelf heading: a play performed for the ear, with several voices rather than one narrator. Radio drama is the same thing where that name is the familiar one |
+| `Audiobooks` | Shelf heading: a book read aloud by one narrator, no music |
+| `Broadcasts` | Shelf heading: records of something first put out on radio, television or as a podcast |
+| `Compilations` | Shelf heading: records collecting older recordings, a “best of” or a various-artists collection |
 | `Couldn't load the artist.` | Error on the screen, with a Retry button |
+| `Demos` | Shelf heading: rough recordings made to be passed around rather than released. Kept as-is in Spanish and Catalan, though a language with its own word for these should use it |
 | `Discography` | Everything an artist has released, albums and singles together |
+| `DJ-mixes` | Shelf heading: recordings of several tracks blended one into the next by a DJ. Kept as-is in Spanish and Catalan, since the term travels |
 | `Downloaded` | Badge on something whose files are on the phone |
-| `EPs` |  |
-| `Live` |  |
+| `EPs` | Shelf heading: records longer than a single and shorter than an album |
+| `Field recordings` | Shelf heading: records made of the world itself, nature or a city, rather than of performed music |
+| `Interviews` | Shelf heading: records of somebody being interviewed, usually the artist |
+| `Live` | Shelf heading: records of a performance in front of an audience. Not the verb, and not “currently playing” |
+| `Mixtapes` | Shelf heading: MusicBrainz's “Mixtape/Street”, promotional records with new material, common in rap and hip hop. Kept as-is where the term travels |
 | `Play discography` | Play the lot, in order |
 | `Popular` | The artist's popular / top tracks |
 | `Rate` | Verb: give it stars. Used for a song and for an artist. Not "bitrate" |
+| `Remixes` | Shelf heading: records that are mostly remixed material. `Remixes` is widely used as-is in several languages; keep it if that is true of yours |
 | `Remove from favorites` | The same button when it is already a favourite |
 | `Show less` | Folds it back |
 | `Show more` | Unfolds the rest of a text that was cut short |
 | `Similar artists` | Related artists |
-| `Singles` |  |
+| `Singles` | Shelf heading: records built around one song |
+| `Soundtracks` | Shelf heading: the music of a film, a series, a play or a game |
+| `Spoken word` | Shelf heading: records of speech rather than music. Not a count, so no plural is needed if yours would be awkward |
 | `View image` | Artist screen: opens the artist photo full screen, since the header crops it |
 
 ## Artist › Discography
@@ -142,12 +153,23 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `Appears on` | Albums the artist appears on: features, compilations |
-| `Compilations` |  |
+| `Audio dramas` | Shelf heading: a play performed for the ear, with several voices rather than one narrator. Radio drama is the same thing where that name is the familiar one |
+| `Audiobooks` | Shelf heading: a book read aloud by one narrator, no music |
+| `Broadcasts` | Shelf heading: records of something first put out on radio, television or as a podcast |
+| `Compilations` | Shelf heading: records collecting older recordings, a “best of” or a various-artists collection |
 | `Couldn't load the artist.` | Error on the screen, with a Retry button |
+| `Demos` | Shelf heading: rough recordings made to be passed around rather than released. Kept as-is in Spanish and Catalan, though a language with its own word for these should use it |
 | `Discography` | Everything an artist has released, albums and singles together |
-| `EPs` |  |
-| `Live` |  |
-| `Singles` |  |
+| `DJ-mixes` | Shelf heading: recordings of several tracks blended one into the next by a DJ. Kept as-is in Spanish and Catalan, since the term travels |
+| `EPs` | Shelf heading: records longer than a single and shorter than an album |
+| `Field recordings` | Shelf heading: records made of the world itself, nature or a city, rather than of performed music |
+| `Interviews` | Shelf heading: records of somebody being interviewed, usually the artist |
+| `Live` | Shelf heading: records of a performance in front of an audience. Not the verb, and not “currently playing” |
+| `Mixtapes` | Shelf heading: MusicBrainz's “Mixtape/Street”, promotional records with new material, common in rap and hip hop. Kept as-is where the term travels |
+| `Remixes` | Shelf heading: records that are mostly remixed material. `Remixes` is widely used as-is in several languages; keep it if that is true of yours |
+| `Singles` | Shelf heading: records built around one song |
+| `Soundtracks` | Shelf heading: the music of a film, a series, a play or a game |
+| `Spoken word` | Shelf heading: records of speech rather than music. Not a count, so no plural is needed if yours would be awkward |
 
 ## Artist › Songs
 
@@ -355,22 +377,25 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
+| `Add to the group` |  |
 | `Back {n} seconds` | Read out by the screen reader for the seek button. `{n}` is how many seconds it is set to |
+| `Currently playing on` | Heading above the output the music is coming out of right now, at the top of the output sheet |
 | `Devices` | The audio output devices to cast to |
 | `Forward {n} seconds` | Read out by the screen reader for the seek button. `{n}` is how many seconds it is set to |
 | `Mix of “{name}”` | What the player calls the queue once it has grown past its album into songs the app picked itself. `{name}` is the song it was grown from |
 | `Next` | Player control: the next track (accessibility label) |
-| `No devices found` | In the output sheet: no speaker or TV answered on this network |
+| `No devices found` |  |
 | `NOW PLAYING` | Small label above the cover, in the same place and style as `PLAYING FROM`, when there is nothing to name |
-| `Output` | The audio output device (phone, or something to cast to) |
+| `Output` |  |
 | `Playback stopped` | The mini player when there is nothing playing any more |
 | `PLAYING FROM` | Small label above the cover, followed by the name of the album, playlist or mix it is playing from, or by `Queue` while the song is one that was added to the queue by hand. Written in capitals by the design, so it can be capitals in your language too, or not, whichever reads right |
 | `Previous` | Player control: the previous track (accessibility label) |
 | `Queue` | The list of songs waiting to play. Not a playlist |
 | `Radio` | Internet radio stations. Most languages keep the word |
 | `Remove from favorites` | The same button when it is already a favourite |
+| `Remove from the group` |  |
 | `Repeat` | Start again at the end |
-| `Search again` | In the output sheet: look for speakers and TVs once more |
+| `Search again` |  |
 | `Searching for devices…` | In the output sheet: looking for speakers and TVs to cast to |
 | `Server speakers (Jukebox)` | Playing out of the speakers attached to the server itself, rather than the phone. Subsonic calls this jukebox mode |
 | `Show cover` | Lyrics screen: the button that goes back to the cover art |
@@ -570,7 +595,7 @@ you are actually typing into, which is easier than reading it here.
 | `Not used` | Replaces the codec's value when that network's quality is `Original`. Nothing is transcoded then, so the codec setting has nothing to do and the row is greyed out |
 | `Offline library` | In the storage bar: the room the offline copy of the library takes. The same thing the line under it calls `Library metadata copy`, so the two should agree |
 | `Original` | Quality option: the file exactly as it is on the server, nothing transcoded. It also appears in quotes inside two descriptions on those screens, so use the same wording in all three |
-| `Other` | In that same storage bar: space used by things other than downloads |
+| `Other` | Two places, and the same word does for both: in that storage bar, the space used by things other than downloads; and on an artist's page, the last shelf of the discography, holding the records that fit none of the kinds above it |
 | `Pending changes` | A line of the storage breakdown: favourites and edits made offline, waiting to go up to the server |
 | `Playlist covers` | One line of the storage breakdown in Settings › Downloads: how much room the playlist cover images take. It is a size, not a setting |
 | `Radio station art` | A line of the storage breakdown: the pictures of radio stations. A size, not a setting |

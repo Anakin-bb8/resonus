@@ -25,6 +25,7 @@ import {
   type Genre,
   type GuestAlbum,
   type MusicFolder,
+  type PlaybackState,
   type Playlist,
   type RadioStation,
   type SavedQueue,
@@ -34,8 +35,8 @@ import {
   type SongListSort,
   type SongLyrics,
   type SortDirection,
-  type StarType,
   type Starred,
+  type StarType,
   type SubsonicAuth,
 } from './subsonic';
 // Not the global `fetch`: it never resolves in the background. See the note
@@ -99,6 +100,41 @@ interface JfItems {
   Items?: JfItem[];
 }
 
+interface JfPlaybackInfo {
+  ItemId: string;
+  PositionTicks: number;
+  IsPaused?: boolean;
+  IsMuted?: boolean;
+  CanSeek?: boolean;
+  PlayMethod?: 'Transcode' | 'DirectStream' | 'DirectPlay';
+  PlaySessionId?: string;
+}
+
+/** Per track/session bookkeeping for Jellyfin playback state events. */
+let activePlaySessionId: string | null = null;
+let activePlayItemId: string | null = null;
+let activePlayStarted = false;
+
+function resetPlaybackSession(): void {
+  activePlayStarted = false;
+  activePlayItemId = null;
+  activePlaySessionId = null;
+}
+
+interface JfClientCapabilities {
+  PlayableMediaTypes: ('Audio' | 'Video' | 'Book' | 'Photo')[];
+  SupportsMediaControl: boolean;
+  SupportsPersistentIdentifier: boolean;
+  SupportedCommands: string[];
+}
+
+const CLIENT_CAPABILITIES: JfClientCapabilities = {
+  PlayableMediaTypes: ['Audio'],
+  SupportsMediaControl: true,
+  SupportsPersistentIdentifier: true,
+  SupportedCommands: ['Play', 'Pause', 'Stop', 'Seek', 'NextTrack', 'PreviousTrack'],
+};
+
 function randomHex(bytes: number): string {
   return Array.from(Crypto.getRandomBytes(bytes))
     .map((b) => b.toString(16).padStart(2, '0'))
@@ -159,7 +195,7 @@ async function request<T>(
   if (res.status === 401) {
     throw new SubsonicRequestError('Sesión caducada: vuelve a iniciar sesión', false);
   }
-  if (!res.ok) throw new SubsonicRequestError(`Error de red (${res.status})`, false);
+  if (!res.ok) throw new SubsonicRequestError(`Error de red (${res.status})`, false, res.status);
   const text = await res.text();
   return (text ? JSON.parse(text) : undefined) as T;
 }
@@ -227,6 +263,22 @@ export async function makeAuth(
  */
 export async function ping(auth: SubsonicAuth): Promise<void> {
   await request(auth, '/Users/Me', {}, {}, true);
+  /**
+   * Lets Jellyfin keep this device's session metadata up to date, and not
+   * waited for on purpose.
+   *
+   * What this function answers is whether the server is there, and `reachable`
+   * asks it against a four second clock covering everything it does. Awaited,
+   * a server that answers the question perfectly well but is slow to take this
+   * would come back as unreachable — at login, at a profile switch and on the
+   * test button, and once per candidate URL, since that is where reachability
+   * is decided between several. It is best effort in the first place: nothing
+   * downstream reads it and a failure is already swallowed.
+   */
+  void request(auth, '/Sessions/Capabilities/Full', {}, {
+    method: 'POST',
+    body: CLIENT_CAPABILITIES,
+  }).catch(() => {});
 }
 
 // ── Mapping BaseItemDto to app models ──
@@ -1029,7 +1081,7 @@ export async function scrobble(auth: SubsonicAuth, id: string, submission = true
   // Jellyfin has no cheap "now playing" (requires full playback
   // sessions); only actual playback is marked.
   if (!submission) return;
-  await request(auth, `/Users/${auth.jfUserId}/PlayedItems/${id}`, {}, { method: 'POST' });
+  await markPlayed(auth, id);
 }
 
 /**
@@ -1039,15 +1091,79 @@ export async function scrobble(auth: SubsonicAuth, id: string, submission = true
  * the wrong time is worth more than one stuck in the queue for good.
  */
 export async function submitPlay(auth: SubsonicAuth, id: string, at: number): Promise<void> {
-  const path = `/Users/${auth.jfUserId}/PlayedItems/${id}`;
   try {
-    await request(auth, path, { datePlayed: new Date(at).toISOString() }, { method: 'POST' });
+    await markPlayed(auth, id, new Date(at).toISOString());
   } catch (e) {
     // Only worth a second try if the server answered at all: with no network
     // the undated one has nowhere to go either.
     if (e instanceof SubsonicRequestError && e.network) throw e;
-    await request(auth, path, {}, { method: 'POST' });
+    await markPlayed(auth, id);
   }
+}
+
+async function markPlayed(auth: SubsonicAuth, id: string, datePlayed?: string): Promise<void> {
+  const params = { userId: auth.jfUserId, ...(datePlayed ? { datePlayed } : {}) };
+  try {
+    await request(auth, `/UserPlayedItems/${id}`, params, { method: 'POST' });
+    return;
+  } catch (e) {
+    // Compatibility fallback: some deployments still expose only this legacy
+    // route. Retry only when the modern one is unsupported.
+    if (!(e instanceof SubsonicRequestError)) throw e;
+    if (e.network) throw e;
+    if (e.code !== 400 && e.code !== 404) throw e;
+  }
+  await request(auth, `/Users/${auth.jfUserId}/PlayedItems/${id}`, params, { method: 'POST' });
+}
+
+function positionTicks(positionSec: number): number {
+  return Math.max(0, Math.round(positionSec * TICKS_PER_SECOND));
+}
+
+function basePlaybackInfo(itemId: string, positionSec: number): JfPlaybackInfo {
+  if (activePlayItemId !== itemId || !activePlaySessionId) {
+    activePlayItemId = itemId;
+    activePlaySessionId = randomHex(16);
+    activePlayStarted = false;
+  }
+  return {
+    ItemId: itemId,
+    PositionTicks: positionTicks(positionSec),
+    IsMuted: false,
+    CanSeek: true,
+    PlayMethod: 'DirectPlay',
+    PlaySessionId: activePlaySessionId,
+  };
+}
+
+/**
+ * Reports playback state to Jellyfin sessions so "Now Playing" and progress
+ * metrics track what this client is doing.
+ */
+export async function reportPlayback(
+  auth: SubsonicAuth,
+  id: string,
+  state: PlaybackState,
+  positionSec: number,
+): Promise<void> {
+  if (state === 'stopped') {
+    // Jellyfin may mark a session stop as played even below the app's own
+    // listen threshold. We keep played-count semantics exclusively on
+    // `scrobble/submitPlay` and only reset local session bookkeeping here.
+    resetPlaybackSession();
+    return;
+  }
+
+  if (state === 'starting') {
+    if (activePlayItemId === id && activePlaySessionId && activePlayStarted) return;
+    const body = { ...basePlaybackInfo(id, positionSec), IsPaused: false };
+    await request(auth, '/Sessions/Playing', {}, { method: 'POST', body });
+    activePlayStarted = true;
+    return;
+  }
+
+  const body = { ...basePlaybackInfo(id, positionSec), IsPaused: state !== 'playing' };
+  await request(auth, '/Sessions/Playing/Progress', {}, { method: 'POST', body });
 }
 
 /** Cover art URL. `id` can come from an album, song, or playlist. */
