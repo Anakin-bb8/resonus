@@ -10,7 +10,23 @@
  */
 import * as FileSystem from 'expo-file-system/legacy';
 import { StorageAccessFramework } from 'expo-file-system/legacy';
-import * as MediaLibrary from 'expo-media-library';
+/**
+ * The legacy entry point, spelled out, and it has to stay spelled out.
+ *
+ * SDK 56 turned `expo-media-library` into a class-based API and kept the old
+ * function names at the package root as stubs that `console.warn` and then
+ * THROW — `getAssetsAsync` among them. Nothing about that import stops
+ * compiling or type-checking, so the phone-wide scan went on looking exactly
+ * as it did and found nothing at all, every time, on every phone. The warning
+ * in the log is the whole of the notice you get.
+ *
+ * `expo-media-library/legacy` is the same functions that worked before,
+ * signatures and all. Migrating to the new API is a separate piece of work and
+ * not a like-for-like swap: it hands assets over as `content://`, which is not
+ * what `parentDirOf` reads for the folder an album is named after, nor what
+ * `expo-file-system` opens for the tag read.
+ */
+import * as MediaLibrary from 'expo-media-library/legacy';
 
 import { type Song } from '@/api/subsonic';
 import { useScanProgress } from '@/store/scanProgress';
@@ -529,9 +545,9 @@ export async function loadDeviceSongs(): Promise<Song[]> {
     let hasNext = true;
     while (hasNext && rawSongs.length < 5000) {
       const page = await MediaLibrary.getAssetsAsync({
-        // `MediaType.audio` until SDK 56, where the enum was renamed. Same
-        // value ("audio"), so nothing about the query changed.
-        mediaType: MediaLibrary.MediaType.AUDIO,
+        // Lower case: `MediaType` here is the legacy object of string values,
+        // not the new API's enum, which spells the same value `AUDIO`.
+        mediaType: MediaLibrary.MediaType.audio,
         first: 200,
         after,
       });
