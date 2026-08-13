@@ -123,7 +123,6 @@ export default function RadioScreen() {
         if (newId && pendingCoverUri && canEditCover) {
           await uploadCoverImage(auth!, 'radio', newId, {
             uri: pendingCoverUri,
-            name: 'cover.jpg',
             type: 'image/jpeg',
           }).catch(() => toast(t("Couldn't update the cover")));
         }

@@ -7,6 +7,7 @@
  */
 // Not the global `fetch`: it never resolves in the background. See the note
 // in `src/api/subsonic.ts`.
+import { File, UploadType, type UploadResult } from 'expo-file-system';
 import { fetch } from 'expo/fetch';
 import { type Album, type Song, type SortDirection, type SubsonicAuth } from './subsonic';
 import { assertCanRequest } from './netGate';
@@ -16,6 +17,14 @@ export class NavidromeError extends Error {
   constructor(
     message: string,
     readonly kind: 'auth' | 'forbidden' | 'unsupported' | 'other',
+    /**
+     * What the server answered, when it answered at all. `kind` covers the ones
+     * worth explaining in words; this is for the rest, which otherwise reach the
+     * user as "it didn't work" and reach us as a report with nothing in it. A
+     * number needs no translating and is the whole difference between guessing
+     * and knowing which end is at fault.
+     */
+    readonly status?: number,
   ) {
     super(message);
   }
@@ -62,6 +71,16 @@ async function ndLogin(auth: SubsonicAuth, fresh = false): Promise<string> {
   return json.token;
 }
 
+/** What an answer from the native API means, for the paths that write. */
+function ndStatusError(status: number): NavidromeError {
+  if (status === 401) return new NavidromeError('Credenciales incorrectas', 'auth');
+  if (status === 403) return new NavidromeError('Subida de carátulas deshabilitada', 'forbidden');
+  if (status === 404 || status === 405) {
+    return new NavidromeError('El servidor no soporta carátulas', 'unsupported');
+  }
+  return new NavidromeError(`Error del servidor (${status})`, 'other', status);
+}
+
 /** Authenticated request to the native API, with errors mapped to NavidromeError. */
 async function ndFetch(auth: SubsonicAuth, path: string, init: RequestInit): Promise<void> {
   const token = await ndLogin(auth, true);
@@ -75,12 +94,7 @@ async function ndFetch(auth: SubsonicAuth, path: string, init: RequestInit): Pro
     throw new NavidromeError('No se pudo conectar con el servidor', 'other');
   }
   if (res.ok) return;
-  if (res.status === 401) throw new NavidromeError('Credenciales incorrectas', 'auth');
-  if (res.status === 403) throw new NavidromeError('Subida de carátulas deshabilitada', 'forbidden');
-  if (res.status === 404 || res.status === 405) {
-    throw new NavidromeError('El servidor no soporta carátulas', 'unsupported');
-  }
-  throw new NavidromeError(`Error del servidor (${res.status})`, 'other');
+  throw ndStatusError(res.status);
 }
 
 /**
@@ -116,20 +130,49 @@ export type CoverKind = 'playlist' | 'radio';
  * Endpoint: POST /api/{kind}/{id}/image, multipart with "image" field
  * (jpeg/png/gif/webp). 403 if upload is disabled or the item doesn't belong
  * to the user; 404 on servers too old for it.
+ *
+ * The one request in this file that does not go through `ndFetch`, and it is
+ * the multipart that decides it. This used to hand `fetch` a `FormData` with
+ * React Native's own file part, `{uri, name, type}` — which is not a standard
+ * form part at all, only something RN's networking knows how to read off the
+ * disk on its way out. Moving off the global `fetch` (see the note at the top)
+ * took that away: `expo/fetch` builds the multipart body itself, in JS, from
+ * strings and blobs, and a part it cannot read is an exception before anything
+ * reaches the network. So changing a cover started failing on every server and
+ * every playlist, and the sheet said only that it could not do it — the throw
+ * came out of the same `catch` that means the server is unreachable.
+ *
+ * `File.upload` is the multipart that does exist natively: the file is streamed
+ * from disk by the same layer that the rest of the app's transfers use, with
+ * nothing buffered in JS, and a completed request comes back as a status
+ * whatever that status is.
  */
 export async function uploadCoverImage(
   auth: SubsonicAuth,
   kind: CoverKind,
   id: string,
-  image: { uri: string; name: string; type: string },
+  image: { uri: string; type: string },
 ): Promise<void> {
-  const form = new FormData();
-  // RN supports local files in FormData with {uri, name, type}.
-  form.append('image', image as unknown as Blob);
-  await ndFetch(auth, `/api/${kind}/${encodeURIComponent(id)}/image`, {
-    method: 'POST',
-    body: form,
-  });
+  const token = await ndLogin(auth, true);
+  let result: UploadResult;
+  try {
+    result = await new File(image.uri).upload(
+      `${auth.serverUrl}/api/${kind}/${encodeURIComponent(id)}/image`,
+      {
+        httpMethod: 'POST',
+        uploadType: UploadType.MULTIPART,
+        // The field Navidrome reads the picture out of; the filename comes off
+        // the file itself, which the picker has already written with the right
+        // extension.
+        fieldName: 'image',
+        mimeType: image.type,
+        headers: { 'x-nd-authorization': `Bearer ${token}` },
+      },
+    );
+  } catch {
+    throw new NavidromeError('No se pudo conectar con el servidor', 'other');
+  }
+  if (result.status < 200 || result.status >= 300) throw ndStatusError(result.status);
 }
 
 /** Removes the custom cover art; Navidrome falls back to its own default. */
