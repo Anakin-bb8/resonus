@@ -80,8 +80,8 @@
     "Off": "A setting value meaning disabled (crossfade, normalization…)",
 
     // ── Player, output & queue ───────────────────────────────────────────────
-    "Output": "The audio output device (phone, or something to cast to)",
     "Devices": "The audio output devices to cast to",
+    "Currently playing on": "Heading above the output the music is coming out of right now, at the top of the output sheet",
     "Colored mini player": "Tint the mini player with the colour of the cover art",
     "Cover color": "The colour taken from the cover art",
     "Player background": "What is drawn behind the player: the blurred artwork, or a flat tint",
@@ -576,9 +576,7 @@
     "Forward {n} seconds": "Read out by the screen reader for the seek button. `{n}` is how many seconds it is set to",
     "View queue": "Read out by the screen reader for the button that opens the queue",
     "Server speakers (Jukebox)": "Playing out of the speakers attached to the server itself, rather than the phone. Subsonic calls this jukebox mode",
-    "No devices found": "In the output sheet: no speaker or TV answered on this network",
     "Searching for devices…": "In the output sheet: looking for speakers and TVs to cast to",
-    "Search again": "In the output sheet: look for speakers and TVs once more",
     "Radio": "Internet radio stations. Most languages keep the word",
 
     // ── Playlist ─────────────────────────────────────────────────────────────
