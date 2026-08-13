@@ -34,7 +34,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 
 import { COVER, songCoverUrl, type Song } from '@/api/data';
 import { AudioQualityBadge } from '@/components/AudioQualityBadge';
-import { Cover, useRedrawOnReturn } from '@/components/Cover';
+import { Cover, useRedrawOnReturn, useSettledSource } from '@/components/Cover';
 import { FavoriteButton } from '@/components/FavoriteButton';
 import { CoverLyrics, LyricsCard } from '@/components/LyricsCard';
 import { MarqueeText } from '@/components/MarqueeText';
@@ -96,6 +96,13 @@ const DISMISS_THRESHOLD = 120;
 let lastPageH = 0;
 // How much of the lyrics card peeks below the first page (invites swipe).
 const LYRICS_PEEK = 56;
+/**
+ * Crossfade between one blurred backdrop and the next. Long on purpose: the
+ * background changing is not an event, it is the room's light following the
+ * song. Nothing is ever asked to fade while this one is still running (see
+ * `useSettledSource`).
+ */
+const BACKDROP_FADE = 600;
 
 function CircleButton({
   name,
@@ -277,7 +284,14 @@ export default function PlayerScreen() {
   // back from the background is the second case (see `useRedrawOnReturn`), and
   // here it would be the whole screen wearing another song's colours.
   const backdropRef = useRef<Image>(null);
-  const backdrop = useRedrawOnReturn(backdropRef, cover);
+  // One cover at a time, and never mid-fade: skipping through a queue is faster
+  // than the fade is long, and handing them over as they come is what made the
+  // background jump back to the cover you started from.
+  const backdropSource = useSettledSource(
+    background === 'cover' ? cover : undefined,
+    BACKDROP_FADE,
+  );
+  const backdrop = useRedrawOnReturn(backdropRef, backdropSource.shown);
   const dominant = useDominantColor(colorBackground ? cover : undefined);
   // Under the blurred artwork the flat colour is irrelevant, but it still
   // paints the frame before the image decodes, so it stays dark rather than
@@ -646,7 +660,7 @@ export default function PlayerScreen() {
     <GestureDetector gesture={dismissPan}>
       <Animated.View style={[styles.root, rootStyle]}>
         <Animated.View style={[StyleSheet.absoluteFill, bgStyle]} />
-        {background === 'cover' && cover ? (
+        {background === 'cover' && backdropSource.shown ? (
           <>
             {/* The artwork itself, blurred, filling the screen. No
                 `recyclingKey`: it blanks the view the moment the song changes,
@@ -656,12 +670,15 @@ export default function PlayerScreen() {
             <Image
               key={backdrop.nonce}
               ref={backdropRef}
-              source={{ uri: cover }}
+              source={{ uri: backdropSource.shown }}
               style={StyleSheet.absoluteFill}
               contentFit="cover"
               blurRadius={60}
-              transition={600}
-              onDisplay={backdrop.onDisplay}
+              transition={BACKDROP_FADE}
+              onDisplay={() => {
+                backdrop.onDisplay();
+                backdropSource.onDisplay();
+              }}
             />
             {/* Scrim: blurring alone doesn't guarantee contrast — a bright or
                 busy cover would swallow the white text. */}
