@@ -264,7 +264,22 @@ export default function PlayerScreen() {
   // a radio. Whether it is actually shown is `showsLyricsCard` below, which
   // also needs there to be lyrics.
   const wantsLyricsCard = canLyrics && showLyricsCard;
-  const favIds = useFavoriteIds(!!song && (!song?.localUri || offline));
+  /**
+   * The heart's state, and it does not ask whether the file is on the phone.
+   *
+   * That question used to be in here as `!song.localUri || offline`, and it is
+   * not the same one: `markUnplayableOffline` stamps `localUri` onto every
+   * downloaded song in a list built offline, so a server song wears the mark
+   * too, and the queue is saved with it on. Once the network is back the mark
+   * stays and `offline` does not, and this went quiet against a song that has a
+   * server and a starred list like any other — leaving the heart on whatever
+   * `song.starred` said whenever the queue happened to be recorded.
+   *
+   * Where to fetch a starred list from at all is the hook's own question (it
+   * takes the local profile's), so all that is left to ask here is whether
+   * there is a song.
+   */
+  const favIds = useFavoriteIds(!!song);
 
   // The data layer resolves the cover: from the server (online) or from the
   // local index by album (offline). Base64 is no longer stored per song.
@@ -597,7 +612,6 @@ export default function PlayerScreen() {
 
   if (!song) return null;
 
-  const isLocal = !!song.localUri;
   // The central list wins when loaded (refreshes when starred from any
   // screen); `song.starred` from the queue becomes stale, so it only serves
   // as a fallback for local songs or while loading.
@@ -766,9 +780,24 @@ export default function PlayerScreen() {
               <Text style={styles.topTitle}>{t('NOW PLAYING')}</Text>
             )}
           </Pressable>
-          {isLocal && !offline ? (
-            <View style={{ width: 40 }} />
-          ) : swapButtons ? (
+          {/* Both of these used to sit behind `song.localUri && !offline`, meant
+              to read as "the phone's own library, which has no server to favourite
+              against or open a menu on". It never read as that. `markUnplayableOffline`
+              puts `localUri` on every downloaded song in a list built offline, so a
+              server song carries it too and the queue is saved with it on; that is
+              what the `&& !offline` was patched in for when the ⋯ went missing
+              offline. What it left is the same thing the other way round: a queue
+              built offline, the network back, `offline` false and the mark still
+              there — and then the corner button and the one under the title both
+              disappear, together, for as long as those songs are queued. Nothing
+              takes the mark off, so closing the player and opening it again shows
+              exactly the same thing.
+
+              There is no condition left because there was never a real one: the
+              phone's own library is a profile with no account, and that profile is
+              always in offline mode (see `switchProfile`), so the old test could
+              only ever be true about a song it was wrong about. */}
+          {swapButtons ? (
             // Swapped: the heart takes the corner. It only reports state here —
             // tapping it still works, it's just the awkward spot to reach.
             <View style={styles.topFavorite}>
@@ -895,7 +924,7 @@ export default function PlayerScreen() {
                 );
               })()}
             </View>
-            {isLocal && !offline ? null : swapButtons ? (
+            {swapButtons ? (
               <CircleButton
                 name="ellipsis-vertical"
                 label={t('More options')}
