@@ -16,6 +16,7 @@ import {
   type SubsonicAuth,
 } from './subsonic';
 
+export { COVER, normalizeUrl, SubsonicRequestError } from './subsonic';
 export type {
   Album,
   AlbumListType,
@@ -34,14 +35,8 @@ export type {
   ScanStatus,
   SearchResult,
   Song,
-  SongListSort,
-  SortDirection,
-  SongLyrics,
-  StarType,
-  Starred,
-  SubsonicAuth,
+  SongListSort, SongLyrics, SortDirection, Starred, StarType, SubsonicAuth
 } from './subsonic';
-export { COVER, normalizeUrl, SubsonicRequestError } from './subsonic';
 
 /** Implementation matching the profile (same signature in both). */
 function api(auth: SubsonicAuth) {
@@ -252,11 +247,11 @@ export const submitPlay = (auth: SubsonicAuth, id: string, at: number) =>
 
 /**
  * Does the server take playback state (paused, stopped), or only "now playing"?
- * Jellyfin reports sessions its own way, which this doesn't speak yet, so it
- * stays on the announcement.
+ * Jellyfin reports session state too (`/Sessions/Playing*`), but the client
+ * intentionally keeps stop out of it so played counts stay on threshold scrobbles.
  */
 export const supportsPlaybackReport = async (auth: SubsonicAuth): Promise<boolean> =>
-  auth.serverType !== 'jellyfin' &&
+  auth.serverType === 'jellyfin' ||
   (await Subsonic.getOpenSubsonicExtensions(auth)).includes('playbackReport');
 
 export const reportPlayback = (
@@ -266,7 +261,7 @@ export const reportPlayback = (
   positionSec: number,
 ) =>
   auth.serverType === 'jellyfin'
-    ? Promise.resolve()
+    ? Jellyfin.reportPlayback(auth, id, state, positionSec)
     : Subsonic.reportPlayback(auth, id, state, positionSec);
 
 export const getRadioStations = (auth: SubsonicAuth) => api(auth).getRadioStations(auth);
