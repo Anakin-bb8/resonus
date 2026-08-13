@@ -1499,11 +1499,18 @@ async function extendWithArtistCatalog(auth: SubsonicAuth, artistId: string, hre
 }
 
 async function maybeQueueAutoplay() {
-  const { queue, index, repeat, radioMode, radioSeed, sourceHref } = usePlayerStore.getState();
+  const { queue, index, repeat, radioMode, radioSeed, sourceHref, originalQueue } =
+    usePlayerStore.getState();
   // With repeat the queue never "runs out"; and if 2+ songs remain, not yet.
   if (repeat !== 'off' || index < queue.length - 2) return;
   const { auth, offline } = useAuthStore.getState();
   if (!auth || offline) return;
+  // Audiobooks must not drift into autoplay mixes after the album ends.
+  // Kept behind the same setting so this behavior can be disabled globally.
+  if (!radioMode && useSettings.getState().saveAudiobookProgress) {
+    const baseQueue = originalQueue ?? queue;
+    if (baseQueue.some((song) => isAudiobookSong(song))) return;
+  }
   // Before the mix, and before the autoplay setting has a say: this is not
   // similar music, it is the artist that was asked for. A mix is left alone,
   // since there the drift is the whole point.
