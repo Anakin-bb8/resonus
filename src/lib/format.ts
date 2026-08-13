@@ -31,6 +31,29 @@ export function formatTotalDuration(totalSeconds: number | undefined): string {
   return parts.join(' ');
 }
 
+export function formatGroupedDeviceLabel(names: string[]): string {
+  const unique = Array.from(
+    new Set(
+      names
+        .map((name) => name.trim())
+        .filter((name) => !!name),
+    ),
+  );
+
+  if (unique.length === 0) return '';
+  if (unique.length <= 2) return unique.join(' + ');
+  return `${unique.slice(0, 2).join(' + ')} + ${unique.length - 2}`;
+}
+
+export function normalizeOutputDisplayName(name: string): string {
+  return name
+    .normalize('NFKC')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+
 /** Bytes in the appropriate unit ("1.2 GB", "340 MB"). */
 export function formatBytes(n: number): string {
   if (n >= 1024 ** 3) return `${(n / 1024 ** 3).toFixed(1)} GB`;
