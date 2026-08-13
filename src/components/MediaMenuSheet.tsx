@@ -14,25 +14,25 @@ import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { COVER, coverArtUrl, getAlbum, getPlaylist, star, unstar, type Song } from '@/api/data';
-import { useBottomSheetAnim } from '@/hooks/useBottomSheetAnim';
 import { useAlbumDownloads } from '@/hooks/useAlbumDownloads';
+import { useBottomSheetAnim } from '@/hooks/useBottomSheetAnim';
 import { useCanShare } from '@/hooks/useCanShare';
 import { useDownloadMessage } from '@/hooks/useDownloadMessage';
+import { songsLabel, useT } from '@/i18n';
+import { artistTargets } from '@/lib/artistNav';
 import { exportManyToFolder, totalBytes } from '@/lib/exportSong';
 import { formatBytes } from '@/lib/format';
-import { artistTargets } from '@/lib/artistNav';
 import { pickFolder } from '@/lib/localLibrary';
 import { queryClient } from '@/lib/query';
-import { useSharePicker } from '@/store/sharePicker';
-import { songsLabel, useT } from '@/i18n';
 import { useArtistPicker } from '@/store/artistPicker';
 import { useAuthStore } from '@/store/auth';
 import { anyDownloads, useDownloads } from '@/store/downloads';
 import { useMediaMenu, type MediaMenuItem } from '@/store/mediaMenu';
-import { usePlaylistPicker } from '@/store/playlistPicker';
 import { MAX_PINS, usePins } from '@/store/pins';
 import { usePlayerStore } from '@/store/player';
+import { usePlaylistPicker } from '@/store/playlistPicker';
 import { useSettings } from '@/store/settings';
+import { useSharePicker } from '@/store/sharePicker';
 import { useToast } from '@/store/toast';
 import { colors, fontSize, radius, spacing } from '@/theme';
 import { Cover } from './Cover';
@@ -126,6 +126,7 @@ export function MediaMenuSheet() {
   const href = album ? `/album/${album.id}` : `/playlist/${playlist!.id}`;
   const pinKey = album ? `album:${album.id}` : `playlist:${playlist!.id}`;
   const pinned = !!pins[pinKey];
+  const extraActions = item.kind === 'album' ? item.extraActions ?? [] : [];
 
   /** Fetches the songs WITHOUT closing, so the dialog has a size to show.
    *  They usually come from the cache: same query key the screens use. */
@@ -254,6 +255,19 @@ export function MediaMenuSheet() {
                 })
               }
             />
+            {extraActions.map((action) => (
+              <Action
+                key={action.label}
+                icon={action.icon}
+                label={action.label}
+                onPress={() => {
+                  close();
+                  void Promise.resolve(action.onPress()).catch(() => {
+                    toast(t("Couldn't complete the action"));
+                  });
+                }}
+              />
+            ))}
             <Action
               icon="list"
               label={t('Add to queue')}

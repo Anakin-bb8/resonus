@@ -132,6 +132,7 @@ export const useLibraries = create<LibrariesState>((set, get) => ({
  * (Jellyfin/offline, single library, or all active).
  */
 export function enabledFolderIds(auth: SubsonicAuth | null | undefined): string[] | undefined {
+  if (!auth || auth.serverType === 'jellyfin') return undefined;
   const key = profileKeyOf(auth);
   if (!key) return undefined;
   const folders = useLibraries.getState().folders[key] ?? [];

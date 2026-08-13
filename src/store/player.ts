@@ -63,6 +63,7 @@ import { beat, bump } from '@/lib/perfLog';
 import { queryClient } from '@/lib/query';
 import { primaryUrl } from '@/lib/serverUrls';
 import { getItem, setItem } from '@/lib/storage';
+import { isAudiobookSong, useAlbumProgress } from './albumProgress';
 import { useAuthStore } from './auth';
 import { checkAutoUrlNow } from './autoUrl';
 import { castSetState, castSetVolumeLevel, castUpdate, initCastMedia } from './castMedia';
@@ -1063,6 +1064,28 @@ function reportState(state: PlaybackState, song: Song | undefined, positionSec: 
     }
     void reportPlayback(auth, song.id, state, positionSec).catch(() => {});
   });
+}
+
+/** Persists the last known track+position for audiobook-like albums. */
+let audiobookCheckCache: { songId: string; isAudiobook: boolean } | null = null;
+
+function isAudiobookSongCached(song: Song): boolean {
+  const cached = audiobookCheckCache;
+  if (cached && cached.songId === song.id) return cached.isAudiobook;
+  const isAudiobook = isAudiobookSong(song);
+  audiobookCheckCache = { songId: song.id, isAudiobook };
+  return isAudiobook;
+}
+
+function rememberAlbumProgress(song: Song | null | undefined, positionSec: number, force = false): void {
+  if (!useSettings.getState().saveAudiobookProgress || !song?.albumId || !isAudiobookSongCached(song)) return;
+  const { auth, offline } = useAuthStore.getState();
+  useAlbumProgress.getState().remember(auth, offline, song.albumId, song.id, positionSec, force);
+}
+
+function flushCurrentAlbumProgress(force = false): void {
+  const st = usePlayerStore.getState();
+  rememberAlbumProgress(st.queue[st.index], st.positionSec, force);
 }
 
 /**
@@ -2254,6 +2277,7 @@ function onStatus(status: AudioStatus) {
     isPlaying: pauseFadeTimer ? prev.isPlaying : status.playing,
     isBuffering: buffering,
   });
+  rememberAlbumProgress(prev.queue[prev.index], positionSec);
   maybeScrobbleThreshold(positionSec);
   maybeDetectStall(intendPlay, buffering, positionSec);
   // Queue sync with the server.
@@ -2566,6 +2590,9 @@ export function initRemoteIntegration() {
     },
     onTrackChanged: (index, positionSec, durationSec) => {
       const state = usePlayerStore.getState();
+      if (state.index !== index) {
+        rememberAlbumProgress(state.queue[state.index], state.positionSec, true);
+      }
       const song = state.queue[index];
       if (!song) return;
       usePlayerStore.setState({
@@ -2581,6 +2608,7 @@ export function initRemoteIntegration() {
       const { queue, index } = usePlayerStore.getState();
       resetUpnpRemoteSyncState();
       if (!queue[index]) return;
+      rememberAlbumProgress(queue[index], lastPositionSec, true);
       void (async () => {
         await loadIndex(index, false);
         if (lastPositionSec > 0) seekActive(lastPositionSec);
@@ -2592,9 +2620,11 @@ export function initRemoteIntegration() {
         positionSec,
         durationSec: durationSec || usePlayerStore.getState().durationSec,
       });
+      const st = usePlayerStore.getState();
+      rememberAlbumProgress(st.queue[st.index], positionSec);
       maybeScrobbleThreshold(positionSec);
       // Updates the casting notification/lock screen scrubber.
-      if (isUpnpConnected()) castSetState(usePlayerStore.getState().isPlaying, positionSec * 1000);
+      if (isUpnpConnected()) castSetState(st.isPlaying, positionSec * 1000);
     },
     onPlayingChanged: (isPlaying, isBuffering) => {
       usePlayerStore.setState({ isPlaying, isBuffering });
@@ -2720,7 +2750,7 @@ interface PlayerState {
        */
       shuffled?: boolean;
     },
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   /**
    * Starts a radio from a song: plays it immediately and the queue keeps
    * filling itself with similar tracks, endlessly.
@@ -2864,14 +2894,14 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   streamInfo: null,
 
   playQueue: async (songs, startIndex = 0, source, sourceHref, opts) => {
-    if (songs.length === 0) return;
+    if (songs.length === 0) return false;
     // Discard offline-unavailable tracks (not downloaded): they can't be
     // played. The initial index is remapped to the tapped song within the
     // already-filtered list. Online never marks `unavailable`, so it doesn't change.
     if (songs.some((s) => s.unavailable)) {
       const tapped = songs[startIndex];
       const playable = songs.filter((s) => !s.unavailable);
-      if (playable.length === 0) return;
+      if (playable.length === 0) return false;
       startIndex = tapped && !tapped.unavailable ? Math.max(0, playable.indexOf(tapped)) : 0;
       songs = playable;
     }
@@ -2881,8 +2911,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     // it. Nothing is touched, so what was playing keeps playing.
     if (useAuthStore.getState().offline && !songs.some(playableOffline)) {
       useToast.getState().show(tg('Nothing here is downloaded'));
-      return;
+      return false;
     }
+    flushCurrentAlbumProgress(true);
     attachAppState();
     autoplayFetchedFor = null;
     autoplayRound = null;
@@ -2956,7 +2987,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     // Only when there was something to go back to: with nothing playing before,
     // an empty queue says less than the one that failed, and the toast has
     // already said what happened.
-    if (!(await loadIndex(at, true)) && before.queue.length > 0) set(before);
+    const ok = await loadIndex(at, true);
+    if (!ok && before.queue.length > 0) set(before);
+    return ok;
   },
 
   startRadio: async (seed, source) => {
@@ -3105,6 +3138,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   next: () => {
     const ni = nextIndex(true);
     if (ni != null) {
+      flushCurrentAlbumProgress(true);
       pushHistory();
       void loadIndex(ni, skipAutoplay(get().isPlaying));
     }
@@ -3118,6 +3152,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       get().seekTo(0);
       return;
     }
+    flushCurrentAlbumProgress(true);
     // Returns to the previous song in history, even if from another list/album.
     const playing = get().isPlaying;
     const entry = playedHistory.pop();
@@ -3172,6 +3207,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     const { queue } = get();
     if (index < 0 || index >= queue.length) return;
     // Forward jump like any other: "previous" must be able to return.
+    flushCurrentAlbumProgress(true);
     pushHistory();
     void loadIndex(index, kind === 'skip' ? skipAutoplay(get().isPlaying) : true);
   },
@@ -3648,8 +3684,10 @@ usePlayerStore.subscribe((st, prev) => {
   if (st.queue.length === 0 && prev.queue.length > 0) {
     // The queue emptied: that is over, not paused. Read from `prev`, since
     // there is no longer a song here to name.
+    rememberAlbumProgress(prev.queue[prev.index], prev.positionSec, true);
     reportState('stopped', prev.queue[prev.index], prev.positionSec);
   } else if (st.isPlaying !== prev.isPlaying) {
+    if (!st.isPlaying) rememberAlbumProgress(st.queue[st.index], st.positionSec, true);
     reportState(st.isPlaying ? 'playing' : 'paused', st.queue[st.index], st.positionSec);
   }
   // What the saved queue holds, position aside (see `queueDirty`).
