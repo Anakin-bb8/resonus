@@ -603,6 +603,8 @@
     "View queue": "Read out by the screen reader for the button that opens the queue",
     "Server speakers (Jukebox)": "Playing out of the speakers attached to the server itself, rather than the phone. Subsonic calls this jukebox mode",
     "Searching for devices…": "In the output sheet: looking for speakers and TVs to cast to",
+    "Add to the group": "Read out by the screen reader, never shown: the + beside a Sonos room in the output sheet, which sets that room playing along with the one already playing. Sonos only, and `group` is a group of SPEAKERS in the sense Sonos itself uses — rooms playing the same thing together. Whatever word Sonos uses in your language is the one",
+    "Remove from the group": "The − beside `Add to the group`, and the same in reverse: it takes that room out of the group so it stops playing along. Read out by the screen reader, never shown, and Sonos only",
     "Radio": "Internet radio stations. Most languages keep the word",
 
     // ── Playlist ─────────────────────────────────────────────────────────────
