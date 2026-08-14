@@ -6,164 +6,77 @@
  */
 import { create } from 'zustand';
 
-import { type Song, type SubsonicAuth } from '@/api/subsonic';
+import { type Album, type Song, type SubsonicAuth } from '@/api/subsonic';
+import { queryClient } from '@/lib/query';
+import { releaseGroupOf, type ReleaseGroup } from '@/lib/releaseGroups';
 import { primaryUrl } from '@/lib/serverUrls';
 import { getItem, setItem } from '@/lib/storage';
 
 const STORAGE_KEY = 'resonus.albumProgress';
 const WRITE_EVERY_SEC = 30;
 
+/**
+ * Genres that mean the record is something read aloud rather than music.
+ *
+ * Matched whole, never as a substring of something longer, and only against
+ * genre fields. That is a deliberate retreat from where this started: a
+ * substring search that also read titles and album names makes Thriller an
+ * audiobook, My Beautiful Dark Twisted Fantasy an audiobook and any track
+ * called Chapter 24 a chapter of one. Being wrong here is not a cosmetic
+ * mislabel, since it takes over the play button and switches off the mix.
+ *
+ * Spellings are normalized first (see `normGenre`), so the umlauts in Hörbuch
+ * and Hörspiel are already gone by the time they are looked up.
+ */
 const AUDIOBOOK_GENRES = new Set([
-  'speech',
-  'spoken word',
   'audiobook',
+  'audiobooks',
   'audio book',
   'audio drama',
   'audio theatre',
   'audio theater',
   'radio play',
+  'radio drama',
   'radioplay',
-  'dramatised',
-  'dramatized',
+  'spoken',
+  'spoken word',
+  'spokenword',
+  'speech',
   'narration',
-  'narrative',
   'storytelling',
   'podcast',
-  'book',
-  'book reading',
-  'reading',
-  'lecture',
-  // German variants (umlauts are normalized away in `normGenre`)
+  // German, which is where this came from: a Hörbuch is a book read aloud and
+  // a Hörspiel the dramatised kind, and neither is shelved with music.
   'horbuch',
   'hoerbuch',
   'horspiel',
   'hoerspiel',
-  // Common terms across major languages
+  // The same word in the other languages the app is likely to meet.
   'audiolibro',
   'audiolivro',
   'livre audio',
+  'livro falado',
   'luisterboek',
   'ljudbok',
   'lydbok',
+  'lydbog',
   'audiokniha',
   'sesli kitap',
-  'audiolivre',
-  'lydbog',
-  'audiolezen',
-  'livro falado',
-  'livre parle',
-  'lectura dramatizada',
 ]);
 
-const AUDIOBOOK_SUBGENRES = [
-  'fantasy',
-  'thriller',
-  'psycho thriller',
-  'psychothriller',
-  'horror',
-];
-
-const AUDIOBOOK_KEY_HINTS = new Set([
-  // Generic and commonly used names
-  'genre',
-  'genres',
-  'style',
-  'styles',
-  'tag',
-  'tags',
-  'category',
-  'categories',
-  'type',
-  'content type',
-  'contenttype',
-  'content group',
-  'contentgroup',
-  'grouping',
-  'group',
-  'mood',
-  'moods',
-  'description',
-  'comment',
-  'comments',
-  'overview',
-  'plot',
-  'biography',
-  // ID3 / iTunes / Vorbis / APE / WMP mapping aliases seen in Picard docs
-  'tcon',
-  'tit1',
-  'grp1',
-  'tmoo',
-  'comm',
-  'uslt',
-  'tmed',
-  'txxx musicbrainz album type',
-  'musicbrainz album type',
-  'musicbrainz album status',
-  'musicbrainz album id',
-  'musicbrainz track id',
-  'musicbrainz recording id',
-  'musicbrainz releasegroupid',
-  'musicbrainz release group id',
-  'musicbrainz albumid',
-  'musicbrainz trackid',
-  'musicbrainz recordingid',
-  'releasetype',
-  'release type',
-  'release status',
-  'releasestatus',
-  'podcast',
-  'podcasturl',
-  'pcst',
-  'purl',
-  'metadata block picture',
-  'wm genre',
-  'wm contentgroupdescription',
-  'wm mood',
-  'wm media',
-  'wm description',
-  'gen',
-  'grp',
-  'cmt',
-  // Jellyfin local metadata and provider-id style
-  'musicbrainzalbumid',
-  'musicbrainzalbumartistid',
-  'musicbrainzartistid',
-  'musicbrainzreleasegroupid',
+/**
+ * The release types that say the same thing, in `releaseGroupOf`'s spelling.
+ *
+ * Wherever a library is tagged this is the answer, and asking it is what ztx
+ * asked for on #144: MusicBrainz's `RELEASETYPE` already arrives with every
+ * album and `lib/releaseGroups` already reads it for the discography, so an
+ * audiobook is known rather than guessed and nothing extra is fetched.
+ */
+const AUDIOBOOK_RELEASE_GROUPS = new Set<ReleaseGroup>([
+  'audiobook',
+  'audiodrama',
+  'spokenword',
 ]);
-
-const AUDIOBOOK_KEYWORD_PARTS = [
-  'audiobook',
-  'audio book',
-  'audio drama',
-  'radio play',
-  'spoken word',
-  'horbuch',
-  'hoerbuch',
-  'horspiel',
-  'hoerspiel',
-  'podcast',
-  'narration',
-  'dramatis',
-];
-
-const AUDIOBOOK_META_VALUE_HINTS = [
-  'audiobook',
-  'audio book',
-  'spoken word',
-  'audio drama',
-  'radio play',
-  'podcast',
-  'narration',
-  'narrated',
-  'unabridged',
-  'abridged',
-  'chapter',
-  'chapters',
-  'horbuch',
-  'hoerbuch',
-  'horspiel',
-  'hoerspiel',
-];
 
 export interface AlbumProgressEntry {
   trackId: string;
@@ -204,78 +117,53 @@ function normGenre(v: string): string {
     .trim();
 }
 
-function splitMetaValues(v: string): string[] {
+/** Genre fields arrive often enough as one string with several genres in it
+ *  ("Audiobook; Fiction") that each part is asked separately. */
+function genreParts(v: string): string[] {
   return v
     .split(/[\n;,|/]+/)
     .map((p) => normGenre(p))
     .filter(Boolean);
 }
 
-function hasAudiobookValue(v: string): boolean {
-  const n = normGenre(v);
-  if (!n) return false;
-  if (
-    AUDIOBOOK_GENRES.has(n) ||
-    n.includes('audiobook') ||
-    n.includes('audio book') ||
-    (n.includes('spoken') && n.includes('word')) ||
-    AUDIOBOOK_SUBGENRES.some((g) => n.includes(g))
-  ) {
-    return true;
-  }
-  return AUDIOBOOK_META_VALUE_HINTS.some((hint) => n.includes(hint));
+function isAudiobookGenre(v: string | null | undefined): boolean {
+  if (!v) return false;
+  return genreParts(v).some((part) => AUDIOBOOK_GENRES.has(part));
 }
 
-function isAudiobookKey(k: string): boolean {
-  const n = normGenre(k);
-  if (!n) return false;
-  if (AUDIOBOOK_KEY_HINTS.has(n)) return true;
-  return AUDIOBOOK_KEYWORD_PARTS.some((part) => n.includes(part));
-}
-
-function parseKeyValueMeta(input: string): Array<{ key: string; value: string }> {
-  const out: Array<{ key: string; value: string }> = [];
-  const re = /([^\n:;=|]{2,60})\s*[:=]\s*([^\n|;]{1,200})/g;
-  for (const match of input.matchAll(re)) {
-    const key = match[1]?.trim();
-    const value = match[2]?.trim();
-    if (!key || !value) continue;
-    out.push({ key, value });
-  }
-  return out;
-}
-
-function isAudiobookGenre(v: string): boolean {
-  return hasAudiobookValue(v);
-}
-
+/**
+ * Whether a track is spoken word, going by its genre and nothing else.
+ *
+ * A song carries no release type — only its album does — so this is what an
+ * untagged library is left with, and `isAudiobookAlbumId` is what goes and
+ * asks the album the track came from.
+ */
 export function isAudiobookSong(song: Song | null | undefined): boolean {
   if (!song) return false;
+  if (isAudiobookGenre(song.genre)) return true;
+  return (song.genres ?? []).some((g) => isAudiobookGenre(g.name));
+}
 
-  const directValues = [
-    song.genre ?? '',
-    ...(song.genres ?? []).map((g) => g.name),
-    ...(song.moods ?? []),
-    song.comment ?? '',
-    song.title ?? '',
-    song.album ?? '',
-  ];
+/** Whether an album is spoken word: the tag first, its genres after. */
+export function isAudiobookAlbum(album: Album | null | undefined): boolean {
+  if (!album) return false;
+  if (AUDIOBOOK_RELEASE_GROUPS.has(releaseGroupOf(album))) return true;
+  if (isAudiobookGenre(album.genre)) return true;
+  return (album.genres ?? []).some((g) => isAudiobookGenre(g.name));
+}
 
-  if (directValues.some((v) => v && isAudiobookGenre(v))) return true;
-
-  // Many tools export opaque metadata chunks in comment-like fields.
-  // Parse key/value pairs such as "RELEASETYPE=Audiobook" or "genre: spoken word".
-  for (const text of [song.comment ?? '', ...song.moods ?? []]) {
-    if (!text) continue;
-    for (const entry of parseKeyValueMeta(text)) {
-      if (isAudiobookKey(entry.key) && hasAudiobookValue(entry.value)) return true;
-      if (hasAudiobookValue(entry.key) && isAudiobookKey(entry.value)) return true;
-      const splitValues = splitMetaValues(entry.value);
-      if (isAudiobookKey(entry.key) && splitValues.some((v) => hasAudiobookValue(v))) return true;
-    }
-  }
-
-  return false;
+/**
+ * The same question asked from the player, which holds songs and not albums.
+ *
+ * The album is read out of the query cache and never fetched: whatever put
+ * this queue together went through `['album', id]` to get its songs, so the
+ * tagged answer is usually already sitting there, and where it is not the
+ * track's own genre still has a say.
+ */
+export function isAudiobookAlbumId(albumId: string | null | undefined): boolean {
+  if (!albumId) return false;
+  const cached = queryClient.getQueryData<{ album: Album }>(['album', albumId]);
+  return cached ? isAudiobookAlbum(cached.album) : false;
 }
 
 function profileKey(auth: SubsonicAuth | null | undefined, offline: boolean): string {
@@ -290,6 +178,23 @@ export function getAlbumProgressEntry(
 ): AlbumProgressEntry | undefined {
   const key = profileKey(auth, offline);
   return useAlbumProgress.getState().byProfile[key]?.[albumId];
+}
+
+/**
+ * The same entry for a screen, which needs to hear about it changing.
+ *
+ * `getAlbumProgressEntry` reads the store once and tells nobody, so a screen
+ * calling it while it renders shows whatever was saved the last time
+ * something else made it draw — the album you just listened to still offers
+ * to resume where it stood two chapters ago.
+ */
+export function useAlbumProgressEntry(
+  auth: SubsonicAuth | null | undefined,
+  offline: boolean,
+  albumId: string,
+): AlbumProgressEntry | undefined {
+  const key = profileKey(auth, offline);
+  return useAlbumProgress((s) => s.byProfile[key]?.[albumId]);
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;

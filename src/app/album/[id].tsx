@@ -19,7 +19,12 @@ import { useDownloadMessage } from '@/hooks/useDownloadMessage';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { songsLabel, useT } from '@/i18n';
 import { formatTotalDuration } from '@/lib/format';
-import { getAlbumProgressEntry, isAudiobookSong, useAlbumProgress } from '@/store/albumProgress';
+import {
+  isAudiobookAlbum,
+  isAudiobookSong,
+  useAlbumProgress,
+  useAlbumProgressEntry,
+} from '@/store/albumProgress';
 import { useAuthStore } from '@/store/auth';
 import { groupDownloadState, useDownloads } from '@/store/downloads';
 import { useMediaMenu } from '@/store/mediaMenu';
@@ -221,6 +226,7 @@ export default function AlbumScreen() {
   const cancelDownload = useDownloads((s) => s.cancelDownload);
   const deleteSongs = useDownloads((s) => s.deleteSongs);
   const downloadSongs = useDownloads((s) => s.downloadSongs);
+  const progressEntry = useAlbumProgressEntry(auth, offline, id);
   // Stable between progress ticks (only changes with status): if its identity
   // changed on every % update, the Pressable would lose its touch and you'd
   // have to press multiple times.
@@ -248,8 +254,14 @@ export default function AlbumScreen() {
     ? `℗ ${data.album.year ? `${data.album.year} ` : ''}${labels.join(' · ')}`
     : null;
 
-  const isAudiobookAlbum = saveAudiobookProgress && data.songs.some(isAudiobookSong);
-  const albumProgress = isAudiobookAlbum ? getAlbumProgressEntry(auth, offline, data.album.id) : undefined;
+  // The album's own tag decides, and its songs only get a say where nobody
+  // tagged the record: one track with a spoken-word genre no longer turns the
+  // whole album into an audiobook.
+  const audiobook =
+    saveAudiobookProgress &&
+    (isAudiobookAlbum(data.album) ||
+      (data.songs.length > 0 && data.songs.every((s) => isAudiobookSong(s))));
+  const albumProgress = audiobook ? progressEntry : undefined;
   const resumeIndex = albumProgress ? data.songs.findIndex((s) => s.id === albumProgress.trackId) : -1;
   const continueExactStart =
     resumeIndex >= 0 && albumProgress
@@ -263,8 +275,7 @@ export default function AlbumScreen() {
         audiobookContinueRewindSec,
       )
     : null;
-  const continueFeatureVisible =
-    isAudiobookAlbum && saveAudiobookProgress && continueExactStart != null;
+  const continueFeatureVisible = audiobook && continueExactStart != null;
 
   const playAlbum = async (
     startIndex: number,
@@ -323,7 +334,7 @@ export default function AlbumScreen() {
   const genres = showGenreChips ? albumGenres(data.album, data.songs) : [];
 
   const totalSec = data.songs.reduce((acc, s) => acc + (s.duration ?? 0), 0);
-  const metaParts = [t(isAudiobookAlbum ? 'Audiobook' : 'Album')];
+  const metaParts = [t(audiobook ? 'Audiobook' : 'Album')];
   if (data.album.year) metaParts.push(String(data.album.year));
   metaParts.push(songsLabel(data.songs.length, lang));
   if (totalSec > 0) metaParts.push(formatTotalDuration(totalSec));

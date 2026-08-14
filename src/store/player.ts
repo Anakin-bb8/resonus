@@ -63,7 +63,7 @@ import { beat, bump } from '@/lib/perfLog';
 import { queryClient } from '@/lib/query';
 import { primaryUrl } from '@/lib/serverUrls';
 import { getItem, setItem } from '@/lib/storage';
-import { isAudiobookSong, useAlbumProgress } from './albumProgress';
+import { isAudiobookAlbumId, isAudiobookSong, useAlbumProgress } from './albumProgress';
 import { useAuthStore } from './auth';
 import { checkAutoUrlNow } from './autoUrl';
 import { castSetState, castSetVolumeLevel, castUpdate, initCastMedia } from './castMedia';
@@ -1067,19 +1067,25 @@ function reportState(state: PlaybackState, song: Song | undefined, positionSec: 
   });
 }
 
-/** Persists the last known track+position for audiobook-like albums. */
+/**
+ * Persists the last known track+position for audiobook-like albums.
+ *
+ * The album is asked first, since that is where the `RELEASETYPE` tag lives
+ * and the track's genre is only what an untagged library leaves us. Answered
+ * from a one-entry cache because this runs on every status tick.
+ */
 let audiobookCheckCache: { songId: string; isAudiobook: boolean } | null = null;
 
-function isAudiobookSongCached(song: Song): boolean {
+function isAudiobookTrack(song: Song): boolean {
   const cached = audiobookCheckCache;
   if (cached && cached.songId === song.id) return cached.isAudiobook;
-  const isAudiobook = isAudiobookSong(song);
+  const isAudiobook = isAudiobookAlbumId(song.albumId) || isAudiobookSong(song);
   audiobookCheckCache = { songId: song.id, isAudiobook };
   return isAudiobook;
 }
 
 function rememberAlbumProgress(song: Song | null | undefined, positionSec: number, force = false): void {
-  if (!useSettings.getState().saveAudiobookProgress || !song?.albumId || !isAudiobookSongCached(song)) return;
+  if (!useSettings.getState().saveAudiobookProgress || !song?.albumId || !isAudiobookTrack(song)) return;
   const { auth, offline } = useAuthStore.getState();
   useAlbumProgress.getState().remember(auth, offline, song.albumId, song.id, positionSec, force);
 }
@@ -1094,7 +1100,7 @@ function clearFinishedAudiobookAlbumProgress(): void {
   if (!st.sourceHref?.startsWith('/album/')) return;
   if (!useSettings.getState().saveAudiobookProgress) return;
   const song = st.queue[st.index];
-  if (!song?.albumId || !isAudiobookSongCached(song)) return;
+  if (!song?.albumId || !isAudiobookTrack(song)) return;
   const { auth, offline } = useAuthStore.getState();
   useAlbumProgress.getState().clearAlbum(auth, offline, song.albumId);
 }
@@ -1510,17 +1516,19 @@ async function extendWithArtistCatalog(auth: SubsonicAuth, artistId: string, hre
 }
 
 async function maybeQueueAutoplay() {
-  const { queue, index, repeat, radioMode, radioSeed, sourceHref, originalQueue } =
-    usePlayerStore.getState();
+  const { queue, index, repeat, radioMode, radioSeed, sourceHref } = usePlayerStore.getState();
   // With repeat the queue never "runs out"; and if 2+ songs remain, not yet.
   if (repeat !== 'off' || index < queue.length - 2) return;
   const { auth, offline } = useAuthStore.getState();
   if (!auth || offline) return;
-  // Audiobooks must not drift into autoplay mixes after the album ends.
-  // Kept behind the same setting so this behavior can be disabled globally.
-  if (!radioMode && useSettings.getState().saveAudiobookProgress) {
-    const baseQueue = originalQueue ?? queue;
-    if (baseQueue.some((song) => isAudiobookSong(song))) return;
+  // A book read aloud must not drift into a mix when it ends. Asked of the
+  // track that is playing rather than of the whole queue: this runs on the
+  // status tick, the answer is cached per track, and one spoken-word track
+  // somewhere in a long queue was never what this is about. Kept behind the
+  // same setting so the whole feature is one switch.
+  const current = queue[index];
+  if (!radioMode && current && useSettings.getState().saveAudiobookProgress) {
+    if (isAudiobookTrack(current)) return;
   }
   // Before the mix, and before the autoplay setting has a say: this is not
   // similar music, it is the artist that was asked for. A mix is left alone,
