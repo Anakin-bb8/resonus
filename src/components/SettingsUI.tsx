@@ -331,6 +331,7 @@ export function SliderRow({
   step = 1,
   formatValue,
   fineTune,
+  disabled = false,
   onChange,
 }: {
   label: string;
@@ -339,6 +340,9 @@ export function SliderRow({
   min?: number;
   max: number;
   step?: number;
+  /** Greys the row out and stops it moving, for a setting that another one
+   *  above it has turned off. Same as `SelectList`'s. */
+  disabled?: boolean;
   /** Text for the current value (already translated by the caller). */
   formatValue: (value: number) => string;
   /**
@@ -355,13 +359,13 @@ export function SliderRow({
   const shown = live ?? value;
 
   return (
-    <View style={settingsStyles.cardBox}>
+    <View style={[settingsStyles.cardBox, disabled && { opacity: 0.5 }]}>
       <View style={[settingsStyles.row, { paddingBottom: 0 }]}>
         <View style={settingsStyles.rowLabelBox}>
           <Text style={settingsStyles.rowLabel}>{label}</Text>
           {description ? <Text style={settingsStyles.rowDescription}>{description}</Text> : null}
         </View>
-        {fineTune ? (
+        {fineTune && !disabled ? (
           // The double chevron is the whole hint that the number opens
           // something: same grey as the value, and the same idea as the arrow
           // a SelectList row carries, which is where anyone reading this
@@ -405,6 +409,7 @@ export function SliderRow({
       ) : null}
       <Slider
         style={settingsStyles.slider}
+        disabled={disabled}
         minimumValue={min}
         maximumValue={max}
         step={step}

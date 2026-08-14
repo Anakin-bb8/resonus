@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 670 of them.
+Every string the app can show, under the screen it shows up on. 669 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -434,7 +434,6 @@ you are actually typing into, which is easier than reading it here.
 | `Delete “{name}”?` | Dialog title. `{name}` is the playlist or station |
 | `Delete playlist` | Menu action, in red |
 | `Description` | The playlist's own description: what whoever made it wrote about it |
-| `Done` | The button that leaves drag-to-reorder, or accepts a fine-tuned number |
 | `Edit playlist` | Menu action, and the title of the sheet it opens |
 | `Find in playlist` | Placeholder of the search box hidden above a tracklist, for finding a song within it |
 | `Name` | The Name field when editing a playlist or a station |
@@ -566,10 +565,9 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `{n} seconds` |  |
 | `Audiobook progress deleted` |  |
 | `Audiobooks` | Shelf heading: a book read aloud by one narrator, no music |
-| `Continue starts this far back from where you stopped.` | The line under “Rewind on resume”, explaining it |
+| `Continue starts this far back from where you stopped. Long enough, and it reaches into the chapters before it.` |  |
 | `Delete audiobook progress` |  |
 | `Remember where you stopped in audiobooks so you can continue later. Stored on this device only.` |  |
 | `Rewind on resume` |  |
@@ -799,7 +797,6 @@ you are actually typing into, which is easier than reading it here.
 | `Codec to transcode to. At “Original” quality nothing is transcoded.` |  |
 | `Codec to transcode to. Your server must support it.` |  |
 | `Crossfade` | One song fading into the next |
-| `Done` | The button that leaves drag-to-reorder, or accepts a fine-tuned number |
 | `Equalizer` |  |
 | `Evens out loudness between songs using your files' ReplayGain tags.` | The line under “Normalize volume”, explaining it |
 | `Keep playing similar songs when your queue ends. A mix you start yourself always does, even with this off.` | The line under “Autoplay”, explaining it |
@@ -909,7 +906,6 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `Done` | The button that leaves drag-to-reorder, or accepts a fine-tuned number |
 | `How far into a song it counts as played. Whichever of the two comes first.` | At the top of the `Scrobbling` screen, over the two rows below it |
 | `Part of the song` | How much of a song must have played before it counts, as a percentage. One of the two scrobble rules, and it can be `Off` |
 | `Restore defaults` | Button at the end of the `Scrobbling` screen, putting both rules back to what they came as |
@@ -997,6 +993,7 @@ you are actually typing into, which is easier than reading it here.
 | `Delete downloads` | Menu action: delete the downloaded files of everything here |
 | `Descending` | Sort option: the order of a list |
 | `Direction` | Sort sheet: the ascending vs descending toggle. Not a compass direction |
+| `Done` | The button that leaves drag-to-reorder, or accepts a fine-tuned number |
 | `Download` | The confirm button of the download dialog, and what the screen reader calls the download button. A verb |
 | `Download “{name}”?` | Dialog title. `{name}` is an album, artist or playlist |
 | `Download stopped` | Toast: the download was stopped part way |

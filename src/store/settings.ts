@@ -101,19 +101,35 @@ export const SCROBBLE_SECONDS_DEFAULT = 240;
 /**
  * How far Continue starts before where you stopped, in seconds.
  *
- * Seconds and not minutes. It arrived offering five minutes to two hours,
- * which is not resuming a book, it is looking for your place in it: at that
- * size the rewind walks back across whole chapters and Continue stops meaning
- * "carry on from here". What you actually want on picking a book back up is
- * the last sentence again, which is what every app that does this offers and
- * where these numbers come from.
+ * Any duration up to two hours, and not a list of four to choose from. There
+ * are two ways of using this and they are nowhere near each other. Picking a
+ * book back up wants the last sentence again, which is seconds. Falling asleep
+ * to one with the sleep timer on wants roughly however long the timer ran,
+ * because everything after the point where you stopped taking it in was heard
+ * by nobody, and that is an hour. Fifteen seconds is no use to the second and
+ * an hour is absurd for the first, so the number is the listener's to pick.
+ * Requested by @garrit-schroeder, who listens with the timer set to an hour.
  */
-export const AUDIOBOOK_CONTINUE_REWIND_OPTIONS = [0, 5, 15, 30] as const;
 export const AUDIOBOOK_CONTINUE_REWIND_DEFAULT = 15;
-type AudiobookContinueRewindSec = (typeof AUDIOBOOK_CONTINUE_REWIND_OPTIONS)[number];
+export const AUDIOBOOK_CONTINUE_REWIND_MAX = 2 * 60 * 60;
 
-function isAudiobookContinueRewindSec(value: number): value is AudiobookContinueRewindSec {
-  return AUDIOBOOK_CONTINUE_REWIND_OPTIONS.includes(value as AudiobookContinueRewindSec);
+/**
+ * The rungs the settings slider climbs, in seconds.
+ *
+ * A slider that ran evenly from nothing to two hours could not land on fifteen
+ * seconds, and one fine enough to land on it would take the whole width of the
+ * screen to cross a minute. So it walks these instead: close together where
+ * seconds matter and far apart where minutes do. Any number in between is a
+ * legal setting, they are only what a finger can reach.
+ */
+export const AUDIOBOOK_CONTINUE_REWIND_STEPS = [
+  0, 5, 10, 15, 20, 30, 45, 60, 90, 120, 180, 300, 600, 900, 1200, 1800, 2700, 3600, 5400, 7200,
+] as const;
+
+/** Whole seconds, never negative, never past the ceiling. */
+function cleanAudiobookContinueRewindSec(value: number): number {
+  if (!Number.isFinite(value)) return AUDIOBOOK_CONTINUE_REWIND_DEFAULT;
+  return Math.min(AUDIOBOOK_CONTINUE_REWIND_MAX, Math.max(0, Math.round(value)));
 }
 
 /**
@@ -1265,10 +1281,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
   },
 
   setAudiobookContinueRewindSec: (audiobookContinueRewindSec) => {
-    const value = isAudiobookContinueRewindSec(audiobookContinueRewindSec)
-      ? audiobookContinueRewindSec
-      : AUDIOBOOK_CONTINUE_REWIND_DEFAULT;
-    set({ audiobookContinueRewindSec: value });
+    set({ audiobookContinueRewindSec: cleanAudiobookContinueRewindSec(audiobookContinueRewindSec) });
     persist(snapshot(get));
   },
 
@@ -1816,11 +1829,15 @@ export const useSettings = create<SettingsState>((set, get) => ({
         if (typeof parsed.saveAudiobookProgress === 'boolean') {
           set({ saveAudiobookProgress: parsed.saveAudiobookProgress });
         }
-        if (
-          typeof parsed.audiobookContinueRewindSec === 'number' &&
-          isAudiobookContinueRewindSec(parsed.audiobookContinueRewindSec)
-        ) {
-          set({ audiobookContinueRewindSec: parsed.audiobookContinueRewindSec });
+        // Clamped rather than only checked, like the two rules below it: what
+        // is in the file is whatever the app that wrote it allowed, and this
+        // one has already been a closed list of four and is now a range.
+        if (typeof parsed.audiobookContinueRewindSec === 'number') {
+          set({
+            audiobookContinueRewindSec: cleanAudiobookContinueRewindSec(
+              parsed.audiobookContinueRewindSec,
+            ),
+          });
         }
         if (typeof parsed.crossfadeSec === 'number' && parsed.crossfadeSec >= 0) {
           set({ crossfadeSec: parsed.crossfadeSec });

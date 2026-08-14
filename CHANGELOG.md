@@ -55,6 +55,16 @@ Releases before 0.2.1 are only listed on the
 
 ### Changed
 
+- Rewind on resume, under Audiobooks, is any length up to two hours rather
+  than a choice of four. It shipped as five minutes to two hours, became
+  Off / 5 / 15 / 30 seconds because at that size it was not resuming a book
+  but hunting for your place in it, and both were right about somebody:
+  picking a book up again wants the last sentence back, and falling asleep to
+  one with the sleep timer set to an hour wants roughly that hour back,
+  because nobody heard it. So the number is the listener's. A long one now
+  reaches into the chapters before the one you stopped in instead of stopping
+  at its start, which is what it would have done on a book split into short
+  chapters. Requested by @garrit-schroeder.
 - The icons in the ⋯ menus are all outlined now. Half of them were filled,
   which in this app means something: a filled icon is the tab you are on. In a
   menu nothing is active — it is all things you can do — so the fill was

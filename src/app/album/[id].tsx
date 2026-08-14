@@ -235,19 +235,25 @@ export default function AlbumScreen() {
       (data.songs.length > 0 && data.songs.every((s) => isAudiobookSong(s))));
   const albumProgress = audiobook ? progressByAlbum[data.album.id] : undefined;
   const resumeIndex = albumProgress ? data.songs.findIndex((s) => s.id === albumProgress.trackId) : -1;
-  // A few seconds back, clamped to the start of the track. It never crosses
-  // into the previous one: at this size that would mean the last second of a
-  // chapter you already finished, and Continue would stop meaning "carry on".
-  const continueStart =
-    resumeIndex >= 0 && albumProgress
-      ? {
-          index: resumeIndex,
-          positionSec: Math.max(
-            0,
-            Math.round(albumProgress.positionSec) - audiobookContinueRewindSec,
-          ),
-        }
-      : null;
+  // Back through the book by however long the setting says, chapters and all.
+  // It used to stop at the start of the track, which was right while the most
+  // it could walk was thirty seconds and is wrong now that it can be an hour:
+  // a book split into ten-minute chapters would have quietly rewound ten
+  // minutes and left somebody who fell asleep with the timer on to find their
+  // own way back. A chapter of unknown length stops the walk, since stepping
+  // over one nobody has a duration for would land anywhere.
+  const continueStart = (() => {
+    if (resumeIndex < 0 || !albumProgress) return null;
+    let index = resumeIndex;
+    let positionSec = Math.round(albumProgress.positionSec) - audiobookContinueRewindSec;
+    while (positionSec < 0 && index > 0) {
+      const previous = data.songs[index - 1].duration;
+      if (!previous) break;
+      index -= 1;
+      positionSec += Math.round(previous);
+    }
+    return { index, positionSec: Math.max(0, positionSec) };
+  })();
   const continueFeatureVisible = audiobook && continueStart != null;
 
   const playAlbum = async (
@@ -287,8 +293,9 @@ export default function AlbumScreen() {
   }
 
   // "Chapter 12 · 1:04:20": where the row is about to drop you, said before
-  // you press it rather than after.
-  const resumeSong = resumeIndex >= 0 ? data.songs[resumeIndex] : undefined;
+  // you press it rather than after. The chapter it names is the one the rewind
+  // lands in, which with an hour of it is not always the one you stopped in.
+  const resumeSong = continueStart ? data.songs[continueStart.index] : undefined;
   const resumeDetail =
     resumeSong && continueStart
       ? [resumeSong.title, formatDuration(continueStart.positionSec)].filter(Boolean).join(' · ')
