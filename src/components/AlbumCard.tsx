@@ -1,12 +1,13 @@
 /** Album card for home and search grids/carousels. */
 import { Link } from 'expo-router';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { COVER, coverArtUrl, type Album } from '@/api/data';
 import { useMediaMenu } from '@/store/mediaMenu';
 import { haptic } from '@/lib/haptics';
 import { fontSize, spacing, themed } from '@/theme';
 import { Cover } from './Cover';
+import { ExplicitBadge, useExplicitBadge } from './ExplicitBadge';
 
 interface Props {
   album: Album;
@@ -18,6 +19,7 @@ interface Props {
 export function AlbumCard({ album, width = 150, onPress }: Props) {
   const cover = coverArtUrl(album.coverArt ?? album.id, COVER.card);
   const openMenu = useMediaMenu((s) => s.open);
+  const explicit = useExplicitBadge(album.explicitStatus);
 
   return (
     <Link href={`/album/${album.id}`} asChild>
@@ -35,10 +37,15 @@ export function AlbumCard({ album, width = 150, onPress }: Props) {
         <Text style={styles.title} numberOfLines={1}>
           {album.name}
         </Text>
-        {album.artist ? (
-          <Text style={styles.artist} numberOfLines={1}>
-            {album.artist}
-          </Text>
+        {explicit || album.artist ? (
+          <View style={styles.subRow}>
+            <ExplicitBadge status={album.explicitStatus} />
+            {album.artist ? (
+              <Text style={styles.artist} numberOfLines={1}>
+                {album.artist}
+              </Text>
+            ) : null}
+          </View>
         ) : null}
       </Pressable>
     </Link>
@@ -55,8 +62,11 @@ const styles = themed((colors) => ({
     fontWeight: '600',
     marginTop: spacing.xs,
   },
+  subRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   artist: {
     color: colors.textSecondary,
     fontSize: fontSize.xs,
+    // Gives way to the badge instead of pushing it off the card.
+    flexShrink: 1,
   },
 }));

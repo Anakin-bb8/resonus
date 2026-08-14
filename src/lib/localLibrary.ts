@@ -516,6 +516,7 @@ function applyTags(base: Record<string, unknown>, fallbackTitle: string, tags: I
   // The file's own comment: there is no server here to tell it, so this is the
   // only way the information sheet gets to show it (#59).
   if (tags?.comment) base.comment = tags.comment;
+  if (tags?.explicitStatus) base.explicitStatus = tags.explicitStatus;
   // Derived ids, which are the catalog's keys, so a song can be followed to its
   // album or artist the same way it can against a server.
   const album = (base.album as string) || UNKNOWN_ALBUM;

@@ -300,6 +300,14 @@ export default function AlbumScreen() {
   // "rock" on different tracks don't both show up.
   const genres = showGenreChips ? albumGenres(data.album, data.songs) : [];
 
+  // The album's own advisory when the server sends one (Navidrome 0.54+), and
+  // otherwise whatever its tracks say: an older server, or a profile with no
+  // server at all, still has the tag on the files themselves, and one explicit
+  // track is what makes a record explicit everywhere else too.
+  const explicit =
+    data.album.explicitStatus === 'explicit' ||
+    data.songs.some((s) => s.explicitStatus === 'explicit');
+
   const totalSec = data.songs.reduce((acc, s) => acc + (s.duration ?? 0), 0);
   const metaParts = [t(audiobook ? 'Audiobook' : 'Album')];
   if (data.album.year) metaParts.push(String(data.album.year));
@@ -319,6 +327,7 @@ export default function AlbumScreen() {
             : undefined
         }
         meta={metaParts.join(' · ')}
+        explicit={explicit}
         genres={genres}
         coverUri={coverArtUrl(data.album.coverArt ?? data.album.id, COVER.card)}
         onCoverPress={() => setCoverOpen(true)}

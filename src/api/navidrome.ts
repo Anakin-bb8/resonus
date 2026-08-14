@@ -242,6 +242,12 @@ interface NdSong {
   channels?: number;
   genre?: string;
   comment?: string;
+  /**
+   * Parental advisory, but in the native model's own shorthand: `"e"` or `"c"`
+   * where Subsonic spells out "explicit" and "clean". Translated in `toSong`,
+   * so nothing downstream has to know there are two spellings.
+   */
+  explicitStatus?: string;
   size?: number;
   playCount?: number;
   starred?: boolean;
@@ -251,6 +257,15 @@ interface NdSong {
   rgTrackPeak?: number;
   rgAlbumGain?: number;
   rgAlbumPeak?: number;
+}
+
+/**
+ * The native model's one-letter advisory into the word Subsonic uses. Anything
+ * else, including the empty string a file with no tag arrives with, is left
+ * undefined: absent and "not advised either way" are the same thing here.
+ */
+function spellExplicit(status?: string): string | undefined {
+  return status === 'e' ? 'explicit' : status === 'c' ? 'clean' : undefined;
 }
 
 /** Native song into the shape the rest of the app speaks (Subsonic's). */
@@ -277,6 +292,7 @@ function toSong(m: NdSong): Song {
     channelCount: m.channels,
     genre: m.genre,
     comment: m.comment,
+    explicitStatus: spellExplicit(m.explicitStatus),
     playCount: m.playCount,
     starred: m.starred ? (m.starredAt ?? new Date().toISOString()) : undefined,
     userRating: m.rating || undefined,
@@ -389,6 +405,8 @@ interface NdAlbum {
   playCount?: number;
   playDate?: string;
   genre?: string;
+  /** Same shorthand as the song's; see `NdSong`. */
+  explicitStatus?: string;
 }
 
 function toAlbum(a: NdAlbum): Album {
@@ -410,6 +428,7 @@ function toAlbum(a: NdAlbum): Album {
     played: a.playDate,
     playCount: a.playCount,
     genre: a.genre,
+    explicitStatus: spellExplicit(a.explicitStatus),
   };
 }
 

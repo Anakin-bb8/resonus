@@ -113,6 +113,7 @@
     "Explore chips": "The row of tappable category chips",
     "Song menu": "The three-dot menu on a song, drawn as ⋮ in a list and ⋯ in a header. A setting picks which actions it shows",
     "Song lists": "The setting for how song lists look",
+    "Show explicit tag": "A switch: whether to draw the E on anything carrying a parental advisory. \"Explicit\" here is the music-industry label for strong language, not \"clear\" or \"stated outright\"",
     "Home sections": "Reorder which sections appear on Home",
     "Pin favorites": "Pin favourites to the quick grid",
 
@@ -653,6 +654,9 @@
     "Rating": "The stars given to the song. Not a bitrate, not a review",
     "Comment": "The file's comment tag, where people keep notes about a recording",
     "Moods": "Mood tags the server has on the song: mellow, energetic…",
+    "Content": "Label of the parental advisory row: whether the recording is explicit. Not the song's lyrics, not what it is about",
+    "Explicit": "A value of `Content`: the recording carries a parental advisory (strong language). Also read out for the E badge next to a title",
+    "Clean": "A value of `Content`: the edited version, with the explicit language taken out. Not \"tidy\" and not \"free of noise\"",
     "This song carries no information.": "Empty state: the file and the server had nothing to say",
 
     // ── Sharing a link (the sheet that opens on Share) ───────────────────────

@@ -131,6 +131,14 @@ export interface Song {
   isrc?: string[];
   /** Moods the server has tagged it with (OpenSubsonic). */
   moods?: string[];
+  /**
+   * Parental advisory (OpenSubsonic): `"explicit"`, `"clean"` or empty when
+   * nothing tagged the file. Navidrome fills it from `ITUNESADVISORY`/`rtng`
+   * since 0.54; other servers may not send it at all, which is why the type is
+   * a plain string and every reader compares against the value it cares about
+   * instead of trusting a union nobody validates.
+   */
+  explicitStatus?: string;
   /** File format (mp3, flac, aac…). */
   suffix?: string;
   /** Bitrate in kbps. */
@@ -237,6 +245,13 @@ export interface Album {
   /** True if the album is a compilation (OpenSubsonic). Says on its own what a
    *  secondary release type would also say, and arrives without the tag. */
   isCompilation?: boolean;
+  /**
+   * Parental advisory for the record as a whole (OpenSubsonic; same values as
+   * the song's). Navidrome works it out from its tracks: one explicit track
+   * makes the album explicit, and it only reads as clean when nothing on it is
+   * explicit and something on it says so.
+   */
+  explicitStatus?: string;
   /**
    * Disc titles by number (OpenSubsonic extension; optional). In multi-disc
    * albums allows showing the name of each disc (tag `discsubtitle`);

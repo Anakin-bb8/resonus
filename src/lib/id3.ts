@@ -101,6 +101,31 @@ function decodeDescribedText(data: Uint8Array): string | undefined {
   return text || undefined;
 }
 
+/**
+ * Decodes a user-defined text frame (TXXX): `<encoding(1)> <null-terminated
+ * description> <value>`. Laid out like the frames above minus the language,
+ * and with the description being the point rather than something to walk past:
+ * it is the name of whatever tag an encoder invented, and there is no other way
+ * to tell one TXXX from the next.
+ */
+function decodeUserText(data: Uint8Array): { name: string; value: string } | undefined {
+  if (data.length < 3) return undefined;
+  const enc = data[0];
+  const wide = enc === 0x01 || enc === 0x02; // UTF-16: two-byte null
+  let end = 1;
+  if (wide) {
+    while (end + 1 < data.length && (data[end] !== 0 || data[end + 1] !== 0)) end += 2;
+  } else {
+    end = nullTerminatedIndex(data, 1, data.length);
+  }
+  const start = end + (wide ? 2 : 1);
+  if (start >= data.length) return undefined;
+  const name = decodeWithEncoding(enc, data.subarray(1, end)).replace(/\0+$/, '').trim();
+  const value = decodeWithEncoding(enc, data.subarray(start)).replace(/\0+$/, '').trim();
+  if (!name || !value) return undefined;
+  return { name: name.toUpperCase(), value };
+}
+
 export interface ID3Tags {
   title?: string;
   artist?: string;
@@ -115,6 +140,13 @@ export interface ID3Tags {
   lyrics?: string;
   /** Comment tag (COMM frame). The only source of it without a server (#59). */
   comment?: string;
+  /**
+   * Parental advisory, in the words the rest of the app uses ("explicit" /
+   * "clean"). Written by iTunes as `TXXX:ITUNESADVISORY`, which is also the
+   * tag Navidrome reads, so a file that shows the E on a server shows it here
+   * too.
+   */
+  explicitStatus?: string;
   /**
    * Frame id that didn't fit fully in the buffer: the tag was truncated and
    * nothing beyond this point was read. `undefined` if the full tag was parsed.
@@ -196,6 +228,16 @@ function parseID3v2(buffer: Uint8Array): ID3Tags {
         // their own behind ("Created by…"). The first non-empty one is the one
         // a person typed, and the one they expect to read back (#59).
         if (!tags.comment) tags.comment = decodeDescribedText(data);
+        break;
+      }
+      case 'TXXX': {
+        // The only one worth reading here. iTunes writes a number: 1 explicit,
+        // 2 clean, 0 (or nothing at all) for a record nobody rated.
+        const pair = decodeUserText(data);
+        if (pair?.name === 'ITUNESADVISORY') {
+          if (pair.value === '1') tags.explicitStatus = 'explicit';
+          else if (pair.value === '2') tags.explicitStatus = 'clean';
+        }
         break;
       }
       case 'APIC': {

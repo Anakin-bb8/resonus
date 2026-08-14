@@ -43,6 +43,7 @@ import { usePlayerStore } from '@/store/player';
 import { colors, fontSize, radius, spacing, themed } from '@/theme';
 import { BackChevron } from './BackChevron';
 import { Cover } from './Cover';
+import { ExplicitBadge, useExplicitBadge } from './ExplicitBadge';
 import { FavoriteButton } from './FavoriteButton';
 import { SelectionBar } from './SelectionBar';
 import { TrackRow } from './TrackRow';
@@ -77,6 +78,13 @@ interface Props {
   description?: string;
   /** Metadata line (e.g. "Album · 2021 · 12 songs · 48 min"). */
   meta?: string;
+  /**
+   * The record carries a parental advisory: the E goes at the head of the
+   * metadata line. A word in that line would have said the same thing, but the
+   * badge is what the rows below it use and reading one mark in two shapes on
+   * the same screen is worse than reading it twice.
+   */
+  explicit?: boolean;
   /** Genres of the album, as a scrollable row of chips that browse each one.
    *  Empty or absent shows nothing at all, not an empty row. */
   genres?: string[];
@@ -168,6 +176,7 @@ export function TrackListView({
   artistImageUri,
   description,
   meta,
+  explicit,
   genres,
   coverUri,
   renderCover,
@@ -216,6 +225,10 @@ export function TrackListView({
     [shuffle, queueDealt, currentId, songs],
   );
   const openArtistPicker = useArtistPicker((s) => s.open);
+  // The caller worked out whether the record carries an advisory; whether it is
+  // drawn is the badge's own switch, asked here so the metadata line is not
+  // built around a badge that never comes.
+  const showExplicit = useExplicitBadge(explicit ? 'explicit' : undefined);
   const subtitleTargets = artistTargets({ artistId, artists });
   const onSubtitlePress =
     subtitleTargets.length > 1
@@ -527,7 +540,12 @@ export function TrackListView({
             {description?.trim() ? (
               <Text style={styles.description}>{description.trim()}</Text>
             ) : null}
-            {meta ? <Text style={styles.meta}>{meta}</Text> : null}
+            {showExplicit || meta ? (
+              <View style={styles.metaRow}>
+                {showExplicit ? <ExplicitBadge status="explicit" /> : null}
+                {meta ? <Text style={styles.meta}>{meta}</Text> : null}
+              </View>
+            ) : null}
             {/* Deliberately quiet: same weight as the metadata line above, so
                 it reads as one more piece of album info and not as a control.
                 Horizontal because an album with eight tags shouldn't push the
@@ -976,10 +994,18 @@ const styles = themed((colors) => ({
     fontSize: fontSize.sm,
     marginTop: spacing.xs,
   },
+  // The row keeps the gap the line used to keep for itself, so a header with
+  // no badge sits exactly where it always did.
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: spacing.xs,
+  },
   meta: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,
-    marginTop: spacing.xs,
+    flexShrink: 1,
   },
   // `flexGrow: 0` or the row would stretch to fill the header column.
   genres: { flexGrow: 0, marginTop: spacing.sm },

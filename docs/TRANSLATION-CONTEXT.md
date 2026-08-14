@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 664 of them.
+Every string the app can show, under the screen it shows up on. 669 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -48,7 +48,9 @@ you are actually typing into, which is easier than reading it here.
 | `Battery optimization is on` | Title of the card warning that Android may cut playback off |
 | `BPM` | A property of the audio: beats per minute |
 | `Channels` | A property of the audio: mono, stereo |
+| `Clean` | A value of `Content`: the edited version, with the explicit language taken out. Not "tidy" and not "free of noise" |
 | `Comment` | The file's comment tag, where people keep notes about a recording |
+| `Content` | Label of the parental advisory row: whether the recording is explicit. Not the song's lyrics, not what it is about |
 | `Couldn't create the link` | The server would not make a share link |
 | `Couldn't find anything to mix with this song` | Toast: the server had nothing similar to carry on with |
 | `Couldn't save the file` | Toast: writing to the chosen folder failed |
@@ -59,6 +61,7 @@ you are actually typing into, which is easier than reading it here.
 | `Download removed` | Toast: the file was deleted, the song stays in the library |
 | `Downloading Resonus {version}` |  |
 | `Duration` | Label of a field in the song information sheet: how long the song is |
+| `Explicit` | A value of `Content`: the recording carries a parental advisory (strong language). Also read out for the E badge next to a title |
 | `Export` | Get the downloaded file itself out of the app, as a file. Not the same as `Share`, which makes a link on the server |
 | `Export “{name}”?` | Confirms getting the files of an album or playlist out of the app |
 | `Exporting…` | The file is being copied out |
@@ -389,6 +392,7 @@ you are actually typing into, which is easier than reading it here.
 | `Back {n} seconds` | Read out by the screen reader for the seek button. `{n}` is how many seconds it is set to |
 | `Currently playing on` | Heading above the output the music is coming out of right now, at the top of the output sheet |
 | `Devices` | The audio output devices to cast to |
+| `Explicit` | A value of `Content`: the recording carries a parental advisory (strong language). Also read out for the E badge next to a title |
 | `Forward {n} seconds` | Read out by the screen reader for the seek button. `{n}` is how many seconds it is set to |
 | `Mix of “{name}”` | What the player calls the queue once it has grown past its album into songs the app picked itself. `{name}` is the song it was grown from |
 | `Next` | Player control: the next track (accessibility label) |
@@ -463,6 +467,7 @@ you are actually typing into, which is easier than reading it here.
 | --- | --- |
 | `Clear all` | Throw away the whole list: the history, the queue, or what you searched for |
 | `Clear queue` | Menu action: empty the list of what is coming |
+| `Explicit` | A value of `Content`: the recording carries a parental advisory (strong language). Also read out for the E badge next to a title |
 | `Mix of “{name}”` | What the player calls the queue once it has grown past its album into songs the app picked itself. `{name}` is the song it was grown from |
 | `Next from {name}` | Heading on the queue screen: what is coming, and where it comes from. `{name}` is an album, a playlist or a mix |
 | `Next in queue` | Queue screen header: the track that plays next |
@@ -912,12 +917,14 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
+| `Mark songs and albums tagged as explicit with an E, in lists, on the player and in album headers.` |  |
 | `Separate discs with a header on multi-disc albums.` | The line under “Show disc titles”, explaining it |
 | `Show a round artist photo next to the name on album screens.` | The line under “Show artist photo”, explaining it |
 | `Show artist photo` | Whether the artist's photo shows at the top of their screen |
 | `Show artwork` | Whether song rows carry the album's little picture |
 | `Show disc titles` | On an album in several discs, whether each disc's own name shows |
 | `Show each song's star rating in lists.` | The line under “Show rating”, explaining it |
+| `Show explicit tag` | A switch: whether to draw the E on anything carrying a parental advisory. "Explicit" here is the music-industry label for strong language, not "clear" or "stated outright" |
 | `Show genres` | Whether a song row says its genre |
 | `Show playlist description` | A setting: whether a playlist's own description is drawn under its name on its screen. The description is text whoever made the playlist wrote about it |
 | `Show rating` |  |

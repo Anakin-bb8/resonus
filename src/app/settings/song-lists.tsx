@@ -1,7 +1,7 @@
 /**
  * Settings › Appearance › Song lists: what a song shows wherever it is listed.
  *
- * Its own screen, like the quick grid and the home sections. Seven switches
+ * Its own screen, like the quick grid and the home sections. Eight switches
  * with a line of explanation each is a screenful, and it sat in the middle of
  * Appearance, between the language and the navigation bar, so everything under
  * it was a scroll away for anyone who had not come looking for this.
@@ -24,6 +24,8 @@ export default function SongListsSettings() {
   const setShowSongDuration = useSettings((s) => s.setShowSongDuration);
   const showListRating = useSettings((s) => s.showListRating);
   const setShowListRating = useSettings((s) => s.setShowListRating);
+  const showExplicitTag = useSettings((s) => s.showExplicitTag);
+  const setShowExplicitTag = useSettings((s) => s.setShowExplicitTag);
   const showPlaylistDescription = useSettings((s) => s.showPlaylistDescription);
   const setShowPlaylistDescription = useSettings((s) => s.setShowPlaylistDescription);
   const showArtistPhoto = useSettings((s) => s.showArtistPhoto);
@@ -54,6 +56,14 @@ export default function SongListsSettings() {
               description: t("Show each song's star rating in lists."),
               value: showListRating,
               onChange: setShowListRating,
+            },
+            {
+              label: t('Show explicit tag'),
+              description: t(
+                'Mark songs and albums tagged as explicit with an E, in lists, on the player and in album headers.',
+              ),
+              value: showExplicitTag,
+              onChange: setShowExplicitTag,
             },
             {
               label: t('Show playlist description'),

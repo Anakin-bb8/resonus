@@ -14,6 +14,7 @@ import { haptic } from '@/lib/haptics';
 import { useMediaMenu } from '@/store/mediaMenu';
 import { fontSize, spacing, themed, useTheme } from '@/theme';
 import { Cover } from './Cover';
+import { ExplicitBadge, useExplicitBadge } from './ExplicitBadge';
 
 interface Props {
   album: Album;
@@ -26,6 +27,7 @@ export function AlbumRow({ album, pinned }: Props) {
   // Subscribed, not read straight off `colors`: without it the pin would keep
   // the previous accent while the screen stays mounted.
   const { accent } = useTheme();
+  const explicit = useExplicitBadge(album.explicitStatus);
 
   return (
     <Link href={`/album/${album.id}`} asChild>
@@ -41,11 +43,12 @@ export function AlbumRow({ album, pinned }: Props) {
           <Text style={styles.name} numberOfLines={1}>
             {album.name}
           </Text>
-          {album.artist || pinned ? (
+          {album.artist || pinned || explicit ? (
             <View style={styles.subLine}>
               {pinned ? (
                 <MaterialCommunityIcons name="pin" size={13} color={accent} style={styles.pin} />
               ) : null}
+              <ExplicitBadge status={album.explicitStatus} />
               {album.artist ? (
                 <Text style={styles.sub} numberOfLines={1}>
                   {album.artist}
@@ -64,7 +67,7 @@ const styles = themed((colors) => ({
   info: { flex: 1 },
   name: { color: colors.text, fontSize: fontSize.md, fontWeight: '600' },
   subLine: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  sub: { color: colors.textSecondary, fontSize: fontSize.xs },
+  sub: { color: colors.textSecondary, fontSize: fontSize.xs, flexShrink: 1 },
   // The MCI pin icon is vertical; rotated 45° it looks like Spotify's.
   pin: { transform: [{ rotate: '45deg' }] },
 }));

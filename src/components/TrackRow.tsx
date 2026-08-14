@@ -23,6 +23,7 @@ import { useToast } from '@/store/toast';
 import { useT } from '@/i18n';
 import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
 import { Cover } from './Cover';
+import { ExplicitBadge, useExplicitBadge } from './ExplicitBadge';
 import { FavoriteButton } from './FavoriteButton';
 
 interface Props {
@@ -143,6 +144,7 @@ function TrackRowBase({
   const unavailable = offline
     ? !song.url && !song.localUri && !downloaded
     : !!song.unavailable;
+  const explicit = useExplicitBadge(song.explicitStatus);
 
   // Swipe right = configurable action (Spotify-style gesture). The row returns
   // on its own; the background strip only peaks during the gesture.
@@ -261,11 +263,15 @@ function TrackRowBase({
         >
           {song.title}
         </Text>
-        {downloaded || song.artist ? (
+        {downloaded || explicit || song.artist ? (
           <View style={styles.subRow}>
             {downloaded ? (
               <Ionicons name="arrow-down-circle" size={13} color={colors.accent} />
             ) : null}
+            {/* Ahead of the name, like every other player draws it: the badge
+                is about the track, and an artist name long enough to be cut
+                would take the badge off the row with it. */}
+            <ExplicitBadge status={song.explicitStatus} />
             {song.artist ? (
               <Text style={styles.artist} numberOfLines={1}>
                 {song.artist}

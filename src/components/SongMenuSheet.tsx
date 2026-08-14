@@ -54,6 +54,7 @@ import { useT } from '@/i18n';
 import { colors, fontSize, radius, spacing, themed } from '@/theme';
 import { Cover } from './Cover';
 import { Dialog } from './Dialog';
+import { ExplicitBadge, useExplicitBadge } from './ExplicitBadge';
 import { StarRating } from './StarRating';
 
 /** Maximum height of the playlist list: proportional to the screen so it
@@ -189,6 +190,10 @@ export function SongMenuSheet() {
     queryFn: () => getPlaylists(),
     enabled: (!!auth || offline) && mode === 'playlists',
   });
+
+  // Before the early return, the way every hook here has to be: the sheet
+  // stays mounted with no song between openings.
+  const explicit = useExplicitBadge(song?.explicitStatus);
 
   if (!song) return null;
 
@@ -358,10 +363,15 @@ export function SongMenuSheet() {
                   <Text style={styles.title} numberOfLines={1}>
                     {song.title}
                   </Text>
-                  {song.artist ? (
-                    <Text style={styles.artist} numberOfLines={1}>
-                      {song.artist}
-                    </Text>
+                  {explicit || song.artist ? (
+                    <View style={styles.subRow}>
+                      <ExplicitBadge status={song.explicitStatus} />
+                      {song.artist ? (
+                        <Text style={styles.artist} numberOfLines={1}>
+                          {song.artist}
+                        </Text>
+                      ) : null}
+                    </View>
                   ) : null}
                 </View>
               </View>
@@ -785,7 +795,8 @@ const styles = themed((colors) => ({
     paddingBottom: spacing.md,
   },
   title: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
-  artist: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: 2 },
+  subRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  artist: { color: colors.textSecondary, fontSize: fontSize.sm, flexShrink: 1 },
   divider: { height: 1, backgroundColor: colors.border, marginBottom: spacing.sm },
   ratingRow: { alignItems: 'center', paddingVertical: spacing.sm, marginBottom: spacing.sm },
   action: {

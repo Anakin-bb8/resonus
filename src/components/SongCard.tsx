@@ -15,6 +15,7 @@ import { useAuthStore } from '@/store/auth';
 import { useDownloads } from '@/store/downloads';
 import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 import { Cover } from './Cover';
+import { ExplicitBadge, useExplicitBadge } from './ExplicitBadge';
 
 interface Props {
   song: Song;
@@ -50,6 +51,7 @@ export const SongCard = memo(function SongCard({
   const unavailable = offline
     ? !song.url && !song.localUri && !downloaded
     : !!song.unavailable;
+  const explicit = useExplicitBadge(song.explicitStatus);
   return (
     <Pressable
       style={[styles.container, { width }]}
@@ -75,10 +77,15 @@ export const SongCard = memo(function SongCard({
       <Text style={[styles.title, isCurrent && { color: accent }]} numberOfLines={1}>
         {song.title}
       </Text>
-      {song.artist ? (
-        <Text style={styles.artist} numberOfLines={1}>
-          {song.artist}
-        </Text>
+      {explicit || song.artist ? (
+        <View style={styles.subRow}>
+          <ExplicitBadge status={song.explicitStatus} />
+          {song.artist ? (
+            <Text style={styles.artist} numberOfLines={1}>
+              {song.artist}
+            </Text>
+          ) : null}
+        </View>
       ) : null}
     </Pressable>
   );
@@ -92,7 +99,10 @@ const styles = themed((colors) => ({
     fontWeight: '600',
     marginTop: spacing.xs,
   },
-  artist: { color: colors.textSecondary, fontSize: fontSize.xs },
+  subRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  // `flexShrink` so a long name gives way to the badge instead of pushing it
+  // off the card.
+  artist: { color: colors.textSecondary, fontSize: fontSize.xs, flexShrink: 1 },
   check: {
     position: 'absolute',
     top: spacing.sm,

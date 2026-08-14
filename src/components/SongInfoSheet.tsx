@@ -187,6 +187,17 @@ export function SongInfoSheet() {
   add(t('Size'), song.dlBytes ? formatBytes(song.dlBytes) : undefined);
   add(t('Comment'), song.comment);
   add(t('BPM'), song.bpm);
+  // Spelled out here, unlike the badge in the lists: this is the one place
+  // "clean" is worth saying, since a censored edit is a fact about the file and
+  // a row that shows nothing cannot tell it from an untagged one.
+  add(
+    t('Content'),
+    song.explicitStatus === 'explicit'
+      ? t('Explicit')
+      : song.explicitStatus === 'clean'
+        ? t('Clean')
+        : undefined,
+  );
   add(t('Moods'), song.moods?.join(', '));
   add(t('Plays'), song.playCount);
   add(t('Rating'), song.userRating ? `${song.userRating}/5` : undefined);

@@ -23,6 +23,7 @@ import { type Song } from '@/api/subsonic';
 import { Cover } from '@/components/Cover';
 import { Dialog } from '@/components/Dialog';
 import { EmptyState } from '@/components/EmptyState';
+import { ExplicitBadge, useExplicitBadge } from '@/components/ExplicitBadge';
 import { SheetModal } from '@/components/SheetModal';
 import { formatTotalDuration } from '@/lib/format';
 import { mixSeedOf, SOURCE_FAVORITES, SOURCE_HISTORY, usePlayerStore } from '@/store/player';
@@ -46,6 +47,26 @@ function SectionHeader({ title, gap }: { title: string; gap?: boolean }) {
   return <Text style={[styles.sectionHeader, gap && styles.sectionGap]}>{title}</Text>;
 }
 
+/**
+ * The line under the title, which the three kinds of row here all draw the
+ * same: the artist, with the advisory badge ahead of it. Either half can be
+ * missing, and a song with neither draws nothing at all.
+ */
+function ArtistLine({ song }: { song: Song }) {
+  const explicit = useExplicitBadge(song.explicitStatus);
+  if (!explicit && !song.artist) return null;
+  return (
+    <View style={styles.subRow}>
+      <ExplicitBadge status={song.explicitStatus} />
+      {song.artist ? (
+        <Text style={styles.artist} numberOfLines={1}>
+          {song.artist}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
 /** Current song: fixed at the top, highlighted, no controls. */
 function NowPlayingRow({ song }: { song: Song }) {
   const showListArtwork = useSettings((s) => s.showListArtwork);
@@ -61,11 +82,7 @@ function NowPlayingRow({ song }: { song: Song }) {
           <Text style={[styles.title, { color: colors.accent }]} numberOfLines={1}>
             {song.title}
           </Text>
-          {song.artist ? (
-            <Text style={styles.artist} numberOfLines={1}>
-              {song.artist}
-            </Text>
-          ) : null}
+          <ArtistLine song={song} />
         </View>
       </View>
       <Ionicons name="volume-medium" size={20} color={colors.accent} />
@@ -89,11 +106,7 @@ function PreviousRow({ item, absIndex }: { item: Song; absIndex: number }) {
           <Text style={styles.title} numberOfLines={1}>
             {item.title}
           </Text>
-          {item.artist ? (
-            <Text style={styles.artist} numberOfLines={1}>
-              {item.artist}
-            </Text>
-          ) : null}
+          <ArtistLine song={item} />
         </View>
       </View>
     </Pressable>
@@ -126,11 +139,7 @@ function UpcomingRow({ item, absIndex }: { item: Song; absIndex: number }) {
           <Text style={styles.title} numberOfLines={1}>
             {item.title}
           </Text>
-          {item.artist ? (
-            <Text style={styles.artist} numberOfLines={1}>
-              {item.artist}
-            </Text>
-          ) : null}
+          <ArtistLine song={item} />
         </View>
       </Pressable>
 
@@ -434,6 +443,9 @@ const styles = themed((colors) => ({
   artwork: { width: 44, height: 44 },
   info: { flex: 1 },
   title: { color: colors.text, fontSize: fontSize.md },
-  artist: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2 },
+  // The line's own gap moved up to the row, so badge and name sit on the same
+  // middle; `flexShrink` keeps a long name from pushing the badge off the row.
+  subRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  artist: { color: colors.textSecondary, fontSize: fontSize.xs, flexShrink: 1 },
   actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
 }));

@@ -589,6 +589,14 @@ interface SettingsState {
   showSongDuration: boolean;
   /** Rating stars per song in lists. */
   showListRating: boolean;
+  /**
+   * The E badge on anything tagged with a parental advisory. One switch and not
+   * one per screen: it is the same mark wherever it appears, and whoever wants
+   * it out of a list does not want it on the player either. The song
+   * information sheet still spells it out, the way it spells out everything
+   * else about a file whether or not it is drawn anywhere.
+   */
+  showExplicitTag: boolean;
   /** When the queue ends, continue with similar songs (getSimilarSongs2). */
   autoplaySimilar: boolean;
   /** Remember audiobook progress locally so albums can resume later. */
@@ -827,6 +835,7 @@ interface SettingsState {
   setAlwaysShowTabs: (value: boolean) => void;
   setShowSongDuration: (value: boolean) => void;
   setShowListRating: (value: boolean) => void;
+  setShowExplicitTag: (value: boolean) => void;
   setAutoplaySimilar: (value: boolean) => void;
   setSaveAudiobookProgress: (value: boolean) => void;
   setAudiobookContinueRewindSec: (value: number) => void;
@@ -939,6 +948,7 @@ function snapshot(get: () => SettingsState) {
     alwaysShowTabs: s.alwaysShowTabs,
     showSongDuration: s.showSongDuration,
     showListRating: s.showListRating,
+    showExplicitTag: s.showExplicitTag,
     autoplaySimilar: s.autoplaySimilar,
     saveAudiobookProgress: s.saveAudiobookProgress,
     audiobookContinueRewindSec: s.audiobookContinueRewindSec,
@@ -1028,6 +1038,9 @@ const DEFAULTS = {
   alwaysShowTabs: false,
   showSongDuration: false,
   showListRating: false,
+  // On: it only ever draws where a file says so, which in most libraries is
+  // nowhere, and where it does draw it is the tag the file was given.
+  showExplicitTag: true,
   autoplaySimilar: true,
   saveAudiobookProgress: true,
   audiobookContinueRewindSec: AUDIOBOOK_CONTINUE_REWIND_DEFAULT,
@@ -1217,6 +1230,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
 
   setShowListRating: (showListRating) => {
     set({ showListRating });
+    persist(snapshot(get));
+  },
+
+  setShowExplicitTag: (showExplicitTag) => {
+    set({ showExplicitTag });
     persist(snapshot(get));
   },
 
@@ -1637,6 +1655,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           alwaysShowTabs: boolean;
           showSongDuration: boolean;
           showListRating: boolean;
+          showExplicitTag?: boolean;
           autoplaySimilar: boolean;
           saveAudiobookProgress: boolean;
           audiobookContinueRewindSec: number;
@@ -1778,6 +1797,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (typeof parsed.showListRating === 'boolean') {
           set({ showListRating: parsed.showListRating });
+        }
+        if (typeof parsed.showExplicitTag === 'boolean') {
+          set({ showExplicitTag: parsed.showExplicitTag });
         }
         if (typeof parsed.navidromeIdRepair === 'boolean') {
           set({ navidromeIdRepair: parsed.navidromeIdRepair });

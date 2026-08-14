@@ -35,6 +35,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { COVER, songCoverUrl, type Song } from '@/api/data';
 import { AudioQualityBadge } from '@/components/AudioQualityBadge';
 import { Cover, useRedrawOnReturn, useSettledSource } from '@/components/Cover';
+import { ExplicitBadge } from '@/components/ExplicitBadge';
 import { FavoriteButton } from '@/components/FavoriteButton';
 import { CoverLyrics, LyricsCard } from '@/components/LyricsCard';
 import { MarqueeText } from '@/components/MarqueeText';
@@ -910,14 +911,20 @@ export default function PlayerScreen() {
                   : undefined;
                 return (
                   <>
-                    <Text
-                      style={styles.artist}
-                      numberOfLines={1}
-                      onPress={goArtist}
-                      suppressHighlighting
-                    >
-                      {artistName}
-                    </Text>
+                    {/* The badge sits beside the artist and not the title: the
+                        title is a marquee, and anything sharing a row with it
+                        would be dragged along by the scroll. */}
+                    <View style={styles.artistRow}>
+                      <ExplicitBadge status={song.explicitStatus} />
+                      <Text
+                        style={styles.artist}
+                        numberOfLines={1}
+                        onPress={goArtist}
+                        suppressHighlighting
+                      >
+                        {artistName}
+                      </Text>
+                    </View>
                     {/* Its own line: next to the artist the two ran together and
                         the album was hard to pick out. */}
                     {albumInfo ? (
@@ -1208,10 +1215,18 @@ const styles = themed((colors) => ({
   // Hugs the text: the tappable area is just the title/artist, not the row.
   tapText: { alignSelf: 'flex-start', maxWidth: '100%' },
   title: { color: colors.text, fontSize: fontSize.xl, fontWeight: '800' },
+  // The gap the artist line used to keep for itself now belongs to the row it
+  // shares with the badge, so the two line up on their middles.
+  artistRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: spacing.xs,
+  },
   artist: {
     color: colors.textSecondary,
     fontSize: fontSize.md,
-    marginTop: spacing.xs,
+    flexShrink: 1,
   },
   // A step below the artist so the three lines read as a hierarchy
   // (title → artist → album) instead of three rows of the same weight.

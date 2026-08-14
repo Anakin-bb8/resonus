@@ -42,6 +42,15 @@ Releases before 0.2.1 are only listed on the
 - An Audiobooks chip for Home, so they have somewhere to be rather than only
   turning up as you walk past them. It is off until you turn it on in
   Settings › Explore chips, since most libraries are music and nothing else.
+- The E next to a title, for a track or a record tagged with a parental
+  advisory. It shows in lists, on cards, in the queue, on the player and in
+  the album header, and turns off in one place, Settings › Appearance › Song
+  lists, since it is the same mark wherever it appears. The song information
+  sheet spells it out either way, where a censored edit reads as Clean rather
+  than as nothing at all. Navidrome sends it from 0.54 onwards; an older
+  server or one that does not send it shows what it always did. A local
+  library reads the tag off the files, which takes a rescan for the ones
+  already scanned.
 
 ### Changed
 
