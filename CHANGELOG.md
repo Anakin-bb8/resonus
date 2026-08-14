@@ -16,6 +16,10 @@ Releases before 0.2.1 are only listed on the
   an answer written into the app is stuck there until the next release reaches
   everybody. It is only getting started, so what is missing from it is
   whatever you ask next.
+- The sleep timer follows the music onto a Sonos speaker, so it still stops
+  when you said it would with the phone out of the way. Repeat travels in both
+  directions too: turn it on from the Sonos app and Resonus shows it on.
+  Thanks to @garrit-schroeder (#149).
 - Casting the music on the phone. A renderer is not sent audio, it is sent an
   address and goes and fetches it, and a file on the phone had none to give, so
   the local profile could not cast at all. The phone serves its own files now,
@@ -50,6 +54,14 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- A queue cast to Sonos and then changed drifted away from the app's: reorders
+  did not arrive, "play next" landed somewhere else, deleting from the middle
+  left the two lists out of step, and an edit in the middle of a song could
+  cut it short. The speaker's queue is edited in place now, one operation at a
+  time, and what cannot be done that way is left alone rather than rewritten
+  under the song that is playing. Shuffle stays on the phone while casting,
+  reshuffling only what is still ahead, so both lists keep counting from the
+  same place. Thanks to @garrit-schroeder (#149).
 - Jellyfin was told it was talking to version 1.0 of something on a device
   called Android, and its dashboard said exactly that. It gets the phone's
   model and the version you are actually running, so the session is worth
