@@ -28,6 +28,17 @@ function bugReportUrl(version: string | undefined): string {
   const form = `${REPO_URL}/issues/new?template=bug_report.yml`;
   return version ? `${form}&version=${encodeURIComponent(version)}` : form;
 }
+/**
+ * The FAQ is a page on GitHub and not a screen in here on purpose: what gets
+ * asked most is what changes most (the car, casting, offline), and an answer
+ * written into the app is frozen until the next APK reaches everybody. Linking
+ * to `main` means the answer somebody reads today is the one written this
+ * morning.
+ *
+ * Its headings are anchors (`#android-auto`), so this can grow into links from
+ * the screen each question is about rather than only this one.
+ */
+const FAQ_URL = `${REPO_URL}/blob/main/docs/FAQ.md`;
 const DISCORD_URL = 'https://discord.gg/pecE8MTPVr';
 const KOFI_URL = 'https://ko-fi.com/juananzzz';
 
@@ -78,6 +89,13 @@ export default function AboutSettings() {
           onPress={() => Linking.openURL(`${REPO_URL}/releases`)}
         />
         {/* Everything from here to Ko-fi leaves the app. */}
+        {/* Above the bug report because half of what arrives there is a
+            question, and this is where the answer already is. */}
+        <SettingRow
+          icon="help-circle-outline"
+          label={t('FAQ')}
+          onPress={() => Linking.openURL(FAQ_URL)}
+        />
         <SettingRow
           icon="logo-github"
           label="GitHub"

@@ -11,6 +11,11 @@ Releases before 0.2.1 are only listed on the
 
 ### Added
 
+- A FAQ, reachable from Settings › About. It is a page on GitHub and not a
+  screen in the app on purpose: what gets asked most is what changes most, and
+  an answer written into the app is stuck there until the next release reaches
+  everybody. It is only getting started, so what is missing from it is
+  whatever you ask next.
 - Casting the music on the phone. A renderer is not sent audio, it is sent an
   address and goes and fetches it, and a file on the phone had none to give, so
   the local profile could not cast at all. The phone serves its own files now,

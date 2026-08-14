@@ -48,6 +48,12 @@ Also available on [Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtai
 - **Queue sync across devices**
 - **In 7 languages**: English, Spanish, German, Catalan, Russian, Italian, Simplified Chinese
 
+## FAQ
+
+The questions that come up most often — Android Auto, casting, offline mode —
+are answered in [docs/FAQ.md](./docs/FAQ.md). The app links to it too, from
+Settings › About.
+
 ## Translations
 
 More languages are welcome via pull request. See

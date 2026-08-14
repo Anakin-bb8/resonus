@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 650 of them.
+Every string the app can show, under the screen it shows up on. 651 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -535,6 +535,7 @@ you are actually typing into, which is easier than reading it here.
 | `Couldn't check for updates` |  |
 | `Couldn't download the update` |  |
 | `Couldn't open the installer` |  |
+| `FAQ` | Opens the page of frequently asked questions on GitHub. Spell it out if that reads better in your language than the initials |
 | `Installing updates needs permission` | Shown when the user came back from Android's «install unknown apps» screen without granting it |
 | `Measure performance` | Timing, not analytics: how long the app takes to do things on this phone, kept on the phone. Nothing is sent anywhere. It is turned on when somebody is being walked through a slowdown |
 | `Report a bug` | Opens a new issue on GitHub |

@@ -235,6 +235,7 @@
     "Settings restored": "Toast after putting the settings back to their defaults",
     "Your preferences will go back to their defaults. Your language stays.": "The line under that dialog",
     "Report a bug": "Opens a new issue on GitHub",
+    "FAQ": "Opens the page of frequently asked questions on GitHub. Spell it out if that reads better in your language than the initials",
     "Cache cleared": "Toast: what was remembered from the server was thrown away. Downloads are untouched",
     "Couldn't rescan": "Toast: going through the phone's own files failed",
     "Couldn't start the scan": "Toast: the server refused to start a scan",
