@@ -18,12 +18,12 @@ import { TrackListView } from '@/components/TrackListView';
 import { useDownloadMessage } from '@/hooks/useDownloadMessage';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { songsLabel, useT } from '@/i18n';
-import { formatTotalDuration } from '@/lib/format';
+import { formatDuration, formatTotalDuration } from '@/lib/format';
 import {
-  isAudiobookAlbum,
-  isAudiobookSong,
+  markedAsAudiobook,
   useAlbumProgress,
   useAlbumProgressByAlbum,
+  useAudiobookMarks,
 } from '@/store/albumProgress';
 import { useAuthStore } from '@/store/auth';
 import { groupDownloadState, useDownloads } from '@/store/downloads';
@@ -227,6 +227,7 @@ export default function AlbumScreen() {
   const deleteSongs = useDownloads((s) => s.deleteSongs);
   const downloadSongs = useDownloads((s) => s.downloadSongs);
   const progressByAlbum = useAlbumProgressByAlbum(auth, offline);
+  const marks = useAudiobookMarks(auth, offline);
   // Stable between progress ticks (only changes with status): if its identity
   // changed on every % update, the Pressable would lose its touch and you'd
   // have to press multiple times.
@@ -254,13 +255,10 @@ export default function AlbumScreen() {
     ? `℗ ${data.album.year ? `${data.album.year} ` : ''}${labels.join(' · ')}`
     : null;
 
-  // The album's own tag decides, and its songs only get a say where nobody
-  // tagged the record: one track with a spoken-word genre no longer turns the
-  // whole album into an audiobook.
-  const audiobook =
-    saveAudiobookProgress &&
-    (isAudiobookAlbum(data.album) ||
-      (data.songs.length > 0 && data.songs.every((s) => isAudiobookSong(s))));
+  // What you marked it as, or what its RELEASETYPE says while you have not.
+  // An album nobody marked is an album: same label, same play button, same
+  // autoplay as the two thousand records that are not books.
+  const audiobook = saveAudiobookProgress && markedAsAudiobook(marks, data.album);
   const albumProgress = audiobook ? progressByAlbum[data.album.id] : undefined;
   const resumeIndex = albumProgress ? data.songs.findIndex((s) => s.id === albumProgress.trackId) : -1;
   const continueExactStart =
@@ -308,24 +306,52 @@ export default function AlbumScreen() {
     void playAlbum(start.index, start.positionSec, undefined, true);
   }
 
+  function toggleAudiobook() {
+    if (!data) return;
+    useAlbumProgress.getState().setAudiobook(auth, offline, data.album.id, !audiobook);
+    toast(audiobook ? t('No longer an audiobook') : t('Marked as an audiobook'));
+  }
+
   function openAlbumMenu() {
     if (!data) return;
-    const audiobookActions = continueFeatureVisible
-      ? [
-          {
-            icon: 'play-forward' as const,
-            label: t('Continue playing'),
-            onPress: () => runContinue(continueExactStart),
-          },
-          {
-            icon: 'play-skip-forward' as const,
-            label: t('Continue play with rewind'),
-            onPress: () => runContinue(continueStart),
-          },
-        ]
-      : undefined;
-    openMediaMenu({ kind: 'album', album: data.album, extraActions: audiobookActions });
+    const extraActions = [
+      // Offered on every album, not only the ones already marked: it is how an
+      // audiobook becomes one in the first place. Gone entirely with the
+      // setting off, where marking one would do nothing.
+      ...(saveAudiobookProgress
+        ? [
+            {
+              icon: audiobook ? ('musical-notes-outline' as const) : ('book-outline' as const),
+              label: audiobook ? t('Not an audiobook') : t("It's an audiobook"),
+              onPress: toggleAudiobook,
+            },
+          ]
+        : []),
+      // The rewound resume lives here rather than on the row, which offers the
+      // exact spot: the row says where it will drop you, and a second row
+      // saying "or somewhat before there" is a choice nobody wants twice.
+      ...(continueFeatureVisible
+        ? [
+            {
+              icon: 'play-back-outline' as const,
+              label: t('Continue play with rewind'),
+              onPress: () => runContinue(continueStart),
+            },
+          ]
+        : []),
+    ];
+    openMediaMenu({ kind: 'album', album: data.album, extraActions });
   }
+
+  // "Chapter 12 · 1:04:20": where the row is about to drop you, said before
+  // you press it rather than after.
+  const resumeSong = resumeIndex >= 0 ? data.songs[resumeIndex] : undefined;
+  const resumeDetail =
+    resumeSong && continueExactStart
+      ? [resumeSong.title, formatDuration(continueExactStart.positionSec)]
+          .filter(Boolean)
+          .join(' · ')
+      : undefined;
 
   // What the server says about the album first (OpenSubsonic sends the full
   // list); otherwise gathered from its songs, which is where the tags actually
@@ -368,11 +394,11 @@ export default function AlbumScreen() {
           starred: favAlbumIds ? favAlbumIds.has(data.album.id) : !!data.album.starred,
         }}
         download={!offline ? { ...download, onPress: onDownloadPress } : undefined}
-        playButton={
+        resumeAction={
           continueFeatureVisible
             ? {
-                icon: 'play-skip-forward',
                 label: t('Continue playing'),
+                detail: resumeDetail,
                 onPress: () => runContinue(continueExactStart),
               }
             : undefined

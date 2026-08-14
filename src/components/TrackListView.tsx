@@ -151,12 +151,13 @@ interface Props {
   /** `opts` goes straight to `playQueue`: the shuffle button asks for the list
    *  dealt, which the screen owning the songs is the one who can request. */
   onPlay: (startIndex: number, opts?: { shuffled?: boolean }) => void | Promise<void | boolean>;
-  /** Optional override for the large primary play button in the header. */
-  playButton?: {
-    icon?: keyof typeof Ionicons.glyphMap;
-    label?: string;
-    onPress: () => void | Promise<void>;
-  };
+  /**
+   * A row of its own between the header and the list, for an album that has
+   * somewhere to be resumed from. Not the play button: that one means "play
+   * this" on every screen in the app, and a screen that quietly repurposes it
+   * is a screen you can no longer start from the top.
+   */
+  resumeAction?: { label: string; detail?: string; onPress: () => void | Promise<void> };
 }
 
 export function TrackListView({
@@ -191,7 +192,7 @@ export function TrackListView({
   searchPlaceholder,
   selection,
   onPlay,
-  playButton,
+  resumeAction,
 }: Props) {
   const router = useRouter();
   const t = useT();
@@ -385,12 +386,6 @@ export function TrackListView({
     // used to be turned on here, and since the mode is remembered between
     // sessions it stayed on for the next album someone pressed Play on.
     void onPlay(0, { shuffled: true });
-  }
-
-  function onPrimaryPlayPress() {
-    if (songs.length === 0) return;
-    if (playButton) void Promise.resolve(playButton.onPress()).catch(() => {});
-    else void Promise.resolve(onPlay(0)).catch(() => {});
   }
 
   return (
@@ -632,18 +627,38 @@ export function TrackListView({
                 <Pressable
                   style={[styles.playButton, { backgroundColor: colors.accent }]}
                   accessibilityRole="button"
-                  accessibilityLabel={playButton?.label ?? t('Play')}
-                  onPress={onPrimaryPlayPress}
+                  accessibilityLabel={t('Play')}
+                  onPress={() => songs.length > 0 && onPlay(0)}
                 >
                   <Ionicons
-                    name={playButton?.icon ?? 'play'}
+                    name="play"
                     size={28}
                     color={colors.onAccent}
-                    style={{ marginLeft: playButton?.icon ? 0 : 3 }}
+                    style={{ marginLeft: 3 }}
                   />
                 </Pressable>
               </View>
             </View>
+
+            {resumeAction ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => void Promise.resolve(resumeAction.onPress()).catch(() => {})}
+                style={({ pressed }) => [styles.addRow, pressed && { opacity: 0.6 }]}
+              >
+                <View style={styles.addBox}>
+                  <Ionicons name="play-forward" size={26} color={colors.textSecondary} />
+                </View>
+                <View style={styles.resumeText}>
+                  <Text style={styles.addLabel}>{resumeAction.label}</Text>
+                  {resumeAction.detail ? (
+                    <Text style={styles.resumeDetail} numberOfLines={1}>
+                      {resumeAction.detail}
+                    </Text>
+                  ) : null}
+                </View>
+              </Pressable>
+            ) : null}
 
             {addAction ? (
               <Pressable
@@ -901,6 +916,8 @@ const styles = themed((colors) => ({
     justifyContent: 'center',
   },
   addLabel: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
+  resumeText: { flex: 1 },
+  resumeDetail: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: 2 },
   discHeader: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,

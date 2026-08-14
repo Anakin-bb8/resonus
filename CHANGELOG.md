@@ -30,14 +30,16 @@ Releases before 0.2.1 are only listed on the
 - An artist's ⋯ menu offers All releases, the whole discography as one list
   the way it was before it was split into albums, EPs and singles. It only
   shows where there is a split to undo.
-- Audiobooks pick up where you left them. An album read aloud says Audiobook
-  under its cover instead of Album, keeps the track and the position you
-  stopped at, and offers to continue from there, either exactly or a set
-  distance back. What it knows it from is the record's release type, the same
-  MusicBrainz tag the discography is split by, and where nothing is tagged,
-  the genre of every track on it. When one ends, nothing similar follows it.
-  All of it can be turned off in Settings › Quality & playback. Thanks to
-  @garrit-schroeder (#144).
+- Audiobooks pick up where you left them. Mark an album as one from its ⋯
+  menu, or let its tags do it: a record whose MusicBrainz release type says
+  audiobook, audio drama or spoken word starts out marked, and you can
+  disagree either way. A marked album says Audiobook under its cover instead
+  of Album, keeps the track and the position you stopped at, and grows a
+  Continue row that names the chapter and the time it will drop you at. Its ⋯
+  menu can resume a set distance earlier instead. When one ends, nothing
+  similar follows it. Nothing changes on an album you have not marked, and
+  the whole thing can be turned off in Settings › Quality & playback. Thanks
+  to @garrit-schroeder (#144).
 
 ### Changed
 

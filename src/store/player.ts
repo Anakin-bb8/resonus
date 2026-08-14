@@ -63,7 +63,7 @@ import { beat, bump } from '@/lib/perfLog';
 import { queryClient } from '@/lib/query';
 import { primaryUrl } from '@/lib/serverUrls';
 import { getItem, setItem } from '@/lib/storage';
-import { isAudiobookAlbumId, isAudiobookSong, useAlbumProgress } from './albumProgress';
+import { isAudiobookAlbumId, useAlbumProgress } from './albumProgress';
 import { useAuthStore } from './auth';
 import { checkAutoUrlNow } from './autoUrl';
 import { castSetState, castSetVolumeLevel, castUpdate, initCastMedia } from './castMedia';
@@ -1068,19 +1068,26 @@ function reportState(state: PlaybackState, song: Song | undefined, positionSec: 
 }
 
 /**
- * Persists the last known track+position for audiobook-like albums.
+ * Whether the track playing belongs to an album marked as an audiobook.
  *
- * The album is asked first, since that is where the `RELEASETYPE` tag lives
- * and the track's genre is only what an untagged library leaves us. Answered
- * from a one-entry cache because this runs on every status tick.
+ * Cached by album rather than by track: a book is one album for hours, so
+ * this answers from the cache for every status tick of every chapter, and it
+ * is thrown away when the marks change so unmarking one takes effect at once.
  */
-let audiobookCheckCache: { songId: string; isAudiobook: boolean } | null = null;
+let audiobookCheckCache: { albumId: string; isAudiobook: boolean } | null = null;
+useAlbumProgress.subscribe((s, prev) => {
+  // Only the marks: the same store takes a position every thirty seconds, and
+  // throwing the answer away on each of those would be a cache in name only.
+  if (s.marked !== prev.marked) audiobookCheckCache = null;
+});
 
 function isAudiobookTrack(song: Song): boolean {
+  if (!song.albumId) return false;
   const cached = audiobookCheckCache;
-  if (cached && cached.songId === song.id) return cached.isAudiobook;
-  const isAudiobook = isAudiobookAlbumId(song.albumId) || isAudiobookSong(song);
-  audiobookCheckCache = { songId: song.id, isAudiobook };
+  if (cached && cached.albumId === song.albumId) return cached.isAudiobook;
+  const { auth, offline } = useAuthStore.getState();
+  const isAudiobook = isAudiobookAlbumId(auth, offline, song.albumId);
+  audiobookCheckCache = { albumId: song.albumId, isAudiobook };
   return isAudiobook;
 }
 
