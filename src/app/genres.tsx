@@ -14,7 +14,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { type Genre } from '@/api/backend';
 import { getGenres } from '@/api/data';
-import { isAudiobookGenre } from '@/store/albumProgress';
 import { EmptyState } from '@/components/EmptyState';
 import { GenreCard } from '@/components/GenreCard';
 import { GenreGridSkeleton } from '@/components/GenreGridSkeleton';
@@ -54,14 +53,7 @@ export default function GenresScreen() {
   });
 
   const genres = useMemo(() => {
-    const all = [...(data ?? [])]
-      // Spoken word is not a kind of music to browse through, and a library
-      // with forty books in it buried the genres that are. They live behind
-      // the Audiobooks chip instead. Not tied to the audiobook setting: that
-      // one is about keeping a position, and where a genre belongs is not a
-      // thing you would go looking for under it.
-      .filter((g) => !isAudiobookGenre(g.value))
-      .sort((a, b) => a.value.localeCompare(b.value));
+    const all = [...(data ?? [])].sort((a, b) => a.value.localeCompare(b.value));
     const q = query.trim().toLowerCase();
     return q ? all.filter((g) => g.value.toLowerCase().includes(q)) : all;
   }, [data, query]);
