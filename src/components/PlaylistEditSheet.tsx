@@ -20,7 +20,7 @@ import { Cover } from '@/components/Cover';
 import { Dialog } from '@/components/Dialog';
 import { useServerCover } from '@/hooks/useServerCover';
 import { useT } from '@/i18n';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { colors, fontSize, radius, spacing, themed } from '@/theme';
 
 export interface PlaylistEdit {
   name: string;
@@ -120,12 +120,12 @@ export function PlaylistEditSheet({
                     <Cover uri={cover.pickedUri ?? coverUri} size={160} />
                     {cover.uploading ? (
                       <View style={styles.coverOverlay}>
-                        <ActivityIndicator color={colors.text} />
+                        <ActivityIndicator color={colors.onArtwork} />
                       </View>
                     ) : (
                       <View style={styles.coverBadges}>
                         <View style={styles.coverBadge}>
-                          <Ionicons name="camera" size={16} color={colors.text} />
+                          <Ionicons name="camera" size={16} color={colors.onArtwork} />
                         </View>
                         <Pressable
                           hitSlop={6}
@@ -134,7 +134,7 @@ export function PlaylistEditSheet({
                           onPress={() => void cover.removeCover()}
                           style={({ pressed }) => [styles.coverBadge, pressed && { opacity: 0.7 }]}
                         >
-                          <Ionicons name="trash-outline" size={16} color={colors.text} />
+                          <Ionicons name="trash-outline" size={16} color={colors.onArtwork} />
                         </Pressable>
                       </View>
                     )}
@@ -176,8 +176,8 @@ export function PlaylistEditSheet({
                 <Switch
                   value={isPublic}
                   onValueChange={setIsPublic}
-                  trackColor={{ true: colors.accent, false: colors.surfaceHighlight }}
-                  thumbColor="#fff"
+                  trackColor={{ true: colors.accent, false: colors.control }}
+                  thumbColor={colors.knob}
                 />
               </Pressable>
             )}
@@ -198,7 +198,7 @@ export function PlaylistEditSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: colors.scrim,
     borderRadius: radius.md,
   },
   coverBadges: {
@@ -226,6 +226,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
   },
+  // Denser than `scrim`: a 16 px icon has less of the cover to lift itself off.
   coverBadge: {
     backgroundColor: 'rgba(0,0,0,0.65)',
     borderRadius: radius.pill,
@@ -264,4 +265,4 @@ const styles = StyleSheet.create({
   switchInfo: { flex: 1 },
   switchTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '600' },
   switchSub: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2 },
-});
+}));

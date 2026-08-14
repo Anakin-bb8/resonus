@@ -8,7 +8,6 @@ import {
   Keyboard,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -28,7 +27,15 @@ import { useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
 import { useLastPlayed } from '@/store/lastPlayed';
 import { useSettings } from '@/store/settings';
-import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
+import {
+  colors,
+  fontSize,
+  radius,
+  spacing,
+  SCREEN_BOTTOM_PADDING,
+  themed,
+  useTheme,
+} from '@/theme';
 import { listPerf } from '@/lib/listPerf';
 import { BackChevron } from '@/components/BackChevron';
 import { useGridColumns } from '@/hooks/useGridColumns';
@@ -58,7 +65,7 @@ type ArtistSort = 'alpha' | 'recent' | 'newest' | 'frequent' | 'random';
 // Same order as the Album chips (without 'Artist', which doesn't make sense
 // here): they're sibling screens and seeing them ordered differently felt jarring.
 const SORTS: { key: ArtistSort; label: string }[] = [
-  { key: 'recent', label: 'Recent' },
+  { key: 'recent', label: 'Recently played' },
   { key: 'frequent', label: 'Most played' },
   { key: 'newest', label: 'Recently added' },
   { key: 'alpha', label: 'A-Z' },
@@ -72,6 +79,9 @@ const FREQUENT_POOL = 50;
 const SEARCH_H = 44 + spacing.md;
 
 export default function BrowseArtistsScreen() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const bottomPad = useScreenBottomPadding();
   const t = useT();
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
@@ -92,8 +102,10 @@ export default function BrowseArtistsScreen() {
   });
   const card = cardWidth(columns);
 
-  // "Recent" blends both sources: having opened their screen and having
-  // played within any queue. Neither alone tells the full story.
+  // "Recently played" blends both sources: having opened their screen and
+  // having played within any queue. Neither alone tells the full story, and
+  // opening an artist without pressing play is rare enough that the chip is
+  // named for what the two of them are mostly made of.
   const times = useLastPlayed((s) => s.times);
   const { byArtist } = useHistoryTimes();
 
@@ -312,7 +324,7 @@ export default function BrowseArtistsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
@@ -368,7 +380,7 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     textAlignVertical: 'center',
   },
-  chipTextActive: { color: '#000' },
+  chipTextActive: { color: colors.onAccent },
   list: {
     paddingHorizontal: spacing.lg,
     paddingBottom: SCREEN_BOTTOM_PADDING,
@@ -381,4 +393,4 @@ const styles = StyleSheet.create({
     paddingBottom: SCREEN_BOTTOM_PADDING,
     gap: spacing.lg,
   },
-});
+}));

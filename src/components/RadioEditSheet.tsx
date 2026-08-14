@@ -20,7 +20,7 @@ import { Cover } from '@/components/Cover';
 import { Dialog } from '@/components/Dialog';
 import { useServerCover } from '@/hooks/useServerCover';
 import { useT } from '@/i18n';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { colors, fontSize, radius, spacing, themed } from '@/theme';
 
 export interface RadioEdit {
   name: string;
@@ -170,12 +170,12 @@ export function RadioEditSheet({
                 <Cover uri={shownCover} size={160} placeholderIcon="radio" />
                 {coverBusy ? (
                   <View style={styles.coverOverlay}>
-                    <ActivityIndicator color={colors.text} />
+                    <ActivityIndicator color={colors.onArtwork} />
                   </View>
                 ) : !coverEditable ? null : (
                   <View style={styles.coverBadges}>
                     <View style={styles.coverBadge}>
-                      <Ionicons name="camera" size={16} color={colors.text} />
+                      <Ionicons name="camera" size={16} color={colors.onArtwork} />
                     </View>
                     {canRemove ? (
                       <Pressable
@@ -185,7 +185,7 @@ export function RadioEditSheet({
                         onPress={() => void clearCover()}
                         style={({ pressed }) => [styles.coverBadge, pressed && { opacity: 0.7 }]}
                       >
-                        <Ionicons name="trash-outline" size={16} color={colors.text} />
+                        <Ionicons name="trash-outline" size={16} color={colors.onArtwork} />
                       </Pressable>
                     ) : null}
                   </View>
@@ -254,7 +254,7 @@ export function RadioEditSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: colors.scrim,
     borderRadius: radius.md,
   },
   coverBadges: {
@@ -289,6 +289,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
   },
+  // Denser than `scrim`: a 16 px icon has less of the cover to lift itself off.
   coverBadge: {
     backgroundColor: 'rgba(0,0,0,0.65)',
     borderRadius: radius.pill,
@@ -309,4 +310,4 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   error: { color: colors.danger, fontSize: fontSize.sm, marginTop: spacing.xs },
-});
+}));

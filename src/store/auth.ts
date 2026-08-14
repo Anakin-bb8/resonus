@@ -22,10 +22,8 @@ import { bump } from '@/lib/perfLog';
 import { clearLocalCatalog } from '@/lib/localLibrary';
 import { deleteProfileData } from '@/lib/profileData';
 import { setOfflineMode } from '@/api/netGate';
-import { queryClient } from '@/lib/query';
+import { clearProfileCache, queryClient } from '@/lib/query';
 import { deleteItem, getItem, setItem } from '@/lib/storage';
-
-import { useLastPlayed } from './lastPlayed';
 
 const ACTIVE_KEY = 'resonus.auth';
 const PROFILES_KEY = 'resonus.profiles';
@@ -251,6 +249,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await setItem(PROFILES_KEY, JSON.stringify(profiles));
     await deleteItem(OFFLINE_KEY);
     await deleteItem(OFFLINE_AUTO_KEY);
+    // Emptied in the same breath as the session changes, with nothing awaited
+    // in between. What is cached was answered by whoever was signed in before,
+    // and the query keys do not carry the account: leave the two apart and the
+    // screens render the previous profile's playlists and albums under the new
+    // one until the clearing gets its turn, which used to be a whole outbox
+    // flush later.
+    clearProfileCache();
     set({ auth, profiles, offline: false, autoOffline: false });
     // Uploads to the server whatever was pending in this profile's outbox
     // (e.g. changes made offline before signing out). Best-effort.
@@ -260,13 +265,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch {
       // Does not block the login.
     }
-    queryClient.clear();
   },
 
   switchProfile: async (profile) => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     await require('./player').usePlayerStore.getState().reset(true);
-    useLastPlayed.getState().forgetNames();
+    // The recents are not wiped on the way out any more: they are the leaving
+    // profile's and they are filed under its own key, so it finds them again
+    // when it comes back (see `store/lastPlayed`).
     // Moves the chosen profile to the front (last-used ordering).
     const reordered = [profile, ...get().profiles.filter((p) => !same(p, profile))];
     if (profile._type === 'offline') {
@@ -274,7 +280,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await deleteItem(OFFLINE_AUTO_KEY);
       await setItem(OFFLINE_SOURCE_KEY, JSON.stringify(profile.source));
       await setItem(PROFILES_KEY, JSON.stringify(reordered));
-      queryClient.clear();
+      clearProfileCache();
       set({
         auth: null,
         offline: true,
@@ -295,7 +301,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         await setItem(PROFILES_KEY, JSON.stringify(reordered));
         await setItem(OFFLINE_KEY, '1');
         await setItem(OFFLINE_AUTO_KEY, '1');
-        queryClient.clear();
+        clearProfileCache();
         set({ auth: profile, profiles: reordered, offline: true, autoOffline: true });
         return 'offline';
       }
@@ -305,6 +311,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await setItem(PROFILES_KEY, JSON.stringify(reordered));
     await deleteItem(OFFLINE_KEY);
     await deleteItem(OFFLINE_AUTO_KEY);
+    // Together and with nothing awaited between them, for the reason `login`
+    // gives: what is cached belongs to the profile being left.
+    clearProfileCache();
     set({ auth: profile, profiles: reordered, offline: false, autoOffline: false });
     // Uploads to the server whatever was pending in this profile's outbox.
     try {
@@ -313,7 +322,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch {
       // Does not block the profile switch.
     }
-    queryClient.clear();
     return 'online';
   },
 
@@ -556,7 +564,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await deleteItem(OFFLINE_AUTO_KEY);
     await deleteItem(OFFLINE_SOURCE_KEY);
     clearLocalCatalog();
-    queryClient.clear();
+    clearProfileCache();
     set({ auth: null, offline: false, autoOffline: false, offlineSource: null });
   },
 }));

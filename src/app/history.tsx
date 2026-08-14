@@ -4,7 +4,7 @@
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
-import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
+import { Pressable, SectionList, Text, View } from 'react-native';
 // gesture-handler doesn't export SectionList; its ScrollView as inner scroll
 // makes the row swipe-to-queue coexist with scrolling (see TrackRow).
 import { ScrollView as GHScrollView } from 'react-native-gesture-handler';
@@ -20,7 +20,7 @@ import { markUnplayableOffline } from '@/api/data';
 import { usePlayHistory, type HistoryEntry } from '@/store/playHistory';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
+import { colors, fontSize, spacing, SCREEN_BOTTOM_PADDING, themed, useTheme } from '@/theme';
 import { BackChevron } from '@/components/BackChevron';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
@@ -48,6 +48,9 @@ function dayLabel(playedAt: number, t: (k: string) => string, lang: string): str
 }
 
 export default function HistoryScreen() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const bottomPad = useScreenBottomPadding();
   const t = useT();
   const lang = useSettings((s) => s.language);
@@ -140,7 +143,7 @@ export default function HistoryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   safe: { flex: 1, backgroundColor: colors.background },
   bar: {
     flexDirection: 'row',
@@ -159,4 +162,4 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
   },
-});
+}));

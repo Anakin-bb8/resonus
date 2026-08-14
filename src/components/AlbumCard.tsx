@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 import { COVER, coverArtUrl, type Album } from '@/api/data';
 import { useMediaMenu } from '@/store/mediaMenu';
 import { haptic } from '@/lib/haptics';
-import { colors, fontSize, spacing } from '@/theme';
+import { fontSize, spacing, themed } from '@/theme';
 import { Cover } from './Cover';
 
 interface Props {
@@ -45,7 +45,7 @@ export function AlbumCard({ album, width = 150, onPress }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   container: {
     gap: spacing.xs,
   },
@@ -59,4 +59,4 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: fontSize.xs,
   },
-});
+}));

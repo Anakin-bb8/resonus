@@ -1,7 +1,7 @@
 /** Song row inside a list (album, playlist, search results). */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { memo, useRef } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import ReanimatedSwipeable, {
   SwipeDirection,
   type SwipeableMethods,
@@ -21,7 +21,7 @@ import { useSettings, type SwipeAction } from '@/store/settings';
 import { haptic } from '@/lib/haptics';
 import { useToast } from '@/store/toast';
 import { useT } from '@/i18n';
-import { colors, fontSize, spacing } from '@/theme';
+import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
 import { Cover } from './Cover';
 import { FavoriteButton } from './FavoriteButton';
 
@@ -88,7 +88,7 @@ function SwipeActionPanel({
         visible,
       ]}
     >
-      <Ionicons name={icon} size={22} color={colors.text} />
+      <Ionicons name={icon} size={22} color={colors.onAccent} />
     </Reanimated.View>
   );
 }
@@ -109,6 +109,9 @@ function TrackRowBase({
 }: Props) {
   const openMenu = useSongMenu((s) => s.open);
   const t = useT();
+  // Memoized below, and with its own `propsEqual` at that: the list repainting
+  // does not reach the rows, so each one asks for the appearance itself.
+  useTheme();
   const showDuration = useSettings((s) => s.showSongDuration);
   const showRating = useSettings((s) => s.showListRating);
   const swipeAction = useSettings((s) => s.swipeAction);
@@ -333,7 +336,7 @@ function propsEqual(a: Props, b: Props): boolean {
 
 export const TrackRow = memo(TrackRowBase, propsEqual);
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -405,4 +408,4 @@ const styles = StyleSheet.create({
   dimmed: {
     opacity: 0.4,
   },
-});
+}));

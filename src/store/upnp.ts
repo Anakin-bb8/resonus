@@ -11,6 +11,8 @@ import { create } from 'zustand';
 
 import { coverArtUrl as serverCoverArtUrl, streamUrl, type Song } from '@/api/backend';
 import { COVER } from '@/api/data';
+import { localFileUrl, publishLocalFiles, stopLocalHttp } from '@/lib/localHttp';
+import { localCoverUrl } from '@/lib/localLibrary';
 import { useAuthStore } from './auth';
 import { castStop } from './castMedia';
 import { useSettings } from './settings';
@@ -268,6 +270,9 @@ export async function upnpDisconnect(silent = false): Promise<void> {
   // Closes the casting media session on any disconnect path
   // (including silent ones: output switch, reset), not just the normal one.
   castStop();
+  // And the port with it: it is only ever open for a renderer that is listening,
+  // and this is the moment there is none.
+  void stopLocalHttp();
   useUpnp.setState({ connected: false, deviceId: null });
   lastNativeTrackNumber = 0;
   lastRemoteRepeat = null;
@@ -289,24 +294,112 @@ function buildUpnpTrackInfo(song: Song) {
   const auth = useAuthStore.getState().auth;
   const listedArtists = firstNonBlank(song.artists?.map((a) => a.name).filter(Boolean).join(', '));
   const listedAlbumArtists = firstNonBlank(song.albumArtists?.map((a) => a.name).filter(Boolean).join(', '));
+  // The picture comes from wherever the song does, and by the same test: a
+  // cover on the server is no use to a renderer being handed a file off this
+  // phone, which is what a download casts as with the server out of reach.
+  // The phone's own copy goes out through the same door as the audio, and
+  // `localFilesOf` opens it under exactly this condition — the two have to
+  // agree or the URL points at something nobody published.
+  const cover = song.albumId ?? song.coverArt;
+  const artworkUrl = servedByPhone(song)
+    ? localFileUrl(localCoverUrl(cover))
+    : auth
+      ? serverCoverArtUrl(auth, cover, COVER.card)
+      : undefined;
   return {
     title: song.title,
     artist: firstNonBlank(song.artist, listedArtists, listedAlbumArtists),
     albumArtist: listedAlbumArtists,
     album: firstNonBlank(song.album),
-    artworkUrl: auth ? serverCoverArtUrl(auth, song.albumId ?? song.coverArt, COVER.card) : undefined,
+    artworkUrl,
     durationSec: song.duration ?? 0,
   };
 }
 
+/**
+ * The server's own address for a song, when the server is the one that can
+ * serve it: an account, and a connection to reach it through.
+ *
+ * Preferred over the phone even for a song that is downloaded. The renderer
+ * fetches for itself, so a URL on the server is one this phone does not have to
+ * stay awake to answer.
+ */
+function serverStreamUrl(song: Song): string | undefined {
+  const { auth, offline } = useAuthStore.getState();
+  if (!auth || offline || song.url) return undefined;
+  const settings = useSettings.getState();
+  return streamUrl(auth, song.id, settings.maxBitRate, 0, settings.streamFormat);
+}
+
+/**
+ * Is this phone the one that will be answering for this song?
+ *
+ * The same question `buildUpnpTrackUrl` ends up asking, in one place because
+ * two things depend on the answer and they must not drift: what gets published
+ * to the network, and whether the cover named in the DIDL is the phone's or the
+ * server's. A station brings its own address and its own picture, and neither
+ * is anything to do with this.
+ */
+function servedByPhone(song: Song): boolean {
+  return !song.url && !!song.localUri && !serverStreamUrl(song);
+}
+
+/**
+ * Where the renderer should go for this song.
+ *
+ * A radio brings its own address. A server account online hands over the
+ * server's. What is left is a file on this phone — the local profile's music,
+ * or a download with the server out of reach — and that is what the phone's own
+ * server is for.
+ *
+ * It used to end here, at `undefined`, for anything with a `localUri`. And one
+ * uncastable track was not one silent track: the queue payload is all or
+ * nothing (see `buildUpnpQueuePayload`), so a single downloaded song in the
+ * queue was a Sonos that played none of it.
+ */
 function buildUpnpTrackUrl(song: Song): string | undefined {
-  const auth = useAuthStore.getState().auth;
   if (song.url) return song.url;
-  if (!song.localUri && auth) {
-    const settings = useSettings.getState();
-    return streamUrl(auth, song.id, settings.maxBitRate, 0, settings.streamFormat);
+  return serverStreamUrl(song) ?? localFileUrl(song.localUri);
+}
+
+/** The image mime of a cover this phone wrote, which it named for its format. */
+function coverMime(uri: string): string {
+  return uri.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
+}
+
+/**
+ * The files these songs would need served from the phone: the ones no server
+ * can be asked for, and the covers that go with them.
+ *
+ * Nothing else is published. A renderer can only ask for what is in here, so
+ * this is also the whole of what the network can reach.
+ */
+function localFilesOf(songs: Song[]): { uri: string; mime: string }[] {
+  const files: { uri: string; mime: string }[] = [];
+  const seen = new Set<string>();
+  const add = (uri: string | undefined, mime: string) => {
+    if (!uri || seen.has(uri)) return;
+    seen.add(uri);
+    files.push({ uri, mime });
+  };
+  for (const song of songs) {
+    if (!servedByPhone(song)) continue;
+    add(song.localUri, castMime(song));
+    const cover = localCoverUrl(song.albumId ?? song.coverArt);
+    if (cover) add(cover, coverMime(cover));
   }
-  return undefined;
+  return files;
+}
+
+/**
+ * Opens the phone's server and publishes what this load will need, before any
+ * URL is built: `localFileUrl` answers out of what has been published, so the
+ * order is the whole of it.
+ */
+async function ensureLocalFilesServed(songs: Song[]): Promise<void> {
+  const files = localFilesOf(songs);
+  if (files.length === 0) return;
+  await publishLocalFiles(files);
 }
 
 function buildUpnpQueuePayload(queue: Song[]) {
@@ -314,12 +407,7 @@ function buildUpnpQueuePayload(queue: Song[]) {
     const url = buildUpnpTrackUrl(song);
     if (!url) return null;
     const info = buildUpnpTrackInfo(song);
-    const settings = useSettings.getState();
-    return {
-      url,
-      mime: castMime(song, settings.maxBitRate > 0 ? settings.streamFormat : undefined),
-      ...info,
-    };
+    return { url, mime: castMime(song, transcodedTo(song)), ...info };
   });
   if (tracks.some((track) => track == null)) return null;
   return tracks as (ReturnType<typeof buildUpnpTrackInfo> & { url: string; mime: string })[];
@@ -329,12 +417,43 @@ function buildUpnpTrackPayload(song: Song) {
   const url = buildUpnpTrackUrl(song);
   if (!url) return null;
   const info = buildUpnpTrackInfo(song);
+  return { url, mime: castMime(song, transcodedTo(song)), ...info };
+}
+
+/**
+ * What the file will have been turned into by the time it arrives, which is
+ * only ever something the SERVER does on the way out.
+ *
+ * A file coming off this phone is served exactly as it lies on disk, so the
+ * transcoding settings have nothing to do with it. Reading them anyway
+ * announced a local FLAC as whatever codec the server had been told to send —
+ * the type in the DIDL disagreeing with the type the phone then served it as,
+ * which is the one thing a renderer is entitled to give up over.
+ */
+function transcodedTo(song: Song): string | undefined {
+  if (!serverStreamUrl(song)) return undefined;
   const settings = useSettings.getState();
-  return {
-    url,
-    mime: castMime(song, settings.maxBitRate > 0 ? settings.streamFormat : undefined),
-    ...info,
-  };
+  return settings.maxBitRate > 0 ? settings.streamFormat : undefined;
+}
+
+/**
+ * The format of a file on the phone, which is written down nowhere but its own
+ * name: the local catalog has no `suffix`, since nothing asked it for one until
+ * a speaker did. Without this every local file went out announced as MP3, and a
+ * renderer handed a FLAC under that name is entitled to refuse it — which is
+ * the same mistake as #70, from the other end.
+ */
+function localSuffix(uri: string | undefined): string | undefined {
+  if (!uri) return undefined;
+  let path = uri.split('?')[0];
+  try {
+    // A SAF document id carries the file name percent-encoded inside it.
+    path = decodeURIComponent(path);
+  } catch {
+    // Malformed escapes: the raw form still ends in the extension.
+  }
+  const ext = path.slice(path.lastIndexOf('.') + 1).toLowerCase();
+  return /^[a-z0-9]{2,5}$/.test(ext) ? ext : undefined;
 }
 
 /**
@@ -344,10 +463,11 @@ function buildUpnpTrackPayload(song: Song) {
  * handed, and a speaker refuses anything that isn't audio. The stream URL says
  * nothing about the file (`/rest/stream.view?…`), so the type has to come from
  * what we know about the song: what the server was asked to transcode to, or
- * failing that the file's own format.
+ * failing that the file's own format — or, for a file on the phone, the only
+ * place that ever said (see `localSuffix`).
  */
 function castMime(song: Song, transcodedTo?: string): string {
-  const suffix = (transcodedTo || song.suffix || '').toLowerCase();
+  const suffix = (transcodedTo || song.suffix || localSuffix(song.localUri) || '').toLowerCase();
   switch (suffix) {
     case 'mp3':
       return 'audio/mpeg';
@@ -397,7 +517,16 @@ export async function upnpLoad(
   lastPositionSec = startTimeSec;
   lastDurationSec = current.duration ?? 0;
   try {
-    const ok = currentUpnpDevice()?.isSonos
+    // What has to be reachable before the URLs are built. Sonos is handed the
+    // whole queue at once, so that is the whole queue. Everything else gets one
+    // track — and its neighbours, which cost nothing and cover the moment
+    // between two tracks, when the notification is still fetching the cover of
+    // the one being left (see `publishLocalFiles`: publishing replaces).
+    const sonos = currentUpnpDevice()?.isSonos;
+    await ensureLocalFilesServed(
+      sonos ? queue : queue.slice(Math.max(0, index - 1), index + 2),
+    );
+    const ok = sonos
       ? await loadSonosQueue(queue, index, autoplay, startTimeSec, playMode)
       : await loadGenericUpnpTrack(current, autoplay, startTimeSec);
     if (ok && startTimeSec > 0) void native.seek(startTimeSec * 1000);
@@ -506,10 +635,12 @@ async function loadGenericUpnpTrack(song: Song, autoplay: boolean, startTimeSec:
 }
 
 /** The same song asked for as MP3, or undefined when the server isn't the one
- *  serving it (a downloaded file, a URL of its own). */
+ *  serving it — a file coming off this phone, or a URL of its own. Asked the
+ *  same way `serverStreamUrl` asks it, since this is the second attempt at
+ *  exactly that URL. */
 function mp3StreamUrl(song: Song): string | undefined {
-  const auth = useAuthStore.getState().auth;
-  if (!auth || song.url || song.localUri) return undefined;
+  const { auth, offline } = useAuthStore.getState();
+  if (!auth || offline || song.url || !serverStreamUrl(song)) return undefined;
   const settings = useSettings.getState();
   return streamUrl(
     auth,

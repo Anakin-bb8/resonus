@@ -7,7 +7,7 @@ import { Link } from 'expo-router';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { COVER, coverArtUrl, type Artist } from '@/api/data';
-import { colors, fontSize, spacing } from '@/theme';
+import { fontSize, spacing, themed } from '@/theme';
 import { Cover } from './Cover';
 
 interface Props {
@@ -32,7 +32,7 @@ export function ArtistCard({ artist, width = 150 }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   container: { gap: spacing.xs, alignItems: 'center' },
   name: {
     color: colors.text,
@@ -41,4 +41,4 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     textAlign: 'center',
   },
-});
+}));

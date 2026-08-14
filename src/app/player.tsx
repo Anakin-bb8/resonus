@@ -43,6 +43,8 @@ import { StarRating } from '@/components/StarRating';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { useLyrics } from '@/hooks/useLyrics';
+import { useLocalProfile } from '@/hooks/useLocalProfile';
+import { localHttpAvailable } from '@/lib/localHttp';
 import { useT } from '@/i18n';
 import { artistTargets } from '@/lib/artistNav';
 import { formatDuration, formatGroupedDeviceLabel } from '@/lib/format';
@@ -63,7 +65,7 @@ import { useSettings } from '@/store/settings';
 import { useSongMenu } from '@/store/songMenu';
 import { useToast } from '@/store/toast';
 import { useUpnp } from '@/store/upnp';
-import { colors, fontSize, spacing } from '@/theme';
+import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
 
 const SCREEN_W = Dimensions.get('window').width;
 const SCREEN_H = Dimensions.get('window').height;
@@ -173,7 +175,7 @@ function PlayerProgress({
         value={positionSec}
         onSlidingComplete={onSeek}
         minimumTrackTintColor={colors.text}
-        maximumTrackTintColor="rgba(255,255,255,0.35)"
+        maximumTrackTintColor={colors.mediaTrack}
         thumbTintColor={colors.text}
       />
       <View style={styles.times}>
@@ -185,7 +187,9 @@ function PlayerProgress({
 }
 
 export default function PlayerScreen() {
-  useSettings((s) => s.accentColor); // re-render when accent changes
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   useSettings((s) => s.appFont); // re-render when font changes
   const router = useRouter();
   const isFocused = useIsFocused();
@@ -226,9 +230,13 @@ export default function PlayerScreen() {
   const coverTapAction = useSettings((s) => s.coverTapAction);
   const marqueeTitles = useSettings((s) => s.marqueeTitles);
   const showQueueButton = useSettings((s) => s.showQueueButton);
-  const showDevicesButton = useSettings((s) => s.showDevicesButton);
+  const local = useLocalProfile();
+  // The local profile can cast now that the phone serves its own files
+  // (`lib/localHttp`), so the only reason left to hide the button there is a
+  // build without the native module behind it.
+  const showDevicesButton =
+    useSettings((s) => s.showDevicesButton) && (!local || localHttpAvailable);
   const seekButtonsSec = useSettings((s) => s.seekButtonsSec);
-  const offline = useAuthStore((s) => s.offline);
   const serverType = useAuthStore((s) => s.auth?.serverType);
   const hasAccount = useAuthStore((s) => !!s.auth);
   const upnpDevices = useUpnp((s) => s.devices);
@@ -311,7 +319,7 @@ export default function PlayerScreen() {
   // Under the blurred artwork the flat colour is irrelevant, but it still
   // paints the frame before the image decodes, so it stays dark rather than
   // flashing the old grey.
-  const targetBg = colorBackground ? dominant : background === 'cover' ? colors.background : '#3a4042';
+  const targetBg = colorBackground ? dominant : background === 'cover' ? colors.background : colors.playerPlain;
   const bgColor = useSharedValue(targetBg);
   useEffect(() => {
     // reduceMotion Never: the color fade is part of the look and some devices
@@ -694,8 +702,10 @@ export default function PlayerScreen() {
                 backdropSource.onDisplay();
               }}
             />
-            {/* Scrim: blurring alone doesn't guarantee contrast — a bright or
-                busy cover would swallow the white text. */}
+            {/* Wash: blurring alone doesn't guarantee contrast — a busy cover
+                would swallow the text. It darkens under the dark appearance
+                and lightens under the light one, since what has to survive it
+                is the page's own text colour either way. */}
             <View style={styles.coverScrim} />
           </>
         ) : null}
@@ -1003,12 +1013,12 @@ export default function PlayerScreen() {
               }}
             >
               {isBuffering ? (
-                <ActivityIndicator size="small" color="#101010" />
+                <ActivityIndicator size="small" color={colors.onInverse} />
               ) : (
                 <Ionicons
                   name={isPlaying ? 'pause' : 'play'}
                   size={34}
-                  color="#101010"
+                  color={colors.onInverse}
                   style={!isPlaying && { marginLeft: 3 }}
                 />
               )}
@@ -1061,20 +1071,25 @@ export default function PlayerScreen() {
             <View style={styles.bottomRow}>
               <View style={styles.bottomSlot}>
                 {/* Connected to a remote device it's always shown: it's the
-                    only way to disconnect the cast. */}
+                    only way to disconnect the cast.
+                    Never disabled any more. It was, without a connection, back
+                    when a renderer could only be given a URL on the server:
+                    downloads cast from the phone now, so offline there is
+                    something to send. And it left the way out drawn and barred
+                    — going offline mid-cast used to leave the cast on with
+                    nothing that could end it. */}
                 {showDevicesButton || remoteDevice ? (
                   <Pressable
                     hitSlop={10}
                     accessibilityRole="button"
                     accessibilityLabel={t('Devices')}
-                    disabled={offline}
                     onPress={() => setOutputOpen(true)}
                     style={styles.deviceRow}
                   >
                     <MaterialIcons
                       name="devices"
                       size={22}
-                      color={remoteDevice ? colors.accent : offline ? colors.textMuted : colors.text}
+                      color={remoteDevice ? colors.accent : colors.text}
                     />
                     {remoteDevice ? (
                       <Text style={[styles.deviceName, { color: colors.accent }]} numberOfLines={1}>
@@ -1107,11 +1122,11 @@ export default function PlayerScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   root: { flex: 1, backgroundColor: colors.background },
   // Darkens the blurred artwork so the white text keeps its contrast whatever
   // the cover is. Tuned by eye: any lighter and pale covers wash the title out.
-  coverScrim: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.45)' },
+  coverScrim: { ...StyleSheet.absoluteFill, backgroundColor: colors.coverWash },
   // Horizontal padding lives in each section (not here): so the slider can
   // overshoot its internal margin without the ScrollView clipping the thumb.
   safe: { flex: 1 },
@@ -1267,4 +1282,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     flexShrink: 1,
   },
-});
+}));

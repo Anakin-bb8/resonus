@@ -4,12 +4,12 @@
  * the Library.
  */
 import { Link } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { COVER, coverArtUrl, type Artist } from '@/api/data';
 import { albumsLabel } from '@/i18n';
 import { useSettings } from '@/store/settings';
-import { colors, fontSize, spacing } from '@/theme';
+import { fontSize, spacing, themed } from '@/theme';
 import { Cover } from './Cover';
 
 export function ArtistRow({ artist }: { artist: Artist }) {
@@ -29,9 +29,9 @@ export function ArtistRow({ artist }: { artist: Artist }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   info: { flex: 1 },
   name: { color: colors.text, fontSize: fontSize.md, fontWeight: '600' },
   sub: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2 },
-});
+}));

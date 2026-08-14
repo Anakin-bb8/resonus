@@ -1,15 +1,21 @@
 /**
  * Extracts a background color from the cover art (dominant color) and
- * normalizes it to a pleasant dark tone: saturation is clamped (to avoid neon)
- * and lightness is clamped to a medium-dark range, so that white text and
- * controls are always legible regardless of the cover art. This is what
- * Spotify/Apple Music do with the cover color.
+ * normalizes it to a pleasant tone: saturation is clamped (to avoid neon) and
+ * lightness is clamped to a narrow band, so that text and controls are always
+ * legible regardless of the cover art. This is what Spotify/Apple Music do with
+ * the cover color.
+ *
+ * Which band depends on the appearance: medium-dark under the dark theme, pale
+ * under the light one. The tint has to be a shade of the page it sits on — a
+ * dark tinted bar in the middle of a white app is not a tint, it is a hole —
+ * and keeping it on the right side of the line is also what lets every screen
+ * using it go on writing over it in the ordinary text colour.
  */
 import { useEffect, useState } from 'react';
 import { getColors } from 'react-native-image-colors';
 
 import { CACHED_COVER, COVER } from '@/api/data';
-import { colors as theme } from '@/theme';
+import { colors as theme, useThemeMode, type ThemeMode } from '@/theme';
 
 function hexToRgb(hex: string): [number, number, number] | null {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
@@ -66,11 +72,21 @@ function hslToHex(h: number, s: number, l: number): string {
   return `#${to(r)}${to(g)}${to(b)}`;
 }
 
-/** Clamps saturation and lightness to a readable dark range. */
-function normalize(hex: string): string {
+/**
+ * Clamps saturation and lightness into the readable band for the appearance.
+ *
+ * The light band is narrower and sits high (0.88–0.94): a pale wash keeps the
+ * hue of the cover while leaving black text on it at well over the contrast the
+ * dark band gives white text. Saturation is allowed a little further up there
+ * because at that lightness a clamp of 0.55 comes out as grey.
+ */
+function normalize(hex: string, mode: ThemeMode): string {
   const rgb = hexToRgb(hex);
   if (!rgb) return hex;
   const [h, s, l] = rgbToHsl(rgb[0], rgb[1], rgb[2]);
+  if (mode === 'light') {
+    return hslToHex(h, Math.min(s, 0.7), Math.min(Math.max(l, 0.88), 0.94));
+  }
   return hslToHex(h, Math.min(s, 0.55), Math.min(Math.max(l, 0.2), 0.32));
 }
 
@@ -97,6 +113,10 @@ function paletteUri(uri: string): string {
 
 export function useDominantColor(uri?: string): string {
   const [color, setColor] = useState<string>(theme.surfaceHighlight);
+  // Switching appearance re-runs the whole thing: the palette `getColors`
+  // returns is cached, so this is a second pass through `normalize` and not a
+  // second download.
+  const mode = useThemeMode();
 
   useEffect(() => {
     let active = true;
@@ -124,7 +144,7 @@ export function useDominantColor(uri?: string): string {
         } else if (res.platform === 'web') {
           c = res.vibrant || res.darkVibrant || res.dominant || c;
         }
-        setColor(normalize(c));
+        setColor(normalize(c, mode));
       })
       .catch(() => {
         if (active) setColor(theme.surfaceHighlight);
@@ -132,7 +152,7 @@ export function useDominantColor(uri?: string): string {
     return () => {
       active = false;
     };
-  }, [uri]);
+  }, [uri, mode]);
 
   return color;
 }

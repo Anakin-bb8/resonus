@@ -11,6 +11,7 @@ import { useT } from '@/i18n';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
 import { useUpdate } from '@/store/update';
+import { useTheme } from '@/theme';
 
 const REPO_URL = 'https://github.com/juananzzz/resonus';
 /**
@@ -31,6 +32,9 @@ const DISCORD_URL = 'https://discord.gg/pecE8MTPVr';
 const KOFI_URL = 'https://ko-fi.com/juananzzz';
 
 export default function AboutSettings() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const t = useT();
   const router = useRouter();
   // Five taps on the version open Diagnostics. It exists for chasing a report

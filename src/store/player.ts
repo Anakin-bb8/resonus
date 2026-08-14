@@ -2909,7 +2909,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     const key = contextKey(source ?? null, sourceHref ?? null);
     if (key) forgetHistoryOf(key);
     if (!key || key !== contextKey(get().source, get().sourceHref)) pushHistory();
-    // Mark the source as recently listened (Library "Recent" order, Home grid).
+    // Mark the source as recently listened (Library "Recents" order, Home grid).
     // Its name travels with it: what was played is drawn from this alone when
     // no list from the server happens to include it.
     if (sourceHref) useLastPlayed.getState().touch(sourceHref, source);

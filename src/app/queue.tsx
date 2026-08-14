@@ -10,7 +10,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ReorderableList, {
@@ -31,7 +31,7 @@ import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
 import { songsLabel, useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
-import { colors, fontSize, spacing } from '@/theme';
+import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
 import { listPerf } from '@/lib/listPerf';
 
 // ReorderableList doesn't support removeClippedSubviews (needs cells mounted
@@ -147,7 +147,6 @@ function UpcomingRow({ item, absIndex }: { item: Song; absIndex: number }) {
 }
 
 export default function QueueScreen() {
-  useSettings((s) => s.accentColor); // re-render when accent changes
   useSettings((s) => s.appFont); // re-render when font changes
   const t = useT();
   const lang = useSettings((s) => s.language);
@@ -161,9 +160,10 @@ export default function QueueScreen() {
   const clearQueue = usePlayerStore((s) => s.clearQueue);
   const radioMode = usePlayerStore((s) => s.radioMode);
   const stopRadio = usePlayerStore((s) => s.stopRadio);
-  // The store's accent, not `colors.accent`: without subscription the icon
-  // would keep the previous one while the screen stays mounted.
-  const accent = useSettings((s) => s.accentColor);
+  // Subscribed, not read straight off `colors`: a stack keeps this screen
+  // mounted while you are elsewhere, so without this it would keep the accent
+  // and the appearance it was last painted in.
+  const { accent } = useTheme();
   const toast = useToast((s) => s.show);
   const [confirmClear, setConfirmClear] = useState(false);
   // ⋯ menu (imperative: opening/closing doesn't re-render the screen).
@@ -378,7 +378,7 @@ export default function QueueScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   safe: { flex: 1, backgroundColor: colors.background },
   // ⋯ menu row (same look as the playlist / media menu).
   action: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg, paddingVertical: spacing.md },
@@ -436,4 +436,4 @@ const styles = StyleSheet.create({
   title: { color: colors.text, fontSize: fontSize.md },
   artist: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2 },
   actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-});
+}));

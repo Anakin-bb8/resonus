@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 
 import { useT } from '@/i18n';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { colors, fontSize, radius, spacing, themed } from '@/theme';
 
 interface Props {
   visible: boolean;
@@ -138,8 +138,8 @@ export function Dialog({
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.6)' },
+const styles = themed((colors) => ({
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: colors.backdropStrong },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
   card: {
     width: '100%',
@@ -173,4 +173,4 @@ const styles = StyleSheet.create({
   },
   cancel: { color: colors.textSecondary, fontSize: fontSize.md, fontWeight: '600' },
   confirm: { color: colors.accent, fontSize: fontSize.md, fontWeight: '700' },
-});
+}));

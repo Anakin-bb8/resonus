@@ -769,17 +769,35 @@ export async function updatePlaylist(
   );
 }
 
+/**
+ * The favorites, newest first — the order a Subsonic server gives them in, and
+ * what the Favorites screen calls "Recently added".
+ *
+ * The store already knows it: `starLocal` appends, so its lists run oldest to
+ * newest and reading them backwards is the answer. Walking the catalog instead
+ * (which is what this did) threw that away and handed back the catalog's own
+ * order, which is alphabetical and has nothing to do with when anything was
+ * marked. Ids no longer in the catalog —a file that left the folder— simply
+ * don't come out.
+ */
+function newestFirst<T>(ids: string[], items: T[], id: (x: T) => string): T[] {
+  const byId = new Map(items.map((x) => [id(x), x]));
+  const out: T[] = [];
+  for (let i = ids.length - 1; i >= 0; i--) {
+    const item = byId.get(ids[i]);
+    if (item) out.push(item);
+  }
+  return out;
+}
+
 export async function getStarred(): Promise<Starred> {
   const c = await ensureCatalog();
   const favs = await loadFavs();
   if (!c) return { songs: [], albums: [], artists: [] };
-  const favSongIds = new Set(favs.songs);
-  const favAlbumIds = new Set(favs.albums);
-  const favArtistIds = new Set(favs.artists);
   return {
-    songs: c.songs.filter((s) => favSongIds.has(s.id)),
-    albums: c.albums.filter((a) => favAlbumIds.has(a.id)).map(toAlbum),
-    artists: c.artists.filter((a) => favArtistIds.has(a.id)).map(toArtist),
+    songs: newestFirst(favs.songs, c.songs, (s) => s.id),
+    albums: newestFirst(favs.albums, c.albums, (a) => a.id).map(toAlbum),
+    artists: newestFirst(favs.artists, c.artists, (a) => a.id).map(toArtist),
   };
 }
 

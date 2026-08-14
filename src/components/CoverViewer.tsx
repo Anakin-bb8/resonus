@@ -71,6 +71,10 @@ export function CoverViewer({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
+    // Near-black in both appearances, and not a theme colour: this is a picture
+    // being looked at, and what a picture wants around it is the dark of a room
+    // with the lights off. Whatever a caller puts in `footer` has to be drawn
+    // in `onArtwork` for the same reason.
     backgroundColor: 'rgba(0,0,0,0.92)',
     alignItems: 'center',
     justifyContent: 'center',

@@ -2,8 +2,11 @@
 import { ScrollView, Text } from 'react-native';
 
 import { SelectList, SettingsPage, settingsStyles, SwitchList } from '@/components/SettingsUI';
+import { useLocalProfile } from '@/hooks/useLocalProfile';
+import { localHttpAvailable } from '@/lib/localHttp';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
+import { useTheme } from '@/theme';
 import {
   type CardBackground,
   type CoverTapAction,
@@ -14,14 +17,15 @@ import {
 } from '@/store/settings';
 
 export default function PlayerSettings() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const t = useT();
   // Rating is a Subsonic thing: needs a server account and doesn't apply to
   // Jellyfin. It does work offline (queued in the outbox and uploaded on
   // reconnect), so its toggle is also shown offline, same as in the player.
-  // The devices button has no offline destination, so its toggle is greyed out
-  // there rather than taken away (#114).
-  const offline = useAuthStore((s) => s.offline);
   const hasAccount = useAuthStore((s) => !!s.auth);
+  const local = useLocalProfile();
   const serverType = useAuthStore((s) => s.auth?.serverType);
   const canRate = hasAccount && serverType !== 'jellyfin';
   const showAudioQuality = useSettings((s) => s.showAudioQuality);
@@ -169,14 +173,20 @@ export default function PlayerSettings() {
               value: showQueueButton,
               onChange: setShowQueueButton,
             },
-            {
-              label: t('Show devices button'),
-              value: showDevicesButton,
-              onChange: setShowDevicesButton,
-              // Nothing to send the music to without a network, so the button
-              // is not drawn offline and the setting has nothing to switch.
-              disabled: offline,
-            },
+            // Was greyed out without a network and gone in the local profile,
+            // both because a renderer could only be handed a URL on the server.
+            // The phone serves its own files now (`lib/localHttp`), so the only
+            // build where this switches nothing is one without that native
+            // module under a local profile.
+            ...(local && !localHttpAvailable
+              ? []
+              : [
+                  {
+                    label: t('Show devices button'),
+                    value: showDevicesButton,
+                    onChange: setShowDevicesButton,
+                  },
+                ]),
             {
               label: t('Swap favorite and menu'),
               description: t(

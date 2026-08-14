@@ -30,7 +30,7 @@ import { SortSheet } from '@/components/SortSheet';
  */
 const SORT_LABEL: Record<string, string> = {
   server: 'Default',
-  recent: 'Recent',
+  recent: 'Recently played',
   alpha: 'Alphabetical',
   added: 'Recently added',
   frequent: 'Most played',

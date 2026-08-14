@@ -9,9 +9,11 @@ import {
   settingsStyles,
   SwitchList,
 } from '@/components/SettingsUI';
+import { useLocalProfile } from '@/hooks/useLocalProfile';
 import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { useAuthStore } from '@/store/auth';
+import { useTheme } from '@/theme';
 import {
   APP_FONT_LABELS,
   LANGUAGE_NAMES,
@@ -21,15 +23,24 @@ import {
 } from '@/store/settings';
 
 export default function AppearanceSettings() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const router = useRouter();
   const t = useT();
   // The folders tab only exists with a Subsonic server (see library).
   const offline = useAuthStore((s) => s.offline);
+  const local = useLocalProfile();
   const serverType = useAuthStore((s) => s.auth?.serverType);
   // Jellyfin has no folder tree to browse, so for that server the setting does
   // not exist at all. Offline it exists and is simply out of reach, which is a
   // different thing and reads as one: greyed out, where it always was (#114).
-  const canBrowseFolders = offline || serverType !== 'jellyfin';
+  // The local profile is the first case, not the second: the tab reads folders
+  // off a Subsonic server and there is none, so the switch would be promising a
+  // tab that cannot appear. (The phone's music does live in folders, and
+  // browsing them is a thing worth having — but it is a thing to build, not a
+  // switch to un-grey: `getMusicDirectory` has no local side.)
+  const canBrowseFolders = !local && (offline || serverType !== 'jellyfin');
   const language = useSettings((s) => s.language);
   const alwaysShowTabs = useSettings((s) => s.alwaysShowTabs);
   const setAlwaysShowTabs = useSettings((s) => s.setAlwaysShowTabs);
@@ -60,7 +71,6 @@ export default function AppearanceSettings() {
         />
         <SettingRow
           label={t('Theme')}
-          description={t('Accent color')}
           chevron
           onPress={() => router.push('/settings/theme')}
         />

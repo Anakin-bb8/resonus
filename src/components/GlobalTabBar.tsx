@@ -21,7 +21,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -33,7 +33,7 @@ import { useTabBarShown } from '@/hooks/useTabBar';
 import { useT } from '@/i18n';
 import { rememberTab, reselectTab, tabOrigin, TABS } from '@/lib/tabOrigin';
 import { useSettings } from '@/store/settings';
-import { colors, TAB_BAR_HEIGHT } from '@/theme';
+import { colors, TAB_BAR_HEIGHT, themed } from '@/theme';
 
 const ICONS: Record<string, 'home' | 'search' | 'library'> = {
   index: 'home',
@@ -143,7 +143,7 @@ export function GlobalTabBar() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   bar: {
     position: 'absolute',
     left: 0,
@@ -157,4 +157,4 @@ const styles = StyleSheet.create({
   item: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', padding: 5 },
   iconBox: { width: 31, height: 28, alignItems: 'center', justifyContent: 'center' },
   label: { fontSize: 10 },
-});
+}));

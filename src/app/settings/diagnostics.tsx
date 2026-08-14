@@ -9,7 +9,7 @@
 import Constants from 'expo-constants';
 import { useRootNavigationState } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, Share, Text, View } from 'react-native';
 
 import { COVER, songCoverUrl, songListSorts } from '@/api/data';
 import { SettingRow, SettingsPage, settingsStyles, SwitchList } from '@/components/SettingsUI';
@@ -30,12 +30,15 @@ import { anyDownloads, useDownloads } from '@/store/downloads';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
 import { enabledFolderIds } from '@/store/libraries';
-import { colors, fontSize, spacing } from '@/theme';
+import { fontSize, spacing, themed, useTheme } from '@/theme';
 
 /** Stamped in by the workflow that builds the APK; empty when run locally. */
 const COMMIT = (process.env.EXPO_PUBLIC_COMMIT ?? '').slice(0, 7);
 
 export default function DiagnosticsSettings() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const t = useT();
   // Nothing here is reactive: it is a snapshot, refreshed by pulling or by
   // resetting, so reading it doesn't add work of its own.
@@ -252,9 +255,9 @@ export default function DiagnosticsSettings() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   line: { color: colors.textSecondary, fontSize: fontSize.sm, paddingVertical: 2 },
   row: { flexDirection: 'row', gap: spacing.md, paddingVertical: 2 },
   tag: { color: colors.text, fontSize: fontSize.sm, flex: 1 },
   value: { color: colors.textSecondary, fontSize: fontSize.sm },
-});
+}));

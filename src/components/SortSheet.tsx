@@ -17,7 +17,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { type SortDirection } from '@/api/subsonic';
 import { SheetModal } from '@/components/SheetModal';
 import { useT } from '@/i18n';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 
 export type { SortDirection } from '@/api/subsonic';
 
@@ -36,6 +36,8 @@ export const SortSheet = memo(function SortSheet({
   openRef: React.MutableRefObject<() => void>;
 }) {
   const t = useT();
+  // Memoized, so the screen repainting is not enough to bring this one along.
+  useTheme();
   return (
     <SheetModal openRef={openRef}>
       {/* Choosing closes it. Both halves are a finished answer on their own, and
@@ -88,9 +90,9 @@ export const SortSheet = memo(function SortSheet({
                   <Ionicons
                     name={d === 'asc' ? 'arrow-up' : 'arrow-down'}
                     size={16}
-                    color={active ? '#000' : colors.text}
+                    color={active ? colors.onAccent : colors.text}
                   />
-                  <Text style={[styles.dirChipText, active && { color: '#000' }]}>
+                  <Text style={[styles.dirChipText, active && { color: colors.onAccent }]}>
                     {d === 'asc' ? t('Ascending') : t('Descending')}
                   </Text>
                 </Pressable>
@@ -103,7 +105,7 @@ export const SortSheet = memo(function SortSheet({
   );
 });
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   sheetTitle: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,
@@ -133,4 +135,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceHighlight,
   },
   dirChipText: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
-});
+}));

@@ -39,7 +39,7 @@ import { haptic } from '@/lib/haptics';
 import { listPerf } from '@/lib/listPerf';
 import { useArtistPicker } from '@/store/artistPicker';
 import { usePlayerStore } from '@/store/player';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { colors, fontSize, radius, spacing, themed } from '@/theme';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { Cover } from './Cover';
 import { FavoriteButton } from './FavoriteButton';
@@ -622,7 +622,12 @@ export function TrackListView({
                   accessibilityLabel={t('Play')}
                   onPress={() => songs.length > 0 && onPlay(0)}
                 >
-                  <Ionicons name="play" size={28} color="#000" style={{ marginLeft: 3 }} />
+                  <Ionicons
+                    name="play"
+                    size={28}
+                    color={colors.onAccent}
+                    style={{ marginLeft: 3 }}
+                  />
                 </Pressable>
               </View>
             </View>
@@ -811,7 +816,7 @@ function DiscHeader({ label }: { label: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   root: {
     flex: 1,
     backgroundColor: colors.background,
@@ -847,7 +852,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     // Translucent to let the header's dominant color through (Spotify).
-    backgroundColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: colors.highlight,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     height: 44,
@@ -1007,4 +1012,4 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     fontWeight: '700',
   },
-});
+}));

@@ -4,7 +4,7 @@
  * round photo) so the transition doesn't jump.
  */
 import { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -12,7 +12,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { colors, radius, spacing } from '@/theme';
+import { radius, spacing, themed } from '@/theme';
 
 export function ArtistListSkeleton({ count = 10 }: { count?: number }) {
   const pulse = useSharedValue(1);
@@ -36,13 +36,15 @@ export function ArtistListSkeleton({ count = 10 }: { count?: number }) {
   );
 }
 
-const block = { backgroundColor: colors.surfaceHighlight } as const;
-
-const styles = StyleSheet.create({
-  list: { paddingHorizontal: spacing.lg, gap: spacing.lg },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  photo: { ...block, width: 56, height: 56, borderRadius: 28 },
-  info: { flex: 1, gap: spacing.sm },
-  bar: { ...block, height: 12, borderRadius: radius.sm },
-  barThin: { height: 8 },
+// See `AlbumRowsSkeleton` for why `block` lives inside the factory.
+const styles = themed((colors) => {
+  const block = { backgroundColor: colors.surfaceHighlight } as const;
+  return {
+    list: { paddingHorizontal: spacing.lg, gap: spacing.lg },
+    row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+    photo: { ...block, width: 56, height: 56, borderRadius: 28 },
+    info: { flex: 1, gap: spacing.sm },
+    bar: { ...block, height: 12, borderRadius: radius.sm },
+    barThin: { height: 8 },
+  };
 });

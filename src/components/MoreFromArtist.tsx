@@ -5,13 +5,13 @@
  */
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { getArtist } from '@/api/data';
 import { AlbumCard } from '@/components/AlbumCard';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
-import { colors, fontSize, spacing } from '@/theme';
+import { fontSize, spacing, themed } from '@/theme';
 
 interface Props {
   artistId: string;
@@ -58,7 +58,7 @@ export function MoreFromArtist({ artistId, artistName, currentAlbumId }: Props) 
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   // Negates the list container's horizontal padding so the carousel
   // spans the full width.
   section: { marginTop: spacing.xl, marginHorizontal: -spacing.lg },
@@ -78,4 +78,4 @@ const styles = StyleSheet.create({
   },
   showAll: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '600' },
   row: { gap: spacing.md, paddingHorizontal: spacing.lg },
-});
+}));

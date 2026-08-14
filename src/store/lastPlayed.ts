@@ -1,21 +1,53 @@
 /**
  * Last time each source was played (album/playlist/artist), key = its
- * `sourceHref` ('/album/x', '/playlist/y'…). Feeds the "Recent" sort order in
- * the Library, Spotify style: what you last listened to, at the top.
+ * `sourceHref` ('/album/x', '/playlist/y'…). Feeds the "Recents" sort order in
+ * the Library, Spotify style: what you last listened to, at the top, and the
+ * tiles Home's grid puts up for what neither list mentions.
+ *
+ * PER PROFILE, like the pins and the play history. It used to be one map for
+ * the whole app, and an href is only meaningful to the profile that wrote it:
+ * a local `/album/<id>` means nothing on Navidrome and the other way round. So
+ * the local profile's records turned up in a server account's grid, drawn from
+ * the name written down here with a cover that could not resolve. Only
+ * `switchProfile` wiped the names, and going out through the login screen —
+ * signing out, or leaving the local profile — does not pass through it, so
+ * they survived, and so did a restart.
+ *
+ * Nothing is wiped now: each profile reads and writes its own key and finds
+ * its own recents where it left them.
  */
 import { create } from 'zustand';
 
-import { getItem, setItem } from '@/lib/storage';
+import { hashKey } from '@/lib/localLibrary';
+import { profileScopeGuard } from '@/lib/profileScope';
+import { deleteItem, getItem, setItem } from '@/lib/storage';
+import { profileScopeId } from '@/store/auth';
 
 const KEY = 'resonus.lastPlayed';
 /**
- * What each of those sources is called, kept apart from the times on purpose:
- * the times have been saved under their own key since before this existed, and
- * splitting them means whoever updates keeps their recents and only fills the
- * names in as they play.
+ * The shared keys of before. Whichever profile opens first after updating
+ * inherits what is in them and they are deleted: the records were made by
+ * somebody, most likely by the account being used, and handing them to nobody
+ * would empty a grid that has been filling up for months.
+ *
+ * They were two keys because the names arrived later than the times and
+ * splitting them let an update keep its recents while the names filled in as
+ * things played. Going forward one key holds both: the migration writes them
+ * together, so there is nothing left to keep apart.
  */
-const NAMES_KEY = 'resonus.lastPlayed.names';
+const LEGACY_TIMES_KEY = KEY;
+const LEGACY_NAMES_KEY = `${KEY}.names`;
 const MAX = 300;
+
+/** Where this profile's recents live. */
+function storageKey(): string {
+  return `${KEY}.${hashKey(profileScopeId())}`;
+}
+
+interface Saved {
+  times: Record<string, number>;
+  names: Record<string, string>;
+}
 
 interface LastPlayedState {
   /** sourceHref → timestamp (ms) of the last play. */
@@ -27,22 +59,22 @@ interface LastPlayedState {
    */
   names: Record<string, string>;
   touch: (href: string, name?: string) => void;
-  /**
-   * Forgets the names on the way out of an account. The ids in them belong to
-   * the server that was open, so drawing them against the next one would put
-   * up tiles leading nowhere. The times stay: sorting a list by an id that is
-   * not in it costs nothing, and they are what the order is made of.
-   */
-  forgetNames: () => void;
   hydrate: () => Promise<void>;
 }
 
+const scope = profileScopeGuard();
+
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 function scheduleSave(times: Record<string, number>, names: Record<string, string>) {
+  // The key is resolved NOW and not when the timer fires: a profile switch
+  // within the second of debounce would otherwise write these recents under the
+  // new profile's key, which is the mixing this is here to stop. And if what is
+  // in memory is not this key's, nothing is written (see `profileScopeGuard`).
+  const key = storageKey();
+  if (!scope.owns(key)) return;
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    void setItem(KEY, JSON.stringify(times));
-    void setItem(NAMES_KEY, JSON.stringify(names));
+    void setItem(key, JSON.stringify({ times, names } satisfies Saved));
   }, 1000);
 }
 
@@ -66,23 +98,46 @@ export const useLastPlayed = create<LastPlayedState>((set, get) => ({
     scheduleSave(times, names);
   },
 
-  forgetNames: () => {
-    set({ names: {} });
-    scheduleSave(get().times, {});
-  },
-
   hydrate: async () => {
+    // Re-runs on a profile switch, and has to RESET when the new profile has no
+    // recents: what is in memory belongs to the one being left.
+    const key = storageKey();
+    const token = scope.start();
     try {
-      const raw = await getItem(KEY);
-      if (raw) set({ times: JSON.parse(raw) as Record<string, number> });
+      const raw = await getItem(key);
+      const saved: Saved = raw
+        ? (JSON.parse(raw) as Saved)
+        : { times: await legacyTimes(), names: await legacyNames() };
+      // Overtaken by a newer hydration: that one owns the recents now.
+      if (!scope.accept(token, key)) return;
+      set({ times: saved.times ?? {}, names: saved.names ?? {} });
+      if (!raw) {
+        // Written under this profile's key before the shared ones go, so a
+        // crash in between loses nothing.
+        if (Object.keys(saved.times).length > 0) await setItem(key, JSON.stringify(saved));
+        await deleteItem(LEGACY_TIMES_KEY);
+        await deleteItem(LEGACY_NAMES_KEY);
+      }
     } catch {
-      // no previous data
-    }
-    try {
-      const raw = await getItem(NAMES_KEY);
-      if (raw) set({ names: JSON.parse(raw) as Record<string, string> });
-    } catch {
-      // no previous data
+      if (scope.accept(token, key)) set({ times: {}, names: {} });
     }
   },
 }));
+
+async function legacyTimes(): Promise<Record<string, number>> {
+  try {
+    const raw = await getItem(LEGACY_TIMES_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, number>) : {};
+  } catch {
+    return {};
+  }
+}
+
+async function legacyNames(): Promise<Record<string, string>> {
+  try {
+    const raw = await getItem(LEGACY_NAMES_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, string>) : {};
+  } catch {
+    return {};
+  }
+}

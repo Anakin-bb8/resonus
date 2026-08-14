@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 import { COVER, coverArtUrl, type Playlist } from '@/api/data';
 import { songsLabel } from '@/i18n';
 import { useSettings } from '@/store/settings';
-import { colors, fontSize, spacing } from '@/theme';
+import { fontSize, spacing, themed } from '@/theme';
 import { Cover } from './Cover';
 
 interface Props {
@@ -35,7 +35,7 @@ export function PlaylistCard({ playlist, width = 150 }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   container: { gap: spacing.xs },
   title: {
     color: colors.text,
@@ -47,4 +47,4 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: fontSize.xs,
   },
-});
+}));

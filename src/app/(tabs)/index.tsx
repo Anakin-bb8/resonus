@@ -10,7 +10,6 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from 'react-native';
@@ -46,7 +45,7 @@ import { usePlayerStore } from '@/store/player';
 import { useScanProgress } from '@/store/scanProgress';
 import { useSettings, type ExploreChipKey, type HomeSectionKey } from '@/store/settings';
 import { useSongMenu } from '@/store/songMenu';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { listPerf } from '@/lib/listPerf';
 import { haptic } from '@/lib/haptics';
@@ -107,7 +106,7 @@ function QuickGrid() {
   });
 
   // Spotify-style dynamic grid: mixes playlists and recent albums sorted by
-  // last play (same store as "Recent" in the Library). What you just listened
+  // last play (same store as "Recents" in the Library). What you just listened
   // to rises; the rest is filled with recent albums (server order) and fresh
   // playlists (by modification date). Favorites is always pinned first, outside
   // this sorting.
@@ -263,7 +262,7 @@ function MostPlayedSongsSection({ title }: { title: string }) {
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
   const playQueue = usePlayerStore((s) => s.playQueue);
   const currentId = usePlayerStore((s) => s.queue[s.index]?.id);
-  const accent = useSettings((s) => s.accentColor);
+  const { accent } = useTheme();
   // Through the same door the Songs screen uses for this order, and not
   // through `getMostPlayedSongs`: Navidrome and Jellyfin sort songs by plays
   // themselves, one request, and only a server that can do neither pays for
@@ -626,6 +625,9 @@ const HOME_ALBUM_CONFIG: Record<
 };
 
 export default function HomeScreen() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   // Counted, to answer whether a tab you have visited keeps working
   // afterwards: they stay mounted once opened, and freezing them is
   // supposed to stop them rendering while they are not on screen. If this
@@ -651,7 +653,7 @@ export default function HomeScreen() {
   // The avatar ring reads the store's accent (not the global constant), so it
   // always recolors when changed or after hydrating; Home is the initial screen
   // and renders before the saved accent is applied.
-  const accentColor = useSettings((s) => s.accentColor);
+  const { accent: accentColor } = useTheme();
   useSettings((s) => s.appFont); // re-render when font changes
   // 'O' only in local profile (no account); a server account offline still
   // shows its initial.
@@ -828,7 +830,7 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { paddingVertical: spacing.md },
   header: {
@@ -932,4 +934,4 @@ const styles = StyleSheet.create({
   scanBarFill: { height: '100%', borderRadius: 3, backgroundColor: colors.accent },
   scanTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
   scanSub: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'] },
-});
+}));

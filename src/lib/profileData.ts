@@ -27,6 +27,7 @@ const SCOPED_KEYS = [
   'resonus.settings',
   'resonus.settings.ratingShown',
   'resonus.pins',
+  'resonus.lastPlayed',
   'resonus.autodl',
   'resonus.localFavorites',
   'resonus.localPlaylists',

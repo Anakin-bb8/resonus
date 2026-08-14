@@ -18,9 +18,12 @@ import { useT } from '@/i18n';
 import { formatDuration } from '@/lib/format';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
-import { colors, fontSize, spacing } from '@/theme';
+import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
 
 export default function LyricsScreen() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const router = useRouter();
   const t = useT();
   const song = usePlayerStore(currentSong);
@@ -57,8 +60,9 @@ export default function LyricsScreen() {
             blurRadius={60}
             transition={600}
           />
-          {/* Same scrim as the player: blur alone doesn't guarantee the lyrics
-              stay readable over a bright cover. */}
+          {/* Same wash as the player: blur alone doesn't guarantee the lyrics
+              stay readable over a bright cover, and which way it washes
+              follows the appearance. */}
           <View style={styles.coverScrim} />
         </>
       ) : null}
@@ -104,7 +108,7 @@ export default function LyricsScreen() {
           value={positionSec}
           onSlidingComplete={seekTo}
           minimumTrackTintColor={colors.text}
-          maximumTrackTintColor="rgba(255,255,255,0.3)"
+          maximumTrackTintColor={colors.mediaTrack}
           thumbTintColor={colors.text}
         />
         <View style={styles.times}>
@@ -129,7 +133,7 @@ export default function LyricsScreen() {
             <Ionicons
               name={isPlaying ? 'pause' : 'play'}
               size={30}
-              color="#101010"
+              color={colors.onInverse}
               style={!isPlaying && { marginLeft: 3 }}
             />
           </Pressable>
@@ -148,10 +152,10 @@ export default function LyricsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   root: { flex: 1, backgroundColor: colors.background },
   safe: { flex: 1 },
-  coverScrim: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.45)' },
+  coverScrim: { ...StyleSheet.absoluteFill, backgroundColor: colors.coverWash },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -161,11 +165,11 @@ const styles = StyleSheet.create({
   },
   titleBox: { flex: 1, alignItems: 'center' },
   title: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
-  artist: { color: 'rgba(255,255,255,0.7)', fontSize: fontSize.xs },
+  artist: { color: colors.textSecondary, fontSize: fontSize.xs },
   body: { flex: 1, paddingHorizontal: spacing.xl },
   plainContent: { paddingVertical: spacing.lg, paddingBottom: spacing.xxl },
   empty: {
-    color: 'rgba(255,255,255,0.7)',
+    color: colors.textSecondary,
     fontSize: fontSize.md,
     textAlign: 'center',
     marginTop: spacing.xxl,
@@ -179,7 +183,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: -2,
   },
-  time: { color: 'rgba(255,255,255,0.7)', fontSize: fontSize.xs },
+  time: { color: colors.textSecondary, fontSize: fontSize.xs },
   buttons: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -191,8 +195,8 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#fff',
+    backgroundColor: colors.text,
     alignItems: 'center',
     justifyContent: 'center',
   },
-});
+}));

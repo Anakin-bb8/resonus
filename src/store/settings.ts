@@ -6,7 +6,7 @@ import { hashKey } from '@/lib/localLibrary';
 import { setPerfEnabled } from '@/lib/perfLog';
 import { profileScopeGuard } from '@/lib/profileScope';
 import { getItem, setItem } from '@/lib/storage';
-import { applyAccent, DEFAULT_ACCENT } from '@/theme';
+import { applyAccent, applyThemeMode, DEFAULT_ACCENT, isThemeMode, type ThemeMode } from '@/theme';
 import { profileScopeId, useAuthStore } from './auth';
 import { queryClient } from '@/lib/query';
 
@@ -773,6 +773,8 @@ interface SettingsState {
   shareDownloadable: boolean;
   /** Accent color (hex). */
   accentColor: string;
+  /** Dark (the app's own look) or light. */
+  themeMode: ThemeMode;
   /** UI font (system font family; `system` = default). */
   appFont: AppFont;
   setMaxBitRate: (value: number) => void;
@@ -860,6 +862,7 @@ interface SettingsState {
   setShareExpiry: (value: ShareExpiry) => void;
   setShareDownloadable: (value: boolean) => void;
   setAccentColor: (value: string) => void;
+  setThemeMode: (value: ThemeMode) => void;
   setAppFont: (value: AppFont) => void;
   /** Resets to factory defaults (language is preserved). */
   resetToDefaults: () => void;
@@ -962,6 +965,7 @@ function snapshot(get: () => SettingsState) {
     shareExpiry: s.shareExpiry,
     shareDownloadable: s.shareDownloadable,
     accentColor: s.accentColor,
+    themeMode: s.themeMode,
     appFont: s.appFont,
   };
 }
@@ -1070,6 +1074,8 @@ const DEFAULTS = {
   // Off: the server has its own default for this and nothing was overriding it.
   shareDownloadable: false,
   accentColor: DEFAULT_ACCENT,
+  // Dark: the appearance the app was designed in. Light is opt-in.
+  themeMode: 'dark' as ThemeMode,
   appFont: 'system' as AppFont,
 };
 
@@ -1496,6 +1502,12 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setThemeMode: (themeMode) => {
+    applyThemeMode(themeMode);
+    set({ themeMode });
+    persist(snapshot(get));
+  },
+
   setLibrarySort: (librarySort) => {
     set({ librarySort });
     persist(snapshot(get));
@@ -1510,6 +1522,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
     // Language is preserved: resetting shouldn't change your language.
     set({ ...DEFAULTS, language: get().language });
     applyAccent(DEFAULT_ACCENT);
+      applyThemeMode(DEFAULTS.themeMode);
     persist(snapshot(get));
   },
 
@@ -1536,11 +1549,12 @@ export const useSettings = create<SettingsState>((set, get) => ({
       // applying this would restore the wrong profile's settings.
       if (!scope.accept(token, key)) return;
       // Reset to factory (preserving language, which is global): on profile
-      // switch it must not inherit the previous profile's settings. Accent is
-      // applied manually because it's a side effect (the blob re-applies it if
-      // present); the font is reactive and doesn't need it.
+      // switch it must not inherit the previous profile's settings. Accent and
+      // appearance are applied manually because they're side effects (the blob
+      // re-applies them if present); the font is reactive and doesn't need it.
       set({ ...DEFAULTS, language: get().language });
       applyAccent(DEFAULT_ACCENT);
+      applyThemeMode(DEFAULTS.themeMode);
       applied = true;
       if (raw) {
         const parsed = JSON.parse(raw) as Partial<{
@@ -1629,6 +1643,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           shareExpiry: ShareExpiry;
           shareDownloadable: boolean;
           accentColor: string;
+          themeMode: ThemeMode;
           appFont: AppFont;
         }>;
         if (typeof parsed.maxBitRate === 'number') {
@@ -1957,6 +1972,10 @@ export const useSettings = create<SettingsState>((set, get) => ({
           set({ accentColor: parsed.accentColor });
           applyAccent(parsed.accentColor);
         }
+        if (isThemeMode(parsed.themeMode)) {
+          set({ themeMode: parsed.themeMode });
+          applyThemeMode(parsed.themeMode);
+        }
         if (parsed.appFont && parsed.appFont in APP_FONT_FAMILY) {
           set({ appFont: parsed.appFont });
         }
@@ -2003,6 +2022,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
       if (!applied && scope.accept(token, key)) {
         set({ ...DEFAULTS, language: get().language });
         applyAccent(DEFAULT_ACCENT);
+      applyThemeMode(DEFAULTS.themeMode);
       }
     } finally {
       // Read or failed, what's in memory is now what this profile gets.

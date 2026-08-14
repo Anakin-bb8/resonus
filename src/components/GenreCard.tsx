@@ -2,7 +2,7 @@
 import { Link } from 'expo-router';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { fontSize, radius, spacing, themed } from '@/theme';
 
 /** Stable color derived from the genre name (dark and legible). */
 function genreColor(name: string): string {
@@ -29,7 +29,7 @@ export function GenreCard({ name, width }: { name: string; width?: number }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   card: {
     height: 88,
     borderRadius: radius.md,
@@ -38,4 +38,4 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   text: { color: colors.text, fontSize: fontSize.md, fontWeight: '800' },
-});
+}));

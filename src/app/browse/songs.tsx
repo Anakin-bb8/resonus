@@ -24,7 +24,6 @@ import {
   Keyboard,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -54,7 +53,15 @@ import { usePlaylistPicker } from '@/store/playlistPicker';
 import { usePlayHistory } from '@/store/playHistory';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
+import {
+  colors,
+  fontSize,
+  radius,
+  spacing,
+  SCREEN_BOTTOM_PADDING,
+  themed,
+  useTheme,
+} from '@/theme';
 import { useGridColumns } from '@/hooks/useGridColumns';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { BackChevron } from '@/components/BackChevron';
@@ -86,7 +93,7 @@ const DEBOUNCE_MS = 300;
 
 const SORT_LABEL: Record<SongListSort, string> = {
   server: 'Default',
-  recent: 'Recent',
+  recent: 'Recently played',
   alpha: 'A-Z',
   added: 'Recently added',
   frequent: 'Most played::songs',
@@ -94,10 +101,13 @@ const SORT_LABEL: Record<SongListSort, string> = {
 };
 
 export default function BrowseSongsScreen() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const bottomPad = useScreenBottomPadding();
   const t = useT();
-  // From the store, not `colors.accent`: styles are frozen at module load, so
-  // without this the marked pill and the card ticks keep the old accent.
+  // Through the hook, not straight off `colors`: it is what the light
+  // appearance darkens, and what the marked pill and the card ticks repaint on.
   const accent = useAccent();
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
   const offline = useAuthStore((s) => s.offline);
@@ -132,8 +142,8 @@ export default function BrowseSongsScreen() {
     (sorts.find((s) => s === sortParam) ?? sorts[0] ?? 'server') as SongListSort,
   );
 
-  // When the last song played changes, "Recent" is a different list: it is the
-  // key so the list follows along instead of sitting in the cache until
+  // When the last song played changes, "Recently played" is a different list:
+  // it is the key so the list follows along instead of sitting in the cache until
   // something else happens to clear it (playing something used to show up here
   // only after refreshing Home). The other orders don't move with a play, so
   // they don't carry it.
@@ -147,8 +157,8 @@ export default function BrowseSongsScreen() {
       initialPageParam: 0,
       getNextPageParam: (last, pages) => (last.length === PAGE ? pages.length * PAGE : undefined),
       enabled: canFetch,
-      // "Recent" is this phone's own play history and costs nothing to rebuild,
-      // so it is rebuilt every time the screen opens. "Most played" is not:
+      // "Recently played" is this phone's own play history and costs nothing to
+      // rebuild, so it is rebuilt every time the screen opens. "Most played" is not:
       // the server only sorts albums, so that list is fifteen album requests,
       // and asking for them again on every visit was most of the traffic of a
       // session. It goes back to the ordinary five minutes, and the album
@@ -491,7 +501,7 @@ export default function BrowseSongsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
@@ -557,7 +567,7 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     textAlignVertical: 'center',
   },
-  chipTextActive: { color: '#000' },
+  chipTextActive: { color: colors.onAccent },
   // `TrackRow` brings no horizontal padding of its own, so without this the
   // covers sit against the left edge and the ⋯ against the right one.
   list: { paddingHorizontal: spacing.lg, paddingBottom: SCREEN_BOTTOM_PADDING },
@@ -566,4 +576,4 @@ const styles = StyleSheet.create({
     paddingBottom: SCREEN_BOTTOM_PADDING,
     gap: GAP,
   },
-});
+}));

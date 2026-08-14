@@ -7,17 +7,16 @@ import { ScrollView, Text } from 'react-native';
 
 import { SelectList, SettingsPage, settingsStyles, SwitchList } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
-import { useAuthStore } from '@/store/auth';
 import { useSettings } from '@/store/settings';
+import { useTheme } from '@/theme';
 
 const SIZES = [4, 6, 8] as const;
 
 export default function QuickGridSettings() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const t = useT();
-  // Locally there are no server playlists, so that source is greyed out rather
-  // than taken off the list: the grid is made of the same three things
-  // whichever mode you are in, and only one of them is out of reach (#114).
-  const offline = useAuthStore((s) => s.offline);
   const showQuickGrid = useSettings((s) => s.showQuickGrid);
   const setShowQuickGrid = useSettings((s) => s.setShowQuickGrid);
   const withFavorites = useSettings((s) => s.quickGridFavorites);
@@ -41,11 +40,15 @@ export default function QuickGridSettings() {
       value: withAlbums,
       onChange: setWithAlbums,
     },
+    // Not greyed out anywhere: this was written as "there are no playlists
+    // without a server", and there are. A local profile keeps its own on the
+    // phone and an account without a connection reads them off its mirror, so
+    // the grid puts up playlist tiles in both — with the switch that says so
+    // greyed out and no way to turn it off.
     {
       label: t('Playlists'),
       value: withPlaylists,
       onChange: setWithPlaylists,
-      disabled: offline,
     },
   ];
 

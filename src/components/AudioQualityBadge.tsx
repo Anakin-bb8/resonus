@@ -1,5 +1,5 @@
 /** Discreet label with the format, the bitrate and the sample rate. */
-import { StyleSheet, Text } from 'react-native';
+import { Text } from 'react-native';
 
 import { type Song } from '@/api/subsonic';
 import { qualityLabel } from '@/lib/audioQuality';
@@ -8,7 +8,7 @@ import { useDownloads } from '@/store/downloads';
 import { localSourceFor } from '@/store/player';
 import { useNetworkType } from '@/store/networkType';
 import { useSettings } from '@/store/settings';
-import { colors, fontSize } from '@/theme';
+import { fontSize, themed } from '@/theme';
 
 export function AudioQualityBadge({ song }: { song: Song }) {
   // Streaming quality depends on the current network (Wi-Fi or mobile data).
@@ -35,10 +35,10 @@ export function AudioQualityBadge({ song }: { song: Song }) {
   return <Text style={styles.badge}>{label}</Text>;
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   badge: {
     color: colors.textMuted,
     fontSize: fontSize.xs,
     fontWeight: '500',
   },
-});
+}));

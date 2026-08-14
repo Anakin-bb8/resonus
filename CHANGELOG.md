@@ -9,6 +9,61 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Added
+
+- Casting the music on the phone. A renderer is not sent audio, it is sent an
+  address and goes and fetches it, and a file on the phone had none to give, so
+  the local profile could not cast at all. The phone serves its own files now,
+  seeking included, and only while a cast is on. The devices button comes back
+  there with it.
+- The cover of a local album reaches the speaker's screen, out of the same
+  place the song does.
+- An artist's ⋯ menu offers All releases, the whole discography as one list
+  the way it was before it was split into albums, EPs and singles. It only
+  shows where there is a split to undo.
+
+### Changed
+
+- The icons in the ⋯ menus are all outlined now. Half of them were filled,
+  which in this app means something: a filled icon is the tab you are on. In a
+  menu nothing is active — it is all things you can do — so the fill was
+  weight where there was nothing to weigh. The one that stays filled is the
+  heart, when the song is already a favourite, because there it is saying so.
+- The local profile stops offering what it can never use: streaming quality
+  and codecs, autoplay, the download, export, rating and mix entries of the
+  song menu, the Genres and Radio chips, and folder browsing. An account
+  without a connection still finds them where they always were, greyed out,
+  because for that one the server comes back.
+- Favorites opens on Recently added, which is what that order is — the last
+  song you starred, first. It said Recent, and Recent everywhere else in the
+  app means what you played or opened last.
+- The orders that are the server's idea of recently played say so, in the
+  library's songs, albums and artists and in a genre's sort menu. The
+  Library's own Recents, which is what you opened, keeps its name.
+- The devices button is never disabled any more. Downloads cast from the phone
+  now, so there is something to send without a connection.
+
+### Fixed
+
+- The Home grid mixed the profiles: albums and playlists from the phone's own
+  music turned up inside a server account, and the other way round. What was
+  played is kept per profile now, so each one finds its own and nothing else.
+- Leaving a profile through the login screen carried its recents into the next
+  one, and a restart with them.
+- One downloaded song in the queue was enough to leave a Sonos playing none of
+  it: a song the server could still be asked for answered that it could not be
+  cast, and the queue is handed over whole or not at all.
+- A file on the phone was announced to the renderer as MP3 whatever it really
+  was, which a speaker handed a FLAC under that name is entitled to refuse.
+- Going offline while casting left the cast on with no way to end it: the
+  button that ends it was drawn and unpressable.
+- The Playlists source of the quick grid was greyed out as though there were
+  none without a server. A local profile keeps its own and an account without
+  a connection reads them off its mirror, and the grid was putting them up all
+  along.
+- Favorites in the local profile came back in alphabetical order instead of by
+  when each one was marked, which is the order every server gives them in.
+
 ## [0.7.0] - 2026-08-13
 
 What to try first is the car. Android Auto was taken apart and rebuilt from the

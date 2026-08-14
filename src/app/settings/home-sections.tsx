@@ -4,7 +4,7 @@
  * applied and saved immediately.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, Switch, Text, View } from 'react-native';
 import ReorderableList, {
   useReorderableDrag,
   type ReorderableListReorderEvent,
@@ -16,7 +16,15 @@ import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { useAuthStore } from '@/store/auth';
 import { useSettings, type HomeSection, type HomeSectionKey } from '@/store/settings';
-import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
+import {
+  colors,
+  fontSize,
+  radius,
+  spacing,
+  SCREEN_BOTTOM_PADDING,
+  themed,
+  useTheme,
+} from '@/theme';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
 /** Label (i18n key) of each section. */
@@ -37,7 +45,7 @@ function SectionRow({ section }: { section: HomeSection }) {
   const setHomeSection = useSettings((s) => s.setHomeSection);
   // From the store, not `colors.accent`: without subscription the switch would
   // keep the previous accent while the screen stays mounted.
-  const accent = useSettings((s) => s.accentColor);
+  const { accent } = useTheme();
   return (
     <View style={styles.row}>
       <Pressable
@@ -55,8 +63,8 @@ function SectionRow({ section }: { section: HomeSection }) {
       <Switch
         value={section.enabled}
         onValueChange={(v) => setHomeSection(section.key, v)}
-        trackColor={{ false: colors.border, true: accent }}
-        thumbColor={colors.text}
+        trackColor={{ false: colors.control, true: accent }}
+        thumbColor={colors.knob}
       />
     </View>
   );
@@ -67,6 +75,9 @@ function SectionRow({ section }: { section: HomeSection }) {
 const SERVER_ONLY: HomeSectionKey[] = ['discover'];
 
 export default function HomeSectionsSettings() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const bottomPad = useScreenBottomPadding();
   const t = useT();
   const offline = useAuthStore((s) => s.offline);
@@ -102,7 +113,7 @@ export default function HomeSectionsSettings() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   hint: {
     color: colors.textMuted,
     fontSize: fontSize.xs,
@@ -121,4 +132,4 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   label: { flex: 1, color: colors.text, fontSize: fontSize.md },
-});
+}));

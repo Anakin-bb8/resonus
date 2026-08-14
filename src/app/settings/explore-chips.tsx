@@ -7,7 +7,7 @@
  * separate master toggle.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, Switch, Text, View } from 'react-native';
 import ReorderableList, {
   useReorderableDrag,
   type ReorderableListReorderEvent,
@@ -15,11 +15,20 @@ import ReorderableList, {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader, settingsStyles } from '@/components/SettingsUI';
+import { useLocalProfile } from '@/hooks/useLocalProfile';
 import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { useAuthStore } from '@/store/auth';
 import { useSettings, type ExploreChip, type ExploreChipKey } from '@/store/settings';
-import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
+import {
+  colors,
+  fontSize,
+  radius,
+  spacing,
+  SCREEN_BOTTOM_PADDING,
+  themed,
+  useTheme,
+} from '@/theme';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
 /** Each chip's label, as an i18n key. The same ones Home draws. */
@@ -40,7 +49,7 @@ function ChipRow({ chip, disabled }: { chip: ExploreChip; disabled?: boolean }) 
   const setExploreChip = useSettings((s) => s.setExploreChip);
   // From the store, not `colors.accent`: without subscription the switch would
   // keep the previous accent while the screen stays mounted.
-  const accent = useSettings((s) => s.accentColor);
+  const { accent } = useTheme();
   return (
     // Still draggable while greyed out: where it goes is a preference about the
     // Home screen you get back, and it costs nothing to set now.
@@ -61,8 +70,8 @@ function ChipRow({ chip, disabled }: { chip: ExploreChip; disabled?: boolean }) 
         value={chip.enabled}
         onValueChange={(v) => setExploreChip(chip.key, v)}
         disabled={disabled}
-        trackColor={{ false: colors.border, true: accent }}
-        thumbColor={colors.text}
+        trackColor={{ false: colors.control, true: accent }}
+        thumbColor={colors.knob}
       />
     </View>
   );
@@ -70,32 +79,46 @@ function ChipRow({ chip, disabled }: { chip: ExploreChip; disabled?: boolean }) 
 
 /** Chips Home does not draw without a connection (it filters them out through
  * OFFLINE_KEYS). Their rows stay here, greyed out, so the list is the same list
- * whichever mode you are in (#114). */
+ * whichever mode you are in (#114) — except in the local profile, where they
+ * are gone: the genres come from `getGenres` and the stations from
+ * `getRadioStations`, both of which want an account, and neither is coming
+ * back to a profile that never had one (see `useLocalProfile`). */
 const SERVER_ONLY: ExploreChipKey[] = ['genres', 'radio'];
 
 export default function ExploreChipsSettings() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const bottomPad = useScreenBottomPadding();
   const t = useT();
   const offline = useAuthStore((s) => s.offline);
+  const local = useLocalProfile();
   const exploreChips = useSettings((s) => s.exploreChips);
   const setExploreChips = useSettings((s) => s.setExploreChips);
+  const visible = local ? exploreChips.filter((c) => !SERVER_ONLY.includes(c.key)) : exploreChips;
   return (
     <SafeAreaView style={settingsStyles.safe} edges={['top']}>
       <ScreenHeader title={t('Explore chips')} />
       <Text style={styles.hint}>{t('Drag to reorder, toggle to show or hide.')}</Text>
       <ReorderableList
-        data={exploreChips}
+        data={visible}
         keyExtractor={(item) => item.key}
         renderItem={({ item }) => (
           <ChipRow chip={item} disabled={offline && SERVER_ONLY.includes(item.key)} />
         )}
         onReorder={({ from, to }: ReorderableListReorderEvent) => {
-          // Every chip is on screen, so the positions dragged are the positions
-          // stored. Holding back the server-only ones used to mean mapping one
-          // list onto the other, which was the price of hiding them.
-          const next = exploreChips.slice();
-          const [moved] = next.splice(from, 1);
-          next.splice(to, 0, moved);
+          // Offline every chip is on screen, so the positions dragged are the
+          // positions stored. In the local profile two of them are not, and
+          // they keep the place they had: what is stored is a preference about
+          // any profile, and reordering here must not shuffle the order an
+          // account will come back to.
+          const nextVisible = visible.slice();
+          const [moved] = nextVisible.splice(from, 1);
+          nextVisible.splice(to, 0, moved);
+          let vi = 0;
+          const next = exploreChips.map((c) =>
+            local && SERVER_ONLY.includes(c.key) ? c : nextVisible[vi++],
+          );
           setExploreChips(next);
         }}
         contentContainerStyle={[styles.list, { paddingBottom: bottomPad }]}
@@ -104,7 +127,7 @@ export default function ExploreChipsSettings() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   hint: {
     color: colors.textMuted,
     fontSize: fontSize.xs,
@@ -123,4 +146,4 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   label: { flex: 1, color: colors.text, fontSize: fontSize.md },
-});
+}));

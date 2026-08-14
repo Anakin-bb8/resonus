@@ -19,21 +19,9 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaFrame, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useSettings } from '@/store/settings';
-import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
+import { useAccent } from '@/hooks/useAccent';
+import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING, themed } from '@/theme';
 import { BackChevron } from './BackChevron';
-
-/**
- * Live accent, read from the store instead of the global constant.
- *
- * `colors.accent` is mutated when choosing another accent, but that alone
- * doesn't repaint anything: Settings screens mounted below the selector
- * don't notice and keep showing the previous color until you exit and
- * re-enter. Subscribing here repaints everything at once.
- */
-function useAccent(): string {
-  return useSettings((s) => s.accentColor);
-}
 
 /** Header with back arrow and centered title. */
 export function ScreenHeader({ title }: { title: string }) {
@@ -427,8 +415,8 @@ export function SliderRow({
           onChange(v);
         }}
         minimumTrackTintColor={accent}
-        maximumTrackTintColor={colors.border}
-        thumbTintColor={colors.text}
+        maximumTrackTintColor={colors.control}
+        thumbTintColor={colors.knob}
       />
     </View>
   );
@@ -623,8 +611,8 @@ export function SwitchList({
             value={opt.value}
             onValueChange={opt.onChange}
             disabled={opt.disabled}
-            trackColor={{ false: colors.border, true: accent }}
-            thumbColor={colors.text}
+            trackColor={{ false: colors.control, true: accent }}
+            thumbColor={colors.knob}
           />
         </View>
       ))}
@@ -692,7 +680,7 @@ export function Field({ label, value }: { label: string; value: string }) {
   );
 }
 
-export const settingsStyles = StyleSheet.create({
+export const settingsStyles = themed((colors) => ({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
@@ -782,7 +770,7 @@ export const settingsStyles = StyleSheet.create({
   tunableValue: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1 },
   tunableArrows: { alignItems: 'center' },
   // Pad that nudges a slider's value one step at a time.
-  padBackdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.6)' },
+  padBackdrop: { ...StyleSheet.absoluteFill, backgroundColor: colors.backdropStrong },
   padCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   padCard: {
     minWidth: 200,
@@ -793,7 +781,7 @@ export const settingsStyles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
     elevation: 8,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOpacity: 0.4,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
@@ -820,7 +808,7 @@ export const settingsStyles = StyleSheet.create({
     borderRadius: radius.md,
     paddingVertical: spacing.sm,
     elevation: 8,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOpacity: 0.4,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
@@ -853,5 +841,5 @@ export const settingsStyles = StyleSheet.create({
     paddingVertical: spacing.md,
     marginTop: spacing.lg,
   },
-  pillButtonText: { color: '#000', fontSize: fontSize.md, fontWeight: '700' },
-});
+  pillButtonText: { color: colors.onInverse, fontSize: fontSize.md, fontWeight: '700' },
+}));

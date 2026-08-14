@@ -106,7 +106,7 @@
 
     // ── Home & personalization ───────────────────────────────────────────────
     "Discover": "Home section: discovery suggestions",
-    "Recents": "Library section: recently opened items",
+    "Recents": "Library section and its sort order: recently opened items",
     "Greeting": "Home's \"Good morning\" line",
     "Custom greeting": "A greeting of your own, replacing Home's \"Good morning\" line",
     "Quick grid": "The grid of shortcut tiles on Home",
@@ -343,7 +343,6 @@
     "Remove download": "Delete the downloaded file, keeping the song in the library",
     "Sort": "Read out by the screen reader for the button that opens the sort options. A verb",
     "Sort by": "Heading over the sort options",
-    "Recent": "A sort order: what you opened most recently first",
     "Share": "Make a link on the server that others can open. Getting the file itself out is `Export`",
     "Export “{name}”?": "Confirms getting the files of an album or playlist out of the app",
     "Exit": "Leave the local profile and go back to choosing a server",
@@ -358,6 +357,7 @@
     "Genres": "A heading over a list of them, never a count",
     "Folders": "A heading: browsing the server by folder instead of by album",
     "Show all": "Opens the full list of what the row is showing a few of",
+    "All releases": "In an artist's ⋯ menu, and only where the shelves below are drawn: it opens everything they have released as one list, of no particular kind. \"Releases\" as the records themselves, the way a discography counts them",
 
     // ── The shelves of a discography ─────────────────────────────────────────
     // Every one of these is a heading over the records of one kind on an
@@ -495,11 +495,11 @@
     "Playlists": "A section on Home and in the library, and a folder in the car",
     "Random albums": "A section of Home: albums picked at random, to happen upon something",
     "Random artists": "A section of Home: artists picked at random",
-    "Recently added": "A sort order, and a section: newest in the library first",
+    "Recently added": "A sort order, and a section: newest first (in Favorites, last favorited first)",
     "Most played": "Sorted by how many times they were played",
     "Most played albums": "A section of Home: the records played most",
     "Most played songs": "A section of Home: the songs played most, as songs",
-    "Recently played": "Sorted by when they were last played",
+    "Recently played": "A sort order and a chip: by when they were last played",
     "Suggestions": "Things the app offers when you are picking favourites to pin",
 
     // ── Home while the phone's own music is being read ───────────────────────
@@ -516,7 +516,7 @@
     "Swipe right": "What dragging a song to the right in a list does. Its values are the actions listed under it",
     "Swipe left": "What dragging a song to the left in a list does",
     "Accent color": "The colour the app uses for buttons, links and anything it wants you to notice",
-    "Theme": "Light, dark, or whatever the phone is set to",
+    "Theme": "The screen where the accent colour is chosen, and the name of the row that opens it",
     "Navigation": "Section header: how you move around the app",
     "Folder browsing": "Browsing the server's folders as folders, instead of by album and artist",
     "Haptic feedback": "The small vibration when something is tapped",

@@ -6,6 +6,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as SystemUI from 'expo-system-ui';
 import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -46,7 +47,7 @@ import { usePlayHistory } from '@/store/playHistory';
 import { useRecentSearches } from '@/store/recentSearches';
 import { APP_FONT_FAMILY, useSettings } from '@/store/settings';
 import { useSortPrefs } from '@/store/sortPrefs';
-import { colors } from '@/theme';
+import { colors, themeMode, useTheme } from '@/theme';
 
 // Patches Text/TextInput once, before the first render.
 installAppFont();
@@ -60,6 +61,16 @@ export default function RootLayout() {
   // so everything that gets repainted picks up the current family.
   const appFont = useSettings((s) => s.appFont);
   setAppFont(APP_FONT_FAMILY[appFont]);
+  // The appearance. Everything mounted beside the Stack below (mini player, tab
+  // bar, sheets, toast) repaints from here; the screens inside subscribe on
+  // their own, because a stack keeps them mounted and out of this render.
+  const palette = useTheme();
+  // The window behind everything the app draws. It shows through for an instant
+  // between screens and under an overscroll, and left at the launch colour it
+  // was a dark flash in the middle of the light theme.
+  useEffect(() => {
+    void SystemUI.setBackgroundColorAsync(palette.background);
+  }, [palette.background]);
 
   const auth = useAuthStore((s) => s.auth);
   const offline = useAuthStore((s) => s.offline);
@@ -188,7 +199,16 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.background }}>
       <QueryClientProvider client={queryClient}>
-        <StatusBar style="light" />
+        {/* The clock and the battery, which are painted by the system over our
+            background: dark icons on the light theme, light on the dark one.
+
+            The navigation bar at the other end is not ours to colour. It is
+            transparent (styles.xml) and the app draws behind it, but the
+            colour of the gesture pill comes from `windowLightNavigationBar`,
+            which is a build-time flag — so under the light theme it stays
+            white on white. Fixing it means adding `expo-navigation-bar` and a
+            new build, which is why it is waiting for one. */}
+        <StatusBar style={themeMode() === 'light' ? 'dark' : 'light'} />
         {hydrating ? (
           <View
             style={{

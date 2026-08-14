@@ -76,7 +76,7 @@ you are actually typing into, which is easier than reading it here.
 | `Plays` | How many times the song has been played |
 | `Rate` | Verb: give it stars. Used for a song and for an artist. Not "bitrate" |
 | `Rating` | The stars given to the song. Not a bitrate, not a review |
-| `Recents` | Library section: recently opened items |
+| `Recents` | Library section and its sort order: recently opened items |
 | `Remove from favorites` | The same button when it is already a favourite |
 | `Remove from playlist` | Menu action: take this song out of the playlist it was opened from |
 | `Removed from playlist` | Toast, with an undo button next to it |
@@ -119,6 +119,7 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `About` | The heading over an artist's biography, and the name of the settings page about the app. Two very different uses of one English word, so `About::artist` and `About::app` exist for a language that needs two words |
+| `All releases` | In an artist's ⋯ menu, and only where the shelves below are drawn: it opens everything they have released as one list, of no particular kind. "Releases" as the records themselves, the way a discography counts them |
 | `All songs` |  |
 | `Appears on` | Albums the artist appears on: features, compilations |
 | `Audio dramas` | Shelf heading: a play performed for the ear, with several voices rather than one narrator. Radio drama is the same thing where that name is the familiar one |
@@ -214,7 +215,6 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `A-Z` | Sort option: the order of a list |
-| `Default` | Sorting pill: what you get when nothing is sorted, which is the order the server keeps its songs in. Not alphabetical, and not Resonus deciding. On a playlist it is the order the list came in, which is the one you made by dragging the songs if it is an ordinary playlist and the one its rules produced if it is a smart one — hence a word that is true of both rather than "custom" or "pre-defined" |
 | `Find a song` | The search box's placeholder on that screen |
 | `No songs yet` | Empty state when the library has no songs |
 | `Nothing played yet` | Empty state: this phone has not played anything yet |
@@ -243,7 +243,7 @@ you are actually typing into, which is easier than reading it here.
 | --- | --- |
 | `Most played` | Sorted by how many times they were played |
 | `Nothing to suggest yet — play some music first.` | The line under an empty state on the add-favourites screen |
-| `Recently played` | Sorted by when they were last played |
+| `Recently played` | A sort order and a chip: by when they were last played |
 | `Suggestions` | Things the app offers when you are picking favourites to pin |
 | `What would you like to add?` | Heading of the screen for adding favourites |
 
@@ -251,7 +251,6 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `Default` | Sorting pill: what you get when nothing is sorted, which is the order the server keeps its songs in. Not alphabetical, and not Resonus deciding. On a playlist it is the order the list came in, which is the one you made by dragging the songs if it is an ordinary playlist and the one its rules produced if it is a smart one — hence a word that is true of both rather than "custom" or "pre-defined" |
 | `Genre` | Label of a field in the song information sheet |
 | `No albums in this genre` | Empty state heading |
 | `No songs in this genre` | Empty state heading |
@@ -418,7 +417,6 @@ you are actually typing into, which is easier than reading it here.
 | `Confirm your password` | Changing a cover on the server needs the password again. It is not a new password being set |
 | `Couldn't load the playlist.` | Error on the screen, with a Retry button |
 | `Couldn't update the cover` | Toast: the upload failed |
-| `Default` | Sorting pill: what you get when nothing is sorted, which is the order the server keeps its songs in. Not alphabetical, and not Resonus deciding. On a playlist it is the order the list came in, which is the one you made by dragging the songs if it is an ordinary playlist and the one its rules produced if it is a smart one — hence a word that is true of both rather than "custom" or "pre-defined" |
 | `Delete` | The confirm button of a delete dialog, for a playlist or a radio station |
 | `Delete “{name}”?` | Dialog title. `{name}` is the playlist or station |
 | `Delete playlist` | Menu action, in red |
@@ -719,7 +717,6 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `“Good morning”, “Good evening”… at the top of Home.` | The line under “Show greeting”, explaining it |
-| `Accent color` | The colour the app uses for buttons, links and anything it wants you to notice |
 | `Action when you swipe a song to the left in lists.` | The line under “Swipe left”, explaining it |
 | `Action when you swipe a song to the right in lists.` | The line under “Swipe right”, explaining it |
 | `Always show the navigation bar` |  |
@@ -755,7 +752,7 @@ you are actually typing into, which is easier than reading it here.
 | `Swipe left` | What dragging a song to the left in a list does |
 | `Swipe right` | What dragging a song to the right in a list does. Its values are the actions listed under it |
 | `The clock button on Home.` | The line under “Show history button”, explaining it |
-| `Theme` | Light, dark, or whatever the phone is set to |
+| `Theme` | The screen where the accent colour is chosen, and the name of the row that opens it |
 | `Which tab opens on launch, and after a while in the background.` | The line under “Open the app on”, explaining it |
 | `Your avatar on Home.` | The line under “Show profile button”, explaining it |
 
@@ -923,7 +920,7 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `Accent color` | The colour the app uses for buttons, links and anything it wants you to notice |
-| `Theme` | Light, dark, or whatever the phone is set to |
+| `Theme` | The screen where the accent colour is chosen, and the name of the row that opens it |
 
 ## Used all over the app
 
@@ -967,6 +964,7 @@ you are actually typing into, which is easier than reading it here.
 | `Couldn't load songs.` | Error on the screen, with a Retry button |
 | `Couldn't play the song` | Toast: the app could not start it at all |
 | `Create` | The confirm button of the new-playlist dialog. A verb |
+| `Default` | Sorting pill: what you get when nothing is sorted, which is the order the server keeps its songs in. Not alphabetical, and not Resonus deciding. On a playlist it is the order the list came in, which is the one you made by dragging the songs if it is an ordinary playlist and the one its rules produced if it is a smart one — hence a word that is true of both rather than "custom" or "pre-defined" |
 | `Delete downloads` | Menu action: delete the downloaded files of everything here |
 | `Descending` | Sort option: the order of a list |
 | `Direction` | Sort sheet: the ascending vs descending toggle. Not a compass direction |
@@ -993,8 +991,7 @@ you are actually typing into, which is easier than reading it here.
 | `Playlist name` | The name field when making or renaming a playlist |
 | `Playlists` | A section on Home and in the library, and a folder in the car |
 | `Rate {n} stars` | Read out by the screen reader for each star. `{n}` is which star it is |
-| `Recent` | A sort order: what you opened most recently first |
-| `Recently added` | A sort order, and a section: newest in the library first |
+| `Recently added` | A sort order, and a section: newest first (in Favorites, last favorited first) |
 | `Remove` | Take something out of a list. Deleting for good is `Delete` |
 | `Remove download` | Delete the downloaded file, keeping the song in the library |
 | `Remove download?` | Dialog title: delete the files of something already downloaded |

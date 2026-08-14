@@ -9,7 +9,6 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  StyleSheet,
   Switch,
   Text,
   TextInput,
@@ -29,7 +28,7 @@ import { useToast } from '@/store/toast';
 import { useT } from '@/i18n';
 import { LANGUAGES } from '@/i18n/languages';
 import { useSettings } from '@/store/settings';
-import { colors, DEFAULT_ACCENT, fontSize, radius, spacing } from '@/theme';
+import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 
 type ServerKey = 'navidrome' | 'opensubsonic' | 'jellyfin' | 'ampache';
 
@@ -120,6 +119,9 @@ function ProfileRow({ profile, onTap, onRemove }: {
 const MAX_VISIBLE = 5;
 
 export default function LoginScreen() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const login = useAuthStore((s) => s.login);
   const profiles = useAuthStore((s) => s.profiles);
   const switchProfile = useAuthStore((s) => s.switchProfile);
@@ -266,9 +268,9 @@ export default function LoginScreen() {
                   {overflow ? (
                     <Pressable style={styles.showMore} onPress={() => setShowAll(true)}>
                       <Text style={styles.showMoreText}>{t('Show all')}</Text>
-                      {/* Fixed color (not the accent): on login the accent may be
-                          from a previous session and clashes with the brand. */}
-                      <Ionicons name="chevron-down" size={18} color={DEFAULT_ACCENT} />
+                      {/* The brand green, not the accent: on login the accent
+                          may still be a previous session's. */}
+                      <Ionicons name="chevron-down" size={18} color={colors.brand} />
                     </Pressable>
                   ) : null}
                 </View>
@@ -445,8 +447,8 @@ export default function LoginScreen() {
                           <Switch
                             value={plainAuth}
                             onValueChange={setPlainAuth}
-                            trackColor={{ false: colors.border, true: colors.accent }}
-                            thumbColor={colors.text}
+                            trackColor={{ false: colors.control, true: colors.accent }}
+                            thumbColor={colors.knob}
                           />
                         </View>
                       ) : null}
@@ -456,8 +458,6 @@ export default function LoginScreen() {
                   {error ? <Text style={styles.error}>{error}</Text> : null}
 
                   <Pressable
-                    // Inline accent: the sheet freezes the first import value
-                    // and changing accent + signing out would leave it stale.
                     style={[
                       styles.button,
                       { backgroundColor: colors.accent },
@@ -467,7 +467,7 @@ export default function LoginScreen() {
                     onPress={onSubmit}
                   >
                     {loading ? (
-                      <ActivityIndicator color="#000" />
+                      <ActivityIndicator color={colors.onAccent} />
                     ) : (
                       <Text style={styles.buttonText}>{t('Sign in')}</Text>
                     )}
@@ -535,9 +535,9 @@ export default function LoginScreen() {
               >
                 <Text style={styles.langRowText}>{l.name}</Text>
                 {l.code === language ? (
-                  // Fixed colour, like the chevron above: the accent here may
-                  // still be the one from a profile that is not open yet.
-                  <Ionicons name="checkmark" size={20} color={DEFAULT_ACCENT} />
+                  // The brand green, like the chevron above: the accent here
+                  // may still be a profile's that is not open yet.
+                  <Ionicons name="checkmark" size={20} color={colors.brand} />
                 ) : null}
               </Pressable>
             ))}
@@ -568,12 +568,12 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   safe: { flex: 1, backgroundColor: colors.background },
   container: { flexGrow: 1, padding: spacing.xl, paddingTop: spacing.xxl },
   logo: {
-    // Fixed brand green: on login the accent may be from a previous session.
-    color: DEFAULT_ACCENT,
+    // The brand green: on login the accent may be a previous session's.
+    color: colors.brand,
     fontSize: fontSize.xxl,
     fontWeight: '800',
     textAlign: 'center',
@@ -617,7 +617,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingVertical: spacing.sm,
   },
-  showMoreText: { color: DEFAULT_ACCENT, fontSize: fontSize.sm, fontWeight: '600' },
+  showMoreText: { color: colors.brand, fontSize: fontSize.sm, fontWeight: '600' },
   addAccount: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -626,9 +626,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     marginTop: spacing.md,
     borderRadius: radius.pill,
-    backgroundColor: DEFAULT_ACCENT,
+    backgroundColor: colors.brand,
   },
-  addAccountText: { color: colors.background, fontSize: fontSize.md, fontWeight: '700' },
+  addAccountText: { color: colors.onAccent, fontSize: fontSize.md, fontWeight: '700' },
   hero: { alignItems: 'center', marginBottom: spacing.xl },
   appIcon: { width: 88, height: 88, borderRadius: 22, marginBottom: spacing.md },
   topBar: { height: 32, justifyContent: 'center', marginBottom: spacing.md },
@@ -740,7 +740,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: '#000', fontSize: fontSize.md, fontWeight: '700' },
+  buttonText: { color: colors.onAccent, fontSize: fontSize.md, fontWeight: '700' },
   modalSafe: { flex: 1, backgroundColor: colors.background },
   modalHeader: {
     flexDirection: 'row',
@@ -752,4 +752,4 @@ const styles = StyleSheet.create({
   modalTitle: { color: colors.text, fontSize: fontSize.lg, fontWeight: '700' },
   modalDone: { color: colors.accent, fontSize: fontSize.md, fontWeight: '600' },
   modalList: { paddingHorizontal: spacing.xl, gap: spacing.sm, paddingBottom: spacing.xl },
-});
+}));

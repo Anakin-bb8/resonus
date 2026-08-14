@@ -7,13 +7,12 @@
  */
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Link } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { COVER, coverArtUrl, type Album } from '@/api/data';
 import { haptic } from '@/lib/haptics';
 import { useMediaMenu } from '@/store/mediaMenu';
-import { useSettings } from '@/store/settings';
-import { colors, fontSize, spacing } from '@/theme';
+import { fontSize, spacing, themed, useTheme } from '@/theme';
 import { Cover } from './Cover';
 
 interface Props {
@@ -24,9 +23,9 @@ interface Props {
 
 export function AlbumRow({ album, pinned }: Props) {
   const openMenu = useMediaMenu((s) => s.open);
-  // From the store, not `colors.accent`: without a subscription the pin would
-  // keep the previous accent color while the screen stays mounted.
-  const accent = useSettings((s) => s.accentColor);
+  // Subscribed, not read straight off `colors`: without it the pin would keep
+  // the previous accent while the screen stays mounted.
+  const { accent } = useTheme();
 
   return (
     <Link href={`/album/${album.id}`} asChild>
@@ -60,7 +59,7 @@ export function AlbumRow({ album, pinned }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   info: { flex: 1 },
   name: { color: colors.text, fontSize: fontSize.md, fontWeight: '600' },
@@ -68,4 +67,4 @@ const styles = StyleSheet.create({
   sub: { color: colors.textSecondary, fontSize: fontSize.xs },
   // The MCI pin icon is vertical; rotated 45° it looks like Spotify's.
   pin: { transform: [{ rotate: '45deg' }] },
-});
+}));
