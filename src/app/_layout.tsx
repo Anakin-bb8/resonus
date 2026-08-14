@@ -59,7 +59,7 @@ const MIRROR_DELAY_MS = 15_000;
 /** No screen is worth having twice. A tap only becomes a screen once the
  *  navigation state is committed, so two quick taps on the same row (or on the
  *  mini player) are two pushes decided against the same state and the stack
- *  ends up with the same screen two, three, four times over — you close the
+ *  ends up with the same screen two, three, four times over: you close the
  *  player and there is another player behind it (#148).
  *
  *  With this, opening something already in the stack moves that screen to the
