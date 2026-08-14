@@ -1,14 +1,20 @@
 /**
- * Settings › Theme: the appearance (dark or light) and the accent colour. Both
- * apply the moment they are chosen.
+ * Settings › Theme: the accent colour, applied the moment it is chosen.
+ *
+ * There is a light appearance too, and everything behind it works — the second
+ * palette, `applyThemeMode`, the `themeMode` setting and its writing to disk.
+ * What is not here is the two rows that would let anybody reach it, on purpose
+ * and for now: it is new and wants looking at on a real screen before it is
+ * offered. Putting them back is a `SelectList` over `themeMode`; nothing else
+ * has to be undone, so none of what it drives is dead code.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { SelectList, SettingsPage, settingsStyles } from '@/components/SettingsUI';
+import { SettingsPage, settingsStyles } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
 import { ACCENT_OPTIONS, useSettings } from '@/store/settings';
-import { fontSize, spacing, themed, useTheme, type ThemeMode } from '@/theme';
+import { fontSize, spacing, themed, useTheme } from '@/theme';
 
 export default function ThemeSettings() {
   // Repaints on a change of appearance or accent: a stack keeps this screen
@@ -17,27 +23,11 @@ export default function ThemeSettings() {
   const t = useT();
   const accentColor = useSettings((s) => s.accentColor);
   const setAccentColor = useSettings((s) => s.setAccentColor);
-  const themeMode = useSettings((s) => s.themeMode);
-  const setThemeMode = useSettings((s) => s.setThemeMode);
 
   return (
     <SettingsPage title={t('Theme')}>
       <ScrollView contentContainerStyle={settingsStyles.content}>
-        {/* "Mode" and not "Appearance": Appearance is the screen this one hangs
-            off, and two headings with the same word one level apart read as a
-            mistake. */}
-        <Text style={styles.label}>{t('Mode')}</Text>
-        <SelectList<ThemeMode>
-          collapsible={false}
-          value={themeMode}
-          onChange={setThemeMode}
-          options={[
-            { value: 'dark', label: t('Dark (default)') },
-            { value: 'light', label: t('Light (experimental)') },
-          ]}
-        />
-
-        <Text style={[styles.label, styles.secondLabel]}>{t('Accent color')}</Text>
+        <Text style={styles.label}>{t('Accent color')}</Text>
         <View style={styles.swatches}>
           {ACCENT_OPTIONS.map((opt) => {
             const active = opt.color.toLowerCase() === accentColor.toLowerCase();
@@ -72,7 +62,6 @@ const styles = themed((colors) => ({
     fontWeight: '700',
     marginBottom: spacing.md,
   },
-  secondLabel: { marginTop: spacing.xl },
   swatches: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg },
   swatch: {
     width: 56,

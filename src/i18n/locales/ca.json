@@ -656,9 +656,5 @@
   "Couldn't download the update": "No s’ha pogut baixar l’actualització",
   "Couldn't check for updates": "No s’ha pogut comprovar si hi ha actualitzacions",
   "Keep paused when skipping": "Continua en pausa en canviar de cançó",
-  "Skipping while paused shows the next song without playing it. Tapping a song in the queue still plays it.": "Passar de cançó amb la reproducció en pausa mostra la següent sense reproduir-la. Tocar una cançó a la cua sí que la reprodueix.",
-  "Mode": "Mode",
-  "Dark (default)": "Fosc (predeterminat)",
-  "Light (experimental)": "Clar (experimental)",
-  "Dark or light, and the accent color": "Fosc o clar, i el color d’accent"
+  "Skipping while paused shows the next song without playing it. Tapping a song in the queue still plays it.": "Passar de cançó amb la reproducció en pausa mostra la següent sense reproduir-la. Tocar una cançó a la cua sí que la reprodueix."
 }

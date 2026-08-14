@@ -11,13 +11,6 @@ Releases before 0.2.1 are only listed on the
 
 ### Added
 
-- A light theme, in Settings › Appearance › Theme, next to the dark one the
-  app has always had. Dark stays the default and is untouched; the light one
-  is marked experimental, because it is new and a screen here or there may
-  still want adjusting. Every screen is covered, the player and the lyrics
-  included: where those take their colour from the cover art, the tint follows
-  the theme instead of always being a dark one. The accent you picked works in
-  both — on white it is darkened only as far as it has to be to stay readable.
 - Casting the music on the phone. A renderer is not sent audio, it is sent an
   address and goes and fetches it, and a file on the phone had none to give, so
   the local profile could not cast at all. The phone serves its own files now,
