@@ -2,7 +2,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Link, useLocalSearchParams } from 'expo-router';
+import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import {
@@ -72,6 +72,7 @@ export default function ArtistScreen() {
   const bottomPad = useScreenBottomPadding();
   useSettings((s) => s.accentColor); // re-render when accent changes
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
   const t = useT();
@@ -671,6 +672,23 @@ export default function ArtistScreen() {
                 <Ionicons name="play" size={24} color={colors.text} />
                 <Text style={styles.actionText}>{t('Play discography')}</Text>
               </Pressable>
+              {/* The way back to the one undivided list the discography was
+                  before it was split into shelves (#138): the same screen the
+                  shelves open, with no kind asked for. Only when there are
+                  shelves — without them the page already shows that list under
+                  its own heading, and this would open what is on screen. */}
+              {releaseGroups.length > 0 ? (
+                <Pressable
+                  style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+                  onPress={() => {
+                    close();
+                    router.push(`/artist/discography/${id}`);
+                  }}
+                >
+                  <Ionicons name="albums-outline" size={24} color={colors.text} />
+                  <Text style={styles.actionText}>{t('All releases')}</Text>
+                </Pressable>
+              ) : null}
               <Pressable
                 style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
                 onPress={() => {

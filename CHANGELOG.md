@@ -18,6 +18,9 @@ Releases before 0.2.1 are only listed on the
   there with it.
 - The cover of a local album reaches the speaker's screen, out of the same
   place the song does.
+- An artist's ⋯ menu offers All releases, the whole discography as one list
+  the way it was before it was split into albums, EPs and singles. It only
+  shows where there is a split to undo.
 
 ### Changed
 

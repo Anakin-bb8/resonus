@@ -357,6 +357,7 @@
     "Genres": "A heading over a list of them, never a count",
     "Folders": "A heading: browsing the server by folder instead of by album",
     "Show all": "Opens the full list of what the row is showing a few of",
+    "All releases": "In an artist's ⋯ menu, and only where the shelves below are drawn: it opens everything they have released as one list, of no particular kind. \"Releases\" as the records themselves, the way a discography counts them",
 
     // ── The shelves of a discography ─────────────────────────────────────────
     // Every one of these is a heading over the records of one kind on an
