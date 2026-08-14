@@ -180,21 +180,27 @@ export function getAlbumProgressEntry(
   return useAlbumProgress.getState().byProfile[key]?.[albumId];
 }
 
+const NO_PROGRESS: Record<string, AlbumProgressEntry> = {};
+
 /**
- * The same entry for a screen, which needs to hear about it changing.
+ * Everything saved for a profile, for a screen that needs to hear it change.
  *
  * `getAlbumProgressEntry` reads the store once and tells nobody, so a screen
  * calling it while it renders shows whatever was saved the last time
- * something else made it draw — the album you just listened to still offers
- * to resume where it stood two chapters ago.
+ * something else made it draw: the album you have been listening to still
+ * offers to resume where it stood two chapters ago.
+ *
+ * The whole profile rather than one album because the id to look up is the
+ * one the server answered with, which a screen only has after its query has
+ * come back, and the album a request was made for is not always the album
+ * that arrives (Navidrome hands back canonical ids).
  */
-export function useAlbumProgressEntry(
+export function useAlbumProgressByAlbum(
   auth: SubsonicAuth | null | undefined,
   offline: boolean,
-  albumId: string,
-): AlbumProgressEntry | undefined {
+): Record<string, AlbumProgressEntry> {
   const key = profileKey(auth, offline);
-  return useAlbumProgress((s) => s.byProfile[key]?.[albumId]);
+  return useAlbumProgress((s) => s.byProfile[key] ?? NO_PROGRESS);
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;

@@ -23,7 +23,7 @@ import {
   isAudiobookAlbum,
   isAudiobookSong,
   useAlbumProgress,
-  useAlbumProgressEntry,
+  useAlbumProgressByAlbum,
 } from '@/store/albumProgress';
 import { useAuthStore } from '@/store/auth';
 import { groupDownloadState, useDownloads } from '@/store/downloads';
@@ -226,7 +226,7 @@ export default function AlbumScreen() {
   const cancelDownload = useDownloads((s) => s.cancelDownload);
   const deleteSongs = useDownloads((s) => s.deleteSongs);
   const downloadSongs = useDownloads((s) => s.downloadSongs);
-  const progressEntry = useAlbumProgressEntry(auth, offline, id);
+  const progressByAlbum = useAlbumProgressByAlbum(auth, offline);
   // Stable between progress ticks (only changes with status): if its identity
   // changed on every % update, the Pressable would lose its touch and you'd
   // have to press multiple times.
@@ -261,7 +261,7 @@ export default function AlbumScreen() {
     saveAudiobookProgress &&
     (isAudiobookAlbum(data.album) ||
       (data.songs.length > 0 && data.songs.every((s) => isAudiobookSong(s))));
-  const albumProgress = audiobook ? progressEntry : undefined;
+  const albumProgress = audiobook ? progressByAlbum[data.album.id] : undefined;
   const resumeIndex = albumProgress ? data.songs.findIndex((s) => s.id === albumProgress.trackId) : -1;
   const continueExactStart =
     resumeIndex >= 0 && albumProgress
