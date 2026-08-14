@@ -20,7 +20,7 @@ import { useAutoDownloads } from '@/store/autoDownloads';
 import { usePlaylistPicker } from '@/store/playlistPicker';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { colors, fontSize, radius, spacing, themed } from '@/theme';
 import { Cover } from './Cover';
 import { Dialog } from './Dialog';
 
@@ -278,8 +278,8 @@ export function PlaylistPickerSheet({
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.5)' },
+const styles = themed((colors) => ({
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: colors.backdrop },
   sheet: {
     position: 'absolute',
     left: 0,
@@ -321,4 +321,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-});
+}));

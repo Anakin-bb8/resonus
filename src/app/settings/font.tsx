@@ -4,8 +4,12 @@ import { ScrollView } from 'react-native';
 import { SelectList, SettingsPage, settingsStyles } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
 import { APP_FONT_LABELS, type AppFont, useSettings } from '@/store/settings';
+import { useTheme } from '@/theme';
 
 export default function FontSettings() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const t = useT();
   const appFont = useSettings((s) => s.appFont);
   const setAppFont = useSettings((s) => s.setAppFont);

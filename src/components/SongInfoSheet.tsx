@@ -27,7 +27,7 @@ import { useDownloads } from '@/store/downloads';
 import { useNetworkType } from '@/store/networkType';
 import { useSettings } from '@/store/settings';
 import { useSongInfo } from '@/store/songInfo';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { fontSize, radius, spacing, themed } from '@/theme';
 import { Cover } from './Cover';
 import { CoverViewer } from './CoverViewer';
 
@@ -272,8 +272,8 @@ export function SongInfoSheet() {
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.5)' },
+const styles = themed((colors) => ({
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: colors.backdrop },
   sheet: {
     position: 'absolute',
     left: 0,
@@ -332,4 +332,4 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     textAlign: 'center',
   },
-});
+}));

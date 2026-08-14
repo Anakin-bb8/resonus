@@ -1,6 +1,6 @@
 /** Offline mode: initial setup to choose the music source. */
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
@@ -10,9 +10,12 @@ import {
 import { useAuthStore } from '@/store/auth';
 import { useToast } from '@/store/toast';
 import { useT } from '@/i18n';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 
 export default function OfflineScreen() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const t = useT();
   const logout = useAuthStore((s) => s.logout);
   const setSource = useAuthStore((s) => s.setOfflineSource);
@@ -70,7 +73,7 @@ export default function OfflineScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
@@ -98,4 +101,4 @@ const styles = StyleSheet.create({
   },
   optionTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
   optionSub: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: 2 },
-});
+}));

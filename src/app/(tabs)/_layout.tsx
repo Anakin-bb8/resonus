@@ -15,9 +15,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useT } from '@/i18n';
 import { useSettings } from '@/store/settings';
-import { colors, TAB_BAR_HEIGHT } from '@/theme';
+import { colors, TAB_BAR_HEIGHT, useTheme } from '@/theme';
 
 export default function TabsLayout() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const insets = useSafeAreaInsets();
   const t = useT();
   const alwaysShowTabs = useSettings((s) => s.alwaysShowTabs);

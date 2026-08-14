@@ -17,10 +17,10 @@
  * say what selecting is FOR, which an empty bar wouldn't.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { useFloatingBottom } from '@/hooks/useScreenBottomPadding';
-import { colors, fontSize, spacing } from '@/theme';
+import { colors, fontSize, spacing, themed } from '@/theme';
 
 export interface SelectionAction {
   icon: keyof typeof Ionicons.glyphMap;
@@ -42,7 +42,7 @@ export function SelectionBar({ actions, count }: { actions: SelectionAction[]; c
           disabled={count === 0}
           onPress={a.onPress}
         >
-          <Ionicons name={a.icon} size={22} color={colors.text} />
+          <Ionicons name={a.icon} size={22} color={colors.onSnackbar} />
           <Text style={styles.label} numberOfLines={1}>
             {a.label}
           </Text>
@@ -52,13 +52,13 @@ export function SelectionBar({ actions, count }: { actions: SelectionAction[]; c
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   bar: {
     position: 'absolute',
     left: spacing.xl,
     right: spacing.xl,
     flexDirection: 'row',
-    backgroundColor: '#2E2E2E',
+    backgroundColor: colors.snackbar,
     borderRadius: 16,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.sm,
@@ -69,8 +69,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   label: {
-    color: colors.text,
+    color: colors.onSnackbar,
     fontSize: fontSize.xs,
     fontWeight: '600',
   },
-});
+}));

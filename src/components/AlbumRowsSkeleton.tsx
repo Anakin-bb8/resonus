@@ -4,7 +4,7 @@
  * so the transition doesn't jump.
  */
 import { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -12,7 +12,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { colors, radius, spacing } from '@/theme';
+import { radius, spacing, themed } from '@/theme';
 
 export function AlbumRowsSkeleton({ count = 10 }: { count?: number }) {
   const pulse = useSharedValue(1);
@@ -36,14 +36,18 @@ export function AlbumRowsSkeleton({ count = 10 }: { count?: number }) {
   );
 }
 
-const block = { backgroundColor: colors.surfaceHighlight } as const;
-
-const styles = StyleSheet.create({
-  list: { paddingHorizontal: spacing.lg, gap: spacing.lg },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  // radius.md, which is what `Cover` uses for square cover art.
-  cover: { ...block, width: 56, height: 56, borderRadius: radius.md },
-  info: { flex: 1, gap: spacing.sm },
-  bar: { ...block, height: 12, borderRadius: radius.sm },
-  barThin: { height: 8 },
+// `block` is built inside the factory, not beside it: outside, it would copy
+// the colour once at import and the skeleton would keep the appearance the app
+// started in. Same in every skeleton here.
+const styles = themed((colors) => {
+  const block = { backgroundColor: colors.surfaceHighlight } as const;
+  return {
+    list: { paddingHorizontal: spacing.lg, gap: spacing.lg },
+    row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+    // radius.md, which is what `Cover` uses for square cover art.
+    cover: { ...block, width: 56, height: 56, borderRadius: radius.md },
+    info: { flex: 1, gap: spacing.sm },
+    bar: { ...block, height: 12, borderRadius: radius.sm },
+    barThin: { height: 8 },
+  };
 });

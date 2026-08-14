@@ -12,7 +12,7 @@
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { memo, type ReactNode, useRef } from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, Text } from 'react-native';
 
 import { SheetModal } from '@/components/SheetModal';
 import { useT } from '@/i18n';
@@ -23,7 +23,7 @@ import {
   type GridKey,
   type ListLayout,
 } from '@/store/settings';
-import { colors, fontSize, spacing } from '@/theme';
+import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
 
 /**
  * For a screen that can also be drawn as rows. Given one, the menu carries the
@@ -61,6 +61,8 @@ const GridSheet = memo(function GridSheet({
   openRef: React.MutableRefObject<() => void>;
 }) {
   const t = useT();
+  // Memoized, so the screen repainting is not enough to bring this one along.
+  useTheme();
   const asList = layout?.value === 'list';
 
   const row = (key: string | number, label: string, active: boolean, pick: () => void) => (
@@ -135,7 +137,7 @@ export function useGridColumns(key: GridKey, layout?: LayoutOption): GridColumns
   };
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   sheetTitle: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,
@@ -149,4 +151,4 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   actionText: { color: colors.text, fontSize: fontSize.md },
-});
+}));

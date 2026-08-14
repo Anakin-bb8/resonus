@@ -4,7 +4,7 @@
  * over an empty screen.
  */
 import { useEffect } from 'react';
-import { Dimensions, StyleSheet, View } from 'react-native';
+import { Dimensions, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -13,7 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors, radius, spacing } from '@/theme';
+import { radius, spacing, themed } from '@/theme';
 import { BackButton } from './BackButton';
 
 // Same cover art and top bar as TrackListView so the skeleton → content
@@ -63,32 +63,34 @@ export function TrackListSkeleton() {
   );
 }
 
-const block = { backgroundColor: colors.surfaceHighlight, borderRadius: radius.sm } as const;
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
-  content: { paddingHorizontal: spacing.lg },
-  coverWrap: { alignItems: 'center', marginBottom: spacing.lg },
-  cover: { ...block, width: COVER, height: COVER, borderRadius: radius.md },
-  title: { ...block, height: 24, width: '60%', marginBottom: spacing.md },
-  meta: { ...block, height: 12, width: '35%' },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginVertical: spacing.lg,
-  },
-  actionsLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
-  smallCircle: { ...block, width: 26, height: 26, borderRadius: 13 },
-  playCircle: { ...block, width: 56, height: 56, borderRadius: 28 },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  rowArt: { ...block, width: 44, height: 44 },
-  rowInfo: { flex: 1, gap: spacing.sm },
-  bar: { ...block, height: 12 },
-  barThin: { height: 8 },
+// See `AlbumRowsSkeleton` for why `block` lives inside the factory.
+const styles = themed((colors) => {
+  const block = { backgroundColor: colors.surfaceHighlight, borderRadius: radius.sm } as const;
+  return {
+    root: { flex: 1, backgroundColor: colors.background },
+    content: { paddingHorizontal: spacing.lg },
+    coverWrap: { alignItems: 'center', marginBottom: spacing.lg },
+    cover: { ...block, width: COVER, height: COVER, borderRadius: radius.md },
+    title: { ...block, height: 24, width: '60%', marginBottom: spacing.md },
+    meta: { ...block, height: 12, width: '35%' },
+    actions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginVertical: spacing.lg,
+    },
+    actionsLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
+    smallCircle: { ...block, width: 26, height: 26, borderRadius: 13 },
+    playCircle: { ...block, width: 56, height: 56, borderRadius: 28 },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      paddingVertical: spacing.sm,
+    },
+    rowArt: { ...block, width: 44, height: 44 },
+    rowInfo: { flex: 1, gap: spacing.sm },
+    bar: { ...block, height: 12 },
+    barThin: { height: 8 },
+  };
 });

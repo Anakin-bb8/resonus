@@ -8,7 +8,7 @@
  */
 import { Paths } from 'expo-file-system';
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 
 import { Dialog } from '@/components/Dialog';
 import {
@@ -31,7 +31,7 @@ import {
   useSettings,
 } from '@/store/settings';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, spacing } from '@/theme';
+import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
 
 /** Disk space (total and free), or null if the system doesn't expose it. */
 function diskSpace(): { total: number; free: number } | null {
@@ -67,13 +67,16 @@ const OFFLINE_COLOR = '#4a6fa5';
 const LISTED_MIN = 100 * 1024;
 
 export default function DownloadsSettings() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const t = useT();
   const toast = useToast((s) => s.show);
   const offline = useAuthStore((s) => s.offline);
   const lang = useSettings((s) => s.language);
   // From the store, not `colors.accent`: without subscription the space bar
   // would keep the previous accent while the screen stays mounted.
-  const accent = useSettings((s) => s.accentColor);
+  const { accent } = useTheme();
   const downloadBitRate = useSettings((s) => s.downloadBitRate);
   const setDownloadBitRate = useSettings((s) => s.setDownloadBitRate);
   const downloadFormat = useSettings((s) => s.downloadFormat);
@@ -316,7 +319,7 @@ export default function DownloadsSettings() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   bar: {
     flexDirection: 'row',
     height: 10,
@@ -338,4 +341,4 @@ const styles = StyleSheet.create({
   mirrorLine: { color: colors.textSecondary, fontSize: fontSize.xs, marginBottom: spacing.xs },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
   legendText: { color: colors.textSecondary, fontSize: fontSize.xs },
-});
+}));

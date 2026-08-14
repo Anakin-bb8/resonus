@@ -14,7 +14,6 @@ import {
   Dimensions,
   FlatList,
   Pressable,
-  StyleSheet,
   Text,
   View,
 } from 'react-native';
@@ -53,7 +52,15 @@ import { usePlaylistPicker } from '@/store/playlistPicker';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
+import {
+  colors,
+  fontSize,
+  radius,
+  spacing,
+  SCREEN_BOTTOM_PADDING,
+  themed,
+  useTheme,
+} from '@/theme';
 import { haptic } from '@/lib/haptics';
 import { listPerf } from '@/lib/listPerf';
 import { useGridColumns } from '@/hooks/useGridColumns';
@@ -78,6 +85,9 @@ const GATHER_PAGE = 200;
 const GATHER_CAP = 5000;
 
 export default function GenreScreen() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const bottomPad = useScreenBottomPadding();
   const { name } = useLocalSearchParams<{ name: string }>();
   const genre = decodeURIComponent(name ?? '');
@@ -453,9 +463,9 @@ export default function GenreScreen() {
               accessibilityLabel={t('Play')}
             >
               {starting ? (
-                <ActivityIndicator color="#000" />
+                <ActivityIndicator color={colors.onAccent} />
               ) : (
-                <Ionicons name="play" size={28} color="#000" style={{ marginLeft: 3 }} />
+                <Ionicons name="play" size={28} color={colors.onAccent} style={{ marginLeft: 3 }} />
               )}
             </Pressable>
           </View>
@@ -684,7 +694,7 @@ export default function GenreScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
@@ -734,7 +744,7 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     textAlignVertical: 'center',
   },
-  chipTextActive: { color: '#000' },
+  chipTextActive: { color: colors.onAccent },
   playRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   // The same row the album and playlist headers have, to the same margins.
   actions: {
@@ -774,4 +784,4 @@ const styles = StyleSheet.create({
   // no horizontal padding of its own, so without this the covers sit against
   // the left edge and the ⋯ against the right one.
   songList: { paddingHorizontal: spacing.lg, paddingBottom: SCREEN_BOTTOM_PADDING },
-});
+}));

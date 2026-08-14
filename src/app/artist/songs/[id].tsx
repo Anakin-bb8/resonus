@@ -28,7 +28,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -57,9 +57,20 @@ import { usePlaylistPicker } from '@/store/playlistPicker';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
+import {
+  colors,
+  fontSize,
+  radius,
+  spacing,
+  SCREEN_BOTTOM_PADDING,
+  themed,
+  useTheme,
+} from '@/theme';
 
 export default function ArtistSongsScreen() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const t = useT();
   // Read at render time: the accent baked into `styles` is whatever it was when
@@ -306,7 +317,7 @@ export default function ArtistSongsScreen() {
               accessibilityLabel={t('Play')}
               onPress={() => void playQueue(shown, 0, name, `/artist/${id}`)}
             >
-              <Ionicons name="play" size={28} color="#000" style={{ marginLeft: 3 }} />
+              <Ionicons name="play" size={28} color={colors.onAccent} style={{ marginLeft: 3 }} />
             </Pressable>
           </View>
         </View>
@@ -440,7 +451,7 @@ export default function ArtistSongsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
@@ -493,4 +504,4 @@ const styles = StyleSheet.create({
   // Same side margin as the album and playlist song lists: `TrackRow` brings
   // no horizontal padding of its own.
   list: { paddingHorizontal: spacing.lg, paddingBottom: SCREEN_BOTTOM_PADDING },
-});
+}));

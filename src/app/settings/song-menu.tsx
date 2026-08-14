@@ -16,6 +16,7 @@ import { useLocalProfile } from '@/hooks/useLocalProfile';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
 import { useSettings, type SongMenuActionKey } from '@/store/settings';
+import { useTheme } from '@/theme';
 
 /** Label (i18n key) of each action. The same ones rendered in the menu. */
 const LABEL: Record<SongMenuActionKey, string> = {
@@ -58,6 +59,9 @@ const ORDER: SongMenuActionKey[] = [
 ];
 
 export default function SongMenuSettings() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const t = useT();
   const offline = useAuthStore((s) => s.offline);
   const songMenuActions = useSettings((s) => s.songMenuActions);

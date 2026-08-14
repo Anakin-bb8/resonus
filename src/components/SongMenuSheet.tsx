@@ -51,7 +51,7 @@ import { useSongInfo } from '@/store/songInfo';
 import { useSongMenu } from '@/store/songMenu';
 import { showUndoToast, useToast } from '@/store/toast';
 import { useT } from '@/i18n';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { colors, fontSize, radius, spacing, themed } from '@/theme';
 import { Cover } from './Cover';
 import { Dialog } from './Dialog';
 import { StarRating } from './StarRating';
@@ -752,8 +752,8 @@ export function SongMenuSheet() {
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.5)' },
+const styles = themed((colors) => ({
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: colors.backdrop },
   sheet: {
     position: 'absolute',
     left: 0,
@@ -811,4 +811,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-});
+}));

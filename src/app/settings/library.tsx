@@ -15,12 +15,13 @@ import { ensureAudioPermission, pickFolder } from '@/lib/localLibrary';
 import { queryClient } from '@/lib/query';
 import { useAuthStore } from '@/store/auth';
 import { profileKeyOf, useLibraries } from '@/store/libraries';
-import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 
 export default function LibrarySettings() {
-  useSettings((s) => s.accentColor); // re-render when accent changes
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const t = useT();
   const auth = useAuthStore((s) => s.auth);
   const offline = useAuthStore((s) => s.offline);
@@ -196,8 +197,8 @@ export default function LibrarySettings() {
   );
 }
 
-const sheetStyles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.5)' },
+const sheetStyles = themed((colors) => ({
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: colors.backdrop },
   sheet: {
     position: 'absolute',
     left: 0,
@@ -226,4 +227,4 @@ const sheetStyles = StyleSheet.create({
   },
   optionTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
   optionSub: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: 2 },
-});
+}));

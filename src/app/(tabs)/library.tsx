@@ -50,7 +50,7 @@ import { usePins } from '@/store/pins';
 import { useSettings, type LibrarySort } from '@/store/settings';
 import { useAccent } from '@/hooks/useAccent';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { listPerf } from '@/lib/listPerf';
 import { bump } from '@/lib/perfLog';
@@ -643,6 +643,9 @@ function gridListProps(grid: boolean, bottomPad: number) {
 }
 
 export default function LibraryScreen() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   // Counted, to answer whether a tab you have visited keeps working
   // afterwards: they stay mounted once opened, and freezing them is
   // supposed to stop them rendering while they are not on screen. If this
@@ -845,7 +848,7 @@ export default function LibraryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
@@ -872,7 +875,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceHighlight,
   },
   segmentText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '600' },
-  segmentTextActive: { color: '#000' },
+  segmentTextActive: { color: colors.onAccent },
   searchRow: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
@@ -925,7 +928,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   sortBarText: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: '600' },
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.5)' },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: colors.backdrop },
   sheet: {
     position: 'absolute',
     left: 0,
@@ -963,4 +966,4 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   sheetRowText: { color: colors.text, fontSize: fontSize.md },
-});
+}));

@@ -10,8 +10,12 @@ import { ScrollView } from 'react-native';
 import { SettingsPage, settingsStyles, SwitchList, TextRow } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
 import { GREETING_MAX, useSettings } from '@/store/settings';
+import { useTheme } from '@/theme';
 
 export default function GreetingSettings() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const t = useT();
   const showGreeting = useSettings((s) => s.showGreeting);
   const setShowGreeting = useSettings((s) => s.setShowGreeting);

@@ -65,7 +65,7 @@ import { useSettings } from '@/store/settings';
 import { useSongMenu } from '@/store/songMenu';
 import { useToast } from '@/store/toast';
 import { useUpnp } from '@/store/upnp';
-import { colors, fontSize, spacing } from '@/theme';
+import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
 
 const SCREEN_W = Dimensions.get('window').width;
 const SCREEN_H = Dimensions.get('window').height;
@@ -175,7 +175,7 @@ function PlayerProgress({
         value={positionSec}
         onSlidingComplete={onSeek}
         minimumTrackTintColor={colors.text}
-        maximumTrackTintColor="rgba(255,255,255,0.35)"
+        maximumTrackTintColor={colors.mediaTrack}
         thumbTintColor={colors.text}
       />
       <View style={styles.times}>
@@ -187,7 +187,9 @@ function PlayerProgress({
 }
 
 export default function PlayerScreen() {
-  useSettings((s) => s.accentColor); // re-render when accent changes
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   useSettings((s) => s.appFont); // re-render when font changes
   const router = useRouter();
   const isFocused = useIsFocused();
@@ -317,7 +319,7 @@ export default function PlayerScreen() {
   // Under the blurred artwork the flat colour is irrelevant, but it still
   // paints the frame before the image decodes, so it stays dark rather than
   // flashing the old grey.
-  const targetBg = colorBackground ? dominant : background === 'cover' ? colors.background : '#3a4042';
+  const targetBg = colorBackground ? dominant : background === 'cover' ? colors.background : colors.playerPlain;
   const bgColor = useSharedValue(targetBg);
   useEffect(() => {
     // reduceMotion Never: the color fade is part of the look and some devices
@@ -700,8 +702,10 @@ export default function PlayerScreen() {
                 backdropSource.onDisplay();
               }}
             />
-            {/* Scrim: blurring alone doesn't guarantee contrast — a bright or
-                busy cover would swallow the white text. */}
+            {/* Wash: blurring alone doesn't guarantee contrast — a busy cover
+                would swallow the text. It darkens under the dark appearance
+                and lightens under the light one, since what has to survive it
+                is the page's own text colour either way. */}
             <View style={styles.coverScrim} />
           </>
         ) : null}
@@ -1009,12 +1013,12 @@ export default function PlayerScreen() {
               }}
             >
               {isBuffering ? (
-                <ActivityIndicator size="small" color="#101010" />
+                <ActivityIndicator size="small" color={colors.onInverse} />
               ) : (
                 <Ionicons
                   name={isPlaying ? 'pause' : 'play'}
                   size={34}
-                  color="#101010"
+                  color={colors.onInverse}
                   style={!isPlaying && { marginLeft: 3 }}
                 />
               )}
@@ -1118,11 +1122,11 @@ export default function PlayerScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   root: { flex: 1, backgroundColor: colors.background },
   // Darkens the blurred artwork so the white text keeps its contrast whatever
   // the cover is. Tuned by eye: any lighter and pale covers wash the title out.
-  coverScrim: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.45)' },
+  coverScrim: { ...StyleSheet.absoluteFill, backgroundColor: colors.coverWash },
   // Horizontal padding lives in each section (not here): so the slider can
   // overshoot its internal margin without the ScrollView clipping the thumb.
   safe: { flex: 1 },
@@ -1278,4 +1282,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     flexShrink: 1,
   },
-});
+}));

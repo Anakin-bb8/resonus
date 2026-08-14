@@ -13,6 +13,7 @@ import { useLocalProfile } from '@/hooks/useLocalProfile';
 import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { useAuthStore } from '@/store/auth';
+import { useTheme } from '@/theme';
 import {
   APP_FONT_LABELS,
   LANGUAGE_NAMES,
@@ -22,6 +23,9 @@ import {
 } from '@/store/settings';
 
 export default function AppearanceSettings() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const router = useRouter();
   const t = useT();
   // The folders tab only exists with a Subsonic server (see library).
@@ -67,7 +71,7 @@ export default function AppearanceSettings() {
         />
         <SettingRow
           label={t('Theme')}
-          description={t('Accent color')}
+          description={t('Dark or light, and the accent color')}
           chevron
           onPress={() => router.push('/settings/theme')}
         />

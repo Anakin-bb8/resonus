@@ -36,7 +36,15 @@ import { useAuthStore } from '@/store/auth';
 import { MAX_PINS, usePins } from '@/store/pins';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
+import {
+  colors,
+  fontSize,
+  radius,
+  spacing,
+  SCREEN_BOTTOM_PADDING,
+  themed,
+  useTheme,
+} from '@/theme';
 import { BackChevron } from '@/components/BackChevron';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { listPerf } from '@/lib/listPerf';
@@ -47,6 +55,9 @@ const EMPTY_EDIT: RadioEdit = { name: '', streamUrl: '', homePageUrl: '' };
 const SEARCH_FROM = 8;
 
 export default function RadioScreen() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const bottomPad = useScreenBottomPadding();
   const t = useT();
   const insets = useSafeAreaInsets();
@@ -361,7 +372,7 @@ export default function RadioScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
@@ -391,7 +402,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceHighlight,
   },
   searchInput: { flex: 1, color: colors.text, fontSize: fontSize.md, padding: 0 },
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.5)' },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: colors.backdrop },
   sheet: {
     position: 'absolute',
     left: 0,
@@ -416,4 +427,4 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   actionText: { color: colors.text, fontSize: fontSize.md },
-});
+}));

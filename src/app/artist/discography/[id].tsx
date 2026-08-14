@@ -11,7 +11,6 @@ import {
   Dimensions,
   FlatList,
   Pressable,
-  StyleSheet,
   Text,
   View,
 } from 'react-native';
@@ -31,7 +30,7 @@ import {
 import { listPerf } from '@/lib/listPerf';
 import { useAuthStore } from '@/store/auth';
 import { useSettings } from '@/store/settings';
-import { colors, fontSize, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
+import { colors, fontSize, spacing, SCREEN_BOTTOM_PADDING, themed, useTheme } from '@/theme';
 import { BackChevron } from '@/components/BackChevron';
 import { useGridColumns } from '@/hooks/useGridColumns';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
@@ -47,6 +46,9 @@ function cardWidth(columns: number): number {
 }
 
 export default function DiscographyScreen() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const bottomPad = useScreenBottomPadding();
   const { id, section, group } = useLocalSearchParams<{
     id: string;
@@ -180,7 +182,7 @@ export default function DiscographyScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
@@ -205,4 +207,4 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   rowTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '600' },
   rowSub: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2 },
-});
+}));

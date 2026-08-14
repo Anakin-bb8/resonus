@@ -34,7 +34,7 @@ import { MAX_PINS, usePins } from '@/store/pins';
 import { usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { colors, fontSize, radius, spacing, themed } from '@/theme';
 import { Cover } from './Cover';
 import { Dialog } from './Dialog';
 
@@ -436,8 +436,8 @@ export function MediaMenuSheet() {
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.5)' },
+const styles = themed((colors) => ({
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: colors.backdrop },
   sheet: {
     position: 'absolute',
     left: 0,
@@ -480,4 +480,4 @@ const styles = StyleSheet.create({
   actionText: { color: colors.text, fontSize: fontSize.md },
   // The MCI pin comes vertical; rotated 45° it looks like Spotify's.
   pinIcon: { transform: [{ rotate: '45deg' }] },
-});
+}));

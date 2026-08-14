@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
   Dimensions,
   Pressable,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -37,7 +36,7 @@ import { useMediaMenu } from '@/store/mediaMenu';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useRecentSearches, type RecentItem } from '@/store/recentSearches';
 import { useSettings } from '@/store/settings';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
 const GENRE_W = (Dimensions.get('window').width - spacing.lg * 2 - spacing.sm) / 2;
@@ -48,7 +47,9 @@ export default function SearchScreen() {
   // supposed to stop them rendering while they are not on screen. If this
   // climbs while you are somewhere else, it does not.
   bump('render · search');
-  useSettings((s) => s.accentColor); // re-render when accent changes
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   useSettings((s) => s.appFont); // re-render when font changes
   const offline = useAuthStore((s) => s.offline);
   const canSearch = useAuthStore((s) => !!s.auth || s.offline);
@@ -450,7 +451,7 @@ export default function SearchScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   safe: {
     flex: 1,
     backgroundColor: colors.background,
@@ -516,4 +517,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
-});
+}));

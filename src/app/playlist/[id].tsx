@@ -40,9 +40,12 @@ import { groupDownloadState, useDownloads } from '@/store/downloads';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
 import { showUndoToast, useToast } from '@/store/toast';
-import { colors, fontSize, spacing } from '@/theme';
+import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
 
 export default function PlaylistScreen() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const auth = useAuthStore((s) => s.auth);
@@ -380,7 +383,7 @@ export default function PlaylistScreen() {
           coverChange.enabled ? (
             <>
               {coverChange.uploading ? (
-                <ActivityIndicator color={colors.text} />
+                <ActivityIndicator color={colors.onArtwork} />
               ) : (
                 <Pressable
                   hitSlop={10}
@@ -637,7 +640,7 @@ export default function PlaylistScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   center: {
     flex: 1,
     backgroundColor: colors.background,
@@ -655,6 +658,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.border,
     marginVertical: spacing.xs,
   },
-  changeCover: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
+  // On the cover viewer, which is near-black in both appearances.
+  changeCover: { color: colors.onArtwork, fontSize: fontSize.md, fontWeight: '700' },
   coverError: { color: colors.danger, fontSize: fontSize.sm, textAlign: 'center' },
-});
+}));

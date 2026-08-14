@@ -6,6 +6,7 @@ import { useLocalProfile } from '@/hooks/useLocalProfile';
 import { localHttpAvailable } from '@/lib/localHttp';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
+import { useTheme } from '@/theme';
 import {
   type CardBackground,
   type CoverTapAction,
@@ -16,6 +17,9 @@ import {
 } from '@/store/settings';
 
 export default function PlayerSettings() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const t = useT();
   // Rating is a Subsonic thing: needs a server account and doesn't apply to
   // Jellyfin. It does work offline (queued in the outbox and uploaded on

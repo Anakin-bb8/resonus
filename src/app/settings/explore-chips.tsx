@@ -7,7 +7,7 @@
  * separate master toggle.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, Switch, Text, View } from 'react-native';
 import ReorderableList, {
   useReorderableDrag,
   type ReorderableListReorderEvent,
@@ -20,7 +20,15 @@ import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { useAuthStore } from '@/store/auth';
 import { useSettings, type ExploreChip, type ExploreChipKey } from '@/store/settings';
-import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
+import {
+  colors,
+  fontSize,
+  radius,
+  spacing,
+  SCREEN_BOTTOM_PADDING,
+  themed,
+  useTheme,
+} from '@/theme';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
 /** Each chip's label, as an i18n key. The same ones Home draws. */
@@ -41,7 +49,7 @@ function ChipRow({ chip, disabled }: { chip: ExploreChip; disabled?: boolean }) 
   const setExploreChip = useSettings((s) => s.setExploreChip);
   // From the store, not `colors.accent`: without subscription the switch would
   // keep the previous accent while the screen stays mounted.
-  const accent = useSettings((s) => s.accentColor);
+  const { accent } = useTheme();
   return (
     // Still draggable while greyed out: where it goes is a preference about the
     // Home screen you get back, and it costs nothing to set now.
@@ -62,8 +70,8 @@ function ChipRow({ chip, disabled }: { chip: ExploreChip; disabled?: boolean }) 
         value={chip.enabled}
         onValueChange={(v) => setExploreChip(chip.key, v)}
         disabled={disabled}
-        trackColor={{ false: colors.border, true: accent }}
-        thumbColor={colors.text}
+        trackColor={{ false: colors.control, true: accent }}
+        thumbColor={colors.knob}
       />
     </View>
   );
@@ -78,6 +86,9 @@ function ChipRow({ chip, disabled }: { chip: ExploreChip; disabled?: boolean }) 
 const SERVER_ONLY: ExploreChipKey[] = ['genres', 'radio'];
 
 export default function ExploreChipsSettings() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const bottomPad = useScreenBottomPadding();
   const t = useT();
   const offline = useAuthStore((s) => s.offline);
@@ -116,7 +127,7 @@ export default function ExploreChipsSettings() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   hint: {
     color: colors.textMuted,
     fontSize: fontSize.xs,
@@ -135,4 +146,4 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   label: { flex: 1, color: colors.text, fontSize: fontSize.md },
-});
+}));

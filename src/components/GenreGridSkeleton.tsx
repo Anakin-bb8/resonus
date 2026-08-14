@@ -4,7 +4,7 @@
  * arrives from the server.
  */
 import { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -12,7 +12,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { colors, radius, spacing } from '@/theme';
+import { radius, spacing, themed } from '@/theme';
 
 export function GenreGridSkeleton({ width, count = 14 }: { width: number; count?: number }) {
   const pulse = useSharedValue(1);
@@ -30,8 +30,8 @@ export function GenreGridSkeleton({ width, count = 14 }: { width: number; count?
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   // Same height and border radius as GenreCard so the layout doesn't jump when content arrives.
   card: { height: 88, borderRadius: radius.md, backgroundColor: colors.surfaceHighlight },
-});
+}));

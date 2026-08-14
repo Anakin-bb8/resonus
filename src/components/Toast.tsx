@@ -1,11 +1,11 @@
 /** Brief pill-shaped message at the bottom (Spotify style). */
 import { useEffect } from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, Text } from 'react-native';
 import Animated, { FadeInDown, FadeOut } from 'react-native-reanimated';
 
 import { useFloatingBottom } from '@/hooks/useScreenBottomPadding';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { colors, fontSize, radius, spacing, themed } from '@/theme';
 
 export function Toast() {
   const message = useToast((s) => s.message);
@@ -48,29 +48,28 @@ export function Toast() {
           }}
           style={({ pressed }) => pressed && { opacity: 0.6 }}
         >
-          {/* Inline accent, not in the stylesheet: this module is imported at
-              startup, BEFORE hydrating settings, so the stylesheet value would
-              be frozen to the default green forever. */}
-          <Text style={[styles.action, { color: colors.accent }]}>{actionLabel}</Text>
+          {/* The accent as picked, not the theme's: the pill is dark in both
+              appearances, and the light theme darkens the accent for white. */}
+          <Text style={[styles.action, { color: colors.accentVivid }]}>{actionLabel}</Text>
         </Pressable>
       ) : null}
     </Animated.View>
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   pill: {
     position: 'absolute',
     left: spacing.xl,
     right: spacing.xl,
-    backgroundColor: '#2E2E2E',
+    backgroundColor: colors.snackbar,
     borderRadius: radius.pill,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xl,
     alignItems: 'center',
   },
   pillRow: { flexDirection: 'row', gap: spacing.lg },
-  text: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
+  text: { color: colors.onSnackbar, fontSize: fontSize.sm, fontWeight: '600' },
   textLeft: { flex: 1 },
   action: { fontSize: fontSize.sm, fontWeight: '700' },
-});
+}));

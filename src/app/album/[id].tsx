@@ -25,7 +25,7 @@ import { useMediaMenu } from '@/store/mediaMenu';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, spacing } from '@/theme';
+import { colors, fontSize, spacing, useTheme } from '@/theme';
 
 /**
  * Disc headers by song index (multi-disc albums). Labels each disc with its
@@ -121,6 +121,9 @@ function albumGenres(album: Album, songs: Song[]): string[] {
 }
 
 export default function AlbumScreen() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);

@@ -5,7 +5,7 @@
  * so the layout doesn't jump when content arrives.
  */
 import { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -13,7 +13,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { colors, radius, spacing } from '@/theme';
+import { radius, spacing, themed } from '@/theme';
 
 interface Props {
   /** Width of each card (= AlbumCard's so the layout doesn't jump). */
@@ -43,13 +43,15 @@ export function AlbumCardsSkeleton({ width = 150, count = 6, horizontal }: Props
   );
 }
 
-const block = { backgroundColor: colors.surfaceHighlight } as const;
-
-const styles = StyleSheet.create({
-  wrap: { paddingHorizontal: spacing.lg },
-  row: { flexDirection: 'row', gap: spacing.md },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  cover: { ...block, borderRadius: radius.md },
-  title: { ...block, height: 12, width: '85%', borderRadius: radius.sm, marginTop: spacing.sm },
-  sub: { ...block, height: 10, width: '55%', borderRadius: radius.sm, marginTop: spacing.xs },
+// See `AlbumRowsSkeleton` for why `block` lives inside the factory.
+const styles = themed((colors) => {
+  const block = { backgroundColor: colors.surfaceHighlight } as const;
+  return {
+    wrap: { paddingHorizontal: spacing.lg },
+    row: { flexDirection: 'row', gap: spacing.md },
+    grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+    cover: { ...block, borderRadius: radius.md },
+    title: { ...block, height: 12, width: '85%', borderRadius: radius.sm, marginTop: spacing.sm },
+    sub: { ...block, height: 10, width: '55%', borderRadius: radius.sm, marginTop: spacing.xs },
+  };
 });

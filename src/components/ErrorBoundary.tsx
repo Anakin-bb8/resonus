@@ -1,8 +1,8 @@
 /** Catches render errors so one of them cannot take the whole app down. */
 import { Component, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { colors, fontSize, radius, spacing, themed } from '@/theme';
 
 interface Props {
   children: ReactNode;
@@ -38,7 +38,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -59,5 +59,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     marginTop: spacing.sm,
   },
-  buttonText: { color: '#000', fontSize: fontSize.md, fontWeight: '700' },
-});
+  buttonText: { color: colors.onAccent, fontSize: fontSize.md, fontWeight: '700' },
+}));

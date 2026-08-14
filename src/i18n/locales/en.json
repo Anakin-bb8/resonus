@@ -654,5 +654,9 @@
   "Couldn't download the update": "Couldn't download the update",
   "Couldn't check for updates": "Couldn't check for updates",
   "Keep paused when skipping": "Keep paused when skipping",
-  "Skipping while paused shows the next song without playing it. Tapping a song in the queue still plays it.": "Skipping while paused shows the next song without playing it. Tapping a song in the queue still plays it."
+  "Skipping while paused shows the next song without playing it. Tapping a song in the queue still plays it.": "Skipping while paused shows the next song without playing it. Tapping a song in the queue still plays it.",
+  "Mode": "Mode",
+  "Dark (default)": "Dark (default)",
+  "Light (experimental)": "Light (experimental)",
+  "Dark or light, and the accent color": "Dark or light, and the accent color"
 }

@@ -36,7 +36,7 @@ import { canShareDownloads, shareItem } from '@/lib/share';
 import { useSettings, SHARE_EXPIRIES, type ShareExpiry } from '@/store/settings';
 import { useSharePicker } from '@/store/sharePicker';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, spacing } from '@/theme';
+import { colors, fontSize, spacing, themed } from '@/theme';
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
@@ -215,8 +215,8 @@ export function GlobalShareSheet() {
                       <Switch
                         value={downloads}
                         onValueChange={setDownloads}
-                        trackColor={{ false: colors.border, true: accent }}
-                        thumbColor={colors.text}
+                        trackColor={{ false: colors.control, true: accent }}
+                        thumbColor={colors.knob}
                       />
                     </Pressable>
                   </>
@@ -240,8 +240,8 @@ export function GlobalShareSheet() {
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.5)' },
+const styles = themed((colors) => ({
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: colors.backdrop },
   sheet: {
     position: 'absolute',
     left: 0,
@@ -278,4 +278,4 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   rowText: { color: colors.text, fontSize: fontSize.md },
-});
+}));

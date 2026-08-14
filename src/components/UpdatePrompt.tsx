@@ -20,7 +20,6 @@ import {
   Linking,
   Modal,
   Pressable,
-  StyleSheet,
   Text,
   View,
 } from 'react-native';
@@ -32,7 +31,7 @@ import { useAuthStore } from '@/store/auth';
 import { useNetworkType } from '@/store/networkType';
 import { useSettings } from '@/store/settings';
 import { useUpdate } from '@/store/update';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { colors, fontSize, radius, spacing, themed } from '@/theme';
 import { Dialog } from './Dialog';
 
 /** Whether this launch has already asked GitHub. */
@@ -164,10 +163,10 @@ export function UpdatePrompt() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: colors.backdropStrong,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
@@ -191,4 +190,4 @@ const styles = StyleSheet.create({
   percent: { color: colors.textSecondary, fontSize: fontSize.sm },
   cancel: { alignSelf: 'flex-end', paddingVertical: spacing.xs, paddingHorizontal: spacing.sm },
   cancelLabel: { color: colors.textSecondary, fontSize: fontSize.md, fontWeight: '600' },
-});
+}));

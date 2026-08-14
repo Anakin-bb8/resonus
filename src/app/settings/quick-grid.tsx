@@ -8,10 +8,14 @@ import { ScrollView, Text } from 'react-native';
 import { SelectList, SettingsPage, settingsStyles, SwitchList } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
 import { useSettings } from '@/store/settings';
+import { useTheme } from '@/theme';
 
 const SIZES = [4, 6, 8] as const;
 
 export default function QuickGridSettings() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const t = useT();
   const showQuickGrid = useSettings((s) => s.showQuickGrid);
   const setShowQuickGrid = useSettings((s) => s.setShowQuickGrid);

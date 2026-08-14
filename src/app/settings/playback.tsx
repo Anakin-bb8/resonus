@@ -26,6 +26,7 @@ import {
 import { useLocalProfile } from '@/hooks/useLocalProfile';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
+import { useTheme } from '@/theme';
 import {
   BITRATE_OPTIONS,
   clampReplayGainPreamp,
@@ -35,6 +36,9 @@ import {
 } from '@/store/settings';
 
 export default function PlaybackSettings() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const t = useT();
   const router = useRouter();
   const offline = useAuthStore((s) => s.offline);

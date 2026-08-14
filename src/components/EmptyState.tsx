@@ -1,8 +1,8 @@
 /** Rich empty state: icon, title, subtitle, and optional action. */
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { colors, fontSize, radius, spacing, themed } from '@/theme';
 
 interface Props {
   icon: keyof typeof Ionicons.glyphMap;
@@ -28,7 +28,7 @@ export function EmptyState({ icon, title, subtitle, action }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -65,5 +65,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xl,
   },
-  buttonText: { color: '#000', fontSize: fontSize.sm, fontWeight: '700' },
-});
+  buttonText: { color: colors.onAccent, fontSize: fontSize.sm, fontWeight: '700' },
+}));

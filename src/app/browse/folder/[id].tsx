@@ -7,7 +7,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { COVER, coverArtUrl, getFolderIndexes, getMusicDirectory, type Song } from '@/api/data';
@@ -19,7 +19,7 @@ import { listPerf } from '@/lib/listPerf';
 import { useAuthStore } from '@/store/auth';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
-import { colors, fontSize, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
+import { colors, fontSize, spacing, SCREEN_BOTTOM_PADDING, themed, useTheme } from '@/theme';
 import { BackChevron } from '@/components/BackChevron';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
@@ -29,7 +29,9 @@ type Row =
 
 export default function FolderBrowseScreen() {
   const bottomPad = useScreenBottomPadding();
-  useSettings((s) => s.accentColor); // re-render when accent changes
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   useSettings((s) => s.appFont); // re-render when font changes
   const router = useRouter();
   const t = useT();
@@ -130,7 +132,7 @@ export default function FolderBrowseScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   safe: { flex: 1, backgroundColor: colors.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: {
@@ -163,4 +165,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: spacing.xl,
   },
-});
+}));

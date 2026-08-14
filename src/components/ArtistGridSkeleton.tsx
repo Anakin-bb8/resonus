@@ -4,7 +4,7 @@
  * transition doesn't jump.
  */
 import { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -12,7 +12,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { colors, radius, spacing } from '@/theme';
+import { radius, spacing, themed } from '@/theme';
 
 export function ArtistGridSkeleton({ width, count = 12 }: { width: number; count?: number }) {
   const pulse = useSharedValue(1);
@@ -25,7 +25,7 @@ export function ArtistGridSkeleton({ width, count = 12 }: { width: number; count
     <Animated.View style={[styles.grid, pulseStyle]}>
       {Array.from({ length: count }, (_, i) => (
         <View key={i} style={[styles.card, { width }]}>
-          <View style={{ ...block, width, height: width, borderRadius: width / 2 }} />
+          <View style={[styles.block, { width, height: width, borderRadius: width / 2 }]} />
           <View style={[styles.bar, { width: width * 0.7 }]} />
         </View>
       ))}
@@ -33,15 +33,18 @@ export function ArtistGridSkeleton({ width, count = 12 }: { width: number; count
   );
 }
 
-const block = { backgroundColor: colors.surfaceHighlight } as const;
-
-const styles = StyleSheet.create({
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-  },
-  card: { alignItems: 'center', gap: spacing.xs },
-  bar: { ...block, height: 12, borderRadius: radius.sm, marginTop: spacing.xs },
+// See `AlbumRowsSkeleton` for why `block` lives inside the factory.
+const styles = themed((colors) => {
+  const block = { backgroundColor: colors.surfaceHighlight } as const;
+  return {
+    grid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+      paddingHorizontal: spacing.lg,
+    },
+    card: { alignItems: 'center', gap: spacing.xs },
+    block,
+    bar: { ...block, height: 12, borderRadius: radius.sm, marginTop: spacing.xs },
+  };
 });

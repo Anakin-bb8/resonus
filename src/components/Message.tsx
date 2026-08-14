@@ -1,8 +1,8 @@
 /** Centered message for error or empty states, with optional retry. */
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { useT } from '@/i18n';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { fontSize, radius, spacing, themed } from '@/theme';
 
 export function Message({
   text,
@@ -24,7 +24,7 @@ export function Message({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -44,4 +44,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   buttonText: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
-});
+}));

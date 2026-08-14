@@ -39,7 +39,7 @@ import {
   useUpnp,
   type UpnpDevice,
 } from '@/store/upnp';
-import { colors, fontSize, spacing } from '@/theme';
+import { colors, fontSize, spacing, themed } from '@/theme';
 
 export function OutputSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const insets = useSafeAreaInsets();
@@ -409,8 +409,8 @@ export function OutputSheet({ visible, onClose }: { visible: boolean; onClose: (
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.5)' },
+const styles = themed((colors) => ({
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: colors.backdrop },
   sheet: {
     position: 'absolute',
     left: 0,
@@ -462,4 +462,4 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   scanText: { color: colors.textSecondary, fontSize: fontSize.sm },
-});
+}));

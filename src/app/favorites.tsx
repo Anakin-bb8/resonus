@@ -3,7 +3,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
 
 import { getStarred, starredByDate, unstar } from '@/api/data';
@@ -24,16 +24,19 @@ import { groupDownloadState, useDownloads } from '@/store/downloads';
 import { currentSong, SOURCE_FAVORITES, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
 import { showUndoToast, useToast } from '@/store/toast';
-import { colors, fontSize, spacing } from '@/theme';
+import { colors, fontSize, spacing, themed, useThemeMode } from '@/theme';
 
-// Indigo → black header (Spotify's "Liked Songs" style): Favorites art's
-// indigo (#450af5, see FavoritesArt) darkened so white text is readable and the
-// gradient blends cleanly with the background, same as the dark tones
-// useDominantColor picks for albums and playlists.
-const HEADER_COLOR = '#290693';
+// Indigo header (Spotify's "Liked Songs" style), taken from the Favorites art's
+// indigo (#450af5, see FavoritesArt) and moved into the same band
+// `useDominantColor` clamps an album's tint to, so this screen's header sits
+// exactly where every other one does: darkened for the dark appearance, washed
+// out for the light one.
+const HEADER_COLOR = { dark: '#290693', light: '#D7CDF8' };
 
 export default function FavoritesScreen() {
-  useSettings((s) => s.accentColor); // re-render when accent changes
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  const mode = useThemeMode();
   const router = useRouter();
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
   const offline = useAuthStore((s) => s.offline);
@@ -185,7 +188,7 @@ export default function FavoritesScreen() {
         title={t('Favorites')}
         meta={metaParts.join(' · ')}
         hideCover
-        accentColor={HEADER_COLOR}
+        accentColor={HEADER_COLOR[mode]}
         songs={displaySongs}
         currentId={playing?.id}
         showArtwork={showListArtwork}
@@ -343,7 +346,7 @@ export default function FavoritesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   center: { flex: 1, backgroundColor: colors.background, justifyContent: 'center' },
   action: {
     flexDirection: 'row',
@@ -352,4 +355,4 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   actionText: { color: colors.text, fontSize: fontSize.md },
-});
+}));

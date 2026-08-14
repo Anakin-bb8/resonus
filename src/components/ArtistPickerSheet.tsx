@@ -13,7 +13,7 @@ import { COVER, coverArtUrl } from '@/api/data';
 import { useBottomSheetAnim } from '@/hooks/useBottomSheetAnim';
 import { useT } from '@/i18n';
 import { useArtistPicker } from '@/store/artistPicker';
-import { colors, fontSize, spacing } from '@/theme';
+import { fontSize, spacing, themed } from '@/theme';
 import { Cover } from './Cover';
 
 export function ArtistPickerSheet() {
@@ -92,8 +92,8 @@ export function ArtistPickerSheet() {
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.5)' },
+const styles = themed((colors) => ({
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: colors.backdrop },
   sheet: {
     position: 'absolute',
     left: 0,
@@ -127,4 +127,4 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   name: { color: colors.text, fontSize: fontSize.md, flex: 1 },
-});
+}));

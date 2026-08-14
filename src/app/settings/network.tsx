@@ -7,7 +7,7 @@
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { Dialog } from '@/components/Dialog';
 import { SettingsPage, settingsStyles, SwitchList } from '@/components/SettingsUI';
@@ -16,9 +16,8 @@ import { isLanUrl } from '@/lib/serverUrls';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
 import { checkAutoUrlNow } from '@/store/autoUrl';
-import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 
 /** Strips the scheme to show a more compact URL. */
 function shown(url: string): string {
@@ -26,6 +25,9 @@ function shown(url: string): string {
 }
 
 export default function NetworkSettings() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const t = useT();
   const toast = useToast((s) => s.show);
   const auth = useAuthStore((s) => s.auth);
@@ -37,7 +39,7 @@ export default function NetworkSettings() {
   // From the store, not `colors.accent`: without subscription the active URL
   // radio and «Add address» would keep the previous accent while the screen
   // stays mounted.
-  const accent = useSettings((s) => s.accentColor);
+  const { accent } = useTheme();
 
   const [health, setHealth] = useState<'checking' | 'ok' | 'down'>('checking');
   const [adding, setAdding] = useState(false);
@@ -218,7 +220,7 @@ export default function NetworkSettings() {
 /** Taller than the icon and no wider than half the space between the two. */
 const ACTION_SLOP = { top: 12, bottom: 12, left: spacing.sm, right: spacing.sm };
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   rowActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   activeRow: {
     flexDirection: 'row',
@@ -229,4 +231,4 @@ const styles = StyleSheet.create({
   },
   activeUrl: { color: colors.text, fontSize: fontSize.md, flex: 1 },
   addRow: { marginTop: spacing.sm, borderRadius: radius.md },
-});
+}));

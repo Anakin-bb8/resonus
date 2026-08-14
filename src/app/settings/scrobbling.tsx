@@ -13,8 +13,12 @@ import { SettingRow, SettingsPage, settingsStyles, SliderRow } from '@/component
 import { useT } from '@/i18n';
 import { formatDuration } from '@/lib/format';
 import { SCROBBLE_SECONDS_MAX, useSettings } from '@/store/settings';
+import { useTheme } from '@/theme';
 
 export default function ScrobblingSettings() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const t = useT();
   const scrobblePercent = useSettings((s) => s.scrobblePercent);
   const setScrobblePercent = useSettings((s) => s.setScrobblePercent);

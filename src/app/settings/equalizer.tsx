@@ -17,6 +17,7 @@ import {
 } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
 import { useEqualizer } from '@/store/equalizer';
+import { useTheme } from '@/theme';
 
 /** 62 → «62 Hz»; 16000 → «16 kHz». */
 function formatFreq(hz: number): string {
@@ -30,6 +31,9 @@ function formatGain(millibels: number): string {
 }
 
 export default function EqualizerSettings() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const t = useT();
   const supported = useEqualizer((s) => s.supported);
   const bands = useEqualizer((s) => s.bands);

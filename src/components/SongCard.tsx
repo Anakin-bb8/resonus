@@ -8,12 +8,12 @@
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { memo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { COVER, songCoverUrl, type Song } from '@/api/data';
 import { useAuthStore } from '@/store/auth';
 import { useDownloads } from '@/store/downloads';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 import { Cover } from './Cover';
 
 interface Props {
@@ -45,6 +45,8 @@ export const SongCard = memo(function SongCard({
   // carries no mark, and would show as if it were on the phone.
   const downloaded = useDownloads((s) => !!s.files[song.id]);
   const offline = useAuthStore((s) => s.offline);
+  // Memoized, so the screen repainting is not enough to bring this one along.
+  useTheme();
   const unavailable = offline
     ? !song.url && !song.localUri && !downloaded
     : !!song.unavailable;
@@ -63,7 +65,7 @@ export const SongCard = memo(function SongCard({
             would be noise on top of the artwork. */}
         {selecting ? (
           <View style={[styles.check, selected && { backgroundColor: accent }]}>
-            {selected ? <Ionicons name="checkmark" size={16} color="#000" /> : null}
+            {selected ? <Ionicons name="checkmark" size={16} color={colors.onAccent} /> : null}
           </View>
         ) : null}
         {/* Dimmed rather than hidden: it is in the library, it just isn't on
@@ -82,7 +84,7 @@ export const SongCard = memo(function SongCard({
   );
 });
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   container: { gap: spacing.xs },
   title: {
     color: colors.text,
@@ -99,8 +101,9 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: radius.pill,
     borderWidth: 2,
-    borderColor: colors.text,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    // Over the cover, not over the page: white in both appearances.
+    borderColor: colors.onArtwork,
+    backgroundColor: colors.scrim,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -109,6 +112,6 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     borderRadius: radius.md,
-    backgroundColor: 'rgba(18,18,18,0.6)',
+    backgroundColor: colors.veil,
   },
-});
+}));

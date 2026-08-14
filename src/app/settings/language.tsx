@@ -5,6 +5,7 @@ import { SelectList, SettingRow, SettingsPage, settingsStyles } from '@/componen
 import { useT } from '@/i18n';
 import { LANGUAGES } from '@/i18n/languages';
 import { useSettings } from '@/store/settings';
+import { useTheme } from '@/theme';
 
 // How to contribute a translation, rather than the folder of locale files: the
 // guide explains what to do with them. The help block is in English on purpose:
@@ -16,6 +17,9 @@ const TRANSLATIONS_URL = 'https://github.com/juananzzz/resonus/blob/main/TRANSLA
 const LANGUAGE_OPTIONS = LANGUAGES.map((l) => ({ value: l.code, label: l.name }));
 
 export default function LanguageSettings() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const t = useT();
   const language = useSettings((s) => s.language);
   const setLanguage = useSettings((s) => s.setLanguage);

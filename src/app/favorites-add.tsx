@@ -13,7 +13,6 @@ import {
   FlatList,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -36,14 +35,15 @@ import { useT } from '@/i18n';
 import { listPerf } from '@/lib/listPerf';
 import { useAuthStore } from '@/store/auth';
 import { usePlayHistory } from '@/store/playHistory';
-import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 
 type Tab = 'most' | 'recent' | 'suggested';
 
 export default function FavoritesAddScreen() {
-  useSettings((s) => s.accentColor); // re-render when accent changes
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const t = useT();
@@ -288,7 +288,7 @@ function AddRow({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   root: { flex: 1, backgroundColor: colors.background },
   topBar: {
     flexDirection: 'row',
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   tabLabel: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
-  tabLabelActive: { color: '#000' },
+  tabLabelActive: { color: colors.onAccent },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
   row: {
@@ -351,4 +351,4 @@ const styles = StyleSheet.create({
     height: 46,
   },
   searchInput: { flex: 1, color: colors.text, fontSize: fontSize.sm, paddingVertical: 0 },
-});
+}));

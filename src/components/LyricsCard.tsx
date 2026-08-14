@@ -9,7 +9,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   cancelAnimation,
@@ -33,7 +33,7 @@ import { useLyrics } from '@/hooks/useLyrics';
 import { useT } from '@/i18n';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 
 export function LyricsCard() {
   const t = useT();
@@ -76,7 +76,7 @@ export function LyricsCard() {
         hitSlop={8}
         onPress={() => router.push('/lyrics')}
       >
-        <MaterialIcons name="open-in-full" size={16} color="#000" />
+        <MaterialIcons name="open-in-full" size={16} color={colors.onInverse} />
       </Pressable>
     </View>
   );
@@ -119,7 +119,7 @@ export function CoverLyrics({ size, onClose }: { size: number; onClose: () => vo
         hitSlop={8}
         onPress={onClose}
       >
-        <MaterialIcons name="image" size={16} color="#000" />
+        <MaterialIcons name="image" size={16} color={colors.onInverse} />
       </Pressable>
     </View>
   );
@@ -337,6 +337,8 @@ const LyricRow = memo(({
   large?: boolean;
   onMeasure: (index: number, y: number, h: number) => void;
 }) => {
+  // Memoized, so the screen repainting is not enough to bring this one along.
+  useTheme();
   // Only the active line grows (spring) and is visible at 100%. The rest are
   // dimmed: the next one about to play a little, the others much more.
   const focus = useSharedValue(active ? 1 : 0);
@@ -376,7 +378,7 @@ const LyricRow = memo(({
 LyricRow.displayName = 'LyricRow';
 
 /** Typography shared by the card and the full screen. */
-export const lyricsStyles = StyleSheet.create({
+export const lyricsStyles = themed((colors) => ({
   line: {
     color: colors.text,
     fontSize: 20,
@@ -385,11 +387,11 @@ export const lyricsStyles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   lineLarge: { fontSize: 28, lineHeight: 40, paddingVertical: spacing.sm },
-});
+}));
 
 const CARD_BODY_H = 280;
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   card: {
     borderRadius: radius.md,
     marginTop: spacing.lg,
@@ -417,8 +419,8 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#fff',
+    backgroundColor: colors.text,
     alignItems: 'center',
     justifyContent: 'center',
   },
-});
+}));

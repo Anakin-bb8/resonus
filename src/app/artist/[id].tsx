@@ -53,7 +53,7 @@ import { currentSong, usePlayerStore } from '@/store/player';
 import { usePlaylistPicker } from '@/store/playlistPicker';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, spacing } from '@/theme';
+import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
 import { BackChevron } from '@/components/BackChevron';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
@@ -70,7 +70,9 @@ const ROW_LIMIT = 50;
 
 export default function ArtistScreen() {
   const bottomPad = useScreenBottomPadding();
-  useSettings((s) => s.accentColor); // re-render when accent changes
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -452,12 +454,12 @@ export default function ArtistScreen() {
             }}
           >
             {starting ? (
-              <ActivityIndicator size="small" color="#000" />
+              <ActivityIndicator size="small" color={colors.onAccent} />
             ) : (
               <Ionicons
                 name={showPause ? 'pause' : 'play'}
                 size={28}
-                color="#000"
+                color={colors.onAccent}
                 // Optical centring only for the play triangle; pause is symmetric.
                 style={showPause ? undefined : { marginLeft: 2 }}
               />
@@ -584,7 +586,10 @@ export default function ArtistScreen() {
             on a cover of the app's own making, and this one on a photo from
             the server that may be pale, or missing entirely, leaving the way
             out to be guessed at. */}
-        <BackChevron size={28} style={styles.back} label={t('Close')} />
+        {/* White on its own dark disc, in both appearances: the disc is what
+            makes it visible over a photo, and it stays there once the bar has
+            gone solid. */}
+        <BackChevron size={28} color={colors.onArtwork} style={styles.back} label={t('Close')} />
         <Animated.Text style={[styles.barTitle, { opacity: barContentOpacity }]} numberOfLines={1}>
           {data.artist.name}
         </Animated.Text>
@@ -765,7 +770,7 @@ function AlbumRow({ title, albums, href }: { title: string; albums: Album[]; hre
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   root: { flex: 1, backgroundColor: colors.background },
   center: { flex: 1, backgroundColor: colors.background, justifyContent: 'center' },
   // ⋯ menu row (same look as the playlist / media menu).
@@ -850,7 +855,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: colors.scrim,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -870,4 +875,4 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     fontWeight: '700',
   },
-});
+}));

@@ -6,7 +6,7 @@
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader, settingsStyles } from '@/components/SettingsUI';
@@ -15,14 +15,17 @@ import { useAuthStore } from '@/store/auth';
 import { anyDownloads, useDownloads } from '@/store/downloads';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 
 export default function SettingsScreen() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
   const router = useRouter();
   const t = useT();
   const auth = useAuthStore((s) => s.auth);
   // The avatar ring reads the store's accent to recolor when changed.
-  const accentColor = useSettings((s) => s.accentColor);
+  const { accent: accentColor } = useTheme();
   useSettings((s) => s.appFont); // re-render when font changes
   const logout = useAuthStore((s) => s.logout);
   const goOnline = useAuthStore((s) => s.goOnline);
@@ -152,7 +155,7 @@ export default function SettingsScreen() {
                 router.replace('/(tabs)');
               }}
             >
-              <Ionicons name="cloud-offline-outline" size={18} color="#000" />
+              <Ionicons name="cloud-offline-outline" size={18} color={colors.onInverse} />
               <Text style={styles.offlinePillText}>{t('Offline mode')}</Text>
             </Pressable>
           ) : serverOffline ? (
@@ -163,7 +166,7 @@ export default function SettingsScreen() {
                 router.replace('/(tabs)');
               }}
             >
-              <Ionicons name="cloud-outline" size={18} color="#000" />
+              <Ionicons name="cloud-outline" size={18} color={colors.onInverse} />
               <Text style={styles.offlinePillText}>{t('Back online')}</Text>
             </Pressable>
           ) : null}
@@ -175,7 +178,7 @@ export default function SettingsScreen() {
             style={({ pressed }) => [styles.offlinePill, pressed && { opacity: 0.6 }]}
             onPress={() => logout()}
           >
-            <Ionicons name="log-out-outline" size={18} color="#000" />
+            <Ionicons name="log-out-outline" size={18} color={colors.onInverse} />
             <Text style={styles.offlinePillText}>
               {offline && !auth ? t('Exit local mode') : t('Sign out')}
             </Text>
@@ -186,7 +189,7 @@ export default function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   profileRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -221,16 +224,17 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginTop: spacing.lg,
   },
-  // Light solid pill for session actions (mode toggle and sign out): white
-  // background with black text and icons, so they stand out.
+  // Solid pill for session actions (mode toggle and sign out): the page's own
+  // text colour as a fill, so it reads as the loudest thing on the screen in
+  // either appearance.
   offlinePill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     borderRadius: radius.pill,
-    backgroundColor: '#fff',
+    backgroundColor: colors.text,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  offlinePillText: { color: '#000', fontSize: fontSize.sm, fontWeight: '600' },
-});
+  offlinePillText: { color: colors.onInverse, fontSize: fontSize.sm, fontWeight: '600' },
+}));

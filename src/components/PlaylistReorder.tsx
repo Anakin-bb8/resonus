@@ -5,7 +5,7 @@
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import ReorderableList, {
   useReorderableDrag,
   type ReorderableListReorderEvent,
@@ -18,7 +18,7 @@ import { useT } from '@/i18n';
 import { listPerf } from '@/lib/listPerf';
 import { haptic } from '@/lib/haptics';
 import { useSettings } from '@/store/settings';
-import { colors, fontSize, spacing, SCREEN_BOTTOM_PADDING } from '@/theme';
+import { colors, fontSize, spacing, SCREEN_BOTTOM_PADDING, themed, useTheme } from '@/theme';
 import { Cover } from './Cover';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
@@ -68,7 +68,8 @@ export function PlaylistReorder({
   const t = useT();
   const bottomPad = useScreenBottomPadding();
   const [list, setList] = useState(songs);
-  useSettings((s) => s.accentColor); // re-render when the accent changes
+  // Repaints on a change of appearance or accent.
+  useTheme();
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -107,7 +108,7 @@ export function PlaylistReorder({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed((colors) => ({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
@@ -131,4 +132,4 @@ const styles = StyleSheet.create({
   info: { flex: 1 },
   title: { color: colors.text, fontSize: fontSize.md },
   artist: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2 },
-});
+}));
