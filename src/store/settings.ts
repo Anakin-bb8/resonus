@@ -780,6 +780,8 @@ interface SettingsState {
   discographyLayout: ListLayout;
   /** List or grid on a genre's albums. Its own key, same reasoning. */
   genreLayout: ListLayout;
+  /** List or grid on the Audiobooks shelf. Its own key, same reasoning. */
+  audiobooksLayout: ListLayout;
   /**
    * How many across each grid is, for the ones that have been changed. Only
    * what somebody chose is kept; anything absent falls back to
@@ -880,6 +882,7 @@ interface SettingsState {
   setBrowseSongsLayout: (value: ListLayout) => void;
   setDiscographyLayout: (value: ListLayout) => void;
   setGenreLayout: (value: ListLayout) => void;
+  setAudiobooksLayout: (value: ListLayout) => void;
   setGridColumns: (key: GridKey, value: number) => void;
   setShareExpiry: (value: ShareExpiry) => void;
   setShareDownloadable: (value: boolean) => void;
@@ -985,6 +988,7 @@ function snapshot(get: () => SettingsState) {
     browseSongsLayout: s.browseSongsLayout,
     discographyLayout: s.discographyLayout,
     genreLayout: s.genreLayout,
+    audiobooksLayout: s.audiobooksLayout,
     gridColumns: s.gridColumns,
     shareExpiry: s.shareExpiry,
     shareDownloadable: s.shareDownloadable,
@@ -1093,6 +1097,9 @@ const DEFAULTS = {
   discographyLayout: 'list' as ListLayout,
   // Grid, like browsing albums: a genre is browsed by cover, not read by name.
   genreLayout: 'grid' as ListLayout,
+  // Grid too: a shelf of books is looked at, and the covers are how you tell
+  // one from another before you have read the spine.
+  audiobooksLayout: 'grid' as ListLayout,
   gridColumns: {} as Partial<Record<GridKey, number>>,
   // Sharing a song with somebody usually means for good; the rest are there
   // for whoever wants the link to stop working.
@@ -1530,6 +1537,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setAudiobooksLayout: (audiobooksLayout) => {
+    set({ audiobooksLayout });
+    persist(snapshot(get));
+  },
+
   setGridColumns: (key, value) => {
     set({ gridColumns: { ...get().gridColumns, [key]: value } });
     persist(snapshot(get));
@@ -1680,6 +1692,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           browseSongsLayout: ListLayout;
           discographyLayout: ListLayout;
           genreLayout: ListLayout;
+          audiobooksLayout: ListLayout;
           gridColumns: Partial<Record<GridKey, number>>;
           shareExpiry: ShareExpiry;
           shareDownloadable: boolean;
@@ -1999,6 +2012,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (parsed.genreLayout === 'list' || parsed.genreLayout === 'grid') {
           set({ genreLayout: parsed.genreLayout });
+        }
+        if (parsed.audiobooksLayout === 'list' || parsed.audiobooksLayout === 'grid') {
+          set({ audiobooksLayout: parsed.audiobooksLayout });
         }
         // Read key by key rather than taken whole: a number from a file is the
         // one thing here that decides how a list is laid out, and a stray one
