@@ -42,6 +42,9 @@ Releases before 0.2.1 are only listed on the
 - An Audiobooks chip for Home, so they have somewhere to be rather than only
   turning up as you walk past them. It is off until you turn it on in
   Settings › Explore chips, since most libraries are music and nothing else.
+  Their genres come out of Genres and out of Search's Browse all with them:
+  spoken word is not a kind of music to go looking through, and a library with
+  forty books in it buried the genres that are.
 
 ### Changed
 

@@ -14,6 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { type Genre } from '@/api/backend';
 import { getGenres } from '@/api/data';
+import { isAudiobookGenre } from '@/store/albumProgress';
+import { useSettings } from '@/store/settings';
 import { EmptyState } from '@/components/EmptyState';
 import { GenreCard } from '@/components/GenreCard';
 import { GenreGridSkeleton } from '@/components/GenreGridSkeleton';
@@ -45,6 +47,7 @@ export default function GenresScreen() {
   const t = useT();
   const auth = useAuthStore((s) => s.auth);
   const [query, setQuery] = useState('');
+  const hideSpokenWord = useSettings((s) => s.saveAudiobookProgress);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['genres'],
@@ -53,10 +56,16 @@ export default function GenresScreen() {
   });
 
   const genres = useMemo(() => {
-    const all = [...(data ?? [])].sort((a, b) => a.value.localeCompare(b.value));
+    const all = [...(data ?? [])]
+      // Spoken word is not a kind of music to browse through, and a library
+      // with forty books in it buried the genres that are. They live behind
+      // the Audiobooks chip instead. Kept where they were with the audiobook
+      // setting off, which is the switch that means "none of this applies".
+      .filter((g) => !hideSpokenWord || !isAudiobookGenre(g.value))
+      .sort((a, b) => a.value.localeCompare(b.value));
     const q = query.trim().toLowerCase();
     return q ? all.filter((g) => g.value.toLowerCase().includes(q)) : all;
-  }, [data, query]);
+  }, [data, query, hideSpokenWord]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>

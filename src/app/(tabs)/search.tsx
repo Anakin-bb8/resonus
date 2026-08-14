@@ -35,6 +35,7 @@ import { useAuthStore } from '@/store/auth';
 import { useMediaMenu } from '@/store/mediaMenu';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useRecentSearches, type RecentItem } from '@/store/recentSearches';
+import { isAudiobookGenre } from '@/store/albumProgress';
 import { useSettings } from '@/store/settings';
 import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
@@ -62,6 +63,7 @@ export default function SearchScreen() {
   const debouncedQuery = useDebounce(query.trim(), 350);
   const playing = usePlayerStore(currentSong);
   const showListArtwork = useSettings((s) => s.showListArtwork);
+  const hideSpokenWord = useSettings((s) => s.saveAudiobookProgress);
   const playQueue = usePlayerStore((s) => s.playQueue);
   const recent = useRecentSearches((s) => s.items);
   const addRecent = useRecentSearches((s) => s.add);
@@ -129,6 +131,13 @@ export default function SearchScreen() {
     enabled: !!auth && !offline,
   });
 
+  // Same rule as the Genres screen: the spoken-word ones are behind the
+  // Audiobooks chip, not among the music to browse.
+  const browsableGenres = useMemo(
+    () => genres?.filter((g) => !hideSpokenWord || !isAudiobookGenre(g.value)),
+    [genres, hideSpokenWord],
+  );
+
   const openMediaMenu = useMediaMenu((s) => s.open);
   // Playlists: Subsonic's search3 doesn't return them, so they're filtered by
   // name client-side (the full list is already cached by other screens).
@@ -164,13 +173,13 @@ export default function SearchScreen() {
   // keystroke. Same elements, so React walks past the whole grid instead of
   // rebuilding it.
   const genreGrid = useMemo(
-    () => genres?.map((g) => <GenreCard key={g.value} name={g.value} width={GENRE_W} />),
-    [genres],
+    () => browsableGenres?.map((g) => <GenreCard key={g.value} name={g.value} width={GENRE_W} />),
+    [browsableGenres],
   );
 
   const isEmpty = query.trim().length === 0;
   const showRecent = focused && isEmpty && recent.length > 0;
-  const showBrowse = isEmpty && !showRecent && !!genres && genres.length > 0;
+  const showBrowse = isEmpty && !showRecent && !!browsableGenres && browsableGenres.length > 0;
   const showBrowseSkeleton = isEmpty && !showRecent && !!auth && !offline && genresLoading;
 
   /** Recent item subtitle: type (+ artist for albums/songs). */
