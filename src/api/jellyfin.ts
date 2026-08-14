@@ -12,6 +12,7 @@
  * `backend.ts` module picks one implementation or the other based on server
  * type.
  */
+import Constants from 'expo-constants';
 import * as Crypto from 'expo-crypto';
 
 import {
@@ -44,7 +45,8 @@ import {
 import { fetch } from 'expo/fetch';
 import { assertCanRequest } from './netGate';
 
-const CLIENT_VERSION = '1.0';
+const CLIENT_VERSION = Constants.expoConfig?.version ?? '0.0.0';
+const CLIENT_DEVICE = (Constants.deviceName ?? 'Android').trim().replaceAll('"', "'") || 'Android';
 const REQUEST_TIMEOUT_MS = 15000;
 
 /** A Jellyfin tick is 100 ns; API times come in ticks. */
@@ -143,7 +145,7 @@ function randomHex(bytes: number): string {
 
 function authHeader(auth: SubsonicAuth): string {
   return (
-    `MediaBrowser Client="${CLIENT_NAME}", Device="Android", ` +
+    `MediaBrowser Client="${CLIENT_NAME}", Device="${CLIENT_DEVICE}", ` +
     `DeviceId="${auth.jfDeviceId}", Version="${CLIENT_VERSION}", Token="${auth.jfToken}"`
   );
 }
@@ -222,7 +224,7 @@ export async function makeAuth(
       headers: {
         'Content-Type': 'application/json',
         Authorization:
-          `MediaBrowser Client="${CLIENT_NAME}", Device="Android", ` +
+          `MediaBrowser Client="${CLIENT_NAME}", Device="${CLIENT_DEVICE}", ` +
           `DeviceId="${deviceId}", Version="${CLIENT_VERSION}"`,
       },
       body: JSON.stringify({ Username: username, Pw: password }),
