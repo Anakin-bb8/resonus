@@ -303,7 +303,7 @@ export default function PlaybackSettings() {
             {
               label: t('Save audiobook progress'),
               description: t(
-                'Remember where you stopped in audiobooks so you can continue later, and keep their genres out of Genres. Stored on this device only.',
+                'Remember where you stopped in audiobooks so you can continue later. Stored on this device only.',
               ),
               value: saveAudiobookProgress,
               onChange: setSaveAudiobookProgress,

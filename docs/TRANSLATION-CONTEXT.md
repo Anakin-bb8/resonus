@@ -805,7 +805,7 @@ you are actually typing into, which is easier than reading it here.
 | `Pre-amp` | A gain in decibels applied on top of normalization, for when everything ends up too quiet |
 | `Preload upcoming tracks` |  |
 | `Quality & playback` |  |
-| `Remember where you stopped in audiobooks so you can continue later, and keep their genres out of Genres. Stored on this device only.` |  |
+| `Remember where you stopped in audiobooks so you can continue later. Stored on this device only.` |  |
 | `Request the next few tracks ahead of time so they start instantly. Helps with proxy servers like Octo-Fiesta or slow sources that fetch tracks on demand.` | The line under “Preload upcoming tracks”, explaining it |
 | `Rewind on resume` |  |
 | `Save audiobook progress` |  |

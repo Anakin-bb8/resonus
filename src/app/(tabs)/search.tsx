@@ -63,7 +63,6 @@ export default function SearchScreen() {
   const debouncedQuery = useDebounce(query.trim(), 350);
   const playing = usePlayerStore(currentSong);
   const showListArtwork = useSettings((s) => s.showListArtwork);
-  const hideSpokenWord = useSettings((s) => s.saveAudiobookProgress);
   const playQueue = usePlayerStore((s) => s.playQueue);
   const recent = useRecentSearches((s) => s.items);
   const addRecent = useRecentSearches((s) => s.add);
@@ -134,8 +133,8 @@ export default function SearchScreen() {
   // Same rule as the Genres screen: the spoken-word ones are behind the
   // Audiobooks chip, not among the music to browse.
   const browsableGenres = useMemo(
-    () => genres?.filter((g) => !hideSpokenWord || !isAudiobookGenre(g.value)),
-    [genres, hideSpokenWord],
+    () => genres?.filter((g) => !isAudiobookGenre(g.value)),
+    [genres],
   );
 
   const openMediaMenu = useMediaMenu((s) => s.open);
