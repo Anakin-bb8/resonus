@@ -45,6 +45,17 @@ export interface CarNode {
 /** Tree: parentId → children map. Root is the "root" key. */
 export interface CarTree {
   nodes: Record<string, CarNode[]>;
+  /**
+   * True for a tree that holds the lists but not the songs inside them. The
+   * native side lays one of these over what it already has instead of taking
+   * it as the whole truth, and keeps it out of the snapshot it writes: that
+   * file is what the car reads when it starts the service on its own, and a
+   * partial tree written there is an album that opens onto nothing.
+   */
+  partial?: boolean;
+  /** The account it was built from, so one profile's tree is never merged
+   *  into another's. `profileScopeId()`. */
+  profile?: string;
 }
 
 export interface CarTrack {
@@ -95,4 +106,9 @@ export function onPlay(cb: (e: PlayEvent) => void): { remove: () => void } | und
 
 export function onTransport(cb: (e: TransportEvent) => void): { remove: () => void } | undefined {
   return native?.addListener('transport', cb);
+}
+
+/** A car asked for the browse tree's root, which is Android Auto opening. */
+export function onCarConnected(cb: () => void): { remove: () => void } | undefined {
+  return native?.addListener('connect', cb);
 }

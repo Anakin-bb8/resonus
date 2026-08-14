@@ -13,7 +13,7 @@ class CarAutoModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("CarAuto")
 
-    Events("play", "transport")
+    Events("play", "transport", "connect")
 
     OnCreate {
       instance = this@CarAutoModule
@@ -85,6 +85,13 @@ class CarAutoModule : Module() {
     payload["mediaId"] = mediaId
     if (parentId != null) payload["parentId"] = parentId
     sendEvent("play", payload)
+  }
+
+  /** A browser asked for the root, which is a car opening the app. JS answers
+   *  by filling the tree in, so what it holds is not whatever was left there
+   *  the last time somebody had the phone in their hand. */
+  fun emitConnected() {
+    sendEvent("connect", emptyMap<String, Any>())
   }
 
   fun emitTransport(action: String, value: Double?) {

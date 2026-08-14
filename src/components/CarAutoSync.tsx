@@ -12,6 +12,7 @@ import { useEffect } from 'react';
 import { COVER, songCoverUrl, type Song } from '@/api/data';
 import {
   carAutoAvailable,
+  onCarConnected,
   onPlay,
   onTransport,
   setNodes,
@@ -29,6 +30,9 @@ const REBUILD_DEBOUNCE_MS = 600;
 /** How long after opening before the tree is filled in. Long enough that the
  *  app has finished starting; short enough to be ready for a drive. */
 const DEEP_REBUILD_MS = 45_000;
+/** How often a connecting car is allowed to set off a full rebuild. It asks
+ *  for the root more than once per drive, and each one is dozens of requests. */
+const DEEP_MIN_INTERVAL_MS = 5 * 60_000;
 const POSITION_PUSH_MS = 1000;
 
 /** `live` is what a radio says it is playing, which replaces the title and the
@@ -68,9 +72,13 @@ export function CarAutoSync() {
     // what any later change restarts: the session store emits several times
     // while hydrating, and each of those used to mean the full fetch again.
     let deepTimer: ReturnType<typeof setTimeout> | null = null;
+    let lastDeepAt = 0;
     const scheduleDeep = (delay = DEEP_REBUILD_MS) => {
       if (deepTimer) clearTimeout(deepTimer);
-      deepTimer = setTimeout(() => rebuild(true), delay);
+      deepTimer = setTimeout(() => {
+        lastDeepAt = Date.now();
+        rebuild(true);
+      }, delay);
     };
     rebuild(false);
     scheduleDeep();
@@ -81,9 +89,18 @@ export function CarAutoSync() {
     // Starting an album or a playlist writes it down as recently played, and
     // the car's Recents tab is built out of exactly that. Without this the tab
     // only ever knew what had been played before the app opened. Deep on
-    // purpose: a shallow rebuild replaces the tree with the lists alone, and
-    // that would drop the songs already fetched into it.
+    // purpose: what has just moved to the top of Recents is the likeliest
+    // thing to be tapped next, and the lists alone would leave it with no
+    // songs of its own.
     const unsubRecent = useLastPlayed.subscribe(() => scheduleDeep());
+    // Plugging into a car is the one moment the tree is certain to be needed,
+    // and the wait was being counted from the launch: forty five seconds of
+    // app in the foreground is a thing that never happens to somebody who
+    // opens Resonus, puts the phone in a pocket and drives off, so what the
+    // car got were the lists with no songs inside them.
+    const connectSub = onCarConnected(() => {
+      if (Date.now() - lastDeepAt > DEEP_MIN_INTERVAL_MS) scheduleDeep(0);
+    });
 
     // ── Mirror playback state ──
     const pushNowPlaying = () => {
@@ -179,6 +196,7 @@ export function CarAutoSync() {
       unsubAuth();
       unsubRecent();
       unsubPlayer();
+      connectSub?.remove();
       playSub?.remove();
       transportSub?.remove();
     };

@@ -81,6 +81,17 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- Albums in Android Auto opened onto nothing. The car is handed the whole
+  library at once, since it cannot ask for anything while the phone is asleep
+  in a pocket, and that arrives in two goes: the covers a second after the app
+  opens and the songs inside them a good while later, so that filling it in
+  does not compete with the app opening. The first of those two was taken for
+  the whole library and written down as such, so unless Resonus had been left
+  on screen for the best part of a minute, what the car got was a wall of
+  records with nothing in any of them. It is laid over what is already there
+  now, plugging in a car goes and fetches whatever is missing, and the albums
+  you marked as favourites are fetched before anything else rather than last,
+  which is what the Library tab is made of.
 - Songs on the phone that other players show a cover for and Resonus did not.
   The tag reader was too strict for what real files contain: a size written the
   other version's way, a tag whose bytes were shifted so no player could

@@ -13,6 +13,7 @@ import * as data from '@/api/data';
 import { type Album, type Artist, type Playlist, type Song } from '@/api/subsonic';
 import { songsLabel, tg } from '@/i18n';
 import { queryClient } from '@/lib/query';
+import { profileScopeId } from '@/store/auth';
 import { useLastPlayed } from '@/store/lastPlayed';
 import { usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
@@ -48,6 +49,11 @@ const songById = new Map<string, Song>();
 const parentTracks = new Map<string, string[]>();
 /** Collection id → what it is called, to name the source a car started. */
 const nodeTitles = new Map<string, string>();
+/** The account these three were filled from. They are thrown away when it
+ *  changes and only then: a rebuild of the lists alone knows nothing about
+ *  any album's songs, and emptying them there left a tap in the car with no
+ *  way to tell which collection the song it was handed belongs to. */
+let mapsProfile: string | null = null;
 
 /** Runs `fn` over `items` with at most `n` in parallel (avoids 429). */
 async function mapConcurrent<T>(items: T[], n: number, fn: (item: T) => Promise<void>): Promise<void> {
@@ -217,12 +223,22 @@ const SHUFFLE_SONGS = 100;
  * come from the same queries the app has already made.
  *
  * So the lists go up straight away and the songs follow later, once the app is
- * done starting. Browsing in the car reads whatever the last push left.
+ * done starting or as soon as a car is plugged in. A tree without the songs is
+ * marked `partial` and the native side lays it over the one it already has,
+ * rather than taking it for the whole library: it was replacing the songs of
+ * every album with nothing, in memory and in the snapshot it keeps for a car
+ * that starts the service on its own.
  */
 export async function buildBrowseTree(deep = true): Promise<CarTree> {
-  songById.clear();
-  parentTracks.clear();
-  nodeTitles.clear();
+  const profile = profileScopeId();
+  // A full build replaces what it knows; a partial one adds to it. What is
+  // dropped either way is another account's, which nothing here can resolve.
+  if (deep || profile !== mapsProfile) {
+    songById.clear();
+    parentTracks.clear();
+    nodeTitles.clear();
+  }
+  mapsProfile = profile;
   const tree: Record<string, CarNode[]> = {};
 
   // Root: the four tabs Android Auto draws, and no more than four. What goes
@@ -243,9 +259,14 @@ export async function buildBrowseTree(deep = true): Promise<CarTree> {
     { id: 'lib:albums', title: tg('Albums'), playable: false, contentStyle: 'grid', artworkUrl: icon('ic_car_albums') },
   ];
 
-  // Recents first, so what was last played is what gets its songs fetched
-  // ahead of anything else: it is the likeliest thing to be tapped, and an
-  // album whose tracks never arrived opens onto nothing.
+  // Which albums get their songs fetched, in the order they deserve them. The
+  // cap further down cuts the tail of this, and it was cutting the wrong end:
+  // the starred albums went in last, behind up to fifty ids from the recents
+  // and the shelves, so the one grid Library opens onto was the one whose
+  // albums opened onto nothing.
+  //
+  // Recents lead all the same: what was played last is the likeliest thing to
+  // be tapped again.
   const albumIds = new Set<string>(
     tree['tab:recents'].filter((n) => n.mediaType === 'album').map((n) => n.id.slice('album:'.length)),
   );
@@ -261,7 +282,6 @@ export async function buildBrowseTree(deep = true): Promise<CarTree> {
           queryFn: () => data.getAlbumList(s.type, HOME_SIZE),
         })
         .catch(() => [] as Album[]);
-      albums.forEach((a) => albumIds.add(a.id));
       return { title: tg(s.titleKey), albums: albums.slice(0, HOME_SHELF_SIZE) };
     }),
   );
@@ -298,8 +318,14 @@ export async function buildBrowseTree(deep = true): Promise<CarTree> {
   tree['favorites'] = starred.songs.map((s) => songNode(s, 'favorites'));
   parentTracks.set('favorites', tree['favorites'].map((n) => n.id));
 
-  tree['lib:albums'] = byLastPlayed(starred.albums, (a) => `/album/${a.id}`).map(albumNode);
-  starred.albums.forEach((a) => albumIds.add(a.id));
+  const starredAlbums = byLastPlayed(starred.albums, (a) => `/album/${a.id}`);
+  tree['lib:albums'] = starredAlbums.map(albumNode);
+  // Behind the recents and ahead of the shelves, in the order the grid shows
+  // them. And of a shelf only what it shows, not the whole list it was cut
+  // from: the songs of five albums nobody can see cost five albums somebody
+  // can.
+  starredAlbums.forEach((a) => albumIds.add(a.id));
+  shelves.forEach((shelf) => shelf.albums.forEach((a) => albumIds.add(a.id)));
 
   tree['lib:artists'] = starred.artists.map(artistNode);
 
@@ -328,7 +354,10 @@ export async function buildBrowseTree(deep = true): Promise<CarTree> {
     ),
   ];
 
-  if (!deep) return { nodes: tree };
+  // Marked for what it is: the lists, and none of the songs inside them. The
+  // native side lays it over the tree it already has rather than taking it for
+  // the whole library.
+  if (!deep) return { nodes: tree, partial: true, profile };
 
   // The songs of each playlist, so they can be browsed and not only played
   // whole. Capped like everything else here: a car that is never plugged in
@@ -394,7 +423,7 @@ export async function buildBrowseTree(deep = true): Promise<CarTree> {
     }
   });
 
-  return { nodes: tree };
+  return { nodes: tree, profile };
 }
 
 // ── Playback resolution on car tap ───────────────────────────────────────────

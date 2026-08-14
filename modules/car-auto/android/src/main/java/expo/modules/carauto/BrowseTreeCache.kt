@@ -25,18 +25,50 @@ object BrowseTreeCache {
 
   @Volatile private var nodes: Map<String, List<BrowseNode>> = emptyMap()
   @Volatile private var loaded: Boolean = false
+  /** Which account the tree in hand belongs to, so another one's albums are
+   *  never merged into it. Null for a tree pushed before this was written. */
+  @Volatile private var profile: String? = null
   // The last browsable parent opened in Android Auto. It travels with a play
   // event so JS can queue the whole collection (the album, the playlist, the
   // section of Home) rather than only the track that was tapped.
   @Volatile private var lastBrowsedParent: String? = null
 
+  /**
+   * Takes a tree from JS, whole or in part.
+   *
+   * The app pushes the lists within a second of opening and the songs inside
+   * them a good while later, because filling the whole thing in is dozens of
+   * requests and doing that at launch competed with the launch itself (#50).
+   * The first of those two carries no album's songs at all, so taking it as
+   * the whole truth emptied every album in the car until the second one
+   * arrived, and wrote that emptiness over the snapshot on disk, which is what
+   * Android Auto reads when it starts the service by itself. A partial push is
+   * therefore laid over what is already here rather than replacing it.
+   *
+   * Only what belongs to the account in hand: signing into another one pushes
+   * a partial tree too, and merging that would leave the car browsing the
+   * albums of an account that is no longer open.
+   */
   fun setFromJson(context: Context, json: String) {
-    val parsed = parse(json) ?: return
-    nodes = parsed
-    runCatching {
-      File(context.filesDir, SNAPSHOT_FILE).writeText(json)
-    }
+    val incoming = parse(json) ?: return
+    // What is on disk is the last tree that had songs in it. Read it before
+    // deciding what to keep, or a partial push on a cold start has nothing to
+    // be laid over and the albums come back empty anyway.
+    loadFromDiskIfNeeded(context)
+    val sameAccount = profile == null || incoming.profile == null || profile == incoming.profile
+    val keepWhatWeHave = incoming.partial && sameAccount
+    nodes = if (keepWhatWeHave) nodes + incoming.nodes else incoming.nodes
+    profile = incoming.profile ?: profile.takeIf { sameAccount }
     loaded = true
+    runCatching {
+      val file = File(context.filesDir, SNAPSHOT_FILE)
+      // Only a whole tree is worth keeping for the next time the car starts
+      // the service on its own. A partial one holds no songs, and the point of
+      // the snapshot is precisely the songs.
+      if (!incoming.partial) file.writeText(json)
+      // Nothing to lay this over, so what is on disk is another account's.
+      else if (!sameAccount) file.delete()
+    }
   }
 
   // For when JS has not pushed a tree into this process yet, which is what
@@ -46,7 +78,12 @@ object BrowseTreeCache {
     loaded = true
     runCatching {
       val file = File(context.filesDir, SNAPSHOT_FILE)
-      if (file.exists()) parse(file.readText())?.let { nodes = it }
+      if (file.exists()) {
+        parse(file.readText())?.let {
+          nodes = it.nodes
+          profile = it.profile
+        }
+      }
     }
   }
 
@@ -74,7 +111,10 @@ object BrowseTreeCache {
 
   fun debugSummary(): String {
     val root = nodes[ROOT_ID]?.size ?: 0
-    return "root=$root totalParents=${nodes.size}"
+    // How many collections have their songs, which is the difference between a
+    // wall of covers that plays and one that opens onto nothing.
+    val filled = nodes.count { (_, list) -> list.any { it.playable } }
+    return "root=$root totalParents=${nodes.size} withSongs=$filled"
   }
 
   // ── Search ──────────────────────────────────────────────────────────────────
@@ -206,7 +246,15 @@ object BrowseTreeCache {
       id.startsWith("playlist:") ||
       id == "favorites"
 
-  private fun parse(json: String): Map<String, List<BrowseNode>>? = try {
+  /** A tree as it arrives: the nodes, whether it is only part of one, and the
+   *  account it was built for. */
+  private data class Snapshot(
+    val nodes: Map<String, List<BrowseNode>>,
+    val partial: Boolean,
+    val profile: String?,
+  )
+
+  private fun parse(json: String): Snapshot? = try {
     val root = JSONObject(json)
     val nodesObj = root.optJSONObject("nodes") ?: return null
     val map = HashMap<String, List<BrowseNode>>(nodesObj.length())
@@ -216,7 +264,11 @@ object BrowseTreeCache {
       val arr = nodesObj.optJSONArray(k) ?: continue
       map[k] = parseList(arr)
     }
-    map
+    Snapshot(
+      nodes = map,
+      partial = root.optBoolean("partial", false),
+      profile = root.optString("profile").takeIf { it.isNotEmpty() },
+    )
   } catch (_: Throwable) {
     null
   }

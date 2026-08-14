@@ -111,6 +111,9 @@ class ResonusCarBrowserService : MediaLibraryService() {
       browser: MediaSession.ControllerInfo,
       params: LibraryParams?,
     ): ListenableFuture<LibraryResult<MediaItem>> {
+      // The car is opening the app: whatever songs the tree is missing, this
+      // is the moment to go and get them, and the phone is awake for it.
+      CarAutoModule.instance?.emitConnected()
       val rootExtras = Bundle().apply {
         // Hints for Android Auto: the root's children are drawn as tabs
         // (category list items), and anything browsable below that as a list.
