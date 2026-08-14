@@ -3360,6 +3360,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   toggleShuffle: () => {
     const { shuffle, queue, index, originalQueue, source, sourceHref } = get();
     const current = queue[index];
+    const upnpActive = remoteKind() === 'upnp';
     // Same reasoning as starting a list again (see `forgetHistoryOf`): the
     // order changes under the list being played, so where the back history had
     // you in it no longer means anything. Left in, ⏮️ restored one of those
@@ -3376,17 +3377,32 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       // here. Left on, their songs would be scattered among the album's and the
       // header would have flipped on every track. `originalQueue` keeps the
       // marked copies, so turning shuffle off brings them back with them.
-      const newQueue = (current ? [current, ...rest] : rest).map(unmarked);
-      // The current song keeps playing; we only reorder and leave it at index 0.
-      // Shuffling dissolves the "queued" block (the positions no longer exist).
-      set({
-        shuffle: true,
-        queueDealt: true,
-        originalQueue: queue,
-        queue: newQueue,
-        index: 0,
-        queuedCount: 0,
-      });
+      if (upnpActive && current) {
+        // While UPnP is active, keep the current track index stable and only
+        // shuffle upcoming tracks. This keeps Sonos and app queue indices aligned.
+        const preservedHead = queue.slice(0, index + 1);
+        const shuffledTail = dealt(queue.slice(index + 1));
+        set({
+          shuffle: true,
+          queueDealt: true,
+          originalQueue: queue,
+          queue: [...preservedHead, ...shuffledTail].map(unmarked),
+          index,
+          queuedCount: 0,
+        });
+      } else {
+        const newQueue = (current ? [current, ...rest] : rest).map(unmarked);
+        // The current song keeps playing; we only reorder and leave it at index 0.
+        // Shuffling dissolves the "queued" block (the positions no longer exist).
+        set({
+          shuffle: true,
+          queueDealt: true,
+          originalQueue: queue,
+          queue: newQueue,
+          index: 0,
+          queuedCount: 0,
+        });
+      }
     } else if (originalQueue && current) {
       const newIndex = Math.max(0, originalQueue.findIndex((s) => s.id === current.id));
       set({
