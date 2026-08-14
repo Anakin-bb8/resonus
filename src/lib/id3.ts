@@ -2,6 +2,17 @@
  * ID3 parser for React Native (Hermes).
  * Supports ID3v2 (header) and ID3v1 (end of file, as fallback).
  * Reads title, artist, album, track number, year and embedded cover art (ID3v2).
+ *
+ * A word on how strict it is, because that turned out to be the whole of a bug
+ * (#141). A tag is written by whatever put the file together and read by
+ * everybody, and the writers get it wrong often enough that the readers have
+ * all had to learn to forgive: sizes written the version's other way,
+ * unsynchronisation, a description in the encoding the frame did not name. Every
+ * one of those loses the picture while leaving the text perfectly readable,
+ * which is why a file can look correctly scanned and have no cover anywhere.
+ * Where this parser cannot trust what a tag says, it now works out what was
+ * meant rather than stopping, and a tag that was already well formed takes byte
+ * for byte the same path it always did.
  */
 function synchsafeToInt(b: Uint8Array, offset: number): number {
   return (
@@ -14,6 +25,74 @@ function synchsafeToInt(b: Uint8Array, offset: number): number {
 
 function int32BE(b: Uint8Array, offset: number): number {
   return (b[offset] << 24) | (b[offset + 1] << 16) | (b[offset + 2] << 8) | b[offset + 3];
+}
+
+/**
+ * Undoes unsynchronisation: every `FF 00` goes back to being an `FF`.
+ *
+ * The scheme exists so that nothing inside a tag can be mistaken for the start
+ * of an audio frame, and the cost of it lands on whoever reads the tag. Text
+ * barely notices, because text hardly ever contains an `FF`. A picture is full
+ * of them, and comes out with a zero wedged after each one, which is not a JPEG
+ * any more: that is a file that reads as perfectly titled and stubbornly
+ * coverless.
+ */
+function deUnsynchronise(data: Uint8Array): Uint8Array {
+  const out = new Uint8Array(data.length);
+  let n = 0;
+  for (let i = 0; i < data.length; i++) {
+    out[n++] = data[i];
+    if (data[i] === 0xff && data[i + 1] === 0x00) i++;
+  }
+  return out.subarray(0, n);
+}
+
+/** The bytes a frame id is made of: capitals and digits, nothing else. */
+function looksLikeFrameId(b: Uint8Array, at: number): boolean {
+  for (let i = at; i < at + 4; i++) {
+    const c = b[i];
+    if (!((c >= 0x41 && c <= 0x5a) || (c >= 0x30 && c <= 0x39))) return false;
+  }
+  return true;
+}
+
+/**
+ * Whether a frame ending here is followed by another frame, by the padding, or
+ * by nothing at all. Those are the only three things that can follow one.
+ */
+function frameEndValidates(b: Uint8Array, end: number, tagEnd: number): boolean {
+  if (end === tagEnd) return true;
+  if (end < 0 || end > tagEnd) return false;
+  if (b[end] === 0) return true;
+  return end + 10 <= tagEnd && looksLikeFrameId(b, end);
+}
+
+/**
+ * The size of the frame whose header starts at `at`.
+ *
+ * 2.3 writes it as a plain 32 bit number and 2.4 as a synchsafe one, and a fair
+ * number of encoders write a 2.4 header with 2.3 sizes inside it. Two things
+ * give that away. A synchsafe byte never has its top bit set, so a size with one
+ * set is not synchsafe whatever the header claims. And where both readings are
+ * legal numbers, the true one is the one that lands on the next frame, on the
+ * padding, or exactly at the end of the tag.
+ *
+ * A well formed tag is right on the first reading, and a 2.3 tag never gets
+ * here at all, so nothing that parses today is read any differently.
+ */
+function frameSizeAt(b: Uint8Array, at: number, verMajor: number, tagEnd: number): number {
+  const plain = int32BE(b, at + 4);
+  if (verMajor < 4) return plain;
+  const sync = synchsafeToInt(b, at + 4);
+  if (sync === plain) return sync; // under 128 bytes there is no difference
+  if ((b[at + 4] | b[at + 5] | b[at + 6] | b[at + 7]) & 0x80) return plain;
+  if (frameEndValidates(b, at + 10 + sync, tagEnd)) return sync;
+  if (frameEndValidates(b, at + 10 + plain, tagEnd)) return plain;
+  // Neither reading leads anywhere. Where the plain one runs past what was
+  // read, saying so is worth more than a shorter size that lands nowhere: it
+  // sends the caller back for the rest of the tag instead of keeping half a
+  // picture.
+  return at + 10 + plain > tagEnd ? plain : sync;
 }
 
 const utf8Decoder = new TextDecoder('utf-8');
@@ -126,6 +205,56 @@ function decodeUserText(data: Uint8Array): { name: string; value: string } | und
   return { name: name.toUpperCase(), value };
 }
 
+/**
+ * Reads the picture out of an APIC frame body, laid out as `<encoding(1)>
+ * <mime, null terminated> <picture type(1)> <description, null terminated>
+ * <picture>`.
+ *
+ * The description is text like any other and is written in whatever encoding
+ * the first byte names, so in UTF-16 it ends in TWO zero bytes. Walking to the
+ * first single zero left the second one in front of the picture, and a JPEG
+ * with a byte in front of it is not a JPEG: the cover came whole out of the
+ * tag and was then thrown away by everything that tried to draw it.
+ */
+function readPicture(data: Uint8Array, tags: ID3Tags): void {
+  if (data.length < 4) return;
+  const enc = data[0];
+  const mimeEnd = nullTerminatedIndex(data, 1, data.length);
+  const mime = decodeLatin1(data.subarray(1, mimeEnd)).trim() || 'image/jpeg';
+  // The spec lets a frame carry a link to a picture instead of the picture,
+  // spelled with this mime type. There is nothing in it to draw.
+  if (mime === '-->') return;
+  let at = mimeEnd + 2; // past the terminator and the picture type byte
+  if (enc === 0x01 || enc === 0x02) {
+    while (at + 1 < data.length && (data[at] !== 0 || data[at + 1] !== 0)) at += 2;
+    at += 2;
+  } else {
+    at = nullTerminatedIndex(data, at, data.length) + 1;
+  }
+  if (at >= data.length) return;
+  tags.coverMime = mime;
+  tags.coverBase64 = uint8ToBase64(data.subarray(at));
+}
+
+/**
+ * Where the picture frame starts, found by its own name instead of by walking to
+ * it. `-1` when there is none to find.
+ *
+ * Four letters are a weak signature by themselves, and this is looked for
+ * inside a tag that quite possibly contains a picture whose bytes can spell
+ * anything, so the frame has to look like one too: an encoding byte that
+ * exists, and a mime type that begins the way every picture's does.
+ */
+function findPictureFrame(b: Uint8Array, from: number, to: number): number {
+  for (let at = from; at + 17 < to; at++) {
+    if (b[at] !== 0x41 || b[at + 1] !== 0x50 || b[at + 2] !== 0x49 || b[at + 3] !== 0x43) continue;
+    if (b[at + 10] > 0x03) continue;
+    if (decodeLatin1(b.subarray(at + 11, at + 17)).toLowerCase() !== 'image/') continue;
+    return at;
+  }
+  return -1;
+}
+
 export interface ID3Tags {
   title?: string;
   artist?: string;
@@ -154,36 +283,51 @@ export interface ID3Tags {
   cutFrame?: string;
 }
 
-function parseID3v2(buffer: Uint8Array): ID3Tags {
+function parseID3v2(input: Uint8Array): ID3Tags {
   const tags: ID3Tags = {};
+  let buffer = input;
   if (buffer.length < 10) return tags;
   if (buffer[0] !== 0x49 || buffer[1] !== 0x44 || buffer[2] !== 0x33) return tags;
 
   const verMajor = buffer[3];
   const flags = buffer[5];
-  const tagSize = synchsafeToInt(buffer, 6);
+  let tagSize = synchsafeToInt(buffer, 6);
 
-  let offset = 10;
-  if (verMajor >= 4 && (flags & 0x40) && offset + 4 <= buffer.length) {
-    const extSize = synchsafeToInt(buffer, offset);
-    offset += 4 + extSize;
+  // A whole tag can be unsynchronised, which is how 2.3 does it, and then the
+  // frame sizes are the sizes from before it happened: undoing it has to come
+  // before the walk or every offset past the first `FF 00` is wrong. 2.4 marks
+  // it frame by frame and stores the size after the fact, so there it is left
+  // to the frames themselves, below.
+  if ((flags & 0x80) && verMajor < 4) {
+    const body = deUnsynchronise(buffer.subarray(10, Math.min(10 + tagSize, buffer.length)));
+    const joined = new Uint8Array(10 + body.length);
+    joined.set(buffer.subarray(0, 10));
+    joined.set(body, 10);
+    buffer = joined;
+    tagSize = body.length;
   }
 
-  const tagEnd = Math.min(offset + tagSize, buffer.length);
+  let offset = 10;
+  if ((flags & 0x40) && offset + 4 <= buffer.length) {
+    // 2.4 writes a synchsafe size that counts the whole extended header; 2.3
+    // writes a plain one that leaves its own four bytes out. Reading either the
+    // other way lands the walk inside the header, where the first thing that is
+    // not a frame id ends the parse with nothing at all to show.
+    offset += verMajor >= 4 ? synchsafeToInt(buffer, offset) : 4 + int32BE(buffer, offset);
+  }
+
+  const tagEnd = Math.min(10 + tagSize, buffer.length);
   let prevFrameId = '';
 
   while (offset + 10 <= tagEnd) {
     const frameId = String.fromCharCode(
       buffer[offset], buffer[offset + 1], buffer[offset + 2], buffer[offset + 3],
     );
-    if (frameId.charCodeAt(0) === 0 || !/^[A-Z0-9]{4}$/.test(frameId)) break;
+    // Where the frames end there is padding, all zeros, which fails this for
+    // the same reason anything else that is not a frame id does.
+    if (!looksLikeFrameId(buffer, offset)) break;
 
-    let frameSize: number;
-    if (verMajor >= 4) {
-      frameSize = synchsafeToInt(buffer, offset + 4);
-    } else {
-      frameSize = int32BE(buffer, offset + 4);
-    }
+    const frameSize = frameSizeAt(buffer, offset, verMajor, tagEnd);
     if (frameSize < 0 || frameSize > 50_000_000) break;
 
     const dataStart = offset + 10;
@@ -199,7 +343,12 @@ function parseID3v2(buffer: Uint8Array): ID3Tags {
     }
     const dataEnd = dataStart + frameSize;
 
-    const data = buffer.subarray(dataStart, dataEnd);
+    let data = buffer.subarray(dataStart, dataEnd);
+    // 2.4's own way of unsynchronising: one frame at a time, either because the
+    // frame says so or because the header said all of them do.
+    if (verMajor >= 4 && ((flags & 0x80) || (buffer[offset + 9] & 0x02))) {
+      data = deUnsynchronise(data);
+    }
 
     switch (frameId) {
       case 'TIT2': tags.title = decodeText(data, 0, data.length) || undefined; break;
@@ -241,17 +390,7 @@ function parseID3v2(buffer: Uint8Array): ID3Tags {
         break;
       }
       case 'APIC': {
-        if (data.length < 4) break;
-        const mimeEnd = nullTerminatedIndex(data, 1, data.length);
-        const mime = decodeLatin1(data.subarray(1, mimeEnd)).trim() || 'image/jpeg';
-        const descEnd = nullTerminatedIndex(data, mimeEnd + 2, data.length);
-        const picData = data.subarray(descEnd + 1);
-        if (picData.length > 0) {
-          tags.coverMime = mime;
-          tags.coverBase64 = uint8ToBase64(picData);
-          // If the cover is large, we skip further frames to avoid losing
-          // them — but we're already within tagEnd so it's safe.
-        }
+        readPicture(data, tags);
         break;
       }
     }
@@ -260,6 +399,38 @@ function parseID3v2(buffer: Uint8Array): ID3Tags {
     if (dataEnd === offset && frameId === prevFrameId) break;
     prevFrameId = frameId;
     offset = dataEnd;
+  }
+
+  // A tag the walk cannot get through usually has nothing else wrong with it:
+  // the picture is in there, whole, and can be found by looking for the frame's
+  // own name. Without this, one frame written by an encoder nobody has heard of
+  // costs the cover of every record in the library, and silently, because a
+  // walk that stops early does not know there was an APIC ahead of it and never
+  // sets `cutFrame` for the caller to act on.
+  //
+  // Only tried where the walk left tag behind and no cover with it, so a tag
+  // that reads cleanly never comes near it.
+  if (!tags.coverBase64 && !tags.cutFrame && offset + 10 < tagEnd) {
+    const at = findPictureFrame(buffer, offset, tagEnd);
+    if (at >= 0) {
+      const size = frameSizeAt(buffer, at, verMajor, tagEnd);
+      if (at + 10 + size > tagEnd) {
+        // The picture runs past what was read. Saying so is what sends the
+        // caller back for the whole tag, exactly as a walk cut short here does.
+        tags.cutFrame = 'APIC';
+      } else {
+        let end = at + 10 + size;
+        if (!frameEndValidates(buffer, end, tagEnd)) {
+          // The size is no more trustworthy than the walk was. What follows a
+          // picture is another frame or the padding, and every decoder stops at
+          // the end of an image on its own, so handing over the rest of the tag
+          // loses nothing and keeps whole what a bad size would cut in half.
+          end = tagEnd;
+          while (end > at + 10 && buffer[end - 1] === 0) end--;
+        }
+        readPicture(buffer.subarray(at + 10, end), tags);
+      }
+    }
   }
 
   return tags;

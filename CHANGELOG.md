@@ -81,6 +81,16 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- Songs on the phone that other players show a cover for and Resonus did not.
+  The tag reader was too strict for what real files contain: a size written the
+  other version's way, a tag whose bytes were shifted so no player could
+  mistake them for audio, a description in an encoding the frame did not admit
+  to. Every one of those loses the picture and leaves the title, the artist and
+  the album perfectly readable, which is why the songs looked properly scanned
+  and had nothing to show. It now works out what the tag meant instead of
+  giving up, and where the frames cannot be read at all it goes looking for the
+  picture by name. Files that were already correct are read exactly as before.
+  Reported by @kshbeat28-ui (#141).
 - A queue cast to Sonos and then changed drifted away from the app's: reorders
   did not arrive, "play next" landed somewhere else, deleting from the middle
   left the two lists out of step, and an edit in the middle of a song could
