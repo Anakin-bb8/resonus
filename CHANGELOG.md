@@ -73,6 +73,11 @@ Releases before 0.2.1 are only listed on the
   Library's own Recents, which is what you opened, keeps its name.
 - The devices button is never disabled any more. Downloads cast from the phone
   now, so there is something to send without a connection.
+- An artist whose records are all of one kind gets that kind as the heading:
+  Soundtracks, Live, Compilations. It used to say Discography whenever there
+  was nothing to split, which threw away what the tags did say. Discography is
+  now what an artist gets when the records say nothing about themselves, which
+  is also every server that does not send the release type.
 
 ### Fixed
 

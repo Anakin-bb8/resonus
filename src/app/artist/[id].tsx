@@ -508,9 +508,10 @@ export default function ArtistScreen() {
         ) : null}
 
         {/* One shelf per kind of record where the library says what they are,
-            and the single undivided discography where it does not. See
+            one named shelf where it says they are all the same kind, and the
+            single undivided discography where it says nothing. See
             `groupArtistAlbums`: it answers with nothing rather than with a
-            split it cannot stand behind. */}
+            heading it cannot stand behind. */}
         {releaseGroups.length > 0 ? (
           releaseGroups.map((g) => (
             <AlbumRow

@@ -130,6 +130,18 @@ const SHELF_ORDER: { key: ReleaseGroup; tags: string[] }[] = [
 ];
 
 /**
+ * Whether the library says anything at all about what this record is.
+ *
+ * The difference between a record tagged `album` and one tagged nothing, which
+ * `releaseGroupOf` deliberately loses: both are albums to it. It matters once,
+ * in `groupArtistAlbums`, to tell a one-shelf discography the tags asked for
+ * from a one-shelf discography that is only the default answer repeated.
+ */
+function isTyped(album: Album): boolean {
+  return album.isCompilation === true || (album.releaseTypes ?? []).some((t) => token(t) !== '');
+}
+
+/**
  * Which shelf a record belongs on. Every record lands on one.
  *
  * A record that says nothing is an album. This started out refusing to sort a
@@ -157,21 +169,33 @@ export function releaseGroupOf(album: Album): ReleaseGroup {
  * The artist's records by shelf, empty shelves left out and in the order
  * above.
  *
- * An empty answer means there was nothing to divide: everything landed in one
- * heap, which is what a library with no tags at all comes to, and what every
- * server that does not send the field comes to. Calling that one heap "Albums"
- * would be a heading where there used to be none and nothing else, so the
- * caller shows its single discography instead.
+ * One shelf is still a shelf, and it says something the count of records does
+ * not: an artist who only ever released soundtracks has a discography of
+ * soundtracks, and that is worth reading off the heading rather than having to
+ * open the records to find out. So a single shelf keeps its name, as long as
+ * the tags are what put every record on it.
+ *
+ * An empty answer means there was nothing to divide, and it now takes all of
+ * the records saying nothing about themselves. That is what a library with no
+ * tags comes to, and what every server that does not send the field comes to:
+ * they all land under `album` by default, and naming that heap "Albums" would
+ * be a heading that claims something nothing in the library said. Half-tagged
+ * comes here too, because the untagged records are in that same heap and the
+ * heading would be speaking for them as well. The caller shows its single
+ * undivided discography instead.
  */
 export function groupArtistAlbums(albums: Album[]): { key: ReleaseGroup; albums: Album[] }[] {
   const byGroup = new Map<ReleaseGroup, Album[]>();
+  let typed = 0;
   for (const album of albums) {
+    if (isTyped(album)) typed++;
     const group = releaseGroupOf(album);
     const bucket = byGroup.get(group);
     if (bucket) bucket.push(album);
     else byGroup.set(group, [album]);
   }
-  if (byGroup.size < 2) return [];
+  if (byGroup.size === 0) return [];
+  if (byGroup.size === 1 && typed < albums.length) return [];
   return RELEASE_GROUPS.filter((key) => byGroup.has(key)).map((key) => ({
     key,
     albums: byGroup.get(key)!,
