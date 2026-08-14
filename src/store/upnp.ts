@@ -274,13 +274,18 @@ function buildUpnpTrackInfo(song: Song) {
   const auth = useAuthStore.getState().auth;
   const listedArtists = firstNonBlank(song.artists?.map((a) => a.name).filter(Boolean).join(', '));
   const listedAlbumArtists = firstNonBlank(song.albumArtists?.map((a) => a.name).filter(Boolean).join(', '));
-  // The server's picture where there is a server, and the phone's own copy
-  // where there is not: the cover of a local album is a file on disk like the
-  // song is, and it goes out through the same door (see `localFilesOf`).
-  // Without it the speaker's screen shows a song with no record behind it.
-  const artworkUrl =
-    (auth ? serverCoverArtUrl(auth, song.albumId ?? song.coverArt, COVER.card) : undefined) ??
-    localFileUrl(localCoverUrl(song.albumId ?? song.coverArt));
+  // The picture comes from wherever the song does, and by the same test: a
+  // cover on the server is no use to a renderer being handed a file off this
+  // phone, which is what a download casts as with the server out of reach.
+  // The phone's own copy goes out through the same door as the audio, and
+  // `localFilesOf` opens it under exactly this condition — the two have to
+  // agree or the URL points at something nobody published.
+  const cover = song.albumId ?? song.coverArt;
+  const artworkUrl = servedByPhone(song)
+    ? localFileUrl(localCoverUrl(cover))
+    : auth
+      ? serverCoverArtUrl(auth, cover, COVER.card)
+      : undefined;
   return {
     title: song.title,
     artist: firstNonBlank(song.artist, listedArtists, listedAlbumArtists),
@@ -304,6 +309,19 @@ function serverStreamUrl(song: Song): string | undefined {
   if (!auth || offline || song.url) return undefined;
   const settings = useSettings.getState();
   return streamUrl(auth, song.id, settings.maxBitRate, 0, settings.streamFormat);
+}
+
+/**
+ * Is this phone the one that will be answering for this song?
+ *
+ * The same question `buildUpnpTrackUrl` ends up asking, in one place because
+ * two things depend on the answer and they must not drift: what gets published
+ * to the network, and whether the cover named in the DIDL is the phone's or the
+ * server's. A station brings its own address and its own picture, and neither
+ * is anything to do with this.
+ */
+function servedByPhone(song: Song): boolean {
+  return !song.url && !!song.localUri && !serverStreamUrl(song);
 }
 
 /**
@@ -345,7 +363,7 @@ function localFilesOf(songs: Song[]): { uri: string; mime: string }[] {
     files.push({ uri, mime });
   };
   for (const song of songs) {
-    if (song.url || !song.localUri || serverStreamUrl(song)) continue;
+    if (!servedByPhone(song)) continue;
     add(song.localUri, castMime(song));
     const cover = localCoverUrl(song.albumId ?? song.coverArt);
     if (cover) add(cover, coverMime(cover));
@@ -369,12 +387,7 @@ function buildUpnpQueuePayload(queue: Song[]) {
     const url = buildUpnpTrackUrl(song);
     if (!url) return null;
     const info = buildUpnpTrackInfo(song);
-    const settings = useSettings.getState();
-    return {
-      url,
-      mime: castMime(song, settings.maxBitRate > 0 ? settings.streamFormat : undefined),
-      ...info,
-    };
+    return { url, mime: castMime(song, transcodedTo(song)), ...info };
   });
   if (tracks.some((track) => track == null)) return null;
   return tracks as (ReturnType<typeof buildUpnpTrackInfo> & { url: string; mime: string })[];
@@ -384,12 +397,23 @@ function buildUpnpTrackPayload(song: Song) {
   const url = buildUpnpTrackUrl(song);
   if (!url) return null;
   const info = buildUpnpTrackInfo(song);
+  return { url, mime: castMime(song, transcodedTo(song)), ...info };
+}
+
+/**
+ * What the file will have been turned into by the time it arrives, which is
+ * only ever something the SERVER does on the way out.
+ *
+ * A file coming off this phone is served exactly as it lies on disk, so the
+ * transcoding settings have nothing to do with it. Reading them anyway
+ * announced a local FLAC as whatever codec the server had been told to send —
+ * the type in the DIDL disagreeing with the type the phone then served it as,
+ * which is the one thing a renderer is entitled to give up over.
+ */
+function transcodedTo(song: Song): string | undefined {
+  if (!serverStreamUrl(song)) return undefined;
   const settings = useSettings.getState();
-  return {
-    url,
-    mime: castMime(song, settings.maxBitRate > 0 ? settings.streamFormat : undefined),
-    ...info,
-  };
+  return settings.maxBitRate > 0 ? settings.streamFormat : undefined;
 }
 
 /**

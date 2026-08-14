@@ -14,7 +14,6 @@ import java.net.ServerSocket
 import java.net.Socket
 import java.util.Collections
 import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -37,7 +36,13 @@ class FileServer(private val ctx: Context) {
   /** A file JS has published, and what to announce it as. */
   data class Entry(val uri: String, val mime: String)
 
-  private val entries = ConcurrentHashMap<String, Entry>()
+  /**
+   * Swapped whole, never edited in place. Publishing happens between one track
+   * and the next, which is exactly when the renderer may still be pulling the
+   * last bytes of the one before: emptying the map and filling it again left a
+   * window, however short, where what it asked for was a 404.
+   */
+  @Volatile private var entries: Map<String, Entry> = emptyMap()
   private val token = UUID.randomUUID().toString().replace("-", "").substring(0, 16)
 
   private var socket: ServerSocket? = null
@@ -56,7 +61,7 @@ class FileServer(private val ctx: Context) {
 
   fun stop() {
     running = false
-    entries.clear()
+    entries = emptyMap()
     try {
       socket?.close()
     } catch (_: IOException) {
@@ -90,8 +95,7 @@ class FileServer(private val ctx: Context) {
       if (key.isEmpty() || uri.isEmpty()) continue
       next[key] = Entry(uri, item.optString("mime", "application/octet-stream"))
     }
-    entries.clear()
-    entries.putAll(next)
+    entries = next
   }
 
   private fun acceptLoop(server: ServerSocket) {
@@ -156,7 +160,16 @@ class FileServer(private val ctx: Context) {
       if (total < 0) return status(out, 500, "Internal Server Error")
 
       val range = parseRange(lines, total)
-      if (range == null && lines.any { it.startsWith("range:", ignoreCase = true) }) {
+      // Only a byte range this server should have understood earns a refusal.
+      // Anything else it cannot read is a header to ignore, not a reason to
+      // turn the request down: a renderer told 416 gives up, and the file was
+      // there to be served whole all along.
+      val askedBytes =
+        lines.any {
+          it.startsWith("range:", ignoreCase = true) &&
+            it.substringAfter(':').trim().startsWith("bytes=", ignoreCase = true)
+        }
+      if (range == null && askedBytes) {
         // Asked for a range that is not in the file. The header is what says
         // how long it actually is, which is how a renderer corrects itself.
         writeHead(
