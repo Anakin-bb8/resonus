@@ -239,12 +239,12 @@ export function MediaMenuSheet() {
             <View style={styles.divider} />
 
             <Action
-              icon="play"
+              icon="play-outline"
               label={t('Play')}
               onPress={() => withSongs((songs) => void playQueue(songs, 0, name, href))}
             />
             <Action
-              icon="shuffle"
+              icon="shuffle-outline"
               label={t('Shuffle')}
               onPress={() =>
                 withSongs((songs) => {
@@ -255,7 +255,7 @@ export function MediaMenuSheet() {
               }
             />
             <Action
-              icon="list"
+              icon="list-outline"
               label={t('Add to queue')}
               onPress={() =>
                 withSongs((songs) => {
@@ -265,7 +265,7 @@ export function MediaMenuSheet() {
               }
             />
             <Action
-              icon="add"
+              icon="add-outline"
               label={t('Add to a playlist')}
               onPress={() => withSongs((songs) => usePlaylistPicker.getState().open(songs))}
             />
@@ -302,7 +302,7 @@ export function MediaMenuSheet() {
                 an artist without offering a way to them. */}
             {album && artistTargets(album).length > 0 ? (
               <Action
-                icon="person"
+                icon="person-outline"
                 label={t('Go to artist')}
                 onPress={() => {
                   const targets = artistTargets(album);

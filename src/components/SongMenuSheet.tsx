@@ -528,7 +528,7 @@ export function SongMenuSheet() {
                   ) : null}
                   {menu.playNext ? (
                     <Action
-                      icon="play-forward"
+                      icon="play-forward-outline"
                       label={t('Play next')}
                       onPress={() => {
                         playNext(song);
@@ -539,7 +539,7 @@ export function SongMenuSheet() {
                   ) : null}
                   {menu.queue ? (
                     <Action
-                      icon="list"
+                      icon="list-outline"
                       label={t('Add to queue')}
                       onPress={() => {
                         addToQueue(song);
@@ -563,7 +563,7 @@ export function SongMenuSheet() {
                   ) : null}
                   {menu.album && (song.albumId || song.album) ? (
                     <Action
-                      icon="disc"
+                      icon="disc-outline"
                       label={t('Go to album')}
                       onPress={() => {
                         if (song.albumId) { go(`/album/${song.albumId}`); return; }
@@ -576,7 +576,7 @@ export function SongMenuSheet() {
                   ) : null}
                   {menu.artist && (song.artistId || song.artist) ? (
                     <Action
-                      icon="person"
+                      icon="person-outline"
                       label={t('Go to artist')}
                       onPress={() => {
                         const targets = artistTargets(song);
@@ -596,7 +596,7 @@ export function SongMenuSheet() {
                   ) : null}
                   {menu.download && downloaded ? (
                     <Action
-                      icon="arrow-down-circle"
+                      icon="arrow-down-circle-outline"
                       label={t('Remove download')}
                       // Asks first, like albums and playlists do: this one used
                       // to delete on the spot (#48).

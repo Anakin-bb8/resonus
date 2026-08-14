@@ -31,6 +31,11 @@ Releases before 0.2.1 are only listed on the
 
 ### Changed
 
+- The icons in the ⋯ menus are all outlined now. Half of them were filled,
+  which in this app means something: a filled icon is the tab you are on. In a
+  menu nothing is active — it is all things you can do — so the fill was
+  weight where there was nothing to weigh. The one that stays filled is the
+  heart, when the song is already a favourite, because there it is saying so.
 - The local profile stops offering what it can never use: streaming quality
   and codecs, autoplay, the download, export, rating and mix entries of the
   song menu, the Genres and Radio chips, and folder browsing. An account
