@@ -1,20 +1,19 @@
 # Contributing to Resonus
 
-Thanks for wanting to help! Resonus is an Android music player built with
-Expo / React Native for Navidrome / OpenSubsonic / Ampache servers, plus a
-local offline mode. This guide gets you from zero to a running app and a pull
-request, even if you've never touched React Native.
+Resonus is an Android music player built with Expo / React Native for
+Navidrome / OpenSubsonic / Ampache servers, plus a local offline mode. This
+guide gets you from zero to a running app and a pull request.
 
 ## Prerequisites
 
-- **Node.js 22 or newer** — <https://nodejs.org>
-- **pnpm** — `npm install -g pnpm`. Not optional and not interchangeable with
+- **Node.js 22 or newer**: <https://nodejs.org>
+- **pnpm**: `npm install -g pnpm`. Not optional and not interchangeable with
   npm or yarn: this project patches one of its dependencies
   (`patches/expo-audio.patch`, which adds the gapless, lock screen and
   equalizer hooks the app is built on), and pnpm is what applies it. Install
   with anything else and the app will fail to compile in files you never
   touched.
-- **JDK 17** — what CI builds with. Android Studio ships one; if you have
+- **JDK 17**: what CI builds with. Android Studio ships one; if you have
   several, point `JAVA_HOME` at 17. Newer JDKs fail with Gradle errors that
   don't say what is wrong.
 - **Git**
@@ -35,18 +34,18 @@ request, even if you've never touched React Native.
 
 ## Run it on an emulator (or device)
 
-Resonus ships custom native code, so it can't run in the Expo Go app — you
-build your own dev app. It's the same flow most contributors use:
+Resonus ships custom native code, so it can't run in the Expo Go app. You
+build your own dev app:
 
-1. Open Android Studio → **Device Manager** and start an emulator (▶), or plug
-   in a phone with USB debugging on.
+1. Open Android Studio, go to **Device Manager** and start an emulator, or
+   plug in a phone with USB debugging on.
 2. Build, install and launch:
    ```sh
    pnpm android
    ```
    The **first run is slow**: it generates the native `android/` project and
    compiles with Gradle. Later runs are much faster.
-3. For day-to-day **JS/TS changes you don't rebuild** — keep the dev server
+3. For day-to-day **JS/TS changes you don't rebuild**. Keep the dev server
    running and the app hot-reloads:
    ```sh
    pnpm start
@@ -59,8 +58,8 @@ build your own dev app. It's the same flow most contributors use:
    ```
 
 > The `android/` and `ios/` folders are **generated** and git-ignored (Expo
-> Continuous Native Generation). Don't commit them or edit them by hand — change
-> `app.json` or a config plugin instead.
+> Continuous Native Generation). Don't commit them or edit them by hand;
+> change `app.json` or a config plugin instead.
 
 ### If the build fails
 
@@ -70,7 +69,7 @@ Reproduce what CI does, which is known to work: Node 22, JDK 17,
 
 The two usual causes are at the top of this page: a package manager that is not
 pnpm, and a JDK that is not 17. If it still fails, open an issue with the last
-forty lines of the output rather than a description of it — Gradle errors are
+forty lines of the output rather than a description of it. Gradle errors are
 only useful verbatim.
 
 Building an APK to try a change is the slowest way to work and gives you no
@@ -128,7 +127,7 @@ read afterwards by plugging the phone in and running `adb logcat -d -s CarAuto`.
 
 ## Before you commit
 
-Both of these must pass — CI and reviewers expect them green:
+Both of these must pass. CI and reviewers expect them green:
 
 ```sh
 pnpm typecheck
@@ -149,8 +148,9 @@ Conventions:
 - **Everything in English**: comments, commit messages, docs.
 - **Strings are translated**: the English text *is* the key. Add new
   user-facing strings to `en.json`, `es.json` and `ca.json` in
-  `src/i18n/locales/`, appended where they belong rather than sorted — the
-  files are not alphabetical and reordering one buries your change in the diff.
+  `src/i18n/locales/`, appended where they belong rather than sorted: the
+  files are not alphabetical, and reordering one buries your change in the
+  diff.
   **Do not touch `de.json`, `it.json` or `ru.json`**: they have their own
   translators, and a missing string is the signal that reaches them. See
   [TRANSLATING.md](TRANSLATING.md) for plurals and context, and check where a
@@ -161,12 +161,12 @@ Conventions:
   **If the English is ambiguous on its own**, add a line to
   `src/i18n/context.jsonc` saying what it is, and run `pnpm i18n:docs`.
   `Direction` is a sort order and not a compass; `Rate` is a verb and not a
-  bitrate. That one line is what
-  every translator of every language gets shown next to the string, and writing
-  it while you still remember costs less than answering the question five
-  times. Where the string shows up is worked out from your code, so that part
-  needs nothing. `pnpm i18n:status --gaps` lists the strings that have no note
-  yet, for reading down and spotting the ones that need one.
+  bitrate. That one line is what every translator of every language gets
+  shown next to the string, and writing it while you still remember costs less
+  than answering the question five times. Where the string shows up is worked
+  out from your code, so that part needs nothing. `pnpm i18n:status --gaps`
+  lists the strings that have no note yet, for reading down and spotting the
+  ones that need one.
   **To reword a string that is already in**, don't edit it by hand: the English
   text is the key, so it lives in the call, in three locale files, in the notes
   and in the generated page. `pnpm i18n:rename "old text" "new text"` does all
@@ -186,10 +186,9 @@ Conventions:
    ```
 4. On GitHub, open a **Pull Request** against `main` of
    `juananzzz/resonus`. Describe **what** changed and **why**; for UI changes,
-   a screenshot or screen recording really helps.
+   a screenshot or screen recording helps.
 
 One change per pull request. A branch that fixes a bug and also renames things
 and also adds a setting is three reviews at once, and the one thing that turns
 out to be wrong holds up the two that were right.
 
-That's it — thanks for contributing! 🎵

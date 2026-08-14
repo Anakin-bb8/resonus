@@ -32,9 +32,17 @@ wherever the English is ambiguous on its own:
 | `Plain` | A value of `Background`: a flat colour behind the player, no picture |
 | `Free` | Free disk space in the storage bar (Other / Downloads / Free). Not "free of charge" |
 
-Open it next to the file you are editing. If a string still isn't clear after
-that, [tell us](#when-a-string-still-isnt-clear). The answer gets written into
-the repo, not into a reply.
+Open it next to the file you are editing.
+
+If you have Node and pnpm, `pnpm i18n:status <code>` says the same thing about
+your file alone: everything still to do, each string under the screen it shows
+up on and, where there is one, the note explaining it. The screen is worked out
+from the code rather than written down, so it is there even for the strings
+nobody has explained yet, and often it is the whole answer on its own.
+
+If a string still isn't clear after that,
+[tell us](#when-a-string-still-isnt-clear). The answer gets written into the
+repo, not into a reply.
 
 ## If you'd rather work locally
 
@@ -156,7 +164,8 @@ says "Buenas noches" for both), just translate both keys the same way.
 
 ```sh
 pnpm i18n:status              # summary table for every language
-pnpm i18n:status ru           # missing / same / stale, each with its context
+pnpm i18n:status ru           # missing / same / stale, each with its screen
+                              # and, where there is one, what it means
 pnpm i18n:status --todo ru    # just the untranslated keys, one per line
 ```
 
