@@ -293,11 +293,6 @@ export default function PlaybackSettings() {
             here is reported to anybody, it is a position kept on the phone, and
             the rules for when a listen counts have nothing to say about it. */}
         <Text style={settingsStyles.sectionTitle}>{t('Audiobooks')}</Text>
-        <Text style={settingsStyles.sectionDescription}>
-          {t(
-            'Mark an album as an audiobook from its ⋯ menu. One whose tags already say so starts out marked.',
-          )}
-        </Text>
         <SwitchList
           options={[
             {

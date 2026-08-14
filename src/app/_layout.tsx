@@ -273,6 +273,7 @@ export default function RootLayout() {
                 <Stack.Screen name="favorites" {...singular} />
                 <Stack.Screen name="favorites-add" {...singular} />
                 <Stack.Screen name="history" {...singular} />
+                <Stack.Screen name="audiobooks" {...singular} />
                 <Stack.Screen name="settings/index" {...singular} />
                 <Stack.Screen name="settings/downloads" {...singular} />
                 <Stack.Screen name="settings/library" {...singular} />

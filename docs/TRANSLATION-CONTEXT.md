@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 670 of them.
+Every string the app can show, under the screen it shows up on. 668 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -25,12 +25,8 @@ you are actually typing into, which is easier than reading it here.
 | `Couldn't load the album.` | Error on the screen, with a Retry button |
 | `Disc {n}` | Heading over the songs of one disc of a multi-disc album. `{n}` is its number |
 | `Find in playlist` | Placeholder of the search box hidden above a tracklist, for finding a song within it |
-| `It's an audiobook` |  |
-| `Marked as an audiobook` |  |
 | `More from {artist}` | Heading under an album: their other records. `{artist}` is the name |
-| `No longer an audiobook` |  |
 | `No saved audiobook progress yet.` |  |
-| `Not an audiobook` |  |
 | `View cover` | The same as `View image`, for album and playlist artwork |
 
 ## Anywhere in the app
@@ -183,6 +179,15 @@ you are actually typing into, which is easier than reading it here.
 | --- | --- |
 | `No songs here yet` |  |
 | `Try exploring another artist.` |  |
+
+## Audiobooks
+
+| String | What it is |
+| --- | --- |
+| `Audiobooks` | Shelf heading: a book read aloud by one narrator, no music |
+| `No audiobooks yet` |  |
+| `Records whose genre says audiobook, spoken word or audio drama show up here.` |  |
+| `Your downloaded music is in Library.` |  |
 
 ## Browse › Albums
 
@@ -791,7 +796,6 @@ you are actually typing into, which is easier than reading it here.
 | `Evens out loudness between songs using your files' ReplayGain tags.` | The line under “Normalize volume”, explaining it |
 | `Keep playing similar songs when your queue ends. A mix you start yourself always does, even with this off.` | The line under “Autoplay”, explaining it |
 | `Keep screen on` |  |
-| `Mark an album as an audiobook from its ⋯ menu. One whose tags already say so starts out marked.` |  |
 | `Mobile data` | Group header under `Streaming`: the settings that apply on mobile data, as opposed to Wi-Fi |
 | `Never` | A value of `Play downloaded songs from the phone`: always stream, never use the file on the phone. The share sheet's own "never expires" is a separate key, `Never::expiry`, so a language that needs two different words can have them |
 | `No` | A setting value meaning none or zero, not the answer to a question: no crossfade, no seek buttons |

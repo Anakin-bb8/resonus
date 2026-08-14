@@ -158,7 +158,8 @@ export type GridKey =
   | 'browseAlbums'
   | 'browseSongs'
   | 'discography'
-  | 'genre';
+  | 'genre'
+  | 'audiobooks';
 
 /** Exactly what each grid looked like before it could be chosen, so nothing
  *  moves for anybody who never opens the menu. */
@@ -170,6 +171,7 @@ export const GRID_DEFAULT_COLUMNS: Record<GridKey, number> = {
   browseSongs: 2,
   discography: 2,
   genre: 2,
+  audiobooks: 2,
 };
 
 /** What the menu offers. Two is a poster, four is about as far as a cover can
@@ -355,7 +357,8 @@ export type ExploreChipKey =
   | 'songs'
   | 'genres'
   | 'radio'
-  | 'history';
+  | 'history'
+  | 'audiobooks';
 
 /** Chip with its state (order is determined by its position in the list). */
 export interface ExploreChip {
@@ -372,6 +375,7 @@ const EXPLORE_CHIP_KEYS: ExploreChipKey[] = [
   'genres',
   'radio',
   'history',
+  'audiobooks',
 ];
 
 /** Default order and state: the usual ones, all visible. */
@@ -384,6 +388,9 @@ export const DEFAULT_EXPLORE_CHIPS: ExploreChip[] = [
   { key: 'genres', enabled: true },
   { key: 'radio', enabled: true },
   { key: 'history', enabled: false },
+  // Off unless somebody goes and turns it on. Most libraries are music and
+  // nothing else, and a chip for a shelf you do not own is a chip in the way.
+  { key: 'audiobooks', enabled: false },
 ];
 
 /**
