@@ -44,6 +44,7 @@ import { useDominantColor } from '@/hooks/useDominantColor';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { useLyrics } from '@/hooks/useLyrics';
 import { useLocalProfile } from '@/hooks/useLocalProfile';
+import { localHttpAvailable } from '@/lib/localHttp';
 import { useT } from '@/i18n';
 import { artistTargets } from '@/lib/artistNav';
 import { formatDuration, formatGroupedDeviceLabel } from '@/lib/format';
@@ -228,13 +229,12 @@ export default function PlayerScreen() {
   const marqueeTitles = useSettings((s) => s.marqueeTitles);
   const showQueueButton = useSettings((s) => s.showQueueButton);
   const local = useLocalProfile();
-  // Off in the local profile whatever the setting says: casting hands the other
-  // end a link to the song, and a file on this phone is not something anybody
-  // else can be sent to. Offline with an account it is drawn and greyed, since
-  // the devices come back with the network (see `useLocalProfile`).
-  const showDevicesButton = useSettings((s) => s.showDevicesButton) && !local;
+  // The local profile can cast now that the phone serves its own files
+  // (`lib/localHttp`), so the only reason left to hide the button there is a
+  // build without the native module behind it.
+  const showDevicesButton =
+    useSettings((s) => s.showDevicesButton) && (!local || localHttpAvailable);
   const seekButtonsSec = useSettings((s) => s.seekButtonsSec);
-  const offline = useAuthStore((s) => s.offline);
   const serverType = useAuthStore((s) => s.auth?.serverType);
   const hasAccount = useAuthStore((s) => !!s.auth);
   const upnpDevices = useUpnp((s) => s.devices);
@@ -1067,23 +1067,25 @@ export default function PlayerScreen() {
             <View style={styles.bottomRow}>
               <View style={styles.bottomSlot}>
                 {/* Connected to a remote device it's always shown: it's the
-                    only way to disconnect the cast. And then it has to be
-                    pressable, offline or not, or the way out is drawn and
-                    barred: going offline while casting left the cast on with
+                    only way to disconnect the cast.
+                    Never disabled any more. It was, without a connection, back
+                    when a renderer could only be given a URL on the server:
+                    downloads cast from the phone now, so offline there is
+                    something to send. And it left the way out drawn and barred
+                    — going offline mid-cast used to leave the cast on with
                     nothing that could end it. */}
                 {showDevicesButton || remoteDevice ? (
                   <Pressable
                     hitSlop={10}
                     accessibilityRole="button"
                     accessibilityLabel={t('Devices')}
-                    disabled={offline && !remoteDevice}
                     onPress={() => setOutputOpen(true)}
                     style={styles.deviceRow}
                   >
                     <MaterialIcons
                       name="devices"
                       size={22}
-                      color={remoteDevice ? colors.accent : offline ? colors.textMuted : colors.text}
+                      color={remoteDevice ? colors.accent : colors.text}
                     />
                     {remoteDevice ? (
                       <Text style={[styles.deviceName, { color: colors.accent }]} numberOfLines={1}>
