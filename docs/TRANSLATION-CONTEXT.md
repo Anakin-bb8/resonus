@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 651 of them.
+Every string the app can show, under the screen it shows up on. 664 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -19,11 +19,14 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `Album` | In search results, the little word under a result saying what kind of thing it is |
+| `Audiobook` |  |
+| `Continue play with rewind` |  |
+| `Continue playing` |  |
 | `Couldn't load the album.` | Error on the screen, with a Retry button |
 | `Disc {n}` | Heading over the songs of one disc of a multi-disc album. `{n}` is its number |
 | `Find in playlist` | Placeholder of the search box hidden above a tracklist, for finding a song within it |
 | `More from {artist}` | Heading under an album: their other records. `{artist}` is the name |
+| `No saved audiobook progress yet.` |  |
 | `View cover` | The same as `View image`, for album and playlist artwork |
 
 ## Anywhere in the app
@@ -882,13 +885,24 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
+| `1 hour` | How long a shared link lasts, counted from the moment it is made. Not a time of day |
+| `10 minutes` |  |
+| `2 hours` |  |
+| `30 minutes` |  |
+| `5 minutes` |  |
+| `Audiobook progresses deleted` |  |
+| `Continue playing rewind` |  |
+| `Delete audiobook progresses` |  |
 | `Done` | The button that leaves drag-to-reorder, or accepts a fine-tuned number |
 | `How far into a song it counts as played. Whichever of the two comes first.` | At the top of the `Scrobbling` screen, over the two rows below it |
 | `Off` | A setting value meaning disabled (crossfade, normalization…) |
 | `Part of the song` | How much of a song must have played before it counts, as a percentage. One of the two scrobble rules, and it can be `Off` |
+| `Remember where you stopped in audiobooks so you can continue later. Stored locally on this device only.` |  |
 | `Restore defaults` | Button at the end of the `Scrobbling` screen, putting both rules back to what they came as |
+| `Save audiobook progress` |  |
 | `Scrobbling` | Reporting a song as played, to the user's own server and from there to Last.fm or ListenBrainz. The title of its own screen and the row that opens it. The word comes from Last.fm and most languages keep it; use whatever those services call it in yours if they do |
 | `Time played` | How long a song must have played before it counts, as a time. The other scrobble rule, and it can be `Off` too. Whichever of the two comes first is the one that counts |
+| `When resuming an audiobook, jump back by this amount first.` | The line under “Continue playing rewind”, explaining it |
 | `With both off nothing is reported, not even to your own server.` | Shown only when both scrobble rules are `Off`, since that also stops the play counts on the user's own server |
 
 ## Settings › Song lists

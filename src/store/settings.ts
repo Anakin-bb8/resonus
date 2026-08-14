@@ -1,14 +1,14 @@
 /** App settings (persisted): streaming quality and language. */
 import { create } from 'zustand';
 
-import { LANGUAGE_NAMES, isLanguage, type Language } from '@/i18n/languages';
+import { isLanguage, LANGUAGE_NAMES, type Language } from '@/i18n/languages';
 import { hashKey } from '@/lib/localLibrary';
 import { setPerfEnabled } from '@/lib/perfLog';
 import { profileScopeGuard } from '@/lib/profileScope';
+import { queryClient } from '@/lib/query';
 import { getItem, setItem } from '@/lib/storage';
 import { applyAccent, applyThemeMode, DEFAULT_ACCENT, isThemeMode, type ThemeMode } from '@/theme';
 import { profileScopeId, useAuthStore } from './auth';
-import { queryClient } from '@/lib/query';
 
 // The field is named `color` (not `value`) on purpose: Reanimated warns
 // excessively when it sees any `.value` inside an inline style, even if it's
@@ -98,6 +98,15 @@ export const SCROBBLE_SECONDS_MAX = 600;
 export const SCROBBLE_PERCENT_DEFAULT = 50;
 export const SCROBBLE_SECONDS_DEFAULT = 240;
 
+/** Rewind choices for audiobook continue playback, in seconds. */
+export const AUDIOBOOK_CONTINUE_REWIND_OPTIONS = [5 * 60, 10 * 60, 30 * 60, 60 * 60, 2 * 60 * 60] as const;
+export const AUDIOBOOK_CONTINUE_REWIND_DEFAULT = 30 * 60;
+type AudiobookContinueRewindSec = (typeof AUDIOBOOK_CONTINUE_REWIND_OPTIONS)[number];
+
+function isAudiobookContinueRewindSec(value: number): value is AudiobookContinueRewindSec {
+  return AUDIOBOOK_CONTINUE_REWIND_OPTIONS.includes(value as AudiobookContinueRewindSec);
+}
+
 /**
  * How far into a song a listen counts, in seconds, or null for "never".
  *
@@ -125,7 +134,7 @@ export function scrobbleThresholdSec(
 
 // Languages live in a single place (`src/i18n/languages.ts`): adding one is
 // a single line there. Re-exported here to avoid breaking existing imports.
-export { LANGUAGE_NAMES, isLanguage };
+export { isLanguage, LANGUAGE_NAMES };
 export type { Language };
 
 /** Library sort order, Spotify style. */
@@ -566,6 +575,10 @@ interface SettingsState {
   showListRating: boolean;
   /** When the queue ends, continue with similar songs (getSimilarSongs2). */
   autoplaySimilar: boolean;
+  /** Remember audiobook progress locally so albums can resume later. */
+  saveAudiobookProgress: boolean;
+  /** How far Continue playing rewinds from the saved audiobook position. */
+  audiobookContinueRewindSec: number;
   /**
    * Whether the app measures itself (Settings › About → Diagnostics). On for
    * everybody, since a report from the phone with the problem is worth more
@@ -797,6 +810,8 @@ interface SettingsState {
   setShowSongDuration: (value: boolean) => void;
   setShowListRating: (value: boolean) => void;
   setAutoplaySimilar: (value: boolean) => void;
+  setSaveAudiobookProgress: (value: boolean) => void;
+  setAudiobookContinueRewindSec: (value: number) => void;
   setDiagnostics: (value: boolean) => void;
   setUpdateCheck: (value: boolean) => void;
   setNavidromeIdRepair: (value: boolean) => void;
@@ -906,6 +921,8 @@ function snapshot(get: () => SettingsState) {
     showSongDuration: s.showSongDuration,
     showListRating: s.showListRating,
     autoplaySimilar: s.autoplaySimilar,
+    saveAudiobookProgress: s.saveAudiobookProgress,
+    audiobookContinueRewindSec: s.audiobookContinueRewindSec,
     diagnostics: s.diagnostics,
     updateCheck: s.updateCheck,
     navidromeIdRepair: s.navidromeIdRepair,
@@ -992,6 +1009,8 @@ const DEFAULTS = {
   showSongDuration: false,
   showListRating: false,
   autoplaySimilar: true,
+  saveAudiobookProgress: true,
+  audiobookContinueRewindSec: AUDIOBOOK_CONTINUE_REWIND_DEFAULT,
   // Off: measuring is for somebody who is being asked to measure. Everyone
   // else was paying for a report they will never send.
   diagnostics: false,
@@ -1196,6 +1215,19 @@ export const useSettings = create<SettingsState>((set, get) => ({
 
   setAutoplaySimilar: (autoplaySimilar) => {
     set({ autoplaySimilar });
+    persist(snapshot(get));
+  },
+
+  setSaveAudiobookProgress: (saveAudiobookProgress) => {
+    set({ saveAudiobookProgress });
+    persist(snapshot(get));
+  },
+
+  setAudiobookContinueRewindSec: (audiobookContinueRewindSec) => {
+    const value = isAudiobookContinueRewindSec(audiobookContinueRewindSec)
+      ? audiobookContinueRewindSec
+      : AUDIOBOOK_CONTINUE_REWIND_DEFAULT;
+    set({ audiobookContinueRewindSec: value });
     persist(snapshot(get));
   },
 
@@ -1578,6 +1610,8 @@ export const useSettings = create<SettingsState>((set, get) => ({
           showSongDuration: boolean;
           showListRating: boolean;
           autoplaySimilar: boolean;
+          saveAudiobookProgress: boolean;
+          audiobookContinueRewindSec: number;
           diagnostics: boolean;
           updateCheck?: boolean;
           navidromeIdRepair?: boolean;
@@ -1727,6 +1761,15 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (typeof parsed.autoplaySimilar === 'boolean') {
           set({ autoplaySimilar: parsed.autoplaySimilar });
+        }
+        if (typeof parsed.saveAudiobookProgress === 'boolean') {
+          set({ saveAudiobookProgress: parsed.saveAudiobookProgress });
+        }
+        if (
+          typeof parsed.audiobookContinueRewindSec === 'number' &&
+          isAudiobookContinueRewindSec(parsed.audiobookContinueRewindSec)
+        ) {
+          set({ audiobookContinueRewindSec: parsed.audiobookContinueRewindSec });
         }
         if (typeof parsed.crossfadeSec === 'number' && parsed.crossfadeSec >= 0) {
           set({ crossfadeSec: parsed.crossfadeSec });

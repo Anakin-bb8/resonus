@@ -33,6 +33,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { type Song, type StarType } from '@/api/subsonic';
 import { useDominantColor } from '@/hooks/useDominantColor';
+import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { useT } from '@/i18n';
 import { artistTargets } from '@/lib/artistNav';
 import { haptic } from '@/lib/haptics';
@@ -40,12 +41,11 @@ import { listPerf } from '@/lib/listPerf';
 import { useArtistPicker } from '@/store/artistPicker';
 import { usePlayerStore } from '@/store/player';
 import { colors, fontSize, radius, spacing, themed } from '@/theme';
-import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
+import { BackChevron } from './BackChevron';
 import { Cover } from './Cover';
 import { FavoriteButton } from './FavoriteButton';
 import { SelectionBar } from './SelectionBar';
 import { TrackRow } from './TrackRow';
-import { BackChevron } from './BackChevron';
 
 const COVER = Math.min(Dimensions.get('window').width * 0.58, 250);
 const TOPBAR_H = 48;
@@ -150,7 +150,13 @@ interface Props {
   };
   /** `opts` goes straight to `playQueue`: the shuffle button asks for the list
    *  dealt, which the screen owning the songs is the one who can request. */
-  onPlay: (startIndex: number, opts?: { shuffled?: boolean }) => void | Promise<void>;
+  onPlay: (startIndex: number, opts?: { shuffled?: boolean }) => void | Promise<void | boolean>;
+  /** Optional override for the large primary play button in the header. */
+  playButton?: {
+    icon?: keyof typeof Ionicons.glyphMap;
+    label?: string;
+    onPress: () => void | Promise<void>;
+  };
 }
 
 export function TrackListView({
@@ -185,6 +191,7 @@ export function TrackListView({
   searchPlaceholder,
   selection,
   onPlay,
+  playButton,
 }: Props) {
   const router = useRouter();
   const t = useT();
@@ -378,6 +385,12 @@ export function TrackListView({
     // used to be turned on here, and since the mode is remembered between
     // sessions it stayed on for the next album someone pressed Play on.
     void onPlay(0, { shuffled: true });
+  }
+
+  function onPrimaryPlayPress() {
+    if (songs.length === 0) return;
+    if (playButton) void Promise.resolve(playButton.onPress()).catch(() => {});
+    else void Promise.resolve(onPlay(0)).catch(() => {});
   }
 
   return (
@@ -619,14 +632,14 @@ export function TrackListView({
                 <Pressable
                   style={[styles.playButton, { backgroundColor: colors.accent }]}
                   accessibilityRole="button"
-                  accessibilityLabel={t('Play')}
-                  onPress={() => songs.length > 0 && onPlay(0)}
+                  accessibilityLabel={playButton?.label ?? t('Play')}
+                  onPress={onPrimaryPlayPress}
                 >
                   <Ionicons
-                    name="play"
+                    name={playButton?.icon ?? 'play'}
                     size={28}
                     color={colors.onAccent}
-                    style={{ marginLeft: 3 }}
+                    style={{ marginLeft: playButton?.icon ? 0 : 3 }}
                   />
                 </Pressable>
               </View>

@@ -7,9 +7,9 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { COVER, coverArtUrl, getAlbum } from '@/api/data';
 import { type Album, type Song } from '@/api/subsonic';
+import { BackButton } from '@/components/BackButton';
 import { CoverViewer } from '@/components/CoverViewer';
 import { Dialog } from '@/components/Dialog';
-import { BackButton } from '@/components/BackButton';
 import { Message } from '@/components/Message';
 import { MoreFromArtist } from '@/components/MoreFromArtist';
 import { PlaylistPickerSheet } from '@/components/PlaylistPickerSheet';
@@ -19,6 +19,7 @@ import { useDownloadMessage } from '@/hooks/useDownloadMessage';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { songsLabel, useT } from '@/i18n';
 import { formatTotalDuration } from '@/lib/format';
+import { getAlbumProgressEntry, isAudiobookSong, useAlbumProgress } from '@/store/albumProgress';
 import { useAuthStore } from '@/store/auth';
 import { groupDownloadState, useDownloads } from '@/store/downloads';
 import { useMediaMenu } from '@/store/mediaMenu';
@@ -120,12 +121,41 @@ function albumGenres(album: Album, songs: Song[]): string[] {
   return out;
 }
 
+/**
+ * Continue-playing start after rewinding across track boundaries.
+ *
+ * If rewind exceeds the available progress, resume from the beginning.
+ */
+function continuedStartFromProgress(
+  songs: Song[],
+  resumeIndex: number,
+  resumePositionSec: number,
+  rewindSec: number,
+): { index: number; positionSec: number } {
+  if (resumeIndex < 0 || resumeIndex >= songs.length) return { index: 0, positionSec: 0 };
+  const startPos = Math.max(0, Math.round(resumePositionSec));
+  let toRewind = Math.max(0, Math.round(rewindSec));
+  if (toRewind === 0) return { index: resumeIndex, positionSec: startPos };
+  if (toRewind <= startPos) return { index: resumeIndex, positionSec: startPos - toRewind };
+
+  toRewind -= startPos;
+  let i = resumeIndex - 1;
+  while (i >= 0) {
+    const dur = Math.max(0, Math.round(songs[i]?.duration ?? 0));
+    if (toRewind < dur) return { index: i, positionSec: dur - toRewind };
+    toRewind -= dur;
+    i -= 1;
+  }
+  return { index: 0, positionSec: 0 };
+}
+
 export default function AlbumScreen() {
   // Repaints on a change of appearance or accent: a stack keeps this screen
   // mounted while you are on another one, out of reach of anything else.
   useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const auth = useAuthStore((s) => s.auth);
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
   const offline = useAuthStore((s) => s.offline);
   const t = useT();
@@ -133,6 +163,8 @@ export default function AlbumScreen() {
   const showArtistPhoto = useSettings((s) => s.showArtistPhoto);
   const showDiscHeaders = useSettings((s) => s.showDiscHeaders);
   const showGenreChips = useSettings((s) => s.showGenreChips);
+  const saveAudiobookProgress = useSettings((s) => s.saveAudiobookProgress);
+  const audiobookContinueRewindSec = useSettings((s) => s.audiobookContinueRewindSec);
   const playing = usePlayerStore(currentSong);
   const playQueue = usePlayerStore((s) => s.playQueue);
   const openMediaMenu = useMediaMenu((s) => s.open);
@@ -216,6 +248,74 @@ export default function AlbumScreen() {
     ? `℗ ${data.album.year ? `${data.album.year} ` : ''}${labels.join(' · ')}`
     : null;
 
+  const isAudiobookAlbum = saveAudiobookProgress && data.songs.some(isAudiobookSong);
+  const albumProgress = isAudiobookAlbum ? getAlbumProgressEntry(auth, offline, data.album.id) : undefined;
+  const resumeIndex = albumProgress ? data.songs.findIndex((s) => s.id === albumProgress.trackId) : -1;
+  const continueExactStart =
+    resumeIndex >= 0 && albumProgress
+      ? { index: resumeIndex, positionSec: Math.max(0, Math.round(albumProgress.positionSec)) }
+      : null;
+  const continueStart = continueExactStart
+    ? continuedStartFromProgress(
+        data.songs,
+        continueExactStart.index,
+        continueExactStart.positionSec,
+        audiobookContinueRewindSec,
+      )
+    : null;
+  const continueFeatureVisible =
+    isAudiobookAlbum && saveAudiobookProgress && continueExactStart != null;
+
+  const playAlbum = async (
+    startIndex: number,
+    startPositionSec = 0,
+    opts?: { shuffled?: boolean },
+    rememberStartProgress = false,
+  ) => {
+    try {
+      const ok = await playQueue(data.songs, startIndex, data.album.name, `/album/${id}`, opts);
+      if (!ok) return;
+      if (rememberStartProgress) {
+        const song = data.songs[startIndex];
+        if (song) {
+          useAlbumProgress
+            .getState()
+            .remember(auth, offline, data.album.id, song.id, startPositionSec);
+        }
+      }
+      if (startPositionSec > 0) usePlayerStore.getState().seekTo(startPositionSec);
+    } catch {
+      // playQueue already shows a failure toast when it can; keep the UI alive.
+    }
+  };
+
+  function runContinue(start: { index: number; positionSec: number } | null) {
+    if (!start) {
+      toast(t('No saved audiobook progress yet.'));
+      return;
+    }
+    void playAlbum(start.index, start.positionSec, undefined, true);
+  }
+
+  function openAlbumMenu() {
+    if (!data) return;
+    const audiobookActions = continueFeatureVisible
+      ? [
+          {
+            icon: 'play-forward' as const,
+            label: t('Continue playing'),
+            onPress: () => runContinue(continueExactStart),
+          },
+          {
+            icon: 'play-skip-forward' as const,
+            label: t('Continue play with rewind'),
+            onPress: () => runContinue(continueStart),
+          },
+        ]
+      : undefined;
+    openMediaMenu({ kind: 'album', album: data.album, extraActions: audiobookActions });
+  }
+
   // What the server says about the album first (OpenSubsonic sends the full
   // list); otherwise gathered from its songs, which is where the tags actually
   // live and works on any server. Deduped case-insensitively so "Rock" and
@@ -223,7 +323,7 @@ export default function AlbumScreen() {
   const genres = showGenreChips ? albumGenres(data.album, data.songs) : [];
 
   const totalSec = data.songs.reduce((acc, s) => acc + (s.duration ?? 0), 0);
-  const metaParts = [t('Album')];
+  const metaParts = [t(isAudiobookAlbum ? 'Audiobook' : 'Album')];
   if (data.album.year) metaParts.push(String(data.album.year));
   metaParts.push(songsLabel(data.songs.length, lang));
   if (totalSec > 0) metaParts.push(formatTotalDuration(totalSec));
@@ -246,7 +346,7 @@ export default function AlbumScreen() {
         onCoverPress={() => setCoverOpen(true)}
         // Same sheet as the long-press on cards: play, queue, download,
         // favorite and pin, without duplicating the menu.
-        onMenu={() => openMediaMenu({ kind: 'album', album: data.album })}
+        onMenu={openAlbumMenu}
         songs={data.songs}
         currentId={playing?.id}
         numbered
@@ -257,6 +357,15 @@ export default function AlbumScreen() {
           starred: favAlbumIds ? favAlbumIds.has(data.album.id) : !!data.album.starred,
         }}
         download={!offline ? { ...download, onPress: onDownloadPress } : undefined}
+        playButton={
+          continueFeatureVisible
+            ? {
+                icon: 'play-skip-forward',
+                label: t('Continue playing'),
+                onPress: () => runContinue(continueExactStart),
+              }
+            : undefined
+        }
         footer={
           data.album.artistId || labelText ? (
             <>
@@ -291,7 +400,7 @@ export default function AlbumScreen() {
               }
             : undefined,
         }}
-        onPlay={(start, opts) => playQueue(data.songs, start, data.album.name, `/album/${id}`, opts)}
+        onPlay={(start, opts) => playAlbum(start, 0, opts)}
       />
       <PlaylistPickerSheet songs={addingSongs} onClose={() => setAddingSongs(null)} />
       <CoverViewer
