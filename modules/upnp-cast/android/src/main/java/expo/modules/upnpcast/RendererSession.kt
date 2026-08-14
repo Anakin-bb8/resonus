@@ -14,20 +14,39 @@ class RendererSession(
   @Volatile
   private var avTransport: String? = initialDescription.controlUrl(Services.AV_TRANSPORT)
 
+  @Volatile
+  private var queueControl: String? = initialDescription.controlUrl(Services.QUEUE)
+
+  @Volatile
+  private var lastQueueOwnerUid: String? = null
+
+  @Volatile
+  private var lastQueueId: Int? = null
+
+  @Volatile
+  private var lastQueueTrackUrls: List<String> = emptyList()
+
+  @Volatile
+  private var lastQueueUpdateId: Int = 0
+
   private val renderingControl: String? =
     initialDescription.controlUrl(Services.RENDERING_CONTROL)
 
-  data class State(val playbackState: String, val positionMs: Long, val durationMs: Long, val trackNumber: Int?)
+  data class State(
+    val playbackState: String,
+    val positionMs: Long,
+    val durationMs: Long,
+    val trackNumber: Int?,
+    val playMode: String?,
+  )
 
   private data class TransportTarget(val controlUrl: String, val uid: String)
 
   suspend fun load(track: Track): Boolean {
     val target = resolveTransportTarget() ?: return false
-    val accepted = setUri(target.controlUrl, track, withMetadata = true) ||
-      setUri(target.controlUrl, track, withMetadata = false)
+    val accepted = setUri(target.controlUrl, track)
 
     if (!accepted) {
-      avTransport = null
       return false
     }
     return true
@@ -39,17 +58,60 @@ class RendererSession(
     val accepted = replaceQueue(target.controlUrl, target.uid, tracks, currentIndex, autoplay, positionMs, playMode)
 
     if (!accepted) {
-      avTransport = null
       return false
     }
     return true
   }
 
-  private suspend fun setUri(control: String, track: Track, withMetadata: Boolean): Boolean {
-    val escapedMetadata = if (withMetadata) Soap.escape(Didl.forTrack(track)) else ""
+  suspend fun syncQueue(tracks: List<Track>, currentIndex: Int, positionMs: Long, playMode: String?): Boolean {
+    val target = resolveTransportTarget() ?: return false
+    val selectedIndex = currentIndex.coerceIn(0, tracks.lastIndex)
+    val wasPlaying = if (description.isSonos) {
+      val playback = state()?.playbackState?.uppercase()
+      playback == "PLAYING" || playback == "TRANSITIONING"
+    } else {
+      false
+    }
+
+    val accepted = if (description.isSonos) {
+      if (wasPlaying) {
+        syncQueueTailWhilePlaying(
+          control = target.controlUrl,
+          queueOwnerUid = target.uid,
+          tracks = tracks,
+          selectedIndex = selectedIndex,
+          playMode = playMode,
+        )
+      } else {
+        replaceQueueViaQueueService(
+          control = target.controlUrl,
+          queueOwnerUid = target.uid,
+          tracks = tracks,
+          selectedIndex = selectedIndex,
+          autoplay = false,
+          positionMs = positionMs,
+          playMode = playMode,
+          applyTransport = false,
+        )
+      }
+    } else {
+      // Non-Sonos renderers have no queue-service path.
+      loadQueue(tracks, currentIndex, autoplay = false, positionMs = positionMs, playMode = playMode)
+    }
+
+    if (!accepted) {
+      avTransport = null
+      return false
+    }
+
+    return true
+  }
+
+  private suspend fun setUri(control: String, track: Track): Boolean {
+    val escapedMetadata = Soap.escape(Didl.forTrack(track))
     Log.d(
       Soap.TAG,
-      "SetAVTransportURI ${if (withMetadata) "with" else "without"} metadata title=${track.title} artist=${track.artist} album=${track.album} artworkUrl=${track.artworkUrl} metadataBytes=${escapedMetadata.length}"
+      "SetAVTransportURI with metadata title=${track.title} artist=${track.artist} album=${track.album} artworkUrl=${track.artworkUrl} metadataBytes=${escapedMetadata.length}"
     )
     val result = Soap.call(
       control,
@@ -59,49 +121,53 @@ class RendererSession(
         "<CurrentURI>${Soap.escape(track.url)}</CurrentURI>" +
         "<CurrentURIMetaData>$escapedMetadata</CurrentURIMetaData>"
     )
-    if (!result.ok && withMetadata) {
-      Log.w(Soap.TAG, "renderer refused metadata payload; retrying URI without metadata")
-    }
     return result.ok
   }
 
-  private suspend fun enqueueTrack(control: String, track: Track, withMetadata: Boolean): Boolean {
-    val escapedMetadata = if (withMetadata) Soap.escape(Didl.forTrack(track)) else ""
+  private suspend fun enqueueTrack(control: String, track: Track): Boolean {
     val result = Soap.call(
       control,
       Services.AV_TRANSPORT,
       "AddURIToQueue",
       "<InstanceID>0</InstanceID>" +
         "<EnqueuedURI>${Soap.escape(track.url)}</EnqueuedURI>" +
-        "<EnqueuedURIMetaData>$escapedMetadata</EnqueuedURIMetaData>" +
+        "<EnqueuedURIMetaData>${Soap.escape(Didl.forTrack(track))}</EnqueuedURIMetaData>" +
         "<DesiredFirstTrackNumberEnqueued>0</DesiredFirstTrackNumberEnqueued>" +
         "<EnqueueAsNext>0</EnqueueAsNext>"
     )
-    if (!result.ok && withMetadata) {
-      Log.w(Soap.TAG, "renderer refused queue metadata payload; retrying URI without metadata")
-    }
-    return result.ok
+    if (!result.ok) return false
+    val firstTrack = Soap.argument(result.body, "FirstTrackNumberEnqueued")
+    val numTracks = Soap.argument(result.body, "NumTracksAdded")
+    Log.d(
+      Soap.TAG,
+      "AddURIToQueue accepted title=${track.title} firstTrack=$firstTrack numTracks=$numTracks"
+    )
+    return true
   }
 
   private suspend fun replaceQueue(control: String, queueOwnerUid: String, tracks: List<Track>, currentIndex: Int, autoplay: Boolean, positionMs: Long, playMode: String?): Boolean {
     if (tracks.isEmpty()) return false
     val selectedIndex = currentIndex.coerceIn(0, tracks.lastIndex)
 
+    if (description.isSonos) {
+      return replaceQueueViaQueueService(control, queueOwnerUid, tracks, selectedIndex, autoplay, positionMs, playMode)
+    }
+
     if (!transport("RemoveAllTracksFromQueue", INSTANCE)) return false
     for (track in tracks) {
-      val accepted = enqueueTrack(control, track, withMetadata = true) ||
-        enqueueTrack(control, track, withMetadata = false)
+      val accepted = enqueueTrack(control, track)
       if (!accepted) return false
     }
 
     val queueUri = "x-rincon-queue:$queueOwnerUid#0"
+    val queueMeta = Soap.escape(Didl.forQueueContainer(queueUri, tracks.size))
     if (!Soap.call(
         control,
         Services.AV_TRANSPORT,
         "SetAVTransportURI",
         "<InstanceID>0</InstanceID>" +
           "<CurrentURI>${Soap.escape(queueUri)}</CurrentURI>" +
-          "<CurrentURIMetaData></CurrentURIMetaData>"
+          "<CurrentURIMetaData>$queueMeta</CurrentURIMetaData>"
       ).ok
     ) {
       return false
@@ -131,6 +197,357 @@ class RendererSession(
       if (!play()) return false
     }
     return true
+  }
+
+  private suspend fun replaceQueueViaQueueService(
+    control: String,
+    queueOwnerUid: String,
+    tracks: List<Track>,
+    selectedIndex: Int,
+    autoplay: Boolean,
+    positionMs: Long,
+    playMode: String?,
+    applyTransport: Boolean = true,
+  ): Boolean {
+    val queueSvc = queueControl ?: refreshQueueControlUrl() ?: return false
+    val queueId = resolveQueueId(queueSvc, queueOwnerUid) ?: return false
+
+    if (!Soap.call(
+        queueSvc,
+        Services.QUEUE,
+        "RemoveAllTracks",
+        "<QueueID>$queueId</QueueID><UpdateID>0</UpdateID>"
+      ).ok
+    ) {
+      return false
+    }
+
+    var updateId = 0
+    for (track in tracks) {
+      val result = Soap.call(
+        queueSvc,
+        Services.QUEUE,
+        "AddURI",
+        "<QueueID>$queueId</QueueID>" +
+          "<UpdateID>$updateId</UpdateID>" +
+          "<EnqueuedURI>${Soap.escape(track.url)}</EnqueuedURI>" +
+          "<EnqueuedURIMetaData>${Soap.escape(Didl.forTrack(track))}</EnqueuedURIMetaData>" +
+          "<DesiredFirstTrackNumberEnqueued>0</DesiredFirstTrackNumberEnqueued>" +
+          "<EnqueueAsNext>0</EnqueueAsNext>"
+      )
+      if (!result.ok) return false
+      updateId = parseUpdateId(result.body, updateId)
+    }
+
+    rememberQueueState(queueOwnerUid, queueId, tracks, updateId)
+
+    if (!playMode.isNullOrBlank()) {
+      if (!Soap.call(
+          control,
+          Services.AV_TRANSPORT,
+          "SetPlayMode",
+          "<InstanceID>0</InstanceID><NewPlayMode>${Soap.escape(playMode)}</NewPlayMode>"
+        ).ok
+      ) {
+        return false
+      }
+    }
+
+    if (!applyTransport) {
+      return true
+    }
+
+    val queueUri = "x-rincon-queue:$queueOwnerUid#$queueId"
+    val queueMeta = Soap.escape(Didl.forQueueContainer(queueUri, tracks.size))
+    if (!Soap.call(
+        control,
+        Services.AV_TRANSPORT,
+        "SetAVTransportURI",
+        "<InstanceID>0</InstanceID>" +
+          "<CurrentURI>${Soap.escape(queueUri)}</CurrentURI>" +
+          "<CurrentURIMetaData>$queueMeta</CurrentURIMetaData>"
+      ).ok
+    ) {
+      return false
+    }
+
+    if (!transport("Seek", "<InstanceID>0</InstanceID><Unit>TRACK_NR</Unit><Target>${selectedIndex + 1}</Target>")) {
+      return false
+    }
+
+    if (positionMs > 0) {
+      if (!seek(positionMs)) return false
+    }
+
+    if (autoplay) {
+      if (!play()) return false
+    }
+    return true
+  }
+
+  private suspend fun syncQueueTailWhilePlaying(
+    control: String,
+    queueOwnerUid: String,
+    tracks: List<Track>,
+    selectedIndex: Int,
+    playMode: String?,
+  ): Boolean {
+    val queueSvc = queueControl ?: refreshQueueControlUrl() ?: return false
+    val queueId = resolveQueueId(queueSvc, queueOwnerUid) ?: return false
+
+    val previousUrls = lastQueueTrackUrls
+    if (lastQueueOwnerUid != queueOwnerUid || lastQueueId != queueId || previousUrls.isEmpty()) {
+      return false
+    }
+
+    if (selectedIndex < 0 || selectedIndex >= previousUrls.size || selectedIndex >= tracks.size) {
+      return false
+    }
+
+    val currentUrl = tracks[selectedIndex].url
+    if (previousUrls[selectedIndex] != currentUrl) {
+      // Current track moved/replaced: avoid disruptive rewrite while playing.
+      return false
+    }
+
+    val tailStart = selectedIndex + 1
+    val previousTail = previousUrls.drop(tailStart)
+    val targetTail = tracks.drop(tailStart)
+    val targetTailUrls = targetTail.map { it.url }
+    var updateId = lastQueueUpdateId
+
+    when {
+      previousTail == targetTailUrls -> {
+        // No structural change in the tail.
+      }
+      targetTailUrls.size > previousTail.size && previousTail == targetTailUrls.take(previousTail.size) -> {
+        // Pure append after current tail.
+        for (track in targetTail.drop(previousTail.size)) {
+          val result = Soap.call(
+            queueSvc,
+            Services.QUEUE,
+            "AddURI",
+            "<QueueID>$queueId</QueueID>" +
+              "<UpdateID>$updateId</UpdateID>" +
+              "<EnqueuedURI>${Soap.escape(track.url)}</EnqueuedURI>" +
+              "<EnqueuedURIMetaData>${Soap.escape(Didl.forTrack(track))}</EnqueuedURIMetaData>" +
+              "<DesiredFirstTrackNumberEnqueued>0</DesiredFirstTrackNumberEnqueued>" +
+              "<EnqueueAsNext>0</EnqueueAsNext>"
+          )
+          if (!result.ok) return false
+          updateId = parseUpdateId(result.body, updateId)
+        }
+      }
+      targetTailUrls.size > previousTail.size -> {
+        // Insertion-only change (for example "play next"): previous tail stays in
+        // order, with additional tracks inserted somewhere in between.
+        val insertedTracks = mutableListOf<Track>()
+        var prevPos = 0
+        var possibleInsertionOnly = true
+        for (track in targetTail) {
+          val url = track.url
+          if (prevPos < previousTail.size && previousTail[prevPos] == url) {
+            prevPos++
+          } else {
+            insertedTracks.add(track)
+          }
+        }
+        if (prevPos != previousTail.size) {
+          possibleInsertionOnly = false
+        }
+        if (!possibleInsertionOnly) {
+          // KISS: unsupported mixed operation while playing.
+          return false
+        }
+
+        for (track in insertedTracks) {
+          val result = Soap.call(
+            queueSvc,
+            Services.QUEUE,
+            "AddURI",
+            "<QueueID>$queueId</QueueID>" +
+              "<UpdateID>$updateId</UpdateID>" +
+              "<EnqueuedURI>${Soap.escape(track.url)}</EnqueuedURI>" +
+              "<EnqueuedURIMetaData>${Soap.escape(Didl.forTrack(track))}</EnqueuedURIMetaData>" +
+              "<DesiredFirstTrackNumberEnqueued>0</DesiredFirstTrackNumberEnqueued>" +
+              "<EnqueueAsNext>0</EnqueueAsNext>"
+          )
+          if (!result.ok) return false
+          updateId = parseUpdateId(result.body, updateId)
+        }
+
+        // Reorder appended inserts into their target positions.
+        val working = (previousTail + insertedTracks.map { it.url }).toMutableList()
+        for (targetOffset in targetTailUrls.indices) {
+          if (working[targetOffset] == targetTailUrls[targetOffset]) continue
+          val sourceOffset = working.subList(targetOffset, working.size).indexOf(targetTailUrls[targetOffset])
+          if (sourceOffset < 0) return false
+          val absoluteSourceIndex = tailStart + targetOffset + sourceOffset
+          val absoluteTargetIndex = tailStart + targetOffset
+          val reorder = Soap.call(
+            queueSvc,
+            Services.QUEUE,
+            "ReorderTracks",
+            "<QueueID>$queueId</QueueID>" +
+              "<StartingIndex>${absoluteSourceIndex + 1}</StartingIndex>" +
+              "<NumberOfTracks>1</NumberOfTracks>" +
+              "<InsertBefore>${absoluteTargetIndex + 1}</InsertBefore>" +
+              "<UpdateID>$updateId</UpdateID>"
+          )
+          if (!reorder.ok) return false
+          updateId = parseUpdateId(reorder.body, updateId)
+          val moved = working.removeAt(targetOffset + sourceOffset)
+          working.add(targetOffset, moved)
+        }
+      }
+      targetTailUrls.size < previousTail.size && targetTailUrls == previousTail.take(targetTailUrls.size) -> {
+        // Pure trim at the end.
+        val removeCount = previousTail.size - targetTailUrls.size
+        val removeStart = tailStart + targetTailUrls.size
+        val remove = Soap.call(
+          queueSvc,
+          Services.QUEUE,
+          "RemoveTrackRange",
+          "<QueueID>$queueId</QueueID>" +
+            "<UpdateID>$updateId</UpdateID>" +
+            "<StartingIndex>${removeStart + 1}</StartingIndex>" +
+            "<NumberOfTracks>$removeCount</NumberOfTracks>"
+        )
+        if (!remove.ok) return false
+        updateId = parseUpdateId(remove.body, updateId)
+      }
+      targetTailUrls.size < previousTail.size -> {
+        // Deletion-only change inside the tail: target tail must be a subsequence
+        // of the previous tail with stable order.
+        val removeOffsets = mutableListOf<Int>()
+        var prevPos = 0
+        var targetPos = 0
+        while (prevPos < previousTail.size) {
+          val prevUrl = previousTail[prevPos]
+          val targetUrl = targetTailUrls.getOrNull(targetPos)
+          if (targetUrl != null && prevUrl == targetUrl) {
+            targetPos++
+          } else {
+            removeOffsets.add(prevPos)
+          }
+          prevPos++
+        }
+        if (targetPos != targetTailUrls.size) {
+          // KISS: unsupported mixed operation while playing.
+          return false
+        }
+
+        // Remove from back to front, collapsing adjacent indices into one call.
+        var i = removeOffsets.size - 1
+        while (i >= 0) {
+          val rangeEnd = removeOffsets[i]
+          var rangeStart = rangeEnd
+          while (i > 0 && removeOffsets[i - 1] == rangeStart - 1) {
+            i--
+            rangeStart = removeOffsets[i]
+          }
+          val absoluteStart = tailStart + rangeStart
+          val removeCount = rangeEnd - rangeStart + 1
+          val remove = Soap.call(
+            queueSvc,
+            Services.QUEUE,
+            "RemoveTrackRange",
+            "<QueueID>$queueId</QueueID>" +
+              "<UpdateID>$updateId</UpdateID>" +
+              "<StartingIndex>${absoluteStart + 1}</StartingIndex>" +
+              "<NumberOfTracks>$removeCount</NumberOfTracks>"
+          )
+          if (!remove.ok) return false
+          updateId = parseUpdateId(remove.body, updateId)
+          i--
+        }
+      }
+      targetTailUrls.size == previousTail.size &&
+        targetTailUrls.groupingBy { it }.eachCount() == previousTail.groupingBy { it }.eachCount() -> {
+        // Reorder in place using ReorderTracks (InsertBefore semantics).
+        val working = previousTail.toMutableList()
+        for (targetOffset in targetTailUrls.indices) {
+          if (working[targetOffset] == targetTailUrls[targetOffset]) continue
+          val sourceOffset = working.subList(targetOffset, working.size).indexOf(targetTailUrls[targetOffset])
+          if (sourceOffset < 0) return false
+          val absoluteSourceIndex = tailStart + targetOffset + sourceOffset
+          val absoluteTargetIndex = tailStart + targetOffset
+          val reorder = Soap.call(
+            queueSvc,
+            Services.QUEUE,
+            "ReorderTracks",
+            "<QueueID>$queueId</QueueID>" +
+              "<StartingIndex>${absoluteSourceIndex + 1}</StartingIndex>" +
+              "<NumberOfTracks>1</NumberOfTracks>" +
+              "<InsertBefore>${absoluteTargetIndex + 1}</InsertBefore>" +
+              "<UpdateID>$updateId</UpdateID>"
+          )
+          if (!reorder.ok) return false
+          updateId = parseUpdateId(reorder.body, updateId)
+          val moved = working.removeAt(targetOffset + sourceOffset)
+          working.add(targetOffset, moved)
+        }
+      }
+      else -> {
+        // KISS: no mixed-operation fallback while playing.
+        // If this is not a pure append, pure trim, or pure reorder, caller must retry in a safer state.
+        return false
+      }
+    }
+
+    rememberQueueState(queueOwnerUid, queueId, tracks, updateId)
+
+    if (!playMode.isNullOrBlank()) {
+      if (!Soap.call(
+          control,
+          Services.AV_TRANSPORT,
+          "SetPlayMode",
+          "<InstanceID>0</InstanceID><NewPlayMode>${Soap.escape(playMode)}</NewPlayMode>"
+        ).ok
+      ) {
+        return false
+      }
+    }
+
+    return true
+  }
+
+  private fun rememberQueueState(queueOwnerUid: String, queueId: Int, tracks: List<Track>, updateId: Int) {
+    lastQueueOwnerUid = queueOwnerUid
+    lastQueueId = queueId
+    lastQueueTrackUrls = tracks.map { it.url }
+    lastQueueUpdateId = updateId
+  }
+
+  private suspend fun resolveQueueId(queueSvc: String, queueOwnerUid: String): Int? {
+    val attach = Soap.call(
+      queueSvc,
+      Services.QUEUE,
+      "AttachQueue",
+      "<QueueOwnerID>${Soap.escape(queueOwnerUid)}</QueueOwnerID>"
+    )
+    val attachedQueueId = if (attach.ok) {
+      Soap.argument(attach.body, "QueueID")?.toIntOrNull()
+    } else {
+      null
+    }
+    if (attachedQueueId != null) return attachedQueueId
+    val create = Soap.call(
+      queueSvc,
+      Services.QUEUE,
+      "CreateQueue",
+      "<QueueOwnerID>${Soap.escape(queueOwnerUid)}</QueueOwnerID>" +
+        "<QueueOwnerContext></QueueOwnerContext>" +
+        "<QueuePolicy></QueuePolicy>"
+    )
+    if (!create.ok) return null
+    return Soap.argument(create.body, "QueueID")?.toIntOrNull()
+  }
+
+  private fun parseUpdateId(body: String?, fallback: Int): Int {
+    return Soap.argument(body, "NewUpdateID")?.toIntOrNull()
+      ?: Soap.argument(body, "UpdateID")?.toIntOrNull()
+      ?: fallback
   }
 
   suspend fun play(): Boolean = transport("Play", "<InstanceID>0</InstanceID><Speed>1</Speed>")
@@ -197,6 +614,17 @@ class RendererSession(
     ).ok
   }
 
+  suspend fun setSleepTimer(durationSeconds: Int): Boolean {
+    val control = avTransport ?: refreshControlUrl() ?: return false
+    val target = Didl.hms(durationSeconds.coerceAtLeast(0))
+    return Soap.call(
+      control,
+      Services.AV_TRANSPORT,
+      "ConfigureSleepTimer",
+      "<InstanceID>0</InstanceID><NewSleepTimerDuration>${Soap.escape(target)}</NewSleepTimerDuration>"
+    ).ok
+  }
+
   suspend fun setVolume(volume: Int): Boolean {
     val control = renderingControl ?: return false
     return Soap.call(
@@ -213,12 +641,14 @@ class RendererSession(
     val transport = Soap.call(control, Services.AV_TRANSPORT, "GetTransportInfo", INSTANCE)
     val playbackState = Soap.argument(transport.body, "CurrentTransportState") ?: return null
     val position = Soap.call(control, Services.AV_TRANSPORT, "GetPositionInfo", INSTANCE)
+    val settings = Soap.call(control, Services.AV_TRANSPORT, "GetTransportSettings", INSTANCE)
     val trackNumber = Soap.argument(position.body, "Track")?.toIntOrNull()
     return State(
       playbackState = playbackState,
       positionMs = Didl.parseDuration(Soap.argument(position.body, "RelTime")),
       durationMs = Didl.parseDuration(Soap.argument(position.body, "TrackDuration")),
-      trackNumber = trackNumber
+      trackNumber = trackNumber,
+      playMode = Soap.argument(settings.body, "PlayMode")
     )
   }
 
@@ -226,7 +656,24 @@ class RendererSession(
     val fresh = Soap.fetch(location)?.let { DeviceDescription.parse(it, location) } ?: return null
     description = fresh
     avTransport = fresh.controlUrl(Services.AV_TRANSPORT)
+    queueControl = fresh.controlUrl(Services.QUEUE)
+    lastQueueOwnerUid = null
+    lastQueueId = null
+    lastQueueTrackUrls = emptyList()
+    lastQueueUpdateId = 0
     return avTransport
+  }
+
+  private suspend fun refreshQueueControlUrl(): String? {
+    val fresh = Soap.fetch(location)?.let { DeviceDescription.parse(it, location) } ?: return null
+    description = fresh
+    queueControl = fresh.controlUrl(Services.QUEUE)
+    avTransport = fresh.controlUrl(Services.AV_TRANSPORT)
+    lastQueueOwnerUid = null
+    lastQueueId = null
+    lastQueueTrackUrls = emptyList()
+    lastQueueUpdateId = 0
+    return queueControl
   }
 
   private companion object {

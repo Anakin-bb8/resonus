@@ -12,9 +12,26 @@ data class Track(
 )
 
 object Didl {
+  fun forQueueContainer(queueUri: String, childCount: Int): String = buildString {
+    append("<DIDL-Lite xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\"")
+    append(" xmlns:dc=\"http://purl.org/dc/elements/1.1/\"")
+    append(" xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\"")
+    append(" xmlns:r=\"urn:schemas-rinconnetworks-com:metadata-1-0/\">")
+    append("<container id=\"Q:0\" parentID=\"Q:\" restricted=\"true\" childCount=\"")
+    append(childCount.coerceAtLeast(0))
+    append("\">")
+    append("<dc:title>Queue Instance 0</dc:title>")
+    append("<upnp:class>object.container.playlistContainer</upnp:class>")
+    append("<res protocolInfo=\"x-rincon-queue:*:*:*\">")
+    append(Soap.escape(queueUri))
+    append("</res>")
+    append("</container></DIDL-Lite>")
+  }
+
   fun forTrack(track: Track): String = buildString {
     append("<DIDL-Lite xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\"")
     append(" xmlns:dc=\"http://purl.org/dc/elements/1.1/\"")
+    append(" xmlns:r=\"urn:schemas-rinconnetworks-com:metadata-1-0/\"")
     append(" xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\">")
     append("<item id=\"0\" parentID=\"-1\" restricted=\"1\">")
     append("<dc:title>").append(Soap.escape(track.title)).append("</dc:title>")

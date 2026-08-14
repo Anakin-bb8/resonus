@@ -9,6 +9,7 @@ import java.net.URL
 object Services {
   const val AV_TRANSPORT = "urn:schemas-upnp-org:service:AVTransport:1"
   const val RENDERING_CONTROL = "urn:schemas-upnp-org:service:RenderingControl:1"
+  const val QUEUE = "urn:schemas-sonos-com:service:Queue:1"
   const val ZONE_GROUP_TOPOLOGY = "urn:schemas-upnp-org:service:ZoneGroupTopology:1"
 }
 

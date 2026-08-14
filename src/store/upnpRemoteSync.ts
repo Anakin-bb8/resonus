@@ -1,14 +1,11 @@
 import { type Song } from '@/api/backend';
 
-import { isUpnpConnected, upnpLoad, upnpSetPlayMode } from './upnp';
+import { isUpnpConnected, upnpLoad, upnpSetPlayMode, upnpSyncQueue } from './upnp';
 
 export type UpnpPlayMode =
   | 'NORMAL'
-  | 'SHUFFLE_NOREPEAT'
-  | 'SHUFFLE'
   | 'REPEAT_ALL'
-  | 'REPEAT_ONE'
-  | 'SHUFFLE_REPEAT_ONE';
+  | 'REPEAT_ONE';
 
 export interface UpnpRemoteState {
   queue: Song[];
@@ -21,11 +18,13 @@ export interface UpnpRemoteState {
 
 let lastQueueSignature: string | null = null;
 let lastPlayMode: UpnpPlayMode | null = null;
+let inFlightSync: Promise<boolean> | null = null;
 
 function playModeForState(state: UpnpRemoteState): UpnpPlayMode {
-  if (state.repeat === 'one') return state.shuffle ? 'SHUFFLE_REPEAT_ONE' : 'REPEAT_ONE';
-  if (state.repeat === 'all') return state.shuffle ? 'SHUFFLE' : 'REPEAT_ALL';
-  return state.shuffle ? 'SHUFFLE_NOREPEAT' : 'NORMAL';
+  // Keep shuffle local to Resonos, but still forward repeat modes to Sonos.
+  if (state.repeat === 'one') return 'REPEAT_ONE';
+  if (state.repeat === 'all') return 'REPEAT_ALL';
+  return 'NORMAL';
 }
 
 function queueSignature(queue: Song[]): string {
@@ -35,27 +34,49 @@ function queueSignature(queue: Song[]): string {
 export function resetUpnpRemoteSyncState(): void {
   lastQueueSignature = null;
   lastPlayMode = null;
+  inFlightSync = null;
 }
 
 export async function loadUpnpRemoteTrack(state: UpnpRemoteState, autoplay: boolean): Promise<boolean> {
   if (!isUpnpConnected()) return false;
+  if (inFlightSync) return inFlightSync;
   const playMode = playModeForState(state);
-  const ok = await upnpLoad(state.queue, state.index, autoplay, state.positionSec, playMode);
-  if (ok) {
-    lastQueueSignature = queueSignature(state.queue);
-    lastPlayMode = playMode;
+  const run = (async () => {
+    const ok = await upnpLoad(state.queue, state.index, autoplay, state.positionSec, playMode);
+    if (ok) {
+      lastQueueSignature = queueSignature(state.queue);
+      lastPlayMode = playMode;
+    }
+    return ok;
+  })();
+  inFlightSync = run;
+  try {
+    return await run;
+  } finally {
+    if (inFlightSync === run) inFlightSync = null;
   }
-  return ok;
 }
 
 export async function syncUpnpRemoteQueue(state: UpnpRemoteState, force = false): Promise<boolean> {
   if (!isUpnpConnected()) return false;
+  if (inFlightSync) return inFlightSync;
   const playMode = playModeForState(state);
   const signature = queueSignature(state.queue);
   if (force || signature !== lastQueueSignature) {
-    lastQueueSignature = signature;
-    lastPlayMode = playMode;
-    return upnpLoad(state.queue, state.index, state.isPlaying, state.positionSec, playMode);
+    const run = (async () => {
+      const ok = await upnpSyncQueue(state.queue, state.index, state.positionSec, playMode);
+      if (ok) {
+        lastQueueSignature = signature;
+        lastPlayMode = playMode;
+      }
+      return ok;
+    })();
+    inFlightSync = run;
+    try {
+      return await run;
+    } finally {
+      if (inFlightSync === run) inFlightSync = null;
+    }
   }
   if (playMode !== lastPlayMode) {
     lastPlayMode = playMode;

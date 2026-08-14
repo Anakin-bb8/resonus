@@ -27,6 +27,7 @@ export interface RemoteEvents {
   onTrackChanged: (index: number, positionSec: number, durationSec: number) => void;
   onProgress: (positionSec: number, durationSec: number) => void;
   onPlayingChanged: (isPlaying: boolean, isBuffering: boolean) => void;
+  onRepeatChanged?: (repeat: 'off' | 'all' | 'one') => void;
   /** Track finished naturally on the renderer. */
   onFinished: () => void;
 }
@@ -61,6 +62,7 @@ interface NativeState {
   positionMs: number;
   durationMs: number;
   trackNumber?: number;
+  playMode?: string;
 }
 
 const native = requireOptionalNativeModule('UpnpCast');
@@ -80,6 +82,7 @@ let wasPlaying = false;
 /** We requested the pause ourselves: a STOPPED after this is not a track end. */
 let pausedByUs = false;
 let lastNativeTrackNumber = 0;
+let lastRemoteRepeat: 'off' | 'all' | 'one' | null = null;
 
 interface CachedDevice {
   device: UpnpDevice;
@@ -104,8 +107,23 @@ export function initUpnp(ev: RemoteEvents): void {
   events = ev;
 }
 
+function repeatForPlayMode(playMode?: string): 'off' | 'all' | 'one' | null {
+  if (!playMode) return null;
+  const normalized = playMode.trim().toUpperCase();
+  if (!normalized) return null;
+  if (normalized.includes('REPEAT_ONE')) return 'one';
+  if (normalized === 'REPEAT_ALL' || normalized === 'SHUFFLE') return 'all';
+  if (normalized === 'NORMAL' || normalized === 'SHUFFLE_NOREPEAT') return 'off';
+  return null;
+}
+
 function onNativeState(e: NativeState) {
   if (!isUpnpConnected()) return;
+  const repeat = repeatForPlayMode(e.playMode);
+  if (repeat != null && repeat !== lastRemoteRepeat) {
+    lastRemoteRepeat = repeat;
+    events?.onRepeatChanged?.(repeat);
+  }
   const pos = (e.positionMs ?? 0) / 1000;
   const dur = (e.durationMs ?? 0) / 1000;
   const trackNumber = Math.floor(e.trackNumber ?? 0);
@@ -233,6 +251,7 @@ export async function upnpConnect(device: UpnpDevice): Promise<boolean> {
   lastPositionSec = 0;
   lastDurationSec = 0;
   lastNativeTrackNumber = 0;
+  lastRemoteRepeat = null;
   finishedFired = false;
   wasPlaying = false;
   pausedByUs = false;
@@ -256,6 +275,7 @@ export async function upnpDisconnect(silent = false): Promise<void> {
   void stopLocalHttp();
   useUpnp.setState({ connected: false, deviceId: null });
   lastNativeTrackNumber = 0;
+  lastRemoteRepeat = null;
   lastPositionSec = 0;
   lastDurationSec = 0;
   try {
@@ -526,11 +546,46 @@ export async function upnpLoad(
   }
 }
 
+export async function upnpSyncQueue(
+  queue: Song[],
+  index: number,
+  startTimeSec = 0,
+  playMode: string,
+): Promise<boolean> {
+  if (!native || !isUpnpConnected()) return false;
+  if (!currentUpnpDevice()?.isSonos) return false;
+  const payload = buildUpnpQueuePayload(queue);
+  if (!payload) return false;
+  try {
+    return (await native.syncQueue(
+      JSON.stringify({
+        tracks: payload,
+        currentIndex: index,
+        positionMs: startTimeSec * 1000,
+        playMode,
+      }),
+    )) as boolean;
+  } catch {
+    return false;
+  }
+}
+
 export async function upnpSetPlayMode(playMode: string): Promise<boolean> {
   if (!native || !isUpnpConnected()) return false;
   if (!currentUpnpDevice()?.isSonos) return true;
   try {
     return (await native.setPlayMode(playMode)) as boolean;
+  } catch {
+    return false;
+  }
+}
+
+export async function upnpSetSleepTimer(durationSec: number | null): Promise<boolean> {
+  if (!native || !isUpnpConnected()) return false;
+  if (!currentUpnpDevice()?.isSonos) return true;
+  const seconds = Math.max(0, Math.round(durationSec ?? 0));
+  try {
+    return (await native.setSleepTimer(seconds)) as boolean;
   } catch {
     return false;
   }

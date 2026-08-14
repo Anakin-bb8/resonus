@@ -92,6 +92,7 @@ import {
   upnpPause,
   upnpPlay,
   upnpSeek,
+  upnpSetSleepTimer,
   upnpSetVolume,
   type RemoteEvents,
 } from './upnp';
@@ -2553,7 +2554,7 @@ export function initRemoteIntegration() {
   const events: RemoteEvents = {
     onConnected: () => {
       // Transfers the current track to the device and silences the local player.
-      const { queue, index, positionSec, isPlaying } = usePlayerStore.getState();
+      const { queue, index, positionSec, isPlaying, sleepEndsAt } = usePlayerStore.getState();
       cutCrossfade();
       try {
         activePlayer()?.pause();
@@ -2562,6 +2563,10 @@ export function initRemoteIntegration() {
       }
       resetUpnpRemoteSyncState();
       clearLockScreen();
+      if (sleepEndsAt) {
+        const remainingSec = Math.max(0, Math.round((sleepEndsAt - Date.now()) / 1000));
+        void upnpSetSleepTimer(remainingSec);
+      }
       if (queue[index]) void remoteLoadIndex(index, isPlaying, positionSec);
     },
     onTrackChanged: (index, positionSec, durationSec) => {
@@ -2605,6 +2610,13 @@ export function initRemoteIntegration() {
       }
       // Reflects play/pause in the casting media session.
       if (isUpnpConnected()) castSetState(isPlaying, usePlayerStore.getState().positionSec * 1000);
+    },
+    onRepeatChanged: (repeat) => {
+      const current = usePlayerStore.getState().repeat;
+      if (repeat === current) return;
+      usePlayerStore.setState({ repeat });
+      applyLoop(activePlayer());
+      scheduleSync();
     },
     onFinished: () => {
       if (handleSleepAtSongEnd()) return;
@@ -3348,6 +3360,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   toggleShuffle: () => {
     const { shuffle, queue, index, originalQueue, source, sourceHref } = get();
     const current = queue[index];
+    const upnpActive = remoteKind() === 'upnp';
     // Same reasoning as starting a list again (see `forgetHistoryOf`): the
     // order changes under the list being played, so where the back history had
     // you in it no longer means anything. Left in, ⏮️ restored one of those
@@ -3364,17 +3377,32 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       // here. Left on, their songs would be scattered among the album's and the
       // header would have flipped on every track. `originalQueue` keeps the
       // marked copies, so turning shuffle off brings them back with them.
-      const newQueue = (current ? [current, ...rest] : rest).map(unmarked);
-      // The current song keeps playing; we only reorder and leave it at index 0.
-      // Shuffling dissolves the "queued" block (the positions no longer exist).
-      set({
-        shuffle: true,
-        queueDealt: true,
-        originalQueue: queue,
-        queue: newQueue,
-        index: 0,
-        queuedCount: 0,
-      });
+      if (upnpActive && current) {
+        // While UPnP is active, keep the current track index stable and only
+        // shuffle upcoming tracks. This keeps Sonos and app queue indices aligned.
+        const preservedHead = queue.slice(0, index + 1);
+        const shuffledTail = dealt(queue.slice(index + 1));
+        set({
+          shuffle: true,
+          queueDealt: true,
+          originalQueue: queue,
+          queue: [...preservedHead, ...shuffledTail].map(unmarked),
+          index,
+          queuedCount: 0,
+        });
+      } else {
+        const newQueue = (current ? [current, ...rest] : rest).map(unmarked);
+        // The current song keeps playing; we only reorder and leave it at index 0.
+        // Shuffling dissolves the "queued" block (the positions no longer exist).
+        set({
+          shuffle: true,
+          queueDealt: true,
+          originalQueue: queue,
+          queue: newQueue,
+          index: 0,
+          queuedCount: 0,
+        });
+      }
     } else if (originalQueue && current) {
       const newIndex = Math.max(0, originalQueue.findIndex((s) => s.id === current.id));
       set({
@@ -3407,6 +3435,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     if (sleepTimeout) clearTimeout(sleepTimeout);
     sleepTimeout = setTimeout(fireSleepTimer, minutes * 60_000);
     armSleepFade(minutes * 60_000);
+    if (remoteKind() === 'upnp') void upnpSetSleepTimer(minutes * 60);
     set({ sleepEndsAt: Date.now() + minutes * 60_000, sleepAtSongEnd: false });
   },
 
@@ -3416,6 +3445,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     // No fade: the song ends on its own, and fading its end would ruin exactly
     // what was asked to be heard in full.
     abortSleepFade();
+    if (remoteKind() === 'upnp') void upnpSetSleepTimer(null);
     set({ sleepEndsAt: null, sleepAtSongEnd: true });
   },
 
@@ -3423,6 +3453,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     if (sleepTimeout) clearTimeout(sleepTimeout);
     sleepTimeout = null;
     abortSleepFade();
+    if (remoteKind() === 'upnp') void upnpSetSleepTimer(null);
     set({ sleepEndsAt: null, sleepAtSongEnd: false });
   },
 
