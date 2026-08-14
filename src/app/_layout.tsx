@@ -56,6 +56,20 @@ installAppFont();
  *  app has a server and nothing is going to ask for it yet. */
 const MIRROR_DELAY_MS = 15_000;
 
+/** No screen is worth having twice. A tap only becomes a screen once the
+ *  navigation state is committed, so two quick taps on the same row (or on the
+ *  mini player) are two pushes decided against the same state and the stack
+ *  ends up with the same screen two, three, four times over — you close the
+ *  player and there is another player behind it (#148).
+ *
+ *  With this, opening something already in the stack moves that screen to the
+ *  top instead of stacking a copy. Screens with a parameter in the name only
+ *  count as the same when the parameter matches, so two different albums still
+ *  stack; the same album twice does not. It is `dangerously` because it does
+ *  change history: the album you came through earlier is no longer behind you,
+ *  which is what stops the album → artist → album loop from growing forever. */
+const singular = { dangerouslySingular: true } as const;
+
 export default function RootLayout() {
   // The selected font is applied on every render (and after hydrating settings):
   // so everything that gets repainted picks up the current family.
@@ -244,34 +258,34 @@ export default function RootLayout() {
             >
               <Stack.Protected guard={ready}>
                 <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="album/[id]" />
-                <Stack.Screen name="playlist/[id]" />
-                <Stack.Screen name="artist/[id]" />
-                <Stack.Screen name="artist/discography/[id]" />
-                <Stack.Screen name="browse/albums" />
-                <Stack.Screen name="browse/artists" />
-                <Stack.Screen name="browse/folder/[id]" />
-                <Stack.Screen name="genres" />
-                <Stack.Screen name="genre/[name]" />
-                <Stack.Screen name="radio" />
-                <Stack.Screen name="favorites" />
-                <Stack.Screen name="favorites-add" />
-                <Stack.Screen name="history" />
-                <Stack.Screen name="settings/index" />
-                <Stack.Screen name="settings/downloads" />
-                <Stack.Screen name="settings/library" />
-                <Stack.Screen name="settings/playback" />
-                <Stack.Screen name="settings/player" />
-                <Stack.Screen name="settings/language" />
-                <Stack.Screen name="settings/font" />
-                <Stack.Screen name="settings/personalization" />
-                <Stack.Screen name="settings/explore-chips" />
-                <Stack.Screen name="settings/song-menu" />
-                <Stack.Screen name="settings/home-sections" />
-                <Stack.Screen name="settings/equalizer" />
-                <Stack.Screen name="settings/scrobbling" />
-                <Stack.Screen name="settings/theme" />
-                <Stack.Screen name="settings/about" />
+                <Stack.Screen name="album/[id]" {...singular} />
+                <Stack.Screen name="playlist/[id]" {...singular} />
+                <Stack.Screen name="artist/[id]" {...singular} />
+                <Stack.Screen name="artist/discography/[id]" {...singular} />
+                <Stack.Screen name="browse/albums" {...singular} />
+                <Stack.Screen name="browse/artists" {...singular} />
+                <Stack.Screen name="browse/folder/[id]" {...singular} />
+                <Stack.Screen name="genres" {...singular} />
+                <Stack.Screen name="genre/[name]" {...singular} />
+                <Stack.Screen name="radio" {...singular} />
+                <Stack.Screen name="favorites" {...singular} />
+                <Stack.Screen name="favorites-add" {...singular} />
+                <Stack.Screen name="history" {...singular} />
+                <Stack.Screen name="settings/index" {...singular} />
+                <Stack.Screen name="settings/downloads" {...singular} />
+                <Stack.Screen name="settings/library" {...singular} />
+                <Stack.Screen name="settings/playback" {...singular} />
+                <Stack.Screen name="settings/player" {...singular} />
+                <Stack.Screen name="settings/language" {...singular} />
+                <Stack.Screen name="settings/font" {...singular} />
+                <Stack.Screen name="settings/personalization" {...singular} />
+                <Stack.Screen name="settings/explore-chips" {...singular} />
+                <Stack.Screen name="settings/song-menu" {...singular} />
+                <Stack.Screen name="settings/home-sections" {...singular} />
+                <Stack.Screen name="settings/equalizer" {...singular} />
+                <Stack.Screen name="settings/scrobbling" {...singular} />
+                <Stack.Screen name="settings/theme" {...singular} />
+                <Stack.Screen name="settings/about" {...singular} />
               </Stack.Protected>
               <Stack.Protected guard={offline && !offlineSource && !hasDownloads}>
                 <Stack.Screen name="offline" />
@@ -292,6 +306,7 @@ export default function RootLayout() {
                   opaque surface over it. */}
               <Stack.Screen
                 name="player"
+                {...singular}
                 options={{
                   presentation: 'containedTransparentModal',
                   animation: 'fade_from_bottom',
@@ -304,12 +319,25 @@ export default function RootLayout() {
               />
               <Stack.Screen
                 name="queue"
+                {...singular}
                 options={{ presentation: 'modal', animation: 'fade_from_bottom' }}
               />
               <Stack.Screen
                 name="lyrics"
+                {...singular}
                 options={{ presentation: 'modal', animation: 'fade_from_bottom' }}
               />
+              {/* Screens the stack would have picked up on its own; they are
+                  named here only so they can be singular too. Outside the
+                  session guard on purpose: which screens a logout takes with
+                  it is a separate question from this one. */}
+              <Stack.Screen name="browse/songs" {...singular} />
+              <Stack.Screen name="artist/songs/[id]" {...singular} />
+              <Stack.Screen name="settings/network" {...singular} />
+              <Stack.Screen name="settings/song-lists" {...singular} />
+              <Stack.Screen name="settings/quick-grid" {...singular} />
+              <Stack.Screen name="settings/greeting" {...singular} />
+              <Stack.Screen name="settings/diagnostics" {...singular} />
             </Stack>
             {auth || offline ? <AppStartupTab /> : null}
             {auth || offline ? <GlobalMiniPlayer /> : null}

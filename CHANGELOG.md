@@ -45,6 +45,12 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- Two quick taps on the bar at the bottom opened two players, four taps four,
+  and closing one left the next one behind it. A tap only becomes a screen
+  once the one before it has been accounted for, so taps that fall in between
+  all decide to open the same thing. Opening something already open brings it
+  forward now instead of stacking another copy of it, which goes for every
+  screen in the app and not only the player.
 - The Home grid mixed the profiles: albums and playlists from the phone's own
   music turned up inside a server account, and the other way round. What was
   played is kept per profile now, so each one finds its own and nothing else.
