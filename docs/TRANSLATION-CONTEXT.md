@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 669 of them.
+Every string the app can show, under the screen it shows up on. 670 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -562,6 +562,19 @@ you are actually typing into, which is easier than reading it here.
 | `You're on the latest version` | Answer when that check finds nothing newer |
 | `Your preferences will go back to their defaults. Your language stays.` | The line under that dialog |
 
+## Settings › Audiobooks
+
+| String | What it is |
+| --- | --- |
+| `{n} seconds` |  |
+| `Audiobook progress deleted` |  |
+| `Audiobooks` | Shelf heading: a book read aloud by one narrator, no music |
+| `Continue starts this far back from where you stopped.` | The line under “Rewind on resume”, explaining it |
+| `Delete audiobook progress` |  |
+| `Remember where you stopped in audiobooks so you can continue later. Stored on this device only.` |  |
+| `Rewind on resume` |  |
+| `Save audiobook progress` |  |
+
 ## Settings › Diagnostics
 
 | String | What it is |
@@ -751,7 +764,6 @@ you are actually typing into, which is easier than reading it here.
 | `Keep Home, Search and Library at the bottom of every screen. Holding the back arrow goes back to the one you came from either way.` |  |
 | `Language` |  |
 | `Navigation` | Section header: how you move around the app |
-| `Off` | A setting value meaning disabled (crossfade, normalization…) |
 | `Open the app on` | Which tab the app opens on, and comes back to after a while away |
 | `Play next` | Action: put this song right after the one playing, without clearing the rest |
 | `Quick grid` | The grid of shortcut tiles on Home |
@@ -776,10 +788,8 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `“Original” is the file exactly as it is on the server, with nothing transcoded. A lower bitrate saves data and may cost audible quality.` |  |
-| `{n} seconds` |  |
 | `A downloaded song normally plays from the file, which costs no data. Choose otherwise if your downloads are smaller copies and you would rather stream the good one when you can. Without a connection the file is always used.` |  |
 | `Always` | A value of when a downloaded song is played from the file instead of streamed |
-| `Audiobook progress deleted` |  |
 | `Audiobooks` | Shelf heading: a book read aloud by one narrator, no music |
 | `Automatic` | A value of `Normalize volume`: let the app decide between per track and per album |
 | `Autoplay` | When the queue runs out, keep playing with similar songs instead of stopping |
@@ -788,9 +798,7 @@ you are actually typing into, which is easier than reading it here.
 | `Check on startup whether Android is restricting the app, which is what usually stops playback in the background.` | The line under “Warn about battery optimization”, explaining it |
 | `Codec to transcode to. At “Original” quality nothing is transcoded.` |  |
 | `Codec to transcode to. Your server must support it.` |  |
-| `Continue starts this far back from where you stopped.` | The line under “Rewind on resume”, explaining it |
 | `Crossfade` | One song fading into the next |
-| `Delete audiobook progress` |  |
 | `Done` | The button that leaves drag-to-reorder, or accepts a fine-tuned number |
 | `Equalizer` |  |
 | `Evens out loudness between songs using your files' ReplayGain tags.` | The line under “Normalize volume”, explaining it |
@@ -801,7 +809,6 @@ you are actually typing into, which is easier than reading it here.
 | `No` | A setting value meaning none or zero, not the answer to a question: no crossfade, no seek buttons |
 | `Normalize volume` |  |
 | `Not used` | Replaces the codec's value when that network's quality is `Original`. Nothing is transcoded then, so the codec setting has nothing to do and the row is greyed out |
-| `Off` | A setting value meaning disabled (crossfade, normalization…) |
 | `On mobile data only` | A value of when a downloaded song is played from the file instead of streamed |
 | `Only if it is the original file` | One of the values of “Play downloaded songs from the phone” |
 | `Original` | Quality option: the file exactly as it is on the server, nothing transcoded. It also appears in quotes inside two descriptions on those screens, so use the same wording in all three |
@@ -810,10 +817,8 @@ you are actually typing into, which is easier than reading it here.
 | `Pre-amp` | A gain in decibels applied on top of normalization, for when everything ends up too quiet |
 | `Preload upcoming tracks` |  |
 | `Quality & playback` |  |
-| `Remember where you stopped in audiobooks so you can continue later. Stored on this device only.` |  |
+| `Remembering where you left a book.` | The line under “Audiobooks”, explaining it |
 | `Request the next few tracks ahead of time so they start instantly. Helps with proxy servers like Octo-Fiesta or slow sources that fetch tracks on demand.` | The line under “Preload upcoming tracks”, explaining it |
-| `Rewind on resume` |  |
-| `Save audiobook progress` |  |
 | `Scrobbling` | Reporting a song as played, to the user's own server and from there to Last.fm or ListenBrainz. The title of its own screen and the row that opens it. The word comes from Last.fm and most languages keep it; use whatever those services call it in yours if they do |
 | `Songs blend into each other when one ends.` | The line under “Crossfade”, explaining it |
 | `Sound` | Section header: normalization and the pre-amp |
@@ -906,7 +911,6 @@ you are actually typing into, which is easier than reading it here.
 | --- | --- |
 | `Done` | The button that leaves drag-to-reorder, or accepts a fine-tuned number |
 | `How far into a song it counts as played. Whichever of the two comes first.` | At the top of the `Scrobbling` screen, over the two rows below it |
-| `Off` | A setting value meaning disabled (crossfade, normalization…) |
 | `Part of the song` | How much of a song must have played before it counts, as a percentage. One of the two scrobble rules, and it can be `Off` |
 | `Restore defaults` | Button at the end of the `Scrobbling` screen, putting both rules back to what they came as |
 | `Scrobbling` | Reporting a song as played, to the user's own server and from there to Last.fm or ListenBrainz. The title of its own screen and the row that opens it. The word comes from Last.fm and most languages keep it; use whatever those services call it in yours if they do |
@@ -1009,6 +1013,7 @@ you are actually typing into, which is easier than reading it here.
 | `No results for “{q}”` | Empty state. `{q}` is what was typed |
 | `Not available offline` | This one is not downloaded, so it cannot play without a connection |
 | `Nothing here is downloaded` | Toast when playing something that is not downloaded, offline |
+| `Off` | A setting value meaning disabled (crossfade, normalization…) |
 | `Offline` | The toast shown when the app falls into offline mode by itself, and the badge that says it is in it |
 | `Pause` | Read out by the screen reader for the pause button. A verb |
 | `Play` | Read out by the screen reader for the play button. A verb |

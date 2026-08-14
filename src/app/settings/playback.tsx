@@ -25,12 +25,9 @@ import {
 } from '@/components/SettingsUI';
 import { useLocalProfile } from '@/hooks/useLocalProfile';
 import { useT } from '@/i18n';
-import { useAlbumProgress } from '@/store/albumProgress';
 import { useAuthStore } from '@/store/auth';
-import { useToast } from '@/store/toast';
 import { useTheme } from '@/theme';
 import {
-  AUDIOBOOK_CONTINUE_REWIND_OPTIONS,
   BITRATE_OPTIONS,
   clampReplayGainPreamp,
   REPLAY_GAIN_PREAMP_LIMIT,
@@ -70,11 +67,6 @@ export default function PlaybackSettings() {
   const batteryWarning = useSettings((s) => s.batteryWarning);
   const setBatteryWarning = useSettings((s) => s.setBatteryWarning);
   const setKeepScreenAwake = useSettings((s) => s.setKeepScreenAwake);
-  const saveAudiobookProgress = useSettings((s) => s.saveAudiobookProgress);
-  const setSaveAudiobookProgress = useSettings((s) => s.setSaveAudiobookProgress);
-  const audiobookContinueRewindSec = useSettings((s) => s.audiobookContinueRewindSec);
-  const setAudiobookContinueRewindSec = useSettings((s) => s.setAudiobookContinueRewindSec);
-  const toast = useToast((s) => s.show);
 
   // Only "Original" is a word; the rest are a number and a unit that read the
   // same in every language.
@@ -86,15 +78,6 @@ export default function PlaybackSettings() {
     value: v,
     label: v === '' ? t('Server default') : v.toUpperCase(),
   }));
-  const rewindOptions = AUDIOBOOK_CONTINUE_REWIND_OPTIONS.map((sec) => ({
-    value: sec,
-    label: sec === 0 ? t('Off') : t('{n} seconds', { n: sec }),
-  }));
-
-  function deleteAudiobookProgress() {
-    useAlbumProgress.getState().clearAll();
-    toast(t('Audiobook progress deleted'));
-  }
 
   return (
     <SettingsPage title={t('Quality & playback')}>
@@ -294,38 +277,18 @@ export default function PlaybackSettings() {
           onPress={() => router.push('/settings/scrobbling')}
         />
 
-        {/* Under Playback rather than Scrobbling, where this arrived: nothing
-            here is reported to anybody, it is a position kept on the phone, and
-            the rules for when a listen counts have nothing to say about it. */}
-        <Text style={settingsStyles.sectionTitle}>{t('Audiobooks')}</Text>
-        <SwitchList
-          options={[
-            {
-              label: t('Save audiobook progress'),
-              description: t(
-                'Remember where you stopped in audiobooks so you can continue later. Stored on this device only.',
-              ),
-              value: saveAudiobookProgress,
-              onChange: setSaveAudiobookProgress,
-            },
-          ]}
-        />
-        <SelectList
-          label={t('Rewind on resume')}
-          description={t('Continue starts this far back from where you stopped.')}
-          options={rewindOptions}
-          value={audiobookContinueRewindSec}
-          onChange={setAudiobookContinueRewindSec}
-          disabled={!saveAudiobookProgress}
-        />
-        {/* Not greyed out with the switch off: what it clears is what was saved
-            while it was on, which is exactly when somebody turning it off wants
-            it gone. */}
+        {/* Its own screen too, and next to Scrobbling rather than under a
+            heading of its own: a switch, a choice and something to delete is a
+            section, and a library with no books in it had to scroll past all
+            three of them. Under Playback rather than Scrobbling, where this
+            arrived: nothing there is reported to anybody, it is a position kept
+            on the phone, and the rules for when a listen counts have nothing to
+            say about it. */}
         <SettingRow
-          icon="trash-outline"
-          label={t('Delete audiobook progress')}
-          destructive
-          onPress={deleteAudiobookProgress}
+          label={t('Audiobooks')}
+          description={t('Remembering where you left a book.')}
+          chevron
+          onPress={() => router.push('/settings/audiobooks')}
         />
       </ScrollView>
     </SettingsPage>
