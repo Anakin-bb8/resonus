@@ -43,6 +43,7 @@ import { StarRating } from '@/components/StarRating';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { useLyrics } from '@/hooks/useLyrics';
+import { useLocalProfile } from '@/hooks/useLocalProfile';
 import { useT } from '@/i18n';
 import { artistTargets } from '@/lib/artistNav';
 import { formatDuration, formatGroupedDeviceLabel } from '@/lib/format';
@@ -226,7 +227,12 @@ export default function PlayerScreen() {
   const coverTapAction = useSettings((s) => s.coverTapAction);
   const marqueeTitles = useSettings((s) => s.marqueeTitles);
   const showQueueButton = useSettings((s) => s.showQueueButton);
-  const showDevicesButton = useSettings((s) => s.showDevicesButton);
+  const local = useLocalProfile();
+  // Off in the local profile whatever the setting says: casting hands the other
+  // end a link to the song, and a file on this phone is not something anybody
+  // else can be sent to. Offline with an account it is drawn and greyed, since
+  // the devices come back with the network (see `useLocalProfile`).
+  const showDevicesButton = useSettings((s) => s.showDevicesButton) && !local;
   const seekButtonsSec = useSettings((s) => s.seekButtonsSec);
   const offline = useAuthStore((s) => s.offline);
   const serverType = useAuthStore((s) => s.auth?.serverType);
@@ -1061,13 +1067,16 @@ export default function PlayerScreen() {
             <View style={styles.bottomRow}>
               <View style={styles.bottomSlot}>
                 {/* Connected to a remote device it's always shown: it's the
-                    only way to disconnect the cast. */}
+                    only way to disconnect the cast. And then it has to be
+                    pressable, offline or not, or the way out is drawn and
+                    barred: going offline while casting left the cast on with
+                    nothing that could end it. */}
                 {showDevicesButton || remoteDevice ? (
                   <Pressable
                     hitSlop={10}
                     accessibilityRole="button"
                     accessibilityLabel={t('Devices')}
-                    disabled={offline}
+                    disabled={offline && !remoteDevice}
                     onPress={() => setOutputOpen(true)}
                     style={styles.deviceRow}
                   >
