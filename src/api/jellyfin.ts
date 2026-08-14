@@ -46,7 +46,20 @@ import { fetch } from 'expo/fetch';
 import { assertCanRequest } from './netGate';
 
 const CLIENT_VERSION = Constants.expoConfig?.version ?? '0.0.0';
-const CLIENT_DEVICE = (Constants.deviceName ?? 'Android').trim().replaceAll('"', "'") || 'Android';
+/**
+ * The phone's model (`Build.MODEL` on Android), which is what the server's
+ * dashboard lists this session under.
+ *
+ * Percent-encoded because Jellyfin decodes every value of the authorization
+ * header (`WebUtility.UrlDecode` in `AuthorizationContext.GetParts`, and it
+ * has done since 10.8), so encoding it here is what makes a name with a space
+ * or a `+` in it arrive whole. It also keeps the header ASCII, which is not
+ * optional: the request goes out through OkHttp, which throws on any byte
+ * outside 0x20..0x7e in a header value, and this header rides on every
+ * request. A model with an accent or a CJK character in it would take the
+ * whole account down with it, not just the name on the dashboard.
+ */
+const CLIENT_DEVICE = encodeURIComponent(Constants.deviceName?.trim() || 'Android');
 const REQUEST_TIMEOUT_MS = 15000;
 
 /** A Jellyfin tick is 100 ns; API times come in ticks. */

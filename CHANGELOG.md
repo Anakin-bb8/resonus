@@ -50,6 +50,10 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- Jellyfin was told it was talking to version 1.0 of something on a device
+  called Android, and its dashboard said exactly that. It gets the phone's
+  model and the version you are actually running, so the session is worth
+  reading. Thanks to @garrit-schroeder (#150).
 - Two quick taps on the bar at the bottom opened two players, four taps four,
   and closing one left the next one behind it. A tap only becomes a screen
   once the one before it has been accounted for, so taps that fall in between
