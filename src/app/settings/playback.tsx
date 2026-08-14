@@ -25,9 +25,12 @@ import {
 } from '@/components/SettingsUI';
 import { useLocalProfile } from '@/hooks/useLocalProfile';
 import { useT } from '@/i18n';
+import { useAlbumProgress } from '@/store/albumProgress';
 import { useAuthStore } from '@/store/auth';
+import { useToast } from '@/store/toast';
 import { useTheme } from '@/theme';
 import {
+  AUDIOBOOK_CONTINUE_REWIND_OPTIONS,
   BITRATE_OPTIONS,
   clampReplayGainPreamp,
   REPLAY_GAIN_PREAMP_LIMIT,
@@ -67,6 +70,11 @@ export default function PlaybackSettings() {
   const batteryWarning = useSettings((s) => s.batteryWarning);
   const setBatteryWarning = useSettings((s) => s.setBatteryWarning);
   const setKeepScreenAwake = useSettings((s) => s.setKeepScreenAwake);
+  const saveAudiobookProgress = useSettings((s) => s.saveAudiobookProgress);
+  const setSaveAudiobookProgress = useSettings((s) => s.setSaveAudiobookProgress);
+  const audiobookContinueRewindSec = useSettings((s) => s.audiobookContinueRewindSec);
+  const setAudiobookContinueRewindSec = useSettings((s) => s.setAudiobookContinueRewindSec);
+  const toast = useToast((s) => s.show);
 
   // Only "Original" is a word; the rest are a number and a unit that read the
   // same in every language.
@@ -78,6 +86,22 @@ export default function PlaybackSettings() {
     value: v,
     label: v === '' ? t('Server default') : v.toUpperCase(),
   }));
+  const rewindLabels: Record<number, string> = {
+    [5 * 60]: t('5 minutes'),
+    [10 * 60]: t('10 minutes'),
+    [30 * 60]: t('30 minutes'),
+    [60 * 60]: t('1 hour'),
+    [2 * 60 * 60]: t('2 hours'),
+  };
+  const rewindOptions = AUDIOBOOK_CONTINUE_REWIND_OPTIONS.map((sec) => ({
+    value: sec,
+    label: rewindLabels[sec] ?? t('30 minutes'),
+  }));
+
+  function deleteAudiobookProgress() {
+    useAlbumProgress.getState().clearAll();
+    toast(t('Audiobook progress deleted'));
+  }
 
   return (
     <SettingsPage title={t('Quality & playback')}>
@@ -263,6 +287,40 @@ export default function PlaybackSettings() {
               onChange: setBatteryWarning,
             },
           ]}
+        />
+
+        {/* Under Playback rather than Scrobbling, where this arrived: nothing
+            here is reported to anybody, it is a position kept on the phone, and
+            the rules for when a listen counts have nothing to say about it. */}
+        <Text style={settingsStyles.sectionTitle}>{t('Audiobooks')}</Text>
+        <SwitchList
+          options={[
+            {
+              label: t('Save audiobook progress'),
+              description: t(
+                'Remember where you stopped in audiobooks so you can continue later. Stored on this device only.',
+              ),
+              value: saveAudiobookProgress,
+              onChange: setSaveAudiobookProgress,
+            },
+          ]}
+        />
+        <SelectList
+          label={t('Continue playing rewind')}
+          description={t('When resuming an audiobook, jump back by this amount first.')}
+          options={rewindOptions}
+          value={audiobookContinueRewindSec}
+          onChange={setAudiobookContinueRewindSec}
+          disabled={!saveAudiobookProgress}
+        />
+        {/* Not greyed out with the switch off: what it clears is what was saved
+            while it was on, which is exactly when somebody turning it off wants
+            it gone. */}
+        <SettingRow
+          icon="trash-outline"
+          label={t('Delete audiobook progress')}
+          destructive
+          onPress={deleteAudiobookProgress}
         />
 
         {/* Its own screen: two sliders and a line of explanation is more than

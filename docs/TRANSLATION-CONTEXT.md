@@ -126,7 +126,6 @@ you are actually typing into, which is easier than reading it here.
 | `All songs` |  |
 | `Appears on` | Albums the artist appears on: features, compilations |
 | `Audio dramas` | Shelf heading: a play performed for the ear, with several voices rather than one narrator. Radio drama is the same thing where that name is the familiar one |
-| `Audiobooks` | Shelf heading: a book read aloud by one narrator, no music |
 | `Broadcasts` | Shelf heading: records of something first put out on radio, television or as a podcast |
 | `Compilations` | Shelf heading: records collecting older recordings, a “best of” or a various-artists collection |
 | `Couldn't load the artist.` | Error on the screen, with a Retry button |
@@ -158,7 +157,6 @@ you are actually typing into, which is easier than reading it here.
 | --- | --- |
 | `Appears on` | Albums the artist appears on: features, compilations |
 | `Audio dramas` | Shelf heading: a play performed for the ear, with several voices rather than one narrator. Radio drama is the same thing where that name is the familiar one |
-| `Audiobooks` | Shelf heading: a book read aloud by one narrator, no music |
 | `Broadcasts` | Shelf heading: records of something first put out on radio, television or as a podcast |
 | `Compilations` | Shelf heading: records collecting older recordings, a “best of” or a various-artists collection |
 | `Couldn't load the artist.` | Error on the screen, with a Retry button |
@@ -765,8 +763,15 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `“Original” is the file exactly as it is on the server, with nothing transcoded. A lower bitrate saves data and may cost audible quality.` |  |
+| `1 hour` | How long a shared link lasts, counted from the moment it is made. Not a time of day |
+| `10 minutes` |  |
+| `2 hours` |  |
+| `30 minutes` |  |
+| `5 minutes` |  |
 | `A downloaded song normally plays from the file, which costs no data. Choose otherwise if your downloads are smaller copies and you would rather stream the good one when you can. Without a connection the file is always used.` |  |
 | `Always` | A value of when a downloaded song is played from the file instead of streamed |
+| `Audiobook progress deleted` |  |
+| `Audiobooks` | Shelf heading: a book read aloud by one narrator, no music |
 | `Automatic` | A value of `Normalize volume`: let the app decide between per track and per album |
 | `Autoplay` | When the queue runs out, keep playing with similar songs instead of stopping |
 | `By album` | Volume normalization (ReplayGain) mode: even out loudness album by album |
@@ -774,7 +779,9 @@ you are actually typing into, which is easier than reading it here.
 | `Check on startup whether Android is restricting the app, which is what usually stops playback in the background.` | The line under “Warn about battery optimization”, explaining it |
 | `Codec to transcode to. At “Original” quality nothing is transcoded.` |  |
 | `Codec to transcode to. Your server must support it.` |  |
+| `Continue playing rewind` |  |
 | `Crossfade` | One song fading into the next |
+| `Delete audiobook progress` |  |
 | `Done` | The button that leaves drag-to-reorder, or accepts a fine-tuned number |
 | `Equalizer` |  |
 | `Evens out loudness between songs using your files' ReplayGain tags.` | The line under “Normalize volume”, explaining it |
@@ -794,7 +801,9 @@ you are actually typing into, which is easier than reading it here.
 | `Pre-amp` | A gain in decibels applied on top of normalization, for when everything ends up too quiet |
 | `Preload upcoming tracks` |  |
 | `Quality & playback` |  |
+| `Remember where you stopped in audiobooks so you can continue later. Stored on this device only.` |  |
 | `Request the next few tracks ahead of time so they start instantly. Helps with proxy servers like Octo-Fiesta or slow sources that fetch tracks on demand.` | The line under “Preload upcoming tracks”, explaining it |
+| `Save audiobook progress` |  |
 | `Scrobbling` | Reporting a song as played, to the user's own server and from there to Last.fm or ListenBrainz. The title of its own screen and the row that opens it. The word comes from Last.fm and most languages keep it; use whatever those services call it in yours if they do |
 | `Songs blend into each other when one ends.` | The line under “Crossfade”, explaining it |
 | `Sound` | Section header: normalization and the pre-amp |
@@ -807,6 +816,7 @@ you are actually typing into, which is easier than reading it here.
 | `Tune the sound band by band.` | The line under “Equalizer”, explaining it |
 | `Warn about battery optimization` |  |
 | `When a song counts as played.` | Under the `Scrobbling` row, saying what the screen it opens is about |
+| `When resuming an audiobook, jump back by this amount first.` | The line under “Continue playing rewind”, explaining it |
 
 ## Settings › Player
 
@@ -885,24 +895,13 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `1 hour` | How long a shared link lasts, counted from the moment it is made. Not a time of day |
-| `10 minutes` |  |
-| `2 hours` |  |
-| `30 minutes` |  |
-| `5 minutes` |  |
-| `Audiobook progresses deleted` |  |
-| `Continue playing rewind` |  |
-| `Delete audiobook progresses` |  |
 | `Done` | The button that leaves drag-to-reorder, or accepts a fine-tuned number |
 | `How far into a song it counts as played. Whichever of the two comes first.` | At the top of the `Scrobbling` screen, over the two rows below it |
 | `Off` | A setting value meaning disabled (crossfade, normalization…) |
 | `Part of the song` | How much of a song must have played before it counts, as a percentage. One of the two scrobble rules, and it can be `Off` |
-| `Remember where you stopped in audiobooks so you can continue later. Stored locally on this device only.` |  |
 | `Restore defaults` | Button at the end of the `Scrobbling` screen, putting both rules back to what they came as |
-| `Save audiobook progress` |  |
 | `Scrobbling` | Reporting a song as played, to the user's own server and from there to Last.fm or ListenBrainz. The title of its own screen and the row that opens it. The word comes from Last.fm and most languages keep it; use whatever those services call it in yours if they do |
 | `Time played` | How long a song must have played before it counts, as a time. The other scrobble rule, and it can be `Off` too. Whichever of the two comes first is the one that counts |
-| `When resuming an audiobook, jump back by this amount first.` | The line under “Continue playing rewind”, explaining it |
 | `With both off nothing is reported, not even to your own server.` | Shown only when both scrobble rules are `Off`, since that also stops the play counts on the user's own server |
 
 ## Settings › Song lists
