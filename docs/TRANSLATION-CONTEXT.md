@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 668 of them.
+Every string the app can show, under the screen it shows up on. 664 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -20,7 +20,6 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `Audiobook` |  |
-| `Continue play with rewind` |  |
 | `Continue playing` |  |
 | `Couldn't load the album.` | Error on the screen, with a Retry button |
 | `Disc {n}` | Heading over the songs of one disc of a multi-disc album. `{n}` is its number |
@@ -772,11 +771,7 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `“Original” is the file exactly as it is on the server, with nothing transcoded. A lower bitrate saves data and may cost audible quality.` |  |
-| `1 hour` | How long a shared link lasts, counted from the moment it is made. Not a time of day |
-| `10 minutes` |  |
-| `2 hours` |  |
-| `30 minutes` |  |
-| `5 minutes` |  |
+| `{n} seconds` |  |
 | `A downloaded song normally plays from the file, which costs no data. Choose otherwise if your downloads are smaller copies and you would rather stream the good one when you can. Without a connection the file is always used.` |  |
 | `Always` | A value of when a downloaded song is played from the file instead of streamed |
 | `Audiobook progress deleted` |  |
@@ -788,7 +783,7 @@ you are actually typing into, which is easier than reading it here.
 | `Check on startup whether Android is restricting the app, which is what usually stops playback in the background.` | The line under “Warn about battery optimization”, explaining it |
 | `Codec to transcode to. At “Original” quality nothing is transcoded.` |  |
 | `Codec to transcode to. Your server must support it.` |  |
-| `Continue playing rewind` |  |
+| `Continue starts this far back from where you stopped.` | The line under “Rewind on resume”, explaining it |
 | `Crossfade` | One song fading into the next |
 | `Delete audiobook progress` |  |
 | `Done` | The button that leaves drag-to-reorder, or accepts a fine-tuned number |
@@ -812,6 +807,7 @@ you are actually typing into, which is easier than reading it here.
 | `Quality & playback` |  |
 | `Remember where you stopped in audiobooks so you can continue later. Stored on this device only.` |  |
 | `Request the next few tracks ahead of time so they start instantly. Helps with proxy servers like Octo-Fiesta or slow sources that fetch tracks on demand.` | The line under “Preload upcoming tracks”, explaining it |
+| `Rewind on resume` |  |
 | `Save audiobook progress` |  |
 | `Scrobbling` | Reporting a song as played, to the user's own server and from there to Last.fm or ListenBrainz. The title of its own screen and the row that opens it. The word comes from Last.fm and most languages keep it; use whatever those services call it in yours if they do |
 | `Songs blend into each other when one ends.` | The line under “Crossfade”, explaining it |
@@ -825,7 +821,6 @@ you are actually typing into, which is easier than reading it here.
 | `Tune the sound band by band.` | The line under “Equalizer”, explaining it |
 | `Warn about battery optimization` |  |
 | `When a song counts as played.` | Under the `Scrobbling` row, saying what the screen it opens is about |
-| `When resuming an audiobook, jump back by this amount first.` | The line under “Continue playing rewind”, explaining it |
 
 ## Settings › Player
 

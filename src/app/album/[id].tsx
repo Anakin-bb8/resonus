@@ -126,34 +126,6 @@ function albumGenres(album: Album, songs: Song[]): string[] {
   return out;
 }
 
-/**
- * Continue-playing start after rewinding across track boundaries.
- *
- * If rewind exceeds the available progress, resume from the beginning.
- */
-function continuedStartFromProgress(
-  songs: Song[],
-  resumeIndex: number,
-  resumePositionSec: number,
-  rewindSec: number,
-): { index: number; positionSec: number } {
-  if (resumeIndex < 0 || resumeIndex >= songs.length) return { index: 0, positionSec: 0 };
-  const startPos = Math.max(0, Math.round(resumePositionSec));
-  let toRewind = Math.max(0, Math.round(rewindSec));
-  if (toRewind === 0) return { index: resumeIndex, positionSec: startPos };
-  if (toRewind <= startPos) return { index: resumeIndex, positionSec: startPos - toRewind };
-
-  toRewind -= startPos;
-  let i = resumeIndex - 1;
-  while (i >= 0) {
-    const dur = Math.max(0, Math.round(songs[i]?.duration ?? 0));
-    if (toRewind < dur) return { index: i, positionSec: dur - toRewind };
-    toRewind -= dur;
-    i -= 1;
-  }
-  return { index: 0, positionSec: 0 };
-}
-
 export default function AlbumScreen() {
   // Repaints on a change of appearance or accent: a stack keeps this screen
   // mounted while you are on another one, out of reach of anything else.
@@ -263,19 +235,20 @@ export default function AlbumScreen() {
       (data.songs.length > 0 && data.songs.every((s) => isAudiobookSong(s))));
   const albumProgress = audiobook ? progressByAlbum[data.album.id] : undefined;
   const resumeIndex = albumProgress ? data.songs.findIndex((s) => s.id === albumProgress.trackId) : -1;
-  const continueExactStart =
+  // A few seconds back, clamped to the start of the track. It never crosses
+  // into the previous one: at this size that would mean the last second of a
+  // chapter you already finished, and Continue would stop meaning "carry on".
+  const continueStart =
     resumeIndex >= 0 && albumProgress
-      ? { index: resumeIndex, positionSec: Math.max(0, Math.round(albumProgress.positionSec)) }
+      ? {
+          index: resumeIndex,
+          positionSec: Math.max(
+            0,
+            Math.round(albumProgress.positionSec) - audiobookContinueRewindSec,
+          ),
+        }
       : null;
-  const continueStart = continueExactStart
-    ? continuedStartFromProgress(
-        data.songs,
-        continueExactStart.index,
-        continueExactStart.positionSec,
-        audiobookContinueRewindSec,
-      )
-    : null;
-  const continueFeatureVisible = audiobook && continueExactStart != null;
+  const continueFeatureVisible = audiobook && continueStart != null;
 
   const playAlbum = async (
     startIndex: number,
@@ -310,29 +283,15 @@ export default function AlbumScreen() {
 
   function openAlbumMenu() {
     if (!data) return;
-    // The rewound resume lives here rather than on the row, which offers the
-    // exact spot: the row says where it will drop you, and a second row
-    // saying "or somewhat before there" is a choice nobody wants twice.
-    const extraActions = continueFeatureVisible
-      ? [
-          {
-            icon: 'play-back-outline' as const,
-            label: t('Continue play with rewind'),
-            onPress: () => runContinue(continueStart),
-          },
-        ]
-      : undefined;
-    openMediaMenu({ kind: 'album', album: data.album, extraActions });
+    openMediaMenu({ kind: 'album', album: data.album });
   }
 
   // "Chapter 12 · 1:04:20": where the row is about to drop you, said before
   // you press it rather than after.
   const resumeSong = resumeIndex >= 0 ? data.songs[resumeIndex] : undefined;
   const resumeDetail =
-    resumeSong && continueExactStart
-      ? [resumeSong.title, formatDuration(continueExactStart.positionSec)]
-          .filter(Boolean)
-          .join(' · ')
+    resumeSong && continueStart
+      ? [resumeSong.title, formatDuration(continueStart.positionSec)].filter(Boolean).join(' · ')
       : undefined;
 
   // What the server says about the album first (OpenSubsonic sends the full
@@ -381,7 +340,7 @@ export default function AlbumScreen() {
             ? {
                 label: t('Continue playing'),
                 detail: resumeDetail,
-                onPress: () => runContinue(continueExactStart),
+                onPress: () => runContinue(continueStart),
               }
             : undefined
         }

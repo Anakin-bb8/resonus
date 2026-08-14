@@ -86,16 +86,9 @@ export default function PlaybackSettings() {
     value: v,
     label: v === '' ? t('Server default') : v.toUpperCase(),
   }));
-  const rewindLabels: Record<number, string> = {
-    [5 * 60]: t('5 minutes'),
-    [10 * 60]: t('10 minutes'),
-    [30 * 60]: t('30 minutes'),
-    [60 * 60]: t('1 hour'),
-    [2 * 60 * 60]: t('2 hours'),
-  };
   const rewindOptions = AUDIOBOOK_CONTINUE_REWIND_OPTIONS.map((sec) => ({
     value: sec,
-    label: rewindLabels[sec] ?? t('30 minutes'),
+    label: sec === 0 ? t('Off') : t('{n} seconds', { n: sec }),
   }));
 
   function deleteAudiobookProgress() {
@@ -289,6 +282,18 @@ export default function PlaybackSettings() {
           ]}
         />
 
+        {/* Its own screen: two sliders and a line of explanation is more than
+            fits under a heading here, and it is a thing somebody sets once
+            rather than one of the switches they come to this screen for. Last
+            thing under Playback, where it belongs: a row after a heading it
+            has nothing to do with reads as one of that heading's settings. */}
+        <SettingRow
+          label={t('Scrobbling')}
+          description={t('When a song counts as played.')}
+          chevron
+          onPress={() => router.push('/settings/scrobbling')}
+        />
+
         {/* Under Playback rather than Scrobbling, where this arrived: nothing
             here is reported to anybody, it is a position kept on the phone, and
             the rules for when a listen counts have nothing to say about it. */}
@@ -306,8 +311,8 @@ export default function PlaybackSettings() {
           ]}
         />
         <SelectList
-          label={t('Continue playing rewind')}
-          description={t('When resuming an audiobook, jump back by this amount first.')}
+          label={t('Rewind on resume')}
+          description={t('Continue starts this far back from where you stopped.')}
           options={rewindOptions}
           value={audiobookContinueRewindSec}
           onChange={setAudiobookContinueRewindSec}
@@ -321,16 +326,6 @@ export default function PlaybackSettings() {
           label={t('Delete audiobook progress')}
           destructive
           onPress={deleteAudiobookProgress}
-        />
-
-        {/* Its own screen: two sliders and a line of explanation is more than
-            fits under a heading here, and it is a thing somebody sets once
-            rather than one of the switches they come to this screen for. */}
-        <SettingRow
-          label={t('Scrobbling')}
-          description={t('When a song counts as played.')}
-          chevron
-          onPress={() => router.push('/settings/scrobbling')}
         />
       </ScrollView>
     </SettingsPage>

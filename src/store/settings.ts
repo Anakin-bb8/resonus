@@ -98,9 +98,18 @@ export const SCROBBLE_SECONDS_MAX = 600;
 export const SCROBBLE_PERCENT_DEFAULT = 50;
 export const SCROBBLE_SECONDS_DEFAULT = 240;
 
-/** Rewind choices for audiobook continue playback, in seconds. */
-export const AUDIOBOOK_CONTINUE_REWIND_OPTIONS = [5 * 60, 10 * 60, 30 * 60, 60 * 60, 2 * 60 * 60] as const;
-export const AUDIOBOOK_CONTINUE_REWIND_DEFAULT = 30 * 60;
+/**
+ * How far Continue starts before where you stopped, in seconds.
+ *
+ * Seconds and not minutes. It arrived offering five minutes to two hours,
+ * which is not resuming a book, it is looking for your place in it: at that
+ * size the rewind walks back across whole chapters and Continue stops meaning
+ * "carry on from here". What you actually want on picking a book back up is
+ * the last sentence again, which is what every app that does this offers and
+ * where these numbers come from.
+ */
+export const AUDIOBOOK_CONTINUE_REWIND_OPTIONS = [0, 5, 15, 30] as const;
+export const AUDIOBOOK_CONTINUE_REWIND_DEFAULT = 15;
 type AudiobookContinueRewindSec = (typeof AUDIOBOOK_CONTINUE_REWIND_OPTIONS)[number];
 
 function isAudiobookContinueRewindSec(value: number): value is AudiobookContinueRewindSec {
