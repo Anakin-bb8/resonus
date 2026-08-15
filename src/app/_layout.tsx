@@ -167,12 +167,17 @@ export default function RootLayout() {
     // the account's own catalog, and with no account yet it falls back to
     // reading every one of them, which is both slow and wrong (#50).
     const downloadsReady = authReady.then(() => useDownloads.getState().hydrate());
-    // Mirror + outbox for offline. Offline it is the library, so it is read
-    // right away: a query could otherwise resolve before it is in memory and
+    // Mirror + outbox for offline. Offline it is the library, so it is opened
+    // right away: a query could otherwise resolve before it is readable and
     // stay empty until manually reloaded. Online nothing reads it, only writes
-    // to it, and reading it is a JSON parse of the whole file on the JS thread
-    // — tens of MB on a heavy install, in the middle of the cold start, which
-    // is where the app was left showing placeholders (#50). There it waits.
+    // to it, so it waits.
+    //
+    // The wait was written for the mirror that was one JSON file, where opening
+    // it meant parsing tens of MB on the JS thread in the middle of the cold
+    // start, which is where the app was left showing placeholders (#50). It has
+    // been SQLite since 0.6.0 and opening it is cheap, but the first open after
+    // upgrading still migrates whatever JSON is on disk, and that one is as
+    // expensive as it ever was (see `migrateFromJson`).
     const startMirror = () =>
       Promise.all([
         useLibraryMirror.getState().load(),
