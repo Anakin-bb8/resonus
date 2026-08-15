@@ -122,7 +122,7 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `About` | The heading over an artist's biography, and the name of the settings page about the app. Two very different uses of one English word, so `About::artist` and `About::app` exist for a language that needs two words |
-| `All releases` | In an artist's ⋯ menu, and only where the shelves below are drawn: it opens everything they have released as one list, of no particular kind. "Releases" as the records themselves, the way a discography counts them |
+| `All releases` | In an artist's ⋯ menu: it opens everything they have released as one list, of no particular kind. "Releases" as the records themselves, the way a discography counts them |
 | `All songs` |  |
 | `Appears on` | Albums the artist appears on: features, compilations |
 | `Audio dramas` | Shelf heading: a play performed for the ear, with several voices rather than one narrator. Radio drama is the same thing where that name is the familiar one |

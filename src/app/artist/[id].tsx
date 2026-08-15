@@ -680,10 +680,16 @@ export default function ArtistScreen() {
               </Pressable>
               {/* The way back to the one undivided list the discography was
                   before it was split into shelves (#138): the same screen the
-                  shelves open, with no kind asked for. Only when there are
-                  shelves — without them the page already shows that list under
-                  its own heading, and this would open what is on screen. */}
-              {releaseGroups.length > 0 ? (
+                  shelves open, with no kind asked for.
+
+                  It used to appear only where there were shelves to undo,
+                  which meant the menu held a different set of things depending
+                  on how the artist happened to be tagged. A menu is somewhere
+                  you go looking, so it says the same everywhere, and on an
+                  artist with one shelf it still opens the whole list rather
+                  than the handful of covers the row has room for. Only an
+                  artist with no records of their own has nothing to open. */}
+              {albums.length > 0 ? (
                 <Pressable
                   style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
                   onPress={() => {
