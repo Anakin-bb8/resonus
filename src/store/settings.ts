@@ -746,6 +746,8 @@ interface SettingsState {
   /** Home explore chips, in order (each with its state). With none active, the
    *  row disappears: that replaces the old toggle. */
   exploreChips: ExploreChip[];
+  /** Whether those chips carry their icon, or are their name and nothing else. */
+  exploreChipIcons: boolean;
   /** Which actions are visible in the song ⋯ menu. */
   songMenuActions: SongMenuActions;
   /** "Folders" section in the Library (directory browsing; Subsonic). */
@@ -863,6 +865,7 @@ interface SettingsState {
   setExploreChip: (key: ExploreChipKey, value: boolean) => void;
   /** Replace the full list (for reordering). */
   setExploreChips: (chips: ExploreChip[]) => void;
+  setExploreChipIcons: (value: boolean) => void;
   setSongMenuAction: (key: SongMenuActionKey, value: boolean) => void;
   setShowFolderBrowser: (value: boolean) => void;
   setShowHistoryButton: (value: boolean) => void;
@@ -968,6 +971,7 @@ function snapshot(get: () => SettingsState) {
     showGreeting: s.showGreeting,
     customGreeting: s.customGreeting,
     exploreChips: s.exploreChips,
+    exploreChipIcons: s.exploreChipIcons,
     songMenuActions: s.songMenuActions,
     showFolderBrowser: s.showFolderBrowser,
     showHistoryButton: s.showHistoryButton,
@@ -1069,6 +1073,7 @@ const DEFAULTS = {
   showGreeting: true,
   customGreeting: '',
   exploreChips: DEFAULT_EXPLORE_CHIPS.map((c) => ({ ...c })),
+  exploreChipIcons: true,
   songMenuActions: { ...DEFAULT_SONG_MENU_ACTIONS },
   showFolderBrowser: false,
   showHistoryButton: true,
@@ -1466,6 +1471,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setExploreChipIcons: (exploreChipIcons) => {
+    set({ exploreChipIcons });
+    persist(snapshot(get));
+  },
+
   setShowFolderBrowser: (showFolderBrowser) => {
     set({ showFolderBrowser });
     persist(snapshot(get));
@@ -1664,6 +1674,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           customGreeting: string;
           showExploreChips: boolean;
           exploreChips: unknown;
+          exploreChipIcons: boolean;
           songMenuActions: unknown;
           showFolderBrowser: boolean;
           showHistoryButton: boolean;
@@ -1947,6 +1958,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (parsed.songMenuActions) {
           set({ songMenuActions: normalizeSongMenuActions(parsed.songMenuActions) });
+        }
+        if (typeof parsed.exploreChipIcons === 'boolean') {
+          set({ exploreChipIcons: parsed.exploreChipIcons });
         }
         if (Array.isArray(parsed.exploreChips)) {
           set({ exploreChips: normalizeExploreChips(parsed.exploreChips) });

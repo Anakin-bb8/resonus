@@ -14,7 +14,7 @@ import ReorderableList, {
 } from 'react-native-reorderable-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ScreenHeader, settingsStyles } from '@/components/SettingsUI';
+import { ScreenHeader, settingsStyles, SwitchList } from '@/components/SettingsUI';
 import { useLocalProfile } from '@/hooks/useLocalProfile';
 import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
@@ -95,6 +95,8 @@ export default function ExploreChipsSettings() {
   const local = useLocalProfile();
   const exploreChips = useSettings((s) => s.exploreChips);
   const setExploreChips = useSettings((s) => s.setExploreChips);
+  const chipIcons = useSettings((s) => s.exploreChipIcons);
+  const setChipIcons = useSettings((s) => s.setExploreChipIcons);
   const visible = local ? exploreChips.filter((c) => !SERVER_ONLY.includes(c.key)) : exploreChips;
   return (
     <SafeAreaView style={settingsStyles.safe} edges={['top']}>
@@ -106,6 +108,16 @@ export default function ExploreChipsSettings() {
         renderItem={({ item }) => (
           <ChipRow chip={item} disabled={offline && SERVER_ONLY.includes(item.key)} />
         )}
+        // Under the last chip, and scrolling with them: it is about the row as
+        // a whole rather than about any one chip, and a switch pinned to the
+        // bottom edge of the screen would read as a bar.
+        ListFooterComponent={
+          <View style={styles.iconsBox}>
+            <SwitchList
+              options={[{ label: t('Show icons'), value: chipIcons, onChange: setChipIcons }]}
+            />
+          </View>
+        }
         onReorder={({ from, to }: ReorderableListReorderEvent) => {
           // Offline every chip is on screen, so the positions dragged are the
           // positions stored. In the local profile two of them are not, and
@@ -128,6 +140,8 @@ export default function ExploreChipsSettings() {
 }
 
 const styles = themed((colors) => ({
+  // Clear of the last chip, which is a card of the same width right above it.
+  iconsBox: { marginTop: spacing.lg },
   hint: {
     color: colors.textMuted,
     fontSize: fontSize.xs,

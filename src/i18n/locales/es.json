@@ -665,5 +665,6 @@
   "Skipping while paused shows the next song without playing it. Tapping a song in the queue still plays it.": "Pasar de canción con la reproducción en pausa muestra la siguiente sin reproducirla. Tocar una canción en la cola sí la reproduce.",
   "Playback speed": "Velocidad de reproducción",
   "Show speed button": "Mostrar el botón de velocidad",
-  "Play the music slower or faster, keeping its pitch.": "Reproducir la música más lenta o más rápida, sin cambiar el tono."
+  "Play the music slower or faster, keeping its pitch.": "Reproducir la música más lenta o más rápida, sin cambiar el tono.",
+  "Show icons": "Mostrar los iconos"
 }

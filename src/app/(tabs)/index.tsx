@@ -509,6 +509,9 @@ function ExploreChips({ offline }: { offline: boolean }) {
   const chips = useSettings((s) => s.exploreChips).filter(
     (c) => c.enabled && (!offline || OFFLINE_KEYS.has(c.key)),
   );
+  // Icons off leaves the name on its own (Settings › Explore chips): the row
+  // reads as words rather than as buttons, and more of it fits on screen.
+  const icons = useSettings((s) => s.exploreChipIcons);
   // The shuffle one takes whatever the server returns: without this, you tap
   // and nothing happens for half a second and it feels broken.
   const [shuffling, setShuffling] = useState(false);
@@ -545,11 +548,14 @@ function ExploreChips({ offline }: { offline: boolean }) {
               accessibilityRole="button"
               onPress={onShuffle}
             >
+              {/* The spinner stays even with the icons off: it is the only
+                  thing saying the tap did something while the server picks the
+                  songs, and it is the whole reason it is here. */}
               {shuffling ? (
                 <ActivityIndicator size={16} color={colors.text} />
-              ) : (
+              ) : icons ? (
                 <Ionicons name={cfg.icon} size={16} color={colors.text} />
-              )}
+              ) : null}
               <Text style={styles.chipText}>{t(cfg.label)}</Text>
             </Pressable>
           );
@@ -557,7 +563,7 @@ function ExploreChips({ offline }: { offline: boolean }) {
         return (
           <Link key={key} href={cfg.href} asChild>
             <Pressable style={styles.chip}>
-              <Ionicons name={cfg.icon} size={16} color={colors.text} />
+              {icons ? <Ionicons name={cfg.icon} size={16} color={colors.text} /> : null}
               <Text style={styles.chipText}>{t(cfg.label)}</Text>
             </Pressable>
           </Link>
