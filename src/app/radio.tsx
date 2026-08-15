@@ -201,6 +201,8 @@ export default function RadioScreen() {
       ) : (
         <FlatList
           {...listPerf}
+          // With the filter box open, a tap opens the row instead of only closing the keyboard.
+          keyboardShouldPersistTaps="handled"
           data={stations}
           keyExtractor={(item) => item.id}
           contentContainerStyle={[styles.list, { paddingBottom: bottomPad }]}

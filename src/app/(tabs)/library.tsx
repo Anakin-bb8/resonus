@@ -301,6 +301,8 @@ function PlaylistsTab({ onNew, query }: { onNew?: () => void; query: string }) {
     <FlatList
       key={grid ? 'grid' : 'list'}
       {...listPerf}
+      // With the filter box open, a tap opens the row instead of only closing the keyboard.
+      keyboardShouldPersistTaps="handled"
       {...gridListProps(grid, bottomPad)}
       data={listData}
       keyExtractor={(item) => item.id}
@@ -392,6 +394,7 @@ function ArtistsTab({ query }: { query: string }) {
     <FlatList
       key={grid ? 'grid' : 'list'}
       {...listPerf}
+      keyboardShouldPersistTaps="handled"
       {...gridListProps(grid, bottomPad)}
       data={artists}
       keyExtractor={(item) => item.id}
@@ -524,6 +527,7 @@ function AlbumsTab({ query }: { query: string }) {
     <FlatList
       key={grid ? 'grid' : 'list'}
       {...listPerf}
+      keyboardShouldPersistTaps="handled"
       {...gridListProps(grid, bottomPad)}
       data={albums}
       keyExtractor={(item) => item.id}

@@ -93,6 +93,8 @@ export default function GenresScreen() {
       ) : (
         <FlatList
         {...listPerf}
+          // With the filter box open, a tap opens the row instead of only closing the keyboard.
+          keyboardShouldPersistTaps="handled"
           data={genres}
           keyExtractor={(item) => item.value}
           numColumns={2}

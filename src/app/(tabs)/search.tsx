@@ -288,6 +288,11 @@ export default function SearchScreen() {
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.albumRow}
+              // Its own, and not the page's: a nested scroll view does not
+              // inherit it, so with the keyboard up the first tap on a card
+              // was spent closing it and the second one was the one that
+              // opened the artist.
+              keyboardShouldPersistTaps="handled"
             >
               {data.artists.map((artist) => (
                 <Link key={artist.id} href={`/artist/${artist.id}`} asChild>
@@ -325,6 +330,8 @@ export default function SearchScreen() {
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.albumRow}
+              // Its own, like the row of artists above it.
+              keyboardShouldPersistTaps="handled"
             >
               {data.albums.map((album) => (
                 <AlbumCard
