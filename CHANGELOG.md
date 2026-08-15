@@ -9,6 +9,14 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Changed
+
+- An artist's ⋯ menu offers All releases whatever their records are tagged as, instead of only where the discography is split into shelves.
+
+### Fixed
+
+- A search result opens with one tap while the keyboard is up, in Search and in the lists with a filter box.
+
 ## [0.7.2] - 2026-08-15
 
 ### Added
