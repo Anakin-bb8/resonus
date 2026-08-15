@@ -11,143 +11,37 @@ Releases before 0.2.1 are only listed on the
 
 ## [0.7.1] - 2026-08-15
 
-The car again, and this time it is what 0.7.0 got wrong. Albums opened onto
-nothing. The browse tree goes up in two goes, the covers a second after the app
-opens and the songs inside them a good while later, and the first of those two
-was being taken for the whole library and written down as such. Unless Resonus
-had been left on screen for the best part of a minute, what a car got was a
-wall of records with nothing in any of them.
-
-The phone can also cast its own music now, which the local profile could never
-do: a renderer is not sent audio, it is sent an address, and a file on the
-phone had none to give. It serves them itself, seeking included, and only while
-a cast is on. Sonos got the rest of what it was missing along with it, the
-sleep timer that follows the music onto the speaker, a queue edited in place
-instead of rewritten under the song playing, and repeat travelling in both
-directions, by @garrit-schroeder.
-
-And the songs on your phone whose cover every other player finds and Resonus
-did not. The tag reader was too strict for what real files actually contain, in
-four different ways, and every one of them loses the picture while leaving the
-title, the artist and the album perfectly readable, which is why those songs
-looked properly scanned and had nothing to show.
-
 ### Added
 
-- A FAQ, reachable from Settings › About. It is a page on GitHub and not a
-  screen in the app on purpose: what gets asked most is what changes most, and
-  an answer written into the app is stuck there until the next release reaches
-  everybody. It is only getting started, so what is missing from it is
-  whatever you ask next.
-- The sleep timer follows the music onto a Sonos speaker, so it still stops
-  when you said it would with the phone out of the way. Repeat travels in both
-  directions too: turn it on from the Sonos app and Resonus shows it on.
-  Thanks to @garrit-schroeder (#149).
-- Casting the music on the phone. A renderer is not sent audio, it is sent an
-  address and goes and fetches it, and a file on the phone had none to give, so
-  the local profile could not cast at all. The phone serves its own files now,
-  seeking included, and only while a cast is on. The devices button comes back
-  there with it.
-- The cover of a local album reaches the speaker's screen, out of the same
-  place the song does.
-- An artist's ⋯ menu offers All releases, the whole discography as one list
-  the way it was before it was split into albums, EPs and singles. It only
-  shows where there is a split to undo.
-- The E next to a title, for a track or a record tagged with a parental
-  advisory. It shows in lists, on cards, in the queue, on the player and in
-  the album header, and turns off in one place, Settings › Appearance › Song
-  lists, since it is the same mark wherever it appears. The song information
-  sheet spells it out either way, where a censored edit reads as Clean rather
-  than as nothing at all. Navidrome sends it from 0.54 onwards; an older
-  server or one that does not send it shows what it always did. A local
-  library reads the tag off the files, which takes a rescan for the ones
-  already scanned.
+- Casting the music on the phone. A renderer is sent an address, not audio, and a file on the phone had none to give, so the local profile could not cast at all. It serves them itself now, seeking included, and only while a cast is on.
+- The cover of a local album reaches the speaker's screen.
+- The sleep timer follows the music onto a Sonos speaker, and repeat travels in both directions. Thanks to @garrit-schroeder (#149).
+- The E next to a title, for anything tagged with a parental advisory. Turns off in Settings › Appearance › Song lists. Navidrome sends it from 0.54; a local library reads it off the files, which takes a rescan.
+- An artist's ⋯ menu offers All releases, the discography as one list again. Only where there is a split to undo.
+- A FAQ, reachable from Settings › About.
 
 ### Changed
 
-- The icons in the ⋯ menus are all outlined now. Half of them were filled,
-  which in this app means something: a filled icon is the tab you are on. In a
-  menu nothing is active — it is all things you can do — so the fill was
-  weight where there was nothing to weigh. The one that stays filled is the
-  heart, when the song is already a favourite, because there it is saying so.
-- The local profile stops offering what it can never use: streaming quality
-  and codecs, autoplay, the download, export, rating and mix entries of the
-  song menu, the Genres and Radio chips, and folder browsing. An account
-  without a connection still finds them where they always were, greyed out,
-  because for that one the server comes back.
-- Favorites opens on Recently added, which is what that order is — the last
-  song you starred, first. It said Recent, and Recent everywhere else in the
-  app means what you played or opened last.
-- The orders that are the server's idea of recently played say so, in the
-  library's songs, albums and artists and in a genre's sort menu. The
-  Library's own Recents, which is what you opened, keeps its name.
-- The devices button is never disabled any more. Downloads cast from the phone
-  now, so there is something to send without a connection.
-- An artist whose records are all of one kind gets that kind as the heading:
-  Soundtracks, Live, Compilations. It used to say Discography whenever there
-  was nothing to split, which threw away what the tags did say. Discography is
-  now what an artist gets when the records say nothing about themselves, which
-  is also every server that does not send the release type.
+- The icons in the ⋯ menus are all outlined. A filled icon means the tab you are on, and in a menu nothing is active. The heart still fills when the song is a favourite, because there it is saying so.
+- The local profile stops offering what it can never use: streaming quality, autoplay, the download, export, rating and mix entries, the Genres and Radio chips, and folder browsing. An account without a connection still finds them greyed out.
+- Favorites opens on Recently added, which is what that order is. Recent everywhere else means what you played or opened last.
+- The orders that are the server's idea of recently played say so. The Library's own Recents keeps its name.
+- The devices button is never disabled. Downloads cast from the phone now, so there is something to send without a connection.
+- An artist whose records are all of one kind gets that kind as the heading. Discography is now what an artist gets when the records say nothing about themselves.
 
 ### Fixed
 
-- Albums in Android Auto opened onto nothing. The car is handed the whole
-  library at once, since it cannot ask for anything while the phone is asleep
-  in a pocket, and that arrives in two goes: the covers a second after the app
-  opens and the songs inside them a good while later, so that filling it in
-  does not compete with the app opening. The first of those two was taken for
-  the whole library and written down as such, so unless Resonus had been left
-  on screen for the best part of a minute, what the car got was a wall of
-  records with nothing in any of them. It is laid over what is already there
-  now, plugging in a car goes and fetches whatever is missing, and the albums
-  you marked as favourites are fetched before anything else rather than last,
-  which is what the Library tab is made of.
-- Songs on the phone that other players show a cover for and Resonus did not.
-  The tag reader was too strict for what real files contain: a size written the
-  other version's way, a tag whose bytes were shifted so no player could
-  mistake them for audio, a description in an encoding the frame did not admit
-  to. Every one of those loses the picture and leaves the title, the artist and
-  the album perfectly readable, which is why the songs looked properly scanned
-  and had nothing to show. It now works out what the tag meant instead of
-  giving up, and where the frames cannot be read at all it goes looking for the
-  picture by name. Files that were already correct are read exactly as before.
-  Reported by @kshbeat28-ui (#141).
-- A queue cast to Sonos and then changed drifted away from the app's: reorders
-  did not arrive, "play next" landed somewhere else, deleting from the middle
-  left the two lists out of step, and an edit in the middle of a song could
-  cut it short. The speaker's queue is edited in place now, one operation at a
-  time, and what cannot be done that way is left alone rather than rewritten
-  under the song that is playing. Shuffle stays on the phone while casting,
-  reshuffling only what is still ahead, so both lists keep counting from the
-  same place. Thanks to @garrit-schroeder (#149).
-- Jellyfin was told it was talking to version 1.0 of something on a device
-  called Android, and its dashboard said exactly that. It gets the phone's
-  model and the version you are actually running, so the session is worth
-  reading. Thanks to @garrit-schroeder (#150).
-- Two quick taps on the bar at the bottom opened two players, four taps four,
-  and closing one left the next one behind it. A tap only becomes a screen
-  once the one before it has been accounted for, so taps that fall in between
-  all decide to open the same thing. Opening something already open brings it
-  forward now instead of stacking another copy of it, which goes for every
-  screen in the app and not only the player.
-- The Home grid mixed the profiles: albums and playlists from the phone's own
-  music turned up inside a server account, and the other way round. What was
-  played is kept per profile now, so each one finds its own and nothing else.
-- Leaving a profile through the login screen carried its recents into the next
-  one, and a restart with them.
-- One downloaded song in the queue was enough to leave a Sonos playing none of
-  it: a song the server could still be asked for answered that it could not be
-  cast, and the queue is handed over whole or not at all.
-- A file on the phone was announced to the renderer as MP3 whatever it really
-  was, which a speaker handed a FLAC under that name is entitled to refuse.
-- Going offline while casting left the cast on with no way to end it: the
-  button that ends it was drawn and unpressable.
-- The Playlists source of the quick grid was greyed out as though there were
-  none without a server. A local profile keeps its own and an account without
-  a connection reads them off its mirror, and the grid was putting them up all
-  along.
-- Favorites in the local profile came back in alphabetical order instead of by
-  when each one was marked, which is the order every server gives them in.
+- Albums in Android Auto opened onto nothing. The tree goes up in two goes, the covers first and the songs later, and the first was taken for the whole library and written down as such. It is laid over what is already there now, plugging in a car fetches what is missing, and starred albums are fetched first.
+- Songs on the phone whose cover every other player finds and Resonus did not. The tag reader was too strict for what real files contain, in four ways, each of which loses the picture and leaves everything else readable. Reported by @kshbeat28-ui (#141).
+- A queue cast to Sonos and then changed drifted away from the app's. It is edited in place now, one operation at a time, and shuffle stays on the phone. Thanks to @garrit-schroeder (#149).
+- Jellyfin was told it was talking to version 1.0 of something on a device called Android. Thanks to @garrit-schroeder (#150).
+- Two quick taps on the bar at the bottom opened two players. Opening something already open brings it forward, which goes for every screen.
+- The Home grid mixed the profiles, and leaving one through the login screen carried its recents into the next.
+- One downloaded song in the queue was enough to leave a Sonos playing none of it.
+- A file on the phone was announced to the renderer as MP3 whatever it really was.
+- Going offline while casting left the cast on with no way to end it.
+- The Playlists source of the quick grid was greyed out as though there were none without a server.
+- Favorites in the local profile came back alphabetical instead of by when each one was marked.
 
 ## [0.7.0] - 2026-08-13
 
