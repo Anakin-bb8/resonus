@@ -9,6 +9,29 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-08-15
+
+The car again, and this time it is what 0.7.0 got wrong. Albums opened onto
+nothing. The browse tree goes up in two goes, the covers a second after the app
+opens and the songs inside them a good while later, and the first of those two
+was being taken for the whole library and written down as such. Unless Resonus
+had been left on screen for the best part of a minute, what a car got was a
+wall of records with nothing in any of them.
+
+The phone can also cast its own music now, which the local profile could never
+do: a renderer is not sent audio, it is sent an address, and a file on the
+phone had none to give. It serves them itself, seeking included, and only while
+a cast is on. Sonos got the rest of what it was missing along with it, the
+sleep timer that follows the music onto the speaker, a queue edited in place
+instead of rewritten under the song playing, and repeat travelling in both
+directions, by @garrit-schroeder.
+
+And the songs on your phone whose cover every other player finds and Resonus
+did not. The tag reader was too strict for what real files actually contain, in
+four different ways, and every one of them loses the picture while leaving the
+title, the artist and the album perfectly readable, which is why those songs
+looked properly scanned and had nothing to show.
+
 ### Added
 
 - A FAQ, reachable from Settings › About. It is a page on GitHub and not a
