@@ -13,29 +13,29 @@ Releases before 0.2.1 are only listed on the
 
 ### Added
 
-- Casting the music on the phone. A renderer is sent an address, not audio, and a file on the phone had none to give, so the local profile could not cast at all. It serves them itself now, seeking included, and only while a cast is on.
+- Casting the music on the phone. The local profile could not cast at all; it serves its own files now, seeking included.
 - The cover of a local album reaches the speaker's screen.
 - The sleep timer follows the music onto a Sonos speaker, and repeat travels in both directions. Thanks to @garrit-schroeder (#149).
-- The E next to a title, for anything tagged with a parental advisory. Turns off in Settings › Appearance › Song lists. Navidrome sends it from 0.54; a local library reads it off the files, which takes a rescan.
-- An artist's ⋯ menu offers All releases, the discography as one list again. Only where there is a split to undo.
+- The E next to a title, for anything tagged with a parental advisory. Turns off in Settings › Appearance › Song lists.
+- An artist's ⋯ menu offers All releases, the discography as one list again.
 - A FAQ, reachable from Settings › About.
 
 ### Changed
 
-- The icons in the ⋯ menus are all outlined. A filled icon means the tab you are on, and in a menu nothing is active. The heart still fills when the song is a favourite, because there it is saying so.
-- The local profile stops offering what it can never use: streaming quality, autoplay, the download, export, rating and mix entries, the Genres and Radio chips, and folder browsing. An account without a connection still finds them greyed out.
-- Favorites opens on Recently added, which is what that order is. Recent everywhere else means what you played or opened last.
-- The orders that are the server's idea of recently played say so. The Library's own Recents keeps its name.
-- The devices button is never disabled. Downloads cast from the phone now, so there is something to send without a connection.
-- An artist whose records are all of one kind gets that kind as the heading. Discography is now what an artist gets when the records say nothing about themselves.
+- The icons in the ⋯ menus are all outlined. The heart still fills when the song is a favourite.
+- The local profile stops offering what it can never use: streaming quality, autoplay, downloads, export, rating, mixes, the Genres and Radio chips, and folder browsing.
+- Favorites opens on Recently added, which is what that order is.
+- The orders that are the server's idea of recently played say so.
+- The devices button is never disabled. Downloads cast from the phone now.
+- An artist whose records are all of one kind gets that kind as the heading.
 
 ### Fixed
 
-- Albums in Android Auto opened onto nothing. The tree goes up in two goes, the covers first and the songs later, and the first was taken for the whole library and written down as such. It is laid over what is already there now, plugging in a car fetches what is missing, and starred albums are fetched first.
-- Songs on the phone whose cover every other player finds and Resonus did not. The tag reader was too strict for what real files contain, in four ways, each of which loses the picture and leaves everything else readable. Reported by @kshbeat28-ui (#141).
-- A queue cast to Sonos and then changed drifted away from the app's. It is edited in place now, one operation at a time, and shuffle stays on the phone. Thanks to @garrit-schroeder (#149).
+- Albums in Android Auto opened onto nothing. Plugging in a car now fetches what the tree is missing, and starred albums are fetched first.
+- Songs on the phone whose cover every other player finds and Resonus did not. The tag reader was too strict for what real files contain. Reported by @kshbeat28-ui (#141).
+- A queue cast to Sonos and then changed drifted away from the app's. Thanks to @garrit-schroeder (#149).
 - Jellyfin was told it was talking to version 1.0 of something on a device called Android. Thanks to @garrit-schroeder (#150).
-- Two quick taps on the bar at the bottom opened two players. Opening something already open brings it forward, which goes for every screen.
+- Two quick taps on the bar at the bottom opened two players. Opening something already open brings it forward.
 - The Home grid mixed the profiles, and leaving one through the login screen carried its recents into the next.
 - One downloaded song in the queue was enough to leave a Sonos playing none of it.
 - A file on the phone was announced to the renderer as MP3 whatever it really was.
