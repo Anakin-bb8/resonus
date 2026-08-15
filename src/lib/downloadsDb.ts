@@ -315,16 +315,28 @@ export async function downloadedFiles(dir: string): Promise<Record<string, strin
   // thousand parses on the path the offline start waits for before it can show
   // anything. It is asked for on its own now (see `downloadedBitRates`), out of
   // the way of the opening.
-  const rows = await db.getAllAsync<{ id: string; local_uri: string | null }>(
-    'SELECT id, local_uri FROM songs WHERE local_uri IS NOT NULL',
-  );
+  // In pages, with a turn given back to everyone else between them. The whole
+  // catalog in one go is a single block of work with sixty thousand rows in it
+  // on a large library, and nothing else runs while it happens: not the first
+  // paint, not a tap. Paged, it takes about the same total and stops being a
+  // freeze.
   const files: Record<string, string> = {};
-  for (const r of rows) {
-    if (!r.local_uri) continue;
-    files[r.id] = r.local_uri;
+  for (let offset = 0; ; offset += PAGE) {
+    const rows = await db.getAllAsync<{ id: string; local_uri: string | null }>(
+      'SELECT id, local_uri FROM songs WHERE local_uri IS NOT NULL LIMIT ? OFFSET ?',
+      [PAGE, offset],
+    );
+    for (const r of rows) {
+      if (!r.local_uri) continue;
+      files[r.id] = r.local_uri;
+    }
+    if (rows.length < PAGE) return files;
   }
-  return files;
 }
+
+/** Rows per page of the two reads above. Large enough that the round trips do
+ *  not add up, small enough that a page is not a freeze. */
+const PAGE = 2000;
 
 /**
  * What each downloaded song was transcoded at, for the ones that were.
@@ -335,13 +347,17 @@ export async function downloadedFiles(dir: string): Promise<Record<string, strin
  */
 export async function downloadedBitRates(dir: string): Promise<Record<string, number>> {
   const db = await catalogDb(dir);
-  const rows = await db.getAllAsync<{ id: string; bit: number | null }>(
-    `SELECT id, json_extract(data, '$.dlBitRate') AS bit
-       FROM songs WHERE local_uri IS NOT NULL AND data LIKE '%dlBitRate%'`,
-  );
   const out: Record<string, number> = {};
-  for (const r of rows) if (r.bit != null) out[r.id] = r.bit;
-  return out;
+  for (let offset = 0; ; offset += PAGE) {
+    const rows = await db.getAllAsync<{ id: string; bit: number | null }>(
+      `SELECT id, json_extract(data, '$.dlBitRate') AS bit
+         FROM songs WHERE local_uri IS NOT NULL AND data LIKE '%dlBitRate%'
+         LIMIT ? OFFSET ?`,
+      [PAGE, offset],
+    );
+    for (const r of rows) if (r.bit != null) out[r.id] = r.bit;
+    if (rows.length < PAGE) return out;
+  }
 }
 
 /**
