@@ -783,9 +783,7 @@ export const useDownloads = create<DownloadsState>((set, get) => {
           // Timed because offline this is on the way in: nothing is drawn until
           // the app knows whether there is anything downloaded, and on a library
           // of fifteen thousand that wait is the whole of the first screen.
-          const part = await timed('downloads hydrate', () => Db.downloadedFiles(dir));
-          Object.assign(files, part.files);
-          Object.assign(dlBitRates, part.bitRates);
+          Object.assign(files, await timed('downloads hydrate', () => Db.downloadedFiles(dir)));
         } catch {
           // A catalog that cannot be read leaves this profile without
           // downloads, not the app without an answer: `hydrated` is what the
@@ -793,7 +791,25 @@ export const useDownloads = create<DownloadsState>((set, get) => {
         }
       }
       if (run !== hydrateRun) return;
-      set({ files, dlBitRates, hydrated: true });
+      set({ files, hydrated: true });
+      // The bitrates come after, on their own: nothing on the way in reads
+      // them, and digging them out of the rows' JSON is the expensive half of
+      // what this used to ask for (see `downloadedBitRates`).
+      void (async () => {
+        for (const dir of dirs) {
+          try {
+            Object.assign(
+              dlBitRates,
+              await timed('downloads bitrates', () => Db.downloadedBitRates(dir)),
+            );
+          } catch {
+            // Same as above: a badge without its number, not an app without
+            // its downloads.
+          }
+        }
+        if (run !== hydrateRun) return;
+        set({ dlBitRates });
+      })();
     },
 
     downloadAlbum: async (album, songs) => {

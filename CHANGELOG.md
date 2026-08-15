@@ -16,6 +16,7 @@ Releases before 0.2.1 are only listed on the
 ### Fixed
 
 - A search result opens with one tap while the keyboard is up, in Search and in the lists with a filter box.
+- The app opens without waiting on the server. Bringing the queue back was asking it for the stream, the lyrics, the next five tracks and more, all in the instant the app was trying to draw itself; none of it is needed before you press play.
 
 ## [0.7.2] - 2026-08-15
 
