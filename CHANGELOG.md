@@ -9,6 +9,8 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-08-15
+
 ### Added
 
 - Playback speed, from half to double, and the song keeps its pitch (#151). Its button sits under the player controls and starts off, in Settings › Player.
