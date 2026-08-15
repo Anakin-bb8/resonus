@@ -823,6 +823,10 @@ let loadToken = 0;
  */
 async function loadIndex(index: number, autoplay: boolean): Promise<boolean> {
   const token = ++loadToken;
+  // Whatever was waiting from the restore is superseded by this: the queue may
+  // not even be the same one any more, and an index into the old one would drop
+  // a stranger's song into the player five seconds later.
+  pendingRestore = null;
   // Anything asked to play is the app in use, whoever asked: the button, the
   // notification, the car, a headset. The window is only for the track the
   // saved queue brings back on its own.
@@ -1175,12 +1179,49 @@ function endBootQuiet(catchUp = false) {
   if (bootQuietTimer) clearTimeout(bootQuietTimer);
   bootQuietTimer = null;
   if (!catchUp) return;
+  // The track itself, if it is still waiting: five seconds in, the app is open
+  // and the notification and the play button have something behind them.
+  if (pendingRestore != null) {
+    void loadRestored(false);
+    return; // its own load does the rest of this, for the song it installs
+  }
   const song = currentSong(usePlayerStore.getState());
   if (!song) return;
   if (!song.url && !localSourceFor(song)) void ensureTranscodeOffsetSupport();
   scheduleNextSource();
   prefetchLyrics(song);
   warmUpcoming();
+}
+
+/**
+ * The track the saved queue came back with, waiting to be installed in the
+ * player, or null.
+ *
+ * Restoring used to load it there and then, and loading a song that lives on
+ * the server means opening its stream: a connection, headers and a first
+ * buffer, in the middle of the app opening, for a song nobody has asked to
+ * hear. It is held until the app is in use or the boot window runs out, the
+ * same as everything else on the way in.
+ *
+ * Only the index travels. The position is read from the store when the load
+ * finally happens, so a seek made in the meantime is the one that survives.
+ */
+let pendingRestore: number | null = null;
+
+/** Installs the restored track, at the position the queue was left at. */
+async function loadRestored(autoplay: boolean): Promise<void> {
+  const index = pendingRestore;
+  if (index == null) return;
+  pendingRestore = null;
+  const { queue, positionSec } = usePlayerStore.getState();
+  if (!queue[index]) return;
+  if (!(await loadIndex(index, autoplay))) return;
+  // `loadIndex` starts the song at zero, which is right for every other caller
+  // and wrong for this one.
+  if (positionSec > 0) {
+    seekActive(positionSec);
+    usePlayerStore.setState({ positionSec });
+  }
 }
 
 /** Now playing / history + syncs the queue on track change. */
@@ -3199,9 +3240,14 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     }
     const p = activePlayer();
     if (!p) {
-      // No player yet: the restored queue never got as far as loading a track,
-      // which offline means none of it is on disk. Going through `loadIndex`
-      // plays what can be played, and says so when nothing can.
+      // No player yet. Either the restored track is still waiting to be
+      // installed, in which case it goes in at the position it was left at, or
+      // there is no player because nothing could be loaded — offline with none
+      // of it on disk — and `loadIndex` says so.
+      if (pendingRestore != null) {
+        void loadRestored(true);
+        return;
+      }
       const { queue, index } = get();
       if (queue[index]) void loadIndex(index, true);
       return;
@@ -3643,15 +3689,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       radioSeed: null,
       queueDealt: false,
     });
-    // Load the track (without playing) and leave the position ready.
-    await loadIndex(index, false);
-    // A tap that landed while this was loading owns the player now (`loadToken`
-    // saw to that). What is left here belongs to the queue being restored, and
-    // running it against another one would drop somebody else's song at the
-    // position this one was left at, paused.
-    if (get().queue !== songs) return;
-    if (positionSec > 0) seekActive(positionSec);
-    usePlayerStore.setState({ positionSec, isPlaying: false });
+    // The track waits, like the one the device's own copy brings back: this
+    // runs while the app is opening too (see `pendingRestore`).
+    pendingRestore = index;
   },
 
   restoreFromStorage: async () => {
@@ -3708,11 +3748,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       queueDealt: saved.dealt === true,
       repeat: isRepeatMode(saved.repeat) ? saved.repeat : 'off',
     });
-    await loadIndex(index, false);
-    // Same as the server restore above: only if this queue is still the one.
-    if (get().queue !== saved.queue) return true;
-    if (positionSec > 0) seekActive(positionSec);
-    usePlayerStore.setState({ positionSec, isPlaying: false });
+    // Not loaded here: the queue is on screen and the track goes into the
+    // player when the app is in use or the boot window runs out (see
+    // `pendingRestore`). The position is already in the store, which is where
+    // the load will read it from.
+    pendingRestore = index;
     return true;
   },
 
@@ -3770,6 +3810,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       // ignore
     }
     clearLockScreen();
+    // Nothing left to install: the queue it belonged to is going away.
+    pendingRestore = null;
     playedHistory = [];
     setStreamOffset(0);
     sourceHasLength = null;
