@@ -30,19 +30,6 @@ Releases before 0.2.1 are only listed on the
 - An artist's ⋯ menu offers All releases, the whole discography as one list
   the way it was before it was split into albums, EPs and singles. It only
   shows where there is a split to undo.
-- Audiobooks pick up where you left them. An album read aloud says Audiobook
-  under its cover instead of Album, keeps the track and the position you
-  stopped at, and grows a Continue row that names the chapter and the time it
-  will drop you at. Its ⋯ menu can resume a set distance earlier instead.
-  When one ends, nothing similar follows it. What it knows a book from is the
-  record's MusicBrainz release type, the same tag a discography is split by,
-  and where nothing is tagged, the genre of every last track on it. All of it
-  can be turned off in Settings › Quality & playback › Audiobooks, which is a
-  screen of its own so that a library with no books in it never scrolls past
-  it. Thanks to @garrit-schroeder (#144).
-- An Audiobooks chip for Home, so they have somewhere to be rather than only
-  turning up as you walk past them. It is off until you turn it on in
-  Settings › Explore chips, since most libraries are music and nothing else.
 - The E next to a title, for a track or a record tagged with a parental
   advisory. It shows in lists, on cards, in the queue, on the player and in
   the album header, and turns off in one place, Settings › Appearance › Song
@@ -55,16 +42,6 @@ Releases before 0.2.1 are only listed on the
 
 ### Changed
 
-- Rewind on resume, under Audiobooks, is any length up to two hours rather
-  than a choice of four. It shipped as five minutes to two hours, became
-  Off / 5 / 15 / 30 seconds because at that size it was not resuming a book
-  but hunting for your place in it, and both were right about somebody:
-  picking a book up again wants the last sentence back, and falling asleep to
-  one with the sleep timer set to an hour wants roughly that hour back,
-  because nobody heard it. So the number is the listener's. A long one now
-  reaches into the chapters before the one you stopped in instead of stopping
-  at its start, which is what it would have done on a book split into short
-  chapters. Requested by @garrit-schroeder.
 - The icons in the ⋯ menus are all outlined now. Half of them were filled,
   which in this app means something: a filled icon is the tab you are on. In a
   menu nothing is active — it is all things you can do — so the fill was

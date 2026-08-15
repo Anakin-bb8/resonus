@@ -99,40 +99,6 @@ export const SCROBBLE_PERCENT_DEFAULT = 50;
 export const SCROBBLE_SECONDS_DEFAULT = 240;
 
 /**
- * How far Continue starts before where you stopped, in seconds.
- *
- * Any duration up to two hours, and not a list of four to choose from. There
- * are two ways of using this and they are nowhere near each other. Picking a
- * book back up wants the last sentence again, which is seconds. Falling asleep
- * to one with the sleep timer on wants roughly however long the timer ran,
- * because everything after the point where you stopped taking it in was heard
- * by nobody, and that is an hour. Fifteen seconds is no use to the second and
- * an hour is absurd for the first, so the number is the listener's to pick.
- * Requested by @garrit-schroeder, who listens with the timer set to an hour.
- */
-export const AUDIOBOOK_CONTINUE_REWIND_DEFAULT = 15;
-export const AUDIOBOOK_CONTINUE_REWIND_MAX = 2 * 60 * 60;
-
-/**
- * The rungs the settings slider climbs, in seconds.
- *
- * A slider that ran evenly from nothing to two hours could not land on fifteen
- * seconds, and one fine enough to land on it would take the whole width of the
- * screen to cross a minute. So it walks these instead: close together where
- * seconds matter and far apart where minutes do. Any number in between is a
- * legal setting, they are only what a finger can reach.
- */
-export const AUDIOBOOK_CONTINUE_REWIND_STEPS = [
-  0, 5, 10, 15, 20, 30, 45, 60, 90, 120, 180, 300, 600, 900, 1200, 1800, 2700, 3600, 5400, 7200,
-] as const;
-
-/** Whole seconds, never negative, never past the ceiling. */
-function cleanAudiobookContinueRewindSec(value: number): number {
-  if (!Number.isFinite(value)) return AUDIOBOOK_CONTINUE_REWIND_DEFAULT;
-  return Math.min(AUDIOBOOK_CONTINUE_REWIND_MAX, Math.max(0, Math.round(value)));
-}
-
-/**
  * How far into a song a listen counts, in seconds, or null for "never".
  *
  * Two rules, either of which can be off (0), and the earlier one wins: a share
@@ -183,8 +149,7 @@ export type GridKey =
   | 'browseAlbums'
   | 'browseSongs'
   | 'discography'
-  | 'genre'
-  | 'audiobooks';
+  | 'genre';
 
 /** Exactly what each grid looked like before it could be chosen, so nothing
  *  moves for anybody who never opens the menu. */
@@ -196,7 +161,6 @@ export const GRID_DEFAULT_COLUMNS: Record<GridKey, number> = {
   browseSongs: 2,
   discography: 2,
   genre: 2,
-  audiobooks: 2,
 };
 
 /** What the menu offers. Two is a poster, four is about as far as a cover can
@@ -382,8 +346,7 @@ export type ExploreChipKey =
   | 'songs'
   | 'genres'
   | 'radio'
-  | 'history'
-  | 'audiobooks';
+  | 'history';
 
 /** Chip with its state (order is determined by its position in the list). */
 export interface ExploreChip {
@@ -400,7 +363,6 @@ const EXPLORE_CHIP_KEYS: ExploreChipKey[] = [
   'genres',
   'radio',
   'history',
-  'audiobooks',
 ];
 
 /** Default order and state: the usual ones, all visible. */
@@ -413,9 +375,6 @@ export const DEFAULT_EXPLORE_CHIPS: ExploreChip[] = [
   { key: 'genres', enabled: true },
   { key: 'radio', enabled: true },
   { key: 'history', enabled: false },
-  // Off unless somebody goes and turns it on. Most libraries are music and
-  // nothing else, and a chip for a shelf you do not own is a chip in the way.
-  { key: 'audiobooks', enabled: false },
 ];
 
 /**
@@ -615,10 +574,6 @@ interface SettingsState {
   showExplicitTag: boolean;
   /** When the queue ends, continue with similar songs (getSimilarSongs2). */
   autoplaySimilar: boolean;
-  /** Remember audiobook progress locally so albums can resume later. */
-  saveAudiobookProgress: boolean;
-  /** How far Continue playing rewinds from the saved audiobook position. */
-  audiobookContinueRewindSec: number;
   /**
    * Whether the app measures itself (Settings › About → Diagnostics). On for
    * everybody, since a report from the phone with the problem is worth more
@@ -813,8 +768,6 @@ interface SettingsState {
   discographyLayout: ListLayout;
   /** List or grid on a genre's albums. Its own key, same reasoning. */
   genreLayout: ListLayout;
-  /** List or grid on the Audiobooks shelf. Its own key, same reasoning. */
-  audiobooksLayout: ListLayout;
   /**
    * How many across each grid is, for the ones that have been changed. Only
    * what somebody chose is kept; anything absent falls back to
@@ -853,8 +806,6 @@ interface SettingsState {
   setShowListRating: (value: boolean) => void;
   setShowExplicitTag: (value: boolean) => void;
   setAutoplaySimilar: (value: boolean) => void;
-  setSaveAudiobookProgress: (value: boolean) => void;
-  setAudiobookContinueRewindSec: (value: number) => void;
   setDiagnostics: (value: boolean) => void;
   setUpdateCheck: (value: boolean) => void;
   setNavidromeIdRepair: (value: boolean) => void;
@@ -916,7 +867,6 @@ interface SettingsState {
   setBrowseSongsLayout: (value: ListLayout) => void;
   setDiscographyLayout: (value: ListLayout) => void;
   setGenreLayout: (value: ListLayout) => void;
-  setAudiobooksLayout: (value: ListLayout) => void;
   setGridColumns: (key: GridKey, value: number) => void;
   setShareExpiry: (value: ShareExpiry) => void;
   setShareDownloadable: (value: boolean) => void;
@@ -966,8 +916,6 @@ function snapshot(get: () => SettingsState) {
     showListRating: s.showListRating,
     showExplicitTag: s.showExplicitTag,
     autoplaySimilar: s.autoplaySimilar,
-    saveAudiobookProgress: s.saveAudiobookProgress,
-    audiobookContinueRewindSec: s.audiobookContinueRewindSec,
     diagnostics: s.diagnostics,
     updateCheck: s.updateCheck,
     navidromeIdRepair: s.navidromeIdRepair,
@@ -1023,7 +971,6 @@ function snapshot(get: () => SettingsState) {
     browseSongsLayout: s.browseSongsLayout,
     discographyLayout: s.discographyLayout,
     genreLayout: s.genreLayout,
-    audiobooksLayout: s.audiobooksLayout,
     gridColumns: s.gridColumns,
     shareExpiry: s.shareExpiry,
     shareDownloadable: s.shareDownloadable,
@@ -1058,8 +1005,6 @@ const DEFAULTS = {
   // nowhere, and where it does draw it is the tag the file was given.
   showExplicitTag: true,
   autoplaySimilar: true,
-  saveAudiobookProgress: true,
-  audiobookContinueRewindSec: AUDIOBOOK_CONTINUE_REWIND_DEFAULT,
   // Off: measuring is for somebody who is being asked to measure. Everyone
   // else was paying for a report they will never send.
   diagnostics: false,
@@ -1137,7 +1082,6 @@ const DEFAULTS = {
   genreLayout: 'grid' as ListLayout,
   // Grid too: a shelf of books is looked at, and the covers are how you tell
   // one from another before you have read the spine.
-  audiobooksLayout: 'grid' as ListLayout,
   gridColumns: {} as Partial<Record<GridKey, number>>,
   // Sharing a song with somebody usually means for good; the rest are there
   // for whoever wants the link to stop working.
@@ -1272,16 +1216,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
 
   setAutoplaySimilar: (autoplaySimilar) => {
     set({ autoplaySimilar });
-    persist(snapshot(get));
-  },
-
-  setSaveAudiobookProgress: (saveAudiobookProgress) => {
-    set({ saveAudiobookProgress });
-    persist(snapshot(get));
-  },
-
-  setAudiobookContinueRewindSec: (audiobookContinueRewindSec) => {
-    set({ audiobookContinueRewindSec: cleanAudiobookContinueRewindSec(audiobookContinueRewindSec) });
     persist(snapshot(get));
   },
 
@@ -1577,11 +1511,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
-  setAudiobooksLayout: (audiobooksLayout) => {
-    set({ audiobooksLayout });
-    persist(snapshot(get));
-  },
-
   setGridColumns: (key, value) => {
     set({ gridColumns: { ...get().gridColumns, [key]: value } });
     persist(snapshot(get));
@@ -1670,8 +1599,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
           showListRating: boolean;
           showExplicitTag?: boolean;
           autoplaySimilar: boolean;
-          saveAudiobookProgress: boolean;
-          audiobookContinueRewindSec: number;
           diagnostics: boolean;
           updateCheck?: boolean;
           navidromeIdRepair?: boolean;
@@ -1733,7 +1660,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
           browseSongsLayout: ListLayout;
           discographyLayout: ListLayout;
           genreLayout: ListLayout;
-          audiobooksLayout: ListLayout;
           gridColumns: Partial<Record<GridKey, number>>;
           shareExpiry: ShareExpiry;
           shareDownloadable: boolean;
@@ -1825,19 +1751,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (typeof parsed.autoplaySimilar === 'boolean') {
           set({ autoplaySimilar: parsed.autoplaySimilar });
-        }
-        if (typeof parsed.saveAudiobookProgress === 'boolean') {
-          set({ saveAudiobookProgress: parsed.saveAudiobookProgress });
-        }
-        // Clamped rather than only checked, like the two rules below it: what
-        // is in the file is whatever the app that wrote it allowed, and this
-        // one has already been a closed list of four and is now a range.
-        if (typeof parsed.audiobookContinueRewindSec === 'number') {
-          set({
-            audiobookContinueRewindSec: cleanAudiobookContinueRewindSec(
-              parsed.audiobookContinueRewindSec,
-            ),
-          });
         }
         if (typeof parsed.crossfadeSec === 'number' && parsed.crossfadeSec >= 0) {
           set({ crossfadeSec: parsed.crossfadeSec });
@@ -2060,9 +1973,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (parsed.genreLayout === 'list' || parsed.genreLayout === 'grid') {
           set({ genreLayout: parsed.genreLayout });
-        }
-        if (parsed.audiobooksLayout === 'list' || parsed.audiobooksLayout === 'grid') {
-          set({ audiobooksLayout: parsed.audiobooksLayout });
         }
         // Read key by key rather than taken whole: a number from a file is the
         // one thing here that decides how a list is laid out, and a stray one

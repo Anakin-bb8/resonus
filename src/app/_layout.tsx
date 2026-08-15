@@ -30,7 +30,6 @@ import { removeLegacyRadioCovers } from '@/lib/legacyRadioCovers';
 import { startPerfLog } from '@/lib/perfLog';
 import { queryClient } from '@/lib/query';
 import { primaryUrl } from '@/lib/serverUrls';
-import { useAlbumProgress } from '@/store/albumProgress';
 import { useAuthStore } from '@/store/auth';
 import { useAutoDownloads } from '@/store/autoDownloads';
 import { checkAutoUrlNow, initAutoUrl } from '@/store/autoUrl';
@@ -147,7 +146,6 @@ export default function RootLayout() {
       usePlayHistory.getState().hydrate();
       useSortPrefs.getState().hydrate();
       void useLastPlayed.getState().hydrate();
-      void useAlbumProgress.getState().hydrate();
       void usePins.getState().hydrate();
       void useAutoDownloads.getState().hydrate();
     });
@@ -273,7 +271,6 @@ export default function RootLayout() {
                 <Stack.Screen name="favorites" {...singular} />
                 <Stack.Screen name="favorites-add" {...singular} />
                 <Stack.Screen name="history" {...singular} />
-                <Stack.Screen name="audiobooks" {...singular} />
                 <Stack.Screen name="settings/index" {...singular} />
                 <Stack.Screen name="settings/downloads" {...singular} />
                 <Stack.Screen name="settings/library" {...singular} />
@@ -287,7 +284,6 @@ export default function RootLayout() {
                 <Stack.Screen name="settings/home-sections" {...singular} />
                 <Stack.Screen name="settings/equalizer" {...singular} />
                 <Stack.Screen name="settings/scrobbling" {...singular} />
-                <Stack.Screen name="settings/audiobooks" {...singular} />
                 <Stack.Screen name="settings/theme" {...singular} />
                 <Stack.Screen name="settings/about" {...singular} />
               </Stack.Protected>
