@@ -14,6 +14,10 @@ Releases before 0.2.1 are only listed on the
 - Playback speed, from half to double, and the song keeps its pitch (#151). Its button sits under the player controls and starts off, in Settings › Player.
 - The chips on Home can go without their icons and be their name alone, in Settings › Explore chips.
 
+### Fixed
+
+- The app no longer freezes on the way back out of album → artist → album → the same artist. Going to a screen already open stopped moving it up the history, which is what left the screen painted but dead to the touch.
+
 ## [0.7.1] - 2026-08-15
 
 ### Added
