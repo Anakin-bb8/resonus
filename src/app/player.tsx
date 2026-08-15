@@ -1140,7 +1140,7 @@ export default function PlayerScreen() {
                 >
                   <MaterialIcons
                     name="speed"
-                    size={22}
+                    size={24}
                     color={speed === 1 ? colors.text : colors.accent}
                   />
                   {/* The number only once it says something. Beside the icon in
