@@ -33,7 +33,7 @@ Also available on [Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtai
 
 ## Features
 
-- **Navidrome / OpenSubsonic / Jellyfin / Ampache**: multi-profile login, multi-library support, plus several server addresses with automatic switching (experimental)
+- **Navidrome / OpenSubsonic / Jellyfin / Ampache**: multi-profile login, multi-library support, plus several server addresses with automatic switching
 - **Local mode**: play music straight from your device or a folder, no server needed
 - **Offline mode**: your favorites, playlists and albums stay browsable with no connection; downloaded songs play, the rest show grayed out, and it switches automatically when the server is unreachable
 - **Downloads**: albums, playlists, an artist's whole discography or single songs, in original quality or transcoded
@@ -44,7 +44,7 @@ Also available on [Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtai
 - **Autoplay & mixes**: keep the music going with similar songs, or start a mix from any track
 - **Organize**: multi-select (queue, playlist or download in batch), star ratings, pinned items, play history
 - **Make it yours**: reorder and show/hide Home sections and explore chips, accent colors, app fonts, configurable swipe and ⋯ menu actions
-- **Android Auto**
+- **Android Auto** (experimental)
 - **Queue sync across devices**
 - **In 7 languages**: English, Spanish, German, Catalan, Russian, Italian, Simplified Chinese
 
