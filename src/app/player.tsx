@@ -40,6 +40,7 @@ import { FavoriteButton } from '@/components/FavoriteButton';
 import { CoverLyrics, LyricsCard } from '@/components/LyricsCard';
 import { MarqueeText } from '@/components/MarqueeText';
 import { OutputSheet } from '@/components/OutputSheet';
+import { SpeedSheet } from '@/components/SpeedSheet';
 import { StarRating } from '@/components/StarRating';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
@@ -215,6 +216,7 @@ export default function PlayerScreen() {
   const toggleShuffle = usePlayerStore((s) => s.toggleShuffle);
   const cycleRepeat = usePlayerStore((s) => s.cycleRepeat);
   const rateSong = usePlayerStore((s) => s.rateSong);
+  const speed = usePlayerStore((s) => s.speed);
   const openMenu = useSongMenu((s) => s.open);
   const openArtistPicker = useArtistPicker((s) => s.open);
   const t = useT();
@@ -237,6 +239,7 @@ export default function PlayerScreen() {
   // build without the native module behind it.
   const showDevicesButton =
     useSettings((s) => s.showDevicesButton) && (!local || localHttpAvailable);
+  const showSpeedButton = useSettings((s) => s.showSpeedButton);
   const seekButtonsSec = useSettings((s) => s.seekButtonsSec);
   const serverType = useAuthStore((s) => s.auth?.serverType);
   const hasAccount = useAuthStore((s) => !!s.auth);
@@ -259,6 +262,10 @@ export default function PlayerScreen() {
   const jukeboxActive = useJukebox((s) => s.active);
   const remoteDevice = upnpDevice ?? (jukeboxActive ? t('Server speakers (Jukebox)') : null);
   const [outputOpen, setOutputOpen] = useState(false);
+  // The speed sheet holds its own visibility (see `SheetModal`): opening it
+  // repaints the modal and not this screen, which is the whole reason the
+  // player's other menus are built this way.
+  const openSpeedSheet = useRef<() => void>(() => {});
   // With local lyrics (.lrc/USLT/LRCLIB) offline mode also has lyrics;
   // only radio (direct url) is excluded. Hiding the card (setting) doesn't
   // disable lyrics: tapping cover art still opens the full screen.
@@ -678,6 +685,19 @@ export default function PlayerScreen() {
   const coverTopPad = Math.round(coverSlack * COVER_TOP_SHARE);
   const duration = durationSec || song.duration || 0;
   const repeatActive = repeat !== 'off';
+  /**
+   * The speed button, off by default and turned on in Settings › Player.
+   *
+   * It shows up uninvited in one case: a speed that is not 1. Somebody who
+   * turns the button off while a record is playing at three quarters would
+   * otherwise be left with no way back to normal, and nothing on screen saying
+   * why the music sounds like that.
+   *
+   * Both cases still need the speed to be able to do anything: a station
+   * arrives in real time and a renderer plays at its own pace, so there is
+   * nothing to offer while either is what is playing.
+   */
+  const showSpeed = (showSpeedButton || speed !== 1) && !song.url && !remoteDevice;
 
   return (
     <GestureDetector gesture={dismissPan}>
@@ -1074,7 +1094,7 @@ export default function PlayerScreen() {
             </Pressable>
           </View>
 
-          {showDevicesButton || showQueueButton || remoteDevice ? (
+          {showDevicesButton || showQueueButton || remoteDevice || showSpeed ? (
             <View style={styles.bottomRow}>
               <View style={styles.bottomSlot}>
                 {/* Connected to a remote device it's always shown: it's the
@@ -1106,16 +1126,44 @@ export default function PlayerScreen() {
                   </Pressable>
                 ) : null}
               </View>
-              {showQueueButton ? (
+              {/* Dead centre of the row, between the devices and the queue: it
+                  is about the music itself rather than about where it goes or
+                  what comes next, and it is the one of the three you reach for
+                  while the song plays. */}
+              {showSpeed ? (
                 <Pressable
                   hitSlop={10}
                   accessibilityRole="button"
-                  accessibilityLabel={t('View queue')}
-                  onPress={() => router.push('/queue')}
+                  accessibilityLabel={t('Playback speed')}
+                  onPress={() => openSpeedSheet.current()}
+                  style={styles.speedButton}
                 >
-                  <MaterialIcons name="queue-music" size={24} color={colors.text} />
+                  <MaterialIcons
+                    name="speed"
+                    size={22}
+                    color={speed === 1 ? colors.text : colors.accent}
+                  />
+                  {/* The number only once it says something. Beside the icon in
+                      the accent, like the device name next to its own. */}
+                  {speed === 1 ? null : (
+                    <Text style={styles.speedText}>{`${speed}×`}</Text>
+                  )}
                 </Pressable>
               ) : null}
+              {/* Same width as the slot on the left, so what sits between them
+                  is centred on the screen and not on what is left over. */}
+              <View style={styles.bottomSlotEnd}>
+                {showQueueButton ? (
+                  <Pressable
+                    hitSlop={10}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('View queue')}
+                    onPress={() => router.push('/queue')}
+                  >
+                    <MaterialIcons name="queue-music" size={24} color={colors.text} />
+                  </Pressable>
+                ) : null}
+              </View>
             </View>
           ) : null}
         </View>
@@ -1124,6 +1172,7 @@ export default function PlayerScreen() {
         </ScrollView>
         </SafeAreaView>
         <OutputSheet visible={outputOpen} onClose={() => setOutputOpen(false)} />
+        <SpeedSheet openRef={openSpeedSheet} />
       </Animated.View>
     </GestureDetector>
   );
@@ -1296,5 +1345,27 @@ const styles = themed((colors) => ({
     fontSize: fontSize.xs,
     fontWeight: '600',
     flexShrink: 1,
+  },
+  // Mirrors `bottomSlot` on the other side, so the speed button between the two
+  // sits in the middle of the screen. The queue icon ends up exactly where it
+  // was before, at the right edge.
+  bottomSlotEnd: {
+    flex: 1,
+    height: 40,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  speedButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    height: 40,
+  },
+  // In the accent like the device name beside its own icon: it is a mode that
+  // is on, which is what the accent means everywhere else on this screen.
+  speedText: {
+    color: colors.accent,
+    fontSize: fontSize.xs,
+    fontWeight: '700',
   },
 }));

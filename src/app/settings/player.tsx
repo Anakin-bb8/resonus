@@ -60,6 +60,8 @@ export default function PlayerSettings() {
   const setShowQueueButton = useSettings((s) => s.setShowQueueButton);
   const showDevicesButton = useSettings((s) => s.showDevicesButton);
   const setShowDevicesButton = useSettings((s) => s.setShowDevicesButton);
+  const showSpeedButton = useSettings((s) => s.showSpeedButton);
+  const setShowSpeedButton = useSettings((s) => s.setShowSpeedButton);
   const seekButtonsSec = useSettings((s) => s.seekButtonsSec);
   const setSeekButtonsSec = useSettings((s) => s.setSeekButtonsSec);
   const previousButtonMode = useSettings((s) => s.previousButtonMode);
@@ -187,6 +189,12 @@ export default function PlayerSettings() {
                     onChange: setShowDevicesButton,
                   },
                 ]),
+            {
+              label: t('Show speed button'),
+              description: t('Play the music slower or faster, keeping its pitch.'),
+              value: showSpeedButton,
+              onChange: setShowSpeedButton,
+            },
             {
               label: t('Swap favorite and menu'),
               description: t(

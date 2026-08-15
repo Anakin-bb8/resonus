@@ -662,5 +662,8 @@
   "Couldn't download the update": "No s’ha pogut baixar l’actualització",
   "Couldn't check for updates": "No s’ha pogut comprovar si hi ha actualitzacions",
   "Keep paused when skipping": "Continua en pausa en canviar de cançó",
-  "Skipping while paused shows the next song without playing it. Tapping a song in the queue still plays it.": "Passar de cançó amb la reproducció en pausa mostra la següent sense reproduir-la. Tocar una cançó a la cua sí que la reprodueix."
+  "Skipping while paused shows the next song without playing it. Tapping a song in the queue still plays it.": "Passar de cançó amb la reproducció en pausa mostra la següent sense reproduir-la. Tocar una cançó a la cua sí que la reprodueix.",
+  "Playback speed": "Velocitat de reproducció",
+  "Show speed button": "Mostra el botó de velocitat",
+  "Play the music slower or faster, keeping its pitch.": "Reprodueix la música més lenta o més ràpida, sense canviar el to."
 }

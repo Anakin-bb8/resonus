@@ -703,6 +703,13 @@ interface SettingsState {
   /** Player bottom buttons (queue and devices). */
   showQueueButton: boolean;
   showDevicesButton: boolean;
+  /**
+   * The playback speed button, in the middle of the same row. Off by default,
+   * unlike the other two: playing a record at anything other than its own
+   * speed is a thing you go looking for (#151), and the player is a screen
+   * where an unused control costs everybody room.
+   */
+  showSpeedButton: boolean;
   /** Seek ±N seconds buttons next to play (0 = hidden). Only 5/10/30: these are the numbered icons that exist in MaterialIcons. */
   seekButtonsSec: number;
   /** "Previous" button behavior (restart track or always go to previous). */
@@ -836,6 +843,7 @@ interface SettingsState {
   setMarqueeTitles: (value: boolean) => void;
   setShowQueueButton: (value: boolean) => void;
   setShowDevicesButton: (value: boolean) => void;
+  setShowSpeedButton: (value: boolean) => void;
   setSeekButtonsSec: (value: number) => void;
   setPreviousButtonMode: (value: PreviousButtonMode) => void;
   setKeepPausedOnSkip: (value: boolean) => void;
@@ -945,6 +953,7 @@ function snapshot(get: () => SettingsState) {
     marqueeTitles: s.marqueeTitles,
     showQueueButton: s.showQueueButton,
     showDevicesButton: s.showDevicesButton,
+    showSpeedButton: s.showSpeedButton,
     seekButtonsSec: s.seekButtonsSec,
     previousButtonMode: s.previousButtonMode,
     keepPausedOnSkip: s.keepPausedOnSkip,
@@ -1043,6 +1052,7 @@ const DEFAULTS = {
   marqueeTitles: true,
   showQueueButton: true,
   showDevicesButton: true,
+  showSpeedButton: false,
   seekButtonsSec: 0,
   previousButtonMode: 'restart' as PreviousButtonMode,
   keepPausedOnSkip: false,
@@ -1362,6 +1372,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setShowSpeedButton: (showSpeedButton) => {
+    set({ showSpeedButton });
+    persist(snapshot(get));
+  },
+
   setSeekButtonsSec: (seekButtonsSec) => {
     set({ seekButtonsSec });
     persist(snapshot(get));
@@ -1631,6 +1646,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           marqueeTitles: boolean;
           showQueueButton: boolean;
           showDevicesButton: boolean;
+          showSpeedButton: boolean;
           seekButtonsSec: number;
           previousButtonMode: PreviousButtonMode;
           keepPausedOnSkip?: boolean;
@@ -1866,6 +1882,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (typeof parsed.showQueueButton === 'boolean') {
           set({ showQueueButton: parsed.showQueueButton });
+        }
+        if (typeof parsed.showSpeedButton === 'boolean') {
+          set({ showSpeedButton: parsed.showSpeedButton });
         }
         if (typeof parsed.showDevicesButton === 'boolean') {
           set({ showDevicesButton: parsed.showDevicesButton });

@@ -898,6 +898,7 @@ async function loadIndex(index: number, autoplay: boolean): Promise<boolean> {
     applyLoop(p);
     // Effective volume of THIS song (user × ReplayGain).
     p.volume = effectiveVolume(song);
+    applySpeed(p, song);
     if (autoplay) p.play();
     applyLockScreen(p, song);
     onTrackChanged(song);
@@ -1703,6 +1704,10 @@ function onTrackTransition() {
   // ReplayGain is per song. Not mid-ramp (sleep fade, pause fade): setting the
   // volume here would undo it.
   if (!sleepFadeTimer && !pauseFadeTimer) p.volume = effectiveVolume(song);
+  // The same player carries on with the rate it had, which is right for
+  // anything gapless queues (never a station) and puts it back to 1 if this
+  // song turns out to be one.
+  applySpeed(p, song);
   usePlayerStore.setState({
     index,
     positionSec: 0,
@@ -1777,6 +1782,45 @@ useSettings.subscribe((s) => {
   const p = activePlayer();
   if (p) p.volume = effectiveVolume(currentSong(usePlayerStore.getState()));
 });
+
+// ── Playback speed ──────────────────────────────────────────────────────────
+// Playing along with a record on an instrument is the reason this exists
+// (#151), so the pitch does not move with the speed: media3 stretches time
+// (`shouldCorrectPitch`, which expo-audio has on by default) and a song slowed
+// to three quarters is still in its own key.
+//
+// It is a property of the player and not of the source, so every place that
+// installs a source applies it: a `replace()` keeps whatever rate the player
+// was running at, but the reserve player of a crossfade or a handoff is
+// another player, and it starts at 1.
+
+/** The speeds offered, in order. 1 is the normal one, and the default. */
+export const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2] as const;
+
+/**
+ * Rate a song should actually run at.
+ *
+ * A station arrives in real time: asking for it faster only drains the buffer
+ * it is being fed and it stalls, so it always plays at 1. The choice is kept
+ * either way and comes back with the next track that has a file behind it.
+ */
+function speedFor(song: Song | null | undefined): number {
+  if (!song || song.url) return 1;
+  return usePlayerStore.getState().speed;
+}
+
+/** Applies the speed of `song` to the player holding it. */
+function applySpeed(p: AudioPlayer | null, song: Song | null | undefined) {
+  if (!p) return;
+  try {
+    // Before the rate, not after: the pitch is worked out when the rate is
+    // set, so a player told to correct it afterwards keeps the old parameters.
+    p.shouldCorrectPitch = true;
+    p.setPlaybackRate(speedFor(song));
+  } catch {
+    // ignore
+  }
+}
 
 // ── Crossfade ───────────────────────────────────────────────────────────────
 // When nearing the end of the track, the next one starts on the reserve player
@@ -1912,6 +1956,7 @@ function handoffToNewSource(index: number, song: Song, sec: number) {
   try {
     replaceSource(r, sourceFor(song, startAt));
     applyLoop(r, startAt);
+    applySpeed(r, song);
     r.volume = 0; // inaudible until the switch; the old one keeps playing from its buffer
     r.play();
     if (!useOffset && sec > 0) r.seekTo(sec);
@@ -1986,7 +2031,12 @@ function maybeStartCrossfade(status: AudioStatus) {
   const current = st.queue[st.index];
   const duration = st.durationSec;
   if (!current || current.url || duration < fadeSec + 5) return;
-  const remaining = duration - (streamOffsetSec + (status.currentTime ?? 0));
+  // What is left of the track measured in seconds of clock, which is what the
+  // fade is made of: at 1.5× the last nine seconds of music are six of ramp,
+  // and comparing the two straight started the fade while there was still a
+  // third of it left to play.
+  const remaining =
+    (duration - (streamOffsetSec + (status.currentTime ?? 0))) / speedFor(current);
   if (remaining <= 0 || remaining > fadeSec) return;
   const ni = nextIndex(false);
   if (ni == null) return;
@@ -2006,6 +2056,7 @@ function startCrossfade(index: number, fadeSec: number) {
     replaceSource(p, sourceFor(song));
     p.loop = false;
     p.volume = 0;
+    applySpeed(p, song);
     p.play();
   } catch {
     return; // no crossfade: the normal track end will do the change
@@ -2682,6 +2733,17 @@ interface PlayerState {
   positionSec: number;
   durationSec: number;
   volume: number;
+  /**
+   * How fast what is playing runs, 1 being as recorded. Carries from one track
+   * to the next, which is the point of it (#151): you set it once and practise
+   * over a whole album.
+   *
+   * It does NOT survive closing the app, unlike shuffle and repeat. Those are
+   * how somebody listens; this one belongs to an afternoon with an instrument,
+   * and a library that quietly comes back at three quarters months later is a
+   * bug report, not a preference. While it is not 1 the player says so.
+   */
+  speed: number;
   shuffle: boolean;
   /**
    * What is playing was dealt when it was started: the Shuffle button of an
@@ -2754,6 +2816,9 @@ interface PlayerState {
   previous: () => void;
   seekTo: (sec: number) => void;
   setVolume: (v: number) => void;
+  /** Sets the playback speed (see `speed`). Heard right away, without
+   *  reloading anything. */
+  setSpeed: (v: number) => void;
   jumpTo: (index: number, kind?: JumpKind) => void;
   /** Removes the song at `index`. Returns a function that reinserts it in its
    *  place (for the "Undo" toast), except when removing the current one or
@@ -2866,6 +2931,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   positionSec: 0,
   durationSec: 0,
   volume: 1,
+  speed: 1,
   shuffle: false,
   queueDealt: false,
   repeat: 'off',
@@ -3183,6 +3249,17 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       const p = activePlayer();
       if (p) p.volume = effectiveVolume(currentSong(get()));
     }
+  },
+
+  setSpeed: (v) => {
+    // The ends of what is offered. Android clamps to 0.1–2 on its own, and a
+    // rate that came back clamped would leave the list showing a speed that is
+    // not the one playing.
+    const speed = Math.min(2, Math.max(0.5, v));
+    set({ speed });
+    // Only the player that is sounding: the reserve gets it when a source is
+    // installed on it, and a remote renderer plays at its own pace.
+    if (!remoteKind()) applySpeed(activePlayer(), currentSong(get()));
   },
 
   jumpTo: (index, kind = 'pick') => {
@@ -3636,7 +3713,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       // them back on by hand afterwards is exactly the chore #102 was about.
       // Changing account is the real exception, since the mode being restored
       // belongs with the other profile's queue.
-      ...(forProfile ? { shuffle: false, repeat: 'off' as const } : {}),
+      // The speed goes with them, and for the same reason: it is about
+      // listening, not about this queue. It does not outlive the run either
+      // way (see `speed`).
+      ...(forProfile ? { shuffle: false, repeat: 'off' as const, speed: 1 } : {}),
       // Not one of those two: this is about the queue that is going away, not
       // about how somebody listens.
       queueDealt: false,

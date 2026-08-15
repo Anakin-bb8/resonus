@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 656 of them.
+Every string the app can show, under the screen it shows up on. 659 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -390,6 +390,7 @@ you are actually typing into, which is easier than reading it here.
 | `No devices found` |  |
 | `NOW PLAYING` | Small label above the cover, in the same place and style as `PLAYING FROM`, when there is nothing to name |
 | `Output` |  |
+| `Playback speed` |  |
 | `Playback stopped` | The mini player when there is nothing playing any more |
 | `PLAYING FROM` | Small label above the cover, followed by the name of the album, playlist or mix it is playing from, or by `Queue` while the song is one that was added to the queue by hand. Written in capitals by the design, so it can be capitals in your language too, or not, whichever reads right |
 | `Previous` | Player control: the previous track (accessibility label) |
@@ -835,6 +836,7 @@ you are actually typing into, which is easier than reading it here.
 | `On cover tap` | What tapping the cover art in the player does. Its values are `Nothing` and `Open lyrics screen` |
 | `Open lyrics screen` | A value of `On cover tap` |
 | `Plain` | A value of `Background`: a flat colour behind the player, no picture |
+| `Play the music slower or faster, keeping its pitch.` | The line under “Show speed button”, explaining it |
 | `Player` |  |
 | `Player background` | What is drawn behind the player: the blurred artwork, or a flat tint |
 | `Prefer local lyrics` | A value of `Lyrics source`: use the ones that came with the file first |
@@ -854,6 +856,7 @@ you are actually typing into, which is easier than reading it here.
 | `Show quality label` |  |
 | `Show queue button` |  |
 | `Show rating` |  |
+| `Show speed button` |  |
 | `Show the album name and release year next to the artist.` | The line under “Show album & year”, explaining it |
 | `Show the whole artwork instead of cropping it to a square.` | The line under “Fit cover art”, explaining it |
 | `Skip buttons` | The seek forward / back buttons setting |
