@@ -11,23 +11,23 @@ Releases before 0.2.1 are only listed on the
 
 ### Added
 
-- A light theme, in Settings › Appearance › Theme, marked experimental. Dark stays the default and is untouched. Every screen is covered, the player and the lyrics included: where those take their colour from the cover art, the tint follows the theme. The accent you picked works in both, darkened on white only as far as it has to be to stay readable.
+- A light theme, in Settings › Appearance › Theme, marked experimental. Dark stays the default.
 
 ### Changed
 
 - The local profile no longer marks itself with a phone icon in Home's header.
-- An artist's ⋯ menu offers All releases whatever their records are tagged as, instead of only where the discography is split into shelves.
+- An artist's ⋯ menu offers All releases whatever their records are tagged as.
 
 ### Fixed
 
-- Text is no longer cut off with Android's "Bold text" turned on. The system draws every label heavier while React Native measures its box with the normal font, so anything that no longer fit was dropped: the tab read "Hom...", a track's artist read "Sum ...", and the track menu lost the end of every line, leaving two identical "Go to" entries. The app now sets its own weight, which is measured as it is drawn. In exchange, that setting no longer makes the app's text bolder.
-- The app no longer freezes after opening an artist or an album from the full player and then tapping the mini player. That reopened a player screen still sitting in the stack, and moving it back to the top left an invisible sheet over the app that swallowed every touch. Nothing short of killing the app got out of it.
-- A playlist deleted on the server stops appearing in Home's quick grid and in the car's Recents (#152). Both draw it from the name written down when it played, which is why clearing the cache never got rid of it.
-- "Check for updates automatically" now asks on every launch, on every return to the app, and when the network comes back, at most once every six hours. It used to ask once per process, which on a music player that stays alive for days meant almost never, and it skipped anyone on a local profile because the app read its offline mode as having no internet.
+- Text is no longer cut off with Android's "Bold text" on, at the price of the app's text no longer following that setting.
+- The app no longer freezes after opening an artist or an album from the full player and then tapping the mini player.
+- A playlist deleted on the server stops appearing in Home's quick grid and in the car's Recents (#152).
+- "Check for updates automatically" asks again at most every six hours, instead of once per app process.
 - A search result opens with one tap while the keyboard is up, in Search and in the lists with a filter box.
-- The app opens without waiting on the server. Bringing the queue back was asking it for the stream, the lyrics, the next five tracks and more, all in the instant the app was trying to draw itself; none of it is needed before you press play.
-- The saved track goes into the player once the app is up, at the position it was left at, instead of on the way in.
-- A large download catalog is read in pages, so opening the app with tens of thousands of songs on the phone is no longer one long freeze.
+- The app opens without waiting on the server.
+- The saved track goes back into the player once the app is up, at the position it was left at.
+- A large download catalog is read in pages, so opening with tens of thousands of songs on the phone is no longer one long freeze.
 
 ## [0.7.2] - 2026-08-15
 
