@@ -11,6 +11,7 @@ Releases before 0.2.1 are only listed on the
 
 ### Changed
 
+- The local profile no longer marks itself with a phone icon in Home's header.
 - An artist's ⋯ menu offers All releases whatever their records are tagged as, instead of only where the discography is split into shelves.
 
 ### Fixed

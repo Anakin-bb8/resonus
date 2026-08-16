@@ -747,18 +747,17 @@ export default function HomeScreen() {
               measure differently depending on the chosen font. Shrinking and
               trimming, no text can push the buttons off-screen. */}
           <View style={styles.headerLeft}>
+            {/* Nothing beside the greeting in the local profile. There used to
+                be a phone in the accent colour here, and it was the one thing
+                on the screen saying which profile you were in. That is the
+                trouble with it: the local profile is not a state you are
+                waiting to come out of, it is where somebody has chosen to be,
+                and a permanent badge for it is decoration. Offline is a
+                different matter and still says so, on the right. */}
             {showGreeting ? (
               <Text style={styles.greeting} numberOfLines={1}>
                 {greeting}
               </Text>
-            ) : null}
-            {offline && !auth ? (
-              <Ionicons
-                name="phone-portrait-outline"
-                size={28}
-                color={colors.accent}
-                accessibilityLabel={t('Offline')}
-              />
             ) : null}
           </View>
           <View style={styles.headerRight}>

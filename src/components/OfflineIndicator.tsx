@@ -1,9 +1,10 @@
 /**
  * Subtle "offline" indicator for the tab headers (Home, Library, Search).
  * It reminds why what is on screen is limited to downloads.
- * Only for server accounts in offline mode; on a local profile "offline" is
- * the normal state and doesn't need a warning, and Home marks that one with an
- * icon of its own.
+ * Only for server accounts in offline mode; on a local profile "offline" is the
+ * normal state and doesn't need a warning. Home used to mark that one with a
+ * phone in the header and no longer does: nothing is limited there, so there was
+ * nothing to remind anybody of.
  *
  * The cloud on its own, everywhere. The word beside it was the widest thing in
  * a header that already carries two or three buttons, and in the search bar it
