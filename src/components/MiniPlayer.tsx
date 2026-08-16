@@ -3,7 +3,6 @@
  * play/pause button; tapping it opens the player.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { ActivityIndicator, Dimensions, Pressable, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -22,6 +21,7 @@ import { useDominantColor } from '@/hooks/useDominantColor';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
+import { pushOnce } from '@/lib/pushOnce';
 import { currentSong, useLiveInfo, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
@@ -54,7 +54,6 @@ function MiniProgress({ song }: { song: Song }) {
 }
 
 export function MiniPlayer() {
-  const router = useRouter();
   const song = usePlayerStore(currentSong);
   // A radio saying what it plays says it here too: down here there is only room
   // for the track and whoever is playing it, so the station stays in the player.
@@ -146,7 +145,7 @@ export function MiniPlayer() {
       <Animated.View style={cardStyle}>
         <Pressable
           style={[styles.container, { backgroundColor: bg }]}
-          onPress={() => router.push('/player')}
+          onPress={() => pushOnce('/player')}
         >
       <Animated.View style={[styles.details, detailsStyle]}>
         <Cover uri={cover} size={44} placeholderIcon={song.url ? 'radio' : 'musical-notes'} />

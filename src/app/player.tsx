@@ -51,6 +51,7 @@ import { useT } from '@/i18n';
 import { artistTargets } from '@/lib/artistNav';
 import { formatDuration, formatGroupedDeviceLabel } from '@/lib/format';
 import { haptic } from '@/lib/haptics';
+import { pushOnce } from '@/lib/pushOnce';
 import { useArtistPicker } from '@/store/artistPicker';
 import { useAuthStore } from '@/store/auth';
 import { useJukebox } from '@/store/jukebox';
@@ -581,7 +582,7 @@ export default function PlayerScreen() {
   }, [song?.id]);
   const openLyrics = () => {
     if (coverTapAction === 'inline') setInlineLyrics((v) => !v);
-    else if (coverTapAction === 'screen') router.push('/lyrics');
+    else if (coverTapAction === 'screen') pushOnce('/lyrics');
   };
   const coverTap = Gesture.Tap()
     .maxDistance(10)
@@ -793,7 +794,7 @@ export default function PlayerScreen() {
               // another screen. Anywhere else replaces the player, since the
               // album or the playlist is somewhere to stay.
               if (queuedNow) {
-                router.push('/queue');
+                pushOnce('/queue');
                 return;
               }
               router.back();
@@ -1158,7 +1159,7 @@ export default function PlayerScreen() {
                     hitSlop={10}
                     accessibilityRole="button"
                     accessibilityLabel={t('View queue')}
-                    onPress={() => router.push('/queue')}
+                    onPress={() => pushOnce('/queue')}
                   >
                     <MaterialIcons name="queue-music" size={24} color={colors.text} />
                   </Pressable>

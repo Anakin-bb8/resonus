@@ -56,33 +56,33 @@ installAppFont();
  *  app has a server and nothing is going to ask for it yet. */
 const MIRROR_DELAY_MS = 15_000;
 
-/**
- * No screen is worth having twice. A tap only becomes a screen once the
- * navigation state is committed, so two quick taps on the same row (or on the
- * mini player) are two pushes decided against the same state and the stack ends
- * up with the same screen two, three, four times over: you close the player and
- * there is another player behind it (#148).
+/*
+ * There is no `dangerouslySingular` on any route here, and there is not going
+ * to be. It asks the router for one screen per name, and the router delivers by
+ * taking the existing route out of the middle of the stack and pushing it again
+ * on the end with the same key. react-native-screens does not survive that
+ * reorder: the Screen on top comes back with no content in it at all, no
+ * `ScreenContentWrapper`, nothing to touch, while JS carries on running.
  *
- * With this, opening something already in the stack moves that screen to the
- * top instead of stacking a copy.
+ * It froze the app twice from two different directions. First on ordinary
+ * screens (#148): album → its artist → an album of that artist → its artist
+ * again → back → back, and the last frame sits there answering nothing. Taking
+ * it off those left it on the three modals, on the argument that the mini
+ * player is the only thing that opens the player and is hidden while the player
+ * is up, so the player could never be opened from above itself.
  *
- * It is only on the three modals now, and the reason is the `dangerously`. The
- * router does not move the route: it takes it out of the middle of the stack
- * and pushes it again on the end, keeping its key. react-native-screens does
- * not survive that. Two backs later the top Screen comes back with no content
- * in it at all — no `ScreenContentWrapper`, nothing to touch — and the last
- * frame stays frozen on the display while JS carries on running, so the app
- * looks alive and answers nothing. Reproduced from Home: album → its artist →
- * an album of that artist → its artist again (the same one, so it is the one
- * already in the stack) → back → back.
+ * That was wrong, and it froze the app again. The mini player is hidden while
+ * the player is the TOP route, not while it is anywhere in the stack, and the
+ * player pushes the artist and the album screens without closing itself. So:
+ * player → artist → an album, and the mini player is back with a player still
+ * buried underneath; tapping it pushes a route that is already down there, and
+ * the reorder happens. Worse than #148, because a transparent modal with
+ * nothing in it is invisible: the screen behind shows through, everything looks
+ * normal and nothing answers. Kill-the-app frozen.
  *
- * The modals are out of reach of that: the mini player, the only thing that
- * pushes the player, is hidden on all three (see `NO_MINI_PLAYER`), so none of
- * them can be opened from above itself and there is nothing to take out of the
- * middle. Everywhere else, a double tap can leave a duplicate again — a screen
- * one back press away, which is the trade for never freezing the app.
+ * The duplicate screens it was there to prevent are handled by `pushOnce`,
+ * which debounces the tap and never touches the stack.
  */
-const singular = { dangerouslySingular: true } as const;
 
 export default function RootLayout() {
   // The selected font is applied on every render (and after hydrating settings):
@@ -325,7 +325,6 @@ export default function RootLayout() {
                   opaque surface over it. */}
               <Stack.Screen
                 name="player"
-                {...singular}
                 options={{
                   presentation: 'containedTransparentModal',
                   animation: 'fade_from_bottom',
@@ -338,12 +337,10 @@ export default function RootLayout() {
               />
               <Stack.Screen
                 name="queue"
-                {...singular}
                 options={{ presentation: 'modal', animation: 'fade_from_bottom' }}
               />
               <Stack.Screen
                 name="lyrics"
-                {...singular}
                 options={{ presentation: 'modal', animation: 'fade_from_bottom' }}
               />
             </Stack>

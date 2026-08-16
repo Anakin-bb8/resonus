@@ -7,7 +7,6 @@
  */
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -31,13 +30,13 @@ import { type LyricLine } from '@/api/subsonic';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useLyrics } from '@/hooks/useLyrics';
 import { useT } from '@/i18n';
+import { pushOnce } from '@/lib/pushOnce';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
 import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 
 export function LyricsCard() {
   const t = useT();
-  const router = useRouter();
   const song = usePlayerStore(currentSong);
   const { data } = useLyrics(song ?? undefined);
   // Same setting as the full screen; without color, neutral gray (surface)
@@ -74,7 +73,7 @@ export function LyricsCard() {
         accessibilityRole="button"
         accessibilityLabel={t('Lyrics')}
         hitSlop={8}
-        onPress={() => router.push('/lyrics')}
+        onPress={() => pushOnce('/lyrics')}
       >
         <MaterialIcons name="open-in-full" size={16} color={colors.onInverse} />
       </Pressable>

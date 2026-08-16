@@ -20,6 +20,7 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- The app no longer freezes after opening an artist or an album from the full player and then tapping the mini player. That reopened a player screen still sitting in the stack, and moving it back to the top left an invisible sheet over the app that swallowed every touch. Nothing short of killing the app got out of it.
 - A playlist deleted on the server stops appearing in Home's quick grid and in the car's Recents (#152). Both draw it from the name written down when it played, which is why clearing the cache never got rid of it.
 - "Check for updates automatically" now asks on every launch, on every return to the app, and when the network comes back, at most once every six hours. It used to ask once per process, which on a music player that stays alive for days meant almost never, and it skipped anyone on a local profile because the app read its offline mode as having no internet.
 - A search result opens with one tap while the keyboard is up, in Search and in the lists with a filter box.
