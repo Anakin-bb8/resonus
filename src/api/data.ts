@@ -15,6 +15,7 @@ import { hashKey } from '@/lib/localLibrary';
 import { bump } from '@/lib/perfLog';
 import { queryClient } from '@/lib/query';
 import { getItem, setItem } from '@/lib/storage';
+import { useLastPlayed } from '@/store/lastPlayed';
 import { useLibraryMirror } from '@/store/libraryMirror';
 import { useOfflineQueue, type PlayOp, type QueuePlaylist } from '@/store/offlineQueue';
 import { usePlayHistory } from '@/store/playHistory';
@@ -837,8 +838,24 @@ export function getPlaylists(): Promise<Subsonic.Playlist[]> {
     if (serverOffline()) return mirrorPlaylists();
     return Local.getPlaylists();
   }
+  // Whose list this is, read before asking rather than when the answer lands:
+  // a profile switch while the request is in flight would otherwise measure the
+  // new profile's recents against the old one's playlists and delete the lot.
+  const asked = profileScopeId();
   return Subsonic.getPlaylists(auth()).then((list) => {
     useLibraryMirror.getState().savePlaylists(list);
+    // These are all of them, so a playlist recorded as played and not in here
+    // was deleted on the server. Its record outlived it and kept drawing a tile
+    // on Home and a row in the car's Recents, both of which are drawn from what
+    // was written down when it played rather than from any list: that is what
+    // let it survive clearing the cache. Only on the way back from the server,
+    // never from the mirror or the local files, which are not the whole story.
+    if (profileScopeId() === asked) {
+      useLastPlayed.getState().forgetMissing(
+        'playlist',
+        list.map((p) => p.id),
+      );
+    }
     // Cache each playlist's tracklist in the background so they are
     // available offline without opening them one by one (non-blocking).
     void prefetchPlaylistDetails(list);

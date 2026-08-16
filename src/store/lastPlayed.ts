@@ -59,6 +59,16 @@ interface LastPlayedState {
    */
   names: Record<string, string>;
   touch: (href: string, name?: string) => void;
+  /**
+   * Drops the records of one kind of source whose id is not in `ids`.
+   *
+   * For the callers that hold a COMPLETE list and nothing less: the server's
+   * playlists are all of the playlists, so one recorded here and missing from
+   * that list has been deleted. A partial list (the server's "recent albums",
+   * anything read while offline) says nothing about what it left out and must
+   * not be handed to this.
+   */
+  forgetMissing: (kind: string, ids: Iterable<string>) => void;
   hydrate: () => Promise<void>;
 }
 
@@ -94,6 +104,23 @@ export const useLastPlayed = create<LastPlayedState>((set, get) => ({
     const names = Object.fromEntries(
       Object.entries(kept).filter(([key]) => key in times),
     );
+    set({ times, names });
+    scheduleSave(times, names);
+  },
+
+  forgetMissing: (kind, ids) => {
+    const alive = new Set(ids);
+    const prefix = `/${kind}/`;
+    const dead = Object.keys(get().times).filter(
+      (href) => href.startsWith(prefix) && !alive.has(href.slice(prefix.length)),
+    );
+    if (dead.length === 0) return;
+    const times = { ...get().times };
+    const names = { ...get().names };
+    for (const href of dead) {
+      delete times[href];
+      delete names[href];
+    }
     set({ times, names });
     scheduleSave(times, names);
   },
