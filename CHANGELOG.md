@@ -15,6 +15,7 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- "Check for updates automatically" now asks on every launch, on every return to the app, and when the network comes back, at most once every six hours. It used to ask once per process, which on a music player that stays alive for days meant almost never, and it skipped anyone on a local profile because the app read its offline mode as having no internet.
 - A search result opens with one tap while the keyboard is up, in Search and in the lists with a filter box.
 
 ## [0.7.2] - 2026-08-15

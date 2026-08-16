@@ -1,14 +1,24 @@
 /**
  * Says that a newer Resonus is out, and installs it.
  *
- * Once a day at most, on a launch: the throttle lives in `checkForUpdate`, and
- * a launch is the one moment somebody is looking at the app itself rather than
- * at a list they came for.
+ * The throttle lives in `checkForUpdate`, so asking here is cheap and this
+ * asks on every occasion somebody could have come back to a newer release:
+ * the launch, every return to the foreground, the moment the network comes
+ * back, and a timer for the app left open. All four go through the same
+ * throttled call, which turns them into "at most once every few hours".
  *
- * Closing it asks again tomorrow, and the switch in Settings › About is the one
- * that stops all of it. There is no per-version dismissal: one day of quiet is
- * short enough not to need one, and a release somebody said no to once is the
- * release they are still on when they report the bug it fixed.
+ * That list is the fix for a report that the switch did nothing. It used to be
+ * the launch alone, once per process, and a music player's process outlives its
+ * launches by days, so for anyone who never swipes the app away there was no
+ * second occasion. The check also sat behind the app's offline flag, which
+ * is about the music server rather than the internet: a local-profile user has
+ * no server and never lost a connection, and never got asked either.
+ *
+ * Closing it asks again on the next round, and the switch in Settings › About
+ * is the one that stops all of it. There is no per-version dismissal: a few
+ * hours of quiet is short enough not to need one, and a release somebody said
+ * no to once is the release they are still on when they report the bug it
+ * fixed.
  *
  * The download has its own window rather than living in the dialog: 57 MB needs
  * a progress bar and a way out, and `Dialog` is built for a question.
@@ -27,23 +37,30 @@ import {
 import { useAccent } from '@/hooks/useAccent';
 import { useT } from '@/i18n';
 import { clearDownloadedApk, currentVersion, RELEASES_PAGE } from '@/lib/appUpdate';
-import { useAuthStore } from '@/store/auth';
 import { useNetworkType } from '@/store/networkType';
 import { useSettings } from '@/store/settings';
 import { useUpdate } from '@/store/update';
 import { colors, fontSize, radius, spacing, themed } from '@/theme';
 import { Dialog } from './Dialog';
 
-/** Whether this launch has already asked GitHub. */
-let checked = false;
+/** Whether this launch has already cleaned up after the previous one. */
+let swept = false;
+
+/**
+ * How often the app-left-open timer comes round. Not the throttle: that one is
+ * in `checkForUpdate` and is what decides whether a tick does anything. This
+ * only has to be short enough that a session spent inside the app crosses it,
+ * and long enough to cost nothing when it doesn't.
+ */
+const TICK_MS = 30 * 60 * 1000;
 
 export function UpdatePrompt() {
   const t = useT();
   const accent = useAccent();
   const enabled = useSettings((s) => s.updateCheck);
   const hydrated = useSettings((s) => s.hydrated);
-  const offline = useAuthStore((s) => s.offline);
   const cellular = useNetworkType((s) => s.cellular);
+  const connected = useNetworkType((s) => s.connected);
   const phase = useUpdate((s) => s.phase);
   const release = useUpdate((s) => s.release);
   const progress = useUpdate((s) => s.progress);
@@ -52,16 +69,33 @@ export function UpdatePrompt() {
   const resume = useUpdate((s) => s.resume);
   const close = useUpdate((s) => s.close);
 
+  // Whatever a previous run downloaded is 57 MB of somebody's storage, and by
+  // now it has either been installed or given up on. Not tied to the switch:
+  // the bytes are already spent and want clearing either way.
+  useEffect(() => {
+    if (swept) return;
+    swept = true;
+    clearDownloadedApk();
+  }, []);
+
   // Only once the settings are read from disk: before that `updateCheck` is its
   // default (on), and someone who had turned it off would be checked on anyway.
+  //
+  // `connected` is in the dependencies rather than only in the guard, which is
+  // what makes "the network came back" one of the occasions: the effect re-runs
+  // on the change and the first thing it does is ask.
   useEffect(() => {
-    if (checked || !hydrated || !enabled || offline) return;
-    checked = true;
-    // Whatever a previous run downloaded is 57 MB of somebody's storage, and
-    // by now it has either been installed or given up on.
-    clearDownloadedApk();
+    if (!hydrated || !enabled || !connected) return;
     void check();
-  }, [hydrated, enabled, offline, check]);
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void check();
+    });
+    const timer = setInterval(() => void check(), TICK_MS);
+    return () => {
+      sub.remove();
+      clearInterval(timer);
+    };
+  }, [hydrated, enabled, connected, check]);
 
   // The answer to «install unknown apps» is not returned to us: the system
   // screen is another app, and coming back is the only news we get.

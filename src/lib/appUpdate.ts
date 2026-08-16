@@ -4,8 +4,8 @@
  * The app is not on a store: it is an APK on GitHub, and whoever does not use
  * Obtainium finds out about a new version by going to look. Which means they
  * mostly don't, and reports keep arriving against versions fixed two releases
- * ago. So the app asks GitHub itself, once a day, and can fetch and hand the
- * APK to Android's installer.
+ * ago. So the app asks GitHub itself, a few times a day, and can fetch and hand
+ * the APK to Android's installer.
  *
  * Two halves on purpose. Knowing there is an update costs nothing and is on by
  * default; installing one asks for a system permission and is only ever
@@ -26,8 +26,15 @@ const native = requireOptionalNativeModule<{
 const RELEASES_API = 'https://api.github.com/repos/juananzzz/resonus/releases/latest';
 export const RELEASES_PAGE = 'https://github.com/juananzzz/resonus/releases/latest';
 
-/** Once a day. The check is one request, but it is one nobody asked for. */
-const CHECK_EVERY_MS = 24 * 60 * 60 * 1000;
+/**
+ * Every six hours. It used to be a day, which sounds like plenty until you
+ * notice what a day means to a music player: the process stays alive for as
+ * long as Android lets it, so "once a day" was really "once, on the launch
+ * after the last one expired", and someone who opens the app every morning to
+ * press play could go a week without the question ever coming round. Six hours
+ * lands at least once in a normal day's use, and it is still one request.
+ */
+const CHECK_EVERY_MS = 6 * 60 * 60 * 1000;
 const LAST_CHECK_KEY = 'update_last_check';
 
 export interface Release {
