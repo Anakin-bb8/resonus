@@ -24,6 +24,9 @@ Releases before 0.2.1 are only listed on the
 - A playlist deleted on the server stops appearing in Home's quick grid and in the car's Recents (#152). Both draw it from the name written down when it played, which is why clearing the cache never got rid of it.
 - "Check for updates automatically" now asks on every launch, on every return to the app, and when the network comes back, at most once every six hours. It used to ask once per process, which on a music player that stays alive for days meant almost never, and it skipped anyone on a local profile because the app read its offline mode as having no internet.
 - A search result opens with one tap while the keyboard is up, in Search and in the lists with a filter box.
+- The app opens without waiting on the server. Bringing the queue back was asking it for the stream, the lyrics, the next five tracks and more, all in the instant the app was trying to draw itself; none of it is needed before you press play.
+- The saved track goes into the player once the app is up, at the position it was left at, instead of on the way in.
+- A large download catalog is read in pages, so opening the app with tens of thousands of songs on the phone is no longer one long freeze.
 
 ## [0.7.2] - 2026-08-15
 

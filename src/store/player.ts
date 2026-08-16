@@ -59,7 +59,7 @@ import { prefetchLyrics } from '@/hooks/useLyrics';
 import { tg } from '@/i18n';
 import type { Remap } from '@/lib/navidromeRemap';
 import { remapSong } from '@/lib/navidromeRemap';
-import { beat, bump } from '@/lib/perfLog';
+import { beat, bump, timed } from '@/lib/perfLog';
 import { queryClient } from '@/lib/query';
 import { primaryUrl } from '@/lib/serverUrls';
 import { getItem, setItem } from '@/lib/storage';
@@ -823,6 +823,14 @@ let loadToken = 0;
  */
 async function loadIndex(index: number, autoplay: boolean): Promise<boolean> {
   const token = ++loadToken;
+  // Whatever was waiting from the restore is superseded by this: the queue may
+  // not even be the same one any more, and an index into the old one would drop
+  // a stranger's song into the player five seconds later.
+  pendingRestore = null;
+  // Anything asked to play is the app in use, whoever asked: the button, the
+  // notification, the car, a headset. The window is only for the track the
+  // saved queue brings back on its own.
+  if (autoplay) endBootQuiet();
   // Offline, a track that only exists as a server stream cannot be played:
   // we skip forward to the next downloaded one instead of getting stuck (covers
   // "previous", manual taps and queue restore). If none is playable, we stop.
@@ -907,13 +915,17 @@ async function loadIndex(index: number, autoplay: boolean): Promise<boolean> {
     // nothing to act on. Queue it again now that `replace()` has installed the
     // current media item. Without this, the first album transition still falls
     // back to didJustFinish → replace(), leaving an audible gap.
-    scheduleNextSource();
-    // Warms up the "does it support timeOffset?" answer so the first seek
-    // on a transcoded stream already has the answer cached. For ANY server
-    // stream: the transcode may be the server's decision, and we only find
-    // out when the source loads without a length (see `sourceHasLength`).
-    if (!song.url && !localSourceFor(song)) {
-      void ensureTranscodeOffsetSupport();
+    // Both of these reach the server, and neither is needed before the first
+    // play, so on the way in they wait for the boot window to close.
+    if (!bootQuiet) {
+      scheduleNextSource();
+      // Warms up the "does it support timeOffset?" answer so the first seek
+      // on a transcoded stream already has the answer cached. For ANY server
+      // stream: the transcode may be the server's decision, and we only find
+      // out when the source loads without a length (see `sourceHasLength`).
+      if (!song.url && !localSourceFor(song)) {
+        void ensureTranscodeOffsetSupport();
+      }
     }
   } catch {
     // The song is in the player: say so, whatever went wrong on the way to
@@ -1124,6 +1136,94 @@ function maybeScrobbleThreshold(positionSec: number) {
 let nextLyricsTimer: ReturnType<typeof setTimeout> | null = null;
 const NEXT_LYRICS_DELAY_MS = 5000;
 
+// ── The first seconds of the app ────────────────────────────────────────────
+// Restoring the saved queue does not only put it on screen: it loads its track
+// into the player (see `restoreFromStorage`), and everything that normally
+// follows a track change goes with it. On a downloaded song none of that
+// touches the network. On one that lives on the server it is the Now Playing
+// report, the lyrics, the warming of the next five, the "is this a transcode?"
+// probe and the source queued behind it: seven requests with their DNS and
+// their TLS, fired in the instant the app is trying to paint itself.
+//
+// Measured on a phone with the same queue: with a downloaded song the app
+// opens instantly, with one from the server it takes a second. None of it is
+// needed before somebody presses play, so it waits for the first sign the app
+// is in use, or for the window below to run out.
+
+const BOOT_QUIET_MS = 5000;
+
+/** Whether the app is still opening, and speculative work stays out of it. */
+let bootQuiet = false;
+let bootQuietTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** Opens the window. Called where the saved queue is restored. */
+function startBootQuiet() {
+  bootQuiet = true;
+  if (bootQuietTimer) clearTimeout(bootQuietTimer);
+  bootQuietTimer = setTimeout(() => endBootQuiet(true), BOOT_QUIET_MS);
+}
+
+/**
+ * Closes the window. Idempotent, and called by whatever comes first: the timer,
+ * or the app being used.
+ *
+ * `catchUp` is for the two cases that leave the track where it is: the window
+ * running out on its own, and Play being pressed on what was restored. Anything
+ * that loads another track says no, because installing it does this again for
+ * the song that is actually going to be heard, and doing it here would be
+ * warming up the one being left behind.
+ */
+function endBootQuiet(catchUp = false) {
+  if (!bootQuiet) return;
+  bootQuiet = false;
+  if (bootQuietTimer) clearTimeout(bootQuietTimer);
+  bootQuietTimer = null;
+  if (!catchUp) return;
+  // The track itself, if it is still waiting: five seconds in, the app is open
+  // and the notification and the play button have something behind them.
+  if (pendingRestore != null) {
+    void loadRestored(false);
+    return; // its own load does the rest of this, for the song it installs
+  }
+  const song = currentSong(usePlayerStore.getState());
+  if (!song) return;
+  if (!song.url && !localSourceFor(song)) void ensureTranscodeOffsetSupport();
+  scheduleNextSource();
+  prefetchLyrics(song);
+  warmUpcoming();
+}
+
+/**
+ * The track the saved queue came back with, waiting to be installed in the
+ * player, or null.
+ *
+ * Restoring used to load it there and then, and loading a song that lives on
+ * the server means opening its stream: a connection, headers and a first
+ * buffer, in the middle of the app opening, for a song nobody has asked to
+ * hear. It is held until the app is in use or the boot window runs out, the
+ * same as everything else on the way in.
+ *
+ * Only the index travels. The position is read from the store when the load
+ * finally happens, so a seek made in the meantime is the one that survives.
+ */
+let pendingRestore: number | null = null;
+
+/** Installs the restored track, at the position the queue was left at. */
+async function loadRestored(autoplay: boolean): Promise<void> {
+  const index = pendingRestore;
+  if (index == null) return;
+  pendingRestore = null;
+  const { queue, positionSec } = usePlayerStore.getState();
+  if (!queue[index]) return;
+  if (!(await loadIndex(index, autoplay))) return;
+  // `loadIndex` starts the song at zero, which is right for every other caller
+  // and wrong for this one.
+  if (positionSec > 0) {
+    seekActive(positionSec);
+    usePlayerStore.setState({ positionSec });
+  }
+}
+
 /** Now playing / history + syncs the queue on track change. */
 function onTrackChanged(song: Song) {
   // Whatever the last stream announced was about the last stream. The
@@ -1140,7 +1240,9 @@ function onTrackChanged(song: Song) {
   // no one to tell. A track can also be loaded without playing (the queue
   // restored on reopen, the undo of a stop), and that is not a listen starting.
   const st = usePlayerStore.getState();
-  reportState(st.isPlaying ? 'starting' : 'paused', song, st.positionSec);
+  // Not while the app is still opening: the queue coming back is not somebody
+  // listening, and this is a request to the server (see the block above).
+  if (!bootQuiet) reportState(st.isPlaying ? 'starting' : 'paused', song, st.positionSec);
   usePlayHistory.getState().record(song);
   // Warm up lyrics for what is playing. The next song's are warmed too, so
   // swiping in the player shows its card instantly, but a few seconds later:
@@ -1148,7 +1250,7 @@ function onTrackChanged(song: Song) {
   // handful of connections to the server at once, so speculative requests sent
   // right then put themselves in front of what the screens are waiting for
   // (#50). Nobody swipes to the next lyrics in the first five seconds.
-  prefetchLyrics(song);
+  if (!bootQuiet) prefetchLyrics(song);
   if (nextLyricsTimer) clearTimeout(nextLyricsTimer);
   nextLyricsTimer = setTimeout(() => {
     const { queue, index } = usePlayerStore.getState();
@@ -1156,7 +1258,9 @@ function onTrackChanged(song: Song) {
   }, NEXT_LYRICS_DELAY_MS);
   scheduleSync();
   warmUpcoming();
-  void maybeQueueAutoplay();
+  // The mix only grows when the queue is running out under somebody who is
+  // listening, and asking the server for it is not work for the cold start.
+  if (!bootQuiet) void maybeQueueAutoplay();
   // Casting: reflect the new track in the media session (lock/volume).
   syncCastMedia();
 }
@@ -1192,6 +1296,7 @@ function resetWarmed() {
 }
 
 function warmUpcoming() {
+  if (bootQuiet) return; // see the boot window: nothing speculative on the way in
   if (!useSettings.getState().preloadUpcoming) return;
   const auth = useAuthStore.getState().auth;
   if (!auth || useAuthStore.getState().offline) return;
@@ -3120,6 +3225,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   toggle: () => {
+    // The one press that does not change track: what was restored is about to
+    // be heard, so what the opening held back is due now.
+    endBootQuiet(true);
     if (remoteKind()) {
       if (get().isPlaying) {
         remotePause();
@@ -3132,9 +3240,14 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     }
     const p = activePlayer();
     if (!p) {
-      // No player yet: the restored queue never got as far as loading a track,
-      // which offline means none of it is on disk. Going through `loadIndex`
-      // plays what can be played, and says so when nothing can.
+      // No player yet. Either the restored track is still waiting to be
+      // installed, in which case it goes in at the position it was left at, or
+      // there is no player because nothing could be loaded — offline with none
+      // of it on disk — and `loadIndex` says so.
+      if (pendingRestore != null) {
+        void loadRestored(true);
+        return;
+      }
       const { queue, index } = get();
       if (queue[index]) void loadIndex(index, true);
       return;
@@ -3186,6 +3299,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   next: () => {
+    endBootQuiet();
     const ni = nextIndex(true);
     if (ni != null) {
       pushHistory();
@@ -3194,6 +3308,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   previous: () => {
+    endBootQuiet();
     const { index, positionSec } = get();
     // Like Spotify: past a few seconds, "previous" restarts the song. In
     // "always" mode (YouTube-style) it always goes to the previous track, no restart.
@@ -3263,6 +3378,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   jumpTo: (index, kind = 'pick') => {
+    endBootQuiet();
     const { queue } = get();
     if (index < 0 || index >= queue.length) return;
     // Forward jump like any other: "previous" must be able to return.
@@ -3573,15 +3689,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       radioSeed: null,
       queueDealt: false,
     });
-    // Load the track (without playing) and leave the position ready.
-    await loadIndex(index, false);
-    // A tap that landed while this was loading owns the player now (`loadToken`
-    // saw to that). What is left here belongs to the queue being restored, and
-    // running it against another one would drop somebody else's song at the
-    // position this one was left at, paused.
-    if (get().queue !== songs) return;
-    if (positionSec > 0) seekActive(positionSec);
-    usePlayerStore.setState({ positionSec, isPlaying: false });
+    // The track waits, like the one the device's own copy brings back: this
+    // runs while the app is opening too (see `pendingRestore`).
+    pendingRestore = index;
   },
 
   restoreFromStorage: async () => {
@@ -3638,20 +3748,30 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       queueDealt: saved.dealt === true,
       repeat: isRepeatMode(saved.repeat) ? saved.repeat : 'off',
     });
-    await loadIndex(index, false);
-    // Same as the server restore above: only if this queue is still the one.
-    if (get().queue !== saved.queue) return true;
-    if (positionSec > 0) seekActive(positionSec);
-    usePlayerStore.setState({ positionSec, isPlaying: false });
+    // Not loaded here: the queue is on screen and the track goes into the
+    // player when the app is in use or the boot window runs out (see
+    // `pendingRestore`). The position is already in the store, which is where
+    // the load will read it from.
+    pendingRestore = index;
     return true;
   },
 
   restoreQueue: async () => {
+    // Everything speculative stays out of the way until the app is up (see
+    // `startBootQuiet`): what comes back here is a queue nobody has asked to
+    // hear yet.
+    startBootQuiet();
     // The local copy is the most faithful (includes downloads, radios and
     // offline mode); the server one is a backup for fresh sessions —
     // except when the local copy says the queue was emptied on purpose.
-    const handled = await get().restoreFromStorage();
-    if (!handled && get().queue.length === 0) await get().restoreFromServer();
+    //
+    // Timed as one: it reads the saved queue out of SecureStore, up to five
+    // hundred songs of it, and loads its track into the player. That is the
+    // last thing the opening waits for.
+    await timed('boot queue', async () => {
+      const handled = await get().restoreFromStorage();
+      if (!handled && get().queue.length === 0) await get().restoreFromServer();
+    });
   },
 
   reloadCurrent: () => {
@@ -3690,6 +3810,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       // ignore
     }
     clearLockScreen();
+    // Nothing left to install: the queue it belonged to is going away.
+    pendingRestore = null;
     playedHistory = [];
     setStreamOffset(0);
     sourceHasLength = null;

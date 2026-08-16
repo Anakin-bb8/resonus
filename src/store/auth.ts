@@ -18,7 +18,7 @@ import {
   type SubsonicAuth,
 } from '@/api/backend';
 import { primaryUrl } from '@/lib/serverUrls';
-import { bump } from '@/lib/perfLog';
+import { bump, timed } from '@/lib/perfLog';
 import { clearLocalCatalog } from '@/lib/localLibrary';
 import { deleteProfileData } from '@/lib/profileData';
 import { setOfflineMode } from '@/api/netGate';
@@ -188,13 +188,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   hydrate: async () => {
     try {
-      const [rawAuth, rawProfiles, rawOffline, rawAuto, rawSource] = await Promise.all([
-        getItem(ACTIVE_KEY),
-        getItem(PROFILES_KEY),
-        getItem(OFFLINE_KEY),
-        getItem(OFFLINE_AUTO_KEY),
-        getItem(OFFLINE_SOURCE_KEY),
-      ]);
+      // Timed because it is the first thing the app waits for and nothing is
+      // drawn until it answers: five reads out of SecureStore, which is the
+      // Android KeyStore decrypting one value at a time.
+      const [rawAuth, rawProfiles, rawOffline, rawAuto, rawSource] = await timed(
+        'boot session',
+        () =>
+          Promise.all([
+            getItem(ACTIVE_KEY),
+            getItem(PROFILES_KEY),
+            getItem(OFFLINE_KEY),
+            getItem(OFFLINE_AUTO_KEY),
+            getItem(OFFLINE_SOURCE_KEY),
+          ]),
+      );
       const profiles: Profile[] = rawProfiles
         ? (JSON.parse(rawProfiles) as any[]).map((p: any): Profile => {
             if (p._type === 'offline') return p as OfflineProfile;

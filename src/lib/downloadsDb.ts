@@ -307,27 +307,57 @@ export async function removeFromCatalog(
  * about constantly (is this one downloaded?) and what used to cost parsing
  * every song in the library to answer.
  */
-export async function downloadedFiles(
-  dir: string,
-): Promise<{ files: Record<string, string>; bitRates: Record<string, number> }> {
+export async function downloadedFiles(dir: string): Promise<Record<string, string>> {
   const db = await catalogDb(dir);
-  // The bitrate is dug out of the row's JSON by SQLite rather than by us: it is
-  // the one field wanted from it, and only transcoded downloads even have it.
-  // Handing the whole `data` column over instead meant fifteen thousand strings
-  // crossing into JS and fifteen thousand `JSON.parse` calls, on a path the
-  // offline start waits for before it can show anything.
-  const rows = await db.getAllAsync<{ id: string; local_uri: string | null; bit: number | null }>(
-    `SELECT id, local_uri, json_extract(data, '$.dlBitRate') AS bit
-       FROM songs WHERE local_uri IS NOT NULL`,
-  );
+  // Two columns and nothing else. The bitrate lives inside the row's JSON and
+  // used to be dug out here with `json_extract`, which is SQLite parsing that
+  // JSON once per row: on a library of sixty thousand songs that is sixty
+  // thousand parses on the path the offline start waits for before it can show
+  // anything. It is asked for on its own now (see `downloadedBitRates`), out of
+  // the way of the opening.
+  // In pages, with a turn given back to everyone else between them. The whole
+  // catalog in one go is a single block of work with sixty thousand rows in it
+  // on a large library, and nothing else runs while it happens: not the first
+  // paint, not a tap. Paged, it takes about the same total and stops being a
+  // freeze.
   const files: Record<string, string> = {};
-  const bitRates: Record<string, number> = {};
-  for (const r of rows) {
-    if (!r.local_uri) continue;
-    files[r.id] = r.local_uri;
-    if (r.bit != null) bitRates[r.id] = r.bit;
+  for (let offset = 0; ; offset += PAGE) {
+    const rows = await db.getAllAsync<{ id: string; local_uri: string | null }>(
+      'SELECT id, local_uri FROM songs WHERE local_uri IS NOT NULL LIMIT ? OFFSET ?',
+      [PAGE, offset],
+    );
+    for (const r of rows) {
+      if (!r.local_uri) continue;
+      files[r.id] = r.local_uri;
+    }
+    if (rows.length < PAGE) return files;
   }
-  return { files, bitRates };
+}
+
+/** Rows per page of the two reads above. Large enough that the round trips do
+ *  not add up, small enough that a page is not a freeze. */
+const PAGE = 2000;
+
+/**
+ * What each downloaded song was transcoded at, for the ones that were.
+ *
+ * Only the quality badge and the export note read it, both about one song at a
+ * time and both a screen away, so it is fetched after the app is up rather
+ * than in the middle of it opening.
+ */
+export async function downloadedBitRates(dir: string): Promise<Record<string, number>> {
+  const db = await catalogDb(dir);
+  const out: Record<string, number> = {};
+  for (let offset = 0; ; offset += PAGE) {
+    const rows = await db.getAllAsync<{ id: string; bit: number | null }>(
+      `SELECT id, json_extract(data, '$.dlBitRate') AS bit
+         FROM songs WHERE local_uri IS NOT NULL AND data LIKE '%dlBitRate%'
+         LIMIT ? OFFSET ?`,
+      [PAGE, offset],
+    );
+    for (const r of rows) if (r.bit != null) out[r.id] = r.bit;
+    if (rows.length < PAGE) return out;
+  }
 }
 
 /**
