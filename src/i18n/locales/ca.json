@@ -666,5 +666,9 @@
   "Playback speed": "Velocitat de reproducció",
   "Show speed button": "Mostra el botó de velocitat",
   "Play the music slower or faster, keeping its pitch.": "Reprodueix la música més lenta o més ràpida, sense canviar el to.",
-  "Show icons": "Mostra les icones"
+  "Show icons": "Mostra les icones",
+  "Mode": "Mode",
+  "Dark (default)": "Fosc (predeterminat)",
+  "Light (experimental)": "Clar (experimental)",
+  "Dark or light, and the accent color": "Fosc o clar, i el color d’accent"
 }

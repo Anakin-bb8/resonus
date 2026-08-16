@@ -666,5 +666,9 @@
   "Playback speed": "Velocidad de reproducción",
   "Show speed button": "Mostrar el botón de velocidad",
   "Play the music slower or faster, keeping its pitch.": "Reproducir la música más lenta o más rápida, sin cambiar el tono.",
-  "Show icons": "Mostrar los iconos"
+  "Show icons": "Mostrar los iconos",
+  "Mode": "Modo",
+  "Dark (default)": "Oscuro (predeterminado)",
+  "Light (experimental)": "Claro (experimental)",
+  "Dark or light, and the accent color": "Oscuro o claro, y el color de acento"
 }

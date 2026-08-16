@@ -664,5 +664,9 @@
   "Playback speed": "Playback speed",
   "Show speed button": "Show speed button",
   "Play the music slower or faster, keeping its pitch.": "Play the music slower or faster, keeping its pitch.",
-  "Show icons": "Show icons"
+  "Show icons": "Show icons",
+  "Mode": "Mode",
+  "Dark (default)": "Dark (default)",
+  "Light (experimental)": "Light (experimental)",
+  "Dark or light, and the accent color": "Dark or light, and the accent color"
 }

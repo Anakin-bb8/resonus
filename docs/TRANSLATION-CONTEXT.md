@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 660 of them.
+Every string the app can show, under the screen it shows up on. 664 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -732,6 +732,7 @@ you are actually typing into, which is easier than reading it here.
 | `Artwork, duration, rating and the rest of what a song shows in a list.` | The line under “Song lists”, explaining it |
 | `Browse your library by folders in a Folders tab (Subsonic servers).` |  |
 | `Choose which actions show in a song's ⋯ menu.` | The line under “Song menu”, explaining it |
+| `Dark or light, and the accent color` | The line under “Theme”, explaining it |
 | `Explore chips` | The row of tappable category chips |
 | `Folder browsing` | Browsing the server's folders as folders, instead of by album and artist |
 | `Font` |  |
@@ -760,7 +761,7 @@ you are actually typing into, which is easier than reading it here.
 | `Swipe left` | What dragging a song to the left in a list does |
 | `Swipe right` | What dragging a song to the right in a list does. Its values are the actions listed under it |
 | `The clock button on Home.` | The line under “Show history button”, explaining it |
-| `Theme` | The screen where the accent colour is chosen, and the name of the row that opens it |
+| `Theme` | The screen where the appearance and the accent colour are chosen, and the name of the row that opens it |
 | `Which tab opens on launch, and after a while in the background.` | The line under “Open the app on”, explaining it |
 | `Your avatar on Home.` | The line under “Show profile button”, explaining it |
 
@@ -932,7 +933,10 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `Accent color` | The colour the app uses for buttons, links and anything it wants you to notice |
-| `Theme` | The screen where the accent colour is chosen, and the name of the row that opens it |
+| `Dark (default)` | The appearance the app has always had, and what it uses unless the other is chosen. The word in brackets is the same one as `Default` |
+| `Light (experimental)` | The light appearance. The word in brackets is a warning that it is new and may still have rough edges |
+| `Mode` | Heading over the two appearances on the Theme screen. Not a playback mode and not a profile: dark or light. It is called this and not "Appearance" because Appearance is the settings screen one level up |
+| `Theme` | The screen where the appearance and the accent colour are chosen, and the name of the row that opens it |
 
 ## Used all over the app
 

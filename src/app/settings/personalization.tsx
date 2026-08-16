@@ -71,6 +71,7 @@ export default function AppearanceSettings() {
         />
         <SettingRow
           label={t('Theme')}
+          description={t('Dark or light, and the accent color')}
           chevron
           onPress={() => router.push('/settings/theme')}
         />

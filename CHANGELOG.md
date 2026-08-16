@@ -9,6 +9,10 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Added
+
+- A light theme, in Settings › Appearance › Theme, marked experimental. Dark stays the default and is untouched. Every screen is covered, the player and the lyrics included: where those take their colour from the cover art, the tint follows the theme. The accent you picked works in both, darkened on white only as far as it has to be to stay readable.
+
 ### Changed
 
 - The local profile no longer marks itself with a phone icon in Home's header.
