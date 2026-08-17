@@ -9,6 +9,8 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.7.3] - 2026-08-17
+
 ### Added
 
 - A light theme, in Settings › Appearance › Theme, marked experimental. Dark stays the default.
