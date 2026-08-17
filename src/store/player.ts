@@ -3242,6 +3242,17 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   toggle: () => {
+    // The restored track, if it is still waiting to go into the player: this
+    // press is what it was waiting for, so it goes in playing and at the
+    // position the queue was left at. Before the line below and not after it,
+    // because `endBootQuiet` installs it too and installs it PAUSED, which left
+    // this press with no player to act on and a second load racing the first
+    // one from zero.
+    if (pendingRestore != null && !remoteKind()) {
+      endBootQuiet(); // no catch-up: the load below does it, for its own song
+      void loadRestored(true);
+      return;
+    }
     // The one press that does not change track: what was restored is about to
     // be heard, so what the opening held back is due now.
     endBootQuiet(true);
@@ -3257,14 +3268,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     }
     const p = activePlayer();
     if (!p) {
-      // No player yet. Either the restored track is still waiting to be
-      // installed, in which case it goes in at the position it was left at, or
-      // there is no player because nothing could be loaded — offline with none
-      // of it on disk — and `loadIndex` says so.
-      if (pendingRestore != null) {
-        void loadRestored(true);
-        return;
-      }
+      // No player, and nothing waiting to become one (that was answered at the
+      // top): nothing could be loaded, which offline means none of the queue is
+      // on disk. `loadIndex` plays what can be played and says so when nothing
+      // can.
       const { queue, index } = get();
       if (queue[index]) void loadIndex(index, true);
       return;

@@ -29,6 +29,7 @@ Releases before 0.2.1 are only listed on the
 - The saved track goes back into the player once the app is up, at the position it was left at.
 - A large download catalog is read in pages, so opening with tens of thousands of songs on the phone is no longer one long freeze.
 - Dragging the car's progress bar no longer springs back to where the song was before.
+- Press play on a queue the app has just brought back and it starts where it was left, instead of from the beginning.
 
 ## [0.7.2] - 2026-08-15
 
