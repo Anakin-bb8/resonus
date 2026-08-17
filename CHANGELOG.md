@@ -17,6 +17,11 @@ Releases before 0.2.1 are only listed on the
 
 - **Cold start:** the saved track goes into the player as the app opens again, so Play answers the first press; what waits is the handful of requests behind it, which is what the opening was actually spending its second on.
 
+### Fixed
+
+- **Artists offline:** their picture is downloaded along with their music and what kind of record each release is no longer gets lost on the way into the catalog, so the artist page is the same one after closing the app.
+- **The artist's two names:** an artist opened by the id the other mode uses — a recent search made online, a downloaded album offline — lands on their page instead of on an empty one.
+
 ## [0.7.3] - 2026-08-17
 
 ### Added
