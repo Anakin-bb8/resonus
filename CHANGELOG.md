@@ -11,6 +11,9 @@ Releases before 0.2.1 are only listed on the
 
 ### Added
 
+- **The app turns:** it is no longer locked upright, and the screens are laid out again as it turns rather than keeping the shape they had when it opened.
+- **Tablets:** grids fit as many covers across as the screen has room for and remember a big screen apart from a phone, while lists and settings stop at a reading width and sit in the middle instead of stretching.
+- **The player sideways:** with the screen wider than it is tall the cover takes the left and the title, the slider and the controls take the right, which is what makes it usable on a phone lying on its side.
 - **Sorting a discography:** the full lists an artist's shelves open into have a sort button beside the view one, with year or name in either direction, and the choice is remembered.
 
 ### Changed
