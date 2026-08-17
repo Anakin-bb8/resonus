@@ -37,7 +37,7 @@ import { useRecentSearches, type RecentItem } from '@/store/recentSearches';
 import { useSettings } from '@/store/settings';
 import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
-import { columnsFor, useScreenSize } from '@/hooks/useScreenSize';
+import { centredPadding, useScreenSize } from '@/hooks/useScreenSize';
 
 /** How wide a genre card wants to be, in dp: two across a phone, and as many
  *  as fit at that size on anything wider (#131). */
@@ -54,9 +54,14 @@ export default function SearchScreen() {
   useTheme();
   useSettings((s) => s.appFont); // re-render when font changes
   // Worked out while rendering, so turning the phone re-lays the cards out.
+  // The whole page is one centred column on a wide screen, like the lists and
+  // the settings, and the cards are measured against that column and not
+  // against the screen (#131).
   const { width } = useScreenSize();
-  const genreCols = columnsFor(width, GENRE_IDEAL, 2, 5);
-  const genreW = (width - spacing.lg * 2 - spacing.sm * (genreCols - 1)) / genreCols;
+  const pagePad = centredPadding(width, spacing.lg);
+  const inner = width - pagePad * 2;
+  const genreCols = Math.max(2, Math.min(5, Math.round(inner / GENRE_IDEAL)));
+  const genreW = (inner - spacing.sm * (genreCols - 1)) / genreCols;
   const offline = useAuthStore((s) => s.offline);
   const canSearch = useAuthStore((s) => !!s.auth || s.offline);
   const auth = useAuthStore((s) => s.auth);
@@ -212,7 +217,10 @@ export default function SearchScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: bottomPad }]}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: bottomPad, paddingHorizontal: pagePad },
+        ]}
         keyboardShouldPersistTaps="handled"
       >
         {showRecent ? (

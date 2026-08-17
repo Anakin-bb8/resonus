@@ -62,6 +62,22 @@ import { playShuffle } from '@/lib/playShuffle';
  */
 const TILE_IDEAL = 300;
 
+/**
+ * How big the covers on the shelves are.
+ *
+ * 150 is what a phone has always shown. On a tablet the same number is a row
+ * of stamps: the screen is three times as wide and the shelf answered by
+ * showing three times as many, each no bigger than before (#131).
+ */
+const SHELF_CARD = 150;
+const SHELF_CARD_WIDE = 190;
+
+/** How big this screen's shelf cards are. */
+function useShelfCard(): number {
+  const { wide } = useScreenSize();
+  return wide ? SHELF_CARD_WIDE : SHELF_CARD;
+}
+
 function QuickTile({
   href,
   name,
@@ -231,6 +247,7 @@ function AlbumSection({
   type: 'recent' | 'newest' | 'frequent' | 'random';
 }) {
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
+  const card = useShelfCard();
   const { data, isLoading } = useQuery({
     queryKey: ['albumList', type],
     queryFn: () => getAlbumList(type),
@@ -257,7 +274,7 @@ function AlbumSection({
         keyExtractor={(item: Album) => item.id}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.rowContent}
-        renderItem={({ item }) => <AlbumCard album={item} />}
+        renderItem={({ item }) => <AlbumCard album={item} width={card} />}
       />
     </View>
   );
@@ -280,6 +297,7 @@ const MOST_PLAYED_SONGS = 30;
 function MostPlayedSongsSection({ title }: { title: string }) {
   const openSongMenu = useSongMenu((s) => s.open);
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
+  const card = useShelfCard();
   const playQueue = usePlayerStore((s) => s.playQueue);
   const currentId = usePlayerStore((s) => s.queue[s.index]?.id);
   const { accent } = useTheme();
@@ -317,7 +335,7 @@ function MostPlayedSongsSection({ title }: { title: string }) {
         renderItem={({ item, index }) => (
           <SongCard
             song={item}
-            width={150}
+            width={card}
             accent={accent}
             isCurrent={item.id === currentId}
             // The whole shelf goes into the queue, not the song on its own:
@@ -343,6 +361,7 @@ function MostPlayedSongsSection({ title }: { title: string }) {
  *  playlists), so it's not filtered like server-only ones. */
 function PlaylistsSection({ title }: { title: string }) {
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
+  const card = useShelfCard();
   const { data, isLoading } = useQuery({
     queryKey: ['playlists'],
     queryFn: () => getPlaylists(),
@@ -369,7 +388,7 @@ function PlaylistsSection({ title }: { title: string }) {
         keyExtractor={(item: Playlist) => item.id}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.rowContent}
-        renderItem={({ item }) => <PlaylistCard playlist={item} />}
+        renderItem={({ item }) => <PlaylistCard playlist={item} width={card} />}
       />
     </View>
   );
@@ -385,7 +404,9 @@ function shuffled<T>(arr: T[]): T[] {
   return a;
 }
 
+/** And the round ones, which are their own shelf. */
 const ARTIST_SIZE = 130;
+const ARTIST_SIZE_WIDE = 165;
 
 /**
  * How long this shelf waits before asking.
@@ -401,6 +422,8 @@ const ARTISTS_DELAY_MS = 4000;
 /** Row of random artists (rediscovery). */
 function ArtistSection({ title, reshuffleKey }: { title: string; reshuffleKey: number }) {
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
+  const { wide } = useScreenSize();
+  const artistSize = wide ? ARTIST_SIZE_WIDE : ARTIST_SIZE;
   // Offline the list comes off the device, so there is nothing to keep out of
   // the way of and no reason to wait.
   const [ready, setReady] = useState(() => useAuthStore.getState().offline);
@@ -445,7 +468,7 @@ function ArtistSection({ title, reshuffleKey }: { title: string; reshuffleKey: n
         keyExtractor={(item: Artist) => item.id}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.rowContent}
-        renderItem={({ item }) => <ArtistCard artist={item} width={ARTIST_SIZE} />}
+        renderItem={({ item }) => <ArtistCard artist={item} width={artistSize} />}
       />
     </View>
   );
@@ -459,6 +482,7 @@ const DISCOVER_POOL = 50;
 
 function DiscoverSection({ title, reshuffleKey }: { title: string; reshuffleKey: number }) {
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
+  const card = useShelfCard();
   const { data, isLoading } = useQuery({
     queryKey: ['albumList', 'discover'],
     queryFn: () => getAlbumList('recent', DISCOVER_POOL, DISCOVER_OFFSET),
@@ -491,7 +515,7 @@ function DiscoverSection({ title, reshuffleKey }: { title: string; reshuffleKey:
         keyExtractor={(item: Album) => item.id}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.rowContent}
-        renderItem={({ item }) => <AlbumCard album={item} />}
+        renderItem={({ item }) => <AlbumCard album={item} width={card} />}
       />
     </View>
   );
