@@ -694,6 +694,23 @@ interface DownloadsState {
   cancelDownload: (groupKey: string) => void;
   /** Deletes files for those songs and removes them from the catalog. */
   deleteSongs: (songIds: string[]) => Promise<void>;
+  /**
+   * Forgets a download whose file is not on the disk any more, and says whether
+   * it did.
+   *
+   * The catalog is what the app goes by: a row here is a badge on the row, a
+   * song that counts as playable offline and a file handed to the player
+   * instead of the stream. A row whose file has gone is all three of those
+   * promises broken at once, and the player is where it shows: it is the one
+   * that gets handed the path (see `onPlaybackError`). An empty file counts as
+   * gone: a download interrupted where nothing noticed is the same nothing to
+   * play.
+   *
+   * Only when the file system answers. Not being able to look is not an answer,
+   * and deleting somebody's download on the strength of it would be worse than
+   * the failure it is trying to explain.
+   */
+  forgetIfMissing: (songId: string) => Promise<boolean>;
   clearAll: () => Promise<void>;
   usageBytes: () => Promise<number>;
 }
@@ -1086,6 +1103,19 @@ export const useDownloads = create<DownloadsState>((set, get) => {
         }
       });
       invalidate();
+    },
+
+    forgetIfMissing: async (songId) => {
+      const uri = get().files[songId];
+      if (!uri) return false;
+      try {
+        const info = await FileSystem.getInfoAsync(uri);
+        if (info.exists && ((info as { size?: number }).size ?? 1) > 0) return false;
+      } catch {
+        return false;
+      }
+      await get().deleteSongs([songId]);
+      return true;
     },
 
     clearAll: async () => {

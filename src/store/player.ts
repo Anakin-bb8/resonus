@@ -333,6 +333,22 @@ function effectiveStreamFormat(): TranscodeFormat {
   return useNetworkType.getState().cellular ? s.streamFormatCellular : s.streamFormat;
 }
 
+/**
+ * The copy of a song the player has already failed on, while the app runs.
+ *
+ * A player that cannot play what it was handed has one thing worth trying: the
+ * other copy. So the failure is remembered per song and read below, where the
+ * choice between the file and the stream is made. `file` sends the song to the
+ * server; `stream` brings it back to the disk whatever the setting says,
+ * because a smaller copy is still music and a stream that stopped arriving is
+ * not.
+ *
+ * Nothing here is written down. A bad connection is not a property of a song,
+ * and a file that turns out not to be there is dropped from the catalog
+ * instead (see `forgetIfMissing`).
+ */
+const failedSource = new Map<string, 'file' | 'stream'>();
+
 /** Source for expo-audio: radio (url), local (file/content) or Subsonic stream. */
 /**
  * Does this song play from the file on disk, and which file?
@@ -350,12 +366,18 @@ function effectiveStreamFormat(): TranscodeFormat {
  * on where the audio actually comes from.
  */
 export function localSourceFor(song: Song): string | undefined {
+  const { auth, offline } = useAuthStore.getState();
+  // What the player has already tried and failed to play beats both the setting
+  // and the phone's own copy: one of the two is silence, and the other one may
+  // not be. See `onPlaybackError`.
+  const failed = failedSource.get(song.id);
+  if (failed === 'file' && auth && !offline) return undefined;
   // The phone's own library is not a download and there is nothing to stream.
   if (song.localUri) return song.localUri;
   const file = downloadedUri(song);
   if (!file) return undefined;
-  const { auth, offline } = useAuthStore.getState();
   if (offline || !auth) return file;
+  if (failed === 'stream') return file;
   switch (useSettings.getState().preferDownloads) {
     case 'never':
       return undefined;
@@ -381,7 +403,20 @@ function sourceFor(song: Song, timeOffsetSec = 0): AudioSource {
   const mediaId = song.id;
   if (song.url) return { uri: song.url, metadata, mediaId };
   const local = localSourceFor(song);
-  if (local) return { uri: local, metadata, mediaId };
+  // Counted where the decision is acted on, once per install, and not inside
+  // `localSourceFor`, which every render and every heartbeat asks. "Streamed
+  // although downloaded" is the one that answers the report this exists for:
+  // somebody with the album on the phone hearing it cut out on a bad
+  // connection, which cannot happen to a file.
+  if (local) {
+    bump('player · played the file on disk');
+    return { uri: local, metadata, mediaId };
+  }
+  bump(
+    downloadedUri(song)
+      ? 'player · streamed although downloaded'
+      : 'player · streamed, nothing downloaded',
+  );
   const auth = useAuthStore.getState().auth!;
   const format = effectiveStreamFormat();
   return {
@@ -894,7 +929,12 @@ async function loadIndex(index: number, autoplay: boolean): Promise<boolean> {
   useEqualizer.getState().attach(p.audioSessionId);
   try {
     replaceSource(p, sourceFor(song));
-  } catch {
+  } catch (e) {
+    // Counted apart from the failures the player reports on its own: this one
+    // never got as far as the player, and the two look identical from the
+    // outside: the same toast over a song that does not start. A report of one
+    // is unanswerable without knowing which it was (see `onPlaybackError`).
+    bump(`player · could not install the source (${errorTag(String(e))})`);
     useToast.getState().show(tg("Couldn't play the song"));
     return false;
   }
@@ -933,10 +973,11 @@ async function loadIndex(index: number, autoplay: boolean): Promise<boolean> {
         void ensureTranscodeOffsetSupport();
       }
     }
-  } catch {
+  } catch (e) {
     // The song is in the player: say so, whatever went wrong on the way to
     // making it sound. Answering false here is what left the screen describing
     // the song before it while this one played.
+    bump(`player · loaded but did not start (${errorTag(String(e))})`);
     useToast.getState().show(tg("Couldn't play the song"));
   }
   return true;
@@ -2305,10 +2346,19 @@ let pendingSeek: { sec: number; at: number } | null = null;
 // without position advancing for several seconds, we request a probe; if it
 // truly doesn't reach and there are downloads, autoUrl falls back to offline
 // only.
+//
+// A stall is also the shape a bad connection takes when it does not fail
+// outright: the socket is open, nothing arrives, and the player waits on it
+// without ever reporting an error. Nothing was answering that, so a song with a
+// perfectly good copy on the phone went quiet because the network it did not
+// need went bad. Past `STALL_FALLBACK_MS` the file takes over (see
+// `onPlaybackError`, which handles the same thing when it does fail outright).
 const STALL_PROBE_MS = 6000;
+const STALL_FALLBACK_MS = 15000;
 let stallSince = 0;
 let stallPos = -1;
 let stallProbed = false;
+let stallFellBack = false;
 
 function maybeDetectStall(intendPlay: boolean, buffering: boolean, positionSec: number): void {
   const st = usePlayerStore.getState();
@@ -2319,6 +2369,7 @@ function maybeDetectStall(intendPlay: boolean, buffering: boolean, positionSec: 
   if (useAuthStore.getState().offline || !intendPlay || !streamed || !buffering) {
     stallSince = 0;
     stallProbed = false;
+    stallFellBack = false;
     stallPos = positionSec;
     return;
   }
@@ -2326,15 +2377,120 @@ function maybeDetectStall(intendPlay: boolean, buffering: boolean, positionSec: 
   if (Math.abs(positionSec - stallPos) > 0.5) {
     stallSince = 0;
     stallProbed = false;
+    stallFellBack = false;
     stallPos = positionSec;
     return;
   }
   const now = Date.now();
   if (stallSince === 0) {
     stallSince = now;
-  } else if (!stallProbed && now - stallSince >= STALL_PROBE_MS) {
+    return;
+  }
+  if (!stallProbed && now - stallSince >= STALL_PROBE_MS) {
     stallProbed = true; // once per stall; autoUrl already retries
     checkAutoUrlNow();
+  }
+  // Fifteen seconds of a stream that is not arriving, with the song sitting on
+  // the disk: play that instead, from where it stopped. Only once per stall, and
+  // only for a song that has a file. For the rest there is nothing to move to,
+  // and the probe above is already asking whether the server is there at all.
+  if (!stallFellBack && now - stallSince >= STALL_FALLBACK_MS && song && downloadedUri(song)) {
+    stallFellBack = true;
+    bump('player · fell back to the file after a stall');
+    failedSource.set(song.id, 'stream');
+    void reloadCurrent(positionSec, true);
+  }
+}
+
+// ── When the player cannot play what it was given ────────────────────────────
+// media3 reports it (`error` on the status), and nothing here used to read it:
+// the app kept its playing state, the position stopped moving, and that was the
+// whole of it. A stream cut off by a bad connection and a downloaded file that
+// is no longer readable both ended the same way, as silence waiting for
+// somebody to press the next track.
+
+/** Which track the attempts below belong to, and how many it has had. */
+let errorTrackId: string | null = null;
+let errorAttempts = 0;
+/** Two: enough to ride out a hiccup, few enough not to retry a dead source. */
+const MAX_ERROR_ATTEMPTS = 2;
+
+/**
+ * The error in its own words, with anything that looks like an address taken
+ * out: this is counted, and counts are what the Diagnostics report is made of.
+ * A stream URL carries the credentials, so none of them can go in it.
+ */
+function errorTag(message: string): string {
+  const clean = message
+    .replace(/\b[a-z][a-z0-9+.-]*:\/\/\S*/gi, 'url')
+    .replace(/\/[\w./-]{16,}/g, 'path')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return clean.length > 80 ? `${clean.slice(0, 80)}…` : clean;
+}
+
+/**
+ * Answers a playback failure: the other copy of the song if it has one, a
+ * second go at the same one if it does not, and the truth if neither sounds.
+ *
+ * Deliberately not the next track. A failure that skips walks a whole album in
+ * silence, and the one thing the person watching needs to know is that this
+ * song is not playing, which a toast says and an advancing queue hides.
+ */
+function onPlaybackError(message: string, wasPlaying: boolean): void {
+  const st = usePlayerStore.getState();
+  const song = st.queue[st.index];
+  bump(`player · playback error (${errorTag(message)})`);
+  if (!song) return;
+  if (errorTrackId !== song.id) {
+    errorTrackId = song.id;
+    errorAttempts = 0;
+  }
+  if (errorAttempts >= MAX_ERROR_ATTEMPTS) {
+    bump('player · gave up on the track');
+    usePlayerStore.setState({ isPlaying: false, isBuffering: false });
+    useToast.getState().show(tg("Couldn't play the song"));
+    return;
+  }
+  errorAttempts++;
+  // The other copy, and only the first time round: once it is marked, what just
+  // failed IS the other copy, and swapping back would be a loop.
+  if (!failedSource.has(song.id) && !song.url) {
+    const { auth, offline } = useAuthStore.getState();
+    if (localSourceFor(song)) {
+      // The phone's own library has no stream behind it, and neither has a
+      // download with no connection: the mark is only worth putting on when
+      // there is somewhere else to play from. A song of the phone's own is the
+      // one with a `localUri` and no download: the mark of a download built
+      // offline is that same field (see `markUnplayableOffline`), and behind
+      // that one there is a server.
+      const phoneOnly = !!song.localUri && !downloadedUri(song);
+      if (!phoneOnly && auth && !offline) failedSource.set(song.id, 'file');
+      // And a download whose file is not there at all should stop being
+      // promised, by its badge and by the catalog behind it.
+      void useDownloads.getState().forgetIfMissing(song.id);
+    } else if (downloadedUri(song)) {
+      failedSource.set(song.id, 'stream');
+    }
+  }
+  void reloadCurrent(st.positionSec, wasPlaying);
+}
+
+/** Installs the current track again, at the second it had got to. */
+async function reloadCurrent(atSec: number, autoplay: boolean): Promise<void> {
+  const { index, queue } = usePlayerStore.getState();
+  const song = queue[index];
+  if (!song) return;
+  if (!(await loadIndex(index, autoplay))) return;
+  // `loadIndex` starts the song at zero, which is right for everything else
+  // that calls it: what failed here was in the middle of one. And only if it is
+  // still the same song, since anything the person did while this loaded owns
+  // the player now.
+  const now = usePlayerStore.getState();
+  if (now.queue[now.index]?.id !== song.id) return;
+  if (atSec > 0) {
+    seekActive(atSec);
+    usePlayerStore.setState({ positionSec: atSec });
   }
 }
 
@@ -2368,6 +2524,18 @@ function onStatus(status: AudioStatus) {
   // Buffering if we want to play but audio isn't flowing yet (initial load,
   // streaming rebuffer, seek…). If paused, it's not buffering.
   const intendPlay = status.playing || prev.isPlaying;
+  // The player could not play what it was handed. Nothing below this applies:
+  // the status that comes with a failure is a stopped player at a position that
+  // is not going to move, and what to do about that is its own question.
+  if (status.error) {
+    onPlaybackError(status.error, intendPlay);
+    return;
+  }
+  // Sound: whatever it took, this track is not the failing one any more.
+  if (status.playing && errorTrackId) {
+    errorTrackId = null;
+    errorAttempts = 0;
+  }
   const buffering =
     intendPlay && !status.didJustFinish && (status.isBuffering || !status.isLoaded);
   // Only once loaded: while buffering the duration is still unknown and would
@@ -3811,6 +3979,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     // goes with it, or the next profile would be handed this one's answer.
     transcodeOffsetSupported = null;
     transcodeOffsetAsking = null;
+    // What failed to play belonged to the queue that is going away, and song
+    // ids are only unique within the account that issued them.
+    failedSource.clear();
+    errorTrackId = null;
+    errorAttempts = 0;
     set({
       queue: [],
       index: 0,

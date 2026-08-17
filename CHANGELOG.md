@@ -19,6 +19,9 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- **A song that will not play:** the player now hears the failure instead of sitting on it, so a stream cut off by a bad connection or a download that is no longer readable is answered with the other copy of the song, then with a second go, and only then with a message.
+- **A stream that stops arriving:** fifteen seconds of a song that is not coming in, with the album downloaded on the phone, and the file takes over from where it stopped.
+- **Downloads that are not there:** one whose file has gone stops being offered by the catalog the moment the player finds out, instead of being promised by its badge for good.
 - **Artists offline:** their picture is downloaded along with their music and what kind of record each release is no longer gets lost on the way into the catalog, so the artist page is the same one after closing the app.
 - **The artist's two names:** an artist opened by the id the other mode uses — a recent search made online, a downloaded album offline — lands on their page instead of on an empty one.
 
