@@ -56,10 +56,10 @@ export function useT(): TFunction {
  * languages like Russian (one/few/many).
  */
 const PLURALS: Record<string, Partial<Record<Language, string[]>>> = {
-  song: { es: ['canción', 'canciones'], en: ['song', 'songs'], de: ['Titel', 'Titel'], ca: ['cançó', 'cançons'], ru: ['композиция', 'композиции', 'композиций'], it: ['canzone', 'canzoni'] },
-  album: { es: ['álbum', 'álbumes'], en: ['album', 'albums'], de: ['Album', 'Alben'], ca: ['àlbum', 'àlbums'], ru: ['альбом', 'альбома', 'альбомов'], it: ['album', 'album']  },
-  playlist: { es: ['lista', 'listas'], en: ['playlist', 'playlists'], de: ['Playlist', 'Playlists'], ca: ['llista', 'llistes'], ru: ['плейлист', 'плейлиста', 'плейлистов'], it: ['playlist', 'playlist'] },
-  artist: { es: ['artista', 'artistas'], en: ['artist', 'artists'], ca: ['artista', 'artistes'] },
+  song: { es: ['canción', 'canciones'], en: ['song', 'songs'], de: ['Titel', 'Titel'], ca: ['cançó', 'cançons'], ru: ['композиция', 'композиции', 'композиций'], it: ['canzone', 'canzoni'], uk: ['пісня', 'пісні', 'пісень'] },
+  album: { es: ['álbum', 'álbumes'], en: ['album', 'albums'], de: ['Album', 'Alben'], ca: ['àlbum', 'àlbums'], ru: ['альбом', 'альбома', 'альбомов'], it: ['album', 'album'], uk: ['альбом', 'альбоми', 'альбомів']  },
+  playlist: { es: ['lista', 'listas'], en: ['playlist', 'playlists'], de: ['Playlist', 'Playlists'], ca: ['llista', 'llistes'], ru: ['плейлист', 'плейлиста', 'плейлистов'], it: ['playlist', 'playlist'], uk: ['плейлист', 'плейлисти', 'плейлистів'] },
+  artist: { es: ['artista', 'artistas'], en: ['artist', 'artists'], ca: ['artista', 'artistes'], uk: ['виконавець', 'виконавці'] },
 };
 
 /**
