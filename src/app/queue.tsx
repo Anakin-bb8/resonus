@@ -33,6 +33,7 @@ import { useToast } from '@/store/toast';
 import { songsLabel, useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
+import { useListPadding } from '@/hooks/useScreenSize';
 import { listPerf } from '@/lib/listPerf';
 
 // ReorderableList doesn't support removeClippedSubviews (needs cells mounted
@@ -157,6 +158,9 @@ function UpcomingRow({ item, absIndex }: { item: Song; absIndex: number }) {
 
 export default function QueueScreen() {
   useSettings((s) => s.appFont); // re-render when font changes
+  // The queue is a list of songs like any other: centred on a wide screen
+  // rather than one name per 1280 points (#131).
+  const listPad = useListPadding(spacing.lg);
   const t = useT();
   const lang = useSettings((s) => s.language);
   const router = useRouter();
@@ -342,7 +346,7 @@ export default function QueueScreen() {
           onReorder={({ from, to }: ReorderableListReorderEvent) => {
             moveTrack(index + 1 + from, index + 1 + to);
           }}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, { paddingHorizontal: listPad }]}
         />
       ) : (
         <View style={styles.emptyWrap}>
@@ -415,7 +419,7 @@ const styles = themed((colors) => ({
   headerAction: { width: 28, alignItems: 'center' },
   headerTitle: { color: colors.text, fontSize: fontSize.lg, fontWeight: '700' },
   headerSub: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2 },
-  list: { flexGrow: 1, paddingHorizontal: spacing.lg, paddingBottom: spacing.xl },
+  list: { flexGrow: 1, paddingBottom: spacing.xl },
   emptyWrap: { flex: 1, justifyContent: 'center' },
   sectionHeader: {
     color: colors.textSecondary,
