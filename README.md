@@ -81,7 +81,7 @@ report bugs, ask questions, or just follow along with development.
 
 ## Contributing
 
-Contributions are welcome! See [CONTRIBUTING.md](./CONTRIBUTING.md) for how to
+Contributions are welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md) for how to
 set up the project, run it on an emulator, and open a pull request.
 
 ## Support
