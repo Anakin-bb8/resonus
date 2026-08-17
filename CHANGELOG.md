@@ -13,26 +13,26 @@ Releases before 0.2.1 are only listed on the
 
 ### Added
 
-- A light theme, in Settings › Appearance › Theme, marked experimental. Dark stays the default.
+- **Light theme:** experimental, in Settings › Appearance › Theme, with dark still the default.
 
 ### Changed
 
-- The local profile no longer marks itself with a phone icon in Home's header.
-- An artist's ⋯ menu offers All releases whatever their records are tagged as.
+- **Local profile:** it no longer wears a phone icon in Home's header.
+- **All releases:** an artist's ⋯ menu offers it whatever their records are tagged as.
 
 ### Fixed
 
-- Text is no longer cut off with Android's "Bold text" on, at the price of the app's text no longer following that setting.
-- The app no longer freezes after opening an artist or an album from the full player and then tapping the mini player.
-- A playlist deleted on the server stops appearing in Home's quick grid and in the car's Recents (#152).
-- "Check for updates automatically" asks again at most every six hours, instead of once per app process.
-- A search result opens with one tap while the keyboard is up, in Search and in the lists with a filter box.
-- The app opens without waiting on the server.
-- The saved track goes back into the player once the app is up, at the position it was left at.
-- A large download catalog is read in pages, so opening with tens of thousands of songs on the phone is no longer one long freeze.
-- Seeking from the car no longer kills the sound a few seconds later, which was the app giving up the audio focus every time the player stopped to buffer.
-- Dragging the car's progress bar no longer springs back to where the song was before.
-- Press play on a queue the app has just brought back and it starts where it was left, instead of from the beginning.
+- **Bold text:** Android's setting no longer cuts words off, at the price of the app's text no longer following it.
+- **Player navigation:** the app no longer freezes after opening an artist or an album from the full player and then tapping the mini player.
+- **Deleted playlists:** one removed on the server stops showing in Home's quick grid and in the car's Recents (#152).
+- **Update checks:** "Check for updates automatically" asks again at most every six hours, instead of once per app process.
+- **Search taps:** a result opens with one tap while the keyboard is up, in Search and in the lists with a filter box.
+- **Cold start:** the app opens without waiting on the server.
+- **Restored track:** it goes back into the player once the app is up, at the position it was left at.
+- **Large libraries:** the download catalog is read in pages, so opening with tens of thousands of songs is no longer one long freeze.
+- **Car audio:** seeking from the car no longer kills the sound a few seconds later, which was the app giving up the audio focus every time the player stopped to buffer.
+- **Car progress bar:** dragging it no longer springs back to where the song was before.
+- **Saved queue:** press play and it starts where it was left, instead of from the beginning.
 
 ## [0.7.2] - 2026-08-15
 
