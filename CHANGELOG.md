@@ -9,6 +9,10 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Added
+
+- **Sorting a discography:** the full lists an artist's shelves open into have a sort button beside the view one, with year or name in either direction, and the choice is remembered.
+
 ### Changed
 
 - **Cold start:** the saved track goes into the player as the app opens again, so Play answers the first press; what waits is the handful of requests behind it, which is what the opening was actually spending its second on.
