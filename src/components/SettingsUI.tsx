@@ -20,6 +20,7 @@ import {
 import { SafeAreaView, useSafeAreaFrame, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAccent } from '@/hooks/useAccent';
+import { CONTENT_MAX_WIDTH } from '@/hooks/useScreenSize';
 import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING, themed } from '@/theme';
 import { BackChevron } from './BackChevron';
 
@@ -34,12 +35,20 @@ export function ScreenHeader({ title }: { title: string }) {
   );
 }
 
-/** Settings screen container (safe-area + header). */
+/**
+ * Settings screen container (safe-area + header).
+ *
+ * The settings stop growing at a reading measure and sit in the middle of
+ * anything wider, which is every one of these screens at once: a switch whose
+ * label is at one edge of a tablet and whose switch is at the other is a row
+ * you have to look twice at to pair up (#131). The header is left across the
+ * full width, where the way back belongs.
+ */
 export function SettingsPage({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <SafeAreaView style={settingsStyles.safe} edges={['top']}>
       <ScreenHeader title={title} />
-      {children}
+      <View style={settingsStyles.pane}>{children}</View>
     </SafeAreaView>
   );
 }
@@ -711,6 +720,8 @@ export const settingsStyles = themed((colors) => ({
   },
   headerTitle: { color: colors.text, fontSize: fontSize.lg, fontWeight: '700' },
   content: { padding: spacing.lg, gap: spacing.sm, paddingBottom: SCREEN_BOTTOM_PADDING },
+  /** Where the settings themselves live, centred once there is room to spare. */
+  pane: { flex: 1, width: '100%', maxWidth: CONTENT_MAX_WIDTH, alignSelf: 'center' },
   // Spotify-style group title: bold, light, with air above.
   sectionTitle: {
     color: colors.text,
