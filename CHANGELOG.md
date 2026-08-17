@@ -11,7 +11,7 @@ Releases before 0.2.1 are only listed on the
 
 ### Changed
 
-- **Cold start:** the saved track goes into the player as the app opens again, undoing the wait of up to five seconds that 0.7.3 put in front of it.
+- **Cold start:** the saved track goes into the player as the app opens again, so Play answers the first press; what waits is the handful of requests behind it, which is what the opening was actually spending its second on.
 
 ## [0.7.3] - 2026-08-17
 
