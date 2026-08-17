@@ -8,7 +8,6 @@ import { useShallow } from 'zustand/react/shallow';
 import {
   ActivityIndicator,
   Animated,
-  Dimensions,
   FlatList,
   Pressable,
   StyleSheet,
@@ -56,9 +55,19 @@ import { useToast } from '@/store/toast';
 import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
 import { BackChevron } from '@/components/BackChevron';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
+import { useScreenSize } from '@/hooks/useScreenSize';
 
-const WIDTH = Dimensions.get('window').width;
-const HEADER_H = Math.min(WIDTH, 360);
+/**
+ * How tall the picture across the top is.
+ *
+ * A square as wide as the screen, capped: the cap is what keeps it from being
+ * the entire page on a tablet, and the share of the height is what keeps it
+ * from being the entire page on a phone lying on its side, where 360 points is
+ * everything there is (#131).
+ */
+function headerHeight(width: number, height: number): number {
+  return Math.round(Math.min(width, height * 0.6, 360));
+}
 const CARD_W = 140;
 /**
  * Cards per album row. The rows are for a look around, not for the whole
@@ -128,25 +137,30 @@ export default function ArtistScreen() {
   const queryClient = useQueryClient();
   const toast = useToast((s) => s.show);
 
+  // Read while rendering, so a turn re-measures the header instead of keeping
+  // the one the app started with.
+  const { width: screenW, height: screenH } = useScreenSize();
+  const headerH = headerHeight(screenW, screenH);
+
   const scrollY = useRef(new Animated.Value(0)).current;
   const barContentOpacity = scrollY.interpolate({
-    inputRange: [HEADER_H * 0.45, HEADER_H * 0.75],
+    inputRange: [headerH * 0.45, headerH * 0.75],
     outputRange: [0, 1],
     extrapolate: 'clamp',
   });
   const barBgOpacity = scrollY.interpolate({
-    inputRange: [0, HEADER_H * 0.75],
+    inputRange: [0, headerH * 0.75],
     outputRange: [0, 1],
     extrapolate: 'clamp',
   });
   const nameOpacity = scrollY.interpolate({
-    inputRange: [0, HEADER_H * 0.55],
+    inputRange: [0, headerH * 0.55],
     outputRange: [1, 0],
     extrapolate: 'clamp',
   });
   const imgTranslate = scrollY.interpolate({
-    inputRange: [-HEADER_H, 0, HEADER_H],
-    outputRange: [HEADER_H / 2, 0, -HEADER_H / 3],
+    inputRange: [-headerH, 0, headerH],
+    outputRange: [headerH / 2, 0, -headerH / 3],
     extrapolate: 'clamp',
   });
 
@@ -341,7 +355,7 @@ export default function ArtistScreen() {
           useNativeDriver: false,
         })}
       >
-        <View style={styles.headerWrap}>
+        <View style={[styles.headerWrap, { width: screenW, height: headerH }]}>
           {/* The header fills its space, so a photo that isn't the shape of
               the header loses its edges. Rather than trying to hold every
               shape up there, tapping it opens the whole thing, like a cover. */}
@@ -353,7 +367,10 @@ export default function ArtistScreen() {
           >
             <Animated.Image
               source={{ uri: headerUri }}
-              style={[styles.headerImg, { transform: [{ translateY: imgTranslate }] }]}
+              style={[
+                styles.headerImg,
+                { width: screenW, height: headerH, transform: [{ translateY: imgTranslate }] },
+              ]}
               resizeMode="cover"
             />
           </Pressable>
@@ -788,8 +805,8 @@ const styles = themed((colors) => ({
   actionText: { color: colors.text, fontSize: fontSize.md },
   // Same as the song menu's, so the stars sit where they do there.
   ratingRow: { alignItems: 'center', paddingVertical: spacing.sm, marginBottom: spacing.sm },
-  headerWrap: { width: WIDTH, height: HEADER_H, justifyContent: 'flex-end' },
-  headerImg: { ...StyleSheet.absoluteFill, width: WIDTH, height: HEADER_H },
+  headerWrap: { justifyContent: 'flex-end' },
+  headerImg: { ...StyleSheet.absoluteFill },
   name: {
     color: colors.text,
     fontSize: fontSize.xxl,

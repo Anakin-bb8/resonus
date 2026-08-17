@@ -5,8 +5,8 @@ import { Link } from 'expo-router';
 import { useEffect, useMemo, useReducer, useState } from 'react';
 import {
   ActivityIndicator,
-  Dimensions,
   FlatList,
+  StyleSheet,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -47,27 +47,39 @@ import { useSettings, type ExploreChipKey, type HomeSectionKey } from '@/store/s
 import { useSongMenu } from '@/store/songMenu';
 import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
+import { columnsFor, useScreenSize } from '@/hooks/useScreenSize';
 import { listPerf } from '@/lib/listPerf';
 import { haptic } from '@/lib/haptics';
 import { bump } from '@/lib/perfLog';
 import { playShuffle } from '@/lib/playShuffle';
 
-const TILE_W = (Dimensions.get('window').width - spacing.lg * 2 - spacing.sm) / 2;
+/**
+ * How wide a quick tile wants to be, in dp.
+ *
+ * Two of them across a phone is what this grid has always been, and two across
+ * a tablet is two buttons the length of a forearm. What it is really made of
+ * is a cover and a name beside it, so that is what decides how many fit (#131).
+ */
+const TILE_IDEAL = 300;
 
 function QuickTile({
   href,
   name,
   cover,
   favorites,
+  width,
 }: {
   href: string;
   name: string;
   cover?: string;
   favorites?: boolean;
+  width: number;
 }) {
   return (
     <Link href={href} asChild>
-      <Pressable style={styles.tile}>
+      {/* Flattened, not an array: expo-router hands the style straight to the
+          child it clones and refuses a list. */}
+      <Pressable style={StyleSheet.flatten([styles.tile, { width }])}>
         {favorites ? (
           <FavoritesArt size={52} />
         ) : (
@@ -82,6 +94,12 @@ function QuickTile({
 }
 
 function QuickGrid() {
+  // Measured on every render, not once when the file was first imported:
+  // otherwise turning the phone leaves the tiles at the width they had when
+  // the app started (#131).
+  const { width } = useScreenSize();
+  const columns = columnsFor(width, TILE_IDEAL, 2, 4);
+  const tile = (width - spacing.lg * 2 - spacing.sm * (columns - 1)) / columns;
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
   const offline = useAuthStore((s) => s.offline);
   const times = useLastPlayed((s) => s.times);
@@ -169,9 +187,11 @@ function QuickGrid() {
 
   return (
     <View style={styles.grid}>
-      {withFavorites ? <QuickTile href="/favorites" name={t('Favorites')} favorites /> : null}
+      {withFavorites ? (
+        <QuickTile href="/favorites" name={t('Favorites')} favorites width={tile} />
+      ) : null}
       {tiles.map((it) => (
-        <QuickTile key={it.key} href={it.href} name={it.name} cover={it.cover} />
+        <QuickTile key={it.key} href={it.href} name={it.name} cover={it.cover} width={tile} />
       ))}
     </View>
   );
@@ -883,7 +903,6 @@ const styles = themed((colors) => ({
     marginBottom: spacing.xl,
   },
   tile: {
-    width: TILE_W,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,

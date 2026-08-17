@@ -5,7 +5,6 @@ import { Link, useNavigation } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Dimensions,
   Pressable,
   Text,
   TextInput,
@@ -38,8 +37,11 @@ import { useRecentSearches, type RecentItem } from '@/store/recentSearches';
 import { useSettings } from '@/store/settings';
 import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
+import { columnsFor, useScreenSize } from '@/hooks/useScreenSize';
 
-const GENRE_W = (Dimensions.get('window').width - spacing.lg * 2 - spacing.sm) / 2;
+/** How wide a genre card wants to be, in dp: two across a phone, and as many
+ *  as fit at that size on anything wider (#131). */
+const GENRE_IDEAL = 220;
 
 export default function SearchScreen() {
   // Counted, to answer whether a tab you have visited keeps working
@@ -51,6 +53,10 @@ export default function SearchScreen() {
   // mounted while you are on another one, out of reach of anything else.
   useTheme();
   useSettings((s) => s.appFont); // re-render when font changes
+  // Worked out while rendering, so turning the phone re-lays the cards out.
+  const { width } = useScreenSize();
+  const genreCols = columnsFor(width, GENRE_IDEAL, 2, 5);
+  const genreW = (width - spacing.lg * 2 - spacing.sm * (genreCols - 1)) / genreCols;
   const offline = useAuthStore((s) => s.offline);
   const canSearch = useAuthStore((s) => !!s.auth || s.offline);
   const auth = useAuthStore((s) => s.auth);
@@ -164,8 +170,8 @@ export default function SearchScreen() {
   // keystroke. Same elements, so React walks past the whole grid instead of
   // rebuilding it.
   const genreGrid = useMemo(
-    () => genres?.map((g) => <GenreCard key={g.value} name={g.value} width={GENRE_W} />),
-    [genres],
+    () => genres?.map((g) => <GenreCard key={g.value} name={g.value} width={genreW} />),
+    [genres, genreW],
   );
 
   const isEmpty = query.trim().length === 0;
@@ -256,7 +262,7 @@ export default function SearchScreen() {
         ) : showBrowseSkeleton ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t('Browse all')}</Text>
-            <GenreGridSkeleton width={GENRE_W} />
+            <GenreGridSkeleton width={genreW} />
           </View>
         ) : null}
 

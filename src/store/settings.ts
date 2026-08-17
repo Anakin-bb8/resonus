@@ -151,6 +151,16 @@ export type GridKey =
   | 'discography'
   | 'genre';
 
+/**
+ * How a grid is remembered on a big screen, which is not the same answer.
+ *
+ * Three columns is a comfortable phone grid and a wall of stamps across a
+ * tablet, and the number that is right there is right nowhere else, so the two
+ * are stored apart: the choice made on a phone survives being taken to a
+ * tablet and back (#131).
+ */
+export type GridSizeKey = GridKey | `${GridKey}:wide`;
+
 /** Exactly what each grid looked like before it could be chosen, so nothing
  *  moves for anybody who never opens the menu. */
 export const GRID_DEFAULT_COLUMNS: Record<GridKey, number> = {
@@ -166,6 +176,10 @@ export const GRID_DEFAULT_COLUMNS: Record<GridKey, number> = {
 /** What the menu offers. Two is a poster, four is about as far as a cover can
  *  shrink on a phone and still be a picture of something. */
 export const GRID_COLUMN_CHOICES = [2, 3, 4];
+
+/** And on a tablet, where two columns are two covers the size of a hand. What
+ *  it opens on is worked out from the width; these are the ways around it. */
+export const WIDE_COLUMN_CHOICES = [3, 4, 5, 6];
 
 /**
  * How long a shared link lives: `never`, or a span from the moment the link is
@@ -783,7 +797,7 @@ interface SettingsState {
    * `GRID_DEFAULT_COLUMNS`, so the defaults stay in one place and a screen
    * that is added later needs nothing here.
    */
-  gridColumns: Partial<Record<GridKey, number>>;
+  gridColumns: Partial<Record<GridSizeKey, number>>;
   /** Last expiry chosen when sharing, offered again the next time. */
   shareExpiry: ShareExpiry;
   /** Whether the last share allowed downloading (Navidrome only). */
@@ -878,7 +892,7 @@ interface SettingsState {
   setBrowseSongsLayout: (value: ListLayout) => void;
   setDiscographyLayout: (value: ListLayout) => void;
   setGenreLayout: (value: ListLayout) => void;
-  setGridColumns: (key: GridKey, value: number) => void;
+  setGridColumns: (key: GridSizeKey, value: number) => void;
   setShareExpiry: (value: ShareExpiry) => void;
   setShareDownloadable: (value: boolean) => void;
   setAccentColor: (value: string) => void;
@@ -1097,7 +1111,7 @@ const DEFAULTS = {
   genreLayout: 'grid' as ListLayout,
   // Grid too: a shelf of books is looked at, and the covers are how you tell
   // one from another before you have read the spine.
-  gridColumns: {} as Partial<Record<GridKey, number>>,
+  gridColumns: {} as Partial<Record<GridSizeKey, number>>,
   // Sharing a song with somebody usually means for good; the rest are there
   // for whoever wants the link to stop working.
   shareExpiry: 'never' as ShareExpiry,
@@ -1687,7 +1701,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           browseSongsLayout: ListLayout;
           discographyLayout: ListLayout;
           genreLayout: ListLayout;
-          gridColumns: Partial<Record<GridKey, number>>;
+          gridColumns: Partial<Record<GridSizeKey, number>>;
           shareExpiry: ShareExpiry;
           shareDownloadable: boolean;
           accentColor: string;
@@ -2012,10 +2026,14 @@ export const useSettings = create<SettingsState>((set, get) => ({
         // would be a screen that renders with columns nobody can choose. Keys
         // that are not grids any more simply do not survive the read.
         if (parsed.gridColumns && typeof parsed.gridColumns === 'object') {
-          const cols: Partial<Record<GridKey, number>> = {};
+          const cols: Partial<Record<GridSizeKey, number>> = {};
           for (const [key, value] of Object.entries(parsed.gridColumns)) {
-            if (!(key in GRID_DEFAULT_COLUMNS)) continue;
-            if (GRID_COLUMN_CHOICES.includes(value as number)) cols[key as GridKey] = value as number;
+            // A grid remembers a phone and a tablet apart, so the key can carry
+            // which one it is; the grid itself has to be one that still exists.
+            const wide = key.endsWith(':wide');
+            if (!(key.replace(/:wide$/, '') in GRID_DEFAULT_COLUMNS)) continue;
+            const choices = wide ? WIDE_COLUMN_CHOICES : GRID_COLUMN_CHOICES;
+            if (choices.includes(value as number)) cols[key as GridSizeKey] = value as number;
           }
           set({ gridColumns: cols });
         }

@@ -3,7 +3,7 @@
     "name": "Resonus",
     "slug": "resonus",
     "version": "0.7.3",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "resonus",
     "userInterfaceStyle": "dark",
