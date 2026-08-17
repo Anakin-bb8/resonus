@@ -51,9 +51,9 @@ Also available on [Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtai
 
 ## FAQ
 
-The questions that come up most often, about Android Auto, casting or offline
-mode, are answered in [docs/FAQ.md](./docs/FAQ.md). The app links to it too,
-from Settings › About.
+The questions that come up most often are answered in
+[docs/FAQ.md](./docs/FAQ.md), starting with how to get Resonus to show up in
+Android Auto. The app links to it too, from Settings › About.
 
 ## Translations
 
