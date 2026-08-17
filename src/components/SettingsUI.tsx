@@ -597,13 +597,26 @@ export function SwitchList({
   return (
     <View style={settingsStyles.cardBox}>
       {options.map((opt, i) => (
-        <View
+        // The whole row and not the switch alone. A switch is a small thing to
+        // hit with a thumb, and it sits at the far edge of the screen, which on
+        // a tall phone is the hardest corner to reach one-handed: the label is
+        // the part being aimed at anyway. It is one control, so it also reads
+        // as one to a screen reader, and the switch inside stops announcing
+        // itself separately.
+        <Pressable
           key={opt.label}
-          style={[
+          disabled={opt.disabled}
+          onPress={() => opt.onChange(!opt.value)}
+          accessibilityRole="switch"
+          accessibilityLabel={opt.label}
+          accessibilityHint={opt.description}
+          accessibilityState={{ checked: opt.value, disabled: !!opt.disabled }}
+          style={({ pressed }) => [
             settingsStyles.row,
             i > 0 && settingsStyles.rowBorder,
             // The whole row, not the label alone: see `SelectList`.
             opt.disabled && { opacity: 0.5 },
+            pressed && { opacity: 0.6 },
           ]}
         >
           <View style={settingsStyles.rowLabelBox}>
@@ -618,8 +631,10 @@ export function SwitchList({
             disabled={opt.disabled}
             trackColor={{ false: colors.control, true: accent }}
             thumbColor={colors.knob}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
           />
-        </View>
+        </Pressable>
       ))}
     </View>
   );
