@@ -47,6 +47,7 @@ import {
 } from '@/theme';
 import { BackChevron } from '@/components/BackChevron';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
+import { useListPadding } from '@/hooks/useScreenSize';
 import { listPerf } from '@/lib/listPerf';
 
 const EMPTY_EDIT: RadioEdit = { name: '', streamUrl: '', homePageUrl: '' };
@@ -59,6 +60,8 @@ export default function RadioScreen() {
   // mounted while you are on another one, out of reach of anything else.
   useTheme();
   const bottomPad = useScreenBottomPadding();
+  // Rows stop growing at a reading measure and centre themselves (#131).
+  const listPad = useListPadding(spacing.lg);
   const t = useT();
   const insets = useSafeAreaInsets();
   const auth = useAuthStore((s) => s.auth);
@@ -205,7 +208,10 @@ export default function RadioScreen() {
           keyboardShouldPersistTaps="handled"
           data={stations}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={[styles.list, { paddingBottom: bottomPad }]}
+          contentContainerStyle={[
+            styles.list,
+            { paddingBottom: bottomPad, paddingHorizontal: listPad },
+          ]}
           refreshControl={
             <RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.accent} />
           }

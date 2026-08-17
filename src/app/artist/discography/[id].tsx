@@ -36,6 +36,7 @@ import { BackChevron } from '@/components/BackChevron';
 import { useAlbumSort } from '@/hooks/useAlbumSort';
 import { useGridColumns } from '@/hooks/useGridColumns';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
+import { useListPadding } from '@/hooks/useScreenSize';
 
 // Same measurements as browsing albums: both are full-screen album grids and
 // cards of different sizes between them would look like an accident. That is
@@ -52,6 +53,8 @@ export default function DiscographyScreen() {
   // mounted while you are on another one, out of reach of anything else.
   useTheme();
   const bottomPad = useScreenBottomPadding();
+  // Rows stop growing at a reading measure and centre themselves (#131).
+  const listPad = useListPadding(spacing.lg);
   const { id, section, group } = useLocalSearchParams<{
     id: string;
     section?: string;
@@ -180,7 +183,12 @@ export default function DiscographyScreen() {
                 columnWrapperStyle: { gap: GAP },
                 contentContainerStyle: [styles.gridList, { paddingBottom: bottomPad }],
               }
-            : { contentContainerStyle: [styles.list, { paddingBottom: bottomPad }] })}
+            : {
+                contentContainerStyle: [
+                  styles.list,
+                  { paddingBottom: bottomPad, paddingHorizontal: listPad },
+                ],
+              })}
           renderItem={({ item }: { item: Album }) =>
             grid ? (
               <AlbumCard album={item} width={card} />

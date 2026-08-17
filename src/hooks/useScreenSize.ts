@@ -79,6 +79,16 @@ export function centredPadding(width: number, base: number): number {
 }
 
 /**
+ * The same, as a hook, for the many screens whose only question is how much
+ * padding their list wants. Rows only: a grid is meant to fill the width, and
+ * what it does with the room is add columns (see `useGridColumns`).
+ */
+export function useListPadding(base = 16): number {
+  const { width } = useWindowDimensions();
+  return centredPadding(width, base);
+}
+
+/**
  * How many cards fit across, given how wide one should be.
  *
  * The screens that draw grids each have a number of columns they open on, and
