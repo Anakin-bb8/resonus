@@ -69,11 +69,8 @@ import { useSongMenu } from '@/store/songMenu';
 import { useToast } from '@/store/toast';
 import { useUpnp } from '@/store/upnp';
 import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
+import { useScreenSize } from '@/hooks/useScreenSize';
 
-const SCREEN_W = Dimensions.get('window').width;
-const SCREEN_H = Dimensions.get('window').height;
-/** Cover size when there's height to spare: a square as wide as the screen. */
-const COVER_MAX = SCREEN_W - spacing.xl * 2;
 /** Floor: below this the cover stops giving up space and the page scrolls. */
 const COVER_MIN = 200;
 /**
@@ -84,7 +81,8 @@ const COVER_MIN = 200;
  * cover sits a touch high, which reads better than dead centre.
  */
 const COVER_TOP_SHARE = 0.4;
-const SWIPE_THRESHOLD = SCREEN_W * 0.25;
+/** How far a finger has to travel across the cover to count as a skip. */
+const SWIPE_SHARE = 0.25;
 const DISMISS_THRESHOLD = 120;
 /**
  * What the scrolling area measured the last time the player was open.
@@ -99,6 +97,13 @@ const DISMISS_THRESHOLD = 120;
  * point is to have it before the first render.
  */
 let lastPageH = 0;
+/**
+ * And the screen it was measured on, because it is only an answer for that
+ * one. Turning the phone, or folding it open, leaves a number that describes
+ * a screen nobody is looking at any more, and the first page then draws taller
+ * than the room it has: the cover ran off the bottom edge (#131).
+ */
+let lastPageFor = 0;
 // How much of the lyrics card peeks below the first page (invites swipe).
 const LYRICS_PEEK = 56;
 /**
@@ -141,13 +146,17 @@ function CircleButton({
  * so committing a swipe doesn't move any visible panel: the one that was the
  * neighbor stays centered and only the hidden panel's content changes.
  */
-function usePaneStyle(offset: SharedValue<number>, k: number) {
+function usePaneStyle(offset: SharedValue<number>, k: number, step: SharedValue<number>) {
   return useAnimatedStyle(() => {
-    const m = k + 3 * Math.round((-offset.value / SCREEN_W - k) / 3);
-    const x = m * SCREEN_W + offset.value;
+    // A screen's width, and it is a shared value rather than a constant
+    // because the screen can be turned while the player is open: read once,
+    // the strip would keep parking its neighbours a portrait width away (#131).
+    const w = step.value;
+    const m = k + 3 * Math.round((-offset.value / w - k) / 3);
+    const x = m * w + offset.value;
     return {
       transform: [{ translateX: x }],
-      opacity: interpolate(Math.abs(x), [0, SCREEN_W * 0.6], [1, 0.4], Extrapolation.CLAMP),
+      opacity: interpolate(Math.abs(x), [0, w * 0.6], [1, 0.4], Extrapolation.CLAMP),
     };
   });
 }
@@ -355,8 +364,16 @@ export default function PlayerScreen() {
   // too, and it is the controls that keep clear of the navigation bar (see
   // `styles.bottom` below).
   const insets = useSafeAreaInsets();
-  const approxPageH = SCREEN_H - insets.top;
-  const [pageH, setPageH] = useState(lastPageH);
+  // Measured as it draws, so turning the phone while the player is open lays
+  // it out for the screen it is on now (#131).
+  const { width: screenW, height: screenH, landscape } = useScreenSize();
+  const approxPageH = screenH - insets.top;
+  const [pageH, setPageH] = useState(lastPageFor === screenH ? lastPageH : 0);
+  // The screen changed under a player that is already open: the page falls back
+  // to the estimate until the layout comes back with the real number.
+  useEffect(() => {
+    if (lastPageFor !== screenH) setPageH(0);
+  }, [screenH]);
   /**
    * Height left over for the cover once everything else has taken its share.
    * The cover is the ONLY elastic piece of the player: the title, the optional
@@ -367,6 +384,9 @@ export default function PlayerScreen() {
    * keep in sync.
    */
   const [coverBoxH, setCoverBoxH] = useState(0);
+  /** And how wide it is, which stops being the screen the moment the cover and
+   *  the controls sit side by side. */
+  const [coverBoxW, setCoverBoxW] = useState(0);
   /** Height of the rating row, measured so it can be subtracted from the slot. */
   const [starsH, setStarsH] = useState(0);
   // The cover's size and vertical offset both come from the measured slot
@@ -495,6 +515,19 @@ export default function PlayerScreen() {
   const offset = useSharedValue(0);
   const dragBase = useSharedValue(0);
   /**
+   * The width the strip of covers travels by, on the UI thread.
+   *
+   * `offset` counts in screens, so when the screen changes width the strip is
+   * resting at a distance that no longer means what it meant: turning the
+   * phone left the cover parked off to one side. Both are put back in step
+   * here, which is instant and invisible because nothing is moving at the time.
+   */
+  const stepSV = useSharedValue(screenW);
+  useEffect(() => {
+    stepSV.value = screenW;
+    offset.value = -spinsSV.value * screenW;
+  }, [screenW, stepSV, offset, spinsSV]);
+  /**
    * The strip travelled, so the song follows it. Where to is worked out here
    * and not in the gesture: `canNext` and `canPrev` are as old as the closure
    * that captured them, and counting an advance the queue can't make would
@@ -515,7 +548,7 @@ export default function PlayerScreen() {
           : -1;
     if (to < 0) {
       spinsSV.value -= advance;
-      offset.value = withSpring(-spinsSV.value * SCREEN_W, { damping: 20, stiffness: 200 });
+      offset.value = withSpring(-spinsSV.value * screenW, { damping: 20, stiffness: 200 });
       return;
     }
     setSpins((n) => n + advance);
@@ -538,16 +571,17 @@ export default function PlayerScreen() {
       const blocked = goingPrev ? !canPrev : !canNext;
       const raw = dragBase.value + (blocked ? e.translationX / 4 : e.translationX);
       const rest = spinsSV.value;
-      const min = canNext ? -(rest + 1) * SCREEN_W : -rest * SCREEN_W;
-      const max = canPrev ? -(rest - 1) * SCREEN_W : -rest * SCREEN_W;
+      const min = canNext ? -(rest + 1) * screenW : -rest * screenW;
+      const max = canPrev ? -(rest - 1) * screenW : -rest * screenW;
       offset.value = Math.min(max, Math.max(min, raw));
     })
     .onEnd((e) => {
-      const wantNext = canNext && (e.translationX < -SWIPE_THRESHOLD || e.velocityX < -600);
-      const wantPrev = canPrev && (e.translationX > SWIPE_THRESHOLD || e.velocityX > 600);
+      const swipe = screenW * SWIPE_SHARE;
+      const wantNext = canNext && (e.translationX < -swipe || e.velocityX < -600);
+      const wantPrev = canPrev && (e.translationX > swipe || e.velocityX > 600);
       const advance = wantNext ? 1 : wantPrev ? -1 : 0;
       const base = spinsSV.value;
-      const target = -(base + advance) * SCREEN_W;
+      const target = -(base + advance) * screenW;
       if (advance !== 0) {
         // The carousel finishes the travel with the neighbor centered; the
         // track changes at the end. If React lags, it's not noticeable: the
@@ -590,7 +624,11 @@ export default function PlayerScreen() {
       if (success && hasLyrics) scheduleOnRN(openLyrics);
     });
   const coverGesture = Gesture.Race(coverPan, coverTap);
-  const paneStyles = [usePaneStyle(offset, 0), usePaneStyle(offset, 1), usePaneStyle(offset, 2)];
+  const paneStyles = [
+    usePaneStyle(offset, 0, stepSV),
+    usePaneStyle(offset, 1, stepSV),
+    usePaneStyle(offset, 2, stepSV),
+  ];
   // Which song (current, next or previous) belongs to each panel based on
   // committed advances; same recycling formula as the UI position.
   const paneRel = (k: number) => k + 3 * Math.round((spins - k) / 3) - spins;
@@ -608,7 +646,7 @@ export default function PlayerScreen() {
     })
     .onEnd((e) => {
       if (e.translationY > DISMISS_THRESHOLD || e.velocityY > 800) {
-        transY.value = withTiming(SCREEN_H, { duration: 220 }, (f) => {
+        transY.value = withTiming(screenH, { duration: 220 }, (f) => {
           if (f) scheduleOnRN(closePlayer);
         });
       } else {
@@ -673,12 +711,15 @@ export default function PlayerScreen() {
     : showAlbumInfo
       ? [song.album, song.year].filter(Boolean).join(' · ')
       : '';
-  // Square, capped at the width: it only shrinks when the height demands it, so
-  // on a tall screen with few options it looks exactly as it did before. The
-  // rating row shares the slot, so it comes off the top first.
+  // Square, capped at the width of the slot it sits in: it only shrinks when
+  // the height demands it, so on a tall screen with few options it looks
+  // exactly as it did before. The rating row shares the slot, so it comes off
+  // the top first. Side by side the slot is half the screen, which is why the
+  // cap is measured rather than taken from the screen (#131).
+  const coverMax = (landscape ? screenW / 2 : screenW) - spacing.xl * 2;
   const coverSize = coverBoxH
-    ? Math.max(COVER_MIN, Math.min(COVER_MAX, coverBoxH - (canRate ? starsH : 0)))
-    : COVER_MAX;
+    ? Math.max(COVER_MIN, Math.min(coverBoxW || coverMax, coverBoxH - (canRate ? starsH : 0)))
+    : coverMax;
   // Left-over height once the cover and the stars have taken their share, split
   // between the two sides. Padding doesn't feed back into the measurement: the
   // slot's height comes from `flex: 1`, not from its contents.
@@ -752,6 +793,7 @@ export default function PlayerScreen() {
           // measured and then move.
           onLayout={(e) => {
             lastPageH = e.nativeEvent.layout.height;
+            lastPageFor = screenH;
             setPageH(lastPageH);
           }}
           onScroll={(e) => {
@@ -840,9 +882,30 @@ export default function PlayerScreen() {
           )}
         </View>
 
+        {/* Side by side once the screen is wider than it is tall: the cover
+            takes the left and everything that is not the cover takes the
+            right. Stacked, a phone lying on its side has some 330 points of
+            height for a square picture AND a title AND a slider AND the
+            controls, and what happens is that the controls go off the bottom
+            of a page that cannot scroll. In portrait this is one more box
+            around what was already a column, and nothing moves (#131). */}
+        <View style={landscape ? styles.pageColumns : styles.pageStack}>
         <View
-          style={[styles.coverWrap, { paddingTop: coverTopPad }]}
-          onLayout={(e) => setCoverBoxH(e.nativeEvent.layout.height)}
+          style={[
+            styles.coverWrap,
+            landscape && styles.coverColumn,
+            {
+              paddingTop: coverTopPad,
+              // Side by side the cover is the thing that reaches the bottom
+              // edge, and the navigation bar is down there: in a column it was
+              // the block of controls that kept clear of it for both.
+              paddingBottom: landscape ? insets.bottom + spacing.md : 0,
+            },
+          ]}
+          onLayout={(e) => {
+            setCoverBoxH(e.nativeEvent.layout.height);
+            setCoverBoxW(e.nativeEvent.layout.width - spacing.xl * 2);
+          }}
         >
           <GestureDetector gesture={coverGesture}>
             {/* Recycled carousel: the current cover centered and the neighbors at
@@ -904,7 +967,13 @@ export default function PlayerScreen() {
             scroll has to reach the bottom edge for the lyrics card, and it is
             this block, the last thing on the first page, that must not end up
             under the navigation bar. */}
-        <View style={[styles.bottom, { paddingBottom: insets.bottom + spacing.md }]}>
+        <View
+          style={[
+            styles.bottom,
+            landscape && styles.bottomColumn,
+            { paddingBottom: insets.bottom + spacing.md },
+          ]}
+        >
           <View style={styles.meta}>
             <View style={{ flex: 1 }}>
               {song.albumId ? (
@@ -1169,6 +1238,7 @@ export default function PlayerScreen() {
           ) : null}
         </View>
         </View>
+        </View>
         {showsLyricsCard ? <LyricsCard /> : null}
         </ScrollView>
         </SafeAreaView>
@@ -1234,6 +1304,24 @@ const styles = themed((colors) => ({
     justifyContent: 'flex-start',
     marginTop: spacing.lg,
   },
+  /** Everything under the top bar, stacked, which is what it has always been. */
+  pageStack: { flex: 1, minHeight: 0 },
+  /** And the same two blocks turned into columns (#131). */
+  pageColumns: { flex: 1, minHeight: 0, flexDirection: 'row', alignItems: 'stretch' },
+  /** The cover's half: it no longer hangs from the top, it sits in the middle
+   *  of its own column, and the split of the spare height above and below
+   *  (`coverTopPad`) does the rest. */
+  coverColumn: { marginTop: 0, justifyContent: 'center' },
+  /**
+   * And the other half, with what is left of it centred: a title and a slider
+   * pinned to the bottom of a short screen read as an afterthought.
+   *
+   * It stops growing well before the column does. Across half a tablet the
+   * shuffle and the repeat end up a forearm apart with the play button alone
+   * in the middle, which is not a set of controls, it is five buttons that
+   * happen to be on the same line.
+   */
+  bottomColumn: { flex: 1, justifyContent: 'center', maxWidth: 560, alignSelf: 'center' },
   // Carousel panels are absolute (usePaneStyle positions them); the row that
   // reserves the cover art slot is sized inline, since it's dynamic now.
   coverPane: { position: 'absolute', top: 0, left: 0 },
