@@ -249,10 +249,35 @@ class JsProxyPlayer : SimpleBasePlayer(Looper.getMainLooper()) {
         CarAutoModule.instance?.emitTransport("previous", null)
       Player.COMMAND_SEEK_TO_MEDIA_ITEM ->
         CarAutoModule.instance?.emitTransport("seekToIndex", mediaItemIndex.toDouble())
-      else ->
-        CarAutoModule.instance?.emitTransport("seek", positionMs.toDouble())
+      else -> {
+        // Everything left is a position inside the song, and the one value that
+        // is not a position at all has to come off here. media3 passes
+        // C.TIME_UNSET to mean "wherever this item starts" (`BasePlayer`'s
+        // `seekToDefaultPositionInternal`, which is what a queue tap and a
+        // finished playlist go through), and that constant is Long.MIN_VALUE
+        // plus one, not a time. Forwarded as it stood, JS read it as a second
+        // and asked the player to seek nine quintillion of them back.
+        val target = if (positionMs == C.TIME_UNSET) 0L else positionMs.coerceAtLeast(0L)
+        applySeekLocally(target)
+        CarAutoModule.instance?.emitTransport("seek", target.toDouble())
+      }
     }
     return Futures.immediateVoidFuture()
+  }
+
+  /**
+   * Moves the position here too, and not only in JS.
+   *
+   * The car draws its bar from this player, and this player is told where
+   * playback is once a second. Between a seek and the next of those the state
+   * handed back was still the one from before, so the bar sprang back to where
+   * it had just been dragged from. The push that follows overwrites this with
+   * whatever is true, which is also what puts the bar back if the seek did not
+   * take.
+   */
+  private fun applySeekLocally(posMs: Long) {
+    positionMs = posMs
+    positionUpdatedAt = System.currentTimeMillis()
   }
 
   override fun handleSetShuffleModeEnabled(shuffleModeEnabled: Boolean): ListenableFuture<*> {

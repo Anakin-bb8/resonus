@@ -530,7 +530,15 @@ function seekActive(sec: number) {
   const song = currentSong(state);
   pendingSeek = { sec, at: Date.now() };
   usePlayerStore.setState({ positionSec: sec });
+  // Which of the three ways out this seek took, and whether anybody was
+  // looking. A seek from the car happens with the app in the background, where
+  // half of what this function can do is not certain to run, and the report is
+  // the only place those tell each other apart afterwards: a count of "offset
+  // asked" that the matching "offset answered" never catches up to is the
+  // server round trip below never coming back out there.
+  if (AppState.currentState !== 'active') bump('seek · away');
   if (!song || !needsOffsetSeek(song)) {
+    bump(activePlayer() ? 'seek · native' : 'seek · no player');
     activePlayer()?.seekTo(sec);
     return;
   }
@@ -541,7 +549,9 @@ function seekActive(sec: number) {
   // loading, would still be unchecked and send us to native seek → restart).
   // The position and pendingSeek are already set so the slider doesn't bounce
   // while it decides.
+  bump('seek · offset asked');
   void ensureTranscodeOffsetSupport().then((supported) => {
+    bump('seek · offset answered');
     // If the track changed while resolving, don't touch the new player.
     if (currentSong(usePlayerStore.getState()) !== song) return;
     const p = activePlayer();
@@ -1972,6 +1982,13 @@ function cutCrossfade() {
     clearInterval(pauseFadeTimer);
     pauseFadeTimer = null;
   }
+  // And where that ramp was headed, which is the half that was being left
+  // behind. `settleFade` finishes whatever is still noted here the next time
+  // the app goes to the background, so a ramp this call abandoned came back
+  // minutes later and landed on whatever was playing by then: the volume put
+  // to zero, and if it had been a pause, the pause with it. What an
+  // intervention cancels does not get to happen afterwards.
+  pendingFade = null;
   // The sleep fade is also an in-progress ramp: if the user touches anything
   // (pause, seek, track change) it must be released, or it would keep lowering
   // the volume of whatever plays now. The expiry still stands and `onStatus`
@@ -3340,18 +3357,28 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   seekTo: (sec) => {
+    // A second of this song, and nothing else. The app's own slider cannot hand
+    // over anything but that, and the car can: what reaches here from there is
+    // whatever media3 gave the session, which is not always a time (see the car
+    // module's `handleSeek`). A position the player cannot answer is not a seek
+    // that goes nowhere, it is a player that stops.
+    if (!Number.isFinite(sec)) return;
+    const duration = get().durationSec;
+    // A radio has no length to stay inside of, and a stream still loading has
+    // not said its own yet.
+    const target = Math.max(0, duration > 0 ? Math.min(sec, duration) : sec);
     cutCrossfade();
     if (remoteKind()) {
-      remoteSeek(sec);
-      set({ positionSec: sec });
+      remoteSeek(target);
+      set({ positionSec: target });
     } else {
-      seekActive(sec);
+      seekActive(target);
     }
     // The server works out the position between reports by letting the clock
     // run, so a jump nobody told it about leaves its panel counting from where
     // the song no longer is.
     const st = get();
-    reportState(st.isPlaying ? 'playing' : 'paused', st.queue[st.index], sec);
+    reportState(st.isPlaying ? 'playing' : 'paused', st.queue[st.index], target);
   },
 
   setVolume: (v) => {

@@ -22,6 +22,7 @@ import {
   type CarTrack,
 } from '@/lib/carAuto';
 import { buildBrowseTree, handleBrowsePlay } from '@/lib/carAutoTree';
+import { bump } from '@/lib/perfLog';
 import { useAuthStore } from '@/store/auth';
 import { useLastPlayed } from '@/store/lastPlayed';
 import { usePlayerStore, type StreamInfo } from '@/store/player';
@@ -156,6 +157,11 @@ export function CarAutoSync() {
     });
     const transportSub = onTransport((e) => {
       const store = usePlayerStore.getState();
+      // One count per button pressed in the car, so a report says what was
+      // asked for out there. Everything below this line happens with the app in
+      // the background, and the only other record of it is whatever the player
+      // ends up doing.
+      bump(`car · ${e.action}`);
       switch (e.action) {
         case 'play':
           if (!store.isPlaying) store.toggle();
