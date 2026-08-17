@@ -18,7 +18,7 @@ Releases before 0.2.1 are only listed on the
 ### Changed
 
 - **Local profile:** it no longer wears a phone icon in Home's header.
-- **All releases:** an artist's ⋯ menu offers it whatever their records are tagged as.
+- **All releases in the artist menu:** it is offered whatever their records are tagged as.
 
 ### Fixed
 
@@ -26,12 +26,12 @@ Releases before 0.2.1 are only listed on the
 - **Player navigation:** the app no longer freezes after opening an artist or an album from the full player and then tapping the mini player.
 - **Deleted playlists:** one removed on the server stops showing in Home's quick grid and in the car's Recents (#152).
 - **Update checks:** "Check for updates automatically" asks again at most every six hours, instead of once per app process.
-- **Search taps:** a result opens with one tap while the keyboard is up, in Search and in the lists with a filter box.
+- **Tapping a search result:** it opens with one tap while the keyboard is up, in Search and in the lists with a filter box.
 - **Cold start:** the app opens without waiting on the server.
 - **Restored track:** it goes back into the player once the app is up, at the position it was left at.
 - **Large libraries:** the download catalog is read in pages, so opening with tens of thousands of songs is no longer one long freeze.
-- **Car audio:** seeking from the car no longer kills the sound a few seconds later, which was the app giving up the audio focus every time the player stopped to buffer.
-- **Car progress bar:** dragging it no longer springs back to where the song was before.
+- **Seeking from the car:** it no longer kills the sound a few seconds later, which was the app giving up the audio focus every time the player stopped to buffer.
+- **Dragging the car's progress bar:** it no longer springs back to where the song was before.
 - **Saved queue:** press play and it starts where it was left, instead of from the beginning.
 
 ## [0.7.2] - 2026-08-15
