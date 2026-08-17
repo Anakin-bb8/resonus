@@ -6,13 +6,14 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { ActivityIndicator, Dimensions, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { addToPlaylist, COVER, coverArtUrl, createPlaylist, getPlaylist, getPlaylists } from '@/api/data';
+import { useScreenSize } from '@/hooks/useScreenSize';
 import { type Song } from '@/api/subsonic';
 import { useBottomSheetAnim } from '@/hooks/useBottomSheetAnim';
 import { songsLabel, useT } from '@/i18n';
@@ -20,13 +21,16 @@ import { useAutoDownloads } from '@/store/autoDownloads';
 import { usePlaylistPicker } from '@/store/playlistPicker';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, radius, spacing, themed } from '@/theme';
+import { colors, fontSize, radius, SHEET_MAX_WIDTH, spacing, themed } from '@/theme';
 import { Cover } from './Cover';
 import { Dialog } from './Dialog';
 
 /** Maximum height of the playlist list: proportional to the screen so it
- *  doesn't look cramped on large phones (previously a fixed 400). */
-const PLAYLISTS_MAX_H = Math.round(Dimensions.get('window').height * 0.6);
+ *  doesn't look cramped on large phones (previously a fixed 400), and read
+ *  while rendering so a turn does not leave it taller than the screen (#131). */
+function playlistsMaxH(height: number): number {
+  return Math.round(height * 0.6);
+}
 
 /** Global instance (mounted once in the root layout): any place can open it
  *  via `usePlaylistPicker.open(songs)` without rendering its own sheet. */
@@ -49,6 +53,7 @@ export function PlaylistPickerSheet({
   onClose: () => void;
 }) {
   const insets = useSafeAreaInsets();
+  const { height: screenH } = useScreenSize();
   const queryClient = useQueryClient();
   const toast = useToast((s) => s.show);
   const t = useT();
@@ -170,7 +175,7 @@ export function PlaylistPickerSheet({
             </View>
           </GestureDetector>
           <GestureDetector gesture={pan.enabled(atTop)}>
-            <View style={{ maxHeight: PLAYLISTS_MAX_H }}>
+            <View style={{ maxHeight: playlistsMaxH(screenH) }}>
               <Pressable
                 style={({ pressed }) => [styles.row, pressed && { opacity: 0.6 }]}
                 onPress={() => setCreating(true)}
@@ -282,9 +287,11 @@ const styles = themed((colors) => ({
   backdrop: { ...StyleSheet.absoluteFill, backgroundColor: colors.backdrop },
   sheet: {
     position: 'absolute',
-    left: 0,
-    right: 0,
     bottom: 0,
+    // Centred and no wider than a sheet wants to be (#131).
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: SHEET_MAX_WIDTH,
     backgroundColor: colors.surface,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
