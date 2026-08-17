@@ -10,7 +10,6 @@ import { useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Animated,
-  Dimensions,
   Keyboard,
   Pressable,
   ScrollView,
@@ -45,10 +44,22 @@ import { BackChevron } from './BackChevron';
 import { Cover } from './Cover';
 import { ExplicitBadge, useExplicitBadge } from './ExplicitBadge';
 import { FavoriteButton } from './FavoriteButton';
+import { centredPadding, useScreenSize } from '@/hooks/useScreenSize';
 import { SelectionBar } from './SelectionBar';
 import { TrackRow } from './TrackRow';
 
-const COVER = Math.min(Dimensions.get('window').width * 0.58, 250);
+/**
+ * The cover across the top of an album or a playlist.
+ *
+ * A share of the width, capped, and measured while rendering rather than once
+ * when the file was imported: turning the phone used to leave it at the size
+ * it had when the app started. The height matters as much as the width on a
+ * screen lying on its side, where 250 points of picture is most of the page
+ * and the tracklist is what people came for (#131).
+ */
+function coverSize(width: number, height: number): number {
+  return Math.round(Math.min(width * 0.58, height * 0.4, 250));
+}
 const TOPBAR_H = 48;
 /** Height of the hidden search bar ("Find in playlist" Spotify style),
  * including the separation gap from the cover. */
@@ -198,6 +209,7 @@ export function TrackListView({
   const router = useRouter();
   const t = useT();
   const insets = useSafeAreaInsets();
+  const { width: screenW, height: screenH } = useScreenSize();
   const bottomPad = useScreenBottomPadding();
   const dominant = useDominantColor(coverUri);
   const headerColor = accentColor ?? dominant;
@@ -338,8 +350,9 @@ export function TrackListView({
 
   // Without cover, the header is shorter: the gradient and bar collapse adjust
   // to a smaller distance so the transition fits.
-  const cover = hideCover ? 0 : COVER;
-  const collapse = hideCover ? 120 : COVER;
+  const art = coverSize(screenW, screenH);
+  const cover = hideCover ? 0 : art;
+  const collapse = hideCover ? 120 : art;
   // The gradient tail dies roughly where the header ends (title + actions):
   // it blends the color with the list's black without tinting the first row
   // (tested: extending it to the rows looked messy).
@@ -440,7 +453,14 @@ export function TrackListView({
         keyboardDismissMode="on-drag"
         contentContainerStyle={[
           styles.list,
-          { paddingTop: insets.top + TOPBAR_H + spacing.md, paddingBottom: bottomPad },
+          {
+            paddingTop: insets.top + TOPBAR_H + spacing.md,
+            paddingBottom: bottomPad,
+            // Centred on a wide screen instead of stretched across it: a row
+            // whose title is at one edge and whose duration is at the other,
+            // a hand's width apart, is a phone screen that was pulled (#131).
+            paddingHorizontal: centredPadding(screenW, spacing.lg),
+          },
         ]}
         scrollEventThrottle={16}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
@@ -503,12 +523,12 @@ export function TrackListView({
                     accessibilityRole="imagebutton"
                     accessibilityLabel={t('View cover')}
                   >
-                    {renderCover ? renderCover(COVER) : <Cover uri={coverUri} size={COVER} />}
+                    {renderCover ? renderCover(art) : <Cover uri={coverUri} size={art} />}
                   </Pressable>
                 ) : renderCover ? (
-                  renderCover(COVER)
+                  renderCover(art)
                 ) : (
-                  <Cover uri={coverUri} size={COVER} />
+                  <Cover uri={coverUri} size={art} />
                 )}
               </Animated.View>
             )}
