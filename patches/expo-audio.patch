@@ -12,7 +12,7 @@ index 36a19f2d9c4a979a940ab681a1fb844ce45f7c75..3509de4747f3ebdda1a014f05fb02f07
 +  <uses-permission android:name="android.permission.WAKE_LOCK" />
  </manifest>
 diff --git a/android/src/main/java/expo/modules/audio/AudioModule.kt b/android/src/main/java/expo/modules/audio/AudioModule.kt
-index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..b15e810b171b94d219d6f3ad5b049b54ac939260 100644
+index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..04a46b5a1c184260d41bbd458d66622d829306c0 100644
 --- a/android/src/main/java/expo/modules/audio/AudioModule.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioModule.kt
 @@ -18,6 +18,7 @@ import androidx.media3.common.C.CONTENT_TYPE_HLS
@@ -94,7 +94,25 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..b15e810b171b94d219d6f3ad5b049b54
        } else {
          AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
        }
-@@ -376,6 +401,15 @@ class AudioModule : Module() {
+@@ -363,7 +388,16 @@ class AudioModule : Module() {
+             bufferDurationMs
+           )
+           player.onPlaybackStateChange = { isPlaying ->
+-            if (!isPlaying && shouldReleaseFocus()) {
++            // Playing again after something that was not a pause: a call that
++            // took the focus for good, a route that changed under us, anything
++            // that left the player sounding with no focus behind it. Asking for
++            // it only in `play` and `replace` meant nothing ever put it back,
++            // and a player holding no focus is one a car will not carry.
++            if (isPlaying) {
++              if (!focusAcquired) {
++                requestAudioFocus()
++              }
++            } else if (shouldReleaseFocus()) {
+               releaseAudioFocus()
+             }
+           }
+@@ -376,6 +410,15 @@ class AudioModule : Module() {
          player.id
        }
  
@@ -110,7 +128,7 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..b15e810b171b94d219d6f3ad5b049b54
        Property("isBuffering") { player ->
          runOnMain {
            player.ref.playbackState == Player.STATE_BUFFERING
-@@ -507,6 +541,27 @@ class AudioModule : Module() {
+@@ -507,6 +550,27 @@ class AudioModule : Module() {
          }
        }
  
@@ -138,7 +156,7 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..b15e810b171b94d219d6f3ad5b049b54
        Function("setActiveForLockScreen") { ref: AudioPlayer, active: Boolean, metadata: Metadata?, options: AudioLockScreenOptions? ->
          runOnMain {
            ref.setActiveForLockScreen(active, metadata, options)
-@@ -525,6 +580,14 @@ class AudioModule : Module() {
+@@ -525,6 +589,14 @@ class AudioModule : Module() {
          }
        }
  
@@ -153,7 +171,25 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..b15e810b171b94d219d6f3ad5b049b54
        Function("setAudioSamplingEnabled") { player: AudioPlayer, enabled: Boolean ->
          runOnMain {
            player.setSamplingEnabled(enabled)
-@@ -860,13 +923,29 @@ class AudioModule : Module() {
+@@ -685,7 +757,16 @@ class AudioModule : Module() {
+           }
+           playlist.loadInitialPlaylist()
+           playlist.onPlaybackStateChange = { isPlaying ->
+-            if (!isPlaying && shouldReleaseFocus()) {
++            // Playing again after something that was not a pause: a call that
++            // took the focus for good, a route that changed under us, anything
++            // that left the player sounding with no focus behind it. Asking for
++            // it only in `play` and `replace` meant nothing ever put it back,
++            // and a player holding no focus is one a car will not carry.
++            if (isPlaying) {
++              if (!focusAcquired) {
++                requestAudioFocus()
++              }
++            } else if (shouldReleaseFocus()) {
+               releaseAudioFocus()
+             }
+           }
+@@ -860,13 +941,29 @@ class AudioModule : Module() {
  
    private fun createMediaItem(source: AudioSource?): MediaSource? = source?.uri?.let { uriString ->
      val uri = uriString.toUri()
@@ -184,7 +220,7 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..b15e810b171b94d219d6f3ad5b049b54
  
      val preloadedBytes = AudioPreloadManager.get(uriString)
      val factory: DataSource.Factory = if (preloadedBytes != null) {
-@@ -914,10 +993,32 @@ class AudioModule : Module() {
+@@ -914,10 +1011,32 @@ class AudioModule : Module() {
      }
    }
  
@@ -218,7 +254,7 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..b15e810b171b94d219d6f3ad5b049b54
    }
  
    private fun retrieveStreamType(uri: Uri): Int = Util.inferContentType(uri)
-@@ -931,11 +1032,37 @@ class AudioModule : Module() {
+@@ -931,11 +1050,37 @@ class AudioModule : Module() {
        CONTENT_TYPE_SS -> SsMediaSource.Factory(factory)
        CONTENT_TYPE_DASH -> DashMediaSource.Factory(factory)
        CONTENT_TYPE_HLS -> HlsMediaSource.Factory(factory)
@@ -645,6 +681,41 @@ index dca91c32a2787a7bc3ecba26f0f3f2ad9cc40d3d..089dcee0b9fe6a369f0809ecdf99a1fa
      .setId("ExpoAudioBasicMediaSession_${player.hashCode()}")
      .build()
  }
+diff --git a/android/src/main/java/expo/modules/audio/BaseAudioPlayer.kt b/android/src/main/java/expo/modules/audio/BaseAudioPlayer.kt
+index 149e9075c8630b14a69318aa6c37d9ff82b23f05..422d2d18677223f48b0106e44f573659b90160dd 100644
+--- a/android/src/main/java/expo/modules/audio/BaseAudioPlayer.kt
++++ b/android/src/main/java/expo/modules/audio/BaseAudioPlayer.kt
+@@ -78,7 +78,6 @@ abstract class BaseAudioPlayer(
+     val listener = object : Player.Listener {
+       override fun onIsPlayingChanged(isPlaying: Boolean) {
+         playing = isPlaying
+-        onPlaybackStateChange?.invoke(isPlaying)
+ 
+         val isTransient = !isPlaying &&
+           (ref.playbackState == Player.STATE_ENDED || ref.playbackState == Player.STATE_BUFFERING)
+@@ -86,9 +85,22 @@ abstract class BaseAudioPlayer(
+           intendedPlayingState = isPlaying
+         }
+ 
++        // Behind the check and not in front of it. `isPlaying` goes false
++        // while the player buffers, which every seek makes it do, and this
++        // callback is what gives up the audio focus: a stop that lasts as long
++        // as one read from the network was being taken for somebody pressing
++        // pause. Nothing asked for the focus back afterwards, because that only
++        // happens in `play` and `replace`, so what was left was a player that
++        // sounds and holds no focus. On the phone that goes unnoticed, since an
++        // AudioTrack keeps running without it. In a car it does not: Android
++        // Auto only carries the media stream to the head unit while the app
++        // holds the focus, so the car fell silent a moment after every seek
++        // while the app played on. The status update below already knew this
++        // state was not worth reporting.
+         if (isTransient) {
+           return
+         }
++        onPlaybackStateChange?.invoke(isPlaying)
+         sendStatusUpdate(mapOf("playing" to isPlaying))
+       }
+ 
 diff --git a/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt b/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
 index 196a5d57f887c2667a88543bd2f6a80044a044f2..f017a6da7498fff92bc5ea9cda1df8cb555489a8 100644
 --- a/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt

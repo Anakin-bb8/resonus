@@ -28,6 +28,7 @@ Releases before 0.2.1 are only listed on the
 - The app opens without waiting on the server.
 - The saved track goes back into the player once the app is up, at the position it was left at.
 - A large download catalog is read in pages, so opening with tens of thousands of songs on the phone is no longer one long freeze.
+- Seeking from the car no longer kills the sound a few seconds later, which was the app giving up the audio focus every time the player stopped to buffer.
 - Dragging the car's progress bar no longer springs back to where the song was before.
 - Press play on a queue the app has just brought back and it starts where it was left, instead of from the beginning.
 
