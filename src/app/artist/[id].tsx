@@ -761,7 +761,10 @@ function AlbumRow({ title, albums, href }: { title: string; albums: Album[]; hre
       <Link href={href} asChild>
         <Pressable style={styles.sectionHeader}>
           <Text style={styles.sectionHeaderTitle}>{title}</Text>
-          {albums.length > 1 ? <Text style={styles.showAll}>{t('Show all')}</Text> : null}
+          {/* Only when there is something to show that is not already here. The
+              row holds up to ROW_LIMIT cards, so a couple of records are all on
+              screen and the link led to a page with the same two on it. */}
+          {albums.length > 2 ? <Text style={styles.showAll}>{t('Show all')}</Text> : null}
         </Pressable>
       </Link>
       <FlatList
