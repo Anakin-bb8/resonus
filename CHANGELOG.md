@@ -9,6 +9,10 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Changed
+
+- **Cold start:** the saved track goes into the player as the app opens again, undoing the wait of up to five seconds that 0.7.3 put in front of it.
+
 ## [0.7.3] - 2026-08-17
 
 ### Added
