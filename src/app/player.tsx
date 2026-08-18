@@ -85,25 +85,18 @@ const COVER_TOP_SHARE = 0.4;
 const SWIPE_SHARE = 0.25;
 const DISMISS_THRESHOLD = 120;
 /**
- * What the scrolling area measured the last time the player was open.
- *
- * The first page is drawn as tall as that area, which nobody knows until it has
- * been laid out, so the first paint went with an estimate from the safe area and
- * everything settled a few pixels once the real number arrived — top bar, title,
- * slider and controls, all at once and only when the estimate happened to be
- * wrong, which is why it looked random. The number belongs to the screen and not
- * to the song, so the one measured before is right for every open after it, and
- * there is nothing left to settle. It outlives the screen on purpose: the whole
- * point is to have it before the first render.
+ * What the player measured last time it was open, so the next one can draw the
+ * cover at its final size instead of waiting a layout pass for it (#155). None
+ * of it belongs to the song; `for` is the screen height it does belong to, and
+ * on another one it would size the page for a screen nobody is on (#131).
  */
-let lastPageH = 0;
-/**
- * And the screen it was measured on, because it is only an answer for that
- * one. Turning the phone, or folding it open, leaves a number that describes
- * a screen nobody is looking at any more, and the first page then draws taller
- * than the room it has: the cover ran off the bottom edge (#131).
- */
-let lastPageFor = 0;
+let lastLayout: {
+  for: number;
+  pageH: number;
+  coverH: number;
+  coverW: number;
+  starsH: number;
+} | null = null;
 // How much of the lyrics card peeks below the first page (invites swipe).
 const LYRICS_PEEK = 56;
 /**
@@ -357,7 +350,7 @@ export default function PlayerScreen() {
 
   // The player is scrollable (like Spotify): the first "page" fills the
   // screen and the lyrics card peeks below. The real height comes from the
-  // ScrollView's onLayout, or from the open before this one (`lastPageH`).
+  // ScrollView's onLayout, or from the open before this one (`lastLayout`).
   // Only on the very first open of a run is there nothing to go on, and then
   // it is approximated from the safe-area inset: the top one only, since the
   // ScrollView runs to the bottom edge of the screen so the lyrics card does
@@ -368,12 +361,9 @@ export default function PlayerScreen() {
   // it out for the screen it is on now (#131).
   const { width: screenW, height: screenH, landscape } = useScreenSize();
   const approxPageH = screenH - insets.top;
-  const [pageH, setPageH] = useState(lastPageFor === screenH ? lastPageH : 0);
-  // The screen changed under a player that is already open: the page falls back
-  // to the estimate until the layout comes back with the real number.
-  useEffect(() => {
-    if (lastPageFor !== screenH) setPageH(0);
-  }, [screenH]);
+  /** What the open before this one measured, if it was on this screen. */
+  const remembered = lastLayout?.for === screenH ? lastLayout : null;
+  const [pageH, setPageH] = useState(remembered?.pageH ?? 0);
   /**
    * Height left over for the cover once everything else has taken its share.
    * The cover is the ONLY elastic piece of the player: the title, the optional
@@ -383,12 +373,25 @@ export default function PlayerScreen() {
    * below it — including any row added in the future, with no constants to
    * keep in sync.
    */
-  const [coverBoxH, setCoverBoxH] = useState(0);
+  const [coverBoxH, setCoverBoxH] = useState(remembered?.coverH ?? 0);
   /** And how wide it is, which stops being the screen the moment the cover and
    *  the controls sit side by side. */
-  const [coverBoxW, setCoverBoxW] = useState(0);
+  const [coverBoxW, setCoverBoxW] = useState(remembered?.coverW ?? 0);
   /** Height of the rating row, measured so it can be subtracted from the slot. */
-  const [starsH, setStarsH] = useState(0);
+  const [starsH, setStarsH] = useState(remembered?.starsH ?? 0);
+  /** The layout has run, so the numbers above are measured and not remembered.
+   *  What is remembered may be wrong, and the cover must not be seen correcting
+   *  itself: that is the jump. */
+  const [laidOut, setLaidOut] = useState(false);
+  // Another screen under an open player: what was measured describes the old
+  // one, so it goes and the page falls back to the estimate.
+  useEffect(() => {
+    if (lastLayout?.for === screenH) return;
+    setPageH(0);
+    setCoverBoxH(0);
+    setCoverBoxW(0);
+    setStarsH(0);
+  }, [screenH]);
   // The cover's size and vertical offset both come from the measured slot
   // (`coverBoxH`) and the page height (`pageH`), neither known on the first
   // paint. Rendered eagerly, the cover flashes full-width pinned to the top and
@@ -401,11 +404,21 @@ export default function PlayerScreen() {
   // safety net so the cover can never stay hidden if the callbacks don't line up.
   const [coverStable, setCoverStable] = useState(false);
   const coverAppear = useSharedValue(0);
+  /** The numbers this open started with, to know later whether they held. */
+  const startedWith = useRef(remembered);
+  /** So the reveal below happens once, whatever moves after it. */
+  const revealed = useRef(false);
   useEffect(() => {
-    if (coverStable) {
-      coverAppear.value = withTiming(1, { duration: 200, reduceMotion: ReduceMotion.Never });
-    }
-  }, [coverStable, coverAppear]);
+    if (!coverStable || revealed.current) return;
+    revealed.current = true;
+    // Confirmed what it was drawn at: nothing to reveal, so no fade. The fade
+    // is for a size nobody has seen yet.
+    const g = startedWith.current;
+    const asRemembered =
+      !!g && g.pageH === pageH && g.coverH === coverBoxH && g.coverW === coverBoxW && g.starsH === starsH;
+    if (asRemembered) coverAppear.set(1);
+    else coverAppear.value = withTiming(1, { duration: 200, reduceMotion: ReduceMotion.Never });
+  }, [coverStable, pageH, coverBoxH, coverBoxW, starsH, coverAppear]);
   useEffect(() => {
     const id = setTimeout(() => setCoverStable(true), 300);
     /**
@@ -439,8 +452,15 @@ export default function PlayerScreen() {
    * on, whatever the page height turns out to be.
    */
   useEffect(() => {
-    if (pageH > 0 && coverBoxH > 0 && (!canRate || starsH > 0)) setCoverStable(true);
-  }, [pageH, coverBoxH, starsH, canRate]);
+    if (laidOut && pageH > 0 && coverBoxH > 0 && (!canRate || starsH > 0)) setCoverStable(true);
+  }, [laidOut, pageH, coverBoxH, starsH, canRate]);
+  /** Kept for the next open, and only whole: half a layout is a memory that
+   *  draws the next one wrong. */
+  useEffect(() => {
+    if (!laidOut || pageH <= 0 || coverBoxH <= 0 || coverBoxW <= 0) return;
+    if (canRate && starsH <= 0) return;
+    lastLayout = { for: screenH, pageH, coverH: coverBoxH, coverW: coverBoxW, starsH };
+  }, [laidOut, screenH, pageH, coverBoxH, coverBoxW, starsH, canRate]);
   /**
    * Coming back to the player from the queue or the lyrics screen, which open
    * on top of it as native modals. The player is not unmounted there, so
@@ -792,9 +812,8 @@ export default function PlayerScreen() {
           // out to be right, is what let the stars appear before they had been
           // measured and then move.
           onLayout={(e) => {
-            lastPageH = e.nativeEvent.layout.height;
-            lastPageFor = screenH;
-            setPageH(lastPageH);
+            setPageH(e.nativeEvent.layout.height);
+            setLaidOut(true);
           }}
           onScroll={(e) => {
             const next = e.nativeEvent.contentOffset.y <= 4;
@@ -905,6 +924,7 @@ export default function PlayerScreen() {
           onLayout={(e) => {
             setCoverBoxH(e.nativeEvent.layout.height);
             setCoverBoxW(e.nativeEvent.layout.width - spacing.xl * 2);
+            setLaidOut(true);
           }}
         >
           <GestureDetector gesture={coverGesture}>
