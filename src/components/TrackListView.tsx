@@ -65,6 +65,23 @@ const TOPBAR_H = 48;
  * including the separation gap from the cover. */
 const SEARCH_H = 72;
 
+/**
+ * The list, with its scroll wired straight to what the scroll animates.
+ *
+ * The cover fading, the bar coming in and the gradient following the scroll all
+ * hang off the scroll position, and every frame of them used to go through JS:
+ * the list moved natively while they waited behind whatever else the thread was
+ * doing. With music playing there is always something else, and what it looks
+ * like is a header stuttering against a list that does not (#154). Native, they
+ * cannot be late whatever JS is up to.
+ *
+ * The search bar is the one thing that stays on this side: it animates a
+ * height, which the native side does not do, so it is kept in a wrapper of its
+ * own rather than added to the scroll (mixing the two in one expression is what
+ * would break both).
+ */
+const AnimatedList = Animated.createAnimatedComponent(GHFlatList) as typeof GHFlatList;
+
 /** Normalizes for searching: lowercase and without accents. */
 function normQ(s: string): string {
   return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -417,26 +434,37 @@ export function TrackListView({
             styles.gradientWrap,
             {
               height: gradientH,
-              // Follows the scroll 1:1 and moves down with the revealed search bar
-              // (which pushes the header down without moving the scroll offset).
-              transform: [{ translateY: Animated.add(searchH, Animated.multiply(scrollY, -1)) }],
+              // Moves down with the revealed search bar, which pushes the header
+              // down without moving the scroll offset. On its own view, because
+              // this is a height animated from JS and the scroll below is not:
+              // one expression holding both would drag the scroll back onto this
+              // side, which is the whole thing being avoided (see `AnimatedList`).
+              transform: [{ translateY: searchH }],
             },
           ]}
         >
-          {/* Color band above the gradient: when the search bar is revealed,
-              content shifts down SEARCH_H px and this fills the gap at the top. */}
-          {searchable ? (
-            <View style={[styles.gradientAbove, { backgroundColor: headerColor }]} />
-          ) : null}
-          <LinearGradient
-            colors={[headerColor, colors.background]}
-            style={StyleSheet.absoluteFill}
-          />
+          <Animated.View
+            style={[
+              StyleSheet.absoluteFill,
+              // And follows the scroll 1:1, natively.
+              { transform: [{ translateY: Animated.multiply(scrollY, -1) }] },
+            ]}
+          >
+            {/* Color band above the gradient: when the search bar is revealed,
+                content shifts down SEARCH_H px and this fills the gap at the top. */}
+            {searchable ? (
+              <View style={[styles.gradientAbove, { backgroundColor: headerColor }]} />
+            ) : null}
+            <LinearGradient
+              colors={[headerColor, colors.background]}
+              style={StyleSheet.absoluteFill}
+            />
+          </Animated.View>
         </Animated.View>
       )}
 
       <GestureDetector gesture={revealPan}>
-      <GHFlatList
+      <AnimatedList
         ref={listRef}
         simultaneousHandlers={revealPanRef}
         {...listPerf}
@@ -464,7 +492,9 @@ export function TrackListView({
         ]}
         scrollEventThrottle={16}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
-          useNativeDriver: false,
+          // The listener still runs on this side: a native event is delivered to
+          // JS as well, it just no longer has to be for the animation to move.
+          useNativeDriver: true,
           listener: (e: NativeSyntheticEvent<NativeScrollEvent>) => {
             const y = e.nativeEvent.contentOffset.y;
             lastOffsetY.current = y;

@@ -19,6 +19,7 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- **Headers that stuttered while music played:** the artist photo, the album cover fading out and the bar coming in follow the scroll from the native side now, so they no longer wait behind whatever the app is doing twice a second (#154).
 - **A song that will not play:** the player now hears the failure instead of sitting on it, so a stream cut off by a bad connection or a download that is no longer readable is answered with the other copy of the song, then with a second go, and only then with a message.
 - **A stream that stops arriving:** fifteen seconds of a song that is not coming in, with the album downloaded on the phone, and the file takes over from where it stopped.
 - **Downloads that are not there:** one whose file has gone stops being offered by the catalog the moment the player finds out, instead of being promised by its badge for good.

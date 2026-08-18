@@ -68,6 +68,22 @@ import { useScreenSize } from '@/hooks/useScreenSize';
 function headerHeight(width: number, height: number): number {
   return Math.round(Math.min(width, height * 0.6, 360));
 }
+/**
+ * The page, with its scroll wired straight to the animations it drives.
+ *
+ * The header moves and fades with the scroll, and until this existed every
+ * frame of that went through JS: the list scrolled natively while the photo,
+ * the name and the top bar waited their turn behind whatever else the thread
+ * was doing. With music playing there is always something else, twice a second
+ * at least, and what it looks like is a header that stutters against a list
+ * that does not (#154). Handing the scroll to the native side takes the whole
+ * thing off the thread: it cannot be late any more, whatever JS is up to.
+ *
+ * What it costs is that only opacity and transforms can be animated this way,
+ * which is all four of the ones below.
+ */
+const AnimatedPage = Animated.createAnimatedComponent(ScrollView);
+
 const CARD_W = 140;
 /**
  * Cards per album row. The rows are for a look around, not for the whole
@@ -348,11 +364,11 @@ export default function ArtistScreen() {
 
   return (
     <View style={styles.root}>
-      <ScrollView
+      <AnimatedPage
         contentContainerStyle={{ paddingBottom: bottomPad }}
         scrollEventThrottle={16}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
-          useNativeDriver: false,
+          useNativeDriver: true,
         })}
       >
         <View style={[styles.headerWrap, { width: screenW, height: headerH }]}>
@@ -591,7 +607,7 @@ export default function ArtistScreen() {
             </ScrollView>
           </View>
         ) : null}
-      </ScrollView>
+      </AnimatedPage>
 
       {/* Fixed bar: the back button always; background + title + play on collapse. */}
       <View style={[styles.bar, { height: insets.top + 48, paddingTop: insets.top }]}>
