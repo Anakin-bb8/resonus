@@ -11,6 +11,7 @@ Releases before 0.2.1 are only listed on the
 
 ### Added
 
+- **Favorites from the add-to-playlist sheet:** picking songs and choosing to add them offers Favorites above the playlists, and the row is gone when they are all favorites already.
 - **Sorting a discography:** the full lists an artist's shelves open into have a sort button beside the view one, with year or name in either direction, and the choice is remembered.
 
 ### Changed
