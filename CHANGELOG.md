@@ -9,6 +9,10 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Changed
+
+- Headings and screen titles are lighter: Android draws Roboto's 800 as a real ExtraBold, which closes the letters up, so they sit at 600 instead.
+
 ### Fixed
 
 - ALAC files play on devices whose own decoder cannot handle them, several Samsung phones among them, through a bundled decoder that only steps in when the system refuses the format (#134).

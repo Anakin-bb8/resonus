@@ -823,7 +823,7 @@ export const settingsStyles = themed((colors) => ({
   padValue: {
     color: colors.text,
     fontSize: fontSize.xl,
-    fontWeight: '800',
+    fontWeight: '600',
     minWidth: 120,
     textAlign: 'center',
   },

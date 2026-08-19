@@ -132,7 +132,7 @@ const styles = themed((colors) => ({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800' },
+  title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '600' },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',

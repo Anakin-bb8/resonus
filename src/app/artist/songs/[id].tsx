@@ -466,7 +466,7 @@ const styles = themed((colors) => ({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  title: { flex: 1, color: colors.text, fontSize: fontSize.lg, fontWeight: '800' },
+  title: { flex: 1, color: colors.text, fontSize: fontSize.lg, fontWeight: '600' },
   meta: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,

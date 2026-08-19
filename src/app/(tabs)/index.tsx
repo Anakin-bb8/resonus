@@ -890,7 +890,7 @@ const styles = themed((colors) => ({
     marginBottom: spacing.lg,
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 1 },
-  greeting: { color: colors.text, fontSize: fontSize.xxl, fontWeight: '800', flexShrink: 1 },
+  greeting: { color: colors.text, fontSize: fontSize.xxl, fontWeight: '600', flexShrink: 1 },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -1372,7 +1372,7 @@ const styles = themed((colors) => ({
   // when tapping the empty space on the right.
   // Hugs the text: the tappable area is just the title/artist, not the row.
   tapText: { alignSelf: 'flex-start', maxWidth: '100%' },
-  title: { color: colors.text, fontSize: fontSize.xl, fontWeight: '800' },
+  title: { color: colors.text, fontSize: fontSize.xl, fontWeight: '600' },
   // The gap the artist line used to keep for itself now belongs to the row it
   // shares with the badge, so the two line up on their middles.
   artistRow: {
