@@ -9,6 +9,8 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.7.4] - 2026-08-19
+
 ### Added
 
 - **Editing the whole queue:** the song playing and the ones behind it are dragged and removed like any other row, so a queue can be trimmed into shape without jumping elsewhere first (#157).
