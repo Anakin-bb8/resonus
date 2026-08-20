@@ -100,7 +100,11 @@ class RendererSession(
     }
 
     if (!accepted) {
-      avTransport = null
+      // Only drop the cached transport URL when the device was not playing.
+      // While playing, a rejected tail-sync (e.g. unsupported operation or the
+      // current track moved) is not a connection error; the URL is still valid
+      // and clearing it would break the next play/pause/seek command.
+      if (!wasPlaying) avTransport = null
       return false
     }
 

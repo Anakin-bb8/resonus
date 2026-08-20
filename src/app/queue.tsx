@@ -12,11 +12,11 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import ReorderableList, {
   useReorderableDrag,
   type ReorderableListReorderEvent,
 } from 'react-native-reorderable-list';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { COVER, songCoverUrl } from '@/api/data';
 import { type Song } from '@/api/subsonic';
@@ -25,16 +25,17 @@ import { Dialog } from '@/components/Dialog';
 import { EmptyState } from '@/components/EmptyState';
 import { ExplicitBadge, useExplicitBadge } from '@/components/ExplicitBadge';
 import { SheetModal } from '@/components/SheetModal';
+import { useListPadding } from '@/hooks/useScreenSize';
+import { songsLabel, useT } from '@/i18n';
 import { formatTotalDuration } from '@/lib/format';
+import { haptic } from '@/lib/haptics';
+import { listPerf } from '@/lib/listPerf';
 import { mixSeedOf, SOURCE_FAVORITES, SOURCE_HISTORY, usePlayerStore } from '@/store/player';
 import { usePlaylistPicker } from '@/store/playlistPicker';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
-import { songsLabel, useT } from '@/i18n';
-import { haptic } from '@/lib/haptics';
+import { useUpnp } from '@/store/upnp';
 import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
-import { useListPadding } from '@/hooks/useScreenSize';
-import { listPerf } from '@/lib/listPerf';
 
 // ReorderableList doesn't support removeClippedSubviews (needs cells mounted
 // to animate the drag); we use the rest of the performance props.
@@ -89,6 +90,11 @@ function QueueRow({
   const t = useT();
   const drag = useReorderableDrag();
   const current = state === 'current';
+  const upnpConnected = useUpnp((s) => s.connected);
+  // While casting to Sonos the queue-service sync only handles tail changes.
+  // Moving the current track would break the incremental sync, so dragging it
+  // is disabled – the same restriction as the fixed NowPlayingRow in ≤ 0.7.3.
+  const canDrag = !(current && upnpConnected);
 
   const remove = async () => {
     // Removing the one playing moves on to the next, which is loud enough on
@@ -102,7 +108,7 @@ function QueueRow({
       <Pressable
         style={styles.main}
         onPress={current ? undefined : () => jumpTo(absIndex)}
-        onLongPress={() => { haptic('medium'); drag(); }}
+        onLongPress={canDrag ? () => { haptic('medium'); drag(); } : undefined}
       >
         {showListArtwork ? (
           <View style={styles.artwork}>
@@ -122,7 +128,7 @@ function QueueRow({
         <Pressable hitSlop={6} onPress={() => void remove()}>
           <Ionicons name="close" size={22} color={colors.textSecondary} />
         </Pressable>
-        <Pressable hitSlop={6} onPressIn={() => { haptic('medium'); drag(); }}>
+        <Pressable hitSlop={6} onPressIn={canDrag ? () => { haptic('medium'); drag(); } : undefined}>
           <Ionicons name="reorder-two" size={24} color={colors.textSecondary} />
         </Pressable>
       </View>
