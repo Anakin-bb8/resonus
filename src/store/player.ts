@@ -86,6 +86,7 @@ import {
   upnpPause,
   upnpPlay,
   upnpSeek,
+  upnpSetCrossfade,
   upnpSetSleepTimer,
   upnpSetVolume,
   type RemoteEvents,
@@ -1090,6 +1091,7 @@ function maybeScrobbleThreshold(positionSec: number) {
   // "Most played" on this phone, which is nobody else's business.
   if (offline) {
     usePlayCounts.getState().bump(song.id);
+    bump(auth ? 'scrobble · to outbox' : 'scrobble · local profile');
     if (auth) useOfflineQueue.getState().addPlay(song.id, at);
     return;
   }
@@ -1102,8 +1104,13 @@ function maybeScrobbleThreshold(positionSec: number) {
   // handed to a promise nobody was waiting on, and lost the moment it failed
   // (#126). A refusal from the network puts it in the same outbox an offline
   // one goes to, dated, so it goes up on the next reconnection either way.
+  bump('scrobble · sent');
   scrobble(auth, song.id, true).catch((e) => {
-    if (!(e instanceof SubsonicRequestError) || !e.network) return;
+    if (!(e instanceof SubsonicRequestError) || !e.network) {
+      bump('scrobble · server refused');
+      return;
+    }
+    bump('scrobble · to outbox (no network)');
     usePlayCounts.getState().bump(song.id);
     useOfflineQueue.getState().addPlay(song.id, at);
   });
@@ -2763,6 +2770,8 @@ export function initRemoteIntegration() {
         const remainingSec = Math.max(0, Math.round((sleepEndsAt - Date.now()) / 1000));
         void upnpSetSleepTimer(remainingSec);
       }
+      const { crossfadeSec } = useSettings.getState();
+      void upnpSetCrossfade(crossfadeSec > 0);
       if (queue[index]) void remoteLoadIndex(index, isPlaying, positionSec);
     },
     onTrackChanged: (index, positionSec, durationSec) => {
@@ -2831,6 +2840,14 @@ export function initRemoteIntegration() {
   };
   initUpnp(events);
   initJukebox(events);
+  // Sync crossfade toggle to Sonos whenever the setting changes.
+  let lastCrossfadeSec = useSettings.getState().crossfadeSec;
+  useSettings.subscribe((s) => {
+    if (s.crossfadeSec !== lastCrossfadeSec) {
+      lastCrossfadeSec = s.crossfadeSec;
+      if (isUpnpConnected()) void upnpSetCrossfade(s.crossfadeSec > 0);
+    }
+  });
   // Controls pressed in the notification/lock screen or volume buttons during
   // casting: the store actions are already routed to the renderer (remoteKind()).
   initCastMedia((action, value) => {

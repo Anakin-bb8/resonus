@@ -317,6 +317,10 @@ class UpnpCastModule : Module() {
       }) }
     }
 
+    AsyncFunction("setCrossfadeMode") { enabled: Boolean, promise: Promise ->
+      scope.launch { promise.resolve(session?.setCrossfadeMode(enabled) ?: false) }
+    }
+
     AsyncFunction("setSleepTimer") { durationSec: Double, promise: Promise ->
       val seconds = durationSec.toInt().coerceAtLeast(0)
       scope.launch { promise.resolve(session?.setSleepTimer(seconds) ?: false) }
