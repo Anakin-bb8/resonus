@@ -34,7 +34,6 @@ import { mixSeedOf, SOURCE_FAVORITES, SOURCE_HISTORY, usePlayerStore } from '@/s
 import { usePlaylistPicker } from '@/store/playlistPicker';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
-import { useUpnp } from '@/store/upnp';
 import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
 
 // ReorderableList doesn't support removeClippedSubviews (needs cells mounted
@@ -90,11 +89,6 @@ function QueueRow({
   const t = useT();
   const drag = useReorderableDrag();
   const current = state === 'current';
-  const upnpConnected = useUpnp((s) => s.connected);
-  // While casting to Sonos the queue-service sync only handles tail changes.
-  // Moving the current track would break the incremental sync, so dragging it
-  // is disabled – the same restriction as the fixed NowPlayingRow in ≤ 0.7.3.
-  const canDrag = !(current && upnpConnected);
 
   const remove = async () => {
     // Removing the one playing moves on to the next, which is loud enough on
@@ -108,7 +102,7 @@ function QueueRow({
       <Pressable
         style={styles.main}
         onPress={current ? undefined : () => jumpTo(absIndex)}
-        onLongPress={canDrag ? () => { haptic('medium'); drag(); } : undefined}
+        onLongPress={() => { haptic('medium'); drag(); }}
       >
         {showListArtwork ? (
           <View style={styles.artwork}>
@@ -128,7 +122,7 @@ function QueueRow({
         <Pressable hitSlop={6} onPress={() => void remove()}>
           <Ionicons name="close" size={22} color={colors.textSecondary} />
         </Pressable>
-        <Pressable hitSlop={6} onPressIn={canDrag ? () => { haptic('medium'); drag(); } : undefined}>
+        <Pressable hitSlop={6} onPressIn={() => { haptic('medium'); drag(); }}>
           <Ionicons name="reorder-two" size={24} color={colors.textSecondary} />
         </Pressable>
       </View>

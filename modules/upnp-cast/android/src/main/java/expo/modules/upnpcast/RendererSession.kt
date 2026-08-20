@@ -75,13 +75,72 @@ class RendererSession(
 
     val accepted = if (description.isSonos) {
       if (wasPlaying) {
-        syncQueueTailWhilePlaying(
-          control = target.controlUrl,
-          queueOwnerUid = target.uid,
-          tracks = tracks,
-          selectedIndex = selectedIndex,
-          playMode = playMode,
-        )
+        val currentTrackUrl = if (selectedIndex < tracks.size) tracks[selectedIndex].url else null
+        val oldSelectedIndex = currentTrackUrl?.let { url -> lastQueueTrackUrls.indexOfFirst { it == url } } ?: -1
+        val currentTrackMoved = oldSelectedIndex >= 0 && oldSelectedIndex != selectedIndex
+        Log.d(Soap.TAG, "syncQueue: selectedIndex=$selectedIndex oldSelectedIndex=$oldSelectedIndex moved=$currentTrackMoved cacheSize=${lastQueueTrackUrls.size}")
+
+        if (currentTrackMoved) {
+          // Move only the current track's queue slot; playback is uninterrupted.
+          val queueSvc = queueControl ?: refreshQueueControlUrl()
+          val queueId = queueSvc?.let { resolveQueueId(it, target.uid) }
+          val reordered = if (queueSvc != null && queueId != null) {
+            // InsertBefore is relative to the queue BEFORE removal (Sonos spec).
+            // For a forward move, removing the track shifts all positions above it
+            // down by one, so the target position needs +2 instead of +1.
+            val insertBefore = if (oldSelectedIndex < selectedIndex) selectedIndex + 2 else selectedIndex + 1
+            Log.d(Soap.TAG, "ReorderTracks: StartingIndex=${oldSelectedIndex + 1} InsertBefore=$insertBefore updateId=$lastQueueUpdateId")
+            val result = Soap.call(
+              queueSvc, Services.QUEUE, "ReorderTracks",
+              "<QueueID>$queueId</QueueID>" +
+                "<StartingIndex>${oldSelectedIndex + 1}</StartingIndex>" +
+                "<NumberOfTracks>1</NumberOfTracks>" +
+                "<InsertBefore>$insertBefore</InsertBefore>" +
+                "<UpdateID>$lastQueueUpdateId</UpdateID>"
+            )
+            Log.d(Soap.TAG, "ReorderTracks result: ok=${result.ok} body=${result.body?.take(200)}")
+            if (result.ok) {
+              lastQueueUpdateId = parseUpdateId(result.body, lastQueueUpdateId)
+              val mutable = lastQueueTrackUrls.toMutableList()
+              mutable.add(selectedIndex, mutable.removeAt(oldSelectedIndex))
+              lastQueueTrackUrls = mutable
+              true
+            } else false
+          } else false
+
+          if (reordered) {
+            // Current track repositioned; sync any remaining tail changes normally.
+            syncQueueTailWhilePlaying(
+              control = target.controlUrl,
+              queueOwnerUid = target.uid,
+              tracks = tracks,
+              selectedIndex = selectedIndex,
+              playMode = playMode,
+            )
+          } else {
+            Log.d(Soap.TAG, "ReorderTracks failed or unavailable; falling back to full rebuild")
+            // ReorderTracks unavailable; rebuild with seek as fallback.
+            val livePositionMs = state()?.positionMs ?: positionMs
+            replaceQueueViaQueueService(
+              control = target.controlUrl,
+              queueOwnerUid = target.uid,
+              tracks = tracks,
+              selectedIndex = selectedIndex,
+              autoplay = true,
+              positionMs = livePositionMs,
+              playMode = playMode,
+              applyTransport = true,
+            )
+          }
+        } else {
+          syncQueueTailWhilePlaying(
+            control = target.controlUrl,
+            queueOwnerUid = target.uid,
+            tracks = tracks,
+            selectedIndex = selectedIndex,
+            playMode = playMode,
+          )
+        }
       } else {
         replaceQueueViaQueueService(
           control = target.controlUrl,
