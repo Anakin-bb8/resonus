@@ -725,6 +725,16 @@ class RendererSession(
     ).ok
   }
 
+  suspend fun setCrossfadeMode(enabled: Boolean): Boolean {
+    val control = avTransport ?: refreshControlUrl() ?: return false
+    return Soap.call(
+      control,
+      Services.AV_TRANSPORT,
+      "SetCrossfadeMode",
+      "<InstanceID>0</InstanceID><CrossfadeMode>${if (enabled) 1 else 0}</CrossfadeMode>"
+    ).ok
+  }
+
   suspend fun setSleepTimer(durationSeconds: Int): Boolean {
     val control = avTransport ?: refreshControlUrl() ?: return false
     val target = Didl.hms(durationSeconds.coerceAtLeast(0))

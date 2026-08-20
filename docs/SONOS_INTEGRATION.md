@@ -10,6 +10,7 @@ The Resonus Sonos integration enables seamless queue management and playback con
 - Maintain playback without interruption during queue updates
 - Optimize network calls by using incremental updates when possible
 - Fall back to a full rebuild when incremental sync is not possible
+- Mirror the Resonus crossfade setting to the Sonos crossfade toggle
 
 ---
 
@@ -49,7 +50,7 @@ The Resonus Sonos integration enables seamless queue management and playback con
   index: number;              // 0-based index of current playing track
   positionSec: number;        // Playback position in seconds
   isPlaying: boolean;
-  shuffle: boolean;           // Local-only, never sent to Sonos
+  shuffle: boolean;           // Local-only for queue ordering; crossfade is synced separately
   repeat: 'off' | 'all' | 'one';
 }
 ```
@@ -127,6 +128,36 @@ syncQueue()
 | Insertion | `[B, C]` → `[B, D, C, E]` | AddURI + ReorderTracks |
 | Pure reorder | `[B, C, D]` → `[D, B, C]` | ReorderTracks |
 | Mixed | Any | Rejected → return false |
+
+---
+
+### Flow 3: Shuffle / Unshuffle (Queue Fully Reordered)
+
+**Scenario:** User enables or disables shuffle while connected to Sonos.
+
+**UPnP-specific shuffle behaviour:** When shuffle is toggled via the player button and UPnP is active, `toggleShuffle` takes a special path that keeps the current track at its current index and only reorders the tail. This ensures `currentTrackMoved` stays `false` and only a tail-sync is needed.
+
+**Problem with `startSongs` + shuffle mode:** When shuffle mode is already on and the user taps a song in an album (`startSongs`), the tapped song goes to `index = 0` with `originalQueue = songs`. When shuffle is then turned off, the current track moves from index 0 to index `k` (its original position). `currentTrackMoved = true`. Without additional handling, only the current track position and tail are fixed — the **head** (positions 0..k-1) remains in shuffled order.
+
+**Execution Path (unshuffle, current track moved):**
+```
+toggleShuffle()  [shuffle off, originalQueue exists]
+  → queue restored to originalQueue
+  → index = k (original position of current track)
+  → scheduleSync()
+  → syncQueue()
+      ├─ currentTrackMoved = true  (was at 0, now at k)
+      ├─ ReorderTracks: move current track from pos 0 to pos k
+      ├─ Head reorder (positions 0..k-1):
+      │    forward sweep, backward ReorderTracks moves
+      │    fixes all tracks that were before current in original order
+      └─ syncQueueTailWhilePlaying()
+           pure reorder of tail (positions k+1..N-1)
+```
+
+**Outcome:** Full queue correctly reordered with no playback interruption.
+
+**Network Cost:** Up to N ReorderTracks calls (one per out-of-order track).
 
 ---
 
@@ -251,6 +282,33 @@ jumpTo(index)
 
 ---
 
+### Flow 5: Crossfade Setting Change
+
+**Scenario:** User enables or disables crossfade in Resonus settings while connected to Sonos, or connects to Sonos while crossfade is already set.
+
+**Mapping:** Resonus stores `crossfadeSec: number` (0 = off, >0 = enabled with N seconds). Sonos has a simple boolean toggle via `SetCrossfadeMode`.
+
+**Sync triggers:**
+1. **On connect** (`onConnected`): `upnpSetCrossfade(crossfadeSec > 0)` is called immediately after the sleep timer sync, before the queue loads.
+2. **On setting change** (`setCrossfadeSec`): A `useSettings.subscribe` listener in `player.ts` fires `upnpSetCrossfade` whenever `crossfadeSec` changes and UPnP is connected.
+
+**SOAP call:**
+```xml
+<u:SetCrossfadeMode xmlns:u="urn:schemas-upnp-org:service:AVTransport:1">
+  <InstanceID>0</InstanceID>
+  <CrossfadeMode>1</CrossfadeMode>  <!-- 0 = off, 1 = on -->
+</u:SetCrossfadeMode>
+```
+
+**Outcome:** Sonos crossfade toggle matches Resonus setting immediately.
+
+**Network Cost:** 1 SOAP call.
+
+**Note:** Sonos returns error 800 if sent to a non-coordinator or for content that doesn't support crossfade (e.g. streams). Both are silently ignored.
+
+
+---
+
 ### TypeScript: `upnpRemoteSync.ts`
 
 Bridges React state to native UPnP calls. Deduplicates syncs and caches the queue signature so unchanged queues don't trigger SOAP traffic.
@@ -351,6 +409,18 @@ All SOAP operations abort immediately on failure. The Sonos queue is left in its
 - [ ] Pause → drag → resume → queue correct on both sides
 - [ ] Multiple rapid drags → debounce fires once with final state
 
+### Shuffle
+- [ ] Toggle shuffle on while playing (UPnP) → only tail reordered, index stable
+- [ ] Toggle shuffle off with `originalQueue` → full queue correctly reordered (head + tail)
+- [ ] Start album via "shuffle play" button → queue shuffled, no `originalQueue`, turning off shuffle is a no-op on queue order
+- [ ] Head reorder failure → falls back to full rebuild with seek
+
+### Crossfade
+- [ ] Enable crossfade in settings while connected → `SetCrossfadeMode(1)` fires immediately
+- [ ] Disable crossfade in settings while connected → `SetCrossfadeMode(0)` fires immediately
+- [ ] Connect while crossfade is on → `SetCrossfadeMode(1)` sent in `onConnected`
+- [ ] Connect while crossfade is off → `SetCrossfadeMode(0)` sent in `onConnected`
+
 ### Regression
 - [ ] Non-Sonos UPnP renderers still work (fallback `loadQueue` path)
 - [ ] Play mode (repeat) changes propagate without full rebuild
@@ -372,6 +442,7 @@ All SOAP operations abort immediately on failure. The Sonos queue is left in its
 | `SetPlayMode` | Set repeat mode (`NORMAL`, `REPEAT_ALL`, `REPEAT_ONE`) |
 | `GetPositionInfo` | Query current track number and playback position |
 | `GetTransportInfo` | Query playback state (`PLAYING`, `PAUSED_PLAYBACK`, etc.) |
+| `SetCrossfadeMode` | Enable/disable crossfade between tracks (`CrossfadeMode`: 0 or 1) |
 
 #### Queue Service (Sonos-specific)
 | Action | Purpose |
@@ -399,6 +470,28 @@ Calls `AttachQueue` to get the active queue ID. Creates a new queue via `CreateQ
 
 ---
 
+## External Reference
+
+All Sonos UPnP service actions, their parameters, allowed values, and error codes are documented in the unofficial community reference:
+
+**https://sonos.svrooij.io/**
+
+Relevant service pages used in this integration:
+
+| Service | URL |
+|---------|-----|
+| AVTransport | https://sonos.svrooij.io/services/av-transport.html |
+| Queue Service | https://sonos.svrooij.io/services/queue.html |
+
+This reference was the authoritative source for:
+- `SetCrossfadeMode` input parameter name (`CrossfadeMode`, boolean `0`/`1`)
+- `ReorderTracks` / `InsertBefore` semantics (*"InsertBefore is based on the current ordering before the operation"*)
+- `ConfigureSleepTimer` duration format (`hh:mm:ss` or empty string to cancel)
+- Error code 800 (*"Command not supported or not a coordinator"*)
+- Queue service `AttachQueue` / `CreateQueue` / `ReorderTracks` parameter names
+
+---
+
 ## Common Issues & Solutions
 
 | Issue | Root Cause | Solution |
@@ -409,6 +502,7 @@ Calls `AttachQueue` to get the active queue ID. Creates a new queue via `CreateQ
 | Tail-sync silently skips | `lastQueueOwnerUid` / `lastQueueId` mismatch | Ensure `rememberQueueState()` is called after every successful sync |
 | `UpdateID mismatch` error from Sonos | Stale `lastQueueUpdateId` | Parse `NewUpdateID` from every queue service response |
 | Deadlock / sync never completes | `inFlightSync` not cleared on error | JS bridge uses `try/finally` to always clear `inFlightSync` |
+| Sonos crossfade out of sync after reconnect | Not synced on `onConnected` | `upnpSetCrossfade` is now called in `onConnected` before queue load |
 
 ---
 
@@ -426,9 +520,11 @@ Calls `AttachQueue` to get the active queue ID. Creates a new queue via `CreateQ
 | **UpdateID** | Monotonically-increasing sequence number threaded through every queue operation |
 | **inFlightSync** | Shared `Promise<boolean>` in the JS bridge; prevents overlapping syncs |
 | **RINCON** | Sonos device identifier embedded in the queue URI |
+| **CrossfadeMode** | Sonos boolean toggle for crossfade between tracks; mapped from Resonus `crossfadeSec > 0` |
 
 ---
 
-**Document Version:** 1.1
+**Document Version:** 1.2
 **Last Updated:** 2026-08-20
+**Changes in 1.2:** Added Flow 3 (Shuffle/Unshuffle) covering head reorder after unshuffle. Added Flow 5 (Crossfade Setting). Updated protocol table, testing checklist, issues table, and glossary. Updated UPnP-specific shuffle behaviour note.
 **Changes in 1.1:** Replaced incorrect "full rebuild" as Flow 3 with correct `ReorderTracks` approach. Added dedicated section on `InsertBefore` semantics (pre-removal reference frame, forward/backward distinction, worked examples). Updated decision tree, edge cases, testing checklist, and issues table.
