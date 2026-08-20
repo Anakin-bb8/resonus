@@ -82,7 +82,7 @@ export default function SearchScreen() {
   // Tapping the Search tab while already on Search raises the keyboard.
   //
   // Entering here doesn't focus on purpose: without focus the screen offers
-  // "Browse all", and the keyboard would cover it. But whoever already knows
+  // the genre grid, and the keyboard would cover it. But whoever already knows
   // what they want was paying an extra tap on the box, always. So both
   // intentions coexist, each with its own gesture.
   //
@@ -129,7 +129,7 @@ export default function SearchScreen() {
     enabled: canSearch && debouncedQuery.length > 1,
   });
 
-  // Genres for "Browse all" (server only) when there's no active search.
+  // Genres for the browse grid (server only) when there's no active search.
   //
   // Not offline: a genre is the server's idea and there is no local index of
   // them, so the section had nothing to open even when it drew. What it did
@@ -264,12 +264,10 @@ export default function SearchScreen() {
 
         {showBrowse ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('Browse all')}</Text>
             <View style={styles.genreGrid}>{genreGrid}</View>
           </View>
         ) : showBrowseSkeleton ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('Browse all')}</Text>
             <GenreGridSkeleton width={genreW} />
           </View>
         ) : null}

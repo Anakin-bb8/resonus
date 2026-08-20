@@ -386,7 +386,6 @@
     "Field recordings": "Shelf heading: records made of the world itself, nature or a city, rather than of performed music",
     // `Other` is the last shelf too, and it is described further down, where it
     // was already explained for the storage bar. One string, one note.
-    "Browse all": "Opens the full list",
     "Show more": "Unfolds the rest of a text that was cut short",
     "Show less": "Folds it back",
     "No results": "Nothing matched what was typed",
