@@ -12,6 +12,7 @@ Releases before 0.2.1 are only listed on the
 ### Changed
 
 - Headings and screen titles are lighter: Android draws Roboto's 800 as a real ExtraBold, which closes the letters up, so they sit at 600 instead.
+- The player's progress bar is thicker, and the elapsed time now follows the thumb while you drag it.
 
 ### Fixed
 

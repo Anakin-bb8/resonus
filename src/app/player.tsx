@@ -171,20 +171,38 @@ function PlayerProgress({
   onSeek: (sec: number) => void;
 }) {
   const positionSec = usePlayerStore((s) => s.positionSec);
+  // Set while a finger is on the slider: the thumb is the native one and moves
+  // by itself, the track below it does not.
+  const [dragSec, setDragSec] = useState<number | null>(null);
+  const shownSec = dragSec ?? positionSec;
+  const filled = duration > 0 ? Math.min(1, Math.max(0, shownSec / duration)) : 0;
   return (
     <View style={styles.progress}>
-      <Slider
-        style={styles.slider}
-        minimumValue={0}
-        maximumValue={duration}
-        value={positionSec}
-        onSlidingComplete={onSeek}
-        minimumTrackTintColor={colors.text}
-        maximumTrackTintColor={colors.mediaTrack}
-        thumbTintColor={colors.text}
-      />
+      <View>
+        {/* The seek bar's own track is 2dp and no prop changes that, so it goes
+            transparent and this one takes its place. */}
+        <View style={styles.trackWrap} pointerEvents="none">
+          <View style={styles.track}>
+            <View style={[styles.trackFill, { width: `${filled * 100}%` }]} />
+          </View>
+        </View>
+        <Slider
+          style={styles.slider}
+          minimumValue={0}
+          maximumValue={duration}
+          value={positionSec}
+          onValueChange={setDragSec}
+          onSlidingComplete={(sec) => {
+            setDragSec(null);
+            onSeek(sec);
+          }}
+          minimumTrackTintColor="transparent"
+          maximumTrackTintColor="transparent"
+          thumbTintColor={colors.text}
+        />
+      </View>
       <View style={styles.times}>
-        <Text style={styles.time}>{formatDuration(positionSec)}</Text>
+        <Text style={styles.time}>{formatDuration(shownSec)}</Text>
         <Text style={styles.time}>{formatDuration(duration)}</Text>
       </View>
     </View>
@@ -1400,6 +1418,14 @@ const styles = themed((colors) => ({
   // content, like Spotify, and the thumb extends into the gap without being
   // clipped.
   slider: { marginHorizontal: -15 },
+  trackWrap: { ...StyleSheet.absoluteFill, justifyContent: 'center' },
+  track: {
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.mediaTrack,
+    overflow: 'hidden',
+  },
+  trackFill: { height: '100%', backgroundColor: colors.text },
   // Snug against the bar: the slider brings lots of vertical space (touch area).
   times: {
     flexDirection: 'row',
