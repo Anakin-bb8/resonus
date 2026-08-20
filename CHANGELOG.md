@@ -16,6 +16,10 @@ Releases before 0.2.1 are only listed on the
 ### Fixed
 
 - ALAC files play on devices whose own decoder cannot handle them, several Samsung phones among them, through a bundled decoder that only steps in when the system refuses the format (#134).
+- Casting to Sonos survives editing the queue: moving the song that is playing, or any row around it, is now mirrored on the speaker instead of leaving the connection unable to play, pause or seek for the rest of the session.
+- Sonos turns off shuffle in one piece: the whole queue goes back to album order, not just the part after the song playing.
+- Skipping to another song already in the Sonos queue is immediate, because the queue is no longer torn down and sent again song by song.
+- Crossfade set in Resonus is passed on to Sonos, both on connecting and when the setting is changed while casting.
 
 ## [0.7.4] - 2026-08-19
 
