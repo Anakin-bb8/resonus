@@ -826,7 +826,7 @@ const styles = themed((colors) => ({
   name: {
     color: colors.text,
     fontSize: fontSize.xxl,
-    fontWeight: '800',
+    fontWeight: '600',
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
   },

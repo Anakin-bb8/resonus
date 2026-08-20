@@ -149,7 +149,7 @@ const styles = themed((colors) => ({
     paddingVertical: spacing.md,
     gap: spacing.md,
   },
-  title: { flex: 1, color: colors.text, fontSize: fontSize.lg, fontWeight: '800', textAlign: 'center' },
+  title: { flex: 1, color: colors.text, fontSize: fontSize.lg, fontWeight: '600', textAlign: 'center' },
   list: { paddingHorizontal: spacing.lg, paddingBottom: SCREEN_BOTTOM_PADDING },
   // Same rhythm as TrackRow so folders and songs line up when a directory
   // holds both.

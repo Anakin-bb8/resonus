@@ -983,7 +983,7 @@ const styles = themed((colors) => ({
   title: {
     color: colors.text,
     fontSize: fontSize.xxl,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   subtitle: {
     color: colors.textSecondary,
