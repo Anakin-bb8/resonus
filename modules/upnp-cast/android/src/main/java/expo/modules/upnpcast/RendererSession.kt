@@ -100,7 +100,7 @@ class RendererSession(
           // Move only the current track's queue slot; playback is uninterrupted.
           val queueSvc = queueControl ?: refreshQueueControlUrl()
           val queueId = queueSvc?.let { resolveQueueId(it, target.uid) }
-          val reordered = if (queueSvc != null && queueId != null) {
+          var reordered = if (queueSvc != null && queueId != null) {
             // InsertBefore is relative to the queue BEFORE removal (Sonos spec).
             // For a forward move, removing the track shifts all positions above it
             // down by one, so the target position needs +2 instead of +1.
@@ -124,8 +124,40 @@ class RendererSession(
             } else false
           } else false
 
+          // After repositioning the current track, the head (0..selectedIndex-1)
+          // may also be out of order (e.g. after turning off shuffle). Fix it with
+          // the same backward-sweep ReorderTracks approach used for the tail.
+          if (reordered && selectedIndex > 0 && queueSvc != null && queueId != null) {
+            val targetHead = tracks.take(selectedIndex).map { it.url }
+            val workingHead = lastQueueTrackUrls.take(selectedIndex).toMutableList()
+            if (workingHead != targetHead) {
+              for (i in targetHead.indices) {
+                if (workingHead[i] == targetHead[i]) continue
+                val sourceOffset = workingHead.subList(i, workingHead.size).indexOf(targetHead[i])
+                if (sourceOffset < 0) { reordered = false; break }
+                val absoluteSource = i + sourceOffset
+                val hr = Soap.call(
+                  queueSvc, Services.QUEUE, "ReorderTracks",
+                  "<QueueID>$queueId</QueueID>" +
+                    "<StartingIndex>${absoluteSource + 1}</StartingIndex>" +
+                    "<NumberOfTracks>1</NumberOfTracks>" +
+                    "<InsertBefore>${i + 1}</InsertBefore>" +
+                    "<UpdateID>$lastQueueUpdateId</UpdateID>"
+                )
+                if (!hr.ok) { reordered = false; break }
+                lastQueueUpdateId = parseUpdateId(hr.body, lastQueueUpdateId)
+                workingHead.add(i, workingHead.removeAt(absoluteSource))
+              }
+              if (reordered) {
+                val cache = lastQueueTrackUrls.toMutableList()
+                for (i in workingHead.indices) cache[i] = workingHead[i]
+                lastQueueTrackUrls = cache
+              }
+            }
+          }
+
           if (reordered) {
-            // Current track repositioned; sync any remaining tail changes normally.
+            // Head and current track fixed; sync any remaining tail changes normally.
             syncQueueTailWhilePlaying(
               control = target.controlUrl,
               queueOwnerUid = target.uid,
