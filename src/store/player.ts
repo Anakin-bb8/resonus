@@ -86,6 +86,7 @@ import {
   upnpPause,
   upnpPlay,
   upnpSeek,
+  upnpSetCrossfade,
   upnpSetSleepTimer,
   upnpSetVolume,
   type RemoteEvents,
@@ -2763,6 +2764,8 @@ export function initRemoteIntegration() {
         const remainingSec = Math.max(0, Math.round((sleepEndsAt - Date.now()) / 1000));
         void upnpSetSleepTimer(remainingSec);
       }
+      const { crossfadeSec } = useSettings.getState();
+      void upnpSetCrossfade(crossfadeSec > 0);
       if (queue[index]) void remoteLoadIndex(index, isPlaying, positionSec);
     },
     onTrackChanged: (index, positionSec, durationSec) => {
@@ -2831,6 +2834,14 @@ export function initRemoteIntegration() {
   };
   initUpnp(events);
   initJukebox(events);
+  // Sync crossfade toggle to Sonos whenever the setting changes.
+  let lastCrossfadeSec = useSettings.getState().crossfadeSec;
+  useSettings.subscribe((s) => {
+    if (s.crossfadeSec !== lastCrossfadeSec) {
+      lastCrossfadeSec = s.crossfadeSec;
+      if (isUpnpConnected()) void upnpSetCrossfade(s.crossfadeSec > 0);
+    }
+  });
   // Controls pressed in the notification/lock screen or volume buttons during
   // casting: the store actions are already routed to the renderer (remoteKind()).
   initCastMedia((action, value) => {

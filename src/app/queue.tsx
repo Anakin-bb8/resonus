@@ -12,11 +12,11 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import ReorderableList, {
   useReorderableDrag,
   type ReorderableListReorderEvent,
 } from 'react-native-reorderable-list';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { COVER, songCoverUrl } from '@/api/data';
 import { type Song } from '@/api/subsonic';
@@ -25,16 +25,16 @@ import { Dialog } from '@/components/Dialog';
 import { EmptyState } from '@/components/EmptyState';
 import { ExplicitBadge, useExplicitBadge } from '@/components/ExplicitBadge';
 import { SheetModal } from '@/components/SheetModal';
+import { useListPadding } from '@/hooks/useScreenSize';
+import { songsLabel, useT } from '@/i18n';
 import { formatTotalDuration } from '@/lib/format';
+import { haptic } from '@/lib/haptics';
+import { listPerf } from '@/lib/listPerf';
 import { mixSeedOf, SOURCE_FAVORITES, SOURCE_HISTORY, usePlayerStore } from '@/store/player';
 import { usePlaylistPicker } from '@/store/playlistPicker';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
-import { songsLabel, useT } from '@/i18n';
-import { haptic } from '@/lib/haptics';
 import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
-import { useListPadding } from '@/hooks/useScreenSize';
-import { listPerf } from '@/lib/listPerf';
 
 // ReorderableList doesn't support removeClippedSubviews (needs cells mounted
 // to animate the drag); we use the rest of the performance props.
