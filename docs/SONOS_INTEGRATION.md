@@ -221,9 +221,35 @@ Result: [A, G*, B, C, D, E, F, H]  →  G* at 0-based index 1  ✓
 
 `syncQueueTailWhilePlaying` uses `ReorderTracks` only for reordering within the tail, and its scan always moves elements **backward** (source > target, `InsertBefore < StartingIndex`). For backward moves the removal is after the insertion point, so the two interpretations of `InsertBefore` yield the same result. The ambiguity only surfaces for forward moves.
 
----
+### Flow 4: Track Skip (Queue Unchanged)
 
-## Implementation Details
+**Scenario:** User taps next/previous or a specific queue entry — no tracks added, removed, or reordered.
+
+**Why naive behavior is wrong:** `loadUpnpRemoteTrack` always calls `upnpLoad` → `replaceQueueViaQueueService` → N+2 SOAP calls (clear + add × N + seek + play), even when the queue on Sonos is already identical.
+
+**Optimized path:** If `lastQueueTrackUrls` is non-empty and matches the incoming track list, the queue is already loaded. Only `Seek TRACK_NR` (and optionally `Play`) is needed.
+
+**Execution Path:**
+```
+jumpTo(index)
+  → loadIndex(index, autoplay)
+  → remoteLoadIndex(index, autoplay)
+  → loadUpnpRemoteTrack()  [JS]
+  → upnpLoad() [Native]
+  → loadQueue()
+      ├─ lastQueueTrackUrls == tracks.map { url }?
+      │  ├─ YES → SetPlayMode (if changed)
+      │  │        Seek TRACK_NR to selectedIndex+1
+      │  │        Seek REL_TIME (if positionMs > 0)
+      │  │        Play (if autoplay)
+      │  └─ NO  → replaceQueueViaQueueService() [full rebuild]
+```
+
+**Outcome:** Single `Seek TRACK_NR` + `Play` call; no queue disruption, no latency.
+
+**Network Cost:** 1–2 SOAP calls (vs. N+2 before).
+
+---
 
 ### TypeScript: `upnpRemoteSync.ts`
 

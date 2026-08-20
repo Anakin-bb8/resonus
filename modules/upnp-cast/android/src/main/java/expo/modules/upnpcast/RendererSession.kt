@@ -54,6 +54,22 @@ class RendererSession(
 
   suspend fun loadQueue(tracks: List<Track>, currentIndex: Int, autoplay: Boolean, positionMs: Long, playMode: String?): Boolean {
     val target = resolveTransportTarget() ?: return false
+    val selectedIndex = currentIndex.coerceIn(0, tracks.lastIndex)
+
+    // If the queue is already loaded and unchanged, skip the rebuild — just seek.
+    val trackUrls = tracks.map { it.url }
+    if (description.isSonos && lastQueueTrackUrls.isNotEmpty() && lastQueueTrackUrls == trackUrls) {
+      if (!playMode.isNullOrBlank()) {
+        Soap.call(
+          target.controlUrl, Services.AV_TRANSPORT, "SetPlayMode",
+          "<InstanceID>0</InstanceID><NewPlayMode>${Soap.escape(playMode)}</NewPlayMode>"
+        )
+      }
+      if (!transport("Seek", "<InstanceID>0</InstanceID><Unit>TRACK_NR</Unit><Target>${selectedIndex + 1}</Target>")) return false
+      if (positionMs > 0 && !seek(positionMs)) return false
+      if (autoplay && !play()) return false
+      return true
+    }
 
     val accepted = replaceQueue(target.controlUrl, target.uid, tracks, currentIndex, autoplay, positionMs, playMode)
 
