@@ -17,6 +17,7 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- Listens saved while offline reach the server on reconnect: the upload read the outbox as it was before the file on disk was opened, so a queue restored on a cold start went up empty.
 - ALAC files play on devices whose own decoder cannot handle them, several Samsung phones among them, through a bundled decoder that only steps in when the system refuses the format (#134).
 - Casting to Sonos survives editing the queue: moving the song that is playing, or any row around it, is now mirrored on the speaker instead of leaving the connection unable to play, pause or seek for the rest of the session.
 - Sonos turns off shuffle in one piece: the whole queue goes back to album order, not just the part after the song playing.

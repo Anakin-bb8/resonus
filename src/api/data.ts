@@ -1221,6 +1221,13 @@ export function unstar(id: string, type?: Subsonic.StarType): Promise<void> {
 export async function flushOfflineQueue(auth: Subsonic.SubsonicAuth): Promise<void> {
   const q = useOfflineQueue.getState();
   await q.load();
+  // Read the outbox through this, never off `q`: `getState()` hands back a
+  // snapshot of the moment it was called, and both the load above and the
+  // repair below replace it. Read off the snapshot taken on the way in, a
+  // flush that had just read the file uploaded what was in memory before it,
+  // which on a cold start is an empty queue. The actions are safe to keep,
+  // they go through the store themselves.
+  const data = () => useOfflineQueue.getState().data;
 
   // Settle a possible id migration BEFORE anything goes up.
   //
@@ -1244,7 +1251,7 @@ export async function flushOfflineQueue(auth: Subsonic.SubsonicAuth): Promise<vo
   }
 
   // Favorites.
-  const favs = q.data.favs ?? {};
+  const favs = data().favs ?? {};
   const favFailed: [string, { type: Subsonic.StarType; starred: boolean }][] = [];
   for (const [id, op] of Object.entries(favs)) {
     try {
@@ -1260,7 +1267,7 @@ export async function flushOfflineQueue(auth: Subsonic.SubsonicAuth): Promise<vo
   }
 
   // Ratings.
-  const ratings = q.data.ratings ?? {};
+  const ratings = data().ratings ?? {};
   const ratingFailed: [string, number][] = [];
   for (const [id, rating] of Object.entries(ratings)) {
     try {
@@ -1278,7 +1285,8 @@ export async function flushOfflineQueue(auth: Subsonic.SubsonicAuth): Promise<vo
   // lands where it belongs in the server's history (and in Last.fm) instead of
   // arriving all at once the moment the phone finds the network. Sent oldest
   // first, and only what actually arrived is taken off the queue.
-  const plays = q.data.plays ?? [];
+  const plays = data().plays ?? [];
+  bump('outbox · plays queued', plays.length);
   const sent: PlayOp[] = [];
   let refused = 0;
   for (const play of plays) {
@@ -1289,7 +1297,11 @@ export async function flushOfflineQueue(auth: Subsonic.SubsonicAuth): Promise<vo
     } catch (e) {
       // Out of network again: the ones behind would each wait out a timeout to
       // learn the same thing. They keep their turn for the next reconnection.
-      if (e instanceof Subsonic.SubsonicRequestError && e.network) break;
+      if (e instanceof Subsonic.SubsonicRequestError && e.network) {
+        bump('outbox · plays no network');
+        break;
+      }
+      bump('outbox · plays refused');
       // The server answered and turned this one down, which is usually about
       // that listen alone (a song no longer on the server), so it doesn't get
       // to hold up the rest. Several in a row is the server or the session
@@ -1298,11 +1310,12 @@ export async function flushOfflineQueue(auth: Subsonic.SubsonicAuth): Promise<vo
       if (++refused >= 5) break;
     }
   }
+  bump('outbox · plays sent', sent.length);
   if (sent.length > 0) q.removePlays(sent);
 
   // Playlists. Rewrites the final state of each one (create/delete/rename +
   // full tracklist via reorderPlaylist, which avoids index juggling).
-  const playlists = q.data.playlists ?? {};
+  const playlists = data().playlists ?? {};
   const plFailed: [string, QueuePlaylist][] = [];
   for (const [id, edit] of Object.entries(playlists)) {
     try {
