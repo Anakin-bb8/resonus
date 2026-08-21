@@ -386,9 +386,9 @@ you are actually typing into, which is easier than reading it here.
 | `Devices` | The audio output devices to cast to |
 | `Explicit` | A value of `Content`: the recording carries a parental advisory (strong language). Also read out for the E badge next to a title |
 | `Forward {n} seconds` | Read out by the screen reader for the seek button. `{n}` is how many seconds it is set to |
-| `less information` |  Text that shows below artist's bio in the Artist's card when it is expanded (currently broken feature it has to be fixed) |
+| `less information` | Text that shows below artist's bio in the artist's card when it is expanded |
 | `Mix of “{name}”` | What the player calls the queue once it has grown past its album into songs the app picked itself. `{name}` is the song it was grown from |
-| `more information` |  Text that shows below artist's bio in the artist's card when it is collapsed |
+| `more information` | Text that shows below artist's bio in the artist's card when it is collapsed |
 | `Next` | Player control: the next track (accessibility label) |
 | `No devices found` |  |
 | `NOW PLAYING` | Small label above the cover, in the same place and style as `PLAYING FROM`, when there is nothing to name |

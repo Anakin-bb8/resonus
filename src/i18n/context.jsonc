@@ -90,6 +90,9 @@
     "Previous": "Player control: the previous track (accessibility label)",
     "Next in queue": "Queue screen header: the track that plays next",
     "Show cover": "Lyrics screen: the button that goes back to the cover art",
+    "About the artist": "The title that shows on top of artist's card inside the player screen",
+    "more information": "Text that shows below artist's bio in the artist's card when it is collapsed",
+    "less information": "Text that shows below artist's bio in the artist's card when it is expanded",
 
     // ── Artist, playlists & radio ────────────────────────────────────────────
     "About": "The heading over an artist's biography, and the name of the settings page about the app. Two very different uses of one English word, so `About::artist` and `About::app` exist for a language that needs two words",
