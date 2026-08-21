@@ -13,13 +13,11 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { CACHED_COVER, COVER, coverArtUrl, getArtistInfo, songCoverUrl } from '@/api/data';
-import { useDominantColor } from '@/hooks/useDominantColor';
+import { CACHED_COVER, COVER, coverArtUrl, getArtistInfo } from '@/api/data';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
 import { currentSong, usePlayerStore } from '@/store/player';
-import { useSettings } from '@/store/settings';
-import { colors, fontSize, radius, spacing, themed } from '@/theme';
+import { fontSize, radius, spacing, themed } from '@/theme';
 
 /** Lines of biography shown before it is expanded. */
 const BIO_LINES = 3;
@@ -37,22 +35,12 @@ export function ArtistPlayerCard() {
   // profile open at all — where `getArtistInfo` has no account to sign with.
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
   const [bioExpanded, setBioExpanded] = useState(false);
-  // The lyrics card's setting: two cards under the same controls that disagreed
-  // about their background would read as two different things.
-  const tinted = useSettings((s) => s.lyricsCardBackground) !== 'none';
 
   const { data: info } = useQuery({
     queryKey: ['artistInfo', artistId],
     queryFn: () => getArtistInfo(artistId!),
     enabled: canFetch && !!artistId,
   });
-
-  // The cover the player and the lyrics card already extracted a colour from,
-  // so the tint costs nothing here.
-  const dominant = useDominantColor(
-    tinted && song ? songCoverUrl(song, COVER.card) : undefined,
-  );
-  const bg = tinted ? dominant : colors.surface;
 
   // The artist's photo, falling back to their cover art. Offline that can come
   // back marked (see `CACHED_COVER`), which only `Cover` knows how to read and
@@ -63,7 +51,7 @@ export function ArtistPlayerCard() {
   if (!song || !artistId || !info?.biography) return null;
 
   return (
-    <View style={[styles.card, { backgroundColor: bg }]}>
+    <View style={styles.card}>
       {/* The whole card goes to the artist, the way tapping the cover goes to
           the lyrics. The toggle below is a Pressable of its own, so it takes
           its own taps and only unfolds the text. */}
@@ -101,6 +89,10 @@ const PHOTO_H = 180;
 
 const styles = themed((colors) => ({
   card: {
+    // The page's own colour rather than a card surface or the cover's tint: it
+    // is what sits under a photo that runs to the edges, and the blurred
+    // backdrop behind the player is what makes it read as a card at all.
+    backgroundColor: colors.background,
     borderRadius: radius.xl,
     marginTop: spacing.lg,
     // The player has no global horizontal padding (because of the slider), so
