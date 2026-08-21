@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 668 of them.
+Every string the app can show, under the screen it shows up on. 670 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -31,8 +31,6 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `{n} minutes` | A value of the sleep timer, in minutes from now |
-| `{n} of {m} songs exported` | Toast when only some of them made it |
-| `{n} songs exported` | Toast when it finished |
 | `{n} songs, {size}, copied into a folder of their own.` | The line under that title |
 | `1 day` | How long a shared link lasts, counted from the moment it is made |
 | `1 hour` | How long a shared link lasts, counted from the moment it is made. Not a time of day |
@@ -60,9 +58,7 @@ you are actually typing into, which is easier than reading it here.
 | `Downloading Resonus {version}` |  |
 | `Duration` | Label of a field in the song information sheet: how long the song is |
 | `Explicit` | A value of `Content`: the recording carries a parental advisory (strong language). Also read out for the E badge next to a title |
-| `Export` | Get the downloaded file itself out of the app, as a file. Not the same as `Share`, which makes a link on the server |
 | `Export “{name}”?` | Confirms getting the files of an album or playlist out of the app |
-| `Exporting…` | The file is being copied out |
 | `Format` | The file format (FLAC, MP3…), written as the player writes it |
 | `Genre` | Label of a field in the song information sheet |
 | `Go to album` | Leave this sheet and open the album the song is on |
@@ -178,6 +174,8 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `{n} added to favorites` |  |
+| `{size} copied into the folder you pick.` | The line under that one. Those go loose into the chosen folder, since a handful of songs has no name to give a folder of their own |
+| `Export {songs}?` | The same title for a selection instead of a whole album. `{songs}` already reads as a count ("12 songs"), so it comes out like "Export 12 songs?" |
 | `No songs here yet` |  |
 | `Nothing to change` | Answer to favouriting a selection that already is one, or unfavouriting one that isn't |
 | `Try exploring another artist.` |  |
@@ -218,7 +216,9 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `{n} added to favorites` |  |
+| `{size} copied into the folder you pick.` | The line under that one. Those go loose into the chosen folder, since a handful of songs has no name to give a folder of their own |
 | `A-Z` | Sort option: the order of a list |
+| `Export {songs}?` | The same title for a selection instead of a whole album. `{songs}` already reads as a count ("12 songs"), so it comes out like "Export 12 songs?" |
 | `Find a song` | The search box's placeholder on that screen |
 | `No songs yet` | Empty state when the library has no songs |
 | `Nothing played yet` | Empty state: this phone has not played anything yet |
@@ -256,6 +256,8 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `{n} added to favorites` |  |
+| `{size} copied into the folder you pick.` | The line under that one. Those go loose into the chosen folder, since a handful of songs has no name to give a folder of their own |
+| `Export {songs}?` | The same title for a selection instead of a whole album. `{songs}` already reads as a count ("12 songs"), so it comes out like "Export 12 songs?" |
 | `Genre` | Label of a field in the song information sheet |
 | `No albums in this genre` | Empty state heading |
 | `No songs in this genre` | Empty state heading |
@@ -950,12 +952,14 @@ you are actually typing into, which is easier than reading it here.
 | `“{name}” will no longer be available offline.` | The line under that title. `{name}` is the album, artist or playlist |
 | `{n} added to “{name}”` | Toast when several songs went in at once. `{n}` is a count of songs |
 | `{n} columns` | The other options in that menu: cards, this many across. `{n}` is 2, 3 or 4, so it is always plural |
+| `{n} of {m} songs exported` | Toast when only some of them made it |
 | `{n} of {songs} are already in “{name}”.` | The same warning when adding several at once and only some of them are already there. `{n}` is how many of them are, and `{songs}` already reads as a count ("12 songs"), so the sentence is like "3 of 12 songs are already in “Rock”." |
 | `{n} removed from favorites` | Toast. `{n}` is a count of songs |
 | `{n} selected` | How many songs are ticked right now |
 | `{n} songs couldn't be downloaded` | Toast: some failed, the rest are there |
 | `{n} songs deleted` | Toast after deleting downloads. `{n}` is how many files went |
 | `{n} songs downloaded` | Toast: a whole album or playlist finished |
+| `{n} songs exported` | Toast when it finished |
 | `{songs} need about {size}, but only {free} is free. The download may stop partway.` | The same line when the phone is nearly full |
 | `{songs} will be saved to this device (about {size}).` | The same line when the size is known. `{size}` is like "340 MB" |
 | `{songs} will be saved to this device.` | The line under that title. `{songs}` is already worded and inflected, "12 songs" |
@@ -994,6 +998,8 @@ you are actually typing into, which is easier than reading it here.
 | `Download “{name}”?` | Dialog title. `{name}` is an album, artist or playlist |
 | `Download stopped` | Toast: the download was stopped part way |
 | `Downloading…` | Toast: the download has started. The songs arrive one by one after this |
+| `Export` | Get the downloaded file itself out of the app, as a file. Not the same as `Share`, which makes a link on the server |
+| `Exporting…` | The file is being copied out |
 | `Favorites` | The songs, albums and artists you starred |
 | `History` | The listening history: what was played and when |
 | `Hold to go back to {tab}` | The hint on holding the back arrow. `{tab}` is Home, Search or Library |

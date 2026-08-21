@@ -13,6 +13,7 @@ Releases before 0.2.1 are only listed on the
 
 - The player can show a card with the artist's photo and biography below the controls, off by default in Settings > Player, thanks to @Anakin-bb8.
 - Italian is much more complete: over 140 strings that were missing or read unnaturally, thanks to @Anakin-bb8.
+- A selection of songs can be exported to a folder, or have its downloads deleted, from the ⋯ of the selection bar (#164).
 
 ### Changed
 

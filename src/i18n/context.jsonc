@@ -297,6 +297,8 @@
     // ── Getting a file out of the app ────────────────────────────────────────
     "Export “{name}”?": "Dialog title. `{name}` is an album or a playlist",
     "{n} songs, {size}, copied into a folder of their own.": "The line under that title",
+    "Export {songs}?": "The same title for a selection instead of a whole album. `{songs}` already reads as a count (\"12 songs\"), so it comes out like \"Export 12 songs?\"",
+    "{size} copied into the folder you pick.": "The line under that one. Those go loose into the chosen folder, since a handful of songs has no name to give a folder of their own",
     "{n} songs exported": "Toast when it finished",
     "{n} of {m} songs exported": "Toast when only some of them made it",
     "Couldn't save the file": "Toast: writing to the chosen folder failed",

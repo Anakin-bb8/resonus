@@ -43,7 +43,7 @@ import { SelectionBar } from '@/components/SelectionBar';
 import { SongCard } from '@/components/SongCard';
 import { TrackRow } from '@/components/TrackRow';
 import { useAccent } from '@/hooks/useAccent';
-import { useSelectionFavorites } from '@/hooks/useSelectionFavorites';
+import { useSelectionMenu } from '@/hooks/useSelectionMenu';
 import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { listPerf } from '@/lib/listPerf';
@@ -226,7 +226,7 @@ export default function BrowseSongsScreen() {
     if (sel.length > 0) fn(sel);
   }
 
-  const favoriteActions = useSelectionFavorites(runSelection);
+  const selectionMenu = useSelectionMenu(runSelection);
 
   function cancelSearch() {
     Keyboard.dismiss();
@@ -506,10 +506,11 @@ export default function BrowseSongsScreen() {
                       }),
                   },
                 ]),
-            ...favoriteActions,
+            ...selectionMenu.actions,
           ]}
         />
       ) : null}
+      {selectionMenu.dialogs}
       {gridSheet}
     </SafeAreaView>
   );

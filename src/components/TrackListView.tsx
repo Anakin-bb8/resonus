@@ -33,7 +33,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { type Song, type StarType } from '@/api/subsonic';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
-import { useSelectionFavorites } from '@/hooks/useSelectionFavorites';
+import { useSelectionMenu } from '@/hooks/useSelectionMenu';
 import { useT } from '@/i18n';
 import { artistTargets } from '@/lib/artistNav';
 import { haptic } from '@/lib/haptics';
@@ -368,7 +368,9 @@ export function TrackListView({
     if (sel.length > 0) fn(sel, indices);
   }
 
-  const favoriteActions = useSelectionFavorites(runSelectionAction);
+  const selectionMenu = useSelectionMenu(runSelectionAction, {
+    favorites: selection?.favorites,
+  });
   // What this list lets you do with a selection, each one built once: the bar
   // takes two of them and ⋯ holds whatever is left.
   const addToAction: SelectionAction[] = selection?.onAddTo
@@ -878,10 +880,11 @@ export function TrackListView({
           actions={[...addToAction, ...(removeAction.length > 0 ? removeAction : downloadAction)]}
           menu={[
             ...(removeAction.length > 0 ? downloadAction : []),
-            ...(selection?.favorites === false ? [] : favoriteActions),
+            ...selectionMenu.actions,
           ]}
         />
       ) : null}
+      {selectionMenu.dialogs}
     </View>
   );
 }

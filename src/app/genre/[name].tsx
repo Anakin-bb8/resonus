@@ -44,7 +44,7 @@ import { SheetModal } from '@/components/SheetModal';
 import { TrackRow } from '@/components/TrackRow';
 import { useAccent } from '@/hooks/useAccent';
 import { useDownloadMessage } from '@/hooks/useDownloadMessage';
-import { useSelectionFavorites } from '@/hooks/useSelectionFavorites';
+import { useSelectionMenu } from '@/hooks/useSelectionMenu';
 import { useServerSort } from '@/hooks/useServerSort';
 import { albumsLabel, songsLabel, useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
@@ -191,7 +191,7 @@ export default function GenreScreen() {
     if (sel.length > 0) fn(sel);
   }
 
-  const favoriteActions = useSelectionFavorites(runSelection);
+  const selectionMenu = useSelectionMenu(runSelection);
 
   const href = `/genre/${encodeURIComponent(genre)}`;
 
@@ -630,10 +630,11 @@ export default function GenreScreen() {
                       }),
                   },
                 ]),
-            ...favoriteActions,
+            ...selectionMenu.actions,
           ]}
         />
       ) : null}
+      {selectionMenu.dialogs}
       {gridSheet}
       {sortSheet}
       {albumSortSheet}
