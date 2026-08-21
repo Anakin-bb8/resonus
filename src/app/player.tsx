@@ -9,13 +9,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   AppState,
-  Dimensions,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
-  type GestureResponderEvent,
+  type GestureResponderEvent
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -33,6 +32,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { COVER, songCoverUrl, type Song } from '@/api/data';
+import { ArtistPlayerCard } from '@/components/ArtistPlayerCard';
 import { AudioQualityBadge } from '@/components/AudioQualityBadge';
 import { Cover, useRedrawOnReturn, useSettledSource } from '@/components/Cover';
 import { ExplicitBadge } from '@/components/ExplicitBadge';
@@ -44,13 +44,14 @@ import { SpeedSheet } from '@/components/SpeedSheet';
 import { StarRating } from '@/components/StarRating';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
-import { useLyrics } from '@/hooks/useLyrics';
 import { useLocalProfile } from '@/hooks/useLocalProfile';
-import { localHttpAvailable } from '@/lib/localHttp';
+import { useLyrics } from '@/hooks/useLyrics';
+import { useScreenSize } from '@/hooks/useScreenSize';
 import { useT } from '@/i18n';
 import { artistTargets } from '@/lib/artistNav';
 import { formatDuration, formatGroupedDeviceLabel } from '@/lib/format';
 import { haptic } from '@/lib/haptics';
+import { localHttpAvailable } from '@/lib/localHttp';
 import { pushOnce } from '@/lib/pushOnce';
 import { useArtistPicker } from '@/store/artistPicker';
 import { useAuthStore } from '@/store/auth';
@@ -69,7 +70,6 @@ import { useSongMenu } from '@/store/songMenu';
 import { useToast } from '@/store/toast';
 import { useUpnp } from '@/store/upnp';
 import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
-import { useScreenSize } from '@/hooks/useScreenSize';
 
 /** Floor: below this the cover stops giving up space and the page scrolls. */
 const COVER_MIN = 200;
@@ -1260,6 +1260,7 @@ export default function PlayerScreen() {
         </View>
         </View>
         {showsLyricsCard ? <LyricsCard /> : null}
+        <ArtistPlayerCard />
         </ScrollView>
         </SafeAreaView>
         <OutputSheet visible={outputOpen} onClose={() => setOutputOpen(false)} />
