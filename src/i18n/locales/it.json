@@ -678,5 +678,8 @@
   "{n} of {m} songs exported": "{n} di {m} brani esportati",
   "{n} of {songs} are already in “{name}”.": "{n} su {songs} sono già in “{name}”.",
   "{n} songs exported": "{n} brani esportati",
-  "{n} songs, {size}, copied into a folder of their own.": "{n} brani, {size}, copiati in una cartella dedicata."
+  "{n} songs, {size}, copied into a folder of their own.": "{n} brani, {size}, copiati in una cartella dedicata.",
+  "About the artist": "Informazioni sull'artista",
+  "more information": "più informazioni",
+  "less information": "meno informazioni"
 }
