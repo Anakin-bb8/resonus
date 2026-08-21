@@ -709,6 +709,8 @@ interface SettingsState {
   miniPlayerColorBackground: boolean;
   /** Lyrics card below the player controls. */
   showLyricsCard: boolean;
+  /** Artist card below the player controls. */
+  showArtistCard: boolean;
   /** What tapping the player cover does (nothing / lyrics screen /
    *  lyrics in place of the cover). */
   coverTapAction: CoverTapAction;
@@ -855,6 +857,7 @@ interface SettingsState {
   setFitCoverArt: (value: boolean) => void;
   setMiniPlayerColorBackground: (value: boolean) => void;
   setShowLyricsCard: (value: boolean) => void;
+  setShowArtistCard: (value: boolean) => void;
   setCoverTapAction: (value: CoverTapAction) => void;
   setMarqueeTitles: (value: boolean) => void;
   setShowQueueButton: (value: boolean) => void;
@@ -966,6 +969,7 @@ function snapshot(get: () => SettingsState) {
     fitCoverArt: s.fitCoverArt,
     miniPlayerColorBackground: s.miniPlayerColorBackground,
     showLyricsCard: s.showLyricsCard,
+    showArtistCard: s.showArtistCard,
     coverTapAction: s.coverTapAction,
     marqueeTitles: s.marqueeTitles,
     showQueueButton: s.showQueueButton,
@@ -1065,6 +1069,8 @@ const DEFAULTS = {
   // Off by default: the card pushes the controls up on shorter screens, and
   // the lyrics screen is one tap away on the cover.
   showLyricsCard: false,
+  // Off for the same reason, and it also needs a biography to show anything.
+  showArtistCard: false,
   // By default, tapping the cover opens the lyrics screen (as always).
   coverTapAction: 'screen' as CoverTapAction,
   marqueeTitles: true,
@@ -1371,6 +1377,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setShowArtistCard: (showArtistCard) => {
+    set({ showArtistCard });
+    persist(snapshot(get));
+  },
+
   setCoverTapAction: (coverTapAction) => {
     set({ coverTapAction });
     persist(snapshot(get));
@@ -1666,6 +1677,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           playerColorBackground: boolean;
           miniPlayerColorBackground: boolean;
           showLyricsCard: boolean;
+          showArtistCard: boolean;
           coverTapAction: CoverTapAction;
           marqueeTitles: boolean;
           showQueueButton: boolean;
@@ -1894,6 +1906,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (typeof parsed.showLyricsCard === 'boolean') {
           set({ showLyricsCard: parsed.showLyricsCard });
+        }
+        if (typeof parsed.showArtistCard === 'boolean') {
+          set({ showArtistCard: parsed.showArtistCard });
         }
         if (
           parsed.coverTapAction === 'none' ||

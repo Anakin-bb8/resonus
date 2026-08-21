@@ -9,6 +9,11 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Added
+
+- The player can show a card with the artist's photo and biography below the controls, off by default in Settings > Player, thanks to @Anakin-bb8.
+- Italian is much more complete: over 140 strings that were missing or read unnaturally, thanks to @Anakin-bb8.
+
 ### Changed
 
 - Headings and screen titles are lighter: Android draws Roboto's 800 as a real ExtraBold, which closes the letters up, so they sit at 600 instead.

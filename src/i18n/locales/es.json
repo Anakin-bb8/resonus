@@ -670,5 +670,8 @@
   "Mode": "Modo",
   "Dark (default)": "Oscuro (predeterminado)",
   "Light (experimental)": "Claro (experimental)",
-  "Dark or light, and the accent color": "Oscuro o claro, y el color de acento"
+  "Dark or light, and the accent color": "Oscuro o claro, y el color de acento",
+  "About the artist": "Sobre el artista",
+  "Show artist card": "Mostrar la tarjeta del artista",
+  "The artist's photo and biography, below the player controls.": "La foto y la biografía del artista, bajo los controles del reproductor."
 }

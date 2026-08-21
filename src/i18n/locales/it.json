@@ -11,7 +11,7 @@
   "Add to queue": "Aggiungi alla coda",
   "Added to favorites": "Aggiunto ai preferiti",
   "Added to queue": "Aggiunto alla coda",
-  "Advanced": "Avanzate", 
+  "Advanced": "Avanzate",
   "Albums": "Album",
   "All downloaded music will be removed from this device.": "Tutta la musica scaricata verrà rimossa da questo dispositivo.",
   "All the music on your device.": "Tutta la musica sul tuo dispositivo.",
@@ -679,7 +679,5 @@
   "{n} of {songs} are already in “{name}”.": "{n} su {songs} sono già in “{name}”.",
   "{n} songs exported": "{n} brani esportati",
   "{n} songs, {size}, copied into a folder of their own.": "{n} brani, {size}, copiati in una cartella dedicata.",
-  "About the artist": "Informazioni sull'artista",
-  "more information": "più informazioni",
-  "less information": "meno informazioni"
+  "About the artist": "Informazioni sull'artista"
 }

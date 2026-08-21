@@ -33,7 +33,7 @@ import { useT } from '@/i18n';
 import { pushOnce } from '@/lib/pushOnce';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
-import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
+import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 
 export function LyricsCard() {
   const t = useT();
@@ -392,17 +392,17 @@ const CARD_BODY_H = 280;
 
 const styles = themed((colors) => ({
   card: {
-    borderRadius: 16,
+    borderRadius: radius.xl,
     marginTop: spacing.lg,
     // The player no longer has global horizontal padding (because of the
     // slider): the card supplies its own margin.
-    marginHorizontal: 16,
+    marginHorizontal: spacing.lg,
     padding: spacing.lg,
   },
   title: { color: colors.text, fontSize: fontSize.md, fontWeight: '700', marginBottom: spacing.sm },
   body: { height: CARD_BODY_H, overflow: 'hidden' },
   // Lyrics in place of the cover: box exactly the size of the cover.
-  coverBox: { borderRadius: 16, overflow: 'hidden', padding: spacing.lg },
+  coverBox: { borderRadius: radius.xl, overflow: 'hidden', padding: spacing.lg },
   coverBody: { flex: 1, overflow: 'hidden' },
   wrap: { flex: 1 },
   // Right margin so the active line (which grows 8% from the left) doesn't get

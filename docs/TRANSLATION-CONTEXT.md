@@ -379,16 +379,14 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `About the artist` | The title that shows on top of artist's card inside the player screen |
+| `About the artist` | The label over the photo on the artist card, the one below the player controls |
 | `Add to the group` | Read out by the screen reader, never shown: the + beside a Sonos room in the output sheet, which sets that room playing along with the one already playing. Sonos only, and `group` is a group of SPEAKERS in the sense Sonos itself uses — rooms playing the same thing together. Whatever word Sonos uses in your language is the one |
 | `Back {n} seconds` | Read out by the screen reader for the seek button. `{n}` is how many seconds it is set to |
 | `Currently playing on` | Heading above the output the music is coming out of right now, at the top of the output sheet |
 | `Devices` | The audio output devices to cast to |
 | `Explicit` | A value of `Content`: the recording carries a parental advisory (strong language). Also read out for the E badge next to a title |
 | `Forward {n} seconds` | Read out by the screen reader for the seek button. `{n}` is how many seconds it is set to |
-| `less information` | Text that shows below artist's bio in the artist's card when it is expanded |
 | `Mix of “{name}”` | What the player calls the queue once it has grown past its album into songs the app picked itself. `{name}` is the song it was grown from |
-| `more information` | Text that shows below artist's bio in the artist's card when it is collapsed |
 | `Next` | Player control: the next track (accessibility label) |
 | `No devices found` |  |
 | `NOW PLAYING` | Small label above the cover, in the same place and style as `PLAYING FROM`, when there is nothing to name |
@@ -406,6 +404,8 @@ you are actually typing into, which is easier than reading it here.
 | `Searching for devices…` | In the output sheet: looking for speakers and TVs to cast to |
 | `Server speakers (Jukebox)` | Playing out of the speakers attached to the server itself, rather than the phone. Subsonic calls this jukebox mode |
 | `Show cover` | Lyrics screen: the button that goes back to the cover art |
+| `Show less` | Folds it back |
+| `Show more` | Unfolds the rest of a text that was cut short |
 | `This phone` | The on-device profile, with no server account |
 | `View queue` | Read out by the screen reader for the button that opens the queue |
 
@@ -852,6 +852,7 @@ you are actually typing into, which is easier than reading it here.
 | `Scroll long titles` | A title too long to fit slides sideways, over and over, instead of being cut off |
 | `Show a star rating bar to rate the current song.` | The line under “Show rating”, explaining it |
 | `Show album & year` |  |
+| `Show artist card` |  |
 | `Show devices button` |  |
 | `Show format and bitrate in the player.` | The line under “Show quality label”, explaining it |
 | `Show lyrics card` |  |
@@ -867,6 +868,7 @@ you are actually typing into, which is easier than reading it here.
 | `Skipping while paused shows the next song without playing it. Tapping a song in the queue still plays it.` |  |
 | `Song and artist names that don't fit scroll across.` | The line under “Scroll long titles”, explaining it |
 | `Swap favorite and menu` | Exchange the places of those two buttons in the player, for whichever hand you hold the phone in |
+| `The artist's photo and biography, below the player controls.` | The line under “Show artist card”, explaining it |
 | `The card that peeks below the player controls.` | The line under “Lyrics card background”, explaining it |
 | `The lyrics card below the player controls.` | The line under “Show lyrics card”, explaining it |
 | `Tint the mini player with the cover color.` | The line under “Colored mini player”, explaining it |

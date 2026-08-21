@@ -14,7 +14,7 @@ import {
   StyleSheet,
   Text,
   View,
-  type GestureResponderEvent
+  type GestureResponderEvent,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -227,6 +227,7 @@ export default function PlayerScreen() {
   const showRating = useSettings((s) => s.showRating);
   const showAlbumInfo = useSettings((s) => s.showAlbumInfo);
   const showLyricsCard = useSettings((s) => s.showLyricsCard);
+  const showArtistCard = useSettings((s) => s.showArtistCard);
   // Ignored on a local profile over a server: there is no heart there, so there
   // is nothing to swap and moving the ⋯ down would just leave the corner empty.
   const swapButtons = useSettings((s) => s.swapPlayerButtons);
@@ -283,6 +284,10 @@ export default function PlayerScreen() {
   // a radio. Whether it is actually shown is `showsLyricsCard` below, which
   // also needs there to be lyrics.
   const wantsLyricsCard = canLyrics && showLyricsCard;
+  // Same shape for the artist card: an artist to ask about, and the setting on.
+  // Whether it draws anything is the card's own question (it needs a
+  // biography), and the room below is kept either way, as for the lyrics.
+  const wantsArtistCard = !!song?.artistId && showArtistCard;
   /**
    * The heart's state, and it does not ask whether the file is on the phone.
    *
@@ -804,7 +809,11 @@ export default function PlayerScreen() {
           // shorter than the screen, so this padding was pure overflow and the
           // player scrolled by that much for nothing (#107).
           contentContainerStyle={
-            showsLyricsCard ? { paddingBottom: Math.max(insets.bottom, spacing.md) } : undefined
+            showsLyricsCard || wantsArtistCard
+              ? // The cards carry no bottom margin of their own, so the last one
+                // gets its air from here.
+                { paddingBottom: Math.max(insets.bottom, spacing.md) + spacing.xl }
+              : undefined
           }
           // Only the measurement. Whether the slot is ready to be shown is
           // decided in one place above, since it takes more than this one
@@ -839,7 +848,8 @@ export default function PlayerScreen() {
             // lyrics. That is the same trade as before, taken the other way: the
             // gap is quiet, the layout jumping on every skip is not. Only a radio
             // (no lyrics ever, `wantsLyricsCard` false) gets the room back.
-            height: (pageH || approxPageH) - (wantsLyricsCard ? LYRICS_PEEK : 0),
+            height:
+              (pageH || approxPageH) - (wantsLyricsCard || wantsArtistCard ? LYRICS_PEEK : 0),
           }}
         >
         <View style={styles.topBar}>
@@ -1260,7 +1270,7 @@ export default function PlayerScreen() {
         </View>
         </View>
         {showsLyricsCard ? <LyricsCard /> : null}
-        <ArtistPlayerCard />
+        {wantsArtistCard ? <ArtistPlayerCard /> : null}
         </ScrollView>
         </SafeAreaView>
         <OutputSheet visible={outputOpen} onClose={() => setOutputOpen(false)} />

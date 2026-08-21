@@ -50,6 +50,8 @@ export default function PlayerSettings() {
   const setLyricsCardBackground = useSettings((s) => s.setLyricsCardBackground);
   const showLyricsCard = useSettings((s) => s.showLyricsCard);
   const setShowLyricsCard = useSettings((s) => s.setShowLyricsCard);
+  const showArtistCard = useSettings((s) => s.showArtistCard);
+  const setShowArtistCard = useSettings((s) => s.setShowArtistCard);
   const coverTapAction = useSettings((s) => s.coverTapAction);
   const setCoverTapAction = useSettings((s) => s.setCoverTapAction);
   const lyricsSource = useSettings((s) => s.lyricsSource);
@@ -150,6 +152,18 @@ export default function PlayerSettings() {
               value: marqueeTitles,
               onChange: setMarqueeTitles,
             },
+            // The biography comes from the server, and the local profile has
+            // none to come: the row goes rather than staying dead.
+            ...(local
+              ? []
+              : [
+                  {
+                    label: t('Show artist card'),
+                    description: t("The artist's photo and biography, below the player controls."),
+                    value: showArtistCard,
+                    onChange: setShowArtistCard,
+                  },
+                ]),
           ]}
         />
 

@@ -670,5 +670,8 @@
   "Mode": "Mode",
   "Dark (default)": "Fosc (predeterminat)",
   "Light (experimental)": "Clar (experimental)",
-  "Dark or light, and the accent color": "Fosc o clar, i el color d’accent"
+  "Dark or light, and the accent color": "Fosc o clar, i el color d’accent",
+  "About the artist": "Sobre l'artista",
+  "Show artist card": "Mostra la targeta de l'artista",
+  "The artist's photo and biography, below the player controls.": "La foto i la biografia de l'artista, sota els controls del reproductor."
 }

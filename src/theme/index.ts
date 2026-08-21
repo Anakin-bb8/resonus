@@ -415,6 +415,8 @@ export const radius = {
   sm: 4,
   md: 8,
   lg: 12,
+  /** The cards that peek below the player controls. */
+  xl: 16,
   pill: 999,
 } as const;
 
