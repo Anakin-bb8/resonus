@@ -9,9 +9,9 @@ import { useDominantColor } from '@/hooks/useDominantColor';
 import { useT } from '@/i18n';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
-import { colors, fontSize, radius, spacing, themed } from '@/theme';
+import { colors, fontSize, spacing, themed } from '@/theme';
 
-export function ArtistCard() {
+export function ArtistPlayerCard() {
   const t = useT();
   const router = useRouter();
   const song = usePlayerStore(currentSong);
@@ -85,7 +85,7 @@ export function ArtistCard() {
               }}
             >
               <Text style={styles.moreInfo}>
-                {bioExpanded ? t('...less information') : t('...more information')}
+                {bioExpanded ? t('less information') : t('more information')}
               </Text>
             </Pressable>
           </View>
@@ -97,10 +97,10 @@ export function ArtistCard() {
 
 const styles = themed((colors) => ({
   card: {
-    borderRadius: radius.md,
+    borderRadius: 16,
     marginTop: spacing.lg,
     marginBottom: spacing.xl,
-    marginHorizontal: spacing.xl,
+    marginHorizontal: 16,
     overflow: 'hidden',
   },
   imageContainer: {

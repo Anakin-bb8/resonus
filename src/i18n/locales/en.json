@@ -668,5 +668,8 @@
   "Mode": "Mode",
   "Dark (default)": "Dark (default)",
   "Light (experimental)": "Light (experimental)",
-  "Dark or light, and the accent color": "Dark or light, and the accent color"
+  "Dark or light, and the accent color": "Dark or light, and the accent color",
+  "About the artist": "About the artist",
+  "more information": "more information",
+  "less information": "less information"
 }
