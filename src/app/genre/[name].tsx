@@ -44,6 +44,7 @@ import { SheetModal } from '@/components/SheetModal';
 import { TrackRow } from '@/components/TrackRow';
 import { useAccent } from '@/hooks/useAccent';
 import { useDownloadMessage } from '@/hooks/useDownloadMessage';
+import { useSelectionFavorites } from '@/hooks/useSelectionFavorites';
 import { useServerSort } from '@/hooks/useServerSort';
 import { albumsLabel, songsLabel, useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
@@ -189,6 +190,8 @@ export default function GenreScreen() {
     setSelectedIds(null);
     if (sel.length > 0) fn(sel);
   }
+
+  const favoriteActions = useSelectionFavorites(runSelection);
 
   const href = `/genre/${encodeURIComponent(genre)}`;
 
@@ -612,6 +615,8 @@ export default function GenreScreen() {
                   toast(t('Added to queue'));
                 }),
             },
+          ]}
+          menu={[
             ...(offline
               ? []
               : [
@@ -625,6 +630,7 @@ export default function GenreScreen() {
                       }),
                   },
                 ]),
+            ...favoriteActions,
           ]}
         />
       ) : null}

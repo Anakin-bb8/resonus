@@ -33,6 +33,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { type Song, type StarType } from '@/api/subsonic';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
+import { useSelectionFavorites } from '@/hooks/useSelectionFavorites';
 import { useT } from '@/i18n';
 import { artistTargets } from '@/lib/artistNav';
 import { haptic } from '@/lib/haptics';
@@ -45,7 +46,7 @@ import { Cover } from './Cover';
 import { ExplicitBadge, useExplicitBadge } from './ExplicitBadge';
 import { FavoriteButton } from './FavoriteButton';
 import { centredPadding, useScreenSize } from '@/hooks/useScreenSize';
-import { SelectionBar } from './SelectionBar';
+import { SelectionBar, type SelectionAction } from './SelectionBar';
 import { TrackRow } from './TrackRow';
 
 /**
@@ -183,6 +184,8 @@ interface Props {
     onAddTo?: (songs: Song[]) => void;
     /** Bulk download. */
     onDownload?: (songs: Song[]) => void;
+    /** Favorites screen: there, "Remove" already is unfavouriting. */
+    favorites?: boolean;
   };
   /** `opts` goes straight to `playQueue`: the shuffle button asks for the list
    *  dealt, which the screen owning the songs is the one who can request. */
@@ -364,6 +367,37 @@ export function TrackListView({
     setSelectedIds(null);
     if (sel.length > 0) fn(sel, indices);
   }
+
+  const favoriteActions = useSelectionFavorites(runSelectionAction);
+  // What this list lets you do with a selection, each one built once: the bar
+  // takes two of them and ⋯ holds whatever is left.
+  const addToAction: SelectionAction[] = selection?.onAddTo
+    ? [
+        {
+          icon: 'add-circle-outline',
+          label: t('Add to a playlist'),
+          onPress: () => runSelectionAction((sel) => selection.onAddTo!(sel)),
+        },
+      ]
+    : [];
+  const removeAction: SelectionAction[] = selection?.onRemove
+    ? [
+        {
+          icon: 'remove-circle-outline',
+          label: t('Remove'),
+          onPress: () => runSelectionAction((sel, idx) => selection.onRemove!(sel, idx)),
+        },
+      ]
+    : [];
+  const downloadAction: SelectionAction[] = selection?.onDownload
+    ? [
+        {
+          icon: 'download-outline',
+          label: t('Download'),
+          onPress: () => runSelectionAction((sel) => selection.onDownload!(sel)),
+        },
+      ]
+    : [];
 
   // Without cover, the header is shorter: the gradient and bar collapse adjust
   // to a smaller distance so the transition fits.
@@ -838,34 +872,13 @@ export function TrackListView({
       {selecting ? (
         <SelectionBar
           count={selectedIds.size}
-          actions={[
-            ...(selection?.onAddTo
-              ? [
-                  {
-                    icon: 'add-circle-outline' as const,
-                    label: t('Add to a playlist'),
-                    onPress: () => runSelectionAction((sel) => selection.onAddTo!(sel)),
-                  },
-                ]
-              : []),
-            ...(selection?.onDownload
-              ? [
-                  {
-                    icon: 'download-outline' as const,
-                    label: t('Download'),
-                    onPress: () => runSelectionAction((sel) => selection.onDownload!(sel)),
-                  },
-                ]
-              : []),
-            ...(selection?.onRemove
-              ? [
-                  {
-                    icon: 'remove-circle-outline' as const,
-                    label: t('Remove'),
-                    onPress: () => runSelectionAction((sel, idx) => selection.onRemove!(sel, idx)),
-                  },
-                ]
-              : []),
+          // Second slot: taking songs out of this list where that is a thing,
+          // and downloading where it isn't. Whichever one loses the slot is
+          // the one behind ⋯.
+          actions={[...addToAction, ...(removeAction.length > 0 ? removeAction : downloadAction)]}
+          menu={[
+            ...(removeAction.length > 0 ? downloadAction : []),
+            ...(selection?.favorites === false ? [] : favoriteActions),
           ]}
         />
       ) : null}

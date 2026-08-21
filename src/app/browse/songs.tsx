@@ -43,6 +43,7 @@ import { SelectionBar } from '@/components/SelectionBar';
 import { SongCard } from '@/components/SongCard';
 import { TrackRow } from '@/components/TrackRow';
 import { useAccent } from '@/hooks/useAccent';
+import { useSelectionFavorites } from '@/hooks/useSelectionFavorites';
 import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { listPerf } from '@/lib/listPerf';
@@ -224,6 +225,8 @@ export default function BrowseSongsScreen() {
     setSelectedIds(null);
     if (sel.length > 0) fn(sel);
   }
+
+  const favoriteActions = useSelectionFavorites(runSelection);
 
   function cancelSearch() {
     Keyboard.dismiss();
@@ -488,6 +491,8 @@ export default function BrowseSongsScreen() {
                   toast(t('Added to queue'));
                 }),
             },
+          ]}
+          menu={[
             ...(offline
               ? []
               : [
@@ -501,6 +506,7 @@ export default function BrowseSongsScreen() {
                       }),
                   },
                 ]),
+            ...favoriteActions,
           ]}
         />
       ) : null}

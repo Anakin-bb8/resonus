@@ -19,16 +19,23 @@ import { SHEET_MAX_WIDTH, spacing, themed } from '@/theme';
 
 export function SheetModal({
   openRef,
+  onClosed,
   children,
 }: {
   /** The screen holds a ref and calls `openRef.current()` to open. */
   openRef: MutableRefObject<() => void>;
+  /** Runs once the sheet is off screen, however it was closed. For an action
+   *  that unmounts the sheet along with whatever declares it. */
+  onClosed?: () => void;
   children: (close: () => void) => ReactNode;
 }) {
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   openRef.current = () => setOpen(true);
-  const closeNow = () => setOpen(false);
+  const closeNow = () => {
+    setOpen(false);
+    onClosed?.();
+  };
   const { dismiss, pan, backdropStyle, sheetStyle, onSheetLayout } = useBottomSheetAnim(
     open,
     closeNow,

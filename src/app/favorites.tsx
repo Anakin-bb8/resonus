@@ -203,6 +203,8 @@ export default function FavoritesScreen() {
             : undefined
         }
         selection={{
+          // No favouriting entries in the ⋯ menu: here "Remove" already is it.
+          favorites: false,
           onRemove: (sel) => removeMany(sel),
           onAddTo: (sel) => setAddingSongs(sel),
           onDownload: !offline

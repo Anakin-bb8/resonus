@@ -45,6 +45,7 @@ import { useAccent } from '@/hooks/useAccent';
 import { useDownloadMessage } from '@/hooks/useDownloadMessage';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { useListPadding } from '@/hooks/useScreenSize';
+import { useSelectionFavorites } from '@/hooks/useSelectionFavorites';
 import { useSongSort } from '@/hooks/useSongSort';
 import { songsLabel, useT } from '@/i18n';
 import { splitArtistAlbums } from '@/lib/artistAlbums';
@@ -182,6 +183,8 @@ export default function ArtistSongsScreen() {
     setSelectedIds(null);
     if (sel.length > 0) fn(sel);
   }
+
+  const favoriteActions = useSelectionFavorites(runSelection);
 
   async function deleteArtistDownloads() {
     const files = useDownloads.getState().files;
@@ -383,6 +386,8 @@ export default function ArtistSongsScreen() {
                   toast(t('Added to queue'));
                 }),
             },
+          ]}
+          menu={[
             ...(offline
               ? []
               : [
@@ -396,6 +401,7 @@ export default function ArtistSongsScreen() {
                       }),
                   },
                 ]),
+            ...favoriteActions,
           ]}
         />
       ) : null}

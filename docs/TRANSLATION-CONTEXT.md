@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 667 of them.
+Every string the app can show, under the screen it shows up on. 668 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -80,7 +80,6 @@ you are actually typing into, which is easier than reading it here.
 | `Rate` | Verb: give it stars. Used for a song and for an artist. Not "bitrate" |
 | `Rating` | The stars given to the song. Not a bitrate, not a review |
 | `Recents` | Library section and its sort order: recently opened items |
-| `Remove from favorites` | The same button when it is already a favourite |
 | `Remove from playlist` | Menu action: take this song out of the playlist it was opened from |
 | `Removed from playlist` | Toast, with an undo button next to it |
 | `Resonus {new} is out. You have {old}.` |  |
@@ -143,7 +142,6 @@ you are actually typing into, which is easier than reading it here.
 | `Popular` | The artist's popular / top tracks |
 | `Rate` | Verb: give it stars. Used for a song and for an artist. Not "bitrate" |
 | `Remixes` | Shelf heading: records that are mostly remixed material. `Remixes` is widely used as-is in several languages; keep it if that is true of yours |
-| `Remove from favorites` | The same button when it is already a favourite |
 | `Show less` | Folds it back |
 | `Show more` | Unfolds the rest of a text that was cut short |
 | `Similar artists` | Related artists |
@@ -179,7 +177,9 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
+| `{n} added to favorites` |  |
 | `No songs here yet` |  |
+| `Nothing to change` | Answer to favouriting a selection that already is one, or unfavouriting one that isn't |
 | `Try exploring another artist.` |  |
 
 ## Browse › Albums
@@ -217,10 +217,12 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
+| `{n} added to favorites` |  |
 | `A-Z` | Sort option: the order of a list |
 | `Find a song` | The search box's placeholder on that screen |
 | `No songs yet` | Empty state when the library has no songs |
 | `Nothing played yet` | Empty state: this phone has not played anything yet |
+| `Nothing to change` | Answer to favouriting a selection that already is one, or unfavouriting one that isn't |
 | `Your library looks empty.` | Empty state: the server answered, and had nothing |
 | `Your most played songs will show up here.` | Empty state, before anything has been played |
 | `Your recently played songs will show up here.` | Empty state, before anything has been played |
@@ -229,7 +231,6 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `{n} removed from favorites` | Toast. `{n}` is a count of songs |
 | `Auto-download` | Keep this playlist downloaded by itself as songs are added to it |
 | `Auto-download off` | The toast that says it was turned off |
 | `Auto-download on` | The toast that says it was turned on |
@@ -254,9 +255,11 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
+| `{n} added to favorites` |  |
 | `Genre` | Label of a field in the song information sheet |
 | `No albums in this genre` | Empty state heading |
 | `No songs in this genre` | Empty state heading |
+| `Nothing to change` | Answer to favouriting a selection that already is one, or unfavouriting one that isn't |
 | `Nothing to shuffle yet` | Empty state: there is nothing here to play in random order |
 | `Try exploring another genre.` | Empty state subtitle on a genre screen |
 
@@ -397,7 +400,6 @@ you are actually typing into, which is easier than reading it here.
 | `Previous` | Player control: the previous track (accessibility label) |
 | `Queue` | The list of songs waiting to play. Not a playlist |
 | `Radio` | Internet radio stations. Most languages keep the word |
-| `Remove from favorites` | The same button when it is already a favourite |
 | `Remove from the group` | The − beside `Add to the group`, and the same in reverse: it takes that room out of the group so it stops playing along. Read out by the screen reader, never shown, and Sonos only |
 | `Repeat` | Start again at the end |
 | `Search again` |  |
@@ -490,7 +492,6 @@ you are actually typing into, which is easier than reading it here.
 | `Delete station` | Menu action, in red |
 | `Edit station` | Title of the same sheet when changing one |
 | `Find a station` | The search box's placeholder on the radio screen |
-| `More` | A "see more" action |
 | `Name` | The Name field when editing a playlist or a station |
 | `No radio stations` | Empty state heading |
 | `Password` | The password field, on the login screen and wherever the server asks again |
@@ -948,9 +949,9 @@ you are actually typing into, which is easier than reading it here.
 | --- | --- |
 | `“{name}” will no longer be available offline.` | The line under that title. `{name}` is the album, artist or playlist |
 | `{n} added to “{name}”` | Toast when several songs went in at once. `{n}` is a count of songs |
-| `{n} added to favorites` |  |
 | `{n} columns` | The other options in that menu: cards, this many across. `{n}` is 2, 3 or 4, so it is always plural |
 | `{n} of {songs} are already in “{name}”.` | The same warning when adding several at once and only some of them are already there. `{n}` is how many of them are, and `{songs}` already reads as a count ("12 songs"), so the sentence is like "3 of 12 songs are already in “Rock”." |
+| `{n} removed from favorites` | Toast. `{n}` is a count of songs |
 | `{n} selected` | How many songs are ticked right now |
 | `{n} songs couldn't be downloaded` | Toast: some failed, the rest are there |
 | `{n} songs deleted` | Toast after deleting downloads. `{n}` is how many files went |
@@ -999,6 +1000,7 @@ you are actually typing into, which is easier than reading it here.
 | `Library` | The tab with your albums, artists and playlists, and a folder in the car |
 | `List` | An option in that menu: one row per item, instead of cards |
 | `Lyrics` | The words of the song. Also a line of the storage bar, where it is their size on the phone |
+| `More` | A "see more" action, and the third button of the selection bar, the one that opens the rest of what it can do |
 | `More options` | Read out by the screen reader for the three-dot button, which is ⋮ on a song row and in the player and ⋯ in a screen's header |
 | `New playlist` | Row at the top of the playlist picker, and the button on an empty library: make one |
 | `No results` | Nothing matched what was typed |
@@ -1016,6 +1018,7 @@ you are actually typing into, which is easier than reading it here.
 | `Remove` | Take something out of a list. Deleting for good is `Delete` |
 | `Remove download` | Delete the downloaded file, keeping the song in the library |
 | `Remove download?` | Dialog title: delete the files of something already downloaded |
+| `Remove from favorites` | The same button when it is already a favourite, and the menu entry that takes a whole selection out |
 | `Removed from favorites` | Toast |
 | `Retry` | The button on an error message: try again. A verb |
 | `Select all` | Tick every song in the list at once |
