@@ -9,7 +9,7 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
-## [0.7.5-beta] - 2026-08-22
+## [0.7.5-beta.1] - 2026-08-22
 
 ### Added
 
