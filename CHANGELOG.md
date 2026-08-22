@@ -20,6 +20,7 @@ Releases before 0.2.1 are only listed on the
 - The selection bar keeps two buttons and a ⋯ that opens the rest, so favouriting and unfavouriting several songs at once are finally somewhere you would look for them, instead of hidden in the "Add to a playlist" sheet (#164).
 - Headings and screen titles are lighter: Android draws Roboto's 800 as a real ExtraBold, which closes the letters up, so they sit at 600 instead.
 - The genre grid on Search no longer carries a "Browse all" heading above it.
+- Expo SDK 57 and React Native 0.86 underneath, with media3 unchanged at 1.9.0.
 
 ### Fixed
 
