@@ -8,7 +8,7 @@ import Slider from '@react-native-community/slider';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { COVER, songCoverUrl } from '@/api/data';
 import { lyricsStyles, SyncedLyricsView } from '@/components/LyricsCard';
@@ -48,6 +48,10 @@ export default function LyricsScreen() {
   // The scrim already keeps the text readable, so the fade just goes away.
   const fadeColor = background === 'cover' ? undefined : bg;
   const duration = durationSec || song?.duration || 0;
+  const insets = useSafeAreaInsets();
+  // Inside a full-screen modal iOS reports no top inset, and the close
+  // button would sit against the edge.
+  const topPad = insets.top > 0 ? insets.top : 12;
 
   return (
     <View style={[styles.root, { backgroundColor: bg }]}>
@@ -68,7 +72,7 @@ export default function LyricsScreen() {
           <View style={styles.coverScrim} />
         </>
       ) : null}
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <View style={[styles.safe, { paddingTop: topPad, paddingBottom: insets.bottom }]}>
       <View style={styles.header}>
         <Pressable hitSlop={12} accessibilityRole="button" accessibilityLabel={t('Close')} onPress={() => router.back()}>
           <Ionicons name="close" size={26} color={colors.text} />
@@ -151,7 +155,7 @@ export default function LyricsScreen() {
           </Pressable>
         </View>
       </View>
-      </SafeAreaView>
+      </View>
     </View>
   );
 }

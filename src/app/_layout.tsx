@@ -8,7 +8,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
 import { useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AppStartupTab } from '@/components/AppStartupTab';
@@ -55,6 +55,13 @@ installAppFont();
 /** How long the offline copy of the library waits before being read, when the
  *  app has a server and nothing is going to ask for it yet. */
 const MIRROR_DELAY_MS = 15_000;
+
+/** Queue and lyrics are whole screens. On iOS `modal` is a sheet that stops
+ *  short of the top, so there they need the full-screen one. */
+const FULL_MODAL = {
+  presentation: Platform.OS === 'ios' ? 'fullScreenModal' : 'modal',
+  animation: Platform.OS === 'ios' ? 'fade' : 'fade_from_bottom',
+} as const;
 
 /*
  * There is no `dangerouslySingular` on any route here, and there is not going
@@ -337,11 +344,11 @@ export default function RootLayout() {
               />
               <Stack.Screen
                 name="queue"
-                options={{ presentation: 'modal', animation: 'fade_from_bottom' }}
+                options={FULL_MODAL}
               />
               <Stack.Screen
                 name="lyrics"
-                options={{ presentation: 'modal', animation: 'fade_from_bottom' }}
+                options={FULL_MODAL}
               />
             </Stack>
             {auth || offline ? <AppStartupTab /> : null}
