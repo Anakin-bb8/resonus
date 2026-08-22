@@ -9,6 +9,8 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.7.5-beta] - 2026-08-22
+
 ### Added
 
 - The player can show a card with the artist's photo and biography below the controls, off by default in Settings > Player, thanks to @Anakin-bb8.
