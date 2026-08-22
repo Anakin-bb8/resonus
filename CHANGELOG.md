@@ -31,6 +31,7 @@ Releases before 0.2.1 are only listed on the
 - Sonos turns off shuffle in one piece: the whole queue goes back to album order, not just the part after the song playing.
 - Skipping to another song already in the Sonos queue is immediate, because the queue is no longer torn down and sent again song by song.
 - Crossfade set in Resonus is passed on to Sonos, both on connecting and when the setting is changed while casting.
+- The last song in the queue no longer sits under the navigation bar: the screen clears whatever height that bar actually has instead of guessing a fixed gap, which fell short with three-button navigation.
 
 ## [0.7.4] - 2026-08-19
 
