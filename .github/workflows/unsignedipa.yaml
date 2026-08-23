@@ -1,6 +1,5 @@
 name: Build unsigned iOS IPA
 
-# Trigger manuale dalla tab "Actions" del repo (Run workflow)
 on:
   workflow_dispatch:
 
@@ -12,24 +11,32 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # resonus richiede pnpm (applica una patch a expo-audio in fase di
-      # install): npm/yarn non vanno bene, vedi CONTRIBUTING.md del repo
+      # Setup pnpm DOPO il checkout così può leggere il campo
+      # "packageManager" da package.json per ricavare la versione
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
+
+      # Cache pnpm store manuale: evita il bug di action-setup
+      # che cerca la store prima del checkout
+      - name: Get pnpm store path
+        id: pnpm-cache
+        run: echo "store=$(pnpm store path)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.store }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
 
       - name: Install JS dependencies
         run: pnpm install --frozen-lockfile
 
-      # ios/ è generata e gitignorata (Expo Continuous Native Generation),
-      # quindi qui non stiamo sovrascrivendo nulla di scritto a mano
       - name: Generate native iOS project (expo prebuild)
         run: pnpm expo prebuild --platform ios --clean --no-install
 
@@ -37,7 +44,6 @@ jobs:
         working-directory: ios
         run: pod install --repo-update
 
-      # Trova automaticamente workspace e scheme, senza doverli scrivere a mano
       - name: Locate workspace and scheme
         id: xcode_info
         working-directory: ios
@@ -48,7 +54,6 @@ jobs:
           echo "scheme=$SCHEME" >> "$GITHUB_OUTPUT"
           echo "Trovati -> Workspace: $WORKSPACE | Scheme: $SCHEME"
 
-      # Compila e archivia SENZA firma: nessun certificato, nessun account Apple coinvolto
       - name: Build unsigned archive
         working-directory: ios
         run: |
@@ -63,8 +68,6 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             DEVELOPMENT_TEAM=""
 
-      # L'archivio contiene già il .app compilato: basta impacchettarlo
-      # in Payload/ e zippare per ottenere un .ipa (non firmato)
       - name: Package unsigned IPA
         working-directory: ios
         run: |
