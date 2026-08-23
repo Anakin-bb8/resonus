@@ -32,6 +32,7 @@ import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 /** Label (i18n key) of each section. */
 const LABEL: Record<HomeSectionKey, string> = {
   recentlyAdded: 'Recently added',
+  newReleases: 'New releases',
   recentlyPlayed: 'Recently played',
   mostPlayed: 'Most played albums',
   mostPlayedSongs: 'Most played songs',

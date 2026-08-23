@@ -258,12 +258,14 @@ function toArtist(local: CatArtist): Artist {
 export async function getAlbumList(type: string, size = 20, offset = 0): Promise<Album[]> {
   // The orders that are the database's to answer. "Recently played" and "most
   // played" are not: they come from this phone's own history and counts, which
-  // live in a store, so those stay below.
+  // live in a store, so those stay below. Neither is "new releases": the year
+  // lives inside the album's blob and not in a column to sort on.
   const dir = downloadsDir();
   const order = ({ newest: 'newest', random: 'random', alphabeticalByArtist: 'artist' } as const)[
     type as 'newest' | 'random' | 'alphabeticalByArtist'
   ];
-  if (dir && (order || (type !== 'recent' && type !== 'frequent'))) {
+  const inMemory = type === 'recent' || type === 'frequent' || type === 'byYear';
+  if (dir && (order || !inMemory)) {
     try {
       const rows = await Cat.albumsPage(dir, order ?? 'name', size, offset);
       return rows.map(toAlbum);
@@ -307,6 +309,11 @@ export async function getAlbumList(type: string, size = 20, offset = 0): Promise
         .sort((a, b) => (albumPlays.get(b.id) ?? 0) - (albumPlays.get(a.id) ?? 0));
       break;
     }
+    case 'byYear':
+      // New releases: the year off the tags, newest first. An album with none
+      // sinks to the bottom rather than leading the list.
+      albums.sort((a, b) => (b.year ?? 0) - (a.year ?? 0) || a.name.localeCompare(b.name));
+      break;
     case 'random':
       for (let i = albums.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));

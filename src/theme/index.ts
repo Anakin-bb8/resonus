@@ -20,6 +20,7 @@
  *    the language.
  */
 import { useSyncExternalStore } from 'react';
+import { Appearance } from 'react-native';
 import type { ImageStyle, TextStyle, ViewStyle } from 'react-native';
 
 /** Default accent (Spotify green). */
@@ -30,6 +31,17 @@ export type ThemeMode = 'dark' | 'light';
 
 export function isThemeMode(value: unknown): value is ThemeMode {
   return value === 'dark' || value === 'light';
+}
+
+/**
+ * What the setting holds, which is not the same question as which appearance is
+ * on screen: `system` is a standing instruction to keep asking Android, and the
+ * other two are answers.
+ */
+export type ThemePreference = ThemeMode | 'system';
+
+export function isThemePreference(value: unknown): value is ThemePreference {
+  return value === 'system' || isThemeMode(value);
 }
 
 /**
@@ -328,9 +340,40 @@ export function applyAccent(hex: string): void {
 }
 
 /** Hot-swaps the whole appearance. */
-export function applyThemeMode(mode: ThemeMode): void {
+function applyThemeMode(mode: ThemeMode): void {
   currentMode = mode;
   rebuild();
+}
+
+let systemWatch: { remove: () => void } | null = null;
+
+/** The appearance the device is in, or dark when it will not say. */
+function systemMode(): ThemeMode {
+  return Appearance.getColorScheme() === 'light' ? 'light' : 'dark';
+}
+
+/**
+ * Picks the appearance and, on `system`, keeps picking it: the listener is what
+ * makes the app follow a device switching to night without being reopened.
+ *
+ * Android only tells anyone what it is set to when the app declares
+ * `userInterfaceStyle: "automatic"` (app.json). Pinned to `dark`, the launcher
+ * calls `setDefaultNightMode(MODE_NIGHT_YES)` and from then on the system
+ * answers dark forever, so on a build older than that one this setting is a
+ * third way of choosing dark.
+ */
+export function applyThemePreference(pref: ThemePreference): void {
+  systemWatch?.remove();
+  systemWatch = null;
+  if (pref === 'system') {
+    systemWatch = Appearance.addChangeListener(() => {
+      // Only on a real change: every rebuild hands out new style objects, and
+      // Android repeats this event for things that are not the appearance.
+      const next = systemMode();
+      if (next !== currentMode) applyThemeMode(next);
+    });
+  }
+  applyThemeMode(pref === 'system' ? systemMode() : pref);
 }
 
 // ---------------------------------------------------------------------------

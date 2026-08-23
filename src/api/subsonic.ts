@@ -574,6 +574,7 @@ export type AlbumListType =
   | 'recent'
   | 'frequent'
   | 'random'
+  | 'byYear'
   | 'alphabeticalByName'
   | 'alphabeticalByArtist'
   | 'starred';
@@ -593,6 +594,13 @@ export type SongListSort =
   | 'frequent'
   | 'random';
 
+/**
+ * How far back `byYear` reaches. It is not a filter anybody asked for: the list
+ * is meant to be the library by release date, and the endpoint only takes a
+ * range, so this is the floor of it.
+ */
+const FIRST_YEAR = 1900;
+
 export async function getAlbumList(
   auth: SubsonicAuth,
   type: AlbumListType = 'newest',
@@ -603,7 +611,17 @@ export async function getAlbumList(
   const res = await request<{ albumList2?: { album?: Album[] } }>(
     auth,
     'getAlbumList2.view',
-    { type, size, offset, ...(musicFolderId ? { musicFolderId } : {}) },
+    {
+      type,
+      size,
+      offset,
+      // `byYear` is the one type that takes a range, and the range is also what
+      // says which way round it is read: later to earlier is newest first.
+      ...(type === 'byYear'
+        ? { fromYear: new Date().getFullYear(), toYear: FIRST_YEAR }
+        : {}),
+      ...(musicFolderId ? { musicFolderId } : {}),
+    },
   );
   return res.albumList2?.album ?? [];
 }

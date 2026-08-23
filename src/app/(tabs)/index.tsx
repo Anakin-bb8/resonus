@@ -244,7 +244,7 @@ function AlbumSection({
   type,
 }: {
   title: string;
-  type: 'recent' | 'newest' | 'frequent' | 'random';
+  type: 'recent' | 'newest' | 'frequent' | 'random' | 'byYear';
 }) {
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
   const card = useShelfCard();
@@ -664,9 +664,12 @@ function ScanningPanel() {
  *  «discover» and «randomArtists» are drawn by components of their own. */
 const HOME_ALBUM_CONFIG: Record<
   Exclude<HomeSectionKey, 'randomArtists' | 'discover' | 'playlists' | 'mostPlayedSongs'>,
-  { title: string; type: 'newest' | 'recent' | 'frequent' | 'random' }
+  { title: string; type: 'newest' | 'recent' | 'frequent' | 'random' | 'byYear' }
 > = {
   recentlyAdded: { title: 'Recently added', type: 'newest' },
+  // When the record came out, not when the server got hold of it: a batch of
+  // ten-year-old albums imported last night is what fills the shelf above.
+  newReleases: { title: 'New releases', type: 'byYear' },
   recentlyPlayed: { title: 'Recently played', type: 'recent' },
   // Named for what it holds now that the songs have a shelf of their own next
   // to it, or the two would read as the same thing twice.

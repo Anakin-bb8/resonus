@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 670 of them.
+Every string the app can show, under the screen it shows up on. 672 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -186,6 +186,7 @@ you are actually typing into, which is easier than reading it here.
 | --- | --- |
 | `A-Z` | Sort option: the order of a list |
 | `Find an album` | The search box's placeholder on that screen |
+| `New releases` | Home shelf and album sort: albums by the year they came out, newest first. Not "Recently added", which is when the server got hold of them |
 | `No albums yet` | Empty state heading |
 | `Nothing played yet` | Empty state: this phone has not played anything yet |
 | `Your library looks empty.` | Empty state: the server answered, and had nothing |
@@ -301,6 +302,7 @@ you are actually typing into, which is easier than reading it here.
 | `Looking for music…` | Reading the phone's own files, before anything can be shown |
 | `Most played albums` | A section of Home: the records played most |
 | `Most played songs` | A section of Home: the songs played most, as songs |
+| `New releases` | Home shelf and album sort: albums by the year they came out, newest first. Not "Recently added", which is when the server got hold of them |
 | `Nothing to shuffle yet` | Empty state: there is nothing here to play in random order |
 | `Random albums` | A section of Home: albums picked at random, to happen upon something |
 | `Random artists` | A section of Home: artists picked at random |
@@ -661,6 +663,7 @@ you are actually typing into, which is easier than reading it here.
 | `Drag to reorder, toggle to show or hide.` |  |
 | `Home sections` | Reorder which sections appear on Home |
 | `Most played albums` | A section of Home: the records played most |
+| `New releases` | Home shelf and album sort: albums by the year they came out, newest first. Not "Recently added", which is when the server got hold of them |
 | `Random albums` | A section of Home: albums picked at random, to happen upon something |
 | `Reorder` | Enter drag-to-reorder mode |
 
@@ -941,6 +944,7 @@ you are actually typing into, which is easier than reading it here.
 | --- | --- |
 | `Accent color` | The colour the app uses for buttons, links and anything it wants you to notice |
 | `Dark (default)` | The appearance the app has always had, and what it uses unless the other is chosen. The word in brackets is the same one as `Default` |
+| `Follow system` | Theme setting: use whichever appearance the phone itself is set to, light or dark |
 | `Light (experimental)` | The light appearance. The word in brackets is a warning that it is new and may still have rough edges |
 | `Mode` | Heading over the two appearances on the Theme screen. Not a playback mode and not a profile: dark or light. It is called this and not "Appearance" because Appearance is the settings screen one level up |
 | `Theme` | The screen where the appearance and the accent colour are chosen, and the name of the row that opens it |

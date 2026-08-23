@@ -676,5 +676,7 @@
   "The artist's photo and biography, below the player controls.": "La foto i la biografia de l'artista, sota els controls del reproductor.",
   "Nothing to change": "Res a canviar",
   "Export {songs}?": "Vols exportar {songs}?",
-  "{size} copied into the folder you pick.": "{size} copiats a la carpeta que triïs."
+  "{size} copied into the folder you pick.": "{size} copiats a la carpeta que triïs.",
+  "New releases": "Novetats",
+  "Follow system": "Segueix el sistema"
 }

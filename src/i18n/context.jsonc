@@ -116,6 +116,8 @@
     "Song lists": "The setting for how song lists look",
     "Show explicit tag": "A switch: whether to draw the E on anything carrying a parental advisory. \"Explicit\" here is the music-industry label for strong language, not \"clear\" or \"stated outright\"",
     "Home sections": "Reorder which sections appear on Home",
+    "New releases": "Home shelf and album sort: albums by the year they came out, newest first. Not \"Recently added\", which is when the server got hold of them",
+    "Follow system": "Theme setting: use whichever appearance the phone itself is set to, light or dark",
     "Pin favorites": "Pin favourites to the quick grid",
 
     // ── Actions & verbs (easy to translate as the wrong part of speech) ──────

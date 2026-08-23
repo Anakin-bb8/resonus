@@ -402,6 +402,9 @@ const ALBUM_SORT: Record<AlbumListType, { SortBy: string; SortOrder?: string; Fi
     recent: { SortBy: 'DatePlayed', SortOrder: 'Descending' },
     frequent: { SortBy: 'PlayCount', SortOrder: 'Descending' },
     random: { SortBy: 'Random' },
+    // The release date, which Jellyfin keeps whole and Subsonic only has the
+    // year of. `ProductionYear` catches an album tagged with a year and no day.
+    byYear: { SortBy: 'PremiereDate,ProductionYear,SortName', SortOrder: 'Descending' },
     alphabeticalByName: { SortBy: 'SortName' },
     alphabeticalByArtist: { SortBy: 'AlbumArtist,SortName' },
     starred: { SortBy: 'SortName', Filters: 'IsFavorite' },

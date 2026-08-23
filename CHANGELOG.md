@@ -9,6 +9,11 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Added
+
+- Home can show a "New releases" shelf, off by default in Settings > Home sections, with the albums ordered by the year they came out rather than by when the server got hold of them (#173).
+- The theme can follow the phone's own light or dark setting, from Settings > Appearance > Theme, and changes with it while the app is open (#173).
+
 ## [0.7.5-beta.1] - 2026-08-22
 
 ### Added

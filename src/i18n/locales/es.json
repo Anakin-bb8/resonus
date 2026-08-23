@@ -676,5 +676,7 @@
   "The artist's photo and biography, below the player controls.": "La foto y la biografía del artista, bajo los controles del reproductor.",
   "Nothing to change": "Nada que cambiar",
   "Export {songs}?": "¿Exportar {songs}?",
-  "{size} copied into the folder you pick.": "{size} copiados en la carpeta que elijas."
+  "{size} copied into the folder you pick.": "{size} copiados en la carpeta que elijas.",
+  "New releases": "Novedades",
+  "Follow system": "Seguir el sistema"
 }

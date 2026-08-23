@@ -1791,18 +1791,19 @@ async function fetchTopAlbums(
 
 /** Album field each list type is really ordered by, when the server sends it. */
 const ALBUM_SORT_FIELD: Partial<
-  Record<Subsonic.AlbumListType, 'created' | 'played' | 'playCount'>
+  Record<Subsonic.AlbumListType, 'created' | 'played' | 'playCount' | 'year'>
 > = {
   newest: 'created',
   recent: 'played',
   frequent: 'playCount',
+  byYear: 'year',
 };
 
 /** The field as a number (dates become timestamps) to sort descending by.
  *  Missing sinks to the bottom instead of jumping to the top. */
 function albumSortValue(
   album: Subsonic.Album,
-  field: 'created' | 'played' | 'playCount',
+  field: 'created' | 'played' | 'playCount' | 'year',
 ): number {
   const v = album[field];
   if (v == null) return -Infinity;

@@ -14,7 +14,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SelectList, SettingsPage, settingsStyles } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
 import { ACCENT_OPTIONS, useSettings } from '@/store/settings';
-import { fontSize, spacing, themed, useTheme, type ThemeMode } from '@/theme';
+import { fontSize, spacing, themed, useTheme, type ThemePreference } from '@/theme';
 
 export default function ThemeSettings() {
   // Repaints on a change of appearance or accent: a stack keeps this screen
@@ -33,11 +33,12 @@ export default function ThemeSettings() {
             off, and two headings with the same word one level apart read as a
             mistake. */}
         <Text style={styles.label}>{t('Mode')}</Text>
-        <SelectList<ThemeMode>
+        <SelectList<ThemePreference>
           collapsible={false}
           value={themeMode}
           onChange={setThemeMode}
           options={[
+            { value: 'system', label: t('Follow system') },
             { value: 'dark', label: t('Dark (default)') },
             { value: 'light', label: t('Light (experimental)') },
           ]}

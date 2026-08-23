@@ -69,6 +69,7 @@ const SORTS: { key: AlbumListType; label: string }[] = [
   { key: 'recent', label: 'Recently played' },
   { key: 'frequent', label: 'Most played::albums' },
   { key: 'newest', label: 'Recently added' },
+  { key: 'byYear', label: 'New releases' },
   { key: 'alphabeticalByName', label: 'A-Z' },
   { key: 'random', label: 'Shuffle' },
 ];

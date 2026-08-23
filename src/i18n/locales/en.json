@@ -674,5 +674,7 @@
   "The artist's photo and biography, below the player controls.": "The artist's photo and biography, below the player controls.",
   "Nothing to change": "Nothing to change",
   "Export {songs}?": "Export {songs}?",
-  "{size} copied into the folder you pick.": "{size} copied into the folder you pick."
+  "{size} copied into the folder you pick.": "{size} copied into the folder you pick.",
+  "New releases": "New releases",
+  "Follow system": "Follow system"
 }

@@ -7,7 +7,13 @@ import { setPerfEnabled } from '@/lib/perfLog';
 import { profileScopeGuard } from '@/lib/profileScope';
 import { queryClient } from '@/lib/query';
 import { getItem, setItem } from '@/lib/storage';
-import { applyAccent, applyThemeMode, DEFAULT_ACCENT, isThemeMode, type ThemeMode } from '@/theme';
+import {
+  applyAccent,
+  applyThemePreference,
+  DEFAULT_ACCENT,
+  isThemePreference,
+  type ThemePreference,
+} from '@/theme';
 import { profileScopeId, useAuthStore } from './auth';
 
 // The field is named `color` (not `value`) on purpose: Reanimated warns
@@ -289,9 +295,11 @@ export type SwipeAction = 'off' | 'queue' | 'next' | 'favorite' | 'menu';
 
 /** Home section row. `recentlyPlayed` and `discover` are server-only; `discover`
  *  rediscovers albums played long ago; `randomAlbums`/`randomArtists`
- *  are purely random. */
+ *  are purely random. `newReleases` is by the year on the tags, which is a
+ *  different list from `recentlyAdded`: that one is when the server got it. */
 export type HomeSectionKey =
   | 'recentlyAdded'
+  | 'newReleases'
   | 'recentlyPlayed'
   | 'mostPlayed'
   | 'mostPlayedSongs'
@@ -308,6 +316,7 @@ export interface HomeSection {
 
 const HOME_SECTION_KEYS: HomeSectionKey[] = [
   'recentlyAdded',
+  'newReleases',
   'recentlyPlayed',
   'mostPlayed',
   'mostPlayedSongs',
@@ -322,6 +331,7 @@ export const DEFAULT_HOME_SECTIONS: HomeSection[] = [
   { key: 'discover', enabled: true },
   { key: 'playlists', enabled: false },
   { key: 'recentlyAdded', enabled: true },
+  { key: 'newReleases', enabled: false },
   { key: 'recentlyPlayed', enabled: true },
   { key: 'mostPlayed', enabled: true },
   { key: 'mostPlayedSongs', enabled: false },
@@ -806,8 +816,8 @@ interface SettingsState {
   shareDownloadable: boolean;
   /** Accent color (hex). */
   accentColor: string;
-  /** Dark (the app's own look) or light. */
-  themeMode: ThemeMode;
+  /** Dark (the app's own look), light, or whichever one the device is in. */
+  themeMode: ThemePreference;
   /** UI font (system font family; `system` = default). */
   appFont: AppFont;
   setMaxBitRate: (value: number) => void;
@@ -899,7 +909,7 @@ interface SettingsState {
   setShareExpiry: (value: ShareExpiry) => void;
   setShareDownloadable: (value: boolean) => void;
   setAccentColor: (value: string) => void;
-  setThemeMode: (value: ThemeMode) => void;
+  setThemeMode: (value: ThemePreference) => void;
   setAppFont: (value: AppFont) => void;
   /** Resets to factory defaults (language is preserved). */
   resetToDefaults: () => void;
@@ -1125,7 +1135,7 @@ const DEFAULTS = {
   shareDownloadable: false,
   accentColor: DEFAULT_ACCENT,
   // Dark: the appearance the app was designed in. Light is opt-in.
-  themeMode: 'dark' as ThemeMode,
+  themeMode: 'dark' as ThemePreference,
   appFont: 'system' as AppFont,
 };
 
@@ -1573,7 +1583,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
   },
 
   setThemeMode: (themeMode) => {
-    applyThemeMode(themeMode);
+    applyThemePreference(themeMode);
     set({ themeMode });
     persist(snapshot(get));
   },
@@ -1592,7 +1602,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
     // Language is preserved: resetting shouldn't change your language.
     set({ ...DEFAULTS, language: get().language });
     applyAccent(DEFAULT_ACCENT);
-      applyThemeMode(DEFAULTS.themeMode);
+    applyThemePreference(DEFAULTS.themeMode);
     persist(snapshot(get));
   },
 
@@ -1624,7 +1634,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
       // re-applies them if present); the font is reactive and doesn't need it.
       set({ ...DEFAULTS, language: get().language });
       applyAccent(DEFAULT_ACCENT);
-      applyThemeMode(DEFAULTS.themeMode);
+      applyThemePreference(DEFAULTS.themeMode);
       applied = true;
       if (raw) {
         const parsed = JSON.parse(raw) as Partial<{
@@ -1717,7 +1727,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           shareExpiry: ShareExpiry;
           shareDownloadable: boolean;
           accentColor: string;
-          themeMode: ThemeMode;
+          themeMode: ThemePreference;
           appFont: AppFont;
         }>;
         if (typeof parsed.maxBitRate === 'number') {
@@ -2062,9 +2072,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
           set({ accentColor: parsed.accentColor });
           applyAccent(parsed.accentColor);
         }
-        if (isThemeMode(parsed.themeMode)) {
+        if (isThemePreference(parsed.themeMode)) {
           set({ themeMode: parsed.themeMode });
-          applyThemeMode(parsed.themeMode);
+          applyThemePreference(parsed.themeMode);
         }
         if (parsed.appFont && parsed.appFont in APP_FONT_FAMILY) {
           set({ appFont: parsed.appFont });
@@ -2112,7 +2122,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
       if (!applied && scope.accept(token, key)) {
         set({ ...DEFAULTS, language: get().language });
         applyAccent(DEFAULT_ACCENT);
-      applyThemeMode(DEFAULTS.themeMode);
+        applyThemePreference(DEFAULTS.themeMode);
       }
     } finally {
       // Read or failed, what's in memory is now what this profile gets.
