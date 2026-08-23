@@ -72,6 +72,33 @@ function hslToHex(h: number, s: number, l: number): string {
 }
 
 /**
+ * From the four UIImageColors candidates (background, primary, secondary,
+ * detail) pick the one with the highest saturation.  The iOS algorithm labels
+ * them by *role* (background, text, detail), not by vibrancy — and
+ * `background` often lands on a large neutral area (white border, black void)
+ * that normalises to a dull grey.  The foreground colours (`primary`,
+ * `secondary`, `detail`) are almost always more colourful and work better as
+ * the Spotify-style tint we want.
+ */
+function pickMostSaturated(
+  colors: Array<string | undefined>,
+): string | undefined {
+  let best: string | undefined;
+  let bestSat = -1;
+  for (const hex of colors) {
+    if (!hex) continue;
+    const rgb = hexToRgb(hex);
+    if (!rgb) continue;
+    const [, s] = rgbToHsl(rgb[0], rgb[1], rgb[2]);
+    if (s > bestSat) {
+      bestSat = s;
+      best = hex;
+    }
+  }
+  return best;
+}
+
+/**
  * Clamps saturation and lightness into the readable band for the appearance.
  *
  * The light band is narrower and sits high (0.88–0.94): a pale wash keeps the
@@ -132,7 +159,12 @@ export function useDominantColor(uri?: string): string {
     // sizes now share one cached palette.
     import('react-native-image-colors')
       .then(({ getColors }) =>
-        getColors(src, { fallback: theme.surfaceHighlight, cache: true, key: src }),
+        getColors(src, {
+          fallback: theme.surfaceHighlight,
+          cache: true,
+          key: src,
+          quality: 'high',
+        }),
       )
       .then((res) => {
         if (!active || !res) return;
@@ -140,7 +172,16 @@ export function useDominantColor(uri?: string): string {
         if (res.platform === 'android') {
           c = res.vibrant || res.darkVibrant || res.muted || res.dominant || c;
         } else if (res.platform === 'ios') {
-          c = res.background || res.primary || res.secondary || c;
+          // foreground colours (primary / secondary / detail) are almost
+          // always more colourful than background, which often lands on a
+          // large neutral area; pick the most saturated one.
+          c =
+            pickMostSaturated([
+              res.primary,
+              res.secondary,
+              res.detail,
+              res.background,
+            ]) || c;
         } else if (res.platform === 'web') {
           c = res.vibrant || res.darkVibrant || res.dominant || c;
         }
