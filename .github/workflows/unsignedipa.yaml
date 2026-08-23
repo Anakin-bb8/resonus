@@ -12,20 +12,26 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # resonus richiede pnpm (applica una patch a expo-audio in fase di
+      # install): npm/yarn non vanno bene, vedi CONTRIBUTING.md del repo
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
+          node-version: 22
+          cache: pnpm
 
       - name: Install JS dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
-      # Genera la cartella ios/ nativa a partire dal progetto Expo managed.
-      # ATTENZIONE: se il tuo progetto è già "bare" e hai modifiche manuali
-      # dentro ios/, RIMUOVI questo step (e --clean) per non sovrascriverle.
+      # ios/ è generata e gitignorata (Expo Continuous Native Generation),
+      # quindi qui non stiamo sovrascrivendo nulla di scritto a mano
       - name: Generate native iOS project (expo prebuild)
-        run: npx expo prebuild --platform ios --clean --no-install
+        run: pnpm expo prebuild --platform ios --clean --no-install
 
       - name: Install CocoaPods dependencies
         working-directory: ios
