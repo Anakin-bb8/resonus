@@ -16,6 +16,10 @@ Releases before 0.2.1 are only listed on the
 - The theme can follow the phone's own light or dark setting, from Settings > Appearance > Theme, and changes with it while the app is open (#173).
 - The accent colour is now remembered per appearance: the swatches set the colour of the theme you are in, and switching between dark and light brings back the one chosen there (#173).
 
+### Fixed
+
+- Dragging the progress bar now moves the time under it, so the number says where you are about to land instead of where the song still is.
+
 ### Changed
 
 - The local profile no longer keeps its library in memory: it asks its catalog for the rows a screen is about to draw, the way a server's downloads already did, so opening the app and moving around it stop costing what the whole library costs.

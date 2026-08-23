@@ -1,7 +1,6 @@
 /** Full-screen player (modal): cover art, progress and controls. */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import Slider from '@react-native-community/slider';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useIsFocused, useRouter } from 'expo-router';
@@ -9,7 +8,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   AppState,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -35,6 +33,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { COVER, songCoverUrl, type Song } from '@/api/data';
 import { ArtistPlayerCard } from '@/components/ArtistPlayerCard';
 import { AudioQualityBadge } from '@/components/AudioQualityBadge';
+import { SeekBar } from '@/components/SeekBar';
 import { Cover, useRedrawOnReturn, useSettledSource } from '@/components/Cover';
 import { ExplicitBadge } from '@/components/ExplicitBadge';
 import { FavoriteButton } from '@/components/FavoriteButton';
@@ -50,7 +49,7 @@ import { useLyrics } from '@/hooks/useLyrics';
 import { useScreenSize } from '@/hooks/useScreenSize';
 import { useT } from '@/i18n';
 import { artistTargets } from '@/lib/artistNav';
-import { formatDuration, formatGroupedDeviceLabel } from '@/lib/format';
+import { formatGroupedDeviceLabel } from '@/lib/format';
 import { haptic } from '@/lib/haptics';
 import { localHttpAvailable } from '@/lib/localHttp';
 import { pushOnce } from '@/lib/pushOnce';
@@ -153,46 +152,6 @@ function usePaneStyle(offset: SharedValue<number>, k: number, step: SharedValue<
       opacity: interpolate(Math.abs(x), [0, w * 0.6], [1, 0.4], Extrapolation.CLAMP),
     };
   });
-}
-
-/**
- * Slider and times, kept apart on purpose.
- *
- * `positionSec` moves twice a second while music plays, and this screen is one
- * large component: cover, gradient, quality badge, controls, queue sheet. It
- * was repainting all of it on every tick, which is the one thing the mini
- * player has always been careful not to do (#50). The seek buttons read the
- * position when they are pressed instead of subscribing to it.
- */
-function PlayerProgress({
-  duration,
-  onSeek,
-}: {
-  duration: number;
-  onSeek: (sec: number) => void;
-}) {
-  const positionSec = usePlayerStore((s) => s.positionSec);
-  return (
-    <View style={styles.progress}>
-      {/* iOS pads the track itself and draws a fatter thumb: there the negative
-          margin overshoots and the knob needs pinning to the Android size. */}
-      <Slider
-        style={[styles.slider, Platform.OS === 'ios' && styles.sliderIos]}
-        thumbSize={Platform.OS === 'ios' ? 12 : undefined}
-        minimumValue={0}
-        maximumValue={duration}
-        value={positionSec}
-        onSlidingComplete={onSeek}
-        minimumTrackTintColor={colors.text}
-        maximumTrackTintColor={colors.mediaTrack}
-        thumbTintColor={colors.text}
-      />
-      <View style={styles.times}>
-        <Text style={styles.time}>{formatDuration(positionSec)}</Text>
-        <Text style={styles.time}>{formatDuration(duration)}</Text>
-      </View>
-    </View>
-  );
 }
 
 export default function PlayerScreen() {
@@ -1082,7 +1041,11 @@ export default function PlayerScreen() {
             </View>
           ) : null}
 
-          <PlayerProgress duration={duration} onSeek={seekTo} />
+          {/* Its own component so a position tick does not repaint this one,
+              which is large: cover, gradient, quality badge, controls, queue
+              sheet (#50). The seek buttons read the position when they are
+              pressed instead of subscribing to it. */}
+          <SeekBar duration={duration} style={styles.progress} timeColor={colors.textMuted} />
 
           <View style={styles.controls}>
             <Pressable
@@ -1410,19 +1373,6 @@ const styles = themed((colors) => ({
   },
   subInfo: { marginTop: -spacing.sm, marginBottom: spacing.xs },
   progress: { marginBottom: spacing.xs },
-  // Compensates for the slider's internal margin (~15px, where the thumb is
-  // centered at the extremes): the visible track goes edge to edge of the
-  // content, like Spotify, and the thumb extends into the gap without being
-  // clipped.
-  slider: { marginHorizontal: -15 },
-  sliderIos: { marginHorizontal: 0 },
-  // Snug against the bar: the slider brings lots of vertical space (touch area).
-  times: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: -2,
-  },
-  time: { color: colors.textMuted, fontSize: fontSize.xs },
   controls: {
     flexDirection: 'row',
     alignItems: 'center',

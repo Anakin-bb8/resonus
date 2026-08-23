@@ -4,26 +4,17 @@
  * and basic controls (progress and play/pause) at the bottom.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
-import Slider from '@react-native-community/slider';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import {
-  ActivityIndicator,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { COVER, songCoverUrl } from '@/api/data';
 import { lyricsStyles, SyncedLyricsView } from '@/components/LyricsCard';
+import { SeekBar } from '@/components/SeekBar';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useLyrics } from '@/hooks/useLyrics';
 import { useT } from '@/i18n';
-import { formatDuration } from '@/lib/format';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
 import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
@@ -38,10 +29,8 @@ export default function LyricsScreen() {
   const { width } = useScreenSize();
   const song = usePlayerStore(currentSong);
   const isPlaying = usePlayerStore((s) => s.isPlaying);
-  const positionSec = usePlayerStore((s) => s.positionSec);
   const durationSec = usePlayerStore((s) => s.durationSec);
   const toggle = usePlayerStore((s) => s.toggle);
-  const seekTo = usePlayerStore((s) => s.seekTo);
   const previous = usePlayerStore((s) => s.previous);
   const next = usePlayerStore((s) => s.next);
   const { data, isLoading } = useLyrics(song ?? undefined);
@@ -117,22 +106,7 @@ export default function LyricsScreen() {
       </View>
 
       <View style={styles.controls}>
-        {/* Same as the player: the negative margin is for Android only. */}
-        <Slider
-          style={[styles.slider, Platform.OS === 'ios' && styles.sliderIos]}
-          thumbSize={Platform.OS === 'ios' ? 12 : undefined}
-          minimumValue={0}
-          maximumValue={duration}
-          value={positionSec}
-          onSlidingComplete={seekTo}
-          minimumTrackTintColor={colors.text}
-          maximumTrackTintColor={colors.mediaTrack}
-          thumbTintColor={colors.text}
-        />
-        <View style={styles.times}>
-          <Text style={styles.time}>{formatDuration(positionSec)}</Text>
-          <Text style={styles.time}>{formatDuration(duration)}</Text>
-        </View>
+        <SeekBar duration={duration} />
         <View style={styles.buttons}>
           <Pressable
             hitSlop={10}
@@ -194,15 +168,6 @@ const styles = themed((colors) => ({
     paddingHorizontal: spacing.xl,
   },
   controls: { paddingHorizontal: spacing.xl, paddingBottom: spacing.md },
-  // Same as the player: the visible track edge to edge of the content.
-  slider: { marginHorizontal: -15 },
-  sliderIos: { marginHorizontal: 0 },
-  times: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: -2,
-  },
-  time: { color: colors.textSecondary, fontSize: fontSize.xs },
   buttons: {
     flexDirection: 'row',
     alignItems: 'center',
