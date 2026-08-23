@@ -16,6 +16,10 @@ Releases before 0.2.1 are only listed on the
 - The theme can follow the phone's own light or dark setting, from Settings > Appearance > Theme, and changes with it while the app is open (#173).
 - The accent colour is now remembered per appearance: the swatches set the colour of the theme you are in, and switching between dark and light brings back the one chosen there (#173).
 
+### Changed
+
+- The local profile reads up to twenty thousand songs per folder instead of five thousand, and a scan that stops there now says so in Diagnostics rather than quietly leaving the rest out.
+
 ## [0.7.5-beta.1] - 2026-08-22
 
 ### Added

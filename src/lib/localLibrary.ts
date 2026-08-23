@@ -88,6 +88,26 @@ function cacheKey(sourceMode: string, uri?: string): string {
  */
 const SCAN_CONCURRENCY = 8;
 
+/**
+ * How many songs one scan will take in.
+ *
+ * Not a limit of the reading, which is one file at a time and costs the same
+ * whatever the total: it is a limit of what comes after. The local profile
+ * keeps its catalog in memory and sorts and searches it in JavaScript, so every
+ * song in it is paid for on every list (a server's downloads went to SQLite for
+ * exactly this reason). Past this many, that is what starts to be felt.
+ *
+ * It applies per folder, so a profile reading three of them can hold three
+ * times this. A scan that stops here says so in Diagnostics, since the songs it
+ * did not reach are otherwise just missing.
+ */
+const MAX_SCAN_SONGS = 20_000;
+
+/** Notes in Diagnostics that a scan stopped at the cap and not at the end. */
+function noteCapped(): void {
+  bump('local scan · hit the song cap');
+}
+
 /** Runs `worker` over `items` with at most `limit` of them in flight at once. */
 async function mapPool<T, R>(
   items: T[],
@@ -572,7 +592,7 @@ export async function loadDeviceSongs(): Promise<Song[]> {
   try {
     let after: string | undefined;
     let hasNext = true;
-    while (hasNext && rawSongs.length < 5000) {
+    while (hasNext && rawSongs.length < MAX_SCAN_SONGS) {
       const page = await MediaLibrary.getAssetsAsync({
         // Lower case: `MediaType` here is the legacy object of string values,
         // not the new API's enum, which spells the same value `AUDIO`.
@@ -597,6 +617,7 @@ export async function loadDeviceSongs(): Promise<Song[]> {
       after = page.endCursor;
       hasNext = page.hasNextPage;
     }
+    if (hasNext) noteCapped();
 
     useScanProgress.getState().start(rawSongs.length);
     const bump = progressBumper(rawSongs.length);
@@ -741,7 +762,7 @@ async function scanFolder(treeUri: string, closeWhenDone = true): Promise<LocalC
   const rawSongs: { id: string; filename: string; uri: string; dirUri: string }[] = [];
 
   async function walk(dirUri: string, depth: number): Promise<void> {
-    if (depth > 6 || rawSongs.length >= 5000) return;
+    if (depth > 6 || rawSongs.length >= MAX_SCAN_SONGS) return;
     let entries: string[];
     try {
       entries = await StorageAccessFramework.readDirectoryAsync(dirUri);
@@ -770,6 +791,7 @@ async function scanFolder(treeUri: string, closeWhenDone = true): Promise<LocalC
   let catalog: LocalCatalog;
   try {
     await walk(treeUri, 0);
+    if (rawSongs.length >= MAX_SCAN_SONGS) noteCapped();
 
     useScanProgress.getState().start(rawSongs.length);
     const bump = progressBumper(rawSongs.length);
