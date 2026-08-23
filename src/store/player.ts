@@ -2693,8 +2693,23 @@ function scheduleSync() {
   syncTimer = setTimeout(syncQueueNow, 2500);
 }
 
+/**
+ * Every so often while a song plays: the queue, and where in the song it is.
+ *
+ * The server shows the position it was last told, and it is only told when
+ * something changes — so a song nobody touches sits at the second it started
+ * on, which is what the panel of a server that has been playing for a minute
+ * was showing (00:00 while the phone was at 1:20). Saying it again also keeps
+ * the entry alive, which is the other half of what a Now Playing list is.
+ */
+function periodicSync() {
+  syncQueueNow();
+  const st = usePlayerStore.getState();
+  if (st.isPlaying) reportState('playing', st.queue[st.index], st.positionSec);
+}
+
 function startPeriodicSync() {
-  if (!syncInterval) syncInterval = setInterval(syncQueueNow, 20000);
+  if (!syncInterval) syncInterval = setInterval(periodicSync, 20000);
 }
 
 function stopPeriodicSync() {
@@ -3012,8 +3027,15 @@ interface PlayerState {
   setSleepTimer: (minutes: number) => void;
   setSleepAtSongEnd: () => void;
   cancelSleepTimer: () => void;
-  /** Restores the queue saved on the server (without playing). */
-  restoreFromServer: () => Promise<void>;
+  /**
+   * Restores the queue saved on the server (without playing).
+   *
+   * On a cold start it only fills a gap, since the copy on this device is the
+   * faithful one. `replace` is somebody asking for it on purpose — the queue
+   * they left on another player, brought over here — and then whatever is
+   * playing gives way to it. False when the server had nothing to give.
+   */
+  restoreFromServer: (replace?: boolean) => Promise<boolean>;
   /** Restores the queue saved on this device (without playing).
    *  Returns true if there was a local copy (even an intentionally emptied
    *  queue): in that case the server backup should not enter. */
@@ -3735,23 +3757,24 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     set({ sleepEndsAt: null, sleepAtSongEnd: false });
   },
 
-  restoreFromServer: async () => {
+  restoreFromServer: async (replace = false) => {
     const { auth, offline } = useAuthStore.getState();
-    if (!auth || offline || get().queue.length > 0) return;
+    if (!auth || offline || (!replace && get().queue.length > 0)) return false;
     let saved;
     try {
       saved = await getPlayQueue(auth);
     } catch {
-      return;
+      return false;
     }
-    if (!saved || saved.entries.length === 0) return;
+    if (!saved || saved.entries.length === 0) return false;
     const songs = saved.entries;
     const index = saved.current
       ? Math.max(0, songs.findIndex((s) => s.id === saved.current))
       : 0;
     const positionSec = (saved.position ?? 0) / 1000;
-    // If something already started playing in the meantime, don't override the queue.
-    if (get().queue.length > 0) return;
+    // If something already started playing in the meantime, don't override the
+    // queue — unless overriding it is the whole request.
+    if (!replace && get().queue.length > 0) return false;
     attachAppState();
     set({
       queue: songs,
@@ -3775,9 +3798,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     // saw to that). What is left here belongs to the queue being restored, and
     // running it against another one would drop somebody else's song at the
     // position this one was left at, paused.
-    if (get().queue !== songs) return;
+    if (get().queue !== songs) return true;
     if (positionSec > 0) seekActive(positionSec);
     usePlayerStore.setState({ positionSec, isPlaying: false });
+    return true;
   },
 
   restoreFromStorage: async () => {

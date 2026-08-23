@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 676 of them.
+Every string the app can show, under the screen it shows up on. 679 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -468,18 +468,21 @@ you are actually typing into, which is easier than reading it here.
 | `Clear all` | Throw away the whole list: the history, the queue, or what you searched for |
 | `Clear queue` | Menu action: empty the list of what is coming |
 | `Explicit` | A value of `Content`: the recording carries a parental advisory (strong language). Also read out for the E badge next to a title |
+| `Get the server's queue` | Queue screen action: replace what is playing here with the queue the server has, which is the one left on another player |
 | `Mix of “{name}”` | What the player calls the queue once it has grown past its album into songs the app picked itself. `{name}` is the song it was grown from |
 | `Next from {name}` | Heading on the queue screen: what is coming, and where it comes from. `{name}` is an album, a playlist or a mix |
 | `Next in queue` | Queue screen header: the track that plays next |
 | `Now playing` | Heading on the queue screen over the song sounding right now. The player's own label is `NOW PLAYING`, a different string |
 | `Play a song or album to start the queue.` | The line under the empty queue |
 | `Queue` | The list of songs waiting to play. Not a playlist |
+| `Queue brought over` | The toast that says it worked |
 | `Queue cleared` | Toast |
 | `Removed from queue` | Toast |
 | `Stop the mix` | Stop the app carrying on with similar songs when the queue runs out |
 | `The current song keeps playing.` | The line under the clear-queue dialog: only what is coming goes |
 | `The mix won't grow any further` | Toast after stopping the mix: what is in the queue stays, nothing new is added |
 | `The queue is empty.` | Empty state on the queue screen |
+| `The server has no saved queue` | The toast when the server had nothing to bring over |
 
 ## Radio
 
