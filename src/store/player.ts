@@ -2973,6 +2973,16 @@ interface PlayerState {
   stopRadio: () => void;
   addToQueue: (song: Song) => void;
   playNext: (song: Song) => void;
+  /**
+   * A whole record's worth at once, in the order given.
+   *
+   * Not the same as calling the two above in a loop: `playNext` puts each song
+   * where the last one went, so an album handed over song by song comes out
+   * backwards, and either way a queue of a hundred is a hundred separate
+   * changes for whatever is listening to them (the remote players sync on
+   * every one).
+   */
+  queueMany: (songs: Song[], where: 'next' | 'end') => void;
   toggle: () => void;
   next: () => void;
   previous: () => void;
@@ -3269,6 +3279,23 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     next.splice(index + 1, 0, handAdded(song));
     // It jumps to the front of the "queued" block; the block grows with it.
     set({ queue: next, queuedCount: queuedCount + 1 });
+    scheduleSync();
+  },
+
+  queueMany: (songs, where) => {
+    if (songs.length === 0) return;
+    const { queue, index, queuedCount } = get();
+    // Nothing playing: this is not a queue to add to, it is the queue.
+    if (queue.length === 0) {
+      void get().playQueue(songs, 0);
+      return;
+    }
+    const at =
+      where === 'next' ? index + 1 : Math.min(index + queuedCount + 1, queue.length);
+    // Built by hand rather than spread into `splice`: a playlist of thousands
+    // would be that many arguments in one call.
+    const next = queue.slice(0, at).concat(songs.map(handAdded), queue.slice(at));
+    set({ queue: next, queuedCount: queuedCount + songs.length });
     scheduleSync();
   },
 

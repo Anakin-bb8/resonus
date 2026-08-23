@@ -89,7 +89,7 @@ export function MediaMenuSheet() {
   const pins = usePins((s) => s.pins);
   const togglePin = usePins((s) => s.toggle);
   const playQueue = usePlayerStore((s) => s.playQueue);
-  const addToQueue = usePlayerStore((s) => s.addToQueue);
+  const queueMany = usePlayerStore((s) => s.queueMany);
   const router = useRouter();
   const openArtistPicker = useArtistPicker((s) => s.open);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -269,11 +269,21 @@ export function MediaMenuSheet() {
               />
             ))}
             <Action
+              icon="play-forward-outline"
+              label={t('Play next')}
+              onPress={() =>
+                withSongs((songs) => {
+                  queueMany(songs, 'next');
+                  toast(t('Playing next'));
+                })
+              }
+            />
+            <Action
               icon="list-outline"
               label={t('Add to queue')}
               onPress={() =>
                 withSongs((songs) => {
-                  for (const song of songs) addToQueue(song);
+                  queueMany(songs, 'end');
                   toast(t('Added to queue'));
                 })
               }

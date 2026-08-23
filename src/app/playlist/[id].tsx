@@ -59,7 +59,7 @@ export default function PlaylistScreen() {
   const canShare = useCanShare();
   const playing = usePlayerStore(currentSong);
   const playQueue = usePlayerStore((s) => s.playQueue);
-  const addToQueue = usePlayerStore((s) => s.addToQueue);
+  const queueMany = usePlayerStore((s) => s.queueMany);
 
   // The ⋯ menu lives in a SheetModal (opening/closing doesn't re-render the screen).
   const menuRef = useRef<() => void>(() => {});
@@ -421,7 +421,18 @@ export default function PlaylistScreen() {
               onPress={() => {
                 close();
                 // In the visible order (respects the order chosen with ⇅).
-                for (const s of displaySongs) addToQueue(s);
+                queueMany(displaySongs, 'next');
+                toast(t('Playing next'));
+              }}
+            >
+              <Ionicons name="play-forward" size={24} color={colors.text} />
+              <Text style={styles.actionText}>{t('Play next')}</Text>
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+              onPress={() => {
+                close();
+                queueMany(displaySongs, 'end');
                 toast(t('Added to queue'));
               }}
             >

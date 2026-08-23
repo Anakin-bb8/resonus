@@ -46,7 +46,7 @@ export default function FavoritesScreen() {
   const showListArtwork = useSettings((s) => s.showListArtwork);
   const playing = usePlayerStore(currentSong);
   const playQueue = usePlayerStore((s) => s.playQueue);
-  const addToQueue = usePlayerStore((s) => s.addToQueue);
+  const queueMany = usePlayerStore((s) => s.queueMany);
   const queryClient = useQueryClient();
   const toast = useToast((s) => s.show);
 
@@ -227,7 +227,18 @@ export default function FavoritesScreen() {
               onPress={() => {
                 close();
                 // In the visible order (respects the order chosen with ⇅).
-                for (const s of displaySongs) addToQueue(s);
+                queueMany(displaySongs, 'next');
+                toast(t('Playing next'));
+              }}
+            >
+              <Ionicons name="play-forward" size={24} color={colors.text} />
+              <Text style={styles.actionText}>{t('Play next')}</Text>
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+              onPress={() => {
+                close();
+                queueMany(displaySongs, 'end');
                 toast(t('Added to queue'));
               }}
             >
