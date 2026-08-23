@@ -674,6 +674,9 @@ export async function loadFolderSongs(uris: string[]): Promise<Song[]> {
     const perFolder: LocalCatalog[] = [];
     for (const uri of uris) perFolder.push(await catalogForFolder(uri));
     catalog = mergeCatalogs(perFolder);
+    // The pieces are on disk and the merge is what the app reads from now on:
+    // holding both would be every album and artist twice in memory.
+    for (const uri of uris) catalogCache.delete(cacheKey('folder', uri));
   } finally {
     useScanProgress.getState().done();
   }
