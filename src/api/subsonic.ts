@@ -1323,6 +1323,16 @@ export interface SavedQueue {
   current?: string;
   /** Position in the current track, in milliseconds. */
   position: number;
+  /**
+   * When the server's copy was last written, by its own clock, and by whom.
+   *
+   * `changedBy` is the client name whoever saved it last sent (ours is
+   * `CLIENT_NAME`), which is how a queue left on another player is told from
+   * the last thing this phone pushed. Both are standard Subsonic and both are
+   * optional: a server that sends neither simply never looks newer.
+   */
+  changed?: number;
+  changedBy?: string;
 }
 
 /** Saves the play queue to the server (savePlayQueue). */
@@ -1353,11 +1363,24 @@ export async function savePlayQueue(
 /** Retrieves the saved queue from the server (getPlayQueue). */
 export async function getPlayQueue(auth: SubsonicAuth): Promise<SavedQueue | null> {
   const res = await request<{
-    playQueue?: { entry?: Song[]; current?: string; position?: number };
+    playQueue?: {
+      entry?: Song[];
+      current?: string;
+      position?: number;
+      changed?: string;
+      changedBy?: string;
+    };
   }>(auth, 'getPlayQueue.view');
   const pq = res.playQueue;
   if (!pq?.entry || pq.entry.length === 0) return null;
-  return { entries: pq.entry, current: pq.current, position: pq.position ?? 0 };
+  const changed = pq.changed ? Date.parse(pq.changed) : NaN;
+  return {
+    entries: pq.entry,
+    current: pq.current,
+    position: pq.position ?? 0,
+    changed: Number.isFinite(changed) ? changed : undefined,
+    changedBy: pq.changedBy,
+  };
 }
 
 /** Notifies the server that a song has been played (scrobble). */
