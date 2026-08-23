@@ -11,18 +11,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 22
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 11
+
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
-      - name: Install pnpm via corepack
-        run: |
-          corepack enable
-          corepack prepare pnpm@9 --activate
+          cache: pnpm
 
       - name: Install JS dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Expo prebuild (iOS)
         run: pnpm expo prebuild --platform ios --clean --no-install
