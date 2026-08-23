@@ -19,6 +19,7 @@ import {
   getLocalCatalog,
   hashKey,
   loadDeviceSongs,
+  folderSetKey,
   loadFolderSongs,
   normKey,
   registerCover,
@@ -101,6 +102,15 @@ export async function unstarLocal(id: string, type?: StarType) {
   await saveFavs(favs);
 }
 
+/**
+ * Forgets a scan in flight, so the next call starts one for the source that is
+ * current now. Without it, changing folders mid-scan would wait for the old
+ * one and then look for a catalog under the new key, which nobody built.
+ */
+export function resetLocalLoading(): void {
+  loadingPromise = null;
+}
+
 /** Clears the favorites cache (on source change). */
 export function clearLocalFavs() {
   favCache = null;
@@ -109,9 +119,13 @@ export function clearLocalFavs() {
 
 function sourceInfo() {
   const { offlineSource } = useAuthStore.getState();
+  const uris = offlineSource?.mode === 'folder' ? offlineSource.uris : [];
   return {
     mode: offlineSource?.mode ?? 'device',
-    key: offlineSource?.mode === 'folder' ? offlineSource.uri : undefined,
+    uris,
+    // The whole set is what the catalog is cached under, so adding a folder is
+    // a different catalog and not a stale one.
+    key: uris.length > 0 ? folderSetKey(uris) : undefined,
   };
 }
 
@@ -149,14 +163,14 @@ interface MergedCatalog {
 
 /** Catalog for the chosen source (device/folder), loading it if needed. */
 async function ensureScanCatalog() {
-  const { mode, key } = sourceInfo();
+  const { mode, uris, key } = sourceInfo();
   const cached = getLocalCatalog(mode, key);
   if (cached) return cached;
   if (!loadingPromise) {
     loadingPromise = (async () => {
       try {
-        if (mode === 'folder' && key) {
-          await loadFolderSongs(key);
+        if (mode === 'folder' && uris.length > 0) {
+          await loadFolderSongs(uris);
         } else {
           await loadDeviceSongs();
         }

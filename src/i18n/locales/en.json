@@ -676,5 +676,9 @@
   "Export {songs}?": "Export {songs}?",
   "{size} copied into the folder you pick.": "{size} copied into the folder you pick.",
   "New releases": "New releases",
-  "Follow system": "Follow system"
+  "Follow system": "Follow system",
+  "Music folders": "Music folders",
+  "Add another folder": "Add another folder",
+  "Keep at least one folder": "Keep at least one folder",
+  "That folder is already there": "That folder is already there"
 }

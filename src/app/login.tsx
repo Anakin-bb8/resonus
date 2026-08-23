@@ -183,7 +183,7 @@ export default function LoginScreen() {
   async function startLocalFolder() {
     const uri = await pickFolder();
     if (!uri) return;
-    await setOfflineSource({ mode: 'folder', uri });
+    await setOfflineSource({ mode: 'folder', uris: [uri] });
     await enterOffline();
   }
 

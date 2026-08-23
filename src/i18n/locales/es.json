@@ -678,5 +678,9 @@
   "Export {songs}?": "¿Exportar {songs}?",
   "{size} copied into the folder you pick.": "{size} copiados en la carpeta que elijas.",
   "New releases": "Novedades",
-  "Follow system": "Seguir el sistema"
+  "Follow system": "Seguir el sistema",
+  "Music folders": "Carpetas de música",
+  "Add another folder": "Añadir otra carpeta",
+  "Keep at least one folder": "Deja al menos una carpeta",
+  "That folder is already there": "Esa carpeta ya está en la lista"
 }

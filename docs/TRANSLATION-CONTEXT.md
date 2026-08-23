@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 672 of them.
+Every string the app can show, under the screen it shows up on. 676 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -678,6 +678,7 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `{n} items` | How many things the server's scan has found so far |
+| `Add another folder` | Adds one more phone folder to the local profile's list |
 | `All the music on your device.` | The line under `Scan the whole phone` |
 | `Cache cleared` | Toast: what was remembered from the server was thrown away. Downloads are untouched |
 | `Change source` | The music source (which server, or local). Not source code |
@@ -688,10 +689,12 @@ you are actually typing into, which is easier than reading it here.
 | `Couldn't start the scan` | Toast: the server refused to start a scan |
 | `Device` | In offline mode, where the phone's own music is read from: the whole device, as opposed to `Folder`, one folder you picked. Not a server library |
 | `Folder` | In offline mode, where the phone's own music is read from: one folder you picked, as opposed to `Device`, the whole phone |
+| `Keep at least one folder` | Refusing to remove the last folder of a local profile, which would leave it with no music |
 | `Keep at least one library on` | Toast: at least one of the server's libraries has to stay ticked |
 | `Libraries` | Section header over the server's libraries, when it has more than one |
 | `Library updated` | Toast after the phone finished going through its own files |
 | `Local music` | Music stored on the phone itself |
+| `Music folders` | Settings > Local music: the list of phone folders the local profile reads its music from |
 | `Only the music in the folder you choose.` | The line under `Choose a folder (recommended)` |
 | `Rescan` | Trigger the server's library scan again |
 | `Rescanning your music…` | The phone is going through its own files again, offline |
@@ -704,6 +707,7 @@ you are actually typing into, which is easier than reading it here.
 | `Source` | The music source (which server, or local). Not source code |
 | `Source updated` | Toast after changing where music is read from |
 | `Storage` | Section header over the cache |
+| `That folder is already there` | The folder just picked is already in the local profile's list |
 | `We need permission to read your device music.` | Android has not granted access to the phone's files yet |
 | `Where should we get your music?` | Heading when choosing where the phone's own music is read from |
 

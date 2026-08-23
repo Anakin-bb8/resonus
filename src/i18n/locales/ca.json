@@ -678,5 +678,9 @@
   "Export {songs}?": "Vols exportar {songs}?",
   "{size} copied into the folder you pick.": "{size} copiats a la carpeta que triïs.",
   "New releases": "Novetats",
-  "Follow system": "Segueix el sistema"
+  "Follow system": "Segueix el sistema",
+  "Music folders": "Carpetes de música",
+  "Add another folder": "Afegeix una altra carpeta",
+  "Keep at least one folder": "Deixa almenys una carpeta",
+  "That folder is already there": "Aquesta carpeta ja és a la llista"
 }
