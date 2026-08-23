@@ -21,10 +21,8 @@ jobs:
           corepack enable
           corepack prepare pnpm@9 --activate
 
-
       - name: Install JS dependencies
         run: pnpm install --no-frozen-lockfile
-
 
       - name: Expo prebuild (iOS)
         run: pnpm expo prebuild --platform ios --clean --no-install
@@ -33,38 +31,51 @@ jobs:
         working-directory: ios
         run: pod install --repo-update
 
-      - name: Find workspace and scheme
+      - name: Find workspace
         id: xcode
         working-directory: ios
         run: |
           WS=$(find . -maxdepth 1 -name "*.xcworkspace" | head -n1 | sed 's|^\./||')
-          SCHEME=$(xcodebuild -list -workspace "$WS" -json | jq -r '.workspace.schemes[0]')
           echo "workspace=$WS" >> "$GITHUB_OUTPUT"
-          echo "scheme=$SCHEME" >> "$GITHUB_OUTPUT"
 
       - name: Build unsigned archive
         working-directory: ios
         run: |
           xcodebuild archive \
             -workspace "${{ steps.xcode.outputs.workspace }}" \
-            -scheme "${{ steps.xcode.outputs.scheme }}" \
+            -scheme "Resonus" \
             -configuration Release \
             -destination "generic/platform=iOS" \
-            -archivePath "$PWD/build/App.xcarchive" \
+            -archivePath build/Resonus.xcarchive \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            DEVELOPMENT_TEAM=""
+            DEVELOPMENT_TEAM="" \
+            SKIP_INSTALL=NO
 
       - name: Package IPA
         run: |
-          cd ios/build/App.xcarchive/Products
-          mv Applications Payload
-          zip -r "$GITHUB_WORKSPACE/resonus-unsigned.ipa" Payload
+          # Search for the .app file inside the Products directory of the archive
+          APP_PATH=$(find ios/build/Resonus.xcarchive/Products -name "*.app" -type d 2>/dev/null | head -n 1)
+
+          if [ -z "$APP_PATH" ]; then
+            echo "Error: Unable to find the .app file inside Products/."
+            echo "Archive contents:"
+            ls -R ios/build/Resonus.xcarchive/Products || true
+            exit 1
+          fi
+
+          echo "App found in: $APP_PATH"
+
+          # Prepare the Payload directory and create the unsigned IPA
+          mkdir -p Payload
+          cp -R "$APP_PATH" Payload/
+          zip -qr "resonus.ipa" Payload
+          rm -rf Payload
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: resonus-unsigned-ipa
-          path: resonus-unsigned.ipa
+          name: resonus.ipa
+          path: resonus.ipa
           retention-days: 14
