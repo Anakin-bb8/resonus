@@ -1,0 +1,5 @@
+nodeLinker: hoisted
+allowBuilds:
+  unrs-resolver: true
+patchedDependencies:
+  expo-audio: patches/expo-audio.patch
