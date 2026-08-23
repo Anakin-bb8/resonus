@@ -682,8 +682,5 @@
   "Music folders": "Carpetas de música",
   "Add another folder": "Añadir otra carpeta",
   "Keep at least one folder": "Deja al menos una carpeta",
-  "That folder is already there": "Esa carpeta ya está en la lista",
-  "Get the server's queue": "Traer la cola del servidor",
-  "Queue brought over": "Cola traída",
-  "The server has no saved queue": "El servidor no tiene ninguna cola guardada"
+  "That folder is already there": "Esa carpeta ya está en la lista"
 }

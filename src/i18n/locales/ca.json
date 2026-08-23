@@ -682,8 +682,5 @@
   "Music folders": "Carpetes de música",
   "Add another folder": "Afegeix una altra carpeta",
   "Keep at least one folder": "Deixa almenys una carpeta",
-  "That folder is already there": "Aquesta carpeta ja és a la llista",
-  "Get the server's queue": "Porta la cua del servidor",
-  "Queue brought over": "Cua portada",
-  "The server has no saved queue": "El servidor no té cap cua desada"
+  "That folder is already there": "Aquesta carpeta ja és a la llista"
 }
