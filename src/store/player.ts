@@ -1042,6 +1042,11 @@ async function ensurePlaybackReportSupport(auth: SubsonicAuth): Promise<boolean>
  */
 function reportState(state: PlaybackState, song: Song | undefined, positionSec: number): void {
   if (!song || song.url) return;
+  // Counted because of what the panel on the server shows: `starting` is the
+  // one report that says "from the top", so more of them than there were songs
+  // means something is announcing a track that was already playing, and that is
+  // a different fault from the position not being repeated.
+  bump(`report · ${state}`);
   const { auth, offline } = useAuthStore.getState();
   if (!auth || offline) return;
   void ensurePlaybackReportSupport(auth).then((supported) => {
