@@ -30,6 +30,7 @@ import { songsLabel, useT } from '@/i18n';
 import { formatTotalDuration } from '@/lib/format';
 import { haptic } from '@/lib/haptics';
 import { listPerf } from '@/lib/listPerf';
+import { useAuthStore } from '@/store/auth';
 import { mixSeedOf, SOURCE_FAVORITES, SOURCE_HISTORY, usePlayerStore } from '@/store/player';
 import { usePlaylistPicker } from '@/store/playlistPicker';
 import { useSettings } from '@/store/settings';
@@ -147,6 +148,10 @@ export default function QueueScreen() {
   const clearQueue = usePlayerStore((s) => s.clearQueue);
   const radioMode = usePlayerStore((s) => s.radioMode);
   const stopRadio = usePlayerStore((s) => s.stopRadio);
+  const restoreFromServer = usePlayerStore((s) => s.restoreFromServer);
+  // The server's copy is only there for an account with a connection: a local
+  // profile has no server, and offline there is nobody to ask.
+  const hasServerQueue = useAuthStore((s) => !!s.auth && !s.offline);
   // Subscribed, not read straight off `colors`: a stack keeps this screen
   // mounted while you are elsewhere, so without this it would keep the accent
   // and the appearance it was last painted in.
@@ -352,17 +357,38 @@ export default function QueueScreen() {
 
       <SheetModal openRef={menuRef}>
         {(close) => (
-          <Pressable
-            style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
-            onPress={() => {
-              close();
-              const q = usePlayerStore.getState().queue;
-              if (q.length > 0) usePlaylistPicker.getState().open(q);
-            }}
-          >
-            <Ionicons name="add" size={24} color={colors.text} />
-            <Text style={styles.actionText}>{t('Add to a playlist')}</Text>
-          </Pressable>
+          <>
+            <Pressable
+              style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+              onPress={() => {
+                close();
+                const q = usePlayerStore.getState().queue;
+                if (q.length > 0) usePlaylistPicker.getState().open(q);
+              }}
+            >
+              <Ionicons name="add" size={24} color={colors.text} />
+              <Text style={styles.actionText}>{t('Add to a playlist')}</Text>
+            </Pressable>
+            {/* The queue is pushed to the server as it changes, but what comes
+                back is only read when this device has none of its own: the copy
+                here is the faithful one and replacing it behind somebody's back
+                is not a thing to do on its own. This is that decision, taken by
+                hand — the queue left on another player, brought over. */}
+            {hasServerQueue ? (
+              <Pressable
+                style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+                onPress={() => {
+                  close();
+                  void restoreFromServer(true).then((found) => {
+                    toast(found ? t('Queue brought over') : t('The server has no saved queue'));
+                  });
+                }}
+              >
+                <Ionicons name="cloud-download-outline" size={24} color={colors.text} />
+                <Text style={styles.actionText}>{t("Get the server's queue")}</Text>
+              </Pressable>
+            ) : null}
+          </>
         )}
       </SheetModal>
     </View>

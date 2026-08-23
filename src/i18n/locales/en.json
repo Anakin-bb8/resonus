@@ -680,5 +680,8 @@
   "Music folders": "Music folders",
   "Add another folder": "Add another folder",
   "Keep at least one folder": "Keep at least one folder",
-  "That folder is already there": "That folder is already there"
+  "That folder is already there": "That folder is already there",
+  "Get the server's queue": "Get the server's queue",
+  "Queue brought over": "Queue brought over",
+  "The server has no saved queue": "The server has no saved queue"
 }
