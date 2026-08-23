@@ -11,57 +11,41 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Setup pnpm DOPO il checkout così può leggere il campo
-      # "packageManager" da package.json per ricavare la versione
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
-      - name: Setup Node.js
+      - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      # Cache pnpm store manuale: evita il bug di action-setup
-      # che cerca la store prima del checkout
-      - name: Get pnpm store path
-        id: pnpm-cache
-        run: echo "store=$(pnpm store path)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache pnpm store
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.pnpm-cache.outputs.store }}
-          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: pnpm-${{ runner.os }}-
+      - name: Install pnpm via corepack
+        run: |
+          corepack enable
+          corepack prepare pnpm@9 --activate
 
       - name: Install JS dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Generate native iOS project (expo prebuild)
+      - name: Expo prebuild (iOS)
         run: pnpm expo prebuild --platform ios --clean --no-install
 
-      - name: Install CocoaPods dependencies
+      - name: Install CocoaPods
         working-directory: ios
         run: pod install --repo-update
 
-      - name: Locate workspace and scheme
-        id: xcode_info
+      - name: Find workspace and scheme
+        id: xcode
         working-directory: ios
         run: |
-          WORKSPACE=$(find . -maxdepth 1 -name "*.xcworkspace" | head -n1 | sed 's|^\./||')
-          SCHEME=$(xcodebuild -list -workspace "$WORKSPACE" -json | jq -r '.workspace.schemes[0]')
-          echo "workspace=$WORKSPACE" >> "$GITHUB_OUTPUT"
+          WS=$(find . -maxdepth 1 -name "*.xcworkspace" | head -n1 | sed 's|^\./||')
+          SCHEME=$(xcodebuild -list -workspace "$WS" -json | jq -r '.workspace.schemes[0]')
+          echo "workspace=$WS" >> "$GITHUB_OUTPUT"
           echo "scheme=$SCHEME" >> "$GITHUB_OUTPUT"
-          echo "Trovati -> Workspace: $WORKSPACE | Scheme: $SCHEME"
 
       - name: Build unsigned archive
         working-directory: ios
         run: |
           xcodebuild archive \
-            -workspace "${{ steps.xcode_info.outputs.workspace }}" \
-            -scheme "${{ steps.xcode_info.outputs.scheme }}" \
+            -workspace "${{ steps.xcode.outputs.workspace }}" \
+            -scheme "${{ steps.xcode.outputs.scheme }}" \
             -configuration Release \
             -destination "generic/platform=iOS" \
             -archivePath "$PWD/build/App.xcarchive" \
@@ -70,16 +54,15 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             DEVELOPMENT_TEAM=""
 
-      - name: Package unsigned IPA
-        working-directory: ios
+      - name: Package IPA
         run: |
-          cd build/App.xcarchive/Products
+          cd ios/build/App.xcarchive/Products
           mv Applications Payload
-          zip -r "$GITHUB_WORKSPACE/unsigned-app.ipa" Payload
+          zip -r "$GITHUB_WORKSPACE/resonus-unsigned.ipa" Payload
 
-      - name: Upload IPA artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: unsigned-app-ipa
-          path: unsigned-app.ipa
+          name: resonus-unsigned-ipa
+          path: resonus-unsigned.ipa
           retention-days: 14
