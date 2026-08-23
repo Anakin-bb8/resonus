@@ -12,7 +12,6 @@
  * using it go on writing over it in the ordinary text colour.
  */
 import { useEffect, useState } from 'react';
-import { getColors } from 'react-native-image-colors';
 
 import { CACHED_COVER, COVER } from '@/api/data';
 import { colors as theme, useThemeMode, type ThemeMode } from '@/theme';
@@ -131,12 +130,13 @@ export function useDominantColor(uri?: string): string {
     const src = paletteUri(uri);
     // Keyed by the small URL: two screens showing the same cover at different
     // sizes now share one cached palette.
-    getColors(src, { fallback: theme.surfaceHighlight, cache: true, key: src })
+    import('react-native-image-colors')
+      .then(({ getColors }) =>
+        getColors(src, { fallback: theme.surfaceHighlight, cache: true, key: src }),
+      )
       .then((res) => {
-        if (!active) return;
+        if (!active || !res) return;
         let c: string = theme.surfaceHighlight;
-        // Prefer a vibrant tone and darken it in `normalize`; this preserves
-        // the character of the cover art without looking dull or too bright.
         if (res.platform === 'android') {
           c = res.vibrant || res.darkVibrant || res.muted || res.dominant || c;
         } else if (res.platform === 'ios') {

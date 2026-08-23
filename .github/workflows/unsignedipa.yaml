@@ -1,0 +1,70 @@
+name: Build unsigned iOS IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install pnpm via corepack
+        run: |
+          corepack enable
+          corepack prepare pnpm@9 --activate
+
+
+      - name: Install JS dependencies
+        run: pnpm install --no-frozen-lockfile
+
+
+      - name: Expo prebuild (iOS)
+        run: pnpm expo prebuild --platform ios --clean --no-install
+
+      - name: Install CocoaPods
+        working-directory: ios
+        run: pod install --repo-update
+
+      - name: Find workspace and scheme
+        id: xcode
+        working-directory: ios
+        run: |
+          WS=$(find . -maxdepth 1 -name "*.xcworkspace" | head -n1 | sed 's|^\./||')
+          SCHEME=$(xcodebuild -list -workspace "$WS" -json | jq -r '.workspace.schemes[0]')
+          echo "workspace=$WS" >> "$GITHUB_OUTPUT"
+          echo "scheme=$SCHEME" >> "$GITHUB_OUTPUT"
+
+      - name: Build unsigned archive
+        working-directory: ios
+        run: |
+          xcodebuild archive \
+            -workspace "${{ steps.xcode.outputs.workspace }}" \
+            -scheme "${{ steps.xcode.outputs.scheme }}" \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath "$PWD/build/App.xcarchive" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            DEVELOPMENT_TEAM=""
+
+      - name: Package IPA
+        run: |
+          cd ios/build/App.xcarchive/Products
+          mv Applications Payload
+          zip -r "$GITHUB_WORKSPACE/resonus-unsigned.ipa" Payload
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: resonus-unsigned-ipa
+          path: resonus-unsigned.ipa
+          retention-days: 14

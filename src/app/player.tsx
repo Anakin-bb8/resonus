@@ -174,7 +174,8 @@ function PlayerProgress({
   return (
     <View style={styles.progress}>
       <Slider
-        style={styles.slider}
+        style={[styles.slider, { marginHorizontal: 0 }]}
+        thumbSize={12}
         minimumValue={0}
         maximumValue={duration}
         value={positionSec}
