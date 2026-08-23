@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   AppState,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -173,9 +174,11 @@ function PlayerProgress({
   const positionSec = usePlayerStore((s) => s.positionSec);
   return (
     <View style={styles.progress}>
+      {/* iOS pads the track itself and draws a fatter thumb: there the negative
+          margin overshoots and the knob needs pinning to the Android size. */}
       <Slider
-        style={[styles.slider, { marginHorizontal: 0 }]}
-        thumbSize={12}
+        style={[styles.slider, Platform.OS === 'ios' && styles.sliderIos]}
+        thumbSize={Platform.OS === 'ios' ? 12 : undefined}
         minimumValue={0}
         maximumValue={duration}
         value={positionSec}
@@ -1412,6 +1415,7 @@ const styles = themed((colors) => ({
   // content, like Spotify, and the thumb extends into the gap without being
   // clipped.
   slider: { marginHorizontal: -15 },
+  sliderIos: { marginHorizontal: 0 },
   // Snug against the bar: the slider brings lots of vertical space (touch area).
   times: {
     flexDirection: 'row',

@@ -7,7 +7,15 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import Slider from '@react-native-community/slider';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { COVER, songCoverUrl } from '@/api/data';
@@ -109,9 +117,10 @@ export default function LyricsScreen() {
       </View>
 
       <View style={styles.controls}>
+        {/* Same as the player: the negative margin is for Android only. */}
         <Slider
-          style={[styles.slider, { marginHorizontal: 0 }]}
-          thumbSize={12}
+          style={[styles.slider, Platform.OS === 'ios' && styles.sliderIos]}
+          thumbSize={Platform.OS === 'ios' ? 12 : undefined}
           minimumValue={0}
           maximumValue={duration}
           value={positionSec}
@@ -187,6 +196,7 @@ const styles = themed((colors) => ({
   controls: { paddingHorizontal: spacing.xl, paddingBottom: spacing.md },
   // Same as the player: the visible track edge to edge of the content.
   slider: { marginHorizontal: -15 },
+  sliderIos: { marginHorizontal: 0 },
   times: {
     flexDirection: 'row',
     justifyContent: 'space-between',
