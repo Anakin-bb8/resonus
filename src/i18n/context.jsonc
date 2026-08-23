@@ -228,6 +228,7 @@
     "{msg} It will keep downloading songs added to this playlist later.": "`{msg}` is the ordinary download message, and this adds what auto-download means on top of it",
 
     // ── The queue ────────────────────────────────────────────────────────────
+    "Pick up the queue from other players": "A switch: whether to take the queue another player left on the server when the app is opened with nothing playing",
     "Get the server's queue": "Queue screen action: replace what is playing here with the queue the server has, which is the one left on another player",
     "Queue brought over": "The toast that says it worked",
     "The server has no saved queue": "The toast when the server had nothing to bring over",

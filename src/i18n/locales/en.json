@@ -683,5 +683,7 @@
   "That folder is already there": "That folder is already there",
   "Get the server's queue": "Get the server's queue",
   "Queue brought over": "Queue brought over",
-  "The server has no saved queue": "The server has no saved queue"
+  "The server has no saved queue": "The server has no saved queue",
+  "Pick up the queue from other players": "Pick up the queue from other players",
+  "When you open the app with nothing playing, take the queue another player left on the server if it is newer than this one. The ⋯ of the queue screen asks for it at any time.": "When you open the app with nothing playing, take the queue another player left on the server if it is newer than this one. The ⋯ of the queue screen asks for it at any time."
 }

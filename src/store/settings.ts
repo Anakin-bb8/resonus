@@ -815,6 +815,14 @@ interface SettingsState {
   shareExpiry: ShareExpiry;
   /** Whether the last share allowed downloading (Navidrome only). */
   shareDownloadable: boolean;
+  /**
+   * Bring over the queue another player left on the server, on its own.
+   *
+   * Off by default: what it does when it fires is replace the queue on this
+   * device, and a queue that changes without being asked is worse than one
+   * that has to be asked for (the ⋯ of the queue screen always can).
+   */
+  syncQueueFromServer: boolean;
   /** Accent color (hex) under the dark appearance. */
   accentColor: string;
   /** The same under the light one, which is a separate choice: a colour picked
@@ -912,6 +920,7 @@ interface SettingsState {
   setGridColumns: (key: GridSizeKey, value: number) => void;
   setShareExpiry: (value: ShareExpiry) => void;
   setShareDownloadable: (value: boolean) => void;
+  setSyncQueueFromServer: (value: boolean) => void;
   setAccentColor: (value: string, appearance: ThemeMode) => void;
   setThemeMode: (value: ThemePreference) => void;
   setAppFont: (value: AppFont) => void;
@@ -1025,6 +1034,7 @@ function snapshot(get: () => SettingsState) {
     gridColumns: s.gridColumns,
     shareExpiry: s.shareExpiry,
     shareDownloadable: s.shareDownloadable,
+    syncQueueFromServer: s.syncQueueFromServer,
     accentColor: s.accentColor,
     accentColorLight: s.accentColorLight,
     themeMode: s.themeMode,
@@ -1144,6 +1154,7 @@ const DEFAULTS = {
   shareExpiry: 'never' as ShareExpiry,
   // Off: the server has its own default for this and nothing was overriding it.
   shareDownloadable: false,
+  syncQueueFromServer: false,
   accentColor: DEFAULT_ACCENT,
   accentColorLight: DEFAULT_ACCENT,
   // Dark: the appearance the app was designed in. Light is opt-in.
@@ -1588,6 +1599,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setSyncQueueFromServer: (syncQueueFromServer) => {
+    set({ syncQueueFromServer });
+    persist(snapshot(get));
+  },
+
   setAccentColor: (value, appearance) => {
     set(appearance === 'light' ? { accentColorLight: value } : { accentColor: value });
     applyAccents(get().accentColor, get().accentColorLight);
@@ -1738,6 +1754,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           gridColumns: Partial<Record<GridSizeKey, number>>;
           shareExpiry: ShareExpiry;
           shareDownloadable: boolean;
+          syncQueueFromServer: boolean;
           accentColor: string;
           accentColorLight: string;
           themeMode: ThemePreference;
@@ -2080,6 +2097,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (typeof parsed.shareDownloadable === 'boolean') {
           set({ shareDownloadable: parsed.shareDownloadable });
+        }
+        if (typeof parsed.syncQueueFromServer === 'boolean') {
+          set({ syncQueueFromServer: parsed.syncQueueFromServer });
         }
         // The light accent falls back to the dark one rather than to the
         // default: every profile that picked a colour before there were two of

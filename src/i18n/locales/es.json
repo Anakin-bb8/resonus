@@ -685,5 +685,7 @@
   "That folder is already there": "Esa carpeta ya está en la lista",
   "Get the server's queue": "Traer la cola del servidor",
   "Queue brought over": "Cola traída",
-  "The server has no saved queue": "El servidor no tiene ninguna cola guardada"
+  "The server has no saved queue": "El servidor no tiene ninguna cola guardada",
+  "Pick up the queue from other players": "Recoger la cola de otros reproductores",
+  "When you open the app with nothing playing, take the queue another player left on the server if it is newer than this one. The ⋯ of the queue screen asks for it at any time.": "Al abrir la app sin nada sonando, coge la cola que otro reproductor dejó en el servidor si es más reciente que esta. El ⋯ de la pantalla de cola la pide en cualquier momento."
 }

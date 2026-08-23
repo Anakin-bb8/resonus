@@ -25,6 +25,7 @@ import { fetch as expoFetch } from 'expo/fetch';
 import { AppState } from 'react-native';
 import { create } from 'zustand';
 
+import { CLIENT_NAME } from '@/api/subsonic';
 import {
   getAlbum,
   getArtist,
@@ -2558,6 +2559,13 @@ interface StoredQueue {
   repeat?: RepeatMode;
   /** The queue was dealt when it was started (see `queueDealt`). */
   dealt?: boolean;
+  /**
+   * When this device last wrote it (ms). Only read to compare against the
+   * server's copy: what is newer decides which of the two is somebody's last
+   * word, and a phone that listened all afternoon with no connection must not
+   * be handed yesterday's queue from another player on reconnecting.
+   */
+  savedAt?: number;
 }
 
 /** Guards what comes back from disk: the file is ours, but an older version's
@@ -2578,6 +2586,10 @@ function isRepeatMode(v: unknown): v is RepeatMode {
  * is waiting on the JS thread.
  */
 let queueDirty = true;
+
+/** When this device's queue was last written, for the comparison in
+ *  `adoptNewerServerQueue`. Zero until something is saved or restored. */
+let localSavedAt = 0;
 
 /**
  * Rewrites the ids in the queue, in memory and on disk.
@@ -2632,7 +2644,9 @@ function saveQueueLocal(force = false) {
     shuffle,
     dealt: queueDealt,
     repeat,
+    savedAt: Date.now(),
   };
+  localSavedAt = payload.savedAt ?? 0;
   void setItem(key, JSON.stringify(payload));
 }
 
@@ -2653,8 +2667,70 @@ function clearQueueLocal() {
   // a restart is the kind of difference nobody can explain to themselves
   // (reported by @ztx-lyghters).
   const { shuffle, repeat } = usePlayerStore.getState();
-  const empty: StoredQueue = { queue: [], index: 0, positionSec: 0, shuffle, repeat };
+  // Dated like any other write: emptying the queue is this device's last word
+  // on it, and what decides whether another player's is newer.
+  const empty: StoredQueue = {
+    queue: [],
+    index: 0,
+    positionSec: 0,
+    shuffle,
+    repeat,
+    savedAt: Date.now(),
+  };
+  localSavedAt = empty.savedAt ?? 0;
   void setItem(key, JSON.stringify(empty));
+}
+
+/**
+ * The queue from another player, when it is the newer of the two.
+ *
+ * The copy on this device is the faithful one — it knows about downloads,
+ * radios and how the queue was started, none of which fits in a Subsonic queue
+ * — so it is what comes back on a cold start and the server's is only a backup
+ * for a device that has none. That left no way in for the thing people
+ * actually want from this: leaving an album half played on the computer and
+ * finding it here.
+ *
+ * Two conditions, and both matter. `changedBy` says who wrote the server's copy
+ * last, and if it was us there is nothing there we do not already have. The
+ * timestamps say whether their copy is newer than this device's last word,
+ * which is what protects an afternoon of listening with no connection —
+ * nothing was pushed, but the queue here was still being written down.
+ */
+let lastAdoptCheck = 0;
+/** When the app last left the foreground, so a quick trip to another app is
+ *  not treated as somebody coming back from a different player. */
+let wentAway = 0;
+
+async function adoptNewerServerQueue(): Promise<void> {
+  if (!useSettings.getState().syncQueueFromServer) return;
+  const { auth, offline } = useAuthStore.getState();
+  if (!auth || offline) return;
+  const before = usePlayerStore.getState();
+  // Somebody is already listening: their queue is not up for replacing.
+  if (before.isPlaying) return;
+  // Coming back to the app is a common thing to do, and what this asks for is
+  // the whole queue with the metadata of every song in it — a few hundred
+  // kilobytes of JSON parsed on the thread that draws. Once a minute, and only
+  // after a while away, is as often as anybody changes players.
+  if (Date.now() - lastAdoptCheck < 60_000) return;
+  lastAdoptCheck = Date.now();
+  let saved;
+  try {
+    saved = await getPlayQueue(auth);
+  } catch {
+    return;
+  }
+  if (!saved || saved.entries.length === 0) return;
+  if (!saved.changedBy || saved.changedBy === CLIENT_NAME) return;
+  // A server that does not date its queue cannot be shown to be newer, and
+  // guessing here is how somebody loses what they were listening to.
+  if (!saved.changed || !localSavedAt || saved.changed <= localSavedAt) return;
+  const now = usePlayerStore.getState();
+  // Anything that happened while the server was answering wins: a tap, a track
+  // change, the queue being emptied.
+  if (now.isPlaying || now.queue !== before.queue || now.index !== before.index) return;
+  await usePlayerStore.getState().restoreFromServer(true);
 }
 
 // ── Queue sync with server (savePlayQueue/getPlayQueue) ─────────────────────
@@ -2739,6 +2815,7 @@ function attachAppState() {
       // not force a queue rewrite: minimizing the app should not touch the
       // current Sonos transport state.
       syncQueueNow(true, false);
+      wentAway = Date.now();
       return;
     }
     // Back to foreground. The native `playbackStatusUpdate` heartbeat that feeds
@@ -2766,6 +2843,12 @@ function attachAppState() {
       const song = currentSong(usePlayerStore.getState());
       if (song && lockOwner === p) applyLockScreen(p, song);
     }
+    // And whatever was left on another player while this one was in a pocket.
+    // Coming back is the moment that matters for it: a phone rarely starts
+    // cold, so leaving this to the opening would mean it almost never ran.
+    // Not for a trip to another app and back, though: changing players takes
+    // longer than that, and this is a request.
+    if (Date.now() - wentAway > 30_000) void adoptNewerServerQueue();
   });
 }
 
@@ -3820,6 +3903,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       return false;
     }
     if (!saved || !Array.isArray(saved.queue)) return false;
+    // What the comparison with the server's copy is made against.
+    localSavedAt = saved.savedAt ?? 0;
     // Saved empty queue = the user emptied it on purpose: nothing to
     // restore, but the server backup should also not enter. How they were
     // listening does come back: it outlived the queue while the app was open,
@@ -3885,7 +3970,15 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     // last thing the opening waits for.
     await timed('boot queue', async () => {
       const handled = await get().restoreFromStorage();
-      if (!handled && get().queue.length === 0) await get().restoreFromServer();
+      if (!handled && get().queue.length === 0) {
+        await get().restoreFromServer();
+        return;
+      }
+      // Not awaited, and not now: it is a whole queue coming down the wire and
+      // the first screens are asking for what they draw (#50). It replaces this
+      // one only if it turns out to be newer, and only while nobody has started
+      // listening here.
+      setTimeout(() => void adoptNewerServerQueue(), 4000);
     });
   },
 
