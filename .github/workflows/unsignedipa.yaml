@@ -1,0 +1,74 @@
+name: Build unsigned iOS IPA
+
+# Trigger manuale dalla tab "Actions" del repo (Run workflow)
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install JS dependencies
+        run: npm ci
+
+      # Genera la cartella ios/ nativa a partire dal progetto Expo managed.
+      # ATTENZIONE: se il tuo progetto è già "bare" e hai modifiche manuali
+      # dentro ios/, RIMUOVI questo step (e --clean) per non sovrascriverle.
+      - name: Generate native iOS project (expo prebuild)
+        run: npx expo prebuild --platform ios --clean --no-install
+
+      - name: Install CocoaPods dependencies
+        working-directory: ios
+        run: pod install --repo-update
+
+      # Trova automaticamente workspace e scheme, senza doverli scrivere a mano
+      - name: Locate workspace and scheme
+        id: xcode_info
+        working-directory: ios
+        run: |
+          WORKSPACE=$(find . -maxdepth 1 -name "*.xcworkspace" | head -n1 | sed 's|^\./||')
+          SCHEME=$(xcodebuild -list -workspace "$WORKSPACE" -json | jq -r '.workspace.schemes[0]')
+          echo "workspace=$WORKSPACE" >> "$GITHUB_OUTPUT"
+          echo "scheme=$SCHEME" >> "$GITHUB_OUTPUT"
+          echo "Trovati -> Workspace: $WORKSPACE | Scheme: $SCHEME"
+
+      # Compila e archivia SENZA firma: nessun certificato, nessun account Apple coinvolto
+      - name: Build unsigned archive
+        working-directory: ios
+        run: |
+          xcodebuild archive \
+            -workspace "${{ steps.xcode_info.outputs.workspace }}" \
+            -scheme "${{ steps.xcode_info.outputs.scheme }}" \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath "$PWD/build/App.xcarchive" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            DEVELOPMENT_TEAM=""
+
+      # L'archivio contiene già il .app compilato: basta impacchettarlo
+      # in Payload/ e zippare per ottenere un .ipa (non firmato)
+      - name: Package unsigned IPA
+        working-directory: ios
+        run: |
+          cd build/App.xcarchive/Products
+          mv Applications Payload
+          zip -r "$GITHUB_WORKSPACE/unsigned-app.ipa" Payload
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-app-ipa
+          path: unsigned-app.ipa
+          retention-days: 14
