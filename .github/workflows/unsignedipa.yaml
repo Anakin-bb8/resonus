@@ -21,8 +21,15 @@ jobs:
           corepack enable
           corepack prepare pnpm@9 --activate
 
+      - name: Remove invalid workspace file and install
+        run: |
+          rm -f pnpm-workspace.yaml
+          pnpm install --frozen-lockfile
+
+
+
       - name: Install JS dependencies
-        run: pnpm install --frozen-lockfile --no-workspaces
+        run: pnpm install --frozen-lockfile
 
 
       - name: Expo prebuild (iOS)
