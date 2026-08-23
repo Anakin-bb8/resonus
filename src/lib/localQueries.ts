@@ -13,9 +13,11 @@ import { queryClient } from '@/lib/query';
 import { deleteItem, getItem, setItem } from '@/lib/storage';
 import { activeServerDir, getDownloadShelf, getDownloadsCatalog } from '@/store/downloads';
 import * as Cat from './downloadsDb';
+import * as LocalCat from './localDb';
 import {
   clearLocalCatalog,
   clearLocalCatalogDisk,
+  ensureScanned,
   getLocalCatalog,
   hashKey,
   loadDeviceSongs,
@@ -109,6 +111,7 @@ export async function unstarLocal(id: string, type?: StarType) {
  */
 export function resetLocalLoading(): void {
   loadingPromise = null;
+  scanning = null;
 }
 
 /** Clears the favorites cache (on source change). */
@@ -227,6 +230,43 @@ function downloadsDir(): string | null {
   return activeServerDir();
 }
 
+/** For the handful of queries that mean "all of them": SQLite takes a limit
+ *  and there is no library this does not cover. */
+const ALL_ROWS = 1_000_000;
+
+/** A scan in progress, so that six screens asking at once on a cold start
+ *  produce one of them and not six. */
+let scanning: Promise<{ src: LocalCat.Source; scanned: boolean }> | null = null;
+
+/**
+ * The local profile's catalog, as a database to ask, scanning the source first
+ * if it has never been read.
+ *
+ * Null when this is not the local profile: a server account with no connection
+ * browses its downloads, which is a different catalog next door, and a profile
+ * that has not been told where its music is has nothing to ask.
+ *
+ * The twin of `downloadsDir` above, and the queries below use them the same
+ * way: the database answers with the rows a screen draws, and the catalog in
+ * memory is what is left for when it cannot.
+ */
+async function localSrc(): Promise<LocalCat.Source | null> {
+  const state = useAuthStore.getState();
+  if (state.auth || !state.offlineSource) return null;
+  const { mode, uris } = sourceInfo();
+  if (mode === 'folder' && uris.length === 0) return null;
+  if (!scanning) {
+    scanning = ensureScanned(mode, uris).finally(() => {
+      scanning = null;
+    });
+  }
+  const { src, scanned } = await scanning;
+  // A library just appeared where there was none, so whatever the screens have
+  // cached predates the music existing.
+  if (scanned) void queryClient.invalidateQueries();
+  return src;
+}
+
 /**
  * Rescans the local source: discards the cached catalog (and the covers) and
  * rebuilds it by reading the files' tags again. Useful after adding or
@@ -236,7 +276,11 @@ export async function rescan(): Promise<void> {
   clearLocalCatalog();
   await clearLocalCatalogDisk();
   loadingPromise = null;
-  await ensureCatalog();
+  scanning = null;
+  // Through the database on the local profile, which is what reads it from now
+  // on: `ensureCatalog` would rebuild the whole library in memory to answer a
+  // question nobody asked.
+  if (!(await localSrc())) await ensureCatalog();
 }
 
 // An album and an artist with nothing to go by are grouped under a name that
@@ -269,6 +313,65 @@ function toArtist(local: CatArtist): Artist {
   };
 }
 
+/** Our list types in the local catalog's own words. The two that are missing
+ *  are not orders at all: they are this phone's history and play counts. */
+const LOCAL_ALBUM_ORDER: Record<string, LocalCat.AlbumOrder> = {
+  newest: 'newest',
+  byYear: 'year',
+  random: 'random',
+  alphabeticalByArtist: 'artist',
+  alphabeticalByName: 'name',
+};
+
+/**
+ * The albums this phone has played, from the stores that record it rather than
+ * from the catalog: the history and the counter know the ids, and the database
+ * is then asked only for those rows.
+ */
+async function playedAlbums(
+  src: LocalCat.Source,
+  type: 'recent' | 'frequent',
+): Promise<CatAlbum[]> {
+  const weight = new Map<string, number>();
+  if (type === 'recent') {
+    // Only what has actually played, like the server does; with an empty
+    // history the list is empty and the Home section does not show.
+    for (const e of usePlayHistory.getState().entries) {
+      const id = e.song.albumId;
+      if (id && (weight.get(id) ?? 0) < e.playedAt) weight.set(id, e.playedAt);
+    }
+  } else {
+    const counts = usePlayCounts.getState().counts;
+    const played = Object.keys(counts).filter((id) => counts[id] > 0);
+    const songs = await LocalCat.songsByIds(src, played);
+    for (const [id, song] of songs) {
+      if (song.albumId) weight.set(song.albumId, (weight.get(song.albumId) ?? 0) + counts[id]);
+    }
+  }
+  const ids = [...weight.keys()].sort((a, b) => (weight.get(b) ?? 0) - (weight.get(a) ?? 0));
+  const rows = await LocalCat.albumsByIds<CatAlbum>(src, ids);
+  return ids.map((id) => rows.get(id)).filter((a): a is CatAlbum => !!a);
+}
+
+/** The songs this phone has played, on the same terms as `playedAlbums`. */
+async function playedSongs(
+  src: LocalCat.Source,
+  type: 'recent' | 'frequent',
+): Promise<Song[]> {
+  const weight = new Map<string, number>();
+  if (type === 'recent') {
+    for (const e of usePlayHistory.getState().entries) {
+      if ((weight.get(e.song.id) ?? 0) < e.playedAt) weight.set(e.song.id, e.playedAt);
+    }
+  } else {
+    const counts = usePlayCounts.getState().counts;
+    for (const [id, n] of Object.entries(counts)) if (n > 0) weight.set(id, n);
+  }
+  const ids = [...weight.keys()].sort((a, b) => (weight.get(b) ?? 0) - (weight.get(a) ?? 0));
+  const rows = await LocalCat.songsByIds(src, ids);
+  return ids.map((id) => rows.get(id)).filter((song): song is Song => !!song);
+}
+
 export async function getAlbumList(type: string, size = 20, offset = 0): Promise<Album[]> {
   // The orders that are the database's to answer. "Recently played" and "most
   // played" are not: they come from this phone's own history and counts, which
@@ -282,6 +385,18 @@ export async function getAlbumList(type: string, size = 20, offset = 0): Promise
   if (dir && (order || !inMemory)) {
     try {
       const rows = await Cat.albumsPage(dir, order ?? 'name', size, offset);
+      return rows.map(toAlbum);
+    } catch {
+      // Falls through to the catalog in memory.
+    }
+  }
+  const src = await localSrc();
+  if (src) {
+    try {
+      const local = LOCAL_ALBUM_ORDER[type];
+      const rows = local
+        ? await LocalCat.albumsPage<CatAlbum>(src, local, size, offset)
+        : (await playedAlbums(src, type as 'recent' | 'frequent')).slice(offset, offset + size);
       return rows.map(toAlbum);
     } catch {
       // Falls through to the catalog in memory.
@@ -345,6 +460,16 @@ export async function getAlbumList(type: string, size = 20, offset = 0): Promise
 
 /** Every album in the local catalog, sorted alphabetically. */
 export async function getAllAlbums(): Promise<Album[]> {
+  const src = await localSrc();
+  if (src) {
+    try {
+      // No paging here on purpose: this is the one caller that wants the lot,
+      // and it is the grid the local library opens on.
+      return (await LocalCat.albumsPage<CatAlbum>(src, 'name', ALL_ROWS, 0)).map(toAlbum);
+    } catch {
+      // Falls through to the catalog in memory.
+    }
+  }
   const c = await ensureCatalog();
   if (!c) return [];
   return [...c.albums].sort((a, b) => a.name.localeCompare(b.name)).map(toAlbum);
@@ -367,6 +492,29 @@ export async function getAlbum(albumId: string): Promise<{ album: Album; songs: 
                 artist: first.artist,
                 songCount: songs.length,
                 coverArt: albumId,
+              },
+          songs,
+        };
+      }
+    } catch {
+      // Falls through to the catalog in memory.
+    }
+  }
+  const src = await localSrc();
+  if (src) {
+    try {
+      const [songs, album] = await Promise.all([
+        LocalCat.albumSongs(src, albumId),
+        LocalCat.albumById<CatAlbum>(src, albumId),
+      ]);
+      if (songs.length > 0 || album) {
+        return {
+          album: album
+            ? toAlbum(album)
+            : {
+                id: albumId,
+                name: songs[0]?.album || tg('Unknown album'),
+                songCount: songs.length,
               },
           songs,
         };
@@ -421,6 +569,14 @@ export async function getArtists(): Promise<Artist[]> {
       // Falls through to the catalog in memory.
     }
   }
+  const src = await localSrc();
+  if (src) {
+    try {
+      return (await LocalCat.allArtists<CatArtist>(src)).map(toArtist);
+    } catch {
+      // Falls through to the catalog in memory.
+    }
+  }
   const c = await ensureCatalog();
   if (!c) return [];
   return c.artists.map(toArtist);
@@ -465,6 +621,25 @@ export async function getArtist(artistId: string): Promise<{ artist: Artist; alb
             albumCount: rows.length,
           },
           albums: rows.map(toAlbum),
+        };
+      }
+    } catch {
+      // Falls through to the catalog in memory.
+    }
+  }
+  const src = await localSrc();
+  if (src) {
+    try {
+      const [albums, artist] = await Promise.all([
+        LocalCat.artistAlbums<CatAlbum>(src, artistId),
+        LocalCat.artistById<CatArtist>(src, artistId),
+      ]);
+      if (albums.length > 0 || artist) {
+        return {
+          artist: artist
+            ? toArtist(artist)
+            : { id: artistId, name: albums[0]?.artist || artistId, albumCount: albums.length },
+          albums: albums.map(toAlbum),
         };
       }
     } catch {
@@ -516,6 +691,19 @@ export async function serverArtistId(artistId: string): Promise<string | undefin
 
 /** Albums by other artists containing songs by this one ("Appears on"). */
 export async function getAppearsOn(artistId: string): Promise<GuestAlbum[]> {
+  const src = await localSrc();
+  if (src) {
+    try {
+      const ids = await LocalCat.albumIdsOfArtist(src, artistId);
+      const rows = await LocalCat.albumsByIds<CatAlbum>(src, ids);
+      return [...rows.values()]
+        // The album's own artist is compared here, so there is no ambiguity.
+        .filter((a) => normKey(a.artist || UNKNOWN_ARTIST) !== artistId)
+        .map((a) => ({ ...toAlbum(a), confirmed: true }));
+    } catch {
+      // Falls through to the catalog in memory.
+    }
+  }
   const c = await ensureCatalog();
   if (!c) return [];
   const albumIds = new Set(
@@ -552,6 +740,20 @@ export async function getSongList(
   if (dir && order) {
     try {
       return await Cat.songsPage(dir, order, count, offset);
+    } catch {
+      // Falls through to the catalog in memory.
+    }
+  }
+  const src = await localSrc();
+  if (src) {
+    try {
+      const local = ({ alpha: 'title', added: 'newest', random: 'random', server: 'server' } as const)[
+        sort as 'alpha' | 'added' | 'random' | 'server'
+      ];
+      const rows = local
+        ? await LocalCat.songsPage(src, local, count, offset)
+        : (await playedSongs(src, sort as 'recent' | 'frequent')).slice(offset, offset + count);
+      return rows;
     } catch {
       // Falls through to the catalog in memory.
     }
@@ -600,6 +802,14 @@ export async function getSongList(
 
 /** Most played songs according to the local play counter. */
 export async function getMostPlayedSongs(size = 50): Promise<Song[]> {
+  const src = await localSrc();
+  if (src) {
+    try {
+      return (await playedSongs(src, 'frequent')).slice(0, size);
+    } catch {
+      // Falls through to the catalog in memory.
+    }
+  }
   const c = await ensureCatalog();
   if (!c) return [];
   const counts = usePlayCounts.getState().counts;
@@ -617,6 +827,14 @@ export async function getMostPlayedSongs(size = 50): Promise<Song[]> {
  * filter by here.
  */
 export async function getRandomSongs(size = 200): Promise<Song[]> {
+  const src = await localSrc();
+  if (src) {
+    try {
+      return await LocalCat.songsPage(src, 'random', size, 0);
+    } catch {
+      // Falls through to the catalog in memory.
+    }
+  }
   const c = await ensureCatalog();
   if (!c) return [];
   // Fisher-Yates over a copy: `c.songs` is the live catalog.
@@ -629,11 +847,24 @@ export async function getRandomSongs(size = 200): Promise<Song[]> {
 }
 
 export async function getTopSongs(artist: string, count = 10): Promise<Song[]> {
+  const counts = usePlayCounts.getState().counts;
+  const src = await localSrc();
+  if (src) {
+    try {
+      // Their songs first and the ranking here: the counter is a store and not
+      // a column, so the database has nothing to sort them by.
+      const songs = await LocalCat.songsByArtist(src, artist, ALL_ROWS);
+      return songs
+        .sort((a, b) => (counts[b.id] ?? 0) - (counts[a.id] ?? 0))
+        .slice(0, count);
+    } catch {
+      // Falls through to the catalog in memory.
+    }
+  }
   const c = await ensureCatalog();
   if (!c) return [];
   // By local play counts, the way the server sorts its own; the sort is stable,
   // so with no plays the catalog's previous order is preserved.
-  const counts = usePlayCounts.getState().counts;
   return c.songs
     .filter((s) => s.artist === artist)
     .sort((a, b) => (counts[b.id] ?? 0) - (counts[a.id] ?? 0))
@@ -719,10 +950,32 @@ function toPlaylist(rec: LocalPlaylistRec, songs: Song[]): Playlist {
   };
 }
 
+/**
+ * The songs the local playlists name, by id.
+ *
+ * A playlist is a list of ids and nothing else, so this is what turns it into
+ * music. From the database when there is one, which asks for the songs the
+ * playlists hold instead of the library they came from; a song that is no
+ * longer in the source simply does not come back and the playlist is shorter.
+ */
+async function playlistSongs(): Promise<Map<string, Song>> {
+  const src = await localSrc();
+  if (src) {
+    try {
+      const list = await loadPlaylists();
+      const ids = [...new Set(list.flatMap((p) => p.songIds))];
+      return await LocalCat.songsByIds(src, ids);
+    } catch {
+      // Falls through to the catalog in memory.
+    }
+  }
+  const c = await ensureCatalog();
+  return new Map((c?.songs ?? []).map((song) => [song.id, song]));
+}
+
 /** The local playlists (in creation order, newest first). */
 export async function getPlaylists(): Promise<Playlist[]> {
-  const [list, c] = await Promise.all([loadPlaylists(), ensureCatalog()]);
-  const byId = new Map((c?.songs ?? []).map((s) => [s.id, s]));
+  const [list, byId] = await Promise.all([loadPlaylists(), playlistSongs()]);
   return list
     .slice()
     .sort((a, b) => b.createdAt - a.createdAt)
@@ -730,9 +983,8 @@ export async function getPlaylists(): Promise<Playlist[]> {
 }
 
 export async function getPlaylist(id: string): Promise<{ playlist: Playlist; songs: Song[] }> {
-  const [list, c] = await Promise.all([loadPlaylists(), ensureCatalog()]);
+  const [list, byId] = await Promise.all([loadPlaylists(), playlistSongs()]);
   const rec = list.find((p) => p.id === id);
-  const byId = new Map((c?.songs ?? []).map((s) => [s.id, s]));
   const songs = (rec?.songIds ?? []).map((sid) => byId.get(sid)).filter(Boolean) as Song[];
   return {
     playlist: rec ? toPlaylist(rec, songs) : { id, name: id, songCount: 0 },
@@ -862,8 +1114,33 @@ function newestFirst<T>(ids: string[], items: T[], id: (x: T) => string): T[] {
 }
 
 export async function getStarred(): Promise<Starred> {
-  const c = await ensureCatalog();
   const favs = await loadFavs();
+  const src = await localSrc();
+  if (src) {
+    try {
+      // The three lists are ids in a store, so the database is asked for those
+      // rows and the order stays the store's: last starred, first shown.
+      const [songs, albums, artists] = await Promise.all([
+        LocalCat.songsByIds(src, favs.songs),
+        LocalCat.albumsByIds<CatAlbum>(src, favs.albums),
+        LocalCat.artistsByIds<CatArtist>(src, favs.artists),
+      ]);
+      const inOrder = <T>(ids: string[], rows: Map<string, T>): T[] =>
+        ids
+          .slice()
+          .reverse()
+          .map((id) => rows.get(id))
+          .filter((row): row is T => !!row);
+      return {
+        songs: inOrder(favs.songs, songs),
+        albums: inOrder(favs.albums, albums).map(toAlbum),
+        artists: inOrder(favs.artists, artists).map(toArtist),
+      };
+    } catch {
+      // Falls through to the catalog in memory.
+    }
+  }
+  const c = await ensureCatalog();
   if (!c) return { songs: [], albums: [], artists: [] };
   return {
     songs: newestFirst(favs.songs, c.songs, (s) => s.id),
@@ -911,7 +1188,73 @@ function ranked<T>(items: T[], score: (x: T) => number | null, name: (x: T) => s
  * a song title decided who showed up in the artists row and in what order —
  * nothing like what the server returns for the same query (issue #55).
  */
+/**
+ * How many rows each kind brings back before the ranking picks from them.
+ *
+ * Deliberately far above `SEARCH_MAX`: the database can only tell what contains
+ * the text, and which of those comes first is decided here (a name that starts
+ * with the query beats one that merely holds it). A tight limit would hand that
+ * decision to whatever the alphabet put first.
+ */
+const SEARCH_POOL = 300;
+
 export async function search(query: string): Promise<SearchResult> {
+  const q0 = norm(query.trim());
+  const src = q0 ? await localSrc() : null;
+  if (src) {
+    try {
+      const text = query.trim();
+      const [songs, named, artistsNamed, hits] = await Promise.all([
+        LocalCat.searchSongs(src, text, SEARCH_POOL),
+        LocalCat.searchAlbums<CatAlbum>(src, text, SEARCH_POOL),
+        LocalCat.searchArtists<CatArtist>(src, text, SEARCH_POOL),
+        LocalCat.albumIdsOfMatchingSongs(src, text, SEARCH_POOL),
+      ]);
+      // The albums and artists reached through a matching SONG are not in the
+      // rows above — they match nothing themselves — so they are fetched by the
+      // ids those songs carry and join the pool at their own tier.
+      const [held, credited] = await Promise.all([
+        LocalCat.albumsByIds<CatAlbum>(src, hits.albumIds),
+        LocalCat.artistsByIds<CatArtist>(src, hits.artistKeys),
+      ]);
+      const withAlbumHit = named.map((a) => normKey(a.artist || UNKNOWN_ARTIST));
+      const byAlbum = await LocalCat.artistsByIds<CatArtist>(src, withAlbumHit);
+      const albumPool = [...new Map([...named, ...held.values()].map((a) => [a.id, a])).values()];
+      const artistPool = [
+        ...new Map(
+          [...artistsNamed, ...byAlbum.values(), ...credited.values()].map((a) => [a.id, a]),
+        ).values(),
+      ];
+      const albumsWithHit = new Set(hits.albumIds);
+      const artistsWithSongHit = new Set(hits.artistKeys);
+      const artistsWithAlbumHit = new Set(withAlbumHit);
+      return {
+        artists: ranked(
+          artistPool,
+          (a) =>
+            rank(a.name, q0) ??
+            (artistsWithAlbumHit.has(a.id) ? 2 : artistsWithSongHit.has(a.id) ? 3 : null),
+          (a) => a.name,
+        ).map(toArtist),
+        albums: ranked(
+          albumPool,
+          (a) =>
+            rank(a.name, q0) ??
+            (rank(a.artist, q0) !== null ? 2 : albumsWithHit.has(a.id) ? 3 : null),
+          (a) => a.name,
+        ).map(toAlbum),
+        songs: ranked(
+          songs,
+          (song) =>
+            rank(song.title, q0) ??
+            (rank(song.artist, q0) !== null || rank(song.album, q0) !== null ? 2 : null),
+          (song) => song.title,
+        ),
+      };
+    } catch {
+      // Falls through to the catalog in memory.
+    }
+  }
   const c = await ensureCatalog();
   const q = norm(query.trim());
   if (!c || !q) return { artists: [], albums: [], songs: [] };
@@ -968,6 +1311,14 @@ export async function searchAlbums(query: string, count = 50): Promise<Album[]> 
       // Falls through to the catalog in memory.
     }
   }
+  const src = query.trim() ? await localSrc() : null;
+  if (src) {
+    try {
+      return (await LocalCat.searchAlbums<CatAlbum>(src, query.trim(), count)).map(toAlbum);
+    } catch {
+      // Falls through to the catalog in memory.
+    }
+  }
   const c = await ensureCatalog();
   if (!c) return [];
   const q = query.toLowerCase();
@@ -987,6 +1338,14 @@ export async function searchSongs(query: string, count = 50): Promise<Song[]> {
   if (dir && query.trim()) {
     try {
       return await Cat.searchSongs(dir, query.trim(), count);
+    } catch {
+      // Falls through to the catalog in memory.
+    }
+  }
+  const src = query.trim() ? await localSrc() : null;
+  if (src) {
+    try {
+      return await LocalCat.searchSongs(src, query.trim(), count);
     } catch {
       // Falls through to the catalog in memory.
     }

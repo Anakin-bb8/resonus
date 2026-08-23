@@ -18,6 +18,7 @@ Releases before 0.2.1 are only listed on the
 
 ### Changed
 
+- The local profile no longer keeps its library in memory: it asks its catalog for the rows a screen is about to draw, the way a server's downloads already did, so opening the app and moving around it stop costing what the whole library costs.
 - The local profile no longer stops at five thousand songs per folder: what is left is a guard against a scan pointed at a whole card, far above any music library, and a scan that ever reaches it says so in Diagnostics instead of quietly leaving the rest out.
 - Folders are followed ten levels deep instead of six, so a library filed under more folders than usual is read whole.
 

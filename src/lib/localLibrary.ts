@@ -74,6 +74,10 @@ export interface LocalCatalog {
 /** In-memory cache, keyed by source. */
 const catalogCache = new Map<string, LocalCatalog>();
 
+/** Sources whose database is scanned, keyed up and in the cover index. Emptied
+ *  alongside the index it stands for (see `clearLocalCatalog`). */
+const ready = new Set<string>();
+
 function cacheKey(sourceMode: string, uri?: string): string {
   return uri ? `${sourceMode}:${uri}` : sourceMode;
 }
@@ -650,7 +654,7 @@ export async function loadDeviceSongs(): Promise<Song[]> {
   }
 
   catalogCache.set(key, catalog);
-  void saveCatalogToDisk('device', undefined, catalog);
+  await saveCatalogToDisk('device', undefined, catalog);
   return songs;
 }
 
@@ -705,7 +709,9 @@ export async function loadFolderSongs(uris: string[]): Promise<Song[]> {
     useScanProgress.getState().done();
   }
   catalogCache.set(key, catalog);
-  void saveCatalogToDisk('folder', setKey, catalog);
+  // Awaited, unlike before: what reads the catalog now is the database, and a
+  // write still in flight is a library that is briefly not there.
+  await saveCatalogToDisk('folder', setKey, catalog);
   return catalog.songs;
 }
 
@@ -830,7 +836,7 @@ async function scanFolder(treeUri: string, closeWhenDone = true): Promise<LocalC
   }
 
   catalogCache.set(key, catalog);
-  void saveCatalogToDisk('folder', treeUri, catalog);
+  await saveCatalogToDisk('folder', treeUri, catalog);
   return catalog;
 }
 
@@ -838,6 +844,75 @@ async function scanFolder(treeUri: string, closeWhenDone = true): Promise<LocalC
 
 export function getLocalCatalog(sourceMode: string, uri?: string): LocalCatalog | undefined {
   return catalogCache.get(cacheKey(sourceMode, uri));
+}
+
+/** Which database a source's catalog is in. */
+export function localSource(sourceMode: string, uri?: string): Db.Source {
+  return { dir: CATALOG_DIR, name: dbName(sourceMode, uri) };
+}
+
+/**
+ * The current source as a database to ask, scanning it first if it has never
+ * been read.
+ *
+ * This is what the local profile leans on instead of holding its library in
+ * memory: past here the screens ask for the twenty rows they draw. The catalog
+ * the scan built is dropped as soon as it is written down, since keeping it
+ * would be the very thing this stops doing.
+ */
+export async function ensureScanned(
+  sourceMode: string,
+  uris: string[],
+): Promise<{ src: Db.Source; scanned: boolean }> {
+  const key = sourceMode === 'folder' ? folderSetKey(uris) : undefined;
+  const src = localSource(sourceMode, key);
+  // Asked once per source and not before every list a screen draws: past the
+  // first time, a query is the only round trip.
+  if (ready.has(src.name)) return { src, scanned: false };
+  if (await Db.hasSongs(src)) {
+    await fillArtistKeys(src);
+    await loadCoverIndex(src);
+    ready.add(src.name);
+    return { src, scanned: false };
+  }
+  if (sourceMode === 'folder') await loadFolderSongs(uris);
+  else await loadDeviceSongs();
+  catalogCache.delete(cacheKey(sourceMode, key));
+  await fillArtistKeys(src);
+  ready.add(src.name);
+  return { src, scanned: true };
+}
+
+/**
+ * The covers of a catalog that is on disk, into the index.
+ *
+ * A scan fills it as it goes; a catalog read back has nobody to fill it, and
+ * the songs then reach the screens with an album id that resolves to nothing.
+ * Only the albums and the artists are read, which is what the index is made of.
+ */
+async function loadCoverIndex(src: Db.Source): Promise<void> {
+  const [albums, artists] = await Promise.all([
+    Db.coverRows<LocalAlbum>(src, 'albums'),
+    Db.coverRows<LocalArtist>(src, 'artists'),
+  ]);
+  for (const a of albums) registerCover(a.id, a.coverUri);
+  for (const a of artists) registerCover(a.id, a.coverUri);
+}
+
+/**
+ * The artist id, in the column the queries look it up by.
+ *
+ * A scanned song and a scanned album carry the artist's NAME and not their id:
+ * the id is that name normalised, and it is worked out wherever it is needed
+ * (see `groupByArtist`). Nothing wrote it down, so the column it belongs in was
+ * empty and an artist's records could only be found by walking the library —
+ * which is the walk all of this is here to stop doing. It is filled once per
+ * catalog, old ones included.
+ */
+async function fillArtistKeys(src: Db.Source): Promise<void> {
+  const key = (artist: string | null) => normKey(artist || UNKNOWN_ARTIST);
+  await Db.backfillColumn(src, 'songs', 'artist_key', 'artist', key);
+  await Db.backfillColumn(src, 'albums', 'artist_key', 'artist', key);
 }
 
 // ── The cover index ───────────────────────────────────────────────────────
@@ -870,6 +945,8 @@ export function localCoverUrl(id: string | undefined): string | undefined {
 export function clearLocalCatalog(): void {
   catalogCache.clear();
   coverIndex.clear();
+  // The index is what `ready` says is loaded, so it stops being true here.
+  ready.clear();
 }
 
 // ── Keeping the catalog on disk ─────────────────────────────────────────────
@@ -996,6 +1073,7 @@ async function migrateCatalogFile(
 
 /** Deletes the catalog kept on disk, which is what scanning again does. */
 export async function clearLocalCatalogDisk(): Promise<void> {
+  ready.clear();
   try {
     // The handles first: a database whose file is deleted underneath it keeps
     // answering from a file nobody can see any more.
