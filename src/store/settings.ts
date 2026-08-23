@@ -264,6 +264,16 @@ export type CardBackground = 'none' | 'color';
 export type CoverTapAction = 'none' | 'screen' | 'inline';
 
 /**
+ * What tapping the cover twice does (#156).
+ *
+ * Off by default, and not only out of caution: with this on, a single tap has
+ * to wait to find out whether a second one is coming, so the tap that is
+ * already there gets slower for everybody who turns this on. That is a price
+ * worth asking about rather than charging.
+ */
+export type CoverDoubleTapAction = 'none' | 'playPause' | 'favorite';
+
+/**
  * Where lyrics come from:
  * - 'local':  prefer server / .lrc / USLT, fall back to LRCLIB online.
  * - 'online': prefer LRCLIB online search, fall back to local.
@@ -725,6 +735,8 @@ interface SettingsState {
   /** What tapping the player cover does (nothing / lyrics screen /
    *  lyrics in place of the cover). */
   coverTapAction: CoverTapAction;
+  /** What tapping it twice does (nothing / play or pause / favourite). */
+  coverDoubleTapAction: CoverDoubleTapAction;
   /** Marquee: long titles in the player auto-scroll. */
   marqueeTitles: boolean;
   /** Player bottom buttons (queue and devices). */
@@ -881,6 +893,7 @@ interface SettingsState {
   setShowLyricsCard: (value: boolean) => void;
   setShowArtistCard: (value: boolean) => void;
   setCoverTapAction: (value: CoverTapAction) => void;
+  setCoverDoubleTapAction: (value: CoverDoubleTapAction) => void;
   setMarqueeTitles: (value: boolean) => void;
   setShowQueueButton: (value: boolean) => void;
   setShowDevicesButton: (value: boolean) => void;
@@ -1000,6 +1013,7 @@ function snapshot(get: () => SettingsState) {
     showLyricsCard: s.showLyricsCard,
     showArtistCard: s.showArtistCard,
     coverTapAction: s.coverTapAction,
+    coverDoubleTapAction: s.coverDoubleTapAction,
     marqueeTitles: s.marqueeTitles,
     showQueueButton: s.showQueueButton,
     showDevicesButton: s.showDevicesButton,
@@ -1104,6 +1118,8 @@ const DEFAULTS = {
   showArtistCard: false,
   // By default, tapping the cover opens the lyrics screen (as always).
   coverTapAction: 'screen' as CoverTapAction,
+  // Nothing: see `CoverDoubleTapAction`.
+  coverDoubleTapAction: 'none' as CoverDoubleTapAction,
   marqueeTitles: true,
   showQueueButton: true,
   showDevicesButton: true,
@@ -1415,6 +1431,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setCoverDoubleTapAction: (coverDoubleTapAction) => {
+    set({ coverDoubleTapAction });
+    persist(snapshot(get));
+  },
+
   setCoverTapAction: (coverTapAction) => {
     set({ coverTapAction });
     persist(snapshot(get));
@@ -1717,6 +1738,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           showLyricsCard: boolean;
           showArtistCard: boolean;
           coverTapAction: CoverTapAction;
+          coverDoubleTapAction: CoverDoubleTapAction;
           marqueeTitles: boolean;
           showQueueButton: boolean;
           showDevicesButton: boolean;
@@ -1956,6 +1978,13 @@ export const useSettings = create<SettingsState>((set, get) => ({
           parsed.coverTapAction === 'inline'
         ) {
           set({ coverTapAction: parsed.coverTapAction });
+        }
+        if (
+          parsed.coverDoubleTapAction === 'none' ||
+          parsed.coverDoubleTapAction === 'playPause' ||
+          parsed.coverDoubleTapAction === 'favorite'
+        ) {
+          set({ coverDoubleTapAction: parsed.coverDoubleTapAction });
         }
         if (typeof parsed.marqueeTitles === 'boolean') {
           set({ marqueeTitles: parsed.marqueeTitles });

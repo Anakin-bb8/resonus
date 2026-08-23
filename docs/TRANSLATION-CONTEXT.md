@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 681 of them.
+Every string the app can show, under the screen it shows up on. 684 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -832,6 +832,7 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
+| `A second action for the same artwork, for a hand that is not looking. With this on, a single tap waits a moment to see whether a second one is coming.` |  |
 | `Always previous track` | A value of `Previous button`: never restarts, always goes back a song |
 | `Background` | Section header over what is drawn behind the player. Its two values are `Plain` and `Blurred cover` |
 | `Blurred cover` | A value of `Background`: the album art, blurred, behind the player |
@@ -850,9 +851,11 @@ you are actually typing into, which is easier than reading it here.
 | `Lyrics source` | Where lyrics are looked for. Its values are the three `Prefer…`/`Disable…` lines |
 | `No` | A setting value meaning none or zero, not the answer to a question: no crossfade, no seek buttons |
 | `Nothing` | A value of `On cover tap`: tapping the cover does nothing |
+| `On cover double tap` | Settings > Player: what tapping the album artwork twice does |
 | `On cover tap` | What tapping the cover art in the player does. Its values are `Nothing` and `Open lyrics screen` |
 | `Open lyrics screen` | A value of `On cover tap` |
 | `Plain` | A value of `Background`: a flat colour behind the player, no picture |
+| `Play or pause` | One of its options: the same as the play button |
 | `Play the music slower or faster, keeping its pitch.` | The line under “Show speed button”, explaining it |
 | `Player` |  |
 | `Player background` | What is drawn behind the player: the blurred artwork, or a flat tint |

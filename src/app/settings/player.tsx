@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/auth';
 import { useTheme } from '@/theme';
 import {
   type CardBackground,
+  type CoverDoubleTapAction,
   type CoverTapAction,
   type LyricsSource,
   type ScreenBackground,
@@ -53,6 +54,8 @@ export default function PlayerSettings() {
   const showArtistCard = useSettings((s) => s.showArtistCard);
   const setShowArtistCard = useSettings((s) => s.setShowArtistCard);
   const coverTapAction = useSettings((s) => s.coverTapAction);
+  const coverDoubleTapAction = useSettings((s) => s.coverDoubleTapAction);
+  const setCoverDoubleTapAction = useSettings((s) => s.setCoverDoubleTapAction);
   const setCoverTapAction = useSettings((s) => s.setCoverTapAction);
   const lyricsSource = useSettings((s) => s.lyricsSource);
   const setLyricsSource = useSettings((s) => s.setLyricsSource);
@@ -119,6 +122,19 @@ export default function PlayerSettings() {
           ]}
           value={coverTapAction}
           onChange={setCoverTapAction}
+        />
+        <SelectList<CoverDoubleTapAction>
+          label={t('On cover double tap')}
+          description={t(
+            'A second action for the same artwork, for a hand that is not looking. With this on, a single tap waits a moment to see whether a second one is coming.',
+          )}
+          options={[
+            { value: 'none', label: t('Nothing') },
+            { value: 'playPause', label: t('Play or pause') },
+            { value: 'favorite', label: t('Add to favorites') },
+          ]}
+          value={coverDoubleTapAction}
+          onChange={setCoverDoubleTapAction}
         />
 
         <Text style={settingsStyles.sectionTitle}>{t('Elements')}</Text>

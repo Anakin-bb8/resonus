@@ -16,6 +16,7 @@ Releases before 0.2.1 are only listed on the
 - The theme can follow the phone's own light or dark setting, from Settings > Appearance > Theme, and changes with it while the app is open (#173).
 - The accent colour is now remembered per appearance: the swatches set the colour of the theme you are in, and switching between dark and light brings back the one chosen there (#173).
 - The queue another player left on the server can be brought over from the ⋯ of the queue screen, and taken on its own with the new switch in Settings > Playback: with it on, opening the app with nothing playing picks up that queue when it is the newer of the two.
+- Tapping the player's artwork twice can play, pause or favourite the song, from a new setting in Settings > Player that starts off (#156).
 - An album, a playlist or the favourites can be played next from their ⋯ menu, instead of only going to the end of the queue.
 
 ### Fixed
