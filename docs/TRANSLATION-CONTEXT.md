@@ -70,7 +70,6 @@ you are actually typing into, which is easier than reading it here.
 | `Open settings` | Its confirm button: goes to Android's own settings, not the app's |
 | `Pick a date…` | Opens the calendar to choose the day the link stops working |
 | `Pin to top` | Keep this at the top of its list, above everything else. `Unpin` undoes it |
-| `Play next` | Action: put this song right after the one playing, without clearing the rest |
 | `Playback stopped` | The mini player when there is nothing playing any more |
 | `Plays` | How many times the song has been played |
 | `Rate` | Verb: give it stars. Used for a song and for an artist. Not "bitrate" |
@@ -759,7 +758,6 @@ you are actually typing into, which is easier than reading it here.
 | `Navigation` | Section header: how you move around the app |
 | `Off` | A setting value meaning disabled (crossfade, normalization…) |
 | `Open the app on` | Which tab the app opens on, and comes back to after a while away |
-| `Play next` | Action: put this song right after the one playing, without clearing the rest |
 | `Quick grid` | The grid of shortcut tiles on Home |
 | `Search` | The search tab, and the action of searching |
 | `Show history button` | Whether the button that opens the listening history shows |
@@ -1024,6 +1022,7 @@ you are actually typing into, which is easier than reading it here.
 | `Offline` | The toast shown when the app falls into offline mode by itself, and the badge that says it is in it |
 | `Pause` | Read out by the screen reader for the pause button. A verb |
 | `Play` | Read out by the screen reader for the play button. A verb |
+| `Play next` | Action: put this song right after the one playing, without clearing the rest |
 | `Playing next` | The toast that says `Play next` worked. Not the same string, and not a heading |
 | `Playlist name` | The name field when making or renaming a playlist |
 | `Playlists` | A section on Home and in the library, and a folder in the car |
