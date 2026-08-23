@@ -8,10 +8,11 @@ import { profileScopeGuard } from '@/lib/profileScope';
 import { queryClient } from '@/lib/query';
 import { getItem, setItem } from '@/lib/storage';
 import {
-  applyAccent,
+  applyAccents,
   applyThemePreference,
   DEFAULT_ACCENT,
   isThemePreference,
+  type ThemeMode,
   type ThemePreference,
 } from '@/theme';
 import { profileScopeId, useAuthStore } from './auth';
@@ -814,8 +815,11 @@ interface SettingsState {
   shareExpiry: ShareExpiry;
   /** Whether the last share allowed downloading (Navidrome only). */
   shareDownloadable: boolean;
-  /** Accent color (hex). */
+  /** Accent color (hex) under the dark appearance. */
   accentColor: string;
+  /** The same under the light one, which is a separate choice: a colour picked
+   *  for near-black is not always the one wanted on white. */
+  accentColorLight: string;
   /** Dark (the app's own look), light, or whichever one the device is in. */
   themeMode: ThemePreference;
   /** UI font (system font family; `system` = default). */
@@ -908,7 +912,7 @@ interface SettingsState {
   setGridColumns: (key: GridSizeKey, value: number) => void;
   setShareExpiry: (value: ShareExpiry) => void;
   setShareDownloadable: (value: boolean) => void;
-  setAccentColor: (value: string) => void;
+  setAccentColor: (value: string, appearance: ThemeMode) => void;
   setThemeMode: (value: ThemePreference) => void;
   setAppFont: (value: AppFont) => void;
   /** Resets to factory defaults (language is preserved). */
@@ -920,6 +924,12 @@ interface SettingsState {
 }
 
 const scope = profileScopeGuard();
+
+/** A saved accent, as the picker writes them. Anything else was not written by
+ *  this app and is not worth painting the screen with. */
+function isHexColor(value: unknown): value is string {
+  return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value);
+}
 
 function persist(state: ReturnType<typeof snapshot>) {
   const key = settingsKey();
@@ -1016,6 +1026,7 @@ function snapshot(get: () => SettingsState) {
     shareExpiry: s.shareExpiry,
     shareDownloadable: s.shareDownloadable,
     accentColor: s.accentColor,
+    accentColorLight: s.accentColorLight,
     themeMode: s.themeMode,
     appFont: s.appFont,
   };
@@ -1134,6 +1145,7 @@ const DEFAULTS = {
   // Off: the server has its own default for this and nothing was overriding it.
   shareDownloadable: false,
   accentColor: DEFAULT_ACCENT,
+  accentColorLight: DEFAULT_ACCENT,
   // Dark: the appearance the app was designed in. Light is opt-in.
   themeMode: 'dark' as ThemePreference,
   appFont: 'system' as AppFont,
@@ -1576,9 +1588,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
-  setAccentColor: (accentColor) => {
-    applyAccent(accentColor);
-    set({ accentColor });
+  setAccentColor: (value, appearance) => {
+    set(appearance === 'light' ? { accentColorLight: value } : { accentColor: value });
+    applyAccents(get().accentColor, get().accentColorLight);
     persist(snapshot(get));
   },
 
@@ -1601,7 +1613,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
   resetToDefaults: () => {
     // Language is preserved: resetting shouldn't change your language.
     set({ ...DEFAULTS, language: get().language });
-    applyAccent(DEFAULT_ACCENT);
+    applyAccents(DEFAULT_ACCENT, DEFAULT_ACCENT);
     applyThemePreference(DEFAULTS.themeMode);
     persist(snapshot(get));
   },
@@ -1633,7 +1645,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
       // appearance are applied manually because they're side effects (the blob
       // re-applies them if present); the font is reactive and doesn't need it.
       set({ ...DEFAULTS, language: get().language });
-      applyAccent(DEFAULT_ACCENT);
+      applyAccents(DEFAULT_ACCENT, DEFAULT_ACCENT);
       applyThemePreference(DEFAULTS.themeMode);
       applied = true;
       if (raw) {
@@ -1727,6 +1739,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           shareExpiry: ShareExpiry;
           shareDownloadable: boolean;
           accentColor: string;
+          accentColorLight: string;
           themeMode: ThemePreference;
           appFont: AppFont;
         }>;
@@ -2068,9 +2081,14 @@ export const useSettings = create<SettingsState>((set, get) => ({
         if (typeof parsed.shareDownloadable === 'boolean') {
           set({ shareDownloadable: parsed.shareDownloadable });
         }
-        if (typeof parsed.accentColor === 'string' && /^#[0-9a-f]{6}$/i.test(parsed.accentColor)) {
-          set({ accentColor: parsed.accentColor });
-          applyAccent(parsed.accentColor);
+        // The light accent falls back to the dark one rather than to the
+        // default: every profile that picked a colour before there were two of
+        // them picked it for the app, not for one of its appearances.
+        if (isHexColor(parsed.accentColor) || isHexColor(parsed.accentColorLight)) {
+          const dark = isHexColor(parsed.accentColor) ? parsed.accentColor : DEFAULT_ACCENT;
+          const light = isHexColor(parsed.accentColorLight) ? parsed.accentColorLight : dark;
+          set({ accentColor: dark, accentColorLight: light });
+          applyAccents(dark, light);
         }
         if (isThemePreference(parsed.themeMode)) {
           set({ themeMode: parsed.themeMode });
@@ -2121,7 +2139,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
       // hydration has taken over.
       if (!applied && scope.accept(token, key)) {
         set({ ...DEFAULTS, language: get().language });
-        applyAccent(DEFAULT_ACCENT);
+        applyAccents(DEFAULT_ACCENT, DEFAULT_ACCENT);
         applyThemePreference(DEFAULTS.themeMode);
       }
     } finally {

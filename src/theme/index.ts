@@ -9,7 +9,7 @@
  * The shape of it:
  *
  *  - `colors` is a single mutable object, rewritten in place by `applyThemeMode`
- *    and `applyAccent`.
+ *    and `applyAccents`.
  *    Anything reading `colors.text` while rendering gets the current value.
  *  - `themed(c => ({…}))` replaces `StyleSheet.create` and returns an object
  *    whose entries are rebuilt when the theme changes. It stays a plain module
@@ -289,7 +289,11 @@ export const colors: Palette = {
 };
 
 let currentMode: ThemeMode = 'dark';
-let currentAccent = DEFAULT_ACCENT;
+// One accent per appearance. They are two choices and not one: a colour that
+// sings on near-black can be the one that dies on white, and the picker in
+// Settings is where each is made.
+let darkAccent = DEFAULT_ACCENT;
+let lightAccent = DEFAULT_ACCENT;
 
 /** Which appearance is active right now (for code outside a component). */
 export function themeMode(): ThemeMode {
@@ -318,14 +322,15 @@ function subscribe(listener: () => void): () => void {
 function rebuild(): void {
   const light = currentMode === 'light';
   const base = light ? LIGHT : DARK;
+  const picked = light ? lightAccent : darkAccent;
   // On white the accent has to be dark enough to read as text; on near-black
   // it is already fine as picked. `onAccent` follows from that: black on the
   // vivid accent, white on the darkened one.
-  const accent = light ? readableOn(currentAccent, LIGHT.background) : currentAccent;
+  const accent = light ? readableOn(picked, LIGHT.background) : picked;
   Object.assign(colors, base, {
     accent,
     accentPressed: darken(accent),
-    accentVivid: currentAccent,
+    accentVivid: picked,
     brand: light ? readableOn(DEFAULT_ACCENT, LIGHT.background) : DEFAULT_ACCENT,
     onAccent: light ? '#FFFFFF' : '#000000',
   });
@@ -333,9 +338,12 @@ function rebuild(): void {
   for (const listener of listeners) listener();
 }
 
-/** Hot-swaps the accent (accent + its "pressed" variant). */
-export function applyAccent(hex: string): void {
-  currentAccent = hex;
+/** Hot-swaps both accents (accent + its "pressed" variant). Both at once, so
+ *  there is never a moment where one appearance holds a colour the setting
+ *  no longer says. */
+export function applyAccents(dark: string, light: string): void {
+  darkAccent = dark;
+  lightAccent = light;
   rebuild();
 }
 

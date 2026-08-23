@@ -1,6 +1,6 @@
 /**
- * Settings › Theme: the appearance (dark or light) and the accent colour. Both
- * apply the moment they are chosen.
+ * Settings › Theme: the appearance (dark, light, or the phone's own) and an
+ * accent colour for each of the two. All of it applies the moment it is chosen.
  *
  * The light one carries "(experimental)" in its own label rather than a warning
  * off to one side. It is a whole second palette across every screen in the app,
@@ -16,12 +16,42 @@ import { useT } from '@/i18n';
 import { ACCENT_OPTIONS, useSettings } from '@/store/settings';
 import { fontSize, spacing, themed, useTheme, type ThemePreference } from '@/theme';
 
+/** The row of colours, for one appearance. */
+function Swatches({ value, onPick }: { value: string; onPick: (hex: string) => void }) {
+  const t = useT();
+  return (
+    <View style={styles.swatches}>
+      {ACCENT_OPTIONS.map((opt) => {
+        const active = opt.color.toLowerCase() === value.toLowerCase();
+        return (
+          <Pressable
+            key={opt.color}
+            onPress={() => onPick(opt.color)}
+            accessibilityRole="button"
+            accessibilityLabel={t(opt.name)}
+            style={[styles.swatch, { backgroundColor: opt.color }, active && styles.swatchActive]}
+          >
+            {/* The swatches are the colours as named — the vivid ones — in
+                both appearances, so black is always the tick that reads on
+                them. What the light theme paints with is a darkened version
+                of whichever one is picked (see `readableOn` in the theme):
+                the same colour, taken down to where it can be read on
+                white. */}
+            {active ? <Ionicons name="checkmark" size={24} color="#000" /> : null}
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 export default function ThemeSettings() {
   // Repaints on a change of appearance or accent: a stack keeps this screen
   // mounted while you are on another one, out of reach of anything else.
   useTheme();
   const t = useT();
   const accentColor = useSettings((s) => s.accentColor);
+  const accentColorLight = useSettings((s) => s.accentColorLight);
   const setAccentColor = useSettings((s) => s.setAccentColor);
   const themeMode = useSettings((s) => s.themeMode);
   const setThemeMode = useSettings((s) => s.setThemeMode);
@@ -44,29 +74,14 @@ export default function ThemeSettings() {
           ]}
         />
 
+        {/* One per appearance, both on screen at once: with a single row you
+            would have to be looking at the light theme to give it a colour,
+            which is the trip this is here to save. */}
         <Text style={[styles.label, styles.secondLabel]}>{t('Accent color')}</Text>
-        <View style={styles.swatches}>
-          {ACCENT_OPTIONS.map((opt) => {
-            const active = opt.color.toLowerCase() === accentColor.toLowerCase();
-            return (
-              <Pressable
-                key={opt.color}
-                onPress={() => setAccentColor(opt.color)}
-                accessibilityRole="button"
-                accessibilityLabel={t(opt.name)}
-                style={[styles.swatch, { backgroundColor: opt.color }, active && styles.swatchActive]}
-              >
-                {/* The swatches are the colours as named — the vivid ones — in
-                    both appearances, so black is always the tick that reads on
-                    them. What the light theme paints with is a darkened version
-                    of whichever one is picked (see `readableOn` in the theme):
-                    the same colour, taken down to where it can be read on
-                    white. */}
-                {active ? <Ionicons name="checkmark" size={24} color="#000" /> : null}
-              </Pressable>
-            );
-          })}
-        </View>
+        <Text style={styles.subLabel}>{t('Dark')}</Text>
+        <Swatches value={accentColor} onPick={(hex) => setAccentColor(hex, 'dark')} />
+        <Text style={[styles.subLabel, styles.secondSubLabel]}>{t('Light')}</Text>
+        <Swatches value={accentColorLight} onPick={(hex) => setAccentColor(hex, 'light')} />
       </ScrollView>
     </SettingsPage>
   );
@@ -80,6 +95,12 @@ const styles = themed((colors) => ({
     marginBottom: spacing.md,
   },
   secondLabel: { marginTop: spacing.xl },
+  subLabel: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    marginBottom: spacing.md,
+  },
+  secondSubLabel: { marginTop: spacing.lg },
   swatches: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg },
   swatch: {
     width: 56,

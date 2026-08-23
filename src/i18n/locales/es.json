@@ -678,5 +678,7 @@
   "Export {songs}?": "¿Exportar {songs}?",
   "{size} copied into the folder you pick.": "{size} copiados en la carpeta que elijas.",
   "New releases": "Novedades",
-  "Follow system": "Seguir el sistema"
+  "Follow system": "Seguir el sistema",
+  "Dark": "Oscuro",
+  "Light": "Claro"
 }

@@ -369,7 +369,7 @@ export default function GenreScreen() {
               size={24}
               // From the setting, like the artist's song list draws the same
               // tick. `colors.accent` would have been the right colour too,
-              // since `applyAccent` hot-swaps it, but only from the next render
+              // since `applyAccents` hot-swaps it, but only from the next render
               // onwards and nothing makes that render happen: the hook is what
               // subscribes.
               color={songs.length > 0 && selectedIds.size === songs.length ? accent : colors.text}
