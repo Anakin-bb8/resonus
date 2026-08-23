@@ -89,21 +89,24 @@ function cacheKey(sourceMode: string, uri?: string): string {
 const SCAN_CONCURRENCY = 8;
 
 /**
- * How many songs one scan will take in.
+ * Where a scan gives up, which is not meant to be a size of library.
  *
- * Not a limit of the reading, which is one file at a time and costs the same
- * whatever the total: it is a limit of what comes after. The local profile
- * keeps its catalog in memory and sorts and searches it in JavaScript, so every
- * song in it is paid for on every list (a server's downloads went to SQLite for
- * exactly this reason). Past this many, that is what starts to be felt.
+ * There used to be five thousand here, and it was the wrong shape of limit: it
+ * applies per folder, so anybody who hit it could have the rest of their music
+ * by splitting it in two and adding the second folder. A limit somebody works
+ * around by rearranging their disk is not protecting anything — it is asking
+ * them to organise their library around the app.
  *
- * It applies per folder, so a profile reading three of them can hold three
- * times this. A scan that stops here says so in Diagnostics, since the songs it
- * did not reach are otherwise just missing.
+ * What is left is a guard against a runaway: pointing the scan at the root of a
+ * card full of everything, where the array grows for as long as the walk does.
+ * No music library reaches it. A big one is slower on every list all the same,
+ * because the local profile sorts and searches its catalog in JavaScript, and
+ * the answer to that is the database the server's downloads already use, not a
+ * number here.
  */
-const MAX_SCAN_SONGS = 20_000;
+const MAX_SCAN_SONGS = 100_000;
 
-/** Notes in Diagnostics that a scan stopped at the cap and not at the end. */
+/** Notes in Diagnostics that a scan gave up rather than reaching the end. */
 function noteCapped(): void {
   bump('local scan · hit the song cap');
 }
@@ -762,7 +765,10 @@ async function scanFolder(treeUri: string, closeWhenDone = true): Promise<LocalC
   const rawSongs: { id: string; filename: string; uri: string; dirUri: string }[] = [];
 
   async function walk(dirUri: string, depth: number): Promise<void> {
-    if (depth > 6 || rawSongs.length >= MAX_SCAN_SONGS) return;
+    // Ten deep, for the same reason: Genre/Artist/Album/Disc is five before
+    // anybody has done anything unusual, and a folder that falls outside is
+    // music that silently is not there.
+    if (depth > 10 || rawSongs.length >= MAX_SCAN_SONGS) return;
     let entries: string[];
     try {
       entries = await StorageAccessFramework.readDirectoryAsync(dirUri);

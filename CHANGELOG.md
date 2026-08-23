@@ -18,7 +18,8 @@ Releases before 0.2.1 are only listed on the
 
 ### Changed
 
-- The local profile reads up to twenty thousand songs per folder instead of five thousand, and a scan that stops there now says so in Diagnostics rather than quietly leaving the rest out.
+- The local profile no longer stops at five thousand songs per folder: what is left is a guard against a scan pointed at a whole card, far above any music library, and a scan that ever reaches it says so in Diagnostics instead of quietly leaving the rest out.
+- Folders are followed ten levels deep instead of six, so a library filed under more folders than usual is read whole.
 
 ## [0.7.5-beta.1] - 2026-08-22
 
