@@ -1,6 +1,7 @@
 /**
- * Settings › Theme: the appearance (dark, light, or the phone's own) and an
- * accent colour for each of the two. All of it applies the moment it is chosen.
+ * Settings › Theme: the appearance (dark, light, or the phone's own) and the
+ * accent colour of whichever one is on screen — each keeps its own. All of it
+ * applies the moment it is chosen.
  *
  * The light one carries "(experimental)" in its own label rather than a warning
  * off to one side. It is a whole second palette across every screen in the app,
@@ -14,9 +15,10 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SelectList, SettingsPage, settingsStyles } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
 import { ACCENT_OPTIONS, useSettings } from '@/store/settings';
-import { fontSize, spacing, themed, useTheme, type ThemePreference } from '@/theme';
+import { fontSize, spacing, themed, useThemeMode, type ThemePreference } from '@/theme';
 
-/** The row of colours, for one appearance. */
+/** The row of colours. Which appearance it is picking for is the one on screen;
+ *  see the note where it is used. */
 function Swatches({ value, onPick }: { value: string; onPick: (hex: string) => void }) {
   const t = useT();
   return (
@@ -47,8 +49,9 @@ function Swatches({ value, onPick }: { value: string; onPick: (hex: string) => v
 
 export default function ThemeSettings() {
   // Repaints on a change of appearance or accent: a stack keeps this screen
-  // mounted while you are on another one, out of reach of anything else.
-  useTheme();
+  // mounted while you are on another one, out of reach of anything else. The
+  // appearance is also read, since it is the one being given a colour.
+  const mode = useThemeMode();
   const t = useT();
   const accentColor = useSettings((s) => s.accentColor);
   const accentColorLight = useSettings((s) => s.accentColorLight);
@@ -74,14 +77,15 @@ export default function ThemeSettings() {
           ]}
         />
 
-        {/* One per appearance, both on screen at once: with a single row you
-            would have to be looking at the light theme to give it a colour,
-            which is the trip this is here to save. */}
+        {/* One row, and it belongs to the appearance you are looking at: each
+            keeps its own colour, so switching mode brings back the one chosen
+            there rather than repainting it with the other's. Nothing has to say
+            so on screen — the ticked swatch is already the answer. */}
         <Text style={[styles.label, styles.secondLabel]}>{t('Accent color')}</Text>
-        <Text style={styles.subLabel}>{t('Dark')}</Text>
-        <Swatches value={accentColor} onPick={(hex) => setAccentColor(hex, 'dark')} />
-        <Text style={[styles.subLabel, styles.secondSubLabel]}>{t('Light')}</Text>
-        <Swatches value={accentColorLight} onPick={(hex) => setAccentColor(hex, 'light')} />
+        <Swatches
+          value={mode === 'light' ? accentColorLight : accentColor}
+          onPick={(hex) => setAccentColor(hex, mode)}
+        />
       </ScrollView>
     </SettingsPage>
   );
@@ -95,12 +99,6 @@ const styles = themed((colors) => ({
     marginBottom: spacing.md,
   },
   secondLabel: { marginTop: spacing.xl },
-  subLabel: {
-    color: colors.textMuted,
-    fontSize: fontSize.xs,
-    marginBottom: spacing.md,
-  },
-  secondSubLabel: { marginTop: spacing.lg },
   swatches: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg },
   swatch: {
     width: 56,

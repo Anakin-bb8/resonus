@@ -118,8 +118,6 @@
     "Home sections": "Reorder which sections appear on Home",
     "New releases": "Home shelf and album sort: albums by the year they came out, newest first. Not \"Recently added\", which is when the server got hold of them",
     "Follow system": "Theme setting: use whichever appearance the phone itself is set to, light or dark",
-    "Dark": "Label over the accent swatches: the colour to use while the app is in its dark appearance",
-    "Light": "Label over the accent swatches: the colour to use while the app is in its light appearance. Not \"light\" as in weight",
     "Pin favorites": "Pin favourites to the quick grid",
 
     // ── Actions & verbs (easy to translate as the wrong part of speech) ──────
