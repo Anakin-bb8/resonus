@@ -9,6 +9,8 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.7.5] - 2026-08-24
+
 ### Added
 
 - The local profile can read from more than one folder, added and removed in Settings > Local music, and adding one reads the tags of the new folder only instead of the whole library again (#158).
