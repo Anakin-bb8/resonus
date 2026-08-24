@@ -843,6 +843,7 @@ you are actually typing into, which is easier than reading it here.
 | `Disable online search` | A value of `Lyrics source`: only ever use the ones that came with the file |
 | `Elements` | Which player elements to show |
 | `Fit cover art` | Show the whole cover even if it is not square, instead of cropping it to fill |
+| `Go to album` | Leave this sheet and open the album the song is on |
 | `Jump back or forward next to the play button.` | The line under “Skip buttons”, explaining it |
 | `Keep paused when skipping` |  |
 | `Keep the tracks before the current one in the queue, dimmed. Tap one to go back.` |  |
@@ -852,7 +853,7 @@ you are actually typing into, which is easier than reading it here.
 | `No` | A setting value meaning none or zero, not the answer to a question: no crossfade, no seek buttons |
 | `Nothing` | A value of `On cover tap`: tapping the cover does nothing |
 | `On cover double tap` | Settings > Player: what tapping the album artwork twice does |
-| `On cover tap` | What tapping the cover art in the player does. Its values are `Nothing` and `Open lyrics screen` |
+| `On cover tap` | What tapping the cover art in the player does. One tap and two share the same values, listed below |
 | `Open lyrics screen` | A value of `On cover tap` |
 | `Plain` | A value of `Background`: a flat colour behind the player, no picture |
 | `Play or pause` | One of its options: the same as the play button |
@@ -872,7 +873,7 @@ you are actually typing into, which is easier than reading it here.
 | `Show devices button` |  |
 | `Show format and bitrate in the player.` | The line under “Show quality label”, explaining it |
 | `Show lyrics card` |  |
-| `Show lyrics on the cover` | One of the values of “On cover tap” |
+| `Show lyrics on the cover` | A value of `On cover tap`: the lyrics take the cover's place, without leaving the player |
 | `Show previous tracks` | Whether the queue keeps the songs already played, dimmed, above the current one |
 | `Show quality label` |  |
 | `Show queue button` |  |

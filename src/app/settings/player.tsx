@@ -17,6 +17,23 @@ import {
   useSettings,
 } from '@/store/settings';
 
+/**
+ * The cover's actions, the same list for one tap and for two.
+ *
+ * Which of them belongs on which tap is the listener's call: play/pause on the
+ * single and the lyrics on the double is as reasonable as the other way round.
+ */
+function coverTapOptions(t: ReturnType<typeof useT>): { value: CoverTapAction; label: string }[] {
+  return [
+    { value: 'none', label: t('Nothing') },
+    { value: 'screen', label: t('Open lyrics screen') },
+    { value: 'inline', label: t('Show lyrics on the cover') },
+    { value: 'album', label: t('Go to album') },
+    { value: 'playPause', label: t('Play or pause') },
+    { value: 'favorite', label: t('Add to favorites') },
+  ];
+}
+
 export default function PlayerSettings() {
   // Repaints on a change of appearance or accent: a stack keeps this screen
   // mounted while you are on another one, out of reach of anything else.
@@ -115,11 +132,7 @@ export default function PlayerSettings() {
         <SelectList<CoverTapAction>
           label={t('On cover tap')}
           description={t('What tapping the cover art in the player does.')}
-          options={[
-            { value: 'none', label: t('Nothing') },
-            { value: 'screen', label: t('Open lyrics screen') },
-            { value: 'inline', label: t('Show lyrics on the cover') },
-          ]}
+          options={coverTapOptions(t)}
           value={coverTapAction}
           onChange={setCoverTapAction}
         />
@@ -128,11 +141,7 @@ export default function PlayerSettings() {
           description={t(
             'A second action for the same artwork, for a hand that is not looking. With this on, a single tap waits a moment to see whether a second one is coming.',
           )}
-          options={[
-            { value: 'none', label: t('Nothing') },
-            { value: 'playPause', label: t('Play or pause') },
-            { value: 'favorite', label: t('Add to favorites') },
-          ]}
+          options={coverTapOptions(t)}
           value={coverDoubleTapAction}
           onChange={setCoverDoubleTapAction}
         />

@@ -66,7 +66,7 @@ import {
   useLiveInfo,
   usePlayerStore,
 } from '@/store/player';
-import { useSettings } from '@/store/settings';
+import { useSettings, type CoverTapAction } from '@/store/settings';
 import { useSongMenu } from '@/store/songMenu';
 import { useToast } from '@/store/toast';
 import { useUpnp } from '@/store/upnp';
@@ -604,15 +604,6 @@ export default function PlayerScreen() {
   useEffect(() => {
     setInlineLyrics(false);
   }, [song?.id]);
-  const openLyrics = () => {
-    if (coverTapAction === 'inline') setInlineLyrics((v) => !v);
-    else if (coverTapAction === 'screen') pushOnce('/lyrics');
-  };
-  const coverTap = Gesture.Tap()
-    .maxDistance(10)
-    .onEnd((_e, success) => {
-      if (success && hasLyrics) scheduleOnRN(openLyrics);
-    });
   /**
    * The heart, from a gesture instead of from the button.
    *
@@ -637,24 +628,55 @@ export default function PlayerScreen() {
     }
   };
   /**
+   * Every action the cover offers, wherever it was asked for.
+   *
+   * One tap and two share the list, so this is the one place that knows how to
+   * run any of them. The two lyrics actions are the only ones that can find
+   * nothing to do: a song with no lyrics leaves the tap where it was rather
+   * than opening an empty screen.
+   *
+   * Handed to `scheduleOnRN` by name, with the action as its argument: a
+   * gesture's `onEnd` is a worklet, and a function written inside one is not
+   * something the JS thread can be asked to run.
+   */
+  const runCoverAction = (action: CoverTapAction) => {
+    switch (action) {
+      case 'inline':
+        if (hasLyrics) setInlineLyrics((v) => !v);
+        break;
+      case 'screen':
+        if (hasLyrics) pushOnce('/lyrics');
+        break;
+      case 'playPause':
+        toggle();
+        break;
+      case 'favorite':
+        void toggleFavorite();
+        break;
+      case 'album':
+        if (song?.albumId) pushOnce(`/album/${song.albumId}`);
+        break;
+      default:
+        break;
+    }
+  };
+  const coverTap = Gesture.Tap()
+    .maxDistance(10)
+    .onEnd((_e, success) => {
+      if (success) scheduleOnRN(runCoverAction, coverTapAction);
+    });
+  /**
    * Two taps on the cover (#156), for the hand that is not looking at the
    * screen. Triple was asked for as well and is not here: every tap before it
    * would have to wait out the ones that might follow, three taps inside half a
    * second is the hardest thing to hit while walking, and Android already
    * spends it on the magnifier.
    */
-  const doubleTapAction = () => {
-    if (coverDoubleTapAction === 'playPause') {
-      toggle();
-      return;
-    }
-    if (coverDoubleTapAction === 'favorite') void toggleFavorite();
-  };
   const coverDoubleTap = Gesture.Tap()
     .numberOfTaps(2)
     .maxDistance(10)
     .onEnd((_e, success) => {
-      if (success) scheduleOnRN(doubleTapAction);
+      if (success) scheduleOnRN(runCoverAction, coverDoubleTapAction);
     });
   // Only when there is a second action to wait for: `Exclusive` holds the
   // single tap back until the double has been ruled out, and that wait is the

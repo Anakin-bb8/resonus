@@ -259,19 +259,31 @@ export type ScreenBackground = 'none' | 'color' | 'cover';
  */
 export type CardBackground = 'none' | 'color';
 
-/** What tapping the cover in the player does: nothing, open the lyrics screen,
- *  or show lyrics in place of the cover. */
-export type CoverTapAction = 'none' | 'screen' | 'inline';
+/**
+ * What tapping the cover in the player does.
+ *
+ * One tap and two draw from the same list. Which action belongs on which is
+ * nobody's business but the listener's: wanting play/pause on the single tap
+ * and the lyrics on the double is as reasonable as the other way round, and
+ * splitting the lists only made half of each unreachable.
+ */
+export type CoverTapAction =
+  | 'none'
+  | 'screen'
+  | 'inline'
+  | 'playPause'
+  | 'favorite'
+  | 'album';
 
 /**
- * What tapping the cover twice does (#156).
+ * What tapping the cover twice does (#156). The same list as one tap.
  *
  * Off by default, and not only out of caution: with this on, a single tap has
  * to wait to find out whether a second one is coming, so the tap that is
  * already there gets slower for everybody who turns this on. That is a price
  * worth asking about rather than charging.
  */
-export type CoverDoubleTapAction = 'none' | 'playPause' | 'favorite';
+export type CoverDoubleTapAction = CoverTapAction;
 
 /**
  * Where lyrics come from:
