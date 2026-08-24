@@ -72,6 +72,69 @@ function hslToHex(h: number, s: number, l: number): string {
 }
 
 /**
+ * From the four UIImageColors candidates pick the best accent colour.
+ *
+ * The iOS algorithm labels colours by *role*, not by vibrancy:
+ *   background  – dominant edge / background colour
+ *   primary     – most prominent foreground colour
+ *   secondary   – second most prominent
+ *   detail      – small accent
+ *
+ * For a Spotify-style tint we want the *dominant* colour of the cover, which
+ * is almost always `background`.  The problem is that `background` can be a
+ * large neutral area (white border, black void) that normalises to grey.
+ *
+ * Strategy: prefer `background` when it carries enough colour (saturation ≥
+ * 0.15).  Otherwise fall through to the foreground colours by importance
+ * (primary > secondary > detail), breaking the order only when a lower-
+ * priority colour is ≥ 1.5× more saturated.
+ */
+function pickBestIosColor(
+  background: string | undefined,
+  primary: string | undefined,
+  secondary: string | undefined,
+  detail: string | undefined,
+): string | undefined {
+  const NEUTRAL_THRESHOLD = 0.15;
+  const BREAK_THRESHOLD = 1.5;
+
+  // 1. If the dominant background has real colour, use it — it best
+  //    represents the overall feel of the cover.
+  if (background) {
+    const rgb = hexToRgb(background);
+    if (rgb) {
+      const [, s] = rgbToHsl(rgb[0], rgb[1], rgb[2]);
+      if (s >= NEUTRAL_THRESHOLD) return background;
+    }
+  }
+
+  // 2. Background was too neutral — pick among the foreground colours.
+  const foreground = [
+    { hex: primary },
+    { hex: secondary },
+    { hex: detail },
+  ];
+
+  let best: string | undefined;
+  let bestSat = -1;
+
+  for (const { hex } of foreground) {
+    if (!hex) continue;
+    const rgb = hexToRgb(hex);
+    if (!rgb) continue;
+    const [, s] = rgbToHsl(rgb[0], rgb[1], rgb[2]);
+    if (s < NEUTRAL_THRESHOLD) continue;
+
+    if (!best || s >= bestSat * BREAK_THRESHOLD) {
+      best = hex;
+      bestSat = s;
+    }
+  }
+
+  return best || background;
+}
+
+/**
  * Clamps saturation and lightness into the readable band for the appearance.
  *
  * The light band is narrower and sits high (0.88–0.94): a pale wash keeps the
@@ -132,7 +195,12 @@ export function useDominantColor(uri?: string): string {
     // sizes now share one cached palette.
     import('react-native-image-colors')
       .then(({ getColors }) =>
-        getColors(src, { fallback: theme.surfaceHighlight, cache: true, key: src }),
+        getColors(src, {
+          fallback: theme.surfaceHighlight,
+          cache: true,
+          key: src,
+          quality: 'high',
+        }),
       )
       .then((res) => {
         if (!active || !res) return;
@@ -140,7 +208,10 @@ export function useDominantColor(uri?: string): string {
         if (res.platform === 'android') {
           c = res.vibrant || res.darkVibrant || res.muted || res.dominant || c;
         } else if (res.platform === 'ios') {
-          c = res.background || res.primary || res.secondary || c;
+          // foreground colours (primary / secondary / detail) are almost
+          // always more colourful than background, which often lands on a
+          // large neutral area; prefer by importance, not just saturation.
+          c = pickBestIosColor(res.background, res.primary, res.secondary, res.detail) || c;
         } else if (res.platform === 'web') {
           c = res.vibrant || res.darkVibrant || res.dominant || c;
         }
