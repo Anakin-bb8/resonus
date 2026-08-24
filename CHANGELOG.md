@@ -23,6 +23,8 @@ Releases before 0.2.1 are only listed on the
 
 - The server's Now Playing panel follows the song instead of sitting at 0:00: the position was only reported when something changed, so a track nobody touched stayed at the second it started on.
 - Dragging the progress bar now moves the time under it, so the number says where you are about to land instead of where the song still is.
+- On iOS the buttons to skip to the next and the previous song work from the lock screen, the Dynamic Island, Bluetooth and the car, where they were greyed out, thanks to @Anakin-bb8.
+- On iOS the accent colour reads the whole cover instead of a sample of it and takes the colour the cover is made of, so a green sleeve no longer comes out grey, thanks to @Anakin-bb8.
 
 ### Changed
 

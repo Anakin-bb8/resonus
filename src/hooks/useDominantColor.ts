@@ -71,61 +71,43 @@ function hslToHex(h: number, s: number, l: number): string {
   return `#${to(r)}${to(g)}${to(b)}`;
 }
 
+/** Saturation of a hex color in HSL, or -1 if it cannot be read. */
+function saturationOf(hex: string): number {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return -1;
+  return rgbToHsl(rgb[0], rgb[1], rgb[2])[1];
+}
+
 /**
- * From the four UIImageColors candidates pick the best accent colour.
+ * Picks the accent from the four colors iOS returns.
  *
- * The iOS algorithm labels colours by *role*, not by vibrancy:
- *   background  – dominant edge / background colour
- *   primary     – most prominent foreground colour
- *   secondary   – second most prominent
- *   detail      – small accent
- *
- * For a Spotify-style tint we want the *dominant* colour of the cover, which
- * is almost always `background`.  The problem is that `background` can be a
- * large neutral area (white border, black void) that normalises to grey.
- *
- * Strategy: prefer `background` when it carries enough colour (saturation ≥
- * 0.15).  Otherwise fall through to the foreground colours by importance
- * (primary > secondary > detail), breaking the order only when a lower-
- * priority colour is ≥ 1.5× more saturated.
+ * They come labeled by role, not by vibrancy: `background` is the dominant
+ * area of the cover and `primary`, `secondary` and `detail` are the foreground
+ * ones in order of how much of the cover they take. The dominant area is the
+ * one that reads as "the color of this cover", so it wins whenever it carries
+ * any color at all; the covers it fails on are the ones whose dominant area is
+ * a white border or a black void, and there the foreground colors are all
+ * there is. Among those, order beats saturation unless the gap is wide: a
+ * small vivid detail should not push aside the color the cover is made of.
  */
-function pickBestIosColor(
+function pickIosColor(
   background: string | undefined,
   primary: string | undefined,
   secondary: string | undefined,
   detail: string | undefined,
 ): string | undefined {
-  const NEUTRAL_THRESHOLD = 0.15;
-  const BREAK_THRESHOLD = 1.5;
+  const NEUTRAL = 0.15;
+  const CLEARLY_MORE = 1.5;
 
-  // 1. If the dominant background has real colour, use it — it best
-  //    represents the overall feel of the cover.
-  if (background) {
-    const rgb = hexToRgb(background);
-    if (rgb) {
-      const [, s] = rgbToHsl(rgb[0], rgb[1], rgb[2]);
-      if (s >= NEUTRAL_THRESHOLD) return background;
-    }
-  }
-
-  // 2. Background was too neutral — pick among the foreground colours.
-  const foreground = [
-    { hex: primary },
-    { hex: secondary },
-    { hex: detail },
-  ];
+  if (background && saturationOf(background) >= NEUTRAL) return background;
 
   let best: string | undefined;
-  let bestSat = -1;
-
-  for (const { hex } of foreground) {
+  let bestSat = 0;
+  for (const hex of [primary, secondary, detail]) {
     if (!hex) continue;
-    const rgb = hexToRgb(hex);
-    if (!rgb) continue;
-    const [, s] = rgbToHsl(rgb[0], rgb[1], rgb[2]);
-    if (s < NEUTRAL_THRESHOLD) continue;
-
-    if (!best || s >= bestSat * BREAK_THRESHOLD) {
+    const s = saturationOf(hex);
+    if (s < NEUTRAL) continue;
+    if (!best || s >= bestSat * CLEARLY_MORE) {
       best = hex;
       bestSat = s;
     }
@@ -192,7 +174,10 @@ export function useDominantColor(uri?: string): string {
     }
     const src = paletteUri(uri);
     // Keyed by the small URL: two screens showing the same cover at different
-    // sizes now share one cached palette.
+    // sizes now share one cached palette. `quality` is read on iOS only, where
+    // it decides how much of the image is looked at before averaging, and the
+    // URL above already brought the cover down to `PALETTE_SIZE`, so there is
+    // nothing to save by looking at less than all of it.
     import('react-native-image-colors')
       .then(({ getColors }) =>
         getColors(src, {
@@ -208,10 +193,7 @@ export function useDominantColor(uri?: string): string {
         if (res.platform === 'android') {
           c = res.vibrant || res.darkVibrant || res.muted || res.dominant || c;
         } else if (res.platform === 'ios') {
-          // foreground colours (primary / secondary / detail) are almost
-          // always more colourful than background, which often lands on a
-          // large neutral area; prefer by importance, not just saturation.
-          c = pickBestIosColor(res.background, res.primary, res.secondary, res.detail) || c;
+          c = pickIosColor(res.background, res.primary, res.secondary, res.detail) || c;
         } else if (res.platform === 'web') {
           c = res.vibrant || res.darkVibrant || res.dominant || c;
         }
