@@ -1,11 +1,20 @@
 name: Build unsigned iOS IPA
 
+# Runs on demand, and alongside the APK when a v* tag is pushed. The IPA is
+# unsigned (there is no Apple account behind it), so it is not App Store
+# material: it goes into the same draft Release as the APK, for sideloading.
+
 on:
   workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
 
 jobs:
   build:
     runs-on: macos-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -41,6 +50,10 @@ jobs:
 
       - name: Build unsigned archive
         working-directory: ios
+        env:
+          # Same stamp the APK carries, so a report from a sideloaded build says
+          # which commit it came from (see the diagnostics screen).
+          EXPO_PUBLIC_COMMIT: ${{ github.sha }}
         run: |
           xcodebuild archive \
             -workspace "${{ steps.xcode.outputs.workspace }}" \
@@ -71,12 +84,26 @@ jobs:
           # Prepare the Payload directory and create the unsigned IPA
           mkdir -p Payload
           cp -R "$APP_PATH" Payload/
-          zip -qr "resonus.ipa" Payload
+          zip -qr "resonus-${GITHUB_REF_NAME}.ipa" Payload
           rm -rf Payload
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: resonus.ipa
-          path: resonus.ipa
+          name: resonus-ipa
+          path: resonus-*.ipa
           retention-days: 14
+
+      # The draft belongs to the APK workflow, which takes longer than this one.
+      # Waiting for it is what keeps this from opening a second Release for the
+      # same tag.
+      - name: Attach the IPA to the draft Release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for _ in $(seq 90); do
+            gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 && break
+            sleep 20
+          done
+          gh release upload "$GITHUB_REF_NAME" "resonus-${GITHUB_REF_NAME}.ipa" --clobber
