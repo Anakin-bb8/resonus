@@ -35,7 +35,7 @@ Every release since 0.7.5 also carries an `.ipa`, on the same
 **unsigned**: no App Store, no TestFlight, so it has to be sideloaded with
 AltStore, Sideloadly or similar, and renewed as that tool asks.
 
-Not implemented, all of it Android-native code:
+Not implemented yet:
 
 - **CarPlay**
 - **Casting**: UPnP/DLNA and Sonos
