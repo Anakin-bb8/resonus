@@ -253,14 +253,44 @@ export function getAlbumList(type: Subsonic.AlbumListType = 'newest', size?: num
   if (isOffline()) return Local.getAlbumList(type, size, offset);
   const a = auth();
   const ids = enabledFolderIds(a);
-  const page = !ids
-    ? Subsonic.getAlbumList(a, type, size, offset)
-    : ids.length === 1
-      ? Subsonic.getAlbumList(a, type, size, offset, ids[0])
-      : mergedAlbumPage(a, `albums|${type}`, type, ids, size ?? 20, offset ?? 0, (id, s, o) =>
-          Subsonic.getAlbumList(a, type, s, o, id),
-        );
+  const page =
+    type === 'byYear' && (!ids || ids.length === 1)
+      ? byYearPage(a, size ?? 20, offset ?? 0, ids?.[0])
+      : !ids
+        ? Subsonic.getAlbumList(a, type, size, offset)
+        : ids.length === 1
+          ? Subsonic.getAlbumList(a, type, size, offset, ids[0])
+          : mergedAlbumPage(a, `albums|${type}`, type, ids, size ?? 20, offset ?? 0, (id, s, o) =>
+              Subsonic.getAlbumList(a, type, s, o, id),
+            );
   return type === 'recent' ? page.then(onlyPlayed) : page;
+}
+
+/**
+ * "New releases", in the order the name promises.
+ *
+ * `getAlbumList2` sorts `byYear` by the year and nothing else, so every record
+ * released this year ties and the server settles it by album name: asking for
+ * twenty gave twenty albums off one end of the alphabet, never the twenty most
+ * recent. The window here is read once, sorted by the date the records actually
+ * came out, and the caller's page is cut from that.
+ */
+async function byYearPage(
+  a: Subsonic.SubsonicAuth,
+  size: number,
+  offset: number,
+  folderId?: string,
+): Promise<Subsonic.Album[]> {
+  const depth = Math.max(BYYEAR_WINDOW, offset + size);
+  const cacheKey = `albums|byYear|${profileKeyOf(a)}|${folderId ?? ''}|${depth}`;
+  let all = readAlbumCache<Subsonic.Album>(cacheKey);
+  if (!all) {
+    all = (
+      await fetchTopAlbums(depth, (s, o) => Subsonic.getAlbumList(a, 'byYear', s, o, folderId))
+    ).sort(byRelease);
+    writeAlbumCache(cacheKey, all);
+  }
+  return all.slice(offset, offset + size);
 }
 
 export function getAlbum(id: string): Promise<{ album: Subsonic.Album; songs: Subsonic.Song[] }> {
@@ -1662,6 +1692,17 @@ function dedupeById<T extends { id: string }>(items: T[]): T[] {
  */
 const MERGE_DEPTH = 100;
 
+/**
+ * How deep "New releases" reads before deciding which records are the newest.
+ *
+ * It has to cover a whole year of the library, because that is the granularity
+ * the server sorts at: anything short of it is still a slice of the alphabet.
+ * One request either way (the endpoint caps a page at 500), so what this really
+ * buys is fewer albums to parse on the JS thread, which is the part that was
+ * costing on Home (#50).
+ */
+const BYYEAR_WINDOW = 250;
+
 // ── Library sizes (for the random pool) ──
 //
 // The API has no count of its own, but `getArtists` carries `albumCount` per
@@ -1796,8 +1837,39 @@ const ALBUM_SORT_FIELD: Partial<
   newest: 'created',
   recent: 'played',
   frequent: 'playCount',
-  byYear: 'year',
 };
+
+/**
+ * The release date as one comparable number (YYYYMMDD), or -Infinity when the
+ * record does not say.
+ *
+ * A record released this March and one released this November are the same
+ * `year`, which is the only thing `getAlbumList2` sorts by: the server breaks
+ * that tie with the album name, so "New releases" came out as a slice of the
+ * alphabet. The day is in the answer already (OpenSubsonic), and this is what
+ * reads it.
+ */
+function releaseValue(album: Subsonic.Album): number {
+  const d = album.originalReleaseDate ?? album.releaseDate;
+  if (d?.year) return d.year * 10000 + (d.month ?? 0) * 100 + (d.day ?? 0);
+  return album.year != null ? album.year * 10000 : -Infinity;
+}
+
+/**
+ * Newest release first, and the most recently added of those that came out the
+ * same day.
+ *
+ * Plenty of libraries carry no more than a year per record, and every one of
+ * them ties: leaving that tie to the server is what put the alphabet on a shelf
+ * that promises new music. Of the two things left to go on, when it was added
+ * is the one that tracks what someone would call new; it only ever decides
+ * between records of the same date, so the year still comes first.
+ */
+function byRelease(a: Subsonic.Album, b: Subsonic.Album): number {
+  const diff = releaseValue(b) - releaseValue(a);
+  if (diff) return Number.isNaN(diff) ? 0 : diff;
+  return albumSortValue(b, 'created') - albumSortValue(a, 'created') || 0;
+}
 
 /** The field as a number (dates become timestamps) to sort descending by.
  *  Missing sinks to the bottom instead of jumping to the top. */
@@ -1843,6 +1915,7 @@ function mergeAlbums(perFolder: Subsonic.Album[][], type: Subsonic.AlbumListType
   // shuffling a pool built with the same amount from each, which is why the
   // pool comes weighted by library size (see `randomDepths`).
   if (type === 'random') return shuffled(all);
+  if (type === 'byYear') return all.sort(byRelease);
   const field = ALBUM_SORT_FIELD[type];
   if (field && all.some((al) => al[field] != null)) {
     return all.sort((a, b) => {
@@ -1889,7 +1962,12 @@ async function mergedAlbumPage(
   // every shelf, on every cold start. On Home that was six requests of a
   // hundred albums each, per shelf, to put twenty on screen, and all of it
   // parsed on the JS thread.
-  const depth = offset === 0 ? size : Math.ceil((offset + size) / MERGE_DEPTH) * MERGE_DEPTH;
+  const depth = Math.max(
+    offset === 0 ? size : Math.ceil((offset + size) / MERGE_DEPTH) * MERGE_DEPTH,
+    // "New releases" is sorted here, not by the server, so each library has to
+    // hand over enough of its newest year for that sort to mean anything.
+    type === 'byYear' ? BYYEAR_WINDOW : 0,
+  );
   const cacheKey = `${cacheBase}|${profileKeyOf(a)}|${ids.join(',')}|${depth}`;
   let all = readAlbumCache<Subsonic.Album>(cacheKey);
   if (!all) {

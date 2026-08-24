@@ -12,6 +12,7 @@ Releases before 0.2.1 are only listed on the
 ### Fixed
 
 - Opening Library for the first time no longer draws it under the status bar for an instant before dropping it into place.
+- "New releases" shows the newest records instead of a slice of the alphabet: the list goes by the day each record came out, and by when it reached the server for those tagged with a year and nothing more.
 
 ## [0.7.5] - 2026-08-24
 

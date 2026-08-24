@@ -215,6 +215,16 @@ export interface Album {
   year?: number;
   starred?: string;
   /**
+   * The day the record came out, not just its year (OpenSubsonic; Navidrome
+   * sends both). `year` is all `getAlbumList2` sorts by, so everything released
+   * in the same year ties and the server falls back to the album name: this is
+   * what puts the newest first (see `releaseValue` in data.ts).
+   */
+  originalReleaseDate?: { year?: number; month?: number; day?: number };
+  /** The day this particular edition came out (OpenSubsonic). Fallback for
+   *  `originalReleaseDate` on a record that only carries this one. */
+  releaseDate?: { year?: number; month?: number; day?: number };
+  /**
    * When it was added to the server. Standard Subsonic; it's what "recently
    * added" is really sorted by, so merging several libraries into one list
    * needs it (see `mergeAlbums` in data.ts).
