@@ -35,16 +35,14 @@ Every release since 0.7.5 also carries an `.ipa`, on the same
 **unsigned**: no App Store, no TestFlight, so it has to be sideloaded with
 AltStore, Sideloadly or similar, and renewed as that tool asks.
 
-Missing on iOS, all of it Android-native code:
+Not implemented, all of it Android-native code:
 
-- **CarPlay.** Android Auto has no counterpart.
-- **Casting.** UPnP/DLNA and Sonos are modules built for Android only.
-- **Equalizer.** Same reason.
-- **Gapless playback.** The next track is queued inside the Android player, so
-  on iOS there is a gap between tracks.
+- **CarPlay**
+- **Casting**: UPnP/DLNA and Sonos
+- **Equalizer**
+- **Gapless playback**: the next track is queued in the Android player
 
-It has also barely been used: Resonus is built and tested on Android. Expect
-rough edges, and report them with the Platform field set to iOS.
+Untested on hardware. Report issues with Platform set to iOS.
 
 ## Screenshots
 
