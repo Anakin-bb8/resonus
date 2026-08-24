@@ -30,7 +30,7 @@ import Animated, {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { COVER, songCoverUrl, type Song } from '@/api/data';
+import { COVER, songCoverUrl, star, unstar, type Song } from '@/api/data';
 import { ArtistPlayerCard } from '@/components/ArtistPlayerCard';
 import { AudioQualityBadge } from '@/components/AudioQualityBadge';
 import { SeekBar } from '@/components/SeekBar';
@@ -50,6 +50,7 @@ import { useScreenSize } from '@/hooks/useScreenSize';
 import { useT } from '@/i18n';
 import { artistTargets } from '@/lib/artistNav';
 import { formatGroupedDeviceLabel } from '@/lib/format';
+import { applyStarChange, resyncFavorites } from '@/lib/favoritesCache';
 import { haptic } from '@/lib/haptics';
 import { localHttpAvailable } from '@/lib/localHttp';
 import { pushOnce } from '@/lib/pushOnce';
@@ -198,6 +199,7 @@ export default function PlayerScreen() {
   // would leave each row a different size and look ragged.
   const fitCoverArt = useSettings((s) => s.fitCoverArt);
   const coverTapAction = useSettings((s) => s.coverTapAction);
+  const coverDoubleTapAction = useSettings((s) => s.coverDoubleTapAction);
   const marqueeTitles = useSettings((s) => s.marqueeTitles);
   const showQueueButton = useSettings((s) => s.showQueueButton);
   const local = useLocalProfile();
@@ -611,7 +613,55 @@ export default function PlayerScreen() {
     .onEnd((_e, success) => {
       if (success && hasLyrics) scheduleOnRN(openLyrics);
     });
-  const coverGesture = Gesture.Race(coverPan, coverTap);
+  /**
+   * The heart, from a gesture instead of from the button.
+   *
+   * The shared list of favourites is written first and the server told after:
+   * the heart in the header reads that list, so it turns over with the tap
+   * rather than with the round trip, and goes back if the request is refused.
+   */
+  const toggleFavorite = async () => {
+    const current = usePlayerStore.getState();
+    const track = currentSong(current);
+    if (!track) return;
+    const next = !(favIds ? favIds.has(track.id) : !!track.starred);
+    haptic('medium');
+    applyStarChange('song', track.id, next, track);
+    try {
+      if (next) await star(track.id);
+      else await unstar(track.id);
+      useToast.getState().show(next ? t('Added to favorites') : t('Removed from favorites'));
+    } catch {
+      resyncFavorites();
+      useToast.getState().show(t("Couldn't complete the action"));
+    }
+  };
+  /**
+   * Two taps on the cover (#156), for the hand that is not looking at the
+   * screen. Triple was asked for as well and is not here: every tap before it
+   * would have to wait out the ones that might follow, three taps inside half a
+   * second is the hardest thing to hit while walking, and Android already
+   * spends it on the magnifier.
+   */
+  const doubleTapAction = () => {
+    if (coverDoubleTapAction === 'playPause') {
+      toggle();
+      return;
+    }
+    if (coverDoubleTapAction === 'favorite') void toggleFavorite();
+  };
+  const coverDoubleTap = Gesture.Tap()
+    .numberOfTaps(2)
+    .maxDistance(10)
+    .onEnd((_e, success) => {
+      if (success) scheduleOnRN(doubleTapAction);
+    });
+  // Only when there is a second action to wait for: `Exclusive` holds the
+  // single tap back until the double has been ruled out, and that wait is the
+  // whole cost of this. Off, the tap fires as it always has.
+  const coverTaps =
+    coverDoubleTapAction === 'none' ? coverTap : Gesture.Exclusive(coverDoubleTap, coverTap);
+  const coverGesture = Gesture.Race(coverPan, coverTaps);
   const paneStyles = [
     usePaneStyle(offset, 0, stepSV),
     usePaneStyle(offset, 1, stepSV),

@@ -116,6 +116,8 @@
     "Song lists": "The setting for how song lists look",
     "Show explicit tag": "A switch: whether to draw the E on anything carrying a parental advisory. \"Explicit\" here is the music-industry label for strong language, not \"clear\" or \"stated outright\"",
     "Home sections": "Reorder which sections appear on Home",
+    "On cover double tap": "Settings > Player: what tapping the album artwork twice does",
+    "Play or pause": "One of its options: the same as the play button",
     "Music folders": "Settings > Local music: the list of phone folders the local profile reads its music from",
     "Add another folder": "Adds one more phone folder to the local profile's list",
     "Keep at least one folder": "Refusing to remove the last folder of a local profile, which would leave it with no music",
@@ -228,6 +230,10 @@
     "{msg} It will keep downloading songs added to this playlist later.": "`{msg}` is the ordinary download message, and this adds what auto-download means on top of it",
 
     // ── The queue ────────────────────────────────────────────────────────────
+    "Pick up the queue from other players": "A switch: whether to take the queue another player left on the server when the app is opened with nothing playing",
+    "Get the server's queue": "Queue screen action: replace what is playing here with the queue the server has, which is the one left on another player",
+    "Queue brought over": "The toast that says it worked",
+    "The server has no saved queue": "The toast when the server had nothing to bring over",
     "Clear queue": "Menu action: empty the list of what is coming",
     "Queue cleared": "Toast",
     "Removed from queue": "Toast",

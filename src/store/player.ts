@@ -1042,6 +1042,11 @@ async function ensurePlaybackReportSupport(auth: SubsonicAuth): Promise<boolean>
  */
 function reportState(state: PlaybackState, song: Song | undefined, positionSec: number): void {
   if (!song || song.url) return;
+  // Counted because of what the panel on the server shows: `starting` is the
+  // one report that says "from the top", so more of them than there were songs
+  // means something is announcing a track that was already playing, and that is
+  // a different fault from the position not being repeated.
+  bump(`report · ${state}`);
   const { auth, offline } = useAuthStore.getState();
   if (!auth || offline) return;
   void ensurePlaybackReportSupport(auth).then((supported) => {
@@ -2693,15 +2698,21 @@ function clearQueueLocal() {
  * nothing was pushed, but the queue here was still being written down.
  */
 let lastAdoptCheck = 0;
+/** When the app last left the foreground, so a quick trip to another app is
+ *  not treated as somebody coming back from a different player. */
+let wentAway = 0;
 
 async function adoptNewerServerQueue(): Promise<void> {
+  if (!useSettings.getState().syncQueueFromServer) return;
   const { auth, offline } = useAuthStore.getState();
   if (!auth || offline) return;
   const before = usePlayerStore.getState();
   // Somebody is already listening: their queue is not up for replacing.
   if (before.isPlaying) return;
-  // Coming back to the app is a common thing to do, and this asks the server
-  // for a whole queue. Once a minute is as often as anybody changes players.
+  // Coming back to the app is a common thing to do, and what this asks for is
+  // the whole queue with the metadata of every song in it — a few hundred
+  // kilobytes of JSON parsed on the thread that draws. Once a minute, and only
+  // after a while away, is as often as anybody changes players.
   if (Date.now() - lastAdoptCheck < 60_000) return;
   lastAdoptCheck = Date.now();
   let saved;
@@ -2804,6 +2815,7 @@ function attachAppState() {
       // not force a queue rewrite: minimizing the app should not touch the
       // current Sonos transport state.
       syncQueueNow(true, false);
+      wentAway = Date.now();
       return;
     }
     // Back to foreground. The native `playbackStatusUpdate` heartbeat that feeds
@@ -2834,7 +2846,9 @@ function attachAppState() {
     // And whatever was left on another player while this one was in a pocket.
     // Coming back is the moment that matters for it: a phone rarely starts
     // cold, so leaving this to the opening would mean it almost never ran.
-    void adoptNewerServerQueue();
+    // Not for a trip to another app and back, though: changing players takes
+    // longer than that, and this is a request.
+    if (Date.now() - wentAway > 30_000) void adoptNewerServerQueue();
   });
 }
 
