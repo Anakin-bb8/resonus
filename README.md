@@ -46,12 +46,16 @@ Report issues with Platform set to iOS.
 
 ## Screenshots
 
-<p align="center">
-  <img src="./assets/screenshots/1.png" width="200" />
-  <img src="./assets/screenshots/2.png" width="200" />
-  <img src="./assets/screenshots/3.png" width="200" />
-  <img src="./assets/screenshots/4.png" width="200" />
-</p>
+The same five screens, in dark and light.
+
+| Home | Player | Album | Artist | Library |
+| :---: | :---: | :---: | :---: | :---: |
+| <img src="./assets/screenshots/dark-home.jpg" width="180" alt="Home, dark" /> | <img src="./assets/screenshots/dark-player.jpg" width="180" alt="Player, dark" /> | <img src="./assets/screenshots/dark-album.jpg" width="180" alt="Album, dark" /> | <img src="./assets/screenshots/dark-artist.jpg" width="180" alt="Artist, dark" /> | <img src="./assets/screenshots/dark-library.jpg" width="180" alt="Library, dark" /> |
+| <img src="./assets/screenshots/light-home.jpg" width="180" alt="Home, light" /> | <img src="./assets/screenshots/light-player.jpg" width="180" alt="Player, light" /> | <img src="./assets/screenshots/light-album.jpg" width="180" alt="Album, light" /> | <img src="./assets/screenshots/light-artist.jpg" width="180" alt="Artist, light" /> | <img src="./assets/screenshots/light-library.jpg" width="180" alt="Library, light" /> |
+
+| Lyrics | Queue | Artists | Servers |
+| :---: | :---: | :---: | :---: |
+| <img src="./assets/screenshots/lyrics.jpg" width="180" alt="Synced lyrics" /> | <img src="./assets/screenshots/queue.jpg" width="180" alt="Queue" /> | <img src="./assets/screenshots/artists.jpg" width="180" alt="Artists" /> | <img src="./assets/screenshots/servers.jpg" width="180" alt="Supported servers" /> |
 
 ## Features
 
