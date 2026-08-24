@@ -80,17 +80,3 @@ body:
         - "Both"
     validations:
       required: false
-  - type: dropdown
-    id: install
-    attributes:
-      label: How you installed it
-      description: "Optional, and it counts for more than it sounds on iOS: the build is unsigned, and each sideloading tool leaves the app with different permissions and refresh rules."
-      options:
-        - "APK from Releases"
-        - "Obtainium"
-        - "AltStore"
-        - "Sideloadly"
-        - "Built it myself"
-        - "Other"
-    validations:
-      required: false
