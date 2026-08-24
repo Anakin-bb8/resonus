@@ -75,18 +75,19 @@ function hslToHex(h: number, s: number, l: number): string {
  * From the four UIImageColors candidates pick the best accent colour.
  *
  * The iOS algorithm labels colours by *role*, not by vibrancy:
- *   background  – dominant edge / background (often a large neutral area)
+ *   background  – dominant edge / background colour
  *   primary     – most prominent foreground colour
  *   secondary   – second most prominent
  *   detail      – small accent
  *
- * A naive "most saturated" pick often lands on a tiny, highly-saturated
- * `detail` (e.g. a red logo) that doesn't represent the cover at all.
+ * For a Spotify-style tint we want the *dominant* colour of the cover, which
+ * is almost always `background`.  The problem is that `background` can be a
+ * large neutral area (white border, black void) that normalises to grey.
  *
- * Strategy: prefer the foreground colours by importance order (primary >
- * secondary > detail > background), skipping very neutral colours
- * (saturation < 0.1).  Only break the preference when a lower-priority
- * colour is *much* more saturated (≥ 1.5 × the current best).
+ * Strategy: prefer `background` when it carries enough colour (saturation ≥
+ * 0.15).  Otherwise fall through to the foreground colours by importance
+ * (primary > secondary > detail), breaking the order only when a lower-
+ * priority colour is ≥ 1.5× more saturated.
  */
 function pickBestIosColor(
   background: string | undefined,
@@ -94,20 +95,30 @@ function pickBestIosColor(
   secondary: string | undefined,
   detail: string | undefined,
 ): string | undefined {
-  const NEUTRAL_THRESHOLD = 0.1;
+  const NEUTRAL_THRESHOLD = 0.15;
   const BREAK_THRESHOLD = 1.5;
 
-  const candidates = [
-    { hex: primary, weight: 1.0 },
-    { hex: secondary, weight: 0.85 },
-    { hex: detail, weight: 0.7 },
-    { hex: background, weight: 0.5 },
+  // 1. If the dominant background has real colour, use it — it best
+  //    represents the overall feel of the cover.
+  if (background) {
+    const rgb = hexToRgb(background);
+    if (rgb) {
+      const [, s] = rgbToHsl(rgb[0], rgb[1], rgb[2]);
+      if (s >= NEUTRAL_THRESHOLD) return background;
+    }
+  }
+
+  // 2. Background was too neutral — pick among the foreground colours.
+  const foreground = [
+    { hex: primary },
+    { hex: secondary },
+    { hex: detail },
   ];
 
   let best: string | undefined;
   let bestSat = -1;
 
-  for (const { hex } of candidates) {
+  for (const { hex } of foreground) {
     if (!hex) continue;
     const rgb = hexToRgb(hex);
     if (!rgb) continue;
@@ -120,12 +131,7 @@ function pickBestIosColor(
     }
   }
 
-  // Every candidate was too neutral — just return the first available so the
-  // normalisation step can still produce a usable tint.
-  if (!best) {
-    return primary || secondary || detail || background;
-  }
-  return best;
+  return best || background;
 }
 
 /**
