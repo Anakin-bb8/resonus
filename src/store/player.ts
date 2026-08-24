@@ -2502,11 +2502,19 @@ function onStatus(status: AudioStatus) {
 function handleSleepAtSongEnd(): boolean {
   const { sleepAtSongEnd, repeat } = usePlayerStore.getState();
   if (!sleepAtSongEnd) return false;
-  usePlayerStore.setState({ sleepAtSongEnd: false, isPlaying: false });
+  usePlayerStore.setState({ isPlaying: false });
   cutCrossfade();
   activePlayer()?.pause();
   const ni = nextIndex(false);
-  if (ni != null && repeat !== 'one') void loadIndex(ni, false);
+  // The timer stays on until the next track is in the player. Turning it off
+  // first brought the gapless queue back to life for the length of this
+  // handler, and queueing a source behind a track that has already ended does
+  // not queue anything: the player takes it as the one to play now and
+  // announces the move, late enough for that announcement to be read as a jump
+  // to whatever had been queued after it (#177).
+  const clear = () => usePlayerStore.setState({ sleepAtSongEnd: false });
+  if (ni == null || repeat === 'one') clear();
+  else void loadIndex(ni, false).finally(clear);
   return true;
 }
 
