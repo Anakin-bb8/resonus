@@ -46,16 +46,16 @@ Report issues with Platform set to iOS.
 
 ## Screenshots
 
-The same five screens, in dark and light.
+The same four screens, in dark and light.
 
-| Home | Player | Album | Artist | Library |
-| :---: | :---: | :---: | :---: | :---: |
-| <img src="./assets/screenshots/dark-home.jpg" width="180" alt="Home, dark" /> | <img src="./assets/screenshots/dark-player.jpg" width="180" alt="Player, dark" /> | <img src="./assets/screenshots/dark-album.jpg" width="180" alt="Album, dark" /> | <img src="./assets/screenshots/dark-artist.jpg" width="180" alt="Artist, dark" /> | <img src="./assets/screenshots/dark-library.jpg" width="180" alt="Library, dark" /> |
-| <img src="./assets/screenshots/light-home.jpg" width="180" alt="Home, light" /> | <img src="./assets/screenshots/light-player.jpg" width="180" alt="Player, light" /> | <img src="./assets/screenshots/light-album.jpg" width="180" alt="Album, light" /> | <img src="./assets/screenshots/light-artist.jpg" width="180" alt="Artist, light" /> | <img src="./assets/screenshots/light-library.jpg" width="180" alt="Library, light" /> |
-
-| Lyrics | Queue | Artists | Servers |
+| Home | Player | Album | Library |
 | :---: | :---: | :---: | :---: |
-| <img src="./assets/screenshots/lyrics.jpg" width="180" alt="Synced lyrics" /> | <img src="./assets/screenshots/queue.jpg" width="180" alt="Queue" /> | <img src="./assets/screenshots/artists.jpg" width="180" alt="Artists" /> | <img src="./assets/screenshots/servers.jpg" width="180" alt="Supported servers" /> |
+| <img src="./assets/screenshots/dark-home.jpg" width="200" alt="Home, dark" /> | <img src="./assets/screenshots/dark-player.jpg" width="200" alt="Player, dark" /> | <img src="./assets/screenshots/dark-album.jpg" width="200" alt="Album, dark" /> | <img src="./assets/screenshots/dark-library.jpg" width="200" alt="Library, dark" /> |
+| <img src="./assets/screenshots/light-home.jpg" width="200" alt="Home, light" /> | <img src="./assets/screenshots/light-player.jpg" width="200" alt="Player, light" /> | <img src="./assets/screenshots/light-album.jpg" width="200" alt="Album, light" /> | <img src="./assets/screenshots/light-library.jpg" width="200" alt="Library, light" /> |
+
+| Artist | Lyrics | Queue | Servers |
+| :---: | :---: | :---: | :---: |
+| <img src="./assets/screenshots/artist.jpg" width="200" alt="Artist" /> | <img src="./assets/screenshots/lyrics.jpg" width="200" alt="Synced lyrics" /> | <img src="./assets/screenshots/queue.jpg" width="200" alt="Queue" /> | <img src="./assets/screenshots/servers.jpg" width="200" alt="Supported servers" /> |
 
 ## Features
 
