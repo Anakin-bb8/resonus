@@ -1368,10 +1368,34 @@ index 33db27c..7999534 100644
  
  enum BitRateStrategy: String, Enumerable {
 diff --git a/ios/MediaController.swift b/ios/MediaController.swift
-index e977f57..5c47c4b 100644
+index e977f57..06d58dc 100644
 --- a/ios/MediaController.swift
 +++ b/ios/MediaController.swift
-@@ -303,12 +303,30 @@ class MediaController {
+@@ -14,6 +14,7 @@ class MediaController {
+   private var artworkLoadToken: UUID?
+   private var currentArtworkItemIdentifier: ObjectIdentifier?
+   private var isLiveStream = false
++  private var remoteCommandTargetsRegistered = false
+ 
+   func setActivePlayer(_ player: AudioPlayer?, options: LockScreenOptions? = nil) {
+     performOnMain {
+@@ -232,6 +233,15 @@ class MediaController {
+   }
+ 
+   private func enableRemoteCommands(options: LockScreenOptions?) {
++    updateRemoteCommandAvailability(options: options)
++
++    // Registering once is what keeps a tap on next from skipping several
++    // tracks: the command centre is process wide, the closures read
++    // `activePlayer` at press time, and `removeTarget(self)` does not remove
++    // them, so every lock screen handoff would pile on another live handler.
++    guard !remoteCommandTargetsRegistered else { return }
++    remoteCommandTargetsRegistered = true
++
+     remoteCommandCenter.playCommand.addTarget { [weak self] _ in
+       guard let player = self?.activePlayer else {
+         return .commandFailed
+@@ -303,12 +313,34 @@ class MediaController {
        return .success
      }
  
@@ -1379,6 +1403,7 @@ index e977f57..5c47c4b 100644
 +      guard let player = self?.activePlayer else {
 +        return .commandFailed
 +      }
++
 +      player.emit(event: "remoteNext")
 +      return .success
 +    }
@@ -1387,10 +1412,13 @@ index e977f57..5c47c4b 100644
 +      guard let player = self?.activePlayer else {
 +        return .commandFailed
 +      }
++
 +      player.emit(event: "remotePrevious")
 +      return .success
 +    }
++  }
 +
++  private func updateRemoteCommandAvailability(options: LockScreenOptions?) {
      remoteCommandCenter.playCommand.isEnabled = true
      remoteCommandCenter.pauseCommand.isEnabled = true
      remoteCommandCenter.togglePlayPauseCommand.isEnabled = true
@@ -1402,7 +1430,7 @@ index e977f57..5c47c4b 100644
    }
  
    private func disableRemoteCommands() {
-@@ -318,6 +336,8 @@ class MediaController {
+@@ -318,6 +350,8 @@ class MediaController {
      remoteCommandCenter.changePlaybackPositionCommand.isEnabled = false
      remoteCommandCenter.skipForwardCommand.isEnabled = false
      remoteCommandCenter.skipBackwardCommand.isEnabled = false
@@ -1411,11 +1439,3 @@ index e977f57..5c47c4b 100644
  
      // Remove event targets
      remoteCommandCenter.playCommand.removeTarget(self)
-@@ -326,5 +346,7 @@ class MediaController {
-     remoteCommandCenter.changePlaybackPositionCommand.removeTarget(self)
-     remoteCommandCenter.skipForwardCommand.removeTarget(self)
-     remoteCommandCenter.skipBackwardCommand.removeTarget(self)
-+    remoteCommandCenter.nextTrackCommand.removeTarget(self)
-+    remoteCommandCenter.previousTrackCommand.removeTarget(self)
-   }
- }
