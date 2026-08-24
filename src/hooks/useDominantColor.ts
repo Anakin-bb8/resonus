@@ -72,28 +72,58 @@ function hslToHex(h: number, s: number, l: number): string {
 }
 
 /**
- * From the four UIImageColors candidates (background, primary, secondary,
- * detail) pick the one with the highest saturation.  The iOS algorithm labels
- * them by *role* (background, text, detail), not by vibrancy — and
- * `background` often lands on a large neutral area (white border, black void)
- * that normalises to a dull grey.  The foreground colours (`primary`,
- * `secondary`, `detail`) are almost always more colourful and work better as
- * the Spotify-style tint we want.
+ * From the four UIImageColors candidates pick the best accent colour.
+ *
+ * The iOS algorithm labels colours by *role*, not by vibrancy:
+ *   background  – dominant edge / background (often a large neutral area)
+ *   primary     – most prominent foreground colour
+ *   secondary   – second most prominent
+ *   detail      – small accent
+ *
+ * A naive "most saturated" pick often lands on a tiny, highly-saturated
+ * `detail` (e.g. a red logo) that doesn't represent the cover at all.
+ *
+ * Strategy: prefer the foreground colours by importance order (primary >
+ * secondary > detail > background), skipping very neutral colours
+ * (saturation < 0.1).  Only break the preference when a lower-priority
+ * colour is *much* more saturated (≥ 1.5 × the current best).
  */
-function pickMostSaturated(
-  colors: Array<string | undefined>,
+function pickBestIosColor(
+  background: string | undefined,
+  primary: string | undefined,
+  secondary: string | undefined,
+  detail: string | undefined,
 ): string | undefined {
+  const NEUTRAL_THRESHOLD = 0.1;
+  const BREAK_THRESHOLD = 1.5;
+
+  const candidates = [
+    { hex: primary, weight: 1.0 },
+    { hex: secondary, weight: 0.85 },
+    { hex: detail, weight: 0.7 },
+    { hex: background, weight: 0.5 },
+  ];
+
   let best: string | undefined;
   let bestSat = -1;
-  for (const hex of colors) {
+
+  for (const { hex } of candidates) {
     if (!hex) continue;
     const rgb = hexToRgb(hex);
     if (!rgb) continue;
     const [, s] = rgbToHsl(rgb[0], rgb[1], rgb[2]);
-    if (s > bestSat) {
-      bestSat = s;
+    if (s < NEUTRAL_THRESHOLD) continue;
+
+    if (!best || s >= bestSat * BREAK_THRESHOLD) {
       best = hex;
+      bestSat = s;
     }
+  }
+
+  // Every candidate was too neutral — just return the first available so the
+  // normalisation step can still produce a usable tint.
+  if (!best) {
+    return primary || secondary || detail || background;
   }
   return best;
 }
@@ -174,14 +204,8 @@ export function useDominantColor(uri?: string): string {
         } else if (res.platform === 'ios') {
           // foreground colours (primary / secondary / detail) are almost
           // always more colourful than background, which often lands on a
-          // large neutral area; pick the most saturated one.
-          c =
-            pickMostSaturated([
-              res.primary,
-              res.secondary,
-              res.detail,
-              res.background,
-            ]) || c;
+          // large neutral area; prefer by importance, not just saturation.
+          c = pickBestIosColor(res.background, res.primary, res.secondary, res.detail) || c;
         } else if (res.platform === 'web') {
           c = res.vibrant || res.darkVibrant || res.dominant || c;
         }
