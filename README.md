@@ -30,26 +30,21 @@ Also available on [Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtai
 
 ### iOS (experimental)
 
-Since 0.7.5 each release also carries an `.ipa`, on the same
+Every release since 0.7.5 also carries an `.ipa`, on the same
 [Releases](https://github.com/juananzzz/resonus/releases/latest) page. It is
-**unsigned**: there is no App Store or TestFlight build, so it has to be
-sideloaded with AltStore, Sideloadly or a similar tool, and renewed however that
-tool asks for.
+**unsigned**: no App Store, no TestFlight, so it has to be sideloaded with
+AltStore, Sideloadly or similar, and renewed as that tool asks.
 
-It is new, and several things the Android build does are not there yet, because
-they are written against Android:
+Missing on iOS, all of it Android-native code:
 
-- **No CarPlay**, where Android has Android Auto.
-- **No casting.** UPnP/DLNA and Sonos are handled by native modules that exist
-  for Android only.
-- **No equalizer**, for the same reason.
-- **No gapless playback.** Queueing the next track inside the player is an
-  Android feature, so on iOS there is a gap between tracks.
-- **Less use behind it.** Resonus is built and tested on Android, and the iOS
-  build has not been through any of that, so expect rough edges the Android one
-  no longer has.
+- **CarPlay.** Android Auto has no counterpart.
+- **Casting.** UPnP/DLNA and Sonos are modules built for Android only.
+- **Equalizer.** Same reason.
+- **Gapless playback.** The next track is queued inside the Android player, so
+  on iOS there is a gap between tracks.
 
-Bug reports are welcome, with the Platform field set to iOS.
+It has also barely been used: Resonus is built and tested on Android. Expect
+rough edges, and report them with the Platform field set to iOS.
 
 ## Screenshots
 
