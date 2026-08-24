@@ -35,14 +35,14 @@ Every release since 0.7.5 also carries an `.ipa`, on the same
 **unsigned**: no App Store, no TestFlight, so it has to be sideloaded with
 AltStore, Sideloadly or similar, and renewed as that tool asks.
 
-Not implemented yet:
+Not implemented yet on iOS:
 
 - **CarPlay**
-- **Casting**: UPnP/DLNA and Sonos
+- **Casting**
 - **Equalizer**
-- **Gapless playback**: the next track is queued in the Android player
+- **Gapless playback**
 
-Untested on hardware. Report issues with Platform set to iOS.
+Report issues with Platform set to iOS.
 
 ## Screenshots
 
