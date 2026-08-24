@@ -9,6 +9,10 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Fixed
+
+- Opening Library for the first time no longer draws it under the status bar for an instant before dropping it into place.
+
 ## [0.7.5] - 2026-08-24
 
 ### Added

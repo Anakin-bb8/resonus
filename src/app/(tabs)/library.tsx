@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 import { GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated from 'react-native-reanimated';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   coverArtUrl,
@@ -768,8 +768,15 @@ export default function LibraryScreen() {
     }
   }
 
+  // The inset is read here rather than left to a `SafeAreaView`: that one pads
+  // itself once its native view has been measured, and this tab is only
+  // mounted the first time it is opened, so its first frame was drawn under
+  // the status bar and jumped down right after. The context already holds the
+  // inset by then, which makes the first frame the right one.
+  const insets = useSafeAreaInsets();
+
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <View style={[styles.safe, { paddingTop: insets.top }]}>
       {/* The screen's own chrome follows what it is over: with rows, it lines
           up with the centred column; with a grid, the grid fills the width and
           so does this (#131). */}
@@ -889,7 +896,7 @@ export default function LibraryScreen() {
           <FoldersTab />
         )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
