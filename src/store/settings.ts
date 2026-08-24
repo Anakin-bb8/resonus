@@ -264,6 +264,16 @@ export type CardBackground = 'none' | 'color';
 export type CoverTapAction = 'none' | 'screen' | 'inline';
 
 /**
+ * What tapping the cover twice does (#156).
+ *
+ * Off by default, and not only out of caution: with this on, a single tap has
+ * to wait to find out whether a second one is coming, so the tap that is
+ * already there gets slower for everybody who turns this on. That is a price
+ * worth asking about rather than charging.
+ */
+export type CoverDoubleTapAction = 'none' | 'playPause' | 'favorite';
+
+/**
  * Where lyrics come from:
  * - 'local':  prefer server / .lrc / USLT, fall back to LRCLIB online.
  * - 'online': prefer LRCLIB online search, fall back to local.
@@ -725,6 +735,8 @@ interface SettingsState {
   /** What tapping the player cover does (nothing / lyrics screen /
    *  lyrics in place of the cover). */
   coverTapAction: CoverTapAction;
+  /** What tapping it twice does (nothing / play or pause / favourite). */
+  coverDoubleTapAction: CoverDoubleTapAction;
   /** Marquee: long titles in the player auto-scroll. */
   marqueeTitles: boolean;
   /** Player bottom buttons (queue and devices). */
@@ -815,6 +827,14 @@ interface SettingsState {
   shareExpiry: ShareExpiry;
   /** Whether the last share allowed downloading (Navidrome only). */
   shareDownloadable: boolean;
+  /**
+   * Bring over the queue another player left on the server, on its own.
+   *
+   * Off by default: what it does when it fires is replace the queue on this
+   * device, and a queue that changes without being asked is worse than one
+   * that has to be asked for (the ⋯ of the queue screen always can).
+   */
+  syncQueueFromServer: boolean;
   /** Accent color (hex) under the dark appearance. */
   accentColor: string;
   /** The same under the light one, which is a separate choice: a colour picked
@@ -873,6 +893,7 @@ interface SettingsState {
   setShowLyricsCard: (value: boolean) => void;
   setShowArtistCard: (value: boolean) => void;
   setCoverTapAction: (value: CoverTapAction) => void;
+  setCoverDoubleTapAction: (value: CoverDoubleTapAction) => void;
   setMarqueeTitles: (value: boolean) => void;
   setShowQueueButton: (value: boolean) => void;
   setShowDevicesButton: (value: boolean) => void;
@@ -912,6 +933,7 @@ interface SettingsState {
   setGridColumns: (key: GridSizeKey, value: number) => void;
   setShareExpiry: (value: ShareExpiry) => void;
   setShareDownloadable: (value: boolean) => void;
+  setSyncQueueFromServer: (value: boolean) => void;
   setAccentColor: (value: string, appearance: ThemeMode) => void;
   setThemeMode: (value: ThemePreference) => void;
   setAppFont: (value: AppFont) => void;
@@ -991,6 +1013,7 @@ function snapshot(get: () => SettingsState) {
     showLyricsCard: s.showLyricsCard,
     showArtistCard: s.showArtistCard,
     coverTapAction: s.coverTapAction,
+    coverDoubleTapAction: s.coverDoubleTapAction,
     marqueeTitles: s.marqueeTitles,
     showQueueButton: s.showQueueButton,
     showDevicesButton: s.showDevicesButton,
@@ -1025,6 +1048,7 @@ function snapshot(get: () => SettingsState) {
     gridColumns: s.gridColumns,
     shareExpiry: s.shareExpiry,
     shareDownloadable: s.shareDownloadable,
+    syncQueueFromServer: s.syncQueueFromServer,
     accentColor: s.accentColor,
     accentColorLight: s.accentColorLight,
     themeMode: s.themeMode,
@@ -1094,6 +1118,8 @@ const DEFAULTS = {
   showArtistCard: false,
   // By default, tapping the cover opens the lyrics screen (as always).
   coverTapAction: 'screen' as CoverTapAction,
+  // Nothing: see `CoverDoubleTapAction`.
+  coverDoubleTapAction: 'none' as CoverDoubleTapAction,
   marqueeTitles: true,
   showQueueButton: true,
   showDevicesButton: true,
@@ -1144,6 +1170,7 @@ const DEFAULTS = {
   shareExpiry: 'never' as ShareExpiry,
   // Off: the server has its own default for this and nothing was overriding it.
   shareDownloadable: false,
+  syncQueueFromServer: false,
   accentColor: DEFAULT_ACCENT,
   accentColorLight: DEFAULT_ACCENT,
   // Dark: the appearance the app was designed in. Light is opt-in.
@@ -1404,6 +1431,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setCoverDoubleTapAction: (coverDoubleTapAction) => {
+    set({ coverDoubleTapAction });
+    persist(snapshot(get));
+  },
+
   setCoverTapAction: (coverTapAction) => {
     set({ coverTapAction });
     persist(snapshot(get));
@@ -1588,6 +1620,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setSyncQueueFromServer: (syncQueueFromServer) => {
+    set({ syncQueueFromServer });
+    persist(snapshot(get));
+  },
+
   setAccentColor: (value, appearance) => {
     set(appearance === 'light' ? { accentColorLight: value } : { accentColor: value });
     applyAccents(get().accentColor, get().accentColorLight);
@@ -1701,6 +1738,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           showLyricsCard: boolean;
           showArtistCard: boolean;
           coverTapAction: CoverTapAction;
+          coverDoubleTapAction: CoverDoubleTapAction;
           marqueeTitles: boolean;
           showQueueButton: boolean;
           showDevicesButton: boolean;
@@ -1738,6 +1776,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           gridColumns: Partial<Record<GridSizeKey, number>>;
           shareExpiry: ShareExpiry;
           shareDownloadable: boolean;
+          syncQueueFromServer: boolean;
           accentColor: string;
           accentColorLight: string;
           themeMode: ThemePreference;
@@ -1940,6 +1979,13 @@ export const useSettings = create<SettingsState>((set, get) => ({
         ) {
           set({ coverTapAction: parsed.coverTapAction });
         }
+        if (
+          parsed.coverDoubleTapAction === 'none' ||
+          parsed.coverDoubleTapAction === 'playPause' ||
+          parsed.coverDoubleTapAction === 'favorite'
+        ) {
+          set({ coverDoubleTapAction: parsed.coverDoubleTapAction });
+        }
         if (typeof parsed.marqueeTitles === 'boolean') {
           set({ marqueeTitles: parsed.marqueeTitles });
         }
@@ -2080,6 +2126,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (typeof parsed.shareDownloadable === 'boolean') {
           set({ shareDownloadable: parsed.shareDownloadable });
+        }
+        if (typeof parsed.syncQueueFromServer === 'boolean') {
+          set({ syncQueueFromServer: parsed.syncQueueFromServer });
         }
         // The light accent falls back to the dark one rather than to the
         // default: every profile that picked a colour before there were two of

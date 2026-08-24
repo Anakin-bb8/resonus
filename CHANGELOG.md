@@ -15,7 +15,8 @@ Releases before 0.2.1 are only listed on the
 - Home can show a "New releases" shelf, off by default in Settings > Home sections, with the albums ordered by the year they came out rather than by when the server got hold of them (#173).
 - The theme can follow the phone's own light or dark setting, from Settings > Appearance > Theme, and changes with it while the app is open (#173).
 - The accent colour is now remembered per appearance: the swatches set the colour of the theme you are in, and switching between dark and light brings back the one chosen there (#173).
-- The queue saved on the server can be brought over from the ⋯ of the queue screen: it is read on its own only when this device has no queue of its own, which left a queue continued on another player with no way in.
+- The queue another player left on the server can be brought over from the ⋯ of the queue screen, and taken on its own with the new switch in Settings > Playback: with it on, opening the app with nothing playing picks up that queue when it is the newer of the two.
+- Tapping the player's artwork twice can play, pause or favourite the song, from a new setting in Settings > Player that starts off (#156).
 - An album, a playlist or the favourites can be played next from their ⋯ menu, instead of only going to the end of the queue.
 
 ### Fixed

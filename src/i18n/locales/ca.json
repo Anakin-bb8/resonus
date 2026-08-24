@@ -685,5 +685,10 @@
   "That folder is already there": "Aquesta carpeta ja és a la llista",
   "Get the server's queue": "Porta la cua del servidor",
   "Queue brought over": "Cua portada",
-  "The server has no saved queue": "El servidor no té cap cua desada"
+  "The server has no saved queue": "El servidor no té cap cua desada",
+  "Pick up the queue from other players": "Recull la cua d’altres reproductors",
+  "When you open the app with nothing playing, take the queue another player left on the server if it is newer than this one. The ⋯ of the queue screen asks for it at any time.": "En obrir l’app sense res sonant, agafa la cua que un altre reproductor va deixar al servidor si és més recent que aquesta. El ⋯ de la pantalla de cua la demana en qualsevol moment.",
+  "On cover double tap": "En tocar dos cops la caràtula",
+  "Play or pause": "Reprodueix o pausa",
+  "A second action for the same artwork, for a hand that is not looking. With this on, a single tap waits a moment to see whether a second one is coming.": "Una segona acció sobre la mateixa caràtula, per a la mà que no mira. Amb això activat, un toc simple espera un moment per si en ve un segon."
 }

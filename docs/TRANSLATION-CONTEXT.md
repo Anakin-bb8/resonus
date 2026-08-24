@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 679 of them.
+Every string the app can show, under the screen it shows up on. 684 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -807,6 +807,7 @@ you are actually typing into, which is easier than reading it here.
 | `On mobile data only` | A value of when a downloaded song is played from the file instead of streamed |
 | `Only if it is the original file` | One of the values of “Play downloaded songs from the phone” |
 | `Original` | Quality option: the file exactly as it is on the server, nothing transcoded. It also appears in quotes inside two descriptions on those screens, so use the same wording in all three |
+| `Pick up the queue from other players` | A switch: whether to take the queue another player left on the server when the app is opened with nothing playing |
 | `Play downloaded songs from the phone` |  |
 | `Playback` |  |
 | `Pre-amp` | A gain in decibels applied on top of normalization, for when everything ends up too quiet |
@@ -825,11 +826,13 @@ you are actually typing into, which is easier than reading it here.
 | `Tune the sound band by band.` | The line under “Equalizer”, explaining it |
 | `Warn about battery optimization` |  |
 | `When a song counts as played.` | Under the `Scrobbling` row, saying what the screen it opens is about |
+| `When you open the app with nothing playing, take the queue another player left on the server if it is newer than this one. The ⋯ of the queue screen asks for it at any time.` |  |
 
 ## Settings › Player
 
 | String | What it is |
 | --- | --- |
+| `A second action for the same artwork, for a hand that is not looking. With this on, a single tap waits a moment to see whether a second one is coming.` |  |
 | `Always previous track` | A value of `Previous button`: never restarts, always goes back a song |
 | `Background` | Section header over what is drawn behind the player. Its two values are `Plain` and `Blurred cover` |
 | `Blurred cover` | A value of `Background`: the album art, blurred, behind the player |
@@ -848,9 +851,11 @@ you are actually typing into, which is easier than reading it here.
 | `Lyrics source` | Where lyrics are looked for. Its values are the three `Prefer…`/`Disable…` lines |
 | `No` | A setting value meaning none or zero, not the answer to a question: no crossfade, no seek buttons |
 | `Nothing` | A value of `On cover tap`: tapping the cover does nothing |
+| `On cover double tap` | Settings > Player: what tapping the album artwork twice does |
 | `On cover tap` | What tapping the cover art in the player does. Its values are `Nothing` and `Open lyrics screen` |
 | `Open lyrics screen` | A value of `On cover tap` |
 | `Plain` | A value of `Background`: a flat colour behind the player, no picture |
+| `Play or pause` | One of its options: the same as the play button |
 | `Play the music slower or faster, keeping its pitch.` | The line under “Show speed button”, explaining it |
 | `Player` |  |
 | `Player background` | What is drawn behind the player: the blurred artwork, or a flat tint |
