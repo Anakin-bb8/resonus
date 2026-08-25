@@ -691,5 +691,6 @@
   "Play or pause": "Reproducir o pausar",
   "A second action for the same artwork, for a hand that is not looking. With this on, a single tap waits a moment to see whether a second one is coming.": "Una segunda acción sobre la misma carátula, para la mano que no está mirando. Con esto activado, un toque simple espera un momento por si viene un segundo.",
   "Keep the tabs at the bottom of every screen. Holding the back arrow goes back to the one you came from either way.": "Mantiene las pestañas abajo en todas las pantallas. Mantener pulsada la flecha de volver lleva a la sección de la que saliste en cualquier caso.",
-  "Browse your library by folders, in the Library tab (Subsonic servers).": "Explora tu biblioteca por carpetas, en la pestaña Biblioteca (servidores Subsonic)."
+  "Browse your library by folders, in the Library tab (Subsonic servers).": "Explora tu biblioteca por carpetas, en la pestaña Biblioteca (servidores Subsonic).",
+  "At the end of the queue": "Al final de la cola"
 }

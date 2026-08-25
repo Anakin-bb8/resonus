@@ -89,6 +89,7 @@
     "Next": "Player control: the next track (accessibility label)",
     "Previous": "Player control: the previous track (accessibility label)",
     "Next in queue": "Queue screen header: the track that plays next",
+    "At the end of the queue": "Queue screen header: the songs 'Add to queue' put after everything else",
     "Show cover": "Lyrics screen: the button that goes back to the cover art",
     "About the artist": "The label over the photo on the artist card, the one below the player controls",
 

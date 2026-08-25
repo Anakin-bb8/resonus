@@ -1,12 +1,19 @@
 /**
- * Spotify-style playback queue, in sections:
+ * Playback queue, in sections:
  *   · Previous — what is behind the cursor (optional setting).
  *   · Now playing — the current song.
- *   · Next up — manually added items (`queuedCount` block).
+ *   · Next in queue — what "Play next" put straight after it.
  *   · Next from: {source} — the rest of what was playing.
+ *   · At the end of the queue — what "Add to queue" put after everything.
  * Every row can be dragged and removed, the one playing included (#157).
- * Section headers are derived from the position, so they reposition themselves
- * on reorder.
+ *
+ * The sections come from the marks the songs carry, not from where they sit.
+ * `queuedCount` used to draw the line, and it is dissolved the moment you tap
+ * a song instead of letting the queue reach it: after that the songs somebody
+ * had added were sitting under "Next from <album>", which named a record none
+ * of them came from (#184). A mark travels with the song, so it survives the
+ * jump — and it survives a reorder too, which is what keeps the headers where
+ * they belong when a row is dragged.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
@@ -141,7 +148,6 @@ export default function QueueScreen() {
   const router = useRouter();
   const queue = usePlayerStore((s) => s.queue);
   const index = usePlayerStore((s) => s.index);
-  const queuedCount = usePlayerStore((s) => s.queuedCount);
   const source = usePlayerStore((s) => s.source);
   const mixSeed = usePlayerStore(mixSeedOf);
   const moveTrack = usePlayerStore((s) => s.moveTrack);
@@ -211,38 +217,44 @@ export default function QueueScreen() {
         ? t('History')
         : source;
   const contextHeader = sourceName ? t('Next from {name}', { name: sourceName }) : null;
-  // Where that mix begins, while it is still ahead: the source above holds
-  // until there and the block gets a header of its own, named after the song
-  // it was grown from (the one right before it). In a radio there is nothing
-  // to separate, the whole queue is the mix.
-  const mixStart = radioMode ? -1 : queue.findIndex((s) => s.fromMix);
-  const mixHeader =
-    mixStart > 0 && mixStart > index
-      ? t('Next from {name}', {
-          name: t('Mix of “{name}”', { name: queue[mixStart - 1].title }),
-        })
-      : null;
+  /**
+   * Where a song ahead of the cursor came from, which is what decides its
+   * section. In a radio the whole queue is the mix and there is nothing to
+   * separate, so nothing carries the mark there either.
+   */
+  type Kind = 'queued' | 'mix' | 'source';
+  const kindOf = (i: number): Kind =>
+    queue[i]?.queued ? 'queued' : queue[i]?.fromMix ? 'mix' : 'source';
 
   /**
    * Section header for the row at queue position `abs` (or null).
    *
-   * Headers live inside the rows, not as items of their own. That's why the
-   * list has no `itemLayoutAnimation`: when a track ends every row shifts, the
-   * one that carried the header loses it and another grows one, so animating
-   * row layout animated rows changing height and read as the list rebuilding
-   * itself. Making them real items would mean remapping the drag-to-reorder
-   * indices around them.
+   * Only the first row of each run gets one, so a header appears exactly where
+   * the queue changes hands. Headers live inside the rows, not as items of
+   * their own. That's why the list has no `itemLayoutAnimation`: when a track
+   * ends every row shifts, the one that carried the header loses it and
+   * another grows one, so animating row layout animated rows changing height
+   * and read as the list rebuilding itself. Making them real items would mean
+   * remapping the drag-to-reorder indices around them.
    */
   const headerFor = (abs: number): string | null => {
     if (abs === start && start < index) return t('Previous::queue');
     if (abs === index) return t('Now playing');
-    if (queuedCount > 0 && abs === index + 1) return t('Next in queue');
-    // Before the source's: with the queue ending right where the mix starts,
-    // both fall on the same row and the one that still applies below it is
-    // this one.
-    if (mixHeader && abs === mixStart) return mixHeader;
-    if (abs === index + 1 + queuedCount && contextHeader) return contextHeader;
-    return null;
+    if (abs < index) return null;
+    const kind = kindOf(abs);
+    if (abs > index + 1 && kindOf(abs - 1) === kind) return null;
+    if (kind === 'queued') {
+      // Straight after the current song it is what "Play next" leaves; anywhere
+      // further along, what "Add to queue" left at the end (#184).
+      return abs === index + 1 ? t('Next in queue') : t('At the end of the queue');
+    }
+    if (kind === 'mix') {
+      // Named after the song it was grown from, which is the one before it.
+      return t('Next from {name}', {
+        name: t('Mix of “{name}”', { name: queue[abs - 1]?.title ?? '' }),
+      });
+    }
+    return contextHeader;
   };
 
   return (
