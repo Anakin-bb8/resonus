@@ -1259,12 +1259,14 @@ const DEFAULTS = {
   defaultTab: 'index' as DefaultTab,
   librarySort: 'recent' as LibrarySort,
   libraryLayout: 'list' as ListLayout,
-  // Grid by default: an artist is recognized by their face, and that's how the
-  // screen is already rendered. List is for those who prefer scanning names.
-  browseArtistsLayout: 'grid' as ListLayout,
-  // Grid by default: the cover is what identifies an album, and that's how the
-  // screen is already rendered.
-  browseAlbumsLayout: 'grid' as ListLayout,
+  // Rows, like the songs below and like everything else in Explore. A grid is
+  // how you recognise one artist you are already looking at; browsing the
+  // whole server is reading names, and a wall of faces is slower at that. The
+  // button is there for whoever disagrees.
+  browseArtistsLayout: 'list' as ListLayout,
+  // Rows, for the same reason. The cover identifies an album you know; the
+  // list is what you scan when you do not.
+  browseAlbumsLayout: 'list' as ListLayout,
   // Rows: a song is read by its title, and twelve of the same album are twelve
   // copies of one cover. The button is there for whoever disagrees.
   browseSongsLayout: 'list' as ListLayout,
