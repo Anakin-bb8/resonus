@@ -7,7 +7,7 @@ import { Cover } from '@/components/Cover';
 import { useGenreArt } from '@/hooks/useGenreArt';
 import { albumsLabel } from '@/i18n';
 import { useSettings } from '@/store/settings';
-import { colors, fontSize, radius, spacing, themed, useThemeMode } from '@/theme';
+import { fontSize, radius, spacing, themed, useTheme } from '@/theme';
 
 /**
  * The card's height, and the size of the covers on it. Both fixed: the columns
@@ -33,18 +33,23 @@ export function GenreCard({
   albumCount?: number;
   width?: number;
 }) {
-  const mode = useThemeMode();
+  // Not for the card's own colour, which no longer follows the appearance, but
+  // for the grey behind a cover that has not arrived: on Search the grid is
+  // memoised, so nothing above would repaint these.
+  useTheme();
   const lang = useSettings((s) => s.language);
   const albums = useGenreArt(name, albumCount);
   const hue = genreHue(name);
   /**
-   * Pale card with dark writing under the dark appearance, deep card with
-   * white writing under the light one. The reason is the page behind it: a
-   * pale block reads as a card on near-black and disappears on white.
+   * The same pale card under both appearances, which is what it was before the
+   * covers arrived and what going through the four combinations on a screen
+   * settled again: the deep card the light theme used to get turns into a wall
+   * of heavy blocks on white, and on near-black it swallows every dark cover
+   * standing on it. 78% is pale enough to hold artwork and still saturated
+   * enough to be a card on a white page.
    */
-  const dark = mode === 'dark';
-  const card = dark ? `hsl(${hue}, 45%, 78%)` : `hsl(${hue}, 50%, 32%)`;
-  const ink = dark ? `hsl(${hue}, 45%, 18%)` : colors.onArtwork;
+  const card = `hsl(${hue}, 45%, 78%)`;
+  const ink = `hsl(${hue}, 45%, 18%)`;
   // An album with no artwork is left out rather than given a placeholder: a
   // grey square is more conspicuous on one of these than a card with no art.
   const art = (albums ?? [])
