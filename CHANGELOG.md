@@ -12,11 +12,13 @@ Releases before 0.2.1 are only listed on the
 ### Added
 
 - One tap and two on the player's artwork now offer the same actions, the album among them, so play or pause on one and the lyrics on the other is a choice you can make either way round.
+- Holding a playlist on the Home shelf opens the same menu the library gives it (#182).
 
 ### Changed
 
 - The library tab is now called "Your library", at the bottom of the screen and at the top of the tab itself.
 - A genre card now says how many albums it holds and fans out the covers of its first two, in Search and in the genres screen alike.
+- The album and year line in the player scrolls when it does not fit, so a long album name no longer keeps the year off the screen (#183).
 
 ### Fixed
 
