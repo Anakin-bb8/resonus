@@ -47,7 +47,7 @@ Every release since 0.7.5 also carries an `.ipa`, on the same
 AltStore, Sideloadly or similar, and renewed as that tool asks.
 
 Not implemented yet on iOS: CarPlay, casting, the equalizer and gapless
-playback. Report issues with Platform set to iOS.
+playback.
 
 ## Features
 
