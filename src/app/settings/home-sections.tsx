@@ -9,11 +9,10 @@ import ReorderableList, {
   useReorderableDrag,
   type ReorderableListReorderEvent,
 } from 'react-native-reorderable-list';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { centredPadding, useScreenSize } from '@/hooks/useScreenSize';
 
-import { ScreenHeader, settingsStyles } from '@/components/SettingsUI';
+import { ScreenHeader, SettingsSafeArea } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { useAuthStore } from '@/store/auth';
@@ -92,7 +91,7 @@ export default function HomeSectionsSettings() {
     : homeSections;
 
   return (
-    <SafeAreaView style={settingsStyles.safe} edges={['top']}>
+    <SettingsSafeArea>
       <ScreenHeader title={t('Home sections')} />
       <Text style={styles.hint}>{t('Drag to reorder, toggle to show or hide.')}</Text>
       <ReorderableList
@@ -118,7 +117,7 @@ export default function HomeSectionsSettings() {
           { paddingBottom: bottomPad, paddingHorizontal: centredPadding(width, spacing.lg) },
         ]}
       />
-    </SafeAreaView>
+    </SettingsSafeArea>
   );
 }
 

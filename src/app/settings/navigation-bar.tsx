@@ -16,9 +16,8 @@ import ReorderableList, {
   useReorderableDrag,
   type ReorderableListReorderEvent,
 } from 'react-native-reorderable-list';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ScreenHeader, settingsStyles } from '@/components/SettingsUI';
+import { ScreenHeader, SettingsSafeArea } from '@/components/SettingsUI';
 import { useAccent } from '@/hooks/useAccent';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { centredPadding, useScreenSize } from '@/hooks/useScreenSize';
@@ -83,7 +82,7 @@ export default function NavigationBarSettings() {
   const bottomTabs = useSettings((s) => s.bottomTabs);
   const setBottomTabs = useSettings((s) => s.setBottomTabs);
   return (
-    <SafeAreaView style={settingsStyles.safe} edges={['top']}>
+    <SettingsSafeArea>
       <ScreenHeader title={t('Navigation bar')} />
       <Text style={styles.hint}>{t('Drag to reorder, toggle to show or hide.')}</Text>
       <ReorderableList
@@ -103,7 +102,7 @@ export default function NavigationBarSettings() {
           { paddingBottom: bottomPad, paddingHorizontal: centredPadding(width, spacing.lg) },
         ]}
       />
-    </SafeAreaView>
+    </SettingsSafeArea>
   );
 }
 

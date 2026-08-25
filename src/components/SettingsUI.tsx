@@ -17,12 +17,28 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaFrame, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaFrame, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAccent } from '@/hooks/useAccent';
 import { CONTENT_MAX_WIDTH } from '@/hooks/useScreenSize';
 import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING, themed } from '@/theme';
 import { BackChevron } from './BackChevron';
+
+/**
+ * The frame every settings screen sits in.
+ *
+ * The inset is read and applied here rather than left to a `SafeAreaView`:
+ * that one pads itself once its own native view has been measured, so the
+ * first frame of a screen is drawn without it and corrects a frame later —
+ * which is a title that lands slightly low and hops. "Your library" and
+ * Explore already read it by hand for the same reason; this is the rest of
+ * the app catching up. The context has the number long before any of this,
+ * so the first frame is the right one.
+ */
+export function SettingsSafeArea({ children }: { children: React.ReactNode }) {
+  const insets = useSafeAreaInsets();
+  return <View style={[settingsStyles.safe, { paddingTop: insets.top }]}>{children}</View>;
+}
 
 /** Header with back arrow and centered title. */
 export function ScreenHeader({ title }: { title: string }) {
@@ -46,10 +62,10 @@ export function ScreenHeader({ title }: { title: string }) {
  */
 export function SettingsPage({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <SafeAreaView style={settingsStyles.safe} edges={['top']}>
+    <SettingsSafeArea>
       <ScreenHeader title={title} />
       <View style={settingsStyles.pane}>{children}</View>
-    </SafeAreaView>
+    </SettingsSafeArea>
   );
 }
 

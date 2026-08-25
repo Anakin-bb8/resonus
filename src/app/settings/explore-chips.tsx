@@ -12,11 +12,10 @@ import ReorderableList, {
   useReorderableDrag,
   type ReorderableListReorderEvent,
 } from 'react-native-reorderable-list';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { centredPadding, useScreenSize } from '@/hooks/useScreenSize';
 
-import { ScreenHeader, settingsStyles, SwitchList } from '@/components/SettingsUI';
+import { ScreenHeader, SettingsSafeArea, SwitchList } from '@/components/SettingsUI';
 import { useLocalProfile } from '@/hooks/useLocalProfile';
 import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
@@ -102,7 +101,7 @@ export default function ExploreChipsSettings() {
   const setChipIcons = useSettings((s) => s.setExploreChipIcons);
   const visible = local ? exploreChips.filter((c) => !SERVER_ONLY.includes(c.key)) : exploreChips;
   return (
-    <SafeAreaView style={settingsStyles.safe} edges={['top']}>
+    <SettingsSafeArea>
       <ScreenHeader title={t('Explore chips')} />
       <Text style={styles.hint}>{t('Drag to reorder, toggle to show or hide.')}</Text>
       <ReorderableList
@@ -143,7 +142,7 @@ export default function ExploreChipsSettings() {
           { paddingBottom: bottomPad, paddingHorizontal: centredPadding(width, spacing.lg) },
         ]}
       />
-    </SafeAreaView>
+    </SettingsSafeArea>
   );
 }
 
