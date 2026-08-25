@@ -46,8 +46,6 @@ export default function AppearanceSettings() {
   const setAlwaysShowTabs = useSettings((s) => s.setAlwaysShowTabs);
   const showHistoryButton = useSettings((s) => s.showHistoryButton);
   const setShowHistoryButton = useSettings((s) => s.setShowHistoryButton);
-  const showProfileButton = useSettings((s) => s.showProfileButton);
-  const setShowProfileButton = useSettings((s) => s.setShowProfileButton);
   const defaultTab = useSettings((s) => s.defaultTab);
   const setDefaultTab = useSettings((s) => s.setDefaultTab);
   const swipeAction = useSettings((s) => s.swipeAction);
@@ -115,12 +113,6 @@ export default function AppearanceSettings() {
               description: t('The clock button on Home.'),
               value: showHistoryButton,
               onChange: setShowHistoryButton,
-            },
-            {
-              label: t('Show profile button'),
-              description: t('Your avatar on Home.'),
-              value: showProfileButton,
-              onChange: setShowProfileButton,
             },
           ]}
         />

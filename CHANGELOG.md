@@ -16,6 +16,10 @@ Releases before 0.2.1 are only listed on the
 - Holding a playlist on the Home shelf opens the same menu the library gives it (#182).
 - A fourth tab, Library, holds everything the server has: all albums, all artists, all songs, the genres, the radio stations and the folders, each with its own search and orders.
 
+### Removed
+
+- The avatar on Home, and the setting that showed it: it was never a button, and the account is one tap away behind the gear beside it.
+
 ### Changed
 
 - Song, album and artist rows dim under the finger, late enough that scrolling past one never lights it up.

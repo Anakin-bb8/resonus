@@ -697,21 +697,12 @@ export default function HomeScreen() {
   // and Discover) bring a new selection even if the library hasn't changed.
   const [reshuffleKey, setReshuffleKey] = useState(0);
   const showHistoryButton = useSettings((s) => s.showHistoryButton);
-  const showProfileButton = useSettings((s) => s.showProfileButton);
   const showQuickGrid = useSettings((s) => s.showQuickGrid);
   const showGreeting = useSettings((s) => s.showGreeting);
   const customGreeting = useSettings((s) => s.customGreeting);
   const language = useSettings((s) => s.language);
   const homeSections = useSettings((s) => s.homeSections);
-  // The avatar ring reads the store's accent (not the global constant), so it
-  // always recolors when changed or after hydrating; Home is the initial screen
-  // and renders before the saved accent is applied.
-  const { accent: accentColor } = useTheme();
   useSettings((s) => s.appFont); // re-render when font changes
-  // 'O' only in local profile (no account); a server account offline still
-  // shows its initial.
-  const initial = offline && !auth ? 'O' : (auth?.username ?? '?').charAt(0).toUpperCase();
-
   // Four slots, and when each one starts comes from the language rather than
   // from here: at 6pm English is in the evening and Spanish is still in the
   // afternoon, so a single set of hours was right in one language and wrong in
@@ -823,11 +814,6 @@ export default function HomeScreen() {
                 <Ionicons name="settings-outline" size={24} color={colors.textSecondary} />
               </Pressable>
             </Link>
-            {showProfileButton ? (
-              <View style={[styles.avatar, { borderColor: accentColor }]}>
-                <Text style={styles.avatarText}>{initial}</Text>
-              </View>
-            ) : null}
           </View>
         </View>
 
@@ -899,17 +885,6 @@ const styles = themed((colors) => ({
     alignItems: 'center',
     gap: spacing.md,
   },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surfaceHighlight,
-    borderWidth: 2,
-    borderColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
   chipsRow: { flexGrow: 0, marginBottom: spacing.lg },
   chips: { gap: spacing.sm, paddingHorizontal: spacing.lg },
   chip: {

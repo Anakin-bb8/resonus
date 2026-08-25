@@ -805,7 +805,6 @@ interface SettingsState {
   showFolderBrowser: boolean;
   /** Optional button visibility, for those who prefer a minimal UI. */
   showHistoryButton: boolean;
-  showProfileButton: boolean;
   /** App startup tab (Home/Search/Library). */
   defaultTab: DefaultTab;
   /** Chosen Library sort order (recent/added/alphabetical). */
@@ -933,7 +932,6 @@ interface SettingsState {
   setSongMenuAction: (key: SongMenuActionKey, value: boolean) => void;
   setShowFolderBrowser: (value: boolean) => void;
   setShowHistoryButton: (value: boolean) => void;
-  setShowProfileButton: (value: boolean) => void;
   setDefaultTab: (value: DefaultTab) => void;
   setLibrarySort: (value: LibrarySort) => void;
   setLibraryLayout: (value: ListLayout) => void;
@@ -1048,7 +1046,6 @@ function snapshot(get: () => SettingsState) {
     songMenuActions: s.songMenuActions,
     showFolderBrowser: s.showFolderBrowser,
     showHistoryButton: s.showHistoryButton,
-    showProfileButton: s.showProfileButton,
     defaultTab: s.defaultTab,
     librarySort: s.librarySort,
     libraryLayout: s.libraryLayout,
@@ -1156,7 +1153,6 @@ const DEFAULTS = {
   songMenuActions: { ...DEFAULT_SONG_MENU_ACTIONS },
   showFolderBrowser: false,
   showHistoryButton: true,
-  showProfileButton: true,
   defaultTab: 'index' as DefaultTab,
   librarySort: 'recent' as LibrarySort,
   libraryLayout: 'list' as ListLayout,
@@ -1577,10 +1573,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
-  setShowProfileButton: (showProfileButton) => {
-    set({ showProfileButton });
-    persist(snapshot(get));
-  },
 
   setDefaultTab: (defaultTab) => {
     set({ defaultTab });
@@ -1776,7 +1768,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
           songMenuActions: unknown;
           showFolderBrowser: boolean;
           showHistoryButton: boolean;
-          showProfileButton: boolean;
           defaultTab: DefaultTab;
           librarySort: LibrarySort;
           libraryLayout: ListLayout;
@@ -2085,9 +2076,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (typeof parsed.showHistoryButton === 'boolean') {
           set({ showHistoryButton: parsed.showHistoryButton });
-        }
-        if (typeof parsed.showProfileButton === 'boolean') {
-          set({ showProfileButton: parsed.showProfileButton });
         }
         if (
           parsed.defaultTab === 'index' ||
