@@ -238,19 +238,6 @@ export function AlbumsBrowser({ embedded, actionRef }: BrowserProps) {
           ) : null}
       </View>
 
-      {/* The row an album, a playlist and a genre have, acting on the same
-          thing they do: the songs behind what is on screen. Browsing all
-          albums and browsing all songs are two views of one library, so the
-          two sections answer the same two buttons. The order the chips are set
-          to is an album order and has no say over songs, which is why nothing
-          is passed for it.
-
-          Gone while searching: what "play everything" would start there is not
-          what you were looking for, and the search hands back albums, so there
-          is no list of songs to offer instead (the song list, whose search does
-          hand back songs, plays those). */}
-      {isSearch ? null : <BrowseActions source={t('Library')} href="/browse/albums" />}
-
       {/* The chips hide when searching: the server returns by relevance, so
           ordering results isn't in its hands and a marked pill would lie about
           the visible order. */}
@@ -277,6 +264,18 @@ export function AlbumsBrowser({ embedded, actionRef }: BrowserProps) {
         })}
       </ScrollView>
       )}
+
+      {/* Play and shuffle for the library, under the order they follow and over
+          the list they start. Browsing all albums and browsing all songs are
+          two views of one library, so the two sections answer the same pair.
+          The order the chips are set to is an album order and has no say over
+          songs, which is why nothing is passed for it.
+
+          Gone while searching: what "play everything" would start there is not
+          what you were looking for, and the search hands back albums, so there
+          is no list of songs to offer instead (the song list, whose search does
+          hand back songs, plays those). */}
+      {isSearch ? null : <BrowseActions source={t('Library')} href="/browse/albums" />}
 
       {(isSearch ? searchPending : isLoading) ? (
         grid ? (
