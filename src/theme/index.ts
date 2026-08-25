@@ -486,6 +486,19 @@ export const radius = {
   pill: 999,
 } as const;
 
+/**
+ * The type scale, from the smallest label to the biggest heading.
+ *
+ * Read it as a ladder, the way `radius` is read: `xs` is a badge or a caption,
+ * `sm` the second line of a row, `md` the first one, `lg` a section heading,
+ * `xl` a screen's title bar, `xxl` the big heading a screen or a record opens
+ * with.
+ *
+ * There is nothing between 24 and 32 on purpose. Three tab headings used to
+ * carry a hand-written 30, which is two points off `xxl` and reads as the same
+ * size to everybody who is not measuring: a step nobody can see is not a step,
+ * it is a second name for one that already exists.
+ */
 export const fontSize = {
   xs: 12,
   sm: 14,

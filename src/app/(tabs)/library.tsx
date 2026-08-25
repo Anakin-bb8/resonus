@@ -842,7 +842,7 @@ const styles = themed((colors) => ({
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
   },
-  heading: { color: colors.text, fontSize: 30, fontWeight: '600' },
+  heading: { color: colors.text, fontSize: fontSize.xxl, fontWeight: '600' },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   segments: {
     flexGrow: 0,
