@@ -1,10 +1,11 @@
 /** Album and song search on the server. */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useNavigation } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useFocusEffect, useNavigation } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Keyboard,
   Pressable,
   Text,
   TextInput,
@@ -28,7 +29,7 @@ import { TrackRow } from '@/components/TrackRow';
 import { useDebounce } from '@/hooks/useDebounce';
 import { songsLabel, useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
-import { onTabReselect } from '@/lib/tabOrigin';
+import { onTabReselect, takeSearchFocus } from '@/lib/tabOrigin';
 import { bump } from '@/lib/perfLog';
 import { useAuthStore } from '@/store/auth';
 import { useMediaMenu } from '@/store/mediaMenu';
@@ -122,6 +123,29 @@ export default function SearchScreen() {
       stopBlur();
     };
   }, [navigation]);
+
+  // Arriving from the button on Home, which asks for the box before it sends
+  // anybody here. On focus rather than on mount: the tab is never unmounted
+  // once opened, so every visit after the first is a focus and nothing else.
+  useFocusEffect(
+    useCallback(() => {
+      if (!takeSearchFocus()) return;
+      inputRef.current?.focus();
+      // Asked for twice, because once is not reliable. A screen still on its
+      // way in will take the cursor and leave the keyboard down, and there is
+      // nothing to retry from: the input answers `isFocused()` yes, so only
+      // the keyboard itself can say whether it worked. The second go is
+      // preceded by a `blur` for the reason the tab gesture below documents:
+      // asking an input that already has focus to take it does nothing at all,
+      // keyboard included.
+      const id = setTimeout(() => {
+        if (Keyboard.isVisible()) return;
+        inputRef.current?.blur();
+        inputRef.current?.focus();
+      }, 250);
+      return () => clearTimeout(id);
+    }, []),
+  );
 
   const { data, isFetching, isError, refetch } = useQuery({
     queryKey: ['search', debouncedQuery],

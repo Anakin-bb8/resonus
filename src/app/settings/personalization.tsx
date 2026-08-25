@@ -44,8 +44,6 @@ export default function AppearanceSettings() {
   const language = useSettings((s) => s.language);
   const alwaysShowTabs = useSettings((s) => s.alwaysShowTabs);
   const setAlwaysShowTabs = useSettings((s) => s.setAlwaysShowTabs);
-  const showHistoryButton = useSettings((s) => s.showHistoryButton);
-  const setShowHistoryButton = useSettings((s) => s.setShowHistoryButton);
   const defaultTab = useSettings((s) => s.defaultTab);
   const setDefaultTab = useSettings((s) => s.setDefaultTab);
   const swipeAction = useSettings((s) => s.swipeAction);
@@ -112,15 +110,11 @@ export default function AppearanceSettings() {
         />
 
         <Text style={settingsStyles.sectionTitle}>{t('Home')}</Text>
-        <SwitchList
-          options={[
-            {
-              label: t('Show history button'),
-              description: t('The clock button on Home.'),
-              value: showHistoryButton,
-              onChange: setShowHistoryButton,
-            },
-          ]}
+        <SettingRow
+          label={t('Home buttons')}
+          description={t('Which icons are at the top of Home, and in what order.')}
+          chevron
+          onPress={() => router.push('/settings/home-buttons')}
         />
 
         <SettingRow
@@ -131,10 +125,10 @@ export default function AppearanceSettings() {
         />
 
         <SettingRow
-          label={t('Explore chips')}
+          label={t('Home chips')}
           description={t('Show, hide and reorder the chips at the top of Home.')}
           chevron
-          onPress={() => router.push('/settings/explore-chips')}
+          onPress={() => router.push('/settings/home-chips')}
         />
 
         <SettingRow

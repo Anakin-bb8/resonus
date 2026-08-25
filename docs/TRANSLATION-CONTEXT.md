@@ -290,6 +290,7 @@ you are actually typing into, which is easier than reading it here.
 | --- | --- |
 | `Clear all` | Throw away the whole list: the history, the queue, or what you searched for |
 | `Clear history` | Throw the listening history away |
+| `History` | The listening history: what was played and when |
 | `History cleared` | Toast |
 | `Nothing played yet` | Empty state: this phone has not played anything yet |
 | `Songs you play will show up here.` | The line under an empty state, saying how to fill it |
@@ -314,7 +315,7 @@ you are actually typing into, which is easier than reading it here.
 | `Random albums` | A section of Home: albums picked at random, to happen upon something |
 | `Random artists` | A section of Home: artists picked at random |
 | `Scanning your music…` | Going through the phone's own files |
-| `Settings` | The app's settings, and the button that opens them |
+| `Search` | The search tab, and the action of searching |
 
 ## Library
 
@@ -399,6 +400,7 @@ you are actually typing into, which is easier than reading it here.
 | `Devices` | The audio output devices to cast to |
 | `Explicit` | A value of `Content`: the recording carries a parental advisory (strong language). Also read out for the E badge next to a title |
 | `Forward {n} seconds` | Read out by the screen reader for the seek button. `{n}` is how many seconds it is set to |
+| `History` | The listening history: what was played and when |
 | `Mix of “{name}”` | What the player calls the queue once it has grown past its album into songs the app picked itself. `{name}` is the song it was grown from |
 | `Next` | Player control: the next track (accessibility label) |
 | `No devices found` |  |
@@ -476,6 +478,7 @@ you are actually typing into, which is easier than reading it here.
 | `Clear queue` | Menu action: empty the list of what is coming |
 | `Explicit` | A value of `Content`: the recording carries a parental advisory (strong language). Also read out for the E badge next to a title |
 | `Get the server's queue` | Queue screen action: replace what is playing here with the queue the server has, which is the one left on another player |
+| `History` | The listening history: what was played and when |
 | `Mix of “{name}”` | What the player calls the queue once it has grown past its album into songs the app picked itself. `{name}` is the song it was grown from |
 | `Next from {name}` | Heading on the queue screen: what is coming, and where it comes from. `{name}` is an album, a playlist or a mix |
 | `Next in queue` | Queue screen header: the track that plays next |
@@ -638,14 +641,6 @@ you are actually typing into, which is easier than reading it here.
 | `Reset bands` | Put the equalizer's frequency sliders back to flat |
 | `This device does not offer an equalizer.` |  |
 
-## Settings › Explore chips
-
-| String | What it is |
-| --- | --- |
-| `Drag to reorder, toggle to show or hide.` |  |
-| `Explore chips` | The row of tappable category chips |
-| `Show icons` |  |
-
 ## Settings › Font
 
 | String | What it is |
@@ -664,11 +659,24 @@ you are actually typing into, which is easier than reading it here.
 | `Leave it empty to greet you by the time of day.` | The line under “Custom greeting”, explaining it |
 | `Show greeting` | Whether Home says "Good morning" at the top |
 
+## Settings › Home buttons
+
+| String | What it is |
+| --- | --- |
+| `Always shown` | Said where a switch would be, on the Home tab, which cannot be taken off the bar |
+| `Home buttons` | The icons at the top right of Home (search, history, settings), which of them show and in what order |
+
+## Settings › Home chips
+
+| String | What it is |
+| --- | --- |
+| `Home chips` | The row of tappable category chips |
+| `Show icons` |  |
+
 ## Settings › Home sections
 
 | String | What it is |
 | --- | --- |
-| `Drag to reorder, toggle to show or hide.` |  |
 | `Home sections` | Reorder which sections appear on Home |
 | `Most played albums` | A section of Home: the records played most |
 | `New releases` | Home shelf and album sort: albums by the year they came out, newest first. Not "Recently added", which is when the server got hold of them |
@@ -724,7 +732,6 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `Always shown` | Said where a switch would be, on the Home tab, which cannot be taken off the bar |
-| `Drag to reorder, toggle to show or hide.` |  |
 | `Navigation bar` | Settings screen: which tabs are on the bar at the bottom, and in what order |
 
 ## Settings › Network
@@ -762,12 +769,13 @@ you are actually typing into, which is easier than reading it here.
 | `Choose which actions show in a song's ⋯ menu.` | The line under “Song menu”, explaining it |
 | `Dark or light, and the accent color` | The line under “Theme”, explaining it |
 | `Explore` | The tab holding everything the server has: all albums, artists, songs, genres, stations and folders |
-| `Explore chips` | The row of tappable category chips |
 | `Folder browsing` | Browsing the server's folders as folders, instead of by album and artist |
 | `Font` |  |
 | `Greeting` | Home's "Good morning" line |
 | `Haptic feedback` | The small vibration when something is tapped |
 | `Home` | The first tab, and a folder in the car |
+| `Home buttons` | The icons at the top right of Home (search, history, settings), which of them show and in what order |
+| `Home chips` | The row of tappable category chips |
 | `Home sections` | Reorder which sections appear on Home |
 | `Interaction` | Section header grouping toggles |
 | `Interface` | Section header grouping toggles |
@@ -779,17 +787,16 @@ you are actually typing into, which is easier than reading it here.
 | `Open the app on` | Which tab the app opens on, and comes back to after a while away |
 | `Quick grid` | The grid of shortcut tiles on Home |
 | `Search` | The search tab, and the action of searching |
-| `Show history button` | Whether the button that opens the listening history shows |
 | `Show, hide and reorder the album rows on Home.` | The line under “Home sections”, explaining it |
-| `Show, hide and reorder the chips at the top of Home.` | The line under “Explore chips”, explaining it |
+| `Show, hide and reorder the chips at the top of Home.` | The line under “Home chips”, explaining it |
 | `Show, personalize and size the shortcut cards on Home.` | The line under “Quick grid”, explaining it |
 | `Song lists` | The setting for how song lists look |
 | `Song menu` | The three-dot menu on a song, drawn as ⋮ in a list and ⋯ in a header. A setting picks which actions it shows |
 | `Subtle vibration on key actions.` | The line under “Haptic feedback”, explaining it |
 | `Swipe left` | What dragging a song to the left in a list does |
 | `Swipe right` | What dragging a song to the right in a list does. Its values are the actions listed under it |
-| `The clock button on Home.` | The line under “Show history button”, explaining it |
 | `Theme` | The screen where the appearance and the accent colour are chosen, and the name of the row that opens it |
+| `Which icons are at the top of Home, and in what order.` | The line under “Home buttons”, explaining it |
 | `Which tab opens on launch, and after a while in the background.` | The line under “Open the app on”, explaining it |
 | `Which tabs are at the bottom, and in what order.` | The line under “Navigation bar”, explaining it |
 | `Your library` | The tab with your albums, artists and playlists |
@@ -1029,10 +1036,10 @@ you are actually typing into, which is easier than reading it here.
 | `Download “{name}”?` | Dialog title. `{name}` is an album, artist or playlist |
 | `Download stopped` | Toast: the download was stopped part way |
 | `Downloading…` | Toast: the download has started. The songs arrive one by one after this |
+| `Drag to reorder, toggle to show or hide.` |  |
 | `Export` | Get the downloaded file itself out of the app, as a file. Not the same as `Share`, which makes a link on the server |
 | `Exporting…` | The file is being copied out |
 | `Favorites` | The songs, albums and artists you starred |
-| `History` | The listening history: what was played and when |
 | `Hold to go back to {tab}` | The hint on holding the back arrow. `{tab}` is Home, Search or Library |
 | `List` | An option in that menu: one row per item, instead of cards |
 | `Lyrics` | The words of the song. Also a line of the storage bar, where it is their size on the phone |

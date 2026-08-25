@@ -16,6 +16,8 @@ Releases before 0.2.1 are only listed on the
 - Holding a playlist on the Home shelf opens the same menu the library gives it (#182).
 - The tabs at the bottom can be reordered, and all but Home hidden, from Settings > Appearance > Navigation bar.
 - A fourth tab, Explore, holds everything the server has: all albums, all artists, all songs, the genres, the radio stations and the folders, each with its own search and orders.
+- A search button on Home, beside the gear, opens the search box with the cursor already in it.
+- The icons at the top of Home can be reordered, and all but the gear hidden, from Settings > Appearance > Home buttons.
 
 ### Removed
 
@@ -27,6 +29,7 @@ Releases before 0.2.1 are only listed on the
 - Corners are rounder throughout, and a cover's follows its size instead of being the same on a thumbnail and on the player's artwork.
 - Every sheet rises with the same rounded top; half of them used to be less rounded than the other half.
 - The library tab is now called "Your library", at the bottom of the screen and at the top of the tab itself.
+- The row of chips on Home is now called "Home chips" and not "Explore chips", which named the Explore tab it has nothing to do with; the order you put them in survives the rename.
 - Browsing all albums, all artists and all songs picks its order from a menu that says which one is on, instead of a scrolling row of pills, and the albums and the songs gained play and shuffle beside it.
 - A genre card now says how many albums it holds and fans out the covers of its first two, in Search and in the genres screen alike.
 - The album and year line in the player scrolls when it does not fit, so a long album name no longer keeps the year off the screen (#183).

@@ -1,14 +1,11 @@
 /**
- * Settings › Navigation bar: which tabs are at the bottom, and in what order.
+ * Settings › Home buttons: the icons at the top right of Home, and in what
+ * order.
  *
- * The same draggable list the Home chips and the Home sections use, with
- * one rule they do not have: **Home has no switch**. Every other list here can
- * be emptied and the thing it feeds simply disappears; empty this one and the
- * app has no way out of wherever you happen to be standing.
- *
- * A tab that is off is still a route — anything already pointing at it still
- * opens it, and the back arrow still knows where it came from. What goes is
- * the way in from the bar.
+ * The same draggable list as the navigation bar, with the same kind of
+ * exemption: there, Home has no switch; here, the gear has none. Settings is
+ * only reachable from that icon, so turning it off would leave no way back to
+ * this very screen.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, Switch, Text, View } from 'react-native';
@@ -23,8 +20,7 @@ import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { centredPadding, useScreenSize } from '@/hooks/useScreenSize';
 import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
-import { TABS } from '@/lib/tabOrigin';
-import { useSettings, type BottomTab } from '@/store/settings';
+import { useSettings, type HomeButton, type HomeButtonKey } from '@/store/settings';
 import {
   colors,
   fontSize,
@@ -35,15 +31,22 @@ import {
   useTheme,
 } from '@/theme';
 
-function TabRow({ tab }: { tab: BottomTab }) {
+/** What each row says and wears, so the list reads like the header does. */
+const BUTTONS: Record<HomeButtonKey, { label: string; icon: keyof typeof Ionicons.glyphMap }> = {
+  search: { label: 'Search', icon: 'search-outline' },
+  history: { label: 'History', icon: 'time-outline' },
+  settings: { label: 'Settings', icon: 'settings-outline' },
+};
+
+function ButtonRow({ button }: { button: HomeButton }) {
   const t = useT();
   const drag = useReorderableDrag();
-  const setBottomTab = useSettings((s) => s.setBottomTab);
+  const setHomeButton = useSettings((s) => s.setHomeButton);
   const accent = useAccent();
-  const label = TABS.find((x) => x.segment === tab.key)?.label ?? tab.key;
-  // Home stays. Its row is still draggable, because where it sits is a
-  // preference like any other; whether it is there at all is not.
-  const fixed = tab.key === 'index';
+  const { label, icon } = BUTTONS[button.key];
+  // The gear stays. Where it sits is a preference like any other; whether it
+  // is there at all is not.
+  const fixed = button.key === 'settings';
   return (
     <View style={styles.row}>
       <Pressable
@@ -57,13 +60,14 @@ function TabRow({ tab }: { tab: BottomTab }) {
       >
         <Ionicons name="reorder-two" size={24} color={colors.textSecondary} />
       </Pressable>
+      <Ionicons name={icon} size={20} color={colors.textSecondary} />
       <Text style={styles.label}>{t(label)}</Text>
       {fixed ? (
         <Text style={styles.fixed}>{t('Always shown')}</Text>
       ) : (
         <Switch
-          value={tab.enabled}
-          onValueChange={(v) => setBottomTab(tab.key, v)}
+          value={button.enabled}
+          onValueChange={(v) => setHomeButton(button.key, v)}
           trackColor={{ false: colors.control, true: accent }}
           thumbColor={colors.knob}
         />
@@ -72,28 +76,28 @@ function TabRow({ tab }: { tab: BottomTab }) {
   );
 }
 
-export default function NavigationBarSettings() {
+export default function HomeButtonsSettings() {
   // Repaints on a change of appearance or accent: a stack keeps this screen
   // mounted while you are on another one, out of reach of anything else.
   useTheme();
   const bottomPad = useScreenBottomPadding();
   const { width } = useScreenSize();
   const t = useT();
-  const bottomTabs = useSettings((s) => s.bottomTabs);
-  const setBottomTabs = useSettings((s) => s.setBottomTabs);
+  const homeButtons = useSettings((s) => s.homeButtons);
+  const setHomeButtons = useSettings((s) => s.setHomeButtons);
   return (
     <SettingsSafeArea>
-      <ScreenHeader title={t('Navigation bar')} />
+      <ScreenHeader title={t('Home buttons')} />
       <Text style={styles.hint}>{t('Drag to reorder, toggle to show or hide.')}</Text>
       <ReorderableList
-        data={bottomTabs}
+        data={homeButtons}
         keyExtractor={(item) => item.key}
-        renderItem={({ item }) => <TabRow tab={item} />}
+        renderItem={({ item }) => <ButtonRow button={item} />}
         onReorder={({ from, to }: ReorderableListReorderEvent) => {
-          const next = bottomTabs.slice();
+          const next = homeButtons.slice();
           const [moved] = next.splice(from, 1);
           next.splice(to, 0, moved);
-          setBottomTabs(next);
+          setHomeButtons(next);
         }}
         contentContainerStyle={[
           styles.list,

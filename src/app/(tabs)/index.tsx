@@ -1,7 +1,7 @@
 /** Spotify-style Home: quick access tiles + album carousels. */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { useEffect, useMemo, useReducer, useState } from 'react';
 import {
   ActivityIndicator,
@@ -42,8 +42,14 @@ import { useAuthStore } from '@/store/auth';
 import { checkAutoUrlNow } from '@/store/autoUrl';
 import { useLastPlayed } from '@/store/lastPlayed';
 import { usePlayerStore } from '@/store/player';
+import { requestSearchFocus } from '@/lib/tabOrigin';
 import { useScanProgress } from '@/store/scanProgress';
-import { useSettings, type ExploreChipKey, type HomeSectionKey } from '@/store/settings';
+import {
+  useSettings,
+  type HomeChipKey,
+  type HomeButtonKey,
+  type HomeSectionKey,
+} from '@/store/settings';
 import { useSongMenu } from '@/store/songMenu';
 import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
@@ -522,9 +528,9 @@ function DiscoverSection({ title, reshuffleKey }: { title: string; reshuffleKey:
 }
 
 /** Look and target of each chip; order and state are set by the user
- *  (Settings → Appearance → Explore chips). Without `href` = plays instead of
+ *  (Settings → Appearance → Home chips). Without `href` = plays instead of
  *  navigating (only the shuffle one). */
-const EXPLORE: Record<ExploreChipKey, { href?: string; icon: keyof typeof Ionicons.glyphMap; label: string }> = {
+const CHIPS: Record<HomeChipKey, { href?: string; icon: keyof typeof Ionicons.glyphMap; label: string }> = {
   shuffle: { icon: 'shuffle', label: 'Shuffle' },
   favorites: { href: '/favorites', icon: 'heart-outline', label: 'Favorites' },
   albums: { href: '/browse/albums', icon: 'disc-outline', label: 'Albums' },
@@ -537,7 +543,7 @@ const EXPLORE: Record<ExploreChipKey, { href?: string; icon: keyof typeof Ionico
 
 // Locally there is shuffle, albums, artists and songs (radio and genres are
 // server-side).
-const OFFLINE_KEYS = new Set<ExploreChipKey>([
+const OFFLINE_KEYS = new Set<HomeChipKey>([
   'shuffle',
   'favorites',
   'albums',
@@ -548,14 +554,14 @@ const OFFLINE_KEYS = new Set<ExploreChipKey>([
   'history',
 ]);
 
-function ExploreChips({ offline }: { offline: boolean }) {
+function HomeChips({ offline }: { offline: boolean }) {
   const t = useT();
-  const chips = useSettings((s) => s.exploreChips).filter(
+  const chips = useSettings((s) => s.homeChips).filter(
     (c) => c.enabled && (!offline || OFFLINE_KEYS.has(c.key)),
   );
-  // Icons off leaves the name on its own (Settings › Explore chips): the row
+  // Icons off leaves the name on its own (Settings › Home chips): the row
   // reads as words rather than as buttons, and more of it fits on screen.
-  const icons = useSettings((s) => s.exploreChipIcons);
+  const icons = useSettings((s) => s.homeChipIcons);
   // The shuffle one takes whatever the server returns: without this, you tap
   // and nothing happens for half a second and it feels broken.
   const [shuffling, setShuffling] = useState(false);
@@ -580,7 +586,7 @@ function ExploreChips({ offline }: { offline: boolean }) {
       contentContainerStyle={styles.chips}
     >
       {chips.map(({ key }) => {
-        const cfg = EXPLORE[key];
+        const cfg = CHIPS[key];
         // The shuffle one is the only one that plays instead of taking you
         // somewhere: asking for it and getting a list is the opposite of what
         // you asked for.
@@ -677,6 +683,50 @@ const HOME_ALBUM_CONFIG: Record<
   randomAlbums: { title: 'Random albums', type: 'random' },
 };
 
+/**
+ * One of the buttons at the top right of Home.
+ *
+ * Together in one place because the header draws whichever ones are on, in
+ * whatever order they were put in, and a list of keys is easier to reorder
+ * than three pieces of JSX. Same size and same muted colour for all three, so
+ * moving one does not change how it looks.
+ */
+function HomeHeaderButton({ which }: { which: HomeButtonKey }) {
+  const t = useT();
+  if (which === 'search') {
+    // Search from here, with the cursor already in the box: the tab is one tap
+    // either way, and this saves the tap on the box that came after it. It is
+    // also the way in for whoever has turned the Search tab off, which keeps
+    // its route.
+    return (
+      <Pressable
+        hitSlop={10}
+        accessibilityLabel={t('Search')}
+        onPress={() => {
+          requestSearchFocus();
+          // `navigate`, like the tab bar and the back arrow: `push` puts
+          // another entry on the stack instead of moving to the tab, which
+          // leaves a back arrow pointing at the Home you never left.
+          router.navigate('/search');
+        }}
+      >
+        <Ionicons name="search-outline" size={24} color={colors.textSecondary} />
+      </Pressable>
+    );
+  }
+  const [href, icon, label] =
+    which === 'history'
+      ? (['/history', 'time-outline', 'History'] as const)
+      : (['/settings', 'settings-outline', 'Settings'] as const);
+  return (
+    <Link href={href} asChild>
+      <Pressable hitSlop={10} accessibilityLabel={t(label)}>
+        <Ionicons name={icon} size={24} color={colors.textSecondary} />
+      </Pressable>
+    </Link>
+  );
+}
+
 export default function HomeScreen() {
   // Repaints on a change of appearance or accent: a stack keeps this screen
   // mounted while you are on another one, out of reach of anything else.
@@ -696,7 +746,7 @@ export default function HomeScreen() {
   // Increments on each pull-to-refresh to force that the random rows (artists
   // and Discover) bring a new selection even if the library hasn't changed.
   const [reshuffleKey, setReshuffleKey] = useState(0);
-  const showHistoryButton = useSettings((s) => s.showHistoryButton);
+  const homeButtons = useSettings((s) => s.homeButtons);
   const showQuickGrid = useSettings((s) => s.showQuickGrid);
   const showGreeting = useSettings((s) => s.showGreeting);
   const customGreeting = useSettings((s) => s.customGreeting);
@@ -802,24 +852,17 @@ export default function HomeScreen() {
             {/* Before the buttons, and dimmer than them, so it reads as a state
                 and not as something to press. */}
             <OfflineIndicator />
-            {showHistoryButton ? (
-              <Link href="/history" asChild>
-                <Pressable hitSlop={10} accessibilityLabel={t('History')}>
-                  <Ionicons name="time-outline" size={24} color={colors.textSecondary} />
-                </Pressable>
-              </Link>
-            ) : null}
-            <Link href="/settings" asChild>
-              <Pressable hitSlop={10} accessibilityLabel={t('Settings')}>
-                <Ionicons name="settings-outline" size={24} color={colors.textSecondary} />
-              </Pressable>
-            </Link>
+            {/* In the order the user put them in, and only the ones left on
+                (Settings › Appearance › Home buttons). */}
+            {homeButtons.map(({ key, enabled }) =>
+              enabled ? <HomeHeaderButton key={key} which={key} /> : null,
+            )}
           </View>
         </View>
 
         {offline && scanning ? <ScanningPanel /> : null}
 
-        <ExploreChips offline={offline} />
+        <HomeChips offline={offline} />
 
         {!offline && serverUnreachable ? (
           <Message

@@ -385,8 +385,9 @@ function normalizeHomeSections(raw: unknown): HomeSection[] {
   return out;
 }
 
-/** Home explore row chip. `genres` and `radio` are server-only. */
-export type ExploreChipKey =
+/** One of the chips in the row at the top of Home. `genres` and `radio`
+ *  are server-only. */
+export type HomeChipKey =
   | 'shuffle'
   | 'favorites'
   | 'albums'
@@ -397,12 +398,12 @@ export type ExploreChipKey =
   | 'history';
 
 /** Chip with its state (order is determined by its position in the list). */
-export interface ExploreChip {
-  key: ExploreChipKey;
+export interface HomeChip {
+  key: HomeChipKey;
   enabled: boolean;
 }
 
-const EXPLORE_CHIP_KEYS: ExploreChipKey[] = [
+const HOME_CHIP_KEYS: HomeChipKey[] = [
   'shuffle',
   'favorites',
   'albums',
@@ -414,7 +415,7 @@ const EXPLORE_CHIP_KEYS: ExploreChipKey[] = [
 ];
 
 /** Default order and state: the usual ones, all visible. */
-export const DEFAULT_EXPLORE_CHIPS: ExploreChip[] = [
+export const DEFAULT_HOME_CHIPS: HomeChip[] = [
   { key: 'shuffle', enabled: true },
   { key: 'favorites', enabled: false },
   { key: 'albums', enabled: true },
@@ -428,7 +429,7 @@ export const DEFAULT_EXPLORE_CHIPS: ExploreChip[] = [
 /**
  * The bar at the bottom: which tabs are on it and in what order.
  *
- * Same shape as the Explore chips, and for the same reason — it is a list the
+ * Same shape as the Home chips, and for the same reason — it is a list the
  * user rearranges — but with one rule they do not have: **Home cannot be
  * turned off**. The chips can all go and the row simply disappears; a bar with
  * nothing on it is an app with no way out of wherever you are standing.
@@ -472,22 +473,68 @@ function normalizeBottomTabs(raw: unknown): BottomTab[] {
 }
 
 /**
+ * The buttons at the top right of Home, in the order they sit there.
+ *
+ * A draggable list like the tabs and the chips, and with the tabs' exemption
+ * rather than the chips' freedom: **the gear cannot be turned off**. Settings
+ * is only reachable from there, so hiding it would leave no way back to this
+ * very screen.
+ */
+export type HomeButtonKey = 'search' | 'history' | 'settings';
+
+export interface HomeButton {
+  key: HomeButtonKey;
+  enabled: boolean;
+}
+
+const HOME_BUTTON_KEYS: HomeButtonKey[] = ['search', 'history', 'settings'];
+
+/** Left to right as they shipped, all of them on. */
+export const DEFAULT_HOME_BUTTONS: HomeButton[] = [
+  { key: 'search', enabled: true },
+  { key: 'history', enabled: true },
+  { key: 'settings', enabled: true },
+];
+
+/** The same sanitising as the tabs, with the gear in Home's place. */
+function normalizeHomeButtons(raw: unknown): HomeButton[] {
+  if (!Array.isArray(raw)) return DEFAULT_HOME_BUTTONS.map((b) => ({ ...b }));
+  const seen = new Set<HomeButtonKey>();
+  const out: HomeButton[] = [];
+  for (const item of raw) {
+    const key = item?.key as HomeButtonKey;
+    if (HOME_BUTTON_KEYS.includes(key) && !seen.has(key)) {
+      seen.add(key);
+      out.push({
+        key,
+        enabled:
+          key === 'settings' ? true : typeof item.enabled === 'boolean' ? item.enabled : true,
+      });
+    }
+  }
+  for (const def of DEFAULT_HOME_BUTTONS) {
+    if (!seen.has(def.key)) out.push({ ...def });
+  }
+  return out;
+}
+
+/**
  * Sanitizes the saved list: preserves user order and state, discards unknown
  * keys, and appends new chips not present (so a future version with more chips
  * doesn't break existing config).
  */
-function normalizeExploreChips(raw: unknown): ExploreChip[] {
-  if (!Array.isArray(raw)) return DEFAULT_EXPLORE_CHIPS.map((c) => ({ ...c }));
-  const seen = new Set<ExploreChipKey>();
-  const out: ExploreChip[] = [];
+function normalizeHomeChips(raw: unknown): HomeChip[] {
+  if (!Array.isArray(raw)) return DEFAULT_HOME_CHIPS.map((c) => ({ ...c }));
+  const seen = new Set<HomeChipKey>();
+  const out: HomeChip[] = [];
   for (const item of raw) {
-    const key = item?.key as ExploreChipKey;
-    if (EXPLORE_CHIP_KEYS.includes(key) && !seen.has(key)) {
+    const key = item?.key as HomeChipKey;
+    if (HOME_CHIP_KEYS.includes(key) && !seen.has(key)) {
       seen.add(key);
       out.push({ key, enabled: typeof item.enabled === 'boolean' ? item.enabled : true });
     }
   }
-  for (const def of DEFAULT_EXPLORE_CHIPS) {
+  for (const def of DEFAULT_HOME_CHIPS) {
     if (!seen.has(def.key)) out.push({ ...def });
   }
   return out;
@@ -843,16 +890,17 @@ interface SettingsState {
   customGreeting: string;
   /** Home explore chips, in order (each with its state). With none active, the
    *  row disappears: that replaces the old toggle. */
-  exploreChips: ExploreChip[];
+  homeChips: HomeChip[];
   bottomTabs: BottomTab[];
   /** Whether those chips carry their icon, or are their name and nothing else. */
-  exploreChipIcons: boolean;
+  homeChipIcons: boolean;
   /** Which actions are visible in the song ⋯ menu. */
   songMenuActions: SongMenuActions;
   /** "Folders" section in the Library (directory browsing; Subsonic). */
   showFolderBrowser: boolean;
-  /** Optional button visibility, for those who prefer a minimal UI. */
-  showHistoryButton: boolean;
+  /** The buttons at the top right of Home, in order (each with its state).
+   *  For those who prefer a minimal UI: all but the gear can go. */
+  homeButtons: HomeButton[];
   /** App startup tab (Home/Search/Library). */
   defaultTab: DefaultTab;
   /** Chosen Library sort order (recent/added/alphabetical). */
@@ -973,16 +1021,18 @@ interface SettingsState {
   setShowGreeting: (value: boolean) => void;
   /** Trims to GREETING_MAX internally: the cap doesn't depend on the caller. */
   setCustomGreeting: (value: string) => void;
-  setExploreChip: (key: ExploreChipKey, value: boolean) => void;
+  setHomeChip: (key: HomeChipKey, value: boolean) => void;
   /** Replace the full list (for reordering). */
-  setExploreChips: (chips: ExploreChip[]) => void;
+  setHomeChips: (chips: HomeChip[]) => void;
   setBottomTab: (key: TabSegment, value: boolean) => void;
   /** Replace the full list (for reordering). */
   setBottomTabs: (tabs: BottomTab[]) => void;
-  setExploreChipIcons: (value: boolean) => void;
+  setHomeChipIcons: (value: boolean) => void;
   setSongMenuAction: (key: SongMenuActionKey, value: boolean) => void;
   setShowFolderBrowser: (value: boolean) => void;
-  setShowHistoryButton: (value: boolean) => void;
+  setHomeButton: (key: HomeButtonKey, value: boolean) => void;
+  /** Replace the full list (for reordering). */
+  setHomeButtons: (buttons: HomeButton[]) => void;
   setDefaultTab: (value: DefaultTab) => void;
   setLibrarySort: (value: LibrarySort) => void;
   setLibraryLayout: (value: ListLayout) => void;
@@ -1092,12 +1142,12 @@ function snapshot(get: () => SettingsState) {
     quickGridSize: s.quickGridSize,
     showGreeting: s.showGreeting,
     customGreeting: s.customGreeting,
-    exploreChips: s.exploreChips,
+    homeChips: s.homeChips,
     bottomTabs: s.bottomTabs,
-    exploreChipIcons: s.exploreChipIcons,
+    homeChipIcons: s.homeChipIcons,
     songMenuActions: s.songMenuActions,
     showFolderBrowser: s.showFolderBrowser,
-    showHistoryButton: s.showHistoryButton,
+    homeButtons: s.homeButtons,
     defaultTab: s.defaultTab,
     librarySort: s.librarySort,
     libraryLayout: s.libraryLayout,
@@ -1200,12 +1250,12 @@ const DEFAULTS = {
   quickGridSize: 8,
   showGreeting: true,
   customGreeting: '',
-  exploreChips: DEFAULT_EXPLORE_CHIPS.map((c) => ({ ...c })),
+  homeChips: DEFAULT_HOME_CHIPS.map((c) => ({ ...c })),
   bottomTabs: DEFAULT_BOTTOM_TABS.map((t) => ({ ...t })),
-  exploreChipIcons: true,
+  homeChipIcons: true,
   songMenuActions: { ...DEFAULT_SONG_MENU_ACTIONS },
   showFolderBrowser: false,
-  showHistoryButton: true,
+  homeButtons: DEFAULT_HOME_BUTTONS.map((b) => ({ ...b })),
   defaultTab: 'index' as DefaultTab,
   librarySort: 'recent' as LibrarySort,
   libraryLayout: 'list' as ListLayout,
@@ -1594,9 +1644,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
-  setExploreChip: (key, value) => {
+  setHomeChip: (key, value) => {
     set((s) => ({
-      exploreChips: s.exploreChips.map((x) => (x.key === key ? { ...x, enabled: value } : x)),
+      homeChips: s.homeChips.map((x) => (x.key === key ? { ...x, enabled: value } : x)),
     }));
     persist(snapshot(get));
   },
@@ -1620,13 +1670,13 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
-  setExploreChips: (exploreChips) => {
-    set({ exploreChips });
+  setHomeChips: (homeChips) => {
+    set({ homeChips });
     persist(snapshot(get));
   },
 
-  setExploreChipIcons: (exploreChipIcons) => {
-    set({ exploreChipIcons });
+  setHomeChipIcons: (homeChipIcons) => {
+    set({ homeChipIcons });
     persist(snapshot(get));
   },
 
@@ -1635,8 +1685,18 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
-  setShowHistoryButton: (showHistoryButton) => {
-    set({ showHistoryButton });
+  setHomeButton: (key, value) => {
+    // The gear's switch is not drawn, but a saved file could still say
+    // otherwise.
+    if (key === 'settings') return;
+    set((s) => ({
+      homeButtons: s.homeButtons.map((x) => (x.key === key ? { ...x, enabled: value } : x)),
+    }));
+    persist(snapshot(get));
+  },
+
+  setHomeButtons: (homeButtons) => {
+    set({ homeButtons });
     persist(snapshot(get));
   },
 
@@ -1829,12 +1889,18 @@ export const useSettings = create<SettingsState>((set, get) => ({
           quickGridSize: number;
           showGreeting: boolean;
           customGreeting: string;
+          /** Older names for the two below, from back when the row was
+           *  called the Explore chips: still read, never written. */
           showExploreChips: boolean;
           exploreChips: unknown;
-          bottomTabs: unknown;
           exploreChipIcons: boolean;
+          homeChips: unknown;
+          bottomTabs: unknown;
+          homeChipIcons: boolean;
           songMenuActions: unknown;
           showFolderBrowser: boolean;
+          homeButtons: unknown;
+          /** Old setting (boolean); migrated to `homeButtons`. */
           showHistoryButton: boolean;
           defaultTab: DefaultTab;
           librarySort: LibrarySort;
@@ -2128,16 +2194,25 @@ export const useSettings = create<SettingsState>((set, get) => ({
         if (parsed.songMenuActions) {
           set({ songMenuActions: normalizeSongMenuActions(parsed.songMenuActions) });
         }
-        if (typeof parsed.exploreChipIcons === 'boolean') {
-          set({ exploreChipIcons: parsed.exploreChipIcons });
+        // Two older names are still read here, and this is the whole of the
+        // rename's cost. The row used to be called the Explore chips, one word
+        // away from the Explore tab and meaning something else entirely; a
+        // file written before the rename says `exploreChips`, and whoever had
+        // spent time putting those in order would have found them back at the
+        // defaults. Written under the new name from the first save on, so this
+        // only ever runs once per install.
+        const chipIcons = parsed.homeChipIcons ?? parsed.exploreChipIcons;
+        if (typeof chipIcons === 'boolean') {
+          set({ homeChipIcons: chipIcons });
         }
-        if (Array.isArray(parsed.exploreChips)) {
-          set({ exploreChips: normalizeExploreChips(parsed.exploreChips) });
+        const chips = parsed.homeChips ?? parsed.exploreChips;
+        if (Array.isArray(chips)) {
+          set({ homeChips: normalizeHomeChips(chips) });
         } else if (parsed.showExploreChips === false) {
-          // Migration from the previous single toggle: whoever had the row
-          // hidden should still not see it, not find the chips back. Turning
-          // them all off is exactly what hides it now.
-          set({ exploreChips: DEFAULT_EXPLORE_CHIPS.map((c) => ({ ...c, enabled: false })) });
+          // Migration from the single toggle that came before either name:
+          // whoever had the row hidden should still not see it, not find the
+          // chips back. Turning them all off is exactly what hides it now.
+          set({ homeChips: DEFAULT_HOME_CHIPS.map((c) => ({ ...c, enabled: false })) });
         }
         if (Array.isArray(parsed.bottomTabs)) {
           set({ bottomTabs: normalizeBottomTabs(parsed.bottomTabs) });
@@ -2145,8 +2220,17 @@ export const useSettings = create<SettingsState>((set, get) => ({
         if (typeof parsed.showFolderBrowser === 'boolean') {
           set({ showFolderBrowser: parsed.showFolderBrowser });
         }
-        if (typeof parsed.showHistoryButton === 'boolean') {
-          set({ showHistoryButton: parsed.showHistoryButton });
+        if (Array.isArray(parsed.homeButtons)) {
+          set({ homeButtons: normalizeHomeButtons(parsed.homeButtons) });
+        } else if (parsed.showHistoryButton === false) {
+          // Migration from the previous single toggle: the clock was the only
+          // one of these with a switch, and whoever had it hidden should not
+          // find it back.
+          set({
+            homeButtons: DEFAULT_HOME_BUTTONS.map((b) =>
+              b.key === 'history' ? { ...b, enabled: false } : { ...b },
+            ),
+          });
         }
         if (
           parsed.defaultTab === 'index' ||

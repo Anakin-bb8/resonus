@@ -112,7 +112,7 @@
     "Greeting": "Home's \"Good morning\" line",
     "Custom greeting": "A greeting of your own, replacing Home's \"Good morning\" line",
     "Quick grid": "The grid of shortcut tiles on Home",
-    "Explore chips": "The row of tappable category chips",
+    "Home chips": "The row of tappable category chips",
     "Song menu": "The three-dot menu on a song, drawn as ⋮ in a list and ⋯ in a header. A setting picks which actions it shows",
     "Song lists": "The setting for how song lists look",
     "Show explicit tag": "A switch: whether to draw the E on anything carrying a parental advisory. \"Explicit\" here is the music-industry label for strong language, not \"clear\" or \"stated outright\"",
@@ -546,7 +546,7 @@
     "Folder browsing": "Browsing the server's folders as folders, instead of by album and artist",
     "Haptic feedback": "The small vibration when something is tapped",
     "Open the app on": "Which tab the app opens on, and comes back to after a while away",
-    "Show history button": "Whether the button that opens the listening history shows",
+    "Home buttons": "The icons at the top right of Home (search, history, settings), which of them show and in what order",
 
     // ── Settings › Network ───────────────────────────────────────────────────
     "Server addresses": "Section header: a profile can have several addresses for the same account, one at home and one from outside",

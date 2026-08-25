@@ -1,5 +1,5 @@
 /**
- * Settings › Explore chips: draggable list (same engine as the queue and
+ * Settings › Home chips: draggable list (same engine as the queue and
  * playlists) to show/hide and reorder the Home chips. Changes are applied and
  * saved immediately.
  *
@@ -20,7 +20,7 @@ import { useLocalProfile } from '@/hooks/useLocalProfile';
 import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { useAuthStore } from '@/store/auth';
-import { useSettings, type ExploreChip, type ExploreChipKey } from '@/store/settings';
+import { useSettings, type HomeChip, type HomeChipKey } from '@/store/settings';
 import {
   colors,
   fontSize,
@@ -33,7 +33,7 @@ import {
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
 /** Each chip's label, as an i18n key. The same ones Home draws. */
-const LABEL: Record<ExploreChipKey, string> = {
+const LABEL: Record<HomeChipKey, string> = {
   shuffle: 'Shuffle',
   favorites: 'Favorites',
   albums: 'Albums',
@@ -44,10 +44,10 @@ const LABEL: Record<ExploreChipKey, string> = {
   history: 'Recently played',
 };
 
-function ChipRow({ chip, disabled }: { chip: ExploreChip; disabled?: boolean }) {
+function ChipRow({ chip, disabled }: { chip: HomeChip; disabled?: boolean }) {
   const t = useT();
   const drag = useReorderableDrag();
-  const setExploreChip = useSettings((s) => s.setExploreChip);
+  const setHomeChip = useSettings((s) => s.setHomeChip);
   // From the store, not `colors.accent`: without subscription the switch would
   // keep the previous accent while the screen stays mounted.
   const { accent } = useTheme();
@@ -69,7 +69,7 @@ function ChipRow({ chip, disabled }: { chip: ExploreChip; disabled?: boolean }) 
       <Text style={styles.label}>{t(LABEL[chip.key])}</Text>
       <Switch
         value={chip.enabled}
-        onValueChange={(v) => setExploreChip(chip.key, v)}
+        onValueChange={(v) => setHomeChip(chip.key, v)}
         disabled={disabled}
         trackColor={{ false: colors.control, true: accent }}
         thumbColor={colors.knob}
@@ -84,9 +84,9 @@ function ChipRow({ chip, disabled }: { chip: ExploreChip; disabled?: boolean }) 
  * are gone: the genres come from `getGenres` and the stations from
  * `getRadioStations`, both of which want an account, and neither is coming
  * back to a profile that never had one (see `useLocalProfile`). */
-const SERVER_ONLY: ExploreChipKey[] = ['genres', 'radio'];
+const SERVER_ONLY: HomeChipKey[] = ['genres', 'radio'];
 
-export default function ExploreChipsSettings() {
+export default function HomeChipsSettings() {
   // Repaints on a change of appearance or accent: a stack keeps this screen
   // mounted while you are on another one, out of reach of anything else.
   useTheme();
@@ -95,14 +95,14 @@ export default function ExploreChipsSettings() {
   const t = useT();
   const offline = useAuthStore((s) => s.offline);
   const local = useLocalProfile();
-  const exploreChips = useSettings((s) => s.exploreChips);
-  const setExploreChips = useSettings((s) => s.setExploreChips);
-  const chipIcons = useSettings((s) => s.exploreChipIcons);
-  const setChipIcons = useSettings((s) => s.setExploreChipIcons);
-  const visible = local ? exploreChips.filter((c) => !SERVER_ONLY.includes(c.key)) : exploreChips;
+  const homeChips = useSettings((s) => s.homeChips);
+  const setHomeChips = useSettings((s) => s.setHomeChips);
+  const chipIcons = useSettings((s) => s.homeChipIcons);
+  const setChipIcons = useSettings((s) => s.setHomeChipIcons);
+  const visible = local ? homeChips.filter((c) => !SERVER_ONLY.includes(c.key)) : homeChips;
   return (
     <SettingsSafeArea>
-      <ScreenHeader title={t('Explore chips')} />
+      <ScreenHeader title={t('Home chips')} />
       <Text style={styles.hint}>{t('Drag to reorder, toggle to show or hide.')}</Text>
       <ReorderableList
         data={visible}
@@ -130,10 +130,10 @@ export default function ExploreChipsSettings() {
           const [moved] = nextVisible.splice(from, 1);
           nextVisible.splice(to, 0, moved);
           let vi = 0;
-          const next = exploreChips.map((c) =>
+          const next = homeChips.map((c) =>
             local && SERVER_ONLY.includes(c.key) ? c : nextVisible[vi++],
           );
-          setExploreChips(next);
+          setHomeChips(next);
         }}
         contentContainerStyle={[
           styles.list,

@@ -1,7 +1,7 @@
 /**
  * Explore: everything the server has, in one tab.
  *
- * The whole catalogue used to be reachable only through the Explore chips on
+ * The whole catalogue used to be reachable only through the Home chips on
  * Home — six pills that scroll off the edge, each opening a screen you then
  * had to come back out of. The lists themselves were fine; what was missing
  * was somewhere they all lived, so switching from all albums to all songs
