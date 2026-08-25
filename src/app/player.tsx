@@ -1081,16 +1081,27 @@ export default function PlayerScreen() {
                       </Text>
                     </View>
                     {/* Its own line: next to the artist the two ran together and
-                        the album was hard to pick out. */}
+                        the album was hard to pick out. It scrolls like the
+                        title does, since the year sits at the end of it and a
+                        long album name was all anyone ever saw (#183). */}
                     {albumInfo ? (
-                      <Text
-                        style={styles.album}
-                        numberOfLines={1}
-                        onPress={goAlbum}
-                        suppressHighlighting
-                      >
-                        {albumInfo}
-                      </Text>
+                      goAlbum ? (
+                        <Pressable style={styles.albumLine} hitSlop={6} onPress={goAlbum}>
+                          <MarqueeText
+                            text={albumInfo}
+                            style={styles.album}
+                            enabled={marqueeTitles}
+                          />
+                        </Pressable>
+                      ) : (
+                        <View style={styles.albumLine}>
+                          <MarqueeText
+                            text={albumInfo}
+                            style={styles.album}
+                            enabled={marqueeTitles}
+                          />
+                        </View>
+                      )
                     ) : null}
                   </>
                 );
@@ -1436,12 +1447,14 @@ const styles = themed((colors) => ({
     fontSize: fontSize.md,
     flexShrink: 1,
   },
+  // The gap belongs to the line and not to the text: the text is handed to a
+  // marquee, which draws it twice.
+  albumLine: { alignSelf: 'flex-start', maxWidth: '100%', marginTop: 2 },
   // A step below the artist so the three lines read as a hierarchy
   // (title → artist → album) instead of three rows of the same weight.
   album: {
     color: colors.textMuted,
     fontSize: fontSize.sm,
-    marginTop: 2,
   },
   subInfo: { marginTop: -spacing.sm, marginBottom: spacing.xs },
   progress: { marginBottom: spacing.xs },
