@@ -160,7 +160,7 @@ export default function AppearanceSettings() {
           options={[
             { value: 'index', label: t('Home') },
             { value: 'search', label: t('Search') },
-            { value: 'library', label: t('Library') },
+            { value: 'library', label: t('Your library') },
           ]}
           value={defaultTab}
           onChange={setDefaultTab}

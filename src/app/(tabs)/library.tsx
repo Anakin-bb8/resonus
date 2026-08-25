@@ -781,7 +781,7 @@ export default function LibraryScreen() {
           up with the centred column; with a grid, the grid fills the width and
           so does this (#131). */}
       <View style={[styles.header, { paddingHorizontal: headerPad }]}>
-        <Text style={styles.heading}>{t('Library')}</Text>
+        <Text style={styles.heading}>{t('Your library')}</Text>
         <View style={styles.headerActions}>
           <OfflineIndicator />
           {/* Folders are a handful of server roots: nothing to filter there. */}

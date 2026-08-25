@@ -17,7 +17,7 @@ export type TabSegment = 'index' | 'search' | 'library';
 export const TABS: { segment: TabSegment; href: string; label: string }[] = [
   { segment: 'index', href: '/', label: 'Home' },
   { segment: 'search', href: '/search', label: 'Search' },
-  { segment: 'library', href: '/library', label: 'Library' },
+  { segment: 'library', href: '/library', label: 'Your library' },
 ];
 
 let origin: TabSegment = 'index';

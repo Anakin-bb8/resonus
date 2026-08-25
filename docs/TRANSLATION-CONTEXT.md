@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 684 of them.
+Every string the app can show, under the screen it shows up on. 685 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -64,6 +64,7 @@ you are actually typing into, which is easier than reading it here.
 | `Go to album` | Leave this sheet and open the album the song is on |
 | `Go to artist` | Leave this sheet and open the artist |
 | `Home` | The first tab, and a folder in the car |
+| `Library` | The settings section, and a folder in the car |
 | `Mix of “{name}”` | What the player calls the queue once it has grown past its album into songs the app picked itself. `{name}` is the song it was grown from |
 | `Mix started` | The toast that says the app is now picking the songs |
 | `Moods` | Mood tags the server has on the song: mellow, energetic… |
@@ -110,6 +111,7 @@ you are actually typing into, which is easier than reading it here.
 | `Will pause when the song ends` | Toast when it is set to the end of the song |
 | `Year` | Label of a field in the song information sheet: the year of the release |
 | `You can pin up to {n} items.` | Toast: there is no room for another pinned thing. `{n}` is the limit |
+| `Your library` | The tab with your albums, artists and playlists |
 
 ## Artist
 
@@ -326,6 +328,7 @@ you are actually typing into, which is easier than reading it here.
 | `Search` | The search tab, and the action of searching |
 | `Star albums to see them here.` | The line under an empty state, saying how to fill it |
 | `Star artists to see them here.` | The line under an empty state, saying how to fill it |
+| `Your library` | The tab with your albums, artists and playlists |
 
 ## Login
 
@@ -694,6 +697,7 @@ you are actually typing into, which is easier than reading it here.
 | `Keep at least one folder` | Refusing to remove the last folder of a local profile, which would leave it with no music |
 | `Keep at least one library on` | Toast: at least one of the server's libraries has to stay ticked |
 | `Libraries` | Section header over the server's libraries, when it has more than one |
+| `Library` | The settings section, and a folder in the car |
 | `Library updated` | Toast after the phone finished going through its own files |
 | `Local music` | Music stored on the phone itself |
 | `Music folders` | Settings > Local music: the list of phone folders the local profile reads its music from |
@@ -777,6 +781,7 @@ you are actually typing into, which is easier than reading it here.
 | `Theme` | The screen where the appearance and the accent colour are chosen, and the name of the row that opens it |
 | `Which tab opens on launch, and after a while in the background.` | The line under “Open the app on”, explaining it |
 | `Your avatar on Home.` | The line under “Show profile button”, explaining it |
+| `Your library` | The tab with your albums, artists and playlists |
 
 ## Settings › Playback
 
@@ -1018,7 +1023,6 @@ you are actually typing into, which is easier than reading it here.
 | `Favorites` | The songs, albums and artists you starred |
 | `History` | The listening history: what was played and when |
 | `Hold to go back to {tab}` | The hint on holding the back arrow. `{tab}` is Home, Search or Library |
-| `Library` | The tab with your albums, artists and playlists, and a folder in the car |
 | `List` | An option in that menu: one row per item, instead of cards |
 | `Lyrics` | The words of the song. Also a line of the storage bar, where it is their size on the phone |
 | `More` | A "see more" action, and the third button of the selection bar, the one that opens the rest of what it can do |

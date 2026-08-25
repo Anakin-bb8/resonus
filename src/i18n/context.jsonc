@@ -506,7 +506,8 @@
     // These name the tabs at the bottom, the sections inside them, and the
     // folders the car shows, so one word has to work in all three.
     "Home": "The first tab, and a folder in the car",
-    "Library": "The tab with your albums, artists and playlists, and a folder in the car",
+    "Library": "The settings section, and a folder in the car",
+    "Your library": "The tab with your albums, artists and playlists",
     "Search": "The search tab, and the action of searching",
     "Favorites": "The songs, albums and artists you starred",
     "Playlists": "A section on Home and in the library, and a folder in the car",
