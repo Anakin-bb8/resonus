@@ -70,7 +70,7 @@ import { useSettings, type CoverTapAction } from '@/store/settings';
 import { useSongMenu } from '@/store/songMenu';
 import { useToast } from '@/store/toast';
 import { useUpnp } from '@/store/upnp';
-import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
+import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 
 /** Floor: below this the cover stops giving up space and the page scrolls. */
 const COVER_MIN = 200;
@@ -1468,7 +1468,7 @@ const styles = themed((colors) => ({
     backgroundColor: colors.text,
     width: 72,
     height: 72,
-    borderRadius: 36,
+    borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },

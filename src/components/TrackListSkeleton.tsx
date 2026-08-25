@@ -84,8 +84,8 @@ const styles = themed((colors) => {
       marginVertical: spacing.lg,
     },
     actionsLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
-    smallCircle: { ...block, width: 26, height: 26, borderRadius: 13 },
-    playCircle: { ...block, width: 56, height: 56, borderRadius: 28 },
+    smallCircle: { ...block, width: 26, height: 26, borderRadius: radius.pill },
+    playCircle: { ...block, width: 56, height: 56, borderRadius: radius.pill },
     row: {
       flexDirection: 'row',
       alignItems: 'center',

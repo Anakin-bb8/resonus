@@ -39,7 +39,7 @@ import { useAccent } from '@/hooks/useAccent';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
 import { useSettings, type ListLayout } from '@/store/settings';
-import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
+import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 
 type Section = 'albums' | 'artists' | 'songs' | 'genres' | 'radio' | 'folders';
 
@@ -214,7 +214,7 @@ const styles = themed((colors) => ({
   segment: {
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
-    borderRadius: 999,
+    borderRadius: radius.pill,
     backgroundColor: colors.surfaceHighlight,
   },
   segmentText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '600' },

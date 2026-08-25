@@ -302,7 +302,7 @@ const styles = themed((colors) => ({
     alignSelf: 'center',
     width: 36,
     height: 4,
-    borderRadius: 2,
+    borderRadius: radius.pill,
     backgroundColor: colors.textMuted,
     opacity: 0.5,
     marginBottom: spacing.md,
@@ -335,7 +335,7 @@ const styles = themed((colors) => ({
   chip: {
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
-    borderRadius: 999,
+    borderRadius: radius.pill,
     backgroundColor: colors.surfaceHighlight,
   },
   chipText: { color: colors.textSecondary, fontSize: fontSize.xs },

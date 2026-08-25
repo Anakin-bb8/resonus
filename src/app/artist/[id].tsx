@@ -52,7 +52,7 @@ import { currentSong, usePlayerStore } from '@/store/player';
 import { usePlaylistPicker } from '@/store/playlistPicker';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
+import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 import { BackChevron } from '@/components/BackChevron';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { useScreenSize } from '@/hooks/useScreenSize';
@@ -851,7 +851,7 @@ const styles = themed((colors) => ({
     backgroundColor: colors.accent,
     width: 56,
     height: 56,
-    borderRadius: 28,
+    borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -897,7 +897,7 @@ const styles = themed((colors) => ({
   back: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: radius.pill,
     backgroundColor: colors.scrim,
     alignItems: 'center',
     justifyContent: 'center',

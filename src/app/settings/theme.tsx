@@ -15,7 +15,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SelectList, SettingsPage, settingsStyles } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
 import { ACCENT_OPTIONS, useSettings } from '@/store/settings';
-import { fontSize, spacing, themed, useThemeMode, type ThemePreference } from '@/theme';
+import { fontSize, radius, spacing, themed, type ThemePreference, useThemeMode } from '@/theme';
 
 /** The row of colours. Which appearance it is picking for is the one on screen;
  *  see the note where it is used. */
@@ -103,7 +103,7 @@ const styles = themed((colors) => ({
   swatch: {
     width: 56,
     height: 56,
-    borderRadius: 28,
+    borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },

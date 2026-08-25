@@ -42,7 +42,7 @@ const styles = themed((colors) => {
   return {
     list: { paddingHorizontal: spacing.lg, gap: spacing.lg },
     row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-    photo: { ...block, width: 56, height: 56, borderRadius: 28 },
+    photo: { ...block, width: 56, height: 56, borderRadius: radius.pill },
     info: { flex: 1, gap: spacing.sm },
     bar: { ...block, height: 12, borderRadius: radius.sm },
     barThin: { height: 8 },

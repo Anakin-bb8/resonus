@@ -739,7 +739,7 @@ const styles = themed((colors) => ({
     paddingTop: spacing.xs - 1,
     paddingBottom: spacing.xs + 1,
     paddingHorizontal: spacing.md,
-    borderRadius: 999,
+    borderRadius: radius.pill,
     backgroundColor: colors.surfaceHighlight,
     justifyContent: 'center',
     alignItems: 'center',

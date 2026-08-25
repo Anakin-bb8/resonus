@@ -1019,7 +1019,7 @@ const styles = themed((colors) => ({
   artistPhoto: {
     width: 24,
     height: 24,
-    borderRadius: 12,
+    borderRadius: radius.pill,
     overflow: 'hidden',
   },
   // Same weight and colour as the metadata under it: what the playlist says
@@ -1049,7 +1049,7 @@ const styles = themed((colors) => ({
   genreChip: {
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
-    borderRadius: 999,
+    borderRadius: radius.pill,
     backgroundColor: colors.surfaceHighlight,
   },
   genreText: { color: colors.textSecondary, fontSize: fontSize.xs },
@@ -1084,7 +1084,7 @@ const styles = themed((colors) => ({
     backgroundColor: colors.accent,
     width: 56,
     height: 56,
-    borderRadius: 28,
+    borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },

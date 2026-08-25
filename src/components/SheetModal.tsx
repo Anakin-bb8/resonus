@@ -15,7 +15,7 @@ import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useBottomSheetAnim } from '@/hooks/useBottomSheetAnim';
-import { SHEET_MAX_WIDTH, spacing, themed } from '@/theme';
+import { radius, SHEET_MAX_WIDTH, spacing, themed } from '@/theme';
 
 export function SheetModal({
   openRef,
@@ -94,7 +94,7 @@ const styles = themed((colors) => ({
     alignSelf: 'center',
     width: 36,
     height: 4,
-    borderRadius: 2,
+    borderRadius: radius.pill,
     backgroundColor: colors.textMuted,
     opacity: 0.5,
     marginBottom: spacing.md,

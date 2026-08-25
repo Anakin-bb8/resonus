@@ -25,7 +25,7 @@ export function ArtistGridSkeleton({ width, count = 12 }: { width: number; count
     <Animated.View style={[styles.grid, pulseStyle]}>
       {Array.from({ length: count }, (_, i) => (
         <View key={i} style={[styles.card, { width }]}>
-          <View style={[styles.block, { width, height: width, borderRadius: width / 2 }]} />
+          <View style={[styles.block, { width, height: width, borderRadius: radius.pill }]} />
           <View style={[styles.bar, { width: width * 0.7 }]} />
         </View>
       ))}

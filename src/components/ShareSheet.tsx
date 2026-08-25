@@ -36,7 +36,7 @@ import { canShareDownloads, shareItem } from '@/lib/share';
 import { useSettings, SHARE_EXPIRIES, type ShareExpiry } from '@/store/settings';
 import { useSharePicker } from '@/store/sharePicker';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, SHEET_MAX_WIDTH, spacing, themed } from '@/theme';
+import { colors, fontSize, radius, SHEET_MAX_WIDTH, spacing, themed } from '@/theme';
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
@@ -259,7 +259,7 @@ const styles = themed((colors) => ({
     alignSelf: 'center',
     width: 36,
     height: 4,
-    borderRadius: 2,
+    borderRadius: radius.pill,
     backgroundColor: colors.textMuted,
     opacity: 0.5,
     marginBottom: spacing.md,

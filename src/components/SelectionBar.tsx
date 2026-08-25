@@ -28,7 +28,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { useFloatingBottom } from '@/hooks/useScreenBottomPadding';
 import { useT } from '@/i18n';
-import { colors, fontSize, spacing, themed } from '@/theme';
+import { colors, fontSize, radius, spacing, themed } from '@/theme';
 import { SheetModal } from './SheetModal';
 
 export interface SelectionAction {
@@ -138,7 +138,7 @@ const styles = themed((colors) => ({
     right: spacing.xl,
     flexDirection: 'row',
     backgroundColor: colors.snackbar,
-    borderRadius: 16,
+    borderRadius: radius.xl,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.sm,
   },

@@ -326,7 +326,7 @@ export function Cover({
   const shown = cacheOnly ? (cached && cached.uri === uri ? cached.path : undefined) : uri;
   const imageRef = useRef<Image>(null);
   const redraw = useRedrawOnReturn(imageRef, shown);
-  const borderRadius = rounded ? size / 2 : radius.md;
+  const borderRadius = rounded ? radius.pill : radius.md;
   if (!shown || failed) {
     return (
       <View

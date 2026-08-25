@@ -204,7 +204,7 @@ const styles = themed((colors) => ({
   avatar: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: radius.pill,
     backgroundColor: colors.surfaceHighlight,
     borderWidth: 2,
     borderColor: colors.accent,

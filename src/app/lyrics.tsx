@@ -17,7 +17,7 @@ import { useLyrics } from '@/hooks/useLyrics';
 import { useT } from '@/i18n';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
-import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
+import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 import { centredPadding, useScreenSize } from '@/hooks/useScreenSize';
 
 export default function LyricsScreen() {
@@ -178,7 +178,7 @@ const styles = themed((colors) => ({
   playButton: {
     width: 60,
     height: 60,
-    borderRadius: 30,
+    borderRadius: radius.pill,
     backgroundColor: colors.text,
     alignItems: 'center',
     justifyContent: 'center',

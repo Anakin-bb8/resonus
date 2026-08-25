@@ -416,7 +416,7 @@ const styles = themed((colors) => ({
     bottom: spacing.md,
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: radius.pill,
     backgroundColor: colors.text,
     alignItems: 'center',
     justifyContent: 'center',

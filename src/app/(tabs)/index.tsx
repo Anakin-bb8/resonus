@@ -902,7 +902,7 @@ const styles = themed((colors) => ({
   avatar: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: radius.pill,
     backgroundColor: colors.surfaceHighlight,
     borderWidth: 2,
     borderColor: colors.accent,
@@ -918,7 +918,7 @@ const styles = themed((colors) => ({
     gap: spacing.xs,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
-    borderRadius: 999,
+    borderRadius: radius.pill,
     backgroundColor: colors.surfaceHighlight,
   },
   chipText: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
@@ -977,12 +977,12 @@ const styles = themed((colors) => ({
   scanBarTrack: {
     width: '100%',
     height: 6,
-    borderRadius: 3,
+    borderRadius: radius.pill,
     backgroundColor: colors.surfaceHighlight,
     overflow: 'hidden',
     marginTop: spacing.xs,
   },
-  scanBarFill: { height: '100%', borderRadius: 3, backgroundColor: colors.accent },
+  scanBarFill: { height: '100%', borderRadius: radius.pill, backgroundColor: colors.accent },
   scanTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
   scanSub: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'] },
 }));
