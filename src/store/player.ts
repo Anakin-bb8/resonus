@@ -2995,9 +2995,10 @@ interface PlayerState {
   queue: Song[];
   index: number;
   /**
-   * Manually-added "add to queue" songs still pending; occupy
-   * positions index+1..index+queuedCount (Spotify "Next in queue"-style:
-   * they play right after the current one, before the list continues).
+   * Songs put straight after the current one by "Play next", still pending;
+   * they occupy positions index+1..index+queuedCount and are what the queue
+   * screen heads "Next in queue". "Add to queue" does not join them: it goes
+   * to the end of the whole queue (#184).
    */
   queuedCount: number;
   isPlaying: boolean;
@@ -3082,7 +3083,9 @@ interface PlayerState {
   startRadio: (seed: Song, source: string) => Promise<boolean>;
   /** Stops extending the queue. Doesn't touch it: finishes when it finishes. */
   stopRadio: () => void;
+  /** At the very end of the queue, after everything (#184). */
   addToQueue: (song: Song) => void;
+  /** Straight after the current song, at the front of the "queued" block. */
   playNext: (song: Song) => void;
   /**
    * A whole record's worth at once, in the order given.
@@ -3369,21 +3372,31 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     saveQueueLocal();
   },
 
-  // Spotify-style: manually added songs play right after the current one (and
-  // after what was already added before), not at the end of the playing list.
-  //
-  // Adding one from the queue itself hands back the very object that is in it,
-  // mark and all, so a song picked out of a mix would have carried the mark
-  // into the middle of an album and taken the header with it (`handAdded`).
+  /**
+   * The end of the queue, and it means the end (#184).
+   *
+   * It used to land at the back of the "queued" block, which is where Spotify
+   * puts it — but Spotify has no "Play next" beside it. With both in the menu,
+   * one going after the current song and the other one place further along is
+   * a distinction nobody can see and a name that does not describe itself: the
+   * report was somebody adding a record and finding it before the rest of the
+   * one already playing. Every player that offers the pair reads it this way
+   * (Apple Music's "Play Last", Feishin's `Play.LAST`).
+   *
+   * The block is left alone: what is in it was put there by "Play next", and
+   * this song is not joining it.
+   *
+   * Adding one from the queue itself hands back the very object that is in it,
+   * mark and all, so a song picked out of a mix would have carried the mark
+   * into the middle of an album and taken the header with it (`handAdded`).
+   */
   addToQueue: (song) => {
-    const { queue, index, queuedCount } = get();
+    const { queue } = get();
     if (queue.length === 0) {
       void get().playQueue([song], 0);
       return;
     }
-    const next = [...queue];
-    next.splice(Math.min(index + queuedCount + 1, next.length), 0, handAdded(song));
-    set({ queue: next, queuedCount: queuedCount + 1 });
+    set({ queue: [...queue, handAdded(song)] });
     scheduleSync();
   },
 
@@ -3408,10 +3421,14 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       void get().playQueue(songs, 0);
       return;
     }
-    const at =
-      where === 'next' ? index + 1 : Math.min(index + queuedCount + 1, queue.length);
     // Built by hand rather than spread into `splice`: a playlist of thousands
     // would be that many arguments in one call.
+    if (where === 'end') {
+      set({ queue: queue.concat(songs.map(handAdded)) });
+      scheduleSync();
+      return;
+    }
+    const at = index + 1;
     const next = queue.slice(0, at).concat(songs.map(handAdded), queue.slice(at));
     set({ queue: next, queuedCount: queuedCount + songs.length });
     scheduleSync();

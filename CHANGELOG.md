@@ -26,6 +26,7 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- "Add to queue" puts what you add at the end of the queue, where "Play next" already put things right after the current song (#184).
 - The dropdowns in Settings open flush against their row again, instead of a status bar's height below it.
 - Opening Your library for the first time no longer draws it under the status bar for an instant before dropping it into place.
 - "New releases" shows the newest records instead of a slice of the alphabet: the list goes by the day each record came out, and by when it reached the server for those tagged with a year and nothing more.
