@@ -343,18 +343,6 @@ export function SongsBrowser({ embedded, actionRef }: BrowserProps) {
         ) : null}
       </View>
 
-      {/* The row an album, a playlist and a genre have, in the same order and
-          acting on the same thing they do: the songs behind what is on screen.
-          Gone while selecting, like every other action row. */}
-      {selecting ? null : (
-        <BrowseActions
-          sort={sort}
-          onScreen={isSearch ? songs : null}
-          source={t('Songs')}
-          href="/browse/songs"
-        />
-      )}
-
       {/* The chips hide while searching: results come back by relevance, so a
           marked pill would lie about the order on screen. With a single order
           there is nothing to choose either. */}
@@ -383,6 +371,18 @@ export function SongsBrowser({ embedded, actionRef }: BrowserProps) {
             );
           })}
         </ScrollView>
+      )}
+
+      {/* Play and shuffle for the library, under the order they follow and over
+          the list they start. Gone while selecting, like every other action
+          row. */}
+      {selecting ? null : (
+        <BrowseActions
+          sort={sort}
+          onScreen={isSearch ? songs : null}
+          source={t('Songs')}
+          href="/browse/songs"
+        />
       )}
 
       {(isSearch ? searchPending : isLoading) ? (
