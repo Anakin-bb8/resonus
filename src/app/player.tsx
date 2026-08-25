@@ -17,7 +17,6 @@ import {
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-  Easing,
   Extrapolation,
   interpolate,
   ReduceMotion,
@@ -71,6 +70,7 @@ import { useSongMenu } from '@/store/songMenu';
 import { useToast } from '@/store/toast';
 import { useUpnp } from '@/store/upnp';
 import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
+import { motion } from '@/theme/motion';
 
 /** Floor: below this the cover stops giving up space and the page scrolls. */
 const COVER_MIN = 200;
@@ -305,7 +305,7 @@ export default function PlayerScreen() {
   useEffect(() => {
     // reduceMotion Never: the color fade is part of the look and some devices
     // (battery saver / "reduce motion") would skip it.
-    bgColor.value = withTiming(targetBg, { duration: 600, reduceMotion: ReduceMotion.Never });
+    bgColor.value = withTiming(targetBg, { duration: motion.duration.tint, reduceMotion: ReduceMotion.Never });
   }, [targetBg, bgColor]);
   const bgStyle = useAnimatedStyle(() => ({ backgroundColor: bgColor.value }));
   // Same query used by the lyrics card (cached): here only to know if there
@@ -387,7 +387,10 @@ export default function PlayerScreen() {
     const asRemembered =
       !!g && g.pageH === pageH && g.coverH === coverBoxH && g.coverW === coverBoxW && g.starsH === starsH;
     if (asRemembered) coverAppear.set(1);
-    else coverAppear.value = withTiming(1, { duration: 200, reduceMotion: ReduceMotion.Never });
+    else coverAppear.value = withTiming(1, {
+        duration: motion.duration.fade,
+        reduceMotion: motion.reduceMotion.essential,
+      });
   }, [coverStable, pageH, coverBoxH, coverBoxW, starsH, coverAppear]);
   useEffect(() => {
     const id = setTimeout(() => setCoverStable(true), 300);
@@ -579,7 +582,7 @@ export default function PlayerScreen() {
         // in the hidden panel.
         offset.value = withTiming(
           target,
-          { duration: 220, easing: Easing.out(Easing.cubic) },
+          { duration: motion.duration.move, easing: motion.easing.move },
           (finished) => {
             // Counted where the strip actually arrived, and only if it did: a
             // travel cut short by the next swipe never happened.
@@ -706,7 +709,7 @@ export default function PlayerScreen() {
     })
     .onEnd((e) => {
       if (e.translationY > DISMISS_THRESHOLD || e.velocityY > 800) {
-        transY.value = withTiming(screenH, { duration: 220 }, (f) => {
+        transY.value = withTiming(screenH, { duration: motion.duration.move }, (f) => {
           if (f) scheduleOnRN(closePlayer);
         });
       } else {

@@ -12,7 +12,6 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   cancelAnimation,
-  Easing,
   ReduceMotion,
   scrollTo,
   useAnimatedReaction,
@@ -34,6 +33,7 @@ import { pushOnce } from '@/lib/pushOnce';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
 import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
+import { motion } from '@/theme/motion';
 
 export function LyricsCard() {
   const t = useT();
@@ -249,9 +249,9 @@ export function SyncedLyricsView({
     // the next line.
     targetY.value = liveY.value;
     targetY.value = withTiming(dest, {
-      duration: 450,
-      easing: Easing.out(Easing.cubic),
-      reduceMotion: ReduceMotion.Never,
+      duration: motion.duration.scroll,
+      easing: motion.easing.move,
+      reduceMotion: motion.reduceMotion.essential,
     });
   }, [current, viewH, anchor, targetY, liveY, placed]);
 
@@ -354,8 +354,8 @@ const LyricRow = memo(({
   }, [active, focus]);
   useEffect(() => {
     dim.value = withTiming(active ? 1 : next ? 0.55 : 0.3, {
-      duration: 300,
-      reduceMotion: ReduceMotion.Never,
+      duration: motion.duration.enter,
+      reduceMotion: motion.reduceMotion.essential,
     });
   }, [active, next, dim]);
   // The growth (8%) is compensated by the right margin of `content` so the

@@ -14,7 +14,6 @@ import { useEffect } from 'react';
 import { View } from 'react-native';
 import Animated, {
   cancelAnimation,
-  Easing,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -25,13 +24,15 @@ import Animated, {
 import { useAccent } from '@/hooks/useAccent';
 import { usePlayerStore } from '@/store/player';
 import { radius } from '@/theme';
+import { motion } from '@/theme/motion';
 
 /**
- * One duration each, and none of them a multiple of another: bars that share a
+ * One period each, and none of them a multiple of another: bars that share a
  * period fall into step after a cycle or two and start reading as one block
- * going up and down. The stagger below only keeps them apart until then.
+ * going up and down. The stagger below only keeps them apart until then. The
+ * slowest is the app's own pulse, the one the placeholders breathe at.
  */
-const DURATIONS = [430, 610, 500, 690] as const;
+const DURATIONS = [430, 610, 500, motion.duration.pulse] as const;
 const STAGGER = 90;
 /** How low a bar sits when nothing is playing, as a fraction of the height. */
 const REST = 0.22;
@@ -44,13 +45,13 @@ function Bar({ index, playing, color }: { index: number; playing: boolean; color
     if (!playing) {
       // Down to the resting height rather than frozen mid-rise: a paused row
       // showing bars stopped at random heights looks like it is still going.
-      height.value = withTiming(REST, { duration: 220 });
+      height.value = withTiming(REST, { duration: motion.duration.move });
       return;
     }
     height.value = withDelay(
       index * STAGGER,
       withRepeat(
-        withTiming(1, { duration: DURATIONS[index], easing: Easing.inOut(Easing.quad) }),
+        withTiming(1, { duration: DURATIONS[index], easing: motion.easing.loop }),
         -1,
         true,
       ),

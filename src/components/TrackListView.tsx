@@ -41,6 +41,7 @@ import { listPerf } from '@/lib/listPerf';
 import { useArtistPicker } from '@/store/artistPicker';
 import { usePlayerStore } from '@/store/player';
 import { colors, fontSize, radius, spacing, themed } from '@/theme';
+import { motion } from '@/theme/motion';
 import { BackChevron } from './BackChevron';
 import { Cover } from './Cover';
 import { ExplicitBadge, useExplicitBadge } from './ExplicitBadge';
@@ -286,13 +287,13 @@ export function TrackListView({
     revealedRef.current = true;
     haptic('light');
     setRevealed(true);
-    Animated.timing(searchH, { toValue: SEARCH_H, duration: 200, useNativeDriver: false }).start();
+    Animated.timing(searchH, { toValue: SEARCH_H, duration: motion.duration.fade, useNativeDriver: false }).start();
   }
 
   function collapseSearchBar() {
     revealedRef.current = false;
     setRevealed(false);
-    Animated.timing(searchH, { toValue: 0, duration: 200, useNativeDriver: false }).start();
+    Animated.timing(searchH, { toValue: 0, duration: motion.duration.fade, useNativeDriver: false }).start();
   }
 
   // Simultaneous pan with the list scroll: doesn't steal the gesture, just

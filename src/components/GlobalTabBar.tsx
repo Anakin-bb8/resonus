@@ -30,6 +30,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTabBarShown } from '@/hooks/useTabBar';
+import { motion } from '@/theme/motion';
 import { useT } from '@/i18n';
 import { rememberTab, reselectTab, tabOrigin, TABS } from '@/lib/tabOrigin';
 import { useSettings } from '@/store/settings';
@@ -79,7 +80,7 @@ export function GlobalTabBar() {
     // Straight back on the way in: coming out of the player the bar was there
     // before and belongs there again, and until the modal finishes dismissing
     // nobody can see it anyway.
-    fade.value = shown ? 1 : withTiming(0, { duration: 150 });
+    fade.value = shown ? 1 : withTiming(0, { duration: motion.duration.exit });
   }, [shown, fade]);
   const fadeStyle = useAnimatedStyle(() => ({ opacity: fade.value }));
 
