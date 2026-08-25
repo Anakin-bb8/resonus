@@ -13,7 +13,6 @@ import {
   Dimensions,
   Keyboard,
   Pressable,
-  ScrollView,
   Text,
   TextInput,
   View,
@@ -42,6 +41,7 @@ import {
 import { listPerf } from '@/lib/listPerf';
 import { BackChevron } from '@/components/BackChevron';
 import { BrowseFrame, type BrowserProps } from '@/components/BrowseFrame';
+import { BrowseToolbar } from '@/components/BrowseToolbar';
 import { useGridColumns } from '@/hooks/useGridColumns';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
@@ -53,7 +53,7 @@ function cardWidth(columns: number): number {
   return (Dimensions.get('window').width - spacing.lg * 2 - GAP * (columns - 1)) / columns;
 }
 
-/** Bar height: the box (44) plus its gap to the chips below. */
+/** Bar height: the box (44) plus its gap to the row below. */
 const SEARCH_H = 44 + spacing.md;
 
 /**
@@ -66,8 +66,8 @@ const SEARCH_COUNT = 50;
 /** Delay before querying the server: without this it'd be one request per keystroke. */
 const DEBOUNCE_MS = 300;
 
-// Same chips and same order as Artists: they're sibling screens and seeing
-// them ordered differently felt jarring. 'alphabeticalByArtist' was dropped
+// Same orders, in the same order, as Artists: they're sibling screens and
+// seeing them listed differently felt jarring. 'alphabeticalByArtist' was dropped
 // for this reason, by symmetry: it has no equivalent in Artists, where sorting
 // by artist is exactly what A-Z already does.
 const SORTS: { key: AlbumListType; label: string }[] = [
@@ -237,31 +237,16 @@ export function AlbumsBrowser({ embedded, actionRef }: BrowserProps) {
           ) : null}
       </View>
 
-      {/* The chips hide when searching: the server returns by relevance, so
-          ordering results isn't in its hands and a marked pill would lie about
-          the visible order. */}
+      {/* Gone while searching: the server returns by relevance, so ordering
+          results isn't in its hands, and what "play everything" would start is
+          not what you were looking for either. */}
       {isSearch ? null : (
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chips}
-        style={styles.chipsRow}
-      >
-        {SORTS.map((s) => {
-          const active = s.key === sort;
-          return (
-            <Pressable
-              key={s.key}
-              style={[styles.chip, active && { backgroundColor: colors.accent }]}
-              onPress={() => setSort(s.key)}
-            >
-              <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                {t(s.label)}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+        <BrowseToolbar
+          options={SORTS}
+          value={sort}
+          onChange={setSort}
+          play={{ source: t('Library'), href: '/browse/albums' }}
+        />
       )}
 
       {(isSearch ? searchPending : isLoading) ? (
@@ -350,7 +335,7 @@ const styles = themed((colors) => ({
     alignItems: 'center',
     gap: spacing.md,
     paddingHorizontal: spacing.lg,
-    // The gap to the chips is part of the height, not an outer margin.
+    // The gap to the row below is part of the height, not an outer margin.
     paddingBottom: spacing.md,
   },
   searchBar: {
@@ -365,31 +350,6 @@ const styles = themed((colors) => ({
   },
   input: { flex: 1, color: colors.text, fontSize: fontSize.md, paddingVertical: 0 },
   searchCancel: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
-  // `flexShrink: 0` because the search bar adds a child to the column: without
-  // it flex shrinks this row and clips the pill text.
-  chipsRow: { flexGrow: 0, flexShrink: 0 },
-  chips: { gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
-  chip: {
-    // Asymmetric padding on purpose: even without includeFontPadding, glyphs
-    // end up ~1dp low relative to the pill center (measured in screenshot).
-    paddingTop: spacing.xs - 1,
-    paddingBottom: spacing.xs + 1,
-    paddingHorizontal: spacing.md,
-    borderRadius: 999,
-    backgroundColor: colors.surfaceHighlight,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  chipText: {
-    color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-    // Android adds extra asymmetric padding on top of the text (font ascent):
-    // without removing it, the text doesn't center in the pill.
-    includeFontPadding: false,
-    textAlignVertical: 'center',
-  },
-  chipTextActive: { color: colors.onAccent },
   list: {
     paddingHorizontal: spacing.lg,
     paddingBottom: SCREEN_BOTTOM_PADDING,

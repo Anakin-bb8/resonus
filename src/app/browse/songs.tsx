@@ -1,7 +1,7 @@
 /**
  * Browse the library's songs: the sibling of browsing albums and artists, with
- * the same header, the same search, the same pills in the same order and the
- * same choice of rows or a grid. Holding one starts selecting, which the other
+ * the same header, the same search, the same toolbar and the same choice of
+ * rows or a grid. Holding one starts selecting, which the other
  * two have no use for and a screen made for gathering songs does (#77).
  *
  * Which orders it offers is `songListSorts`'s to say, because the answer is the
@@ -23,7 +23,6 @@ import {
   Dimensions,
   Keyboard,
   Pressable,
-  ScrollView,
   Text,
   TextInput,
   View,
@@ -67,6 +66,7 @@ import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { useListPadding } from '@/hooks/useScreenSize';
 import { BackChevron } from '@/components/BackChevron';
 import { BrowseFrame, type BrowserProps } from '@/components/BrowseFrame';
+import { BrowseToolbar } from '@/components/BrowseToolbar';
 
 const PAGE = 50;
 
@@ -81,7 +81,7 @@ function cardWidth(columns: number): number {
   return (Dimensions.get('window').width - spacing.lg * 2 - GAP * (columns - 1)) / columns;
 }
 
-/** Bar height: the box (44) plus its gap to the chips below. */
+/** Bar height: the box (44) plus its gap to the row below. */
 const SEARCH_H = 44 + spacing.md;
 
 /**
@@ -142,8 +142,8 @@ export function SongsBrowser({ embedded, actionRef }: BrowserProps) {
   /**
    * Arrived at from a Home shelf, this says which one. Only the value it opens
    * on: each visit is its own screen, so there is nothing to keep in step. An
-   * order this server cannot give is ignored rather than shown as a chip that
-   * does nothing.
+   * order this server cannot give is ignored rather than offered in a menu
+   * where it would do nothing.
    */
   const { sort: sortParam } = useLocalSearchParams<{ sort?: string }>();
   const [sort, setSort] = useState<SongListSort>(
@@ -342,34 +342,19 @@ export function SongsBrowser({ embedded, actionRef }: BrowserProps) {
         ) : null}
       </View>
 
-      {/* The chips hide while searching: results come back by relevance, so a
-          marked pill would lie about the order on screen. With a single order
-          there is nothing to choose either. */}
-      {isSearch || sorts.length < 2 ? null : (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chips}
-          style={styles.chipsRow}
-        >
-          {sorts.map((key) => {
-            const active = key === sort;
-            return (
-              <Pressable
-                key={key}
-                style={[styles.chip, active && { backgroundColor: accent }]}
-                onPress={() => {
-                  setSort(key);
-                  setSelectedIds(null);
-                }}
-              >
-                <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                  {t(SORT_LABEL[key])}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+      {/* Gone while searching, and while selecting: results come back by
+          relevance so there is no order to show, and an action row is not what
+          a selection wants over its list. */}
+      {isSearch || selecting ? null : (
+        <BrowseToolbar
+          options={sorts.map((key) => ({ key, label: SORT_LABEL[key] }))}
+          value={sort}
+          onChange={(key) => {
+            setSort(key);
+            setSelectedIds(null);
+          }}
+          play={{ sort, source: t('Songs'), href: '/browse/songs' }}
+        />
       )}
 
       {(isSearch ? searchPending : isLoading) ? (
@@ -557,7 +542,7 @@ const styles = themed((colors) => ({
     alignItems: 'center',
     gap: spacing.md,
     paddingHorizontal: spacing.lg,
-    // The gap to the chips is part of the height, not an outer margin.
+    // The gap to the row below is part of the height, not an outer margin.
     paddingBottom: spacing.md,
   },
   searchBar: {
@@ -581,31 +566,6 @@ const styles = themed((colors) => ({
     fontSize: fontSize.sm,
     fontWeight: '600',
   },
-  // `flexShrink: 0` because the search bar adds a child to the column: without
-  // it flex shrinks this row and clips the pill text.
-  chipsRow: { flexGrow: 0, flexShrink: 0 },
-  chips: { gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
-  chip: {
-    // Asymmetric padding on purpose: even without includeFontPadding, glyphs
-    // end up ~1dp low relative to the pill center (same as the browse chips).
-    paddingTop: spacing.xs - 1,
-    paddingBottom: spacing.xs + 1,
-    paddingHorizontal: spacing.md,
-    borderRadius: 999,
-    backgroundColor: colors.surfaceHighlight,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  chipText: {
-    color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-    // Android adds extra asymmetric padding on top of the text (font ascent):
-    // without removing it, the text doesn't center in the pill.
-    includeFontPadding: false,
-    textAlignVertical: 'center',
-  },
-  chipTextActive: { color: colors.onAccent },
   // `TrackRow` brings no horizontal padding of its own, so without this the
   // covers sit against the left edge and the ⋯ against the right one.
   list: { paddingHorizontal: spacing.lg, paddingBottom: SCREEN_BOTTOM_PADDING },

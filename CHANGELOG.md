@@ -18,6 +18,7 @@ Releases before 0.2.1 are only listed on the
 ### Changed
 
 - The library tab is now called "Your library", at the bottom of the screen and at the top of the tab itself.
+- Browsing all albums, all artists and all songs picks its order from a menu that says which one is on, instead of a scrolling row of pills, and the albums and the songs gained play and shuffle beside it.
 - A genre card now says how many albums it holds and fans out the covers of its first two, in Search and in the genres screen alike.
 - The album and year line in the player scrolls when it does not fit, so a long album name no longer keeps the year off the screen (#183).
 - Folders moved out of Your library and into the new Library tab, which is where the rest of the server's own catalogue now lives.

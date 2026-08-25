@@ -8,7 +8,6 @@ import {
   Dimensions,
   Keyboard,
   Pressable,
-  ScrollView,
   Text,
   TextInput,
   View,
@@ -39,6 +38,7 @@ import {
 import { listPerf } from '@/lib/listPerf';
 import { BackChevron } from '@/components/BackChevron';
 import { BrowseFrame, type BrowserProps } from '@/components/BrowseFrame';
+import { BrowseToolbar } from '@/components/BrowseToolbar';
 import { useGridColumns } from '@/hooks/useGridColumns';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
@@ -63,8 +63,9 @@ function cardWidth(columns: number): number {
  */
 type ArtistSort = 'alpha' | 'recent' | 'newest' | 'frequent' | 'random';
 
-// Same order as the Album chips (without 'Artist', which doesn't make sense
-// here): they're sibling screens and seeing them ordered differently felt jarring.
+// The same orders the album screen offers (without 'Artist', which doesn't
+// make sense here): they're sibling screens and seeing them listed differently
+// felt jarring.
 const SORTS: { key: ArtistSort; label: string }[] = [
   { key: 'recent', label: 'Recently played' },
   { key: 'frequent', label: 'Most played' },
@@ -76,7 +77,7 @@ const SORTS: { key: ArtistSort; label: string }[] = [
 /** How many albums are checked to infer frequent / recently added artists. */
 const FREQUENT_POOL = 50;
 
-/** Bar height: the box (44) plus its gap to the chips below. */
+/** Bar height: the box (44) plus its gap to the row below. */
 const SEARCH_H = 44 + spacing.md;
 
 export default function BrowseArtistsScreen() {
@@ -109,7 +110,7 @@ export function ArtistsBrowser({ embedded, actionRef }: BrowserProps) {
 
   // "Recently played" blends both sources: having opened their screen and
   // having played within any queue. Neither alone tells the full story, and
-  // opening an artist without pressing play is rare enough that the chip is
+  // opening an artist without pressing play is rare enough that the order is
   // named for what the two of them are mostly made of.
   const times = useLastPlayed((s) => s.times);
   const { byArtist } = useHistoryTimes();
@@ -120,8 +121,8 @@ export function ArtistsBrowser({ embedded, actionRef }: BrowserProps) {
     enabled: canFetch,
   });
 
-  // The filter bar sits above the chips, outside the scroll: the chips stay
-  // fixed in the middle, so it can't live inside the list.
+  // The filter bar sits above the toolbar, outside the scroll: both stay put
+  // while the list moves under them, so neither can live inside it.
   const listRef = useRef<GHFlatList<Artist>>(null);
   const [searching, setSearching] = useState(false);
 
@@ -269,25 +270,8 @@ export function ArtistsBrowser({ embedded, actionRef }: BrowserProps) {
           ) : null}
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chips}
-        style={styles.chipsRow}
-      >
-        {SORTS.map((s) => {
-          const active = s.key === sort;
-          return (
-            <Pressable
-              key={s.key}
-              style={[styles.chip, active && { backgroundColor: colors.accent }]}
-              onPress={() => setSort(s.key)}
-            >
-              <Text style={[styles.chipText, active && styles.chipTextActive]}>{t(s.label)}</Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+      {/* No play beside it: there is no such thing as starting every artist. */}
+      <BrowseToolbar options={SORTS} value={sort} onChange={setSort} />
 
       {isLoading ? (
         grid ? (
@@ -352,7 +336,7 @@ const styles = themed((colors) => ({
     alignItems: 'center',
     gap: spacing.md,
     paddingHorizontal: spacing.lg,
-    // The gap to the chips is part of the height, not an outer margin.
+    // The gap to the row below is part of the height, not an outer margin.
     paddingBottom: spacing.md,
   },
   searchBar: {
@@ -369,31 +353,6 @@ const styles = themed((colors) => ({
   searchCancel: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
   headerAction: { width: 26, alignItems: 'flex-end' },
 
-  // Same chips as exploring albums, fine adjustments included. `flexShrink: 0`
-  // because the search bar adds a child to the column: without it flex
-  // shrinks this row and clips the pill text.
-  chipsRow: { flexGrow: 0, flexShrink: 0 },
-  chips: { gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
-  chip: {
-    // Asymmetric padding on purpose: even without includeFontPadding, glyphs
-    // end up ~1dp low relative to the pill center (measured in screenshot).
-    paddingTop: spacing.xs - 1,
-    paddingBottom: spacing.xs + 1,
-    paddingHorizontal: spacing.md,
-    borderRadius: 999,
-    backgroundColor: colors.surfaceHighlight,
-    justifyContent: 'center',
-  },
-  chipText: {
-    color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-    // Android adds extra asymmetric padding on top of the text (font ascent):
-    // without removing it, the text doesn't center in the pill.
-    includeFontPadding: false,
-    textAlignVertical: 'center',
-  },
-  chipTextActive: { color: colors.onAccent },
   list: {
     paddingHorizontal: spacing.lg,
     paddingBottom: SCREEN_BOTTOM_PADDING,
