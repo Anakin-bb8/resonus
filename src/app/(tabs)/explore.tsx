@@ -1,5 +1,5 @@
 /**
- * Library: everything the server has, in one tab.
+ * Explore: everything the server has, in one tab.
  *
  * The whole catalogue used to be reachable only through the Explore chips on
  * Home — six pills that scroll off the edge, each opening a screen you then
@@ -128,7 +128,7 @@ export default function ExploreScreen() {
   return (
     <View style={[styles.safe, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <Text style={styles.heading}>{t('Library')}</Text>
+        <Text style={styles.heading}>{t('Explore')}</Text>
         <View style={styles.headerActions}>
           <OfflineIndicator />
           {headerButton ? (

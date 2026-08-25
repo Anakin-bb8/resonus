@@ -239,7 +239,7 @@ export function SongsBrowser({ embedded, actionRef }: BrowserProps) {
     listRef.current?.scrollToOffset({ offset: 0, animated: false });
   }
 
-  // Embedded, the button that opens this menu is drawn by the Library tab, in
+  // Embedded, the button that opens this menu is drawn by the Explore tab, in
   // its own header: this is the way down to the menu it belongs to. Kept up to
   // date after every render rather than during one, which is a rule the ref is
   // not worth breaking for — it is only read from a tap, long after this.
@@ -301,7 +301,7 @@ export function SongsBrowser({ embedded, actionRef }: BrowserProps) {
           <Text style={styles.title} numberOfLines={1}>
             {selecting ? t('{n} selected', { n: selectedIds.size }) : t('Songs')}
           </Text>
-          {/* Embedded, the view menu is drawn by the Library tab and this slot
+          {/* Embedded, the view menu is drawn by the Explore tab and this slot
               only carries the select-all. It keeps its width either way, so the
               title stays centred. */}
           <View style={styles.headerAction}>

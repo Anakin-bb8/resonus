@@ -14,7 +14,7 @@ Releases before 0.2.1 are only listed on the
 - The row playing in a list shows a set of bars that move while it plays and settle when you pause it.
 - One tap and two on the player's artwork now offer the same actions, the album among them, so play or pause on one and the lyrics on the other is a choice you can make either way round.
 - Holding a playlist on the Home shelf opens the same menu the library gives it (#182).
-- A fourth tab, Library, holds everything the server has: all albums, all artists, all songs, the genres, the radio stations and the folders, each with its own search and orders.
+- A fourth tab, Explore, holds everything the server has: all albums, all artists, all songs, the genres, the radio stations and the folders, each with its own search and orders.
 
 ### Removed
 
@@ -29,7 +29,7 @@ Releases before 0.2.1 are only listed on the
 - Browsing all albums, all artists and all songs picks its order from a menu that says which one is on, instead of a scrolling row of pills, and the albums and the songs gained play and shuffle beside it.
 - A genre card now says how many albums it holds and fans out the covers of its first two, in Search and in the genres screen alike.
 - The album and year line in the player scrolls when it does not fit, so a long album name no longer keeps the year off the screen (#183).
-- Folders moved out of Your library and into the new Library tab, which is where the rest of the server's own catalogue now lives.
+- Folders moved out of Your library and into the new Explore tab, which is where the rest of the server's own catalogue now lives.
 - Settings > Personalization > "Open the app on" can pick the new tab.
 
 ### Fixed

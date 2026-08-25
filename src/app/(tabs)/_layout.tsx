@@ -1,5 +1,5 @@
 /**
- * Main tab navigation: Home, Search, Your library and Library.
+ * Main tab navigation: Home, Search, Your library and Explore.
  * Solid bottom bar over the app background.
  *
  * With "Always show the navigation bar" on, the drawing is handed over to
@@ -94,7 +94,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="explore"
           options={{
-            title: t('Library'),
+            title: t('Explore'),
             tabBarIcon: ({ focused, color, size }) => (
               <Ionicons name={focused ? 'albums' : 'albums-outline'} color={color} size={size} />
             ),

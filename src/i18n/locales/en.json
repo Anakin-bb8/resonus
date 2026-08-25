@@ -76,7 +76,7 @@
   "Back": "Back",
   "Back {n} seconds": "Back {n} seconds",
   "Block downloads on mobile data.": "Block downloads on mobile data.",
-  "Browse your library by folders, in the Library tab (Subsonic servers).": "Browse your library by folders, in the Library tab (Subsonic servers).",
+  "Browse your library by folders, in the Explore tab (Subsonic servers).": "Browse your library by folders, in the Explore tab (Subsonic servers).",
   "Buttons": "Buttons",
   "Background": "Background",
   "Cover art": "Cover art",
@@ -688,5 +688,6 @@
   "On cover double tap": "On cover double tap",
   "Play or pause": "Play or pause",
   "A second action for the same artwork, for a hand that is not looking. With this on, a single tap waits a moment to see whether a second one is coming.": "A second action for the same artwork, for a hand that is not looking. With this on, a single tap waits a moment to see whether a second one is coming.",
-  "At the end of the queue": "At the end of the queue"
+  "At the end of the queue": "At the end of the queue",
+  "Explore": "Explore"
 }

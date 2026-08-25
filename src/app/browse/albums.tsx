@@ -1,7 +1,7 @@
 /**
  * Browse all server albums, with sort, search and infinite scroll.
  *
- * A screen of its own and, `embedded`, the Albums section of the Library tab
+ * A screen of its own and, `embedded`, the Albums section of the Explore tab
  * (see `BrowseFrame`).
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -172,7 +172,7 @@ export function AlbumsBrowser({ embedded, actionRef }: BrowserProps) {
   // flash between keystrokes.
   const searchPending = isSearch && (searchLoading || debounced !== query.trim());
 
-  // Embedded, the button that opens this menu is drawn by the Library tab, in
+  // Embedded, the button that opens this menu is drawn by the Explore tab, in
   // its own header: this is the way down to the menu it belongs to. Kept up to
   // date after every render rather than during one, which is a rule the ref is
   // not worth breaking for — it is only read from a tap, long after this.

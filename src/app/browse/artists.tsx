@@ -1,5 +1,5 @@
 /** Browse all artists on the server, with quick filter. */
-/* A screen of its own and, `embedded`, the Artists section of the Library tab. */
+/* A screen of its own and, `embedded`, the Artists section of the Explore tab. */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
@@ -205,7 +205,7 @@ export function ArtistsBrowser({ embedded, actionRef }: BrowserProps) {
     return all.sort((a, b) => score(b) - score(a) || byName(a, b));
   }, [filtered, sort, shuffledArtists, times, byArtist, playedByArtist, addedByArtist]);
 
-  // Embedded, the button that opens this menu is drawn by the Library tab, in
+  // Embedded, the button that opens this menu is drawn by the Explore tab, in
   // its own header: this is the way down to the menu it belongs to. Kept up to
   // date after every render rather than during one, which is a rule the ref is
   // not worth breaking for — it is only read from a tap, long after this.

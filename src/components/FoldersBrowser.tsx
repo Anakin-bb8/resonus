@@ -2,7 +2,7 @@
  * The server's music folders, as the way into browsing its directory tree.
  *
  * Subsonic only, and it lived as a fourth segment of "Your library" until the
- * Library tab gathered the whole catalogue in one place. What a folder holds
+ * Explore tab gathered the whole catalogue in one place. What a folder holds
  * is the server's, not yours, which is what it was doing on the wrong side of
  * that line.
  *

@@ -58,7 +58,7 @@ import { haptic } from '@/lib/haptics';
 
 // Folders used to be a fourth segment here. It browses the server's own
 // directory tree, which is the catalogue rather than your own shelf, so it
-// went to the Library tab with the rest of it (`FoldersBrowser`).
+// went to the Explore tab with the rest of it (`FoldersBrowser`).
 type Segment = 'playlists' | 'albums' | 'artists';
 
 const SEGMENTS: { key: Segment; label: string }[] = [

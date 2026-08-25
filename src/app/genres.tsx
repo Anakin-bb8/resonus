@@ -1,7 +1,7 @@
 /**
  * Server genre list, in colored cards.
  *
- * A screen of its own and, `embedded`, the Genres section of the Library tab.
+ * A screen of its own and, `embedded`, the Genres section of the Explore tab.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery } from '@tanstack/react-query';
