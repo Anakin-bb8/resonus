@@ -67,7 +67,7 @@ import { useGridColumns } from '@/hooks/useGridColumns';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { useListPadding } from '@/hooks/useScreenSize';
 import { BackChevron } from '@/components/BackChevron';
-import { BrowseFrame } from '@/components/BrowseFrame';
+import { BrowseFrame, type BrowserProps } from '@/components/BrowseFrame';
 
 const PAGE = 50;
 
@@ -115,7 +115,7 @@ export default function BrowseSongsScreen() {
   return <SongsBrowser />;
 }
 
-export function SongsBrowser({ embedded }: { embedded?: boolean }) {
+export function SongsBrowser({ embedded, actionRef }: BrowserProps) {
   // Repaints on a change of appearance or accent: a stack keeps this screen
   // mounted while you are on another one, out of reach of anything else.
   useTheme();
@@ -280,6 +280,14 @@ export function SongsBrowser({ embedded }: { embedded?: boolean }) {
     }
   }
 
+  // Embedded, the button that opens this menu is drawn by the Library tab, in
+  // its own header: this is the way down to the menu it belongs to. Kept up to
+  // date after every render rather than during one, which is a rule the ref is
+  // not worth breaking for — it is only read from a tap, long after this.
+  useEffect(() => {
+    if (actionRef) actionRef.current = openGridMenu;
+  });
+
   const viewButton = (
     <Pressable
       hitSlop={10}
@@ -373,14 +381,14 @@ export function SongsBrowser({ embedded }: { embedded?: boolean }) {
         ) : null}
       </View>
 
-      {/* The same row an album, a playlist and a genre have, in the same order:
-          what you do to the list on the left, what starts it on the right. The
-          view menu is the left-hand half of it here, which is also what keeps
-          it off the search box and out of a row of its own. Gone while
-          selecting, like every other action row. */}
+      {/* Play and shuffle for the whole list, in the corner an album, a playlist
+          and a genre keep them in. The view menu is the left-hand half of this
+          row on its own screen and lives in the tab's header when embedded, so
+          there it is only the pair. Gone while selecting, like every other
+          action row. */}
       {selecting ? null : (
         <View style={styles.actions}>
-          {viewButton}
+          {embedded ? null : viewButton}
           <View style={styles.playRow}>
             <Pressable
               hitSlop={10}

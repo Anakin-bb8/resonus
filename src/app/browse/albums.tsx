@@ -41,7 +41,7 @@ import {
 } from '@/theme';
 import { listPerf } from '@/lib/listPerf';
 import { BackChevron } from '@/components/BackChevron';
-import { BrowseFrame } from '@/components/BrowseFrame';
+import { BrowseFrame, type BrowserProps } from '@/components/BrowseFrame';
 import { useGridColumns } from '@/hooks/useGridColumns';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
@@ -88,7 +88,7 @@ export default function BrowseAlbumsScreen() {
   return <AlbumsBrowser />;
 }
 
-export function AlbumsBrowser({ embedded }: { embedded?: boolean }) {
+export function AlbumsBrowser({ embedded, actionRef }: BrowserProps) {
   // Repaints on a change of appearance or accent: a stack keeps this screen
   // mounted while you are on another one, out of reach of anything else.
   useTheme();
@@ -172,6 +172,14 @@ export function AlbumsBrowser({ embedded }: { embedded?: boolean }) {
   // flash between keystrokes.
   const searchPending = isSearch && (searchLoading || debounced !== query.trim());
 
+  // Embedded, the button that opens this menu is drawn by the Library tab, in
+  // its own header: this is the way down to the menu it belongs to. Kept up to
+  // date after every render rather than during one, which is a rule the ref is
+  // not worth breaking for — it is only read from a tap, long after this.
+  useEffect(() => {
+    if (actionRef) actionRef.current = openGridMenu;
+  });
+
   const viewButton = (
     <Pressable
       hitSlop={10}
@@ -228,12 +236,6 @@ export function AlbumsBrowser({ embedded }: { embedded?: boolean }) {
             </Pressable>
           ) : null}
       </View>
-
-      {/* Embedded there is no header to keep the view menu in, so it sits where
-          the song list keeps it: the left-hand half of the row that acts on the
-          list. The three sections are flipped between with one tap, so it has
-          to be in the same corner on all of them. */}
-      {embedded ? <View style={styles.actions}>{viewButton}</View> : null}
 
       {/* The chips hide when searching: the server returns by relevance, so
           ordering results isn't in its hands and a marked pill would lie about
@@ -341,12 +343,6 @@ const styles = themed((colors) => ({
   },
   title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '600' },
   headerAction: { width: 26, alignItems: 'flex-end' },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
-  },
 
   searchRow: {
     height: SEARCH_H,

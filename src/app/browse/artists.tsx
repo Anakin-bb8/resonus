@@ -3,7 +3,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
   Keyboard,
@@ -38,7 +38,7 @@ import {
 } from '@/theme';
 import { listPerf } from '@/lib/listPerf';
 import { BackChevron } from '@/components/BackChevron';
-import { BrowseFrame } from '@/components/BrowseFrame';
+import { BrowseFrame, type BrowserProps } from '@/components/BrowseFrame';
 import { useGridColumns } from '@/hooks/useGridColumns';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
@@ -83,7 +83,7 @@ export default function BrowseArtistsScreen() {
   return <ArtistsBrowser />;
 }
 
-export function ArtistsBrowser({ embedded }: { embedded?: boolean }) {
+export function ArtistsBrowser({ embedded, actionRef }: BrowserProps) {
   // Repaints on a change of appearance or accent: a stack keeps this screen
   // mounted while you are on another one, out of reach of anything else.
   useTheme();
@@ -204,6 +204,14 @@ export function ArtistsBrowser({ embedded }: { embedded?: boolean }) {
     return all.sort((a, b) => score(b) - score(a) || byName(a, b));
   }, [filtered, sort, shuffledArtists, times, byArtist, playedByArtist, addedByArtist]);
 
+  // Embedded, the button that opens this menu is drawn by the Library tab, in
+  // its own header: this is the way down to the menu it belongs to. Kept up to
+  // date after every render rather than during one, which is a rule the ref is
+  // not worth breaking for — it is only read from a tap, long after this.
+  useEffect(() => {
+    if (actionRef) actionRef.current = openGridMenu;
+  });
+
   const viewButton = (
     <Pressable
       hitSlop={10}
@@ -260,12 +268,6 @@ export function ArtistsBrowser({ embedded }: { embedded?: boolean }) {
             </Pressable>
           ) : null}
       </View>
-
-      {/* Embedded there is no header to keep the view menu in, so it sits where
-          the song list keeps it: the left-hand half of the row that acts on the
-          list. The three sections are flipped between with one tap, so it has
-          to be in the same corner on all of them. */}
-      {embedded ? <View style={styles.actions}>{viewButton}</View> : null}
 
       <ScrollView
         horizontal
@@ -366,12 +368,6 @@ const styles = themed((colors) => ({
   input: { flex: 1, color: colors.text, fontSize: fontSize.md, paddingVertical: 0 },
   searchCancel: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
   headerAction: { width: 26, alignItems: 'flex-end' },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
-  },
 
   // Same chips as exploring albums, fine adjustments included. `flexShrink: 0`
   // because the search bar adds a child to the column: without it flex
