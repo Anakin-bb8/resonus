@@ -462,12 +462,27 @@ export const spacing = {
   xxl: 32,
 } as const;
 
+/**
+ * The corners, from the smallest control to the biggest surface.
+ *
+ * Read them as a ladder rather than as numbers: `sm` is a badge or a bar,
+ * `md` a row or a small cover, `lg` a card, `xl` the panels that take up half
+ * the screen, `xxl` the sheets that rise over it, and `pill` anything meant to
+ * be a capsule or a circle (a large radius on a square box is one, which is
+ * why there is no separate `circle`).
+ *
+ * The whole ladder went up a step in August 2026: it used to top out at 16 and
+ * almost everything in the app sat on 8, which reads flat next to anything
+ * drawn in the last few years.
+ */
 export const radius = {
-  sm: 4,
-  md: 8,
-  lg: 12,
+  sm: 6,
+  md: 10,
+  lg: 16,
   /** The cards that peek below the player controls. */
-  xl: 16,
+  xl: 24,
+  /** A sheet rising from the bottom, and anything else that owns the screen. */
+  xxl: 32,
   pill: 999,
 } as const;
 

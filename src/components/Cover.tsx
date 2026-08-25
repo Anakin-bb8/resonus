@@ -278,6 +278,22 @@ export function useSettledSource(
   return { shown, onDisplay };
 }
 
+/**
+ * The corner a cover gets, which cannot be one number.
+ *
+ * Every artwork in the app went through this at one fixed size, and one size
+ * is wrong at both ends: on the 44 point thumbnail in the mini player it is a
+ * quarter of the picture, and on the 350 point cover in the player it is a
+ * rounding error nobody can see. So it climbs the scale with the picture, the
+ * way a shape scale is meant to be read.
+ */
+function coverRadius(size: number): number {
+  if (size <= 56) return radius.sm;
+  if (size <= 120) return radius.md;
+  if (size <= 240) return radius.lg;
+  return radius.xl;
+}
+
 export function Cover({
   uri,
   size,
@@ -326,7 +342,7 @@ export function Cover({
   const shown = cacheOnly ? (cached && cached.uri === uri ? cached.path : undefined) : uri;
   const imageRef = useRef<Image>(null);
   const redraw = useRedrawOnReturn(imageRef, shown);
-  const borderRadius = rounded ? radius.pill : radius.md;
+  const borderRadius = rounded ? radius.pill : coverRadius(size);
   if (!shown || failed) {
     return (
       <View

@@ -17,6 +17,8 @@ Releases before 0.2.1 are only listed on the
 
 ### Changed
 
+- Corners are rounder throughout, and a cover's follows its size instead of being the same on a thumbnail and on the player's artwork.
+- Every sheet rises with the same rounded top; half of them used to be less rounded than the other half.
 - The library tab is now called "Your library", at the bottom of the screen and at the top of the tab itself.
 - Browsing all albums, all artists and all songs picks its order from a menu that says which one is on, instead of a scrolling row of pills, and the albums and the songs gained play and shuffle beside it.
 - A genre card now says how many albums it holds and fans out the covers of its first two, in Search and in the genres screen alike.

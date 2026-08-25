@@ -297,8 +297,8 @@ const styles = themed((colors) => ({
     width: '100%',
     maxWidth: SHEET_MAX_WIDTH,
     backgroundColor: colors.surface,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    borderTopLeftRadius: radius.xxl,
+    borderTopRightRadius: radius.xxl,
     paddingHorizontal: spacing.lg,
     // Smaller than the old spacing.lg because the grabber below already brings
     // its own margin: together they add up to the same top gap as before.
