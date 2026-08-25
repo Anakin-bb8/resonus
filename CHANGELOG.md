@@ -16,6 +16,7 @@ Releases before 0.2.1 are only listed on the
 ### Changed
 
 - The library tab is now called "Your library", at the bottom of the screen and at the top of the tab itself.
+- A genre card now says how many albums it holds and fans out the covers of its first two, in Search and in the genres screen alike.
 
 ### Fixed
 

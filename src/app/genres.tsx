@@ -109,7 +109,9 @@ export default function GenresScreen() {
           numColumns={columns}
           columnWrapperStyle={{ gap: spacing.sm }}
           contentContainerStyle={[styles.list, { paddingBottom: bottomPad }]}
-          renderItem={({ item }: { item: Genre }) => <GenreCard name={item.value} />}
+          renderItem={({ item }: { item: Genre }) => (
+            <GenreCard name={item.value} albumCount={item.albumCount} />
+          )}
           ListEmptyComponent={
             <EmptyState
               icon="pricetags-outline"

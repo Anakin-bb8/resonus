@@ -12,6 +12,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { GENRE_CARD_HEIGHT } from '@/components/GenreCard';
 import { radius, spacing, themed } from '@/theme';
 
 export function GenreGridSkeleton({ width, count = 14 }: { width: number; count?: number }) {
@@ -33,5 +34,9 @@ export function GenreGridSkeleton({ width, count = 14 }: { width: number; count?
 const styles = themed((colors) => ({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   // Same height and border radius as GenreCard so the layout doesn't jump when content arrives.
-  card: { height: 88, borderRadius: radius.md, backgroundColor: colors.surfaceHighlight },
+  card: {
+    height: GENRE_CARD_HEIGHT,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surfaceHighlight,
+  },
 }));

@@ -175,7 +175,10 @@ export default function SearchScreen() {
   // keystroke. Same elements, so React walks past the whole grid instead of
   // rebuilding it.
   const genreGrid = useMemo(
-    () => genres?.map((g) => <GenreCard key={g.value} name={g.value} width={genreW} />),
+    () =>
+      genres?.map((g) => (
+        <GenreCard key={g.value} name={g.value} albumCount={g.albumCount} width={genreW} />
+      )),
     [genres, genreW],
   );
 
