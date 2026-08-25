@@ -21,8 +21,9 @@ import { useSettings, type SwipeAction } from '@/store/settings';
 import { haptic } from '@/lib/haptics';
 import { useToast } from '@/store/toast';
 import { useT } from '@/i18n';
-import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
+import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 import { Cover } from './Cover';
+import { PlayingBars } from './PlayingBars';
 import { ExplicitBadge, useExplicitBadge } from './ExplicitBadge';
 import { FavoriteButton } from './FavoriteButton';
 
@@ -246,13 +247,29 @@ function TrackRowBase({
           having, and past that a number that does not fit should be cut rather
           than push the row taller than every other one. */}
       {position !== undefined ? (
-        <Text style={[styles.position, styles.leftSlot]} numberOfLines={1}>
-          {position}
-        </Text>
+        // The slot says which track this is, so on the one playing it says so
+        // with the bars instead of the number. Same slot, so nothing shifts
+        // when the song changes.
+        <View style={styles.leftSlot}>
+          {isCurrent ? (
+            <PlayingBars />
+          ) : (
+            <Text style={styles.position} numberOfLines={1}>
+              {position}
+            </Text>
+          )}
+        </View>
       ) : null}
       {showArtwork ? (
         <View style={styles.artwork}>
           <Cover uri={songCoverUrl(song, COVER.thumb)} size={44} />
+          {/* Over the picture where there is no number to give up, behind a
+              scrim so the bars read on artwork of any colour. */}
+          {isCurrent && position === undefined ? (
+            <View style={styles.artworkPlaying}>
+              <PlayingBars />
+            </View>
+          ) : null}
         </View>
       ) : null}
 
@@ -383,6 +400,17 @@ const styles = themed((colors) => ({
   artwork: {
     width: 44,
     height: 44,
+  },
+  artworkPlaying: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.scrim,
+    borderRadius: radius.sm,
   },
   info: {
     flex: 1,

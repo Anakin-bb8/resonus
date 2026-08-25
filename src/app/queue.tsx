@@ -28,6 +28,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COVER, songCoverUrl } from '@/api/data';
 import { type Song } from '@/api/subsonic';
 import { Cover } from '@/components/Cover';
+import { PlayingBars } from '@/components/PlayingBars';
 import { Dialog } from '@/components/Dialog';
 import { EmptyState } from '@/components/EmptyState';
 import { ExplicitBadge, useExplicitBadge } from '@/components/ExplicitBadge';
@@ -126,7 +127,7 @@ function QueueRow({
       </Pressable>
 
       <View style={styles.actions}>
-        {current ? <Ionicons name="volume-medium" size={20} color={colors.accent} /> : null}
+        {current ? <PlayingBars size={18} /> : null}
         <Pressable hitSlop={6} onPress={() => void remove()}>
           <Ionicons name="close" size={22} color={colors.textSecondary} />
         </Pressable>
