@@ -3,8 +3,8 @@
  *
  * A stack can get deep: an artist, one of its albums, another artist off a
  * track, a genre from there, and Home is five taps back. With "Always show the
- * navigation bar" on, this puts Home, Search and Library within one tap of
- * anywhere, and that tap also clears the stack it was covering.
+ * navigation bar" on, this puts every tab within one tap of anywhere, and that
+ * tap also clears the stack it was covering.
  *
  * It is the only bar there is. The tabs navigator draws none of its own
  * (`tabBar={() => null}` in the tabs layout) and this is rendered next to the
@@ -35,10 +35,11 @@ import { rememberTab, reselectTab, tabOrigin, TABS } from '@/lib/tabOrigin';
 import { useSettings } from '@/store/settings';
 import { colors, TAB_BAR_HEIGHT, themed } from '@/theme';
 
-const ICONS: Record<string, 'home' | 'search' | 'library'> = {
+const ICONS: Record<string, 'home' | 'search' | 'library' | 'albums'> = {
   index: 'home',
   search: 'search',
   library: 'library',
+  explore: 'albums',
 };
 
 export function GlobalTabBar() {

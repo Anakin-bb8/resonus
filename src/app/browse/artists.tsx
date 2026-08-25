@@ -1,4 +1,5 @@
 /** Browse all artists on the server, with quick filter. */
+/* A screen of its own and, `embedded`, the Artists section of the Library tab. */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
@@ -13,7 +14,6 @@ import {
   View,
 } from 'react-native';
 import { FlatList as GHFlatList } from 'react-native-gesture-handler';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { getAlbumList, getArtists, type Album, type Artist } from '@/api/data';
 import { ArtistCard } from '@/components/ArtistCard';
@@ -38,6 +38,7 @@ import {
 } from '@/theme';
 import { listPerf } from '@/lib/listPerf';
 import { BackChevron } from '@/components/BackChevron';
+import { BrowseFrame } from '@/components/BrowseFrame';
 import { useGridColumns } from '@/hooks/useGridColumns';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
@@ -79,6 +80,10 @@ const FREQUENT_POOL = 50;
 const SEARCH_H = 44 + spacing.md;
 
 export default function BrowseArtistsScreen() {
+  return <ArtistsBrowser />;
+}
+
+export function ArtistsBrowser({ embedded }: { embedded?: boolean }) {
   // Repaints on a change of appearance or accent: a stack keeps this screen
   // mounted while you are on another one, out of reach of anything else.
   useTheme();
@@ -199,28 +204,30 @@ export default function BrowseArtistsScreen() {
     return all.sort((a, b) => score(b) - score(a) || byName(a, b));
   }, [filtered, sort, shuffledArtists, times, byArtist, playedByArtist, addedByArtist]);
 
+  const viewButton = (
+    <Pressable
+      hitSlop={10}
+      accessibilityRole="button"
+      accessibilityLabel={t('View')}
+      onPress={openGridMenu}
+    >
+      <Ionicons name={grid ? 'grid-outline' : 'list'} size={20} color={colors.textSecondary} />
+    </Pressable>
+  );
+
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <BackChevron />
-        <Text style={styles.title}>{t('Artists')}</Text>
-        {/* Takes the same width as the back chevron so the title stays centered;
-            there used to be an empty slot of the same width here. */}
-        <View style={styles.headerAction}>
-          <Pressable
-            hitSlop={10}
-            accessibilityRole="button"
-            accessibilityLabel={t('View')}
-            onPress={openGridMenu}
-          >
-            <Ionicons
-              name={grid ? 'grid-outline' : 'list'}
-              size={20}
-              color={colors.textSecondary}
-            />
-          </Pressable>
+    <BrowseFrame embedded={embedded}>
+      {embedded ? (
+        <View style={styles.headerEmbedded}>{viewButton}</View>
+      ) : (
+        <View style={styles.header}>
+          <BackChevron />
+          <Text style={styles.title}>{t('Artists')}</Text>
+          {/* Takes the same width as the back chevron so the title stays
+              centered; there used to be an empty slot of the same width here. */}
+          <View style={styles.headerAction}>{viewButton}</View>
         </View>
-      </View>
+      )}
 
       {/* Always visible: filtering is what you come to this screen to do, so
           the bar is not worth hiding behind a gesture nobody discovers. */}
@@ -320,12 +327,11 @@ export default function BrowseArtistsScreen() {
         />
       )}
       {gridSheet}
-    </SafeAreaView>
+    </BrowseFrame>
   );
 }
 
 const styles = themed((colors) => ({
-  safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -356,6 +362,12 @@ const styles = themed((colors) => ({
   input: { flex: 1, color: colors.text, fontSize: fontSize.md, paddingVertical: 0 },
   searchCancel: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
   headerAction: { width: 26, alignItems: 'flex-end' },
+  // Embedded there is no title and no chevron, so the row is the one button.
+  headerEmbedded: {
+    alignItems: 'flex-end',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
   // Same chips as exploring albums, fine adjustments included. `flexShrink: 0`
   // because the search bar adds a child to the column: without it flex
   // shrinks this row and clips the pill text.

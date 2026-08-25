@@ -19,10 +19,11 @@ import { mark } from '@/lib/perfLog';
 import { useAutoDownloads } from '@/store/autoDownloads';
 import { useSettings, type DefaultTab } from '@/store/settings';
 
-const TAB_HREF: Record<DefaultTab, '/' | '/search' | '/library'> = {
+const TAB_HREF: Record<DefaultTab, '/' | '/search' | '/library' | '/explore'> = {
   index: '/',
   search: '/search',
   library: '/library',
+  explore: '/explore',
 };
 
 // Time in background after which, on return, the app opens on the default

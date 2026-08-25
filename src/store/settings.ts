@@ -307,7 +307,7 @@ export type PreferDownloads = 'always' | 'cellular' | 'original' | 'never';
 
 /** Tab the app starts on (and returns to after being in the background for a
  *  while). Matches the `(tabs)` route names. */
-export type DefaultTab = 'index' | 'search' | 'library';
+export type DefaultTab = 'index' | 'search' | 'library' | 'explore';
 
 /** "Previous" button behavior: restart the track after a few seconds (default,
  *  like Spotify) or always go to the previous track (like YouTube). */
@@ -2092,7 +2092,8 @@ export const useSettings = create<SettingsState>((set, get) => ({
         if (
           parsed.defaultTab === 'index' ||
           parsed.defaultTab === 'search' ||
-          parsed.defaultTab === 'library'
+          parsed.defaultTab === 'library' ||
+          parsed.defaultTab === 'explore'
         ) {
           set({ defaultTab: parsed.defaultTab });
         }
