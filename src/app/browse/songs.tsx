@@ -66,7 +66,6 @@ import { useGridColumns } from '@/hooks/useGridColumns';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { useListPadding } from '@/hooks/useScreenSize';
 import { BackChevron } from '@/components/BackChevron';
-import { BrowseActions } from '@/components/BrowseActions';
 import { BrowseFrame, type BrowserProps } from '@/components/BrowseFrame';
 
 const PAGE = 50;
@@ -371,18 +370,6 @@ export function SongsBrowser({ embedded, actionRef }: BrowserProps) {
             );
           })}
         </ScrollView>
-      )}
-
-      {/* Play and shuffle for the library, under the order they follow and over
-          the list they start. Gone while selecting, like every other action
-          row. */}
-      {selecting ? null : (
-        <BrowseActions
-          sort={sort}
-          onScreen={isSearch ? songs : null}
-          source={t('Songs')}
-          href="/browse/songs"
-        />
       )}
 
       {(isSearch ? searchPending : isLoading) ? (
