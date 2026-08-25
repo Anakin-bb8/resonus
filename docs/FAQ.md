@@ -28,4 +28,5 @@ The sideloading methods we suggest are:
    Unofficial method (on device, doesn't require a PC) [SideInstaller guide](https://sideinstaller.net/)
 2. Altstore:
    Official guide (requires a PC) [Windows](https://faq.altstore.io/altstore-classic/how-to-install-altstore-windows), [MacOS](https://faq.altstore.io/altstore-classic/how-to-install-altstore-macos)
-   
+
+You can also [add Resonus repository as an altsource](https://altdirect.app/?url=https://github.com/juananzzz/resonus/blob/main/Source.json).
