@@ -14,7 +14,7 @@ Releases before 0.2.1 are only listed on the
 - One tap and two on the player's artwork now offer the same actions, the album among them, so play or pause on one and the lyrics on the other is a choice you can make either way round.
 - Holding a playlist on the Home shelf opens the same menu the library gives it (#182).
 - A fourth tab, Library, holds everything the server has: all albums, all artists, all songs, the genres, the radio stations and the folders, each with its own search and orders.
-- Browsing all songs has play and shuffle buttons, the same two an album or a genre already had.
+- Browsing all songs and browsing all albums have the row a genre has: play, shuffle, and a ⋯ that adds the library to a playlist or clears its downloads.
 
 ### Changed
 
