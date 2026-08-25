@@ -22,8 +22,6 @@
 
 ## Screenshots
 
-The same four screens, in dark and light.
-
 | Home | Player | Album | Library |
 | :---: | :---: | :---: | :---: |
 | <img src="./assets/screenshots/dark-home.jpg" width="200" alt="Home, dark" /> | <img src="./assets/screenshots/dark-player.jpg" width="200" alt="Player, dark" /> | <img src="./assets/screenshots/dark-album.jpg" width="200" alt="Album, dark" /> | <img src="./assets/screenshots/dark-library.jpg" width="200" alt="Library, dark" /> |
