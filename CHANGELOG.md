@@ -18,6 +18,7 @@ Releases before 0.2.1 are only listed on the
 
 ### Changed
 
+- Song, album and artist rows dim under the finger, late enough that scrolling past one never lights it up.
 - Corners are rounder throughout, and a cover's follows its size instead of being the same on a thumbnail and on the player's artwork.
 - Every sheet rises with the same rounded top; half of them used to be less rounded than the other half.
 - The library tab is now called "Your library", at the bottom of the screen and at the top of the tab itself.

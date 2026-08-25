@@ -8,8 +8,10 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Link } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { COVER, coverArtUrl, type Album } from '@/api/data';
+import { usePressFeedback } from '@/hooks/usePressFeedback';
 import { haptic } from '@/lib/haptics';
 import { useMediaMenu } from '@/store/mediaMenu';
 import { fontSize, spacing, themed, useTheme } from '@/theme';
@@ -22,17 +24,22 @@ interface Props {
   pinned?: boolean;
 }
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 export function AlbumRow({ album, pinned }: Props) {
   const openMenu = useMediaMenu((s) => s.open);
   // Subscribed, not read straight off `colors`: without it the pin would keep
   // the previous accent while the screen stays mounted.
   const { accent } = useTheme();
   const explicit = useExplicitBadge(album.explicitStatus);
+  const press = usePressFeedback();
 
   return (
     <Link href={`/album/${album.id}`} asChild>
-      <Pressable
-        style={styles.row}
+      <AnimatedPressable
+        style={[styles.row, press.style]}
+        onPressIn={press.onPressIn}
+        onPressOut={press.onPressOut}
         onLongPress={() => {
           haptic('light');
           openMenu({ kind: 'album', album });
@@ -57,7 +64,7 @@ export function AlbumRow({ album, pinned }: Props) {
             </View>
           ) : null}
         </View>
-      </Pressable>
+      </AnimatedPressable>
     </Link>
   );
 }

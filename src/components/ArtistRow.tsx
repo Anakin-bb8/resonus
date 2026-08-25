@@ -5,18 +5,27 @@
  */
 import { Link } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { COVER, coverArtUrl, type Artist } from '@/api/data';
+import { usePressFeedback } from '@/hooks/usePressFeedback';
 import { albumsLabel } from '@/i18n';
 import { useSettings } from '@/store/settings';
 import { fontSize, spacing, themed } from '@/theme';
 import { Cover } from './Cover';
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 export function ArtistRow({ artist }: { artist: Artist }) {
   const lang = useSettings((s) => s.language);
+  const press = usePressFeedback();
   return (
     <Link href={`/artist/${artist.id}`} asChild>
-      <Pressable style={styles.row}>
+      <AnimatedPressable
+        style={[styles.row, press.style]}
+        onPressIn={press.onPressIn}
+        onPressOut={press.onPressOut}
+      >
         <Cover uri={coverArtUrl(artist.coverArt ?? artist.id, COVER.thumb)} size={56} rounded />
         <View style={styles.info}>
           <Text style={styles.name} numberOfLines={1}>
@@ -24,7 +33,7 @@ export function ArtistRow({ artist }: { artist: Artist }) {
           </Text>
           <Text style={styles.sub}>{albumsLabel(artist.albumCount ?? 0, lang)}</Text>
         </View>
-      </Pressable>
+      </AnimatedPressable>
     </Link>
   );
 }

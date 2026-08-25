@@ -2,6 +2,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { memo, useRef } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 import ReanimatedSwipeable, {
   SwipeDirection,
   type SwipeableMethods,
@@ -23,6 +24,7 @@ import { useToast } from '@/store/toast';
 import { useT } from '@/i18n';
 import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 import { Cover } from './Cover';
+import { usePressFeedback } from '@/hooks/usePressFeedback';
 import { PlayingBars } from './PlayingBars';
 import { ExplicitBadge, useExplicitBadge } from './ExplicitBadge';
 import { FavoriteButton } from './FavoriteButton';
@@ -95,6 +97,8 @@ function SwipeActionPanel({
   );
 }
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 function TrackRowBase({
   song,
   position,
@@ -111,6 +115,7 @@ function TrackRowBase({
 }: Props) {
   const openMenu = useSongMenu((s) => s.open);
   const t = useT();
+  const press = usePressFeedback();
   // Memoized below, and with its own `propsEqual` at that: the list repainting
   // does not reach the rows, so each one asks for the appearance itself.
   useTheme();
@@ -225,14 +230,21 @@ function TrackRowBase({
         else if (direction === SwipeDirection.LEFT) runSwipeAction(swipeLeftAction);
       }}
     >
-    <Pressable
-      // No visual feedback on press (like Spotify): the "pressed" effect
-      // triggered while scrolling and made it look like rows were being tapped.
+    <AnimatedPressable
+      // The row dims late rather than not at all: it used to light up on the
+      // way past while somebody scrolled, which read as taps nobody made, so
+      // it stopped answering the finger entirely. The wait is in the fade now
+      // and not in the gesture (see `usePressFeedback`).
+      //
       // Not downloaded: dimmed and with warning on tap OUTSIDE selection; inside
       // selection it behaves normally (long-press enters, tap marks) so it can
       // be added to a list even though it can't be played.
-      style={[styles.row, unavailable && !selecting && styles.dimmed]}
-      onPressIn={unavailable && !selecting ? undefined : onPressIn}
+      style={[styles.row, unavailable && !selecting && styles.dimmed, press.style]}
+      onPressIn={() => {
+        press.onPressIn();
+        if (!(unavailable && !selecting)) onPressIn?.();
+      }}
+      onPressOut={press.onPressOut}
       onPress={unavailable && !selecting ? () => toast(t('Not available offline')) : onPress}
       onLongPress={onLongPress}
     >
@@ -320,7 +332,7 @@ function TrackRowBase({
           <Ionicons name="ellipsis-vertical" size={18} color={colors.textSecondary} />
         </Pressable>
       ) : null}
-    </Pressable>
+    </AnimatedPressable>
     </ReanimatedSwipeable>
   );
 }

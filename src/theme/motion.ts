@@ -40,6 +40,16 @@ export const motion = {
     tint: 600,
     /** One breath of a placeholder, or one rise of the bars on a playing row. */
     pulse: 700,
+    /**
+     * How long a finger has to stay down before a row admits it was touched.
+     *
+     * A row lighting up the instant it is touched lights up on the way past
+     * while somebody is scrolling, which reads as taps nobody made — the
+     * reason the song rows had no press feedback at all. The touch that starts
+     * a scroll is over well inside this, so the row never gets as far as
+     * showing anything.
+     */
+    press: 90,
   },
   easing: {
     /** Arriving: fast at first, easing into place. */
