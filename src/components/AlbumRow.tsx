@@ -24,8 +24,6 @@ interface Props {
   pinned?: boolean;
 }
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
 export function AlbumRow({ album, pinned }: Props) {
   const openMenu = useMediaMenu((s) => s.open);
   // Subscribed, not read straight off `colors`: without it the pin would keep
@@ -34,38 +32,43 @@ export function AlbumRow({ album, pinned }: Props) {
   const explicit = useExplicitBadge(album.explicitStatus);
   const press = usePressFeedback();
 
+  // The fade sits outside the Link: its child is handed to a `Slot`, which
+  // refuses an array of styles, and an animated one cannot be flattened into
+  // the single object it wants.
   return (
-    <Link href={`/album/${album.id}`} asChild>
-      <AnimatedPressable
-        style={[styles.row, press.style]}
-        onPressIn={press.onPressIn}
-        onPressOut={press.onPressOut}
-        onLongPress={() => {
-          haptic('light');
-          openMenu({ kind: 'album', album });
-        }}
-      >
-        <Cover uri={coverArtUrl(album.coverArt ?? album.id, COVER.thumb)} size={56} />
-        <View style={styles.info}>
-          <Text style={styles.name} numberOfLines={1}>
-            {album.name}
-          </Text>
-          {album.artist || pinned || explicit ? (
-            <View style={styles.subLine}>
-              {pinned ? (
-                <MaterialCommunityIcons name="pin" size={13} color={accent} style={styles.pin} />
-              ) : null}
-              <ExplicitBadge status={album.explicitStatus} />
-              {album.artist ? (
-                <Text style={styles.sub} numberOfLines={1}>
-                  {album.artist}
-                </Text>
-              ) : null}
-            </View>
-          ) : null}
-        </View>
-      </AnimatedPressable>
-    </Link>
+    <Animated.View style={press.style}>
+      <Link href={`/album/${album.id}`} asChild>
+        <Pressable
+          style={styles.row}
+          onPressIn={press.onPressIn}
+          onPressOut={press.onPressOut}
+          onLongPress={() => {
+            haptic('light');
+            openMenu({ kind: 'album', album });
+          }}
+        >
+          <Cover uri={coverArtUrl(album.coverArt ?? album.id, COVER.thumb)} size={56} />
+          <View style={styles.info}>
+            <Text style={styles.name} numberOfLines={1}>
+              {album.name}
+            </Text>
+            {album.artist || pinned || explicit ? (
+              <View style={styles.subLine}>
+                {pinned ? (
+                  <MaterialCommunityIcons name="pin" size={13} color={accent} style={styles.pin} />
+                ) : null}
+                <ExplicitBadge status={album.explicitStatus} />
+                {album.artist ? (
+                  <Text style={styles.sub} numberOfLines={1}>
+                    {album.artist}
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
+          </View>
+        </Pressable>
+      </Link>
+    </Animated.View>
   );
 }
 

@@ -14,27 +14,30 @@ import { useSettings } from '@/store/settings';
 import { fontSize, spacing, themed } from '@/theme';
 import { Cover } from './Cover';
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
 export function ArtistRow({ artist }: { artist: Artist }) {
   const lang = useSettings((s) => s.language);
   const press = usePressFeedback();
+  // The fade sits outside the Link: its child is handed to a `Slot`, which
+  // refuses an array of styles, and an animated one cannot be flattened into
+  // the single object it wants.
   return (
-    <Link href={`/artist/${artist.id}`} asChild>
-      <AnimatedPressable
-        style={[styles.row, press.style]}
-        onPressIn={press.onPressIn}
-        onPressOut={press.onPressOut}
-      >
-        <Cover uri={coverArtUrl(artist.coverArt ?? artist.id, COVER.thumb)} size={56} rounded />
-        <View style={styles.info}>
-          <Text style={styles.name} numberOfLines={1}>
-            {artist.name}
-          </Text>
-          <Text style={styles.sub}>{albumsLabel(artist.albumCount ?? 0, lang)}</Text>
-        </View>
-      </AnimatedPressable>
-    </Link>
+    <Animated.View style={press.style}>
+      <Link href={`/artist/${artist.id}`} asChild>
+        <Pressable
+          style={styles.row}
+          onPressIn={press.onPressIn}
+          onPressOut={press.onPressOut}
+        >
+          <Cover uri={coverArtUrl(artist.coverArt ?? artist.id, COVER.thumb)} size={56} rounded />
+          <View style={styles.info}>
+            <Text style={styles.name} numberOfLines={1}>
+              {artist.name}
+            </Text>
+            <Text style={styles.sub}>{albumsLabel(artist.albumCount ?? 0, lang)}</Text>
+          </View>
+        </Pressable>
+      </Link>
+    </Animated.View>
   );
 }
 
