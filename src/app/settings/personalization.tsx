@@ -161,6 +161,7 @@ export default function AppearanceSettings() {
             { value: 'index', label: t('Home') },
             { value: 'search', label: t('Search') },
             { value: 'library', label: t('Your library') },
+            { value: 'explore', label: t('Library') },
           ]}
           value={defaultTab}
           onChange={setDefaultTab}
@@ -173,7 +174,7 @@ export default function AppearanceSettings() {
               {
                 label: t('Folder browsing'),
                 description: t(
-                  'Browse your library by folders in a Folders tab (Subsonic servers).',
+                  'Browse your library by folders, in the Library tab (Subsonic servers).',
                 ),
                 value: showFolderBrowser,
                 onChange: setShowFolderBrowser,

@@ -31,7 +31,6 @@ import {
 // The list must use gesture-handler so the row swipe-to-queue doesn't fight
 // the vertical scroll (with RN's FlatList the gesture is flaky).
 import { FlatList as GHFlatList } from 'react-native-gesture-handler';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { getSongList, searchSongs, songListSorts } from '@/api/data';
 import { type Song, type SongListSort } from '@/api/subsonic';
@@ -47,6 +46,7 @@ import { useSelectionMenu } from '@/hooks/useSelectionMenu';
 import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { listPerf } from '@/lib/listPerf';
+import { playShuffle } from '@/lib/playShuffle';
 import { useAuthStore } from '@/store/auth';
 import { useDownloads } from '@/store/downloads';
 import { currentSong, usePlayerStore } from '@/store/player';
@@ -67,6 +67,7 @@ import { useGridColumns } from '@/hooks/useGridColumns';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { useListPadding } from '@/hooks/useScreenSize';
 import { BackChevron } from '@/components/BackChevron';
+import { BrowseFrame } from '@/components/BrowseFrame';
 
 const PAGE = 50;
 
@@ -102,7 +103,19 @@ const SORT_LABEL: Record<SongListSort, string> = {
   random: 'Shuffle',
 };
 
+/**
+ * Songs fetched when Play is pressed. The list on screen is a window on a
+ * paginated one, so playing it would mean "the first thirty, and whatever you
+ * happened to scroll past"; this asks for a queue's worth in the order the
+ * chips are set to, which is what the genre screen does with the same button.
+ */
+const PLAY_SIZE = 200;
+
 export default function BrowseSongsScreen() {
+  return <SongsBrowser />;
+}
+
+export function SongsBrowser({ embedded }: { embedded?: boolean }) {
   // Repaints on a change of appearance or accent: a stack keeps this screen
   // mounted while you are on another one, out of reach of anything else.
   useTheme();
@@ -132,6 +145,8 @@ export default function BrowseSongsScreen() {
     value: layout,
     set: setLayout,
   });
+  /** A queue's worth is a request, and the play button says so meanwhile. */
+  const [starting, setStarting] = useState(false);
   const card = cardWidth(columns);
   // What this server can actually order by; the first one is what it opens on.
   const sorts = canFetch ? songListSorts() : [];
@@ -235,58 +250,94 @@ export default function BrowseSongsScreen() {
     listRef.current?.scrollToOffset({ offset: 0, animated: false });
   }
 
+  /** Play and shuffle draw from the same place the genre screen does: the list
+   *  as the chips have it, and the server's own random pick. Searching, what is
+   *  on screen IS the whole answer, so Play takes it as it stands. */
+  async function onPlay() {
+    if (starting) return;
+    setStarting(true);
+    try {
+      const queue = isSearch ? songs : await getSongList(sort, PLAY_SIZE, 0);
+      if (queue.length === 0) {
+        toast(t('Nothing to shuffle yet'));
+        return;
+      }
+      await playQueue(queue, 0, t('Songs'), '/browse/songs');
+    } catch {
+      toast(t("Couldn't load songs."));
+    } finally {
+      setStarting(false);
+    }
+  }
+
+  async function onShuffle() {
+    if (starting) return;
+    setStarting(true);
+    try {
+      await playShuffle();
+    } finally {
+      setStarting(false);
+    }
+  }
+
+  const headerAction = !selecting ? (
+    <Pressable
+      hitSlop={10}
+      accessibilityRole="button"
+      accessibilityLabel={t('View')}
+      onPress={openGridMenu}
+    >
+      <Ionicons name={grid ? 'grid-outline' : 'list'} size={20} color={colors.textSecondary} />
+    </Pressable>
+  ) : (
+    <Pressable
+      hitSlop={10}
+      accessibilityRole="button"
+      accessibilityLabel={t('Select all')}
+      onPress={() =>
+        setSelectedIds(
+          selectedIds.size === songs.length ? new Set() : new Set(songs.map((s) => s.id)),
+        )
+      }
+    >
+      <Ionicons
+        name="checkmark-done"
+        size={24}
+        color={songs.length > 0 && selectedIds.size === songs.length ? accent : colors.text}
+      />
+    </Pressable>
+  );
+
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <BrowseFrame embedded={embedded}>
       {/* Same header as browsing albums and artists: the title centred between
           the chevron and a slot of its width. While selecting it turns into
-          ✕ + counter + select all, the swap the other song lists do. */}
-      <View style={styles.header}>
-        {/* While selecting, the ✕ cancels the selection and nothing else: the
-            long press out of here belongs to the chevron. */}
-        {selecting ? (
-          <Pressable hitSlop={10} onPress={() => setSelectedIds(null)} accessibilityLabel={t('Close')}>
-            <Ionicons name="close" size={26} color={colors.text} />
-          </Pressable>
-        ) : (
-          <BackChevron />
-        )}
-        <Text style={styles.title} numberOfLines={1}>
-          {selecting ? t('{n} selected', { n: selectedIds.size }) : t('Songs')}
-        </Text>
-        <View style={styles.headerAction}>
-          {!selecting ? (
+          ✕ + counter + select all, the swap the other song lists do — and that
+          swap is the one thing the embedded section keeps a header for, since
+          the ✕ is the way out of it. */}
+      {embedded && !selecting ? (
+        <View style={styles.headerEmbedded}>{headerAction}</View>
+      ) : (
+        <View style={styles.header}>
+          {/* While selecting, the ✕ cancels the selection and nothing else: the
+              long press out of here belongs to the chevron. */}
+          {selecting ? (
             <Pressable
               hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel={t('View')}
-              onPress={openGridMenu}
+              onPress={() => setSelectedIds(null)}
+              accessibilityLabel={t('Close')}
             >
-              <Ionicons
-                name={grid ? 'grid-outline' : 'list'}
-                size={20}
-                color={colors.textSecondary}
-              />
+              <Ionicons name="close" size={26} color={colors.text} />
             </Pressable>
-          ) : (
-            <Pressable
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel={t('Select all')}
-              onPress={() =>
-                setSelectedIds(
-                  selectedIds.size === songs.length ? new Set() : new Set(songs.map((s) => s.id)),
-                )
-              }
-            >
-              <Ionicons
-                name="checkmark-done"
-                size={24}
-                color={songs.length > 0 && selectedIds.size === songs.length ? accent : colors.text}
-              />
-            </Pressable>
+          ) : embedded ? null : (
+            <BackChevron />
           )}
+          <Text style={styles.title} numberOfLines={1}>
+            {selecting ? t('{n} selected', { n: selectedIds.size }) : t('Songs')}
+          </Text>
+          <View style={styles.headerAction}>{headerAction}</View>
         </View>
-      </View>
+      )}
 
       <View style={styles.searchRow}>
         <View style={styles.searchBar}>
@@ -319,6 +370,34 @@ export default function BrowseSongsScreen() {
           </Pressable>
         ) : null}
       </View>
+
+      {/* Play and shuffle for the whole list, which is what the screen was
+          missing next to a genre or an album: the same two controls in the same
+          corner. Gone while selecting, like every other action row. */}
+      {selecting ? null : (
+        <View style={styles.actions}>
+          <Pressable
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={t('Shuffle')}
+            onPress={() => void onShuffle()}
+          >
+            <Ionicons name="shuffle" size={26} color={colors.textSecondary} />
+          </Pressable>
+          <Pressable
+            style={[styles.playButton, { backgroundColor: accent }]}
+            accessibilityRole="button"
+            accessibilityLabel={t('Play')}
+            onPress={() => void onPlay()}
+          >
+            {starting ? (
+              <ActivityIndicator color={colors.onAccent} />
+            ) : (
+              <Ionicons name="play" size={28} color={colors.onAccent} style={{ marginLeft: 3 }} />
+            )}
+          </Pressable>
+        </View>
+      )}
 
       {/* The chips hide while searching: results come back by relevance, so a
           marked pill would lie about the order on screen. With a single order
@@ -512,12 +591,11 @@ export default function BrowseSongsScreen() {
       ) : null}
       {selectionMenu.dialogs}
       {gridSheet}
-    </SafeAreaView>
+    </BrowseFrame>
   );
 }
 
 const styles = themed((colors) => ({
-  safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -528,6 +606,29 @@ const styles = themed((colors) => ({
   title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '600' },
   // The same width as the back chevron, so the title stays centred.
   headerAction: { width: 26, alignItems: 'flex-end' },
+  // Embedded there is no title and no chevron, so the row is the one button.
+  headerEmbedded: {
+    alignItems: 'flex-end',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  // The same row an album, a playlist and a genre have, to the same margins:
+  // what you do to the list on the left, what starts it on the right.
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+  },
+  playButton: {
+    width: 56,
+    height: 56,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   searchRow: {
     height: SEARCH_H,
     flexDirection: 'row',

@@ -1,4 +1,8 @@
-/** Server genre list, in colored cards (Spotify style). */
+/**
+ * Server genre list, in colored cards.
+ *
+ * A screen of its own and, `embedded`, the Genres section of the Library tab.
+ */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
@@ -9,7 +13,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { type Genre } from '@/api/backend';
 import { getGenres } from '@/api/data';
@@ -30,6 +33,7 @@ import {
 } from '@/theme';
 import { listPerf } from '@/lib/listPerf';
 import { BackChevron } from '@/components/BackChevron';
+import { BrowseFrame } from '@/components/BrowseFrame';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { columnsFor, useScreenSize } from '@/hooks/useScreenSize';
 
@@ -41,6 +45,10 @@ import { columnsFor, useScreenSize } from '@/hooks/useScreenSize';
 const GENRE_IDEAL = 220;
 
 export default function GenresScreen() {
+  return <GenresBrowser />;
+}
+
+export function GenresBrowser({ embedded }: { embedded?: boolean }) {
   // Repaints on a change of appearance or accent: a stack keeps this screen
   // mounted while you are on another one, out of reach of anything else.
   useTheme();
@@ -67,12 +75,14 @@ export default function GenresScreen() {
   }, [data, query]);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <BackChevron />
-        <Text style={styles.title}>{t('Genres')}</Text>
-        <View style={{ width: 26 }} />
-      </View>
+    <BrowseFrame embedded={embedded}>
+      {embedded ? null : (
+        <View style={styles.header}>
+          <BackChevron />
+          <Text style={styles.title}>{t('Genres')}</Text>
+          <View style={{ width: 26 }} />
+        </View>
+      )}
 
       <View style={styles.searchBar}>
         <Ionicons name="search" size={18} color={colors.textMuted} />
@@ -121,12 +131,11 @@ export default function GenresScreen() {
           }
         />
       )}
-    </SafeAreaView>
+    </BrowseFrame>
   );
 }
 
 const styles = themed((colors) => ({
-  safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -2,7 +2,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useFocusEffect, useRouter } from 'expo-router';
+import { Link, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
@@ -25,7 +25,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   coverArtUrl,
   createPlaylist,
-  getMusicFolders,
   getPlaylists,
   getStarred,
   type Playlist,
@@ -57,16 +56,16 @@ import { listPerf } from '@/lib/listPerf';
 import { bump } from '@/lib/perfLog';
 import { haptic } from '@/lib/haptics';
 
-type Segment = 'playlists' | 'albums' | 'artists' | 'folders';
+// Folders used to be a fourth segment here. It browses the server's own
+// directory tree, which is the catalogue rather than your own shelf, so it
+// went to the Library tab with the rest of it (`FoldersBrowser`).
+type Segment = 'playlists' | 'albums' | 'artists';
 
 const SEGMENTS: { key: Segment; label: string }[] = [
   { key: 'playlists', label: 'Playlists' },
   { key: 'albums', label: 'Albums' },
   { key: 'artists', label: 'Artists' },
 ];
-
-/** Extra "Folders" segment (directory browsing; Subsonic only). */
-const FOLDERS_SEGMENT: { key: Segment; label: string } = { key: 'folders', label: 'Folders' };
 
 // Library grid: the same gap as the rest of the grids.
 /**
@@ -451,7 +450,6 @@ function ArtistsTab({ query }: { query: string }) {
   );
 }
 
-/** "Folders" segment: lists libraries and opens their directory browser. */
 /** Nothing matched the filter (as opposed to "you have none yet"). */
 function NoResults({ query }: { query: string }) {
   const t = useT();
@@ -460,53 +458,6 @@ function NoResults({ query }: { query: string }) {
       icon="search-outline"
       title={t('No results')}
       subtitle={t('No results for “{q}”', { q: query })}
-    />
-  );
-}
-
-function FoldersTab() {
-  const listPad = useListPadding(spacing.lg);
-  const t = useT();
-  const router = useRouter();
-  const bottomPad = useScreenBottomPadding();
-  const canFetch = useAuthStore((s) => !!s.auth);
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['musicFolders'],
-    queryFn: () => getMusicFolders(),
-    enabled: canFetch,
-  });
-  if (isLoading) return <Loader />;
-  if (isError) return <Message text={t("Couldn't load folders.")} onRetry={() => refetch()} />;
-  // No declared libraries: a root entry that explores the entire tree.
-  const folders = data && data.length > 0 ? data : [{ id: 'root', name: t('Music') }];
-  return (
-    <FlatList
-      {...listPerf}
-      contentContainerStyle={[
-        styles.list,
-        { paddingBottom: bottomPad, paddingHorizontal: listPad },
-      ]}
-      data={folders}
-      keyExtractor={(item) => item.id}
-      renderItem={({ item }) => (
-        <Pressable
-          style={styles.row}
-          onPress={() =>
-            router.push({
-              pathname: '/browse/folder/[id]',
-              params: { id: item.id, name: item.name, root: '1' },
-            })
-          }
-        >
-          <Ionicons name="folder" size={44} color={colors.accent} />
-          <View style={styles.rowInfo}>
-            <Text style={styles.rowTitle} numberOfLines={1}>
-              {item.name}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-        </Pressable>
-      )}
     />
   );
 }
@@ -748,14 +699,6 @@ export default function LibraryScreen() {
     }
   }
 
-  // "Folders" only with a Subsonic server (Jellyfin doesn't browse directories;
-  // offline doesn't apply) and with the setting enabled (hidden by default).
-  const showFolderBrowser = useSettings((s) => s.showFolderBrowser);
-  const foldersEnabled =
-    showFolderBrowser && !offline && !!auth && auth.serverType !== 'jellyfin';
-  const visibleSegments = foldersEnabled ? [...SEGMENTS, FOLDERS_SEGMENT] : SEGMENTS;
-  const activeSegment = segment === 'folders' && !foldersEnabled ? 'playlists' : segment;
-
   async function onCreate(name: string) {
     setCreating(false);
     if (!auth && !offline) return;
@@ -784,21 +727,18 @@ export default function LibraryScreen() {
         <Text style={styles.heading}>{t('Your library')}</Text>
         <View style={styles.headerActions}>
           <OfflineIndicator />
-          {/* Folders are a handful of server roots: nothing to filter there. */}
-          {activeSegment === 'folders' ? null : (
-            <Pressable
-              hitSlop={12}
-              accessibilityRole="button"
-              accessibilityLabel={searchOpen ? t('Close') : t('Search')}
-              onPress={toggleSearch}
-            >
-              <Ionicons
-                name={searchOpen ? 'close' : 'search'}
-                size={24}
-                color={searchOpen ? colors.accent : colors.text}
-              />
-            </Pressable>
-          )}
+          <Pressable
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel={searchOpen ? t('Close') : t('Search')}
+            onPress={toggleSearch}
+          >
+            <Ionicons
+              name={searchOpen ? 'close' : 'search'}
+              size={24}
+              color={searchOpen ? colors.accent : colors.text}
+            />
+          </Pressable>
           <Pressable
             hitSlop={12}
             accessibilityRole="button"
@@ -810,11 +750,10 @@ export default function LibraryScreen() {
         </View>
       </View>
 
-      {/* Hidden on Folders along with its button, so the bar can't be left
-          open with no way to close it. Its text survives: coming back to the
-          other segments finds the filter as you left it, which is the point of
-          filtering the same word across lists, albums and artists. */}
-      {searchOpen && activeSegment !== 'folders' ? (
+      {/* Its text survives closing it: coming back to the other segments finds
+          the filter as you left it, which is the point of filtering the same
+          word across lists, albums and artists. */}
+      {searchOpen ? (
         <View style={styles.searchRow}>
           <View style={styles.searchBar}>
             <Ionicons name="search" size={18} color={colors.textMuted} />
@@ -858,8 +797,8 @@ export default function LibraryScreen() {
         style={styles.segments}
         contentContainerStyle={[styles.segmentsContent, { paddingHorizontal: headerPad }]}
       >
-        {visibleSegments.map((s) => {
-          const active = s.key === activeSegment;
+        {SEGMENTS.map((s) => {
+          const active = s.key === segment;
           return (
             <Pressable
               key={s.key}
@@ -874,26 +813,19 @@ export default function LibraryScreen() {
         })}
       </ScrollView>
 
-      {/* Sort/layout controls don't apply to Folders. */}
-      {activeSegment === 'folders' ? null : (
-        <>
-          <View style={[styles.controls, { paddingHorizontal: headerPad }]}>
-            <SortBar onPress={() => setSortOpen(true)} />
-            <LayoutToggle />
-          </View>
-          <SortSheet visible={sortOpen} onClose={() => setSortOpen(false)} />
-        </>
-      )}
+      <View style={[styles.controls, { paddingHorizontal: headerPad }]}>
+        <SortBar onPress={() => setSortOpen(true)} />
+        <LayoutToggle />
+      </View>
+      <SortSheet visible={sortOpen} onClose={() => setSortOpen(false)} />
 
       <View style={{ flex: 1 }}>
-        {activeSegment === 'playlists' ? (
+        {segment === 'playlists' ? (
           <PlaylistsTab onNew={() => setCreating(true)} query={filter} />
-        ) : activeSegment === 'albums' ? (
+        ) : segment === 'albums' ? (
           <AlbumsTab query={filter} />
-        ) : activeSegment === 'artists' ? (
-          <ArtistsTab query={filter} />
         ) : (
-          <FoldersTab />
+          <ArtistsTab query={filter} />
         )}
       </View>
     </View>

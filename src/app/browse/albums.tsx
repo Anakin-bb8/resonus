@@ -1,4 +1,9 @@
-/** Browse all server albums, with sort, search and infinite scroll. */
+/**
+ * Browse all server albums, with sort, search and infinite scroll.
+ *
+ * A screen of its own and, `embedded`, the Albums section of the Library tab
+ * (see `BrowseFrame`).
+ */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
@@ -14,7 +19,6 @@ import {
   View,
 } from 'react-native';
 import { FlatList as GHFlatList } from 'react-native-gesture-handler';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { getAlbumList, searchAlbums, type Album, type AlbumListType } from '@/api/data';
 import { AlbumCard } from '@/components/AlbumCard';
@@ -37,6 +41,7 @@ import {
 } from '@/theme';
 import { listPerf } from '@/lib/listPerf';
 import { BackChevron } from '@/components/BackChevron';
+import { BrowseFrame } from '@/components/BrowseFrame';
 import { useGridColumns } from '@/hooks/useGridColumns';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
@@ -80,6 +85,10 @@ function sortFromParam(value: string | undefined): AlbumListType | undefined {
 }
 
 export default function BrowseAlbumsScreen() {
+  return <AlbumsBrowser />;
+}
+
+export function AlbumsBrowser({ embedded }: { embedded?: boolean }) {
   // Repaints on a change of appearance or accent: a stack keeps this screen
   // mounted while you are on another one, out of reach of anything else.
   useTheme();
@@ -163,28 +172,30 @@ export default function BrowseAlbumsScreen() {
   // flash between keystrokes.
   const searchPending = isSearch && (searchLoading || debounced !== query.trim());
 
+  const viewButton = (
+    <Pressable
+      hitSlop={10}
+      accessibilityRole="button"
+      accessibilityLabel={t('View')}
+      onPress={openGridMenu}
+    >
+      <Ionicons name={grid ? 'grid-outline' : 'list'} size={20} color={colors.textSecondary} />
+    </Pressable>
+  );
+
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <BackChevron />
-        <Text style={styles.title}>{t('Albums')}</Text>
-        {/* Takes the same width as the back chevron so the title stays centered;
-            there used to be an empty slot of the same width here. */}
-        <View style={styles.headerAction}>
-          <Pressable
-            hitSlop={10}
-            accessibilityRole="button"
-            accessibilityLabel={t('View')}
-            onPress={openGridMenu}
-          >
-            <Ionicons
-              name={grid ? 'grid-outline' : 'list'}
-              size={20}
-              color={colors.textSecondary}
-            />
-          </Pressable>
+    <BrowseFrame embedded={embedded}>
+      {embedded ? (
+        <View style={styles.headerEmbedded}>{viewButton}</View>
+      ) : (
+        <View style={styles.header}>
+          <BackChevron />
+          <Text style={styles.title}>{t('Albums')}</Text>
+          {/* Takes the same width as the back chevron so the title stays
+              centered; there used to be an empty slot of the same width here. */}
+          <View style={styles.headerAction}>{viewButton}</View>
         </View>
-      </View>
+      )}
 
       {/* Always visible: finding an album is what this screen is for, so the
           bar is not worth hiding behind a gesture nobody discovers. */}
@@ -312,12 +323,11 @@ export default function BrowseAlbumsScreen() {
         />
       )}
       {gridSheet}
-    </SafeAreaView>
+    </BrowseFrame>
   );
 }
 
 const styles = themed((colors) => ({
-  safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -327,6 +337,12 @@ const styles = themed((colors) => ({
   },
   title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '600' },
   headerAction: { width: 26, alignItems: 'flex-end' },
+  // Embedded there is no title and no chevron, so the row is the one button.
+  headerEmbedded: {
+    alignItems: 'flex-end',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
   searchRow: {
     height: SEARCH_H,
     flexDirection: 'row',
