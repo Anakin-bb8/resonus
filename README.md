@@ -46,14 +46,8 @@ Every release since 0.7.5 also carries an `.ipa`, on the same
 **unsigned**: no App Store, no TestFlight, so it has to be sideloaded with
 AltStore, Sideloadly or similar, and renewed as that tool asks.
 
-Not implemented yet on iOS:
-
-- **CarPlay**
-- **Casting**
-- **Equalizer**
-- **Gapless playback**
-
-Report issues with Platform set to iOS.
+Not implemented yet on iOS: CarPlay, casting, the equalizer and gapless
+playback. Report issues with Platform set to iOS.
 
 ## Features
 
@@ -63,12 +57,14 @@ Report issues with Platform set to iOS.
 - **Downloads**: albums, playlists, an artist's whole discography or single songs, in original quality or transcoded
 - **Synced lyrics**: karaoke view with tap-to-seek, full-screen mode, optional LRCLIB lookup
 - **Internet radio**: browse and manage your stations
-- **Cast to speakers**: UPnP/DLNA renderers
-- **Playback**: gapless, crossfade, built-in equalizer, ReplayGain normalization, sleep timer, queue with undo, shuffle, repeat, background & lock-screen controls
+- **Cast to speakers**: UPnP/DLNA renderers and Sonos, with room grouping; local music streams to them too
+- **Playback**: gapless, crossfade, built-in equalizer, ReplayGain normalization, playback speed, sleep timer, queue with undo, shuffle, repeat, background & lock-screen controls
 - **Autoplay & mixes**: keep the music going with similar songs, or start a mix from any track
 - **Organize**: multi-select (queue, playlist or download in batch), star ratings, pinned items, play history
-- **Make it yours**: reorder and show/hide Home sections and explore chips, accent colors, app fonts, configurable swipe and ⋯ menu actions
+- **Themes**: dark, light (experimental) or whichever one the phone is on, each with its own accent color
+- **Make it yours**: reorder and show/hide Home sections and explore chips, app fonts, configurable swipe and ⋯ menu actions
 - **Android Auto** (experimental)
+- **Landscape and tablet layouts**
 - **Queue sync across devices**
 - **In 8 languages**: English, Spanish, German, Catalan, Russian, Italian, Simplified Chinese, Ukrainian
 
