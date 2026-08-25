@@ -15,7 +15,7 @@
 <p align="center">
   <a href="https://github.com/juananzzz/resonus/releases/latest"><img src="https://img.shields.io/badge/⬇_Download_APK-6366F1?style=for-the-badge" alt="Download APK" /></a>
   <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/juananzzz/resonus"><img src="./assets/images/obtainium.svg" height="28" alt="Get via Obtainium" /></a>
-  <a href="#ios-experimental"><img src="https://img.shields.io/badge/iOS_experimental-000000?style=for-the-badge&logo=apple&logoColor=white" alt="iOS (experimental)" /></a>
+  <a href="#ios-experimental"><img src="https://img.shields.io/badge/iOS_experimental-6366F1?style=for-the-badge&logo=apple&logoColor=white" alt="iOS (experimental)" /></a>
   <a href="https://discord.gg/pecE8MTPVr"><img src="https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord" /></a>
   <a href="https://ko-fi.com/juananzzz"><img src="https://img.shields.io/badge/Support_on_Ko--fi-FF5E5B?style=for-the-badge&logo=kofi&logoColor=white" alt="Support on Ko-fi" /></a>
 </p>
