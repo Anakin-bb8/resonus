@@ -280,16 +280,17 @@ export function SongsBrowser({ embedded }: { embedded?: boolean }) {
     }
   }
 
-  const headerAction = !selecting ? (
+  const viewButton = (
     <Pressable
       hitSlop={10}
       accessibilityRole="button"
       accessibilityLabel={t('View')}
       onPress={openGridMenu}
     >
-      <Ionicons name={grid ? 'grid-outline' : 'list'} size={20} color={colors.textSecondary} />
+      <Ionicons name={grid ? 'grid-outline' : 'list'} size={22} color={colors.textSecondary} />
     </Pressable>
-  ) : (
+  );
+  const selectAll = !selecting ? null : (
     <Pressable
       hitSlop={10}
       accessibilityRole="button"
@@ -315,9 +316,7 @@ export function SongsBrowser({ embedded }: { embedded?: boolean }) {
           ✕ + counter + select all, the swap the other song lists do — and that
           swap is the one thing the embedded section keeps a header for, since
           the ✕ is the way out of it. */}
-      {embedded && !selecting ? (
-        <View style={styles.headerEmbedded}>{headerAction}</View>
-      ) : (
+      {embedded && !selecting ? null : (
         <View style={styles.header}>
           {/* While selecting, the ✕ cancels the selection and nothing else: the
               long press out of here belongs to the chevron. */}
@@ -335,7 +334,10 @@ export function SongsBrowser({ embedded }: { embedded?: boolean }) {
           <Text style={styles.title} numberOfLines={1}>
             {selecting ? t('{n} selected', { n: selectedIds.size }) : t('Songs')}
           </Text>
-          <View style={styles.headerAction}>{headerAction}</View>
+          {/* Empty unless selecting: the view menu lives in the row below,
+              next to the buttons it belongs with. It keeps its width so the
+              title stays centred. */}
+          <View style={styles.headerAction}>{selectAll}</View>
         </View>
       )}
 
@@ -371,31 +373,36 @@ export function SongsBrowser({ embedded }: { embedded?: boolean }) {
         ) : null}
       </View>
 
-      {/* Play and shuffle for the whole list, which is what the screen was
-          missing next to a genre or an album: the same two controls in the same
-          corner. Gone while selecting, like every other action row. */}
+      {/* The same row an album, a playlist and a genre have, in the same order:
+          what you do to the list on the left, what starts it on the right. The
+          view menu is the left-hand half of it here, which is also what keeps
+          it off the search box and out of a row of its own. Gone while
+          selecting, like every other action row. */}
       {selecting ? null : (
         <View style={styles.actions}>
-          <Pressable
-            hitSlop={10}
-            accessibilityRole="button"
-            accessibilityLabel={t('Shuffle')}
-            onPress={() => void onShuffle()}
-          >
-            <Ionicons name="shuffle" size={26} color={colors.textSecondary} />
-          </Pressable>
-          <Pressable
-            style={[styles.playButton, { backgroundColor: accent }]}
-            accessibilityRole="button"
-            accessibilityLabel={t('Play')}
-            onPress={() => void onPlay()}
-          >
-            {starting ? (
-              <ActivityIndicator color={colors.onAccent} />
-            ) : (
-              <Ionicons name="play" size={28} color={colors.onAccent} style={{ marginLeft: 3 }} />
-            )}
-          </Pressable>
+          {viewButton}
+          <View style={styles.playRow}>
+            <Pressable
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={t('Shuffle')}
+              onPress={() => void onShuffle()}
+            >
+              <Ionicons name="shuffle" size={26} color={colors.textSecondary} />
+            </Pressable>
+            <Pressable
+              style={[styles.playButton, { backgroundColor: accent }]}
+              accessibilityRole="button"
+              accessibilityLabel={t('Play')}
+              onPress={() => void onPlay()}
+            >
+              {starting ? (
+                <ActivityIndicator color={colors.onAccent} />
+              ) : (
+                <Ionicons name="play" size={28} color={colors.onAccent} style={{ marginLeft: 3 }} />
+              )}
+            </Pressable>
+          </View>
         </View>
       )}
 
@@ -606,22 +613,16 @@ const styles = themed((colors) => ({
   title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '600' },
   // The same width as the back chevron, so the title stays centred.
   headerAction: { width: 26, alignItems: 'flex-end' },
-  // Embedded there is no title and no chevron, so the row is the one button.
-  headerEmbedded: {
-    alignItems: 'flex-end',
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
-  },
   // The same row an album, a playlist and a genre have, to the same margins:
   // what you do to the list on the left, what starts it on the right.
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: spacing.lg,
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
   },
+  playRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   playButton: {
     width: 56,
     height: 56,

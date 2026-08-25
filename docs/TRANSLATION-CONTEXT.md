@@ -64,7 +64,6 @@ you are actually typing into, which is easier than reading it here.
 | `Go to album` | Leave this sheet and open the album the song is on |
 | `Go to artist` | Leave this sheet and open the artist |
 | `Home` | The first tab, and a folder in the car |
-| `Library` | The settings section, and a folder in the car |
 | `Mix of “{name}”` | What the player calls the queue once it has grown past its album into songs the app picked itself. `{name}` is the song it was grown from |
 | `Mix started` | The toast that says the app is now picking the songs |
 | `Moods` | Mood tags the server has on the song: mellow, energetic… |
@@ -225,9 +224,17 @@ you are actually typing into, which is easier than reading it here.
 | `No songs yet` | Empty state when the library has no songs |
 | `Nothing played yet` | Empty state: this phone has not played anything yet |
 | `Nothing to change` | Answer to favouriting a selection that already is one, or unfavouriting one that isn't |
+| `Nothing to shuffle yet` | Empty state: there is nothing here to play in random order |
 | `Your library looks empty.` | Empty state: the server answered, and had nothing |
 | `Your most played songs will show up here.` | Empty state, before anything has been played |
 | `Your recently played songs will show up here.` | Empty state, before anything has been played |
+
+## Explore
+
+| String | What it is |
+| --- | --- |
+| `Couldn't load folders.` | Error on the screen, with a Retry button |
+| `Music` | The name given to the server's folder when it does not have one of its own, browsing by folder |
 
 ## Favorites
 
@@ -315,12 +322,10 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `Couldn't load artists.` | Error on the screen, with a Retry button |
-| `Couldn't load folders.` | Error on the screen, with a Retry button |
 | `Couldn't load playlists.` | Error on the screen, with a Retry button |
 | `Create your first playlist to get started.` | The line under an empty state |
 | `Grid view` | Show the list as cards in a grid |
 | `List view` | Show it as rows, one under the other |
-| `Music` | The name given to the server's folder when it does not have one of its own, browsing by folder |
 | `No favorite albums` | Empty state heading on the favourites tab |
 | `No favorite artists` | Empty state heading on the favourites tab |
 | `No playlists yet` | Empty state heading |
@@ -697,7 +702,6 @@ you are actually typing into, which is easier than reading it here.
 | `Keep at least one folder` | Refusing to remove the last folder of a local profile, which would leave it with no music |
 | `Keep at least one library on` | Toast: at least one of the server's libraries has to stay ticked |
 | `Libraries` | Section header over the server's libraries, when it has more than one |
-| `Library` | The settings section, and a folder in the car |
 | `Library updated` | Toast after the phone finished going through its own files |
 | `Local music` | Music stored on the phone itself |
 | `Music folders` | Settings > Local music: the list of phone folders the local profile reads its music from |
@@ -748,7 +752,7 @@ you are actually typing into, which is easier than reading it here.
 | `Always show the navigation bar` |  |
 | `Appearance` |  |
 | `Artwork, duration, rating and the rest of what a song shows in a list.` | The line under “Song lists”, explaining it |
-| `Browse your library by folders in a Folders tab (Subsonic servers).` |  |
+| `Browse your library by folders, in the Library tab (Subsonic servers).` |  |
 | `Choose which actions show in a song's ⋯ menu.` | The line under “Song menu”, explaining it |
 | `Dark or light, and the accent color` | The line under “Theme”, explaining it |
 | `Explore chips` | The row of tappable category chips |
@@ -760,7 +764,7 @@ you are actually typing into, which is easier than reading it here.
 | `Home sections` | Reorder which sections appear on Home |
 | `Interaction` | Section header grouping toggles |
 | `Interface` | Section header grouping toggles |
-| `Keep Home, Search and Library at the bottom of every screen. Holding the back arrow goes back to the one you came from either way.` |  |
+| `Keep the tabs at the bottom of every screen. Holding the back arrow goes back to the one you came from either way.` |  |
 | `Language` |  |
 | `Navigation` | Section header: how you move around the app |
 | `Off` | A setting value meaning disabled (crossfade, normalization…) |
@@ -1023,6 +1027,7 @@ you are actually typing into, which is easier than reading it here.
 | `Favorites` | The songs, albums and artists you starred |
 | `History` | The listening history: what was played and when |
 | `Hold to go back to {tab}` | The hint on holding the back arrow. `{tab}` is Home, Search or Library |
+| `Library` | The settings section, and a folder in the car |
 | `List` | An option in that menu: one row per item, instead of cards |
 | `Lyrics` | The words of the song. Also a line of the storage bar, where it is their size on the phone |
 | `More` | A "see more" action, and the third button of the selection bar, the one that opens the rest of what it can do |
