@@ -224,7 +224,6 @@ you are actually typing into, which is easier than reading it here.
 | `No songs yet` | Empty state when the library has no songs |
 | `Nothing played yet` | Empty state: this phone has not played anything yet |
 | `Nothing to change` | Answer to favouriting a selection that already is one, or unfavouriting one that isn't |
-| `Nothing to shuffle yet` | Empty state: there is nothing here to play in random order |
 | `Your library looks empty.` | Empty state: the server answered, and had nothing |
 | `Your most played songs will show up here.` | Empty state, before anything has been played |
 | `Your recently played songs will show up here.` | Empty state, before anything has been played |
@@ -233,6 +232,7 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
+| `Add station` | Title of the sheet for adding an internet radio station |
 | `Couldn't load folders.` | Error on the screen, with a Retry button |
 | `Music` | The name given to the server's folder when it does not have one of its own, browsing by folder |
 
@@ -271,7 +271,6 @@ you are actually typing into, which is easier than reading it here.
 | `No albums in this genre` | Empty state heading |
 | `No songs in this genre` | Empty state heading |
 | `Nothing to change` | Answer to favouriting a selection that already is one, or unfavouriting one that isn't |
-| `Nothing to shuffle yet` | Empty state: there is nothing here to play in random order |
 | `Try exploring another genre.` | Empty state subtitle on a genre screen |
 
 ## Genres
@@ -311,7 +310,6 @@ you are actually typing into, which is easier than reading it here.
 | `Most played albums` | A section of Home: the records played most |
 | `Most played songs` | A section of Home: the songs played most, as songs |
 | `New releases` | Home shelf and album sort: albums by the year they came out, newest first. Not "Recently added", which is when the server got hold of them |
-| `Nothing to shuffle yet` | Empty state: there is nothing here to play in random order |
 | `Random albums` | A section of Home: albums picked at random, to happen upon something |
 | `Random artists` | A section of Home: artists picked at random |
 | `Scanning your music…` | Going through the phone's own files |
@@ -1037,6 +1035,7 @@ you are actually typing into, which is easier than reading it here.
 | `No results for “{q}”` | Empty state. `{q}` is what was typed |
 | `Not available offline` | This one is not downloaded, so it cannot play without a connection |
 | `Nothing here is downloaded` | Toast when playing something that is not downloaded, offline |
+| `Nothing to shuffle yet` | Empty state: there is nothing here to play in random order |
 | `Offline` | The toast shown when the app falls into offline mode by itself, and the badge that says it is in it |
 | `Pause` | Read out by the screen reader for the pause button. A verb |
 | `Play` | Read out by the screen reader for the play button. A verb |
