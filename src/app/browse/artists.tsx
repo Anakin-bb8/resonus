@@ -217,9 +217,7 @@ export function ArtistsBrowser({ embedded }: { embedded?: boolean }) {
 
   return (
     <BrowseFrame embedded={embedded}>
-      {embedded ? (
-        <View style={styles.headerEmbedded}>{viewButton}</View>
-      ) : (
+      {embedded ? null : (
         <View style={styles.header}>
           <BackChevron />
           <Text style={styles.title}>{t('Artists')}</Text>
@@ -262,6 +260,12 @@ export function ArtistsBrowser({ embedded }: { embedded?: boolean }) {
             </Pressable>
           ) : null}
       </View>
+
+      {/* Embedded there is no header to keep the view menu in, so it sits where
+          the song list keeps it: the left-hand half of the row that acts on the
+          list. The three sections are flipped between with one tap, so it has
+          to be in the same corner on all of them. */}
+      {embedded ? <View style={styles.actions}>{viewButton}</View> : null}
 
       <ScrollView
         horizontal
@@ -362,12 +366,13 @@ const styles = themed((colors) => ({
   input: { flex: 1, color: colors.text, fontSize: fontSize.md, paddingVertical: 0 },
   searchCancel: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
   headerAction: { width: 26, alignItems: 'flex-end' },
-  // Embedded there is no title and no chevron, so the row is the one button.
-  headerEmbedded: {
-    alignItems: 'flex-end',
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
+    paddingBottom: spacing.md,
   },
+
   // Same chips as exploring albums, fine adjustments included. `flexShrink: 0`
   // because the search bar adds a child to the column: without it flex
   // shrinks this row and clips the pill text.

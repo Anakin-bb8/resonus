@@ -72,7 +72,9 @@ export function FoldersBrowser() {
 }
 
 const styles = themed((colors) => ({
-  list: { paddingHorizontal: spacing.lg, gap: spacing.md },
+  // A gap at the top the other sections get from their search box: without it
+  // the first folder sits against the chips.
+  list: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, gap: spacing.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   rowInfo: { flex: 1 },
   rowTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '600' },

@@ -172,10 +172,11 @@ export function RadioBrowser({ embedded }: { embedded?: boolean }) {
 
   return (
     <BrowseFrame embedded={embedded}>
+      {/* Left-aligned when embedded, like the view menu on the three list
+          sections beside it, and because that is the side the app keeps what
+          you do TO a list on. */}
       {embedded ? (
-        addButton ? (
-          <View style={styles.headerEmbedded}>{addButton}</View>
-        ) : null
+        addButton ? <View style={styles.actions}>{addButton}</View> : null
       ) : (
         <View style={styles.header}>
           <BackChevron />
@@ -397,10 +398,11 @@ const styles = themed((colors) => ({
   },
   title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '600' },
   // Embedded there is no title and no chevron, so the row is the one button.
-  headerEmbedded: {
-    alignItems: 'flex-end',
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
+    paddingBottom: spacing.md,
   },
   list: { paddingHorizontal: spacing.lg, paddingBottom: SCREEN_BOTTOM_PADDING, gap: spacing.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
