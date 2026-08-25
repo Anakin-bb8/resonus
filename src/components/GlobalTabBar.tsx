@@ -29,7 +29,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { TabBarBackground } from '@/components/TabBarBackground';
 import { useTabBarShown } from '@/hooks/useTabBar';
 import { useT } from '@/i18n';
 import { rememberTab, reselectTab, tabOrigin, TABS } from '@/lib/tabOrigin';
@@ -52,7 +51,6 @@ export function GlobalTabBar() {
   // With the setting off the tabs keep their own bar and this draws nothing at
   // all: off is the app exactly as it was, down to the last pixel.
   const always = useSettings((s) => s.alwaysShowTabs);
-  const seeThrough = useSettings((s) => s.seeThroughTabBar);
   const root = segments[0];
   const inTabs = root === '(tabs)' || root === undefined;
   // Where a stack opened from here would belong; the back arrow reads the same
@@ -104,13 +102,9 @@ export function GlobalTabBar() {
       style={[
         styles.bar,
         { height: TAB_BAR_HEIGHT + insets.bottom, paddingBottom: insets.bottom },
-        seeThrough ? null : { backgroundColor: colors.background },
         fadeStyle,
       ]}
     >
-      {/* Behind the items, not around them: it is the background, and the
-          items have to stay on top of it. */}
-      {seeThrough ? <TabBarBackground /> : null}
       {TABS.map((tab) => {
         // On a tab screen the bar says which one you are on. Off the tabs
         // nothing is current, and the tab the stack came from is only marked
@@ -157,6 +151,7 @@ const styles = themed((colors) => ({
     right: 0,
     bottom: 0,
     flexDirection: 'row',
+    backgroundColor: colors.background,
     // What the tabs layout used to pass as `tabBarStyle`.
     paddingTop: 6,
   },

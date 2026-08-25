@@ -692,7 +692,5 @@
   "A second action for the same artwork, for a hand that is not looking. With this on, a single tap waits a moment to see whether a second one is coming.": "Una segona acció sobre la mateixa caràtula, per a la mà que no mira. Amb això activat, un toc simple espera un moment per si en ve un segon.",
   "Keep the tabs at the bottom of every screen. Holding the back arrow goes back to the one you came from either way.": "Manté les pestanyes a baix a totes les pantalles. Mantenir premuda la fletxa de tornar porta a la secció d'on vas sortir igualment.",
   "Browse your library by folders, in the Library tab (Subsonic servers).": "Explora la biblioteca per carpetes, a la pestanya Biblioteca (servidors Subsonic).",
-  "At the end of the queue": "Al final de la cua",
-  "See-through navigation bar": "Barra de navegació transparent",
-  "Let the list carry on under it instead of stopping at it.": "Deixa que la llista continuï per sota en comptes de tallar-se aquí."
+  "At the end of the queue": "Al final de la cua"
 }

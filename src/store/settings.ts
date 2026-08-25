@@ -607,8 +607,6 @@ interface SettingsState {
   showPlaylistDescription: boolean;
   /** Keep the navigation bar on every screen, not only on the tabs. */
   alwaysShowTabs: boolean;
-  /** Let the list run under the navigation bar instead of stopping at it. */
-  seeThroughTabBar: boolean;
   /** Song duration in lists (Spotify doesn't show it). */
   showSongDuration: boolean;
   /** Rating stars per song in lists. */
@@ -875,7 +873,6 @@ interface SettingsState {
   setShowListArtwork: (value: boolean) => void;
   setShowPlaylistDescription: (value: boolean) => void;
   setAlwaysShowTabs: (value: boolean) => void;
-  setSeeThroughTabBar: (value: boolean) => void;
   setShowSongDuration: (value: boolean) => void;
   setShowListRating: (value: boolean) => void;
   setShowExplicitTag: (value: boolean) => void;
@@ -997,7 +994,6 @@ function snapshot(get: () => SettingsState) {
     showListArtwork: s.showListArtwork,
     showPlaylistDescription: s.showPlaylistDescription,
     alwaysShowTabs: s.alwaysShowTabs,
-    seeThroughTabBar: s.seeThroughTabBar,
     showSongDuration: s.showSongDuration,
     showListRating: s.showListRating,
     showExplicitTag: s.showExplicitTag,
@@ -1091,7 +1087,6 @@ const DEFAULTS = {
   showListArtwork: true,
   showPlaylistDescription: true,
   alwaysShowTabs: false,
-  seeThroughTabBar: false,
   showSongDuration: false,
   showListRating: false,
   // On: it only ever draws where a file says so, which in most libraries is
@@ -1281,11 +1276,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
 
   setAlwaysShowTabs: (alwaysShowTabs) => {
     set({ alwaysShowTabs });
-    persist(snapshot(get));
-  },
-
-  setSeeThroughTabBar: (seeThroughTabBar) => {
-    set({ seeThroughTabBar });
     persist(snapshot(get));
   },
 
@@ -1726,7 +1716,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
           showListArtwork: boolean;
           showPlaylistDescription: boolean;
           alwaysShowTabs: boolean;
-          seeThroughTabBar?: boolean;
           showSongDuration: boolean;
           showListRating: boolean;
           showExplicitTag?: boolean;
@@ -1865,9 +1854,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (typeof parsed.showPlaylistDescription === 'boolean') {
           set({ showPlaylistDescription: parsed.showPlaylistDescription });
-        }
-        if (typeof parsed.seeThroughTabBar === 'boolean') {
-          set({ seeThroughTabBar: parsed.seeThroughTabBar });
         }
         if (typeof parsed.alwaysShowTabs === 'boolean') {
           set({ alwaysShowTabs: parsed.alwaysShowTabs });
