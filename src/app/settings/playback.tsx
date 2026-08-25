@@ -122,7 +122,7 @@ export default function PlaybackSettings() {
               options={[
                 {
                   label: t('Preload upcoming tracks'),
-                  description: t('Request the next few tracks ahead of time so they start instantly. Helps with proxy servers like Octo-Fiesta or slow sources that fetch tracks on demand.'),
+                  description: t('Request the next few tracks ahead of time so they start instantly. Helps with proxy servers and slow sources that fetch each track on demand.'),
                   value: preloadUpcoming,
                   onChange: setPreloadUpcoming,
                   disabled: offline,

@@ -343,7 +343,6 @@
   "Reorder": "Reordenar",
   "Repeat": "Repetir",
   "Report a bug": "Informar de un error",
-  "Request the next few tracks ahead of time so they start instantly. Helps with proxy servers like Octo-Fiesta or slow sources that fetch tracks on demand.": "Pide las próximas pistas por adelantado para que suenen al instante. Útil con servidores proxy tipo Octo-Fiesta u orígenes lentos que descargan las pistas al vuelo.",
   "Rescan": "Volver a escanear",
   "Rescanning your music…": "Volviendo a escanear tu música…",
   "Restore": "Restablecer",
@@ -691,5 +690,6 @@
   "Keep the tabs at the bottom of every screen. Holding the back arrow goes back to the one you came from either way.": "Mantiene las pestañas abajo en todas las pantallas. Mantener pulsada la flecha de volver lleva a la sección de la que saliste en cualquier caso.",
   "At the end of the queue": "Al final de la cola",
   "Explore": "Explorar",
-  "Browse your library by folders, in the Explore tab (Subsonic servers).": "Explora tu biblioteca por carpetas, en la pestaña Explorar (servidores Subsonic)."
+  "Browse your library by folders, in the Explore tab (Subsonic servers).": "Explora tu biblioteca por carpetas, en la pestaña Explorar (servidores Subsonic).",
+  "Request the next few tracks ahead of time so they start instantly. Helps with proxy servers and slow sources that fetch each track on demand.": "Pide las próximas pistas por adelantado para que suenen al instante. Útil con servidores proxy y orígenes lentos que descargan cada pista al vuelo."
 }
