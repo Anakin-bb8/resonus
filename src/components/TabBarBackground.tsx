@@ -1,17 +1,15 @@
 /**
  * What is behind the navigation bar.
  *
- * Solid by default, and with "See-through navigation bar" on, a gradient that
- * runs from nothing at the top to the page's own colour at the bottom: the
- * list keeps going under it instead of stopping at a line, and the labels
- * still sit on something opaque enough to read.
+ * Solid by default. With "See-through navigation bar" on, the page's own
+ * colour at a fraction of itself, so a list scrolling past shows through it.
  *
- * A gradient rather than one flat wash of half-transparent colour, because a
- * flat one has a hard edge along its top and that edge IS a line — the same
- * line the setting is there to get rid of. And a gradient rather than a real
- * blur because `expo-blur` is a native module: it would mean a new build for
- * something the lists spend most of their time not even scrolling under (they
- * reserve this height, so what is behind the bar is usually the background).
+ * No blur, and that is not a shortcut: the reference for this is Navic, and
+ * measuring its screenshots says its bar has none either — the writing behind
+ * it is perfectly sharp. What it has is a flat wash of the page colour, which
+ * is what this is. Over empty background the two are the same colour and the
+ * bar has no edge at all, in Navic exactly as here (sampled: its bar over
+ * nothing is the page's own 19,12,12).
  */
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet } from 'react-native';
@@ -19,11 +17,21 @@ import { StyleSheet } from 'react-native';
 import { useTheme } from '@/theme';
 
 /**
- * How the page's colour arrives. Nothing at the very top, most of the way
- * there by the time the icons start, and all but solid under the labels.
+ * How the page's colour arrives: nothing at the very top edge, then one flat
+ * amount the rest of the way down.
+ *
+ * Flat is the whole point. A ramp dims whatever passes behind the bar more at
+ * the bottom than at the top, and a cover scrolling through it comes out
+ * smeared along a line that belongs to nothing on screen. Measured off Navic,
+ * which is what this is copying: its bar is one even wash, and the writing
+ * behind it stays sharp — there is no blur in it at all.
+ *
+ * The dissolve at the top is 12% of the height, which at the bar's 84 points
+ * is about ten of them: enough that the wash has no hard edge of its own, too
+ * little to read as a ramp.
  */
-const STOPS = [0, 0.45, 1] as const;
-const ALPHA = [0, 0.72, 0.96] as const;
+const STOPS = [0, 0.12, 1] as const;
+const ALPHA = [0, 0.62, 0.62] as const;
 
 /** `#RRGGBB` at a given alpha, for the two ends of the gradient. */
 function fade(hex: string, alpha: number): string {
