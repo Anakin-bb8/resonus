@@ -43,7 +43,9 @@ export default function AppearanceSettings() {
   const canBrowseFolders = !local && (offline || serverType !== 'jellyfin');
   const language = useSettings((s) => s.language);
   const alwaysShowTabs = useSettings((s) => s.alwaysShowTabs);
+  const seeThroughTabBar = useSettings((s) => s.seeThroughTabBar);
   const setAlwaysShowTabs = useSettings((s) => s.setAlwaysShowTabs);
+  const setSeeThroughTabBar = useSettings((s) => s.setSeeThroughTabBar);
   const showHistoryButton = useSettings((s) => s.showHistoryButton);
   const setShowHistoryButton = useSettings((s) => s.setShowHistoryButton);
   const showProfileButton = useSettings((s) => s.showProfileButton);
@@ -103,6 +105,12 @@ export default function AppearanceSettings() {
               ),
               value: alwaysShowTabs,
               onChange: setAlwaysShowTabs,
+            },
+            {
+              label: t('See-through navigation bar'),
+              description: t('Let the list carry on under it instead of stopping at it.'),
+              value: seeThroughTabBar,
+              onChange: setSeeThroughTabBar,
             },
           ]}
         />

@@ -13,6 +13,7 @@ import { Tabs } from 'expo-router';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { TabBarBackground } from '@/components/TabBarBackground';
 import { useT } from '@/i18n';
 import { useSettings } from '@/store/settings';
 import { colors, TAB_BAR_HEIGHT, useTheme } from '@/theme';
@@ -24,6 +25,7 @@ export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const t = useT();
   const alwaysShowTabs = useSettings((s) => s.alwaysShowTabs);
+  const seeThrough = useSettings((s) => s.seeThroughTabBar);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -51,9 +53,12 @@ export default function TabsLayout() {
           tabBarActiveTintColor: colors.text,
           tabBarInactiveTintColor: colors.textSecondary,
           sceneStyle: { backgroundColor: colors.background },
+          // See-through: the colour moves into `tabBarBackground`, where it can
+          // be a gradient instead of one flat block (`TabBarBackground`).
+          tabBarBackground: seeThrough ? () => <TabBarBackground /> : undefined,
           tabBarStyle: {
             position: 'absolute',
-            backgroundColor: colors.background,
+            backgroundColor: seeThrough ? 'transparent' : colors.background,
             borderTopWidth: 0,
             elevation: 0,
             height: TAB_BAR_HEIGHT + insets.bottom,

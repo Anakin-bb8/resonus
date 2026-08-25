@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 686 of them.
+Every string the app can show, under the screen it shows up on. 688 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -765,11 +765,13 @@ you are actually typing into, which is easier than reading it here.
 | `Interface` | Section header grouping toggles |
 | `Keep the tabs at the bottom of every screen. Holding the back arrow goes back to the one you came from either way.` |  |
 | `Language` |  |
+| `Let the list carry on under it instead of stopping at it.` | The line under “See-through navigation bar”, explaining it |
 | `Navigation` | Section header: how you move around the app |
 | `Off` | A setting value meaning disabled (crossfade, normalization…) |
 | `Open the app on` | Which tab the app opens on, and comes back to after a while away |
 | `Quick grid` | The grid of shortcut tiles on Home |
 | `Search` | The search tab, and the action of searching |
+| `See-through navigation bar` | Settings switch: the navigation bar stops being a solid block, so the list shows through it |
 | `Show history button` | Whether the button that opens the listening history shows |
 | `Show profile button` | Whether the round avatar shows in the corner of Home |
 | `Show, hide and reorder the album rows on Home.` | The line under “Home sections”, explaining it |
