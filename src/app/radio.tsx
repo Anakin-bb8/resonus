@@ -6,7 +6,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useQuery } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -42,7 +42,7 @@ import { currentSong, usePlayerStore } from '@/store/player';
 import { useToast } from '@/store/toast';
 import { colors, fontSize, radius, SCREEN_BOTTOM_PADDING, SHEET_MAX_WIDTH, spacing, themed, useTheme } from '@/theme';
 import { BackChevron } from '@/components/BackChevron';
-import { BrowseFrame } from '@/components/BrowseFrame';
+import { BrowseFrame, type BrowserProps } from '@/components/BrowseFrame';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { useListPadding } from '@/hooks/useScreenSize';
 import { listPerf } from '@/lib/listPerf';
@@ -56,7 +56,7 @@ export default function RadioScreen() {
   return <RadioBrowser />;
 }
 
-export function RadioBrowser({ embedded }: { embedded?: boolean }) {
+export function RadioBrowser({ embedded, actionRef }: BrowserProps) {
   // Repaints on a change of appearance or accent: a stack keeps this screen
   // mounted while you are on another one, out of reach of anything else.
   useTheme();
@@ -160,6 +160,12 @@ export function RadioBrowser({ embedded }: { embedded?: boolean }) {
     }
   }
 
+  // Embedded, the Library tab draws this in its own header; the form it opens
+  // stays down here with the rest of the station editing.
+  useEffect(() => {
+    if (actionRef) actionRef.current = () => setEditForm({ station: null });
+  });
+
   const addButton = canManage ? (
     <Pressable
       hitSlop={10}
@@ -172,12 +178,7 @@ export function RadioBrowser({ embedded }: { embedded?: boolean }) {
 
   return (
     <BrowseFrame embedded={embedded}>
-      {/* Left-aligned when embedded, like the view menu on the three list
-          sections beside it, and because that is the side the app keeps what
-          you do TO a list on. */}
-      {embedded ? (
-        addButton ? <View style={styles.actions}>{addButton}</View> : null
-      ) : (
+      {embedded ? null : (
         <View style={styles.header}>
           <BackChevron />
           <Text style={styles.title}>{t('Radio')}</Text>
@@ -397,13 +398,6 @@ const styles = themed((colors) => ({
     paddingVertical: spacing.md,
   },
   title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '600' },
-  // Embedded there is no title and no chevron, so the row is the one button.
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
-  },
   list: { paddingHorizontal: spacing.lg, paddingBottom: SCREEN_BOTTOM_PADDING, gap: spacing.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   rowTitleLine: { flexDirection: 'row', alignItems: 'center', gap: 4 },

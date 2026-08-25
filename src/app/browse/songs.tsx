@@ -46,7 +46,6 @@ import { useSelectionMenu } from '@/hooks/useSelectionMenu';
 import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { listPerf } from '@/lib/listPerf';
-import { playShuffle } from '@/lib/playShuffle';
 import { useAuthStore } from '@/store/auth';
 import { useDownloads } from '@/store/downloads';
 import { currentSong, usePlayerStore } from '@/store/player';
@@ -67,7 +66,8 @@ import { useGridColumns } from '@/hooks/useGridColumns';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { useListPadding } from '@/hooks/useScreenSize';
 import { BackChevron } from '@/components/BackChevron';
-import { BrowseFrame } from '@/components/BrowseFrame';
+import { BrowseActions } from '@/components/BrowseActions';
+import { BrowseFrame, type BrowserProps } from '@/components/BrowseFrame';
 
 const PAGE = 50;
 
@@ -103,19 +103,11 @@ const SORT_LABEL: Record<SongListSort, string> = {
   random: 'Shuffle',
 };
 
-/**
- * Songs fetched when Play is pressed. The list on screen is a window on a
- * paginated one, so playing it would mean "the first thirty, and whatever you
- * happened to scroll past"; this asks for a queue's worth in the order the
- * chips are set to, which is what the genre screen does with the same button.
- */
-const PLAY_SIZE = 200;
-
 export default function BrowseSongsScreen() {
   return <SongsBrowser />;
 }
 
-export function SongsBrowser({ embedded }: { embedded?: boolean }) {
+export function SongsBrowser({ embedded, actionRef }: BrowserProps) {
   // Repaints on a change of appearance or accent: a stack keeps this screen
   // mounted while you are on another one, out of reach of anything else.
   useTheme();
@@ -145,8 +137,6 @@ export function SongsBrowser({ embedded }: { embedded?: boolean }) {
     value: layout,
     set: setLayout,
   });
-  /** A queue's worth is a request, and the play button says so meanwhile. */
-  const [starting, setStarting] = useState(false);
   const card = cardWidth(columns);
   // What this server can actually order by; the first one is what it opens on.
   const sorts = canFetch ? songListSorts() : [];
@@ -250,35 +240,13 @@ export function SongsBrowser({ embedded }: { embedded?: boolean }) {
     listRef.current?.scrollToOffset({ offset: 0, animated: false });
   }
 
-  /** Play and shuffle draw from the same place the genre screen does: the list
-   *  as the chips have it, and the server's own random pick. Searching, what is
-   *  on screen IS the whole answer, so Play takes it as it stands. */
-  async function onPlay() {
-    if (starting) return;
-    setStarting(true);
-    try {
-      const queue = isSearch ? songs : await getSongList(sort, PLAY_SIZE, 0);
-      if (queue.length === 0) {
-        toast(t('Nothing to shuffle yet'));
-        return;
-      }
-      await playQueue(queue, 0, t('Songs'), '/browse/songs');
-    } catch {
-      toast(t("Couldn't load songs."));
-    } finally {
-      setStarting(false);
-    }
-  }
-
-  async function onShuffle() {
-    if (starting) return;
-    setStarting(true);
-    try {
-      await playShuffle();
-    } finally {
-      setStarting(false);
-    }
-  }
+  // Embedded, the button that opens this menu is drawn by the Library tab, in
+  // its own header: this is the way down to the menu it belongs to. Kept up to
+  // date after every render rather than during one, which is a rule the ref is
+  // not worth breaking for — it is only read from a tap, long after this.
+  useEffect(() => {
+    if (actionRef) actionRef.current = openGridMenu;
+  });
 
   const viewButton = (
     <Pressable
@@ -334,10 +302,12 @@ export function SongsBrowser({ embedded }: { embedded?: boolean }) {
           <Text style={styles.title} numberOfLines={1}>
             {selecting ? t('{n} selected', { n: selectedIds.size }) : t('Songs')}
           </Text>
-          {/* Empty unless selecting: the view menu lives in the row below,
-              next to the buttons it belongs with. It keeps its width so the
+          {/* Embedded, the view menu is drawn by the Library tab and this slot
+              only carries the select-all. It keeps its width either way, so the
               title stays centred. */}
-          <View style={styles.headerAction}>{selectAll}</View>
+          <View style={styles.headerAction}>
+            {selecting ? selectAll : embedded ? null : viewButton}
+          </View>
         </View>
       )}
 
@@ -373,37 +343,16 @@ export function SongsBrowser({ embedded }: { embedded?: boolean }) {
         ) : null}
       </View>
 
-      {/* The same row an album, a playlist and a genre have, in the same order:
-          what you do to the list on the left, what starts it on the right. The
-          view menu is the left-hand half of it here, which is also what keeps
-          it off the search box and out of a row of its own. Gone while
-          selecting, like every other action row. */}
+      {/* The row an album, a playlist and a genre have, in the same order and
+          acting on the same thing they do: the songs behind what is on screen.
+          Gone while selecting, like every other action row. */}
       {selecting ? null : (
-        <View style={styles.actions}>
-          {viewButton}
-          <View style={styles.playRow}>
-            <Pressable
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel={t('Shuffle')}
-              onPress={() => void onShuffle()}
-            >
-              <Ionicons name="shuffle" size={26} color={colors.textSecondary} />
-            </Pressable>
-            <Pressable
-              style={[styles.playButton, { backgroundColor: accent }]}
-              accessibilityRole="button"
-              accessibilityLabel={t('Play')}
-              onPress={() => void onPlay()}
-            >
-              {starting ? (
-                <ActivityIndicator color={colors.onAccent} />
-              ) : (
-                <Ionicons name="play" size={28} color={colors.onAccent} style={{ marginLeft: 3 }} />
-              )}
-            </Pressable>
-          </View>
-        </View>
+        <BrowseActions
+          sort={sort}
+          onScreen={isSearch ? songs : null}
+          source={t('Songs')}
+          href="/browse/songs"
+        />
       )}
 
       {/* The chips hide while searching: results come back by relevance, so a
@@ -615,21 +564,6 @@ const styles = themed((colors) => ({
   headerAction: { width: 26, alignItems: 'flex-end' },
   // The same row an album, a playlist and a genre have, to the same margins:
   // what you do to the list on the left, what starts it on the right.
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
-  },
-  playRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
-  playButton: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   searchRow: {
     height: SEARCH_H,
     flexDirection: 'row',

@@ -41,7 +41,8 @@ import {
 } from '@/theme';
 import { listPerf } from '@/lib/listPerf';
 import { BackChevron } from '@/components/BackChevron';
-import { BrowseFrame } from '@/components/BrowseFrame';
+import { BrowseActions } from '@/components/BrowseActions';
+import { BrowseFrame, type BrowserProps } from '@/components/BrowseFrame';
 import { useGridColumns } from '@/hooks/useGridColumns';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
@@ -88,7 +89,7 @@ export default function BrowseAlbumsScreen() {
   return <AlbumsBrowser />;
 }
 
-export function AlbumsBrowser({ embedded }: { embedded?: boolean }) {
+export function AlbumsBrowser({ embedded, actionRef }: BrowserProps) {
   // Repaints on a change of appearance or accent: a stack keeps this screen
   // mounted while you are on another one, out of reach of anything else.
   useTheme();
@@ -172,6 +173,14 @@ export function AlbumsBrowser({ embedded }: { embedded?: boolean }) {
   // flash between keystrokes.
   const searchPending = isSearch && (searchLoading || debounced !== query.trim());
 
+  // Embedded, the button that opens this menu is drawn by the Library tab, in
+  // its own header: this is the way down to the menu it belongs to. Kept up to
+  // date after every render rather than during one, which is a rule the ref is
+  // not worth breaking for — it is only read from a tap, long after this.
+  useEffect(() => {
+    if (actionRef) actionRef.current = openGridMenu;
+  });
+
   const viewButton = (
     <Pressable
       hitSlop={10}
@@ -229,11 +238,18 @@ export function AlbumsBrowser({ embedded }: { embedded?: boolean }) {
           ) : null}
       </View>
 
-      {/* Embedded there is no header to keep the view menu in, so it sits where
-          the song list keeps it: the left-hand half of the row that acts on the
-          list. The three sections are flipped between with one tap, so it has
-          to be in the same corner on all of them. */}
-      {embedded ? <View style={styles.actions}>{viewButton}</View> : null}
+      {/* The row an album, a playlist and a genre have, acting on the same
+          thing they do: the songs behind what is on screen. Browsing all
+          albums and browsing all songs are two views of one library, so the
+          two sections answer the same two buttons. The order the chips are set
+          to is an album order and has no say over songs, which is why nothing
+          is passed for it.
+
+          Gone while searching: what "play everything" would start there is not
+          what you were looking for, and the search hands back albums, so there
+          is no list of songs to offer instead (the song list, whose search does
+          hand back songs, plays those). */}
+      {isSearch ? null : <BrowseActions source={t('Library')} href="/browse/albums" />}
 
       {/* The chips hide when searching: the server returns by relevance, so
           ordering results isn't in its hands and a marked pill would lie about
@@ -341,12 +357,6 @@ const styles = themed((colors) => ({
   },
   title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '600' },
   headerAction: { width: 26, alignItems: 'flex-end' },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
-  },
 
   searchRow: {
     height: SEARCH_H,

@@ -16,8 +16,15 @@
  * "Your library" next door is the other half of the split, and the line
  * between them is whose it is: your playlists, your favourites and your pins
  * there; what the server holds here. Folders moved across for that reason.
+ *
+ * The one thing the tab does draw for a section is its header button, top
+ * right: the view menu on the three lists, "add a station" on the radio. Down
+ * in the section it would need a row of its own, and a row holding one icon
+ * reads as an empty band. What it opens still lives with the state it belongs
+ * to; the button reaches it through a ref (`BrowserProps`).
  */
-import { useState } from 'react';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -31,8 +38,8 @@ import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { useAccent } from '@/hooks/useAccent';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
-import { useSettings } from '@/store/settings';
-import { fontSize, spacing, themed, useTheme } from '@/theme';
+import { useSettings, type ListLayout } from '@/store/settings';
+import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
 
 type Section = 'albums' | 'artists' | 'songs' | 'genres' | 'radio' | 'folders';
 
@@ -56,6 +63,16 @@ export default function ExploreScreen() {
   const offline = useAuthStore((s) => s.offline);
   const showFolderBrowser = useSettings((s) => s.showFolderBrowser);
   const [section, setSection] = useState<Section>('albums');
+  /** Filled in by whichever section is on screen (see `BrowserProps`). */
+  const sectionAction = useRef<() => void>(() => {});
+  // Read for all three rather than for the one showing, because hooks cannot
+  // be conditional; it is a selector each, which is what a chip press costs
+  // anyway. Only the icon needs them — what the menu writes is its own.
+  const layouts: Record<'albums' | 'artists' | 'songs', ListLayout> = {
+    albums: useSettings((s) => s.browseAlbumsLayout),
+    artists: useSettings((s) => s.browseArtistsLayout),
+    songs: useSettings((s) => s.browseSongsLayout),
+  };
 
   /**
    * Which sections this profile actually has.
@@ -84,6 +101,24 @@ export default function ExploreScreen() {
   // Going offline can take the section you were on with it.
   const current = available(section) ? section : 'albums';
 
+  /**
+   * The section's own button, drawn here and acting down there.
+   *
+   * Genres and folders have none: one is a grid with nothing to choose about
+   * it and the other is a handful of server roots.
+   */
+  const headerButton =
+    current === 'radio'
+      ? { icon: 'add' as const, label: t('Add station'), size: 28, color: colors.text }
+      : current === 'albums' || current === 'artists' || current === 'songs'
+        ? {
+            icon: layouts[current] === 'grid' ? ('grid-outline' as const) : ('list' as const),
+            label: t('View'),
+            size: 22,
+            color: colors.textSecondary,
+          }
+        : null;
+
   // The inset is read here rather than left to a `SafeAreaView`: that one pads
   // itself once its native view has been measured, and a tab is only mounted
   // the first time it is opened, so its first frame was drawn under the status
@@ -94,7 +129,23 @@ export default function ExploreScreen() {
     <View style={[styles.safe, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <Text style={styles.heading}>{t('Library')}</Text>
-        <OfflineIndicator />
+        <View style={styles.headerActions}>
+          <OfflineIndicator />
+          {headerButton ? (
+            <Pressable
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel={headerButton.label}
+              onPress={() => sectionAction.current()}
+            >
+              <Ionicons
+                name={headerButton.icon}
+                size={headerButton.size}
+                color={headerButton.color}
+              />
+            </Pressable>
+          ) : null}
+        </View>
       </View>
 
       <ScrollView
@@ -127,15 +178,15 @@ export default function ExploreScreen() {
           once, which on a big library is what the app spent #50 undoing. */}
       <View style={styles.body}>
         {current === 'albums' ? (
-          <AlbumsBrowser embedded />
+          <AlbumsBrowser embedded actionRef={sectionAction} />
         ) : current === 'artists' ? (
-          <ArtistsBrowser embedded />
+          <ArtistsBrowser embedded actionRef={sectionAction} />
         ) : current === 'songs' ? (
-          <SongsBrowser embedded />
+          <SongsBrowser embedded actionRef={sectionAction} />
         ) : current === 'genres' ? (
           <GenresBrowser embedded />
         ) : current === 'radio' ? (
-          <RadioBrowser embedded />
+          <RadioBrowser embedded actionRef={sectionAction} />
         ) : (
           <FoldersBrowser />
         )}
@@ -157,6 +208,7 @@ const styles = themed((colors) => ({
   // The same heading "Your library" has, since they are the two halves of one
   // idea and a different size would read as a different kind of screen.
   heading: { color: colors.text, fontSize: 30, fontWeight: '600' },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   segments: { flexGrow: 0, paddingBottom: spacing.md },
   segmentsContent: { gap: spacing.sm, paddingHorizontal: spacing.lg },
   segment: {
