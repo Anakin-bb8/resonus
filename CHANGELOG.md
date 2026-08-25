@@ -15,6 +15,7 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- The dropdowns in Settings open flush against their row again, instead of a status bar's height below it.
 - Opening Library for the first time no longer draws it under the status bar for an instant before dropping it into place.
 - "New releases" shows the newest records instead of a slice of the alphabet: the list goes by the day each record came out, and by when it reached the server for those tagged with a year and nothing more.
 - Offline mode no longer looks for a new version of Resonus by itself, since asking GitHub is still using the network somebody said not to use (#179).

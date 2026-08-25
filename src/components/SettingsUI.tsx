@@ -158,13 +158,12 @@ export function SelectList<T extends string | number | boolean>({
   const active = options.find((o) => o.value === value) ?? options[0];
 
   function openMenu() {
-    // `measureInWindow` measures from the window content, i.e. BELOW the status
-    // bar, while the Modal renders full-screen from the very top. These are two
-    // different origins separated by exactly `insets.top`, and not adding it
-    // placed the menu that distance too high. We convert here, once, so the rest
-    // of the calculation lives entirely in screen coordinates (which is what
-    // `frame` uses).
-    rowRef.current?.measureInWindow((_x, y, _w, h) => setAnchor({ y: y + insets.top, h }));
+    // `measureInWindow` and the Modal share an origin, the top of the screen:
+    // the window runs edge to edge and the Modal is `statusBarTranslucent`. It
+    // did not always: before edge-to-edge the window began under the status bar
+    // and the row's `y` had to have `insets.top` added to it to reach the
+    // Modal's space. Adding it now moves the menu down by a status bar.
+    rowRef.current?.measureInWindow((_x, y, _w, h) => setAnchor({ y, h }));
   }
 
   /**
