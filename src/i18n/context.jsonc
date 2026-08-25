@@ -540,6 +540,8 @@
     "Dark (default)": "The appearance the app has always had, and what it uses unless the other is chosen. The word in brackets is the same one as `Default`",
     "Light (experimental)": "The light appearance. The word in brackets is a warning that it is new and may still have rough edges",
     "Navigation": "Section header: how you move around the app",
+    "Navigation bar": "Settings screen: which tabs are on the bar at the bottom, and in what order",
+    "Always shown": "Said where a switch would be, on the Home tab, which cannot be taken off the bar",
     "Explore": "The tab holding everything the server has: all albums, artists, songs, genres, stations and folders",
     "Folder browsing": "Browsing the server's folders as folders, instead of by album and artist",
     "Haptic feedback": "The small vibration when something is tapped",

@@ -689,5 +689,8 @@
   "Play or pause": "Play or pause",
   "A second action for the same artwork, for a hand that is not looking. With this on, a single tap waits a moment to see whether a second one is coming.": "A second action for the same artwork, for a hand that is not looking. With this on, a single tap waits a moment to see whether a second one is coming.",
   "At the end of the queue": "At the end of the queue",
-  "Explore": "Explore"
+  "Explore": "Explore",
+  "Navigation bar": "Navigation bar",
+  "Which tabs are at the bottom, and in what order.": "Which tabs are at the bottom, and in what order.",
+  "Always shown": "Always shown"
 }

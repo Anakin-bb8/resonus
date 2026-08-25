@@ -52,6 +52,7 @@ export function GlobalTabBar() {
   // With the setting off the tabs keep their own bar and this draws nothing at
   // all: off is the app exactly as it was, down to the last pixel.
   const always = useSettings((s) => s.alwaysShowTabs);
+  const bottomTabs = useSettings((s) => s.bottomTabs);
   const root = segments[0];
   const inTabs = root === '(tabs)' || root === undefined;
   // Where a stack opened from here would belong; the back arrow reads the same
@@ -106,7 +107,14 @@ export function GlobalTabBar() {
         fadeStyle,
       ]}
     >
-      {TABS.map((tab) => {
+      {/* The user's order, and only the ones they kept (Settings › Appearance
+          › Navigation bar). `TABS` stays the catalogue: it is what says where
+          each one goes and what it is called. */}
+      {bottomTabs
+        .filter((t) => t.enabled)
+        .map(({ key }) => TABS.find((x) => x.segment === key))
+        .filter((tab): tab is (typeof TABS)[number] => !!tab)
+        .map((tab) => {
         // On a tab screen the bar says which one you are on. Off the tabs
         // nothing is current, and the tab the stack came from is only marked
         // enough to keep the bar from looking dead.
@@ -139,8 +147,8 @@ export function GlobalTabBar() {
               {t(tab.label)}
             </Text>
           </Pressable>
-        );
-      })}
+          );
+        })}
     </Animated.View>
   );
 }

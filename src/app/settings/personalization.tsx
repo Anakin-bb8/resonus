@@ -104,6 +104,12 @@ export default function AppearanceSettings() {
             },
           ]}
         />
+        <SettingRow
+          label={t('Navigation bar')}
+          description={t('Which tabs are at the bottom, and in what order.')}
+          chevron
+          onPress={() => router.push('/settings/navigation-bar')}
+        />
 
         <Text style={settingsStyles.sectionTitle}>{t('Home')}</Text>
         <SwitchList

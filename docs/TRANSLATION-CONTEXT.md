@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 685 of them.
+Every string the app can show, under the screen it shows up on. 688 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -58,7 +58,6 @@ you are actually typing into, which is easier than reading it here.
 | `Downloading Resonus {version}` |  |
 | `Duration` | Label of a field in the song information sheet: how long the song is |
 | `Explicit` | A value of `Content`: the recording carries a parental advisory (strong language). Also read out for the E badge next to a title |
-| `Explore` | The tab holding everything the server has: all albums, artists, songs, genres, stations and folders |
 | `Export “{name}”?` | Confirms getting the files of an album or playlist out of the app |
 | `Format` | The file format (FLAC, MP3…), written as the player writes it |
 | `Genre` | Label of a field in the song information sheet |
@@ -84,7 +83,6 @@ you are actually typing into, which is easier than reading it here.
 | `Sample rate` | A property of the audio, in kHz |
 | `Save to a folder` | A value of `Export`: write the file somewhere on the phone |
 | `Saved as “{name}”` | Where the exported file ended up. `{name}` is the file's name |
-| `Search` | The search tab, and the action of searching |
 | `Send to another app` | A value of `Export`: hand the file to another app |
 | `Sending to another app isn't available on this device` | Toast: this phone has nothing that takes a shared file |
 | `Server didn't allow downloads` | Warning after sharing: the link was made and works, but the call that turns downloading on did not go through |
@@ -112,7 +110,6 @@ you are actually typing into, which is easier than reading it here.
 | `Will pause when the song ends` | Toast when it is set to the end of the song |
 | `Year` | Label of a field in the song information sheet: the year of the release |
 | `You can pin up to {n} items.` | Toast: there is no room for another pinned thing. `{n}` is the limit |
-| `Your library` | The tab with your albums, artists and playlists |
 
 ## Artist
 
@@ -457,7 +454,6 @@ you are actually typing into, which is easier than reading it here.
 | `Refresh` | Ask the server for this playlist again, in case it changed elsewhere |
 | `Remove cover` | Screen reader label for the small x on a chosen picture |
 | `Removed from playlist` | Toast, with an undo button next to it |
-| `Reorder` | Enter drag-to-reorder mode |
 | `Save` | The confirm button of an edit sheet. A verb |
 | `Share` | Make a link on the server that others can open. Getting the file itself out is `Export` |
 | `This playlist is empty` | Empty state heading |
@@ -648,7 +644,6 @@ you are actually typing into, which is easier than reading it here.
 | --- | --- |
 | `Drag to reorder, toggle to show or hide.` |  |
 | `Explore chips` | The row of tappable category chips |
-| `Reorder` | Enter drag-to-reorder mode |
 | `Show icons` |  |
 
 ## Settings › Font
@@ -678,7 +673,6 @@ you are actually typing into, which is easier than reading it here.
 | `Most played albums` | A section of Home: the records played most |
 | `New releases` | Home shelf and album sort: albums by the year they came out, newest first. Not "Recently added", which is when the server got hold of them |
 | `Random albums` | A section of Home: albums picked at random, to happen upon something |
-| `Reorder` | Enter drag-to-reorder mode |
 
 ## Settings › Language
 
@@ -724,6 +718,14 @@ you are actually typing into, which is easier than reading it here.
 | `That folder is already there` | The folder just picked is already in the local profile's list |
 | `We need permission to read your device music.` | Android has not granted access to the phone's files yet |
 | `Where should we get your music?` | Heading when choosing where the phone's own music is read from |
+
+## Settings › Navigation bar
+
+| String | What it is |
+| --- | --- |
+| `Always shown` | Said where a switch would be, on the Home tab, which cannot be taken off the bar |
+| `Drag to reorder, toggle to show or hide.` |  |
+| `Navigation bar` | Settings screen: which tabs are on the bar at the bottom, and in what order |
 
 ## Settings › Network
 
@@ -772,6 +774,7 @@ you are actually typing into, which is easier than reading it here.
 | `Keep the tabs at the bottom of every screen. Holding the back arrow goes back to the one you came from either way.` |  |
 | `Language` |  |
 | `Navigation` | Section header: how you move around the app |
+| `Navigation bar` | Settings screen: which tabs are on the bar at the bottom, and in what order |
 | `Off` | A setting value meaning disabled (crossfade, normalization…) |
 | `Open the app on` | Which tab the app opens on, and comes back to after a while away |
 | `Quick grid` | The grid of shortcut tiles on Home |
@@ -788,6 +791,7 @@ you are actually typing into, which is easier than reading it here.
 | `The clock button on Home.` | The line under “Show history button”, explaining it |
 | `Theme` | The screen where the appearance and the accent colour are chosen, and the name of the row that opens it |
 | `Which tab opens on launch, and after a while in the background.` | The line under “Open the app on”, explaining it |
+| `Which tabs are at the bottom, and in what order.` | The line under “Navigation bar”, explaining it |
 | `Your library` | The tab with your albums, artists and playlists |
 
 ## Settings › Playback
@@ -1054,6 +1058,7 @@ you are actually typing into, which is easier than reading it here.
 | `Remove download?` | Dialog title: delete the files of something already downloaded |
 | `Remove from favorites` | The same button when it is already a favourite, and the menu entry that takes a whole selection out |
 | `Removed from favorites` | Toast |
+| `Reorder` | Enter drag-to-reorder mode |
 | `Retry` | The button on an error message: try again. A verb |
 | `Select all` | Tick every song in the list at once |
 | `Server default` | Codec option meaning "let the server decide" what to transcode to |

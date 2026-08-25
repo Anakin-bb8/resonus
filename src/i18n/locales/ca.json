@@ -691,5 +691,8 @@
   "At the end of the queue": "Al final de la cua",
   "Explore": "Explorar",
   "Browse your library by folders, in the Explore tab (Subsonic servers).": "Explora la biblioteca per carpetes, a la pestanya Explorar (servidors Subsonic).",
-  "Request the next few tracks ahead of time so they start instantly. Helps with proxy servers and slow sources that fetch each track on demand.": "Demana les pistes següents per endavant perquè sonin a l'instant. Útil amb servidors proxy i orígens lents que baixen cada pista sobre la marxa."
+  "Request the next few tracks ahead of time so they start instantly. Helps with proxy servers and slow sources that fetch each track on demand.": "Demana les pistes següents per endavant perquè sonin a l'instant. Útil amb servidors proxy i orígens lents que baixen cada pista sobre la marxa.",
+  "Navigation bar": "Barra de navegació",
+  "Which tabs are at the bottom, and in what order.": "Quines pestanyes hi ha a baix i en quin ordre.",
+  "Always shown": "Sempre visible"
 }

@@ -37,7 +37,17 @@ const PLAYER_PATHS = new Set(['/player', '/queue', '/lyrics']);
 
 export function AppStartupTab() {
   const router = useRouter();
-  const defaultTab = useSettings((s) => s.defaultTab);
+  const chosenTab = useSettings((s) => s.defaultTab);
+  const bottomTabs = useSettings((s) => s.bottomTabs);
+  /**
+   * The tab to open on, which is not always the one that was chosen: it can
+   * have been taken off the bar since (Settings › Navigation bar). Opening on
+   * a screen with no way back to it is worse than opening on the first one
+   * that is there, and Home always is.
+   */
+  const defaultTab = bottomTabs.some((t) => t.key === chosenTab && t.enabled)
+    ? chosenTab
+    : 'index';
   const backgroundedAt = useRef<number | null>(null);
   const didInitial = useRef(false);
   // Where the app was when it went away. Read in the listener, which has no

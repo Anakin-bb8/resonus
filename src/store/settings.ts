@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 
 import { isLanguage, LANGUAGE_NAMES, type Language } from '@/i18n/languages';
+import { type TabSegment } from '@/lib/tabOrigin';
 import { hashKey } from '@/lib/localLibrary';
 import { setPerfEnabled } from '@/lib/perfLog';
 import { profileScopeGuard } from '@/lib/profileScope';
@@ -425,6 +426,52 @@ export const DEFAULT_EXPLORE_CHIPS: ExploreChip[] = [
 ];
 
 /**
+ * The bar at the bottom: which tabs are on it and in what order.
+ *
+ * Same shape as the Explore chips, and for the same reason — it is a list the
+ * user rearranges — but with one rule they do not have: **Home cannot be
+ * turned off**. The chips can all go and the row simply disappears; a bar with
+ * nothing on it is an app with no way out of wherever you are standing.
+ */
+export interface BottomTab {
+  key: TabSegment;
+  enabled: boolean;
+}
+
+const BOTTOM_TAB_KEYS: TabSegment[] = ['index', 'search', 'library', 'explore'];
+
+/** In the order they shipped, all of them on. */
+export const DEFAULT_BOTTOM_TABS: BottomTab[] = [
+  { key: 'index', enabled: true },
+  { key: 'search', enabled: true },
+  { key: 'library', enabled: true },
+  { key: 'explore', enabled: true },
+];
+
+/** The same sanitising the chips get, plus Home's exemption. */
+function normalizeBottomTabs(raw: unknown): BottomTab[] {
+  if (!Array.isArray(raw)) return DEFAULT_BOTTOM_TABS.map((t) => ({ ...t }));
+  const seen = new Set<TabSegment>();
+  const out: BottomTab[] = [];
+  for (const item of raw) {
+    const key = item?.key as TabSegment;
+    if (BOTTOM_TAB_KEYS.includes(key) && !seen.has(key)) {
+      seen.add(key);
+      out.push({
+        key,
+        enabled: key === 'index' ? true : typeof item.enabled === 'boolean' ? item.enabled : true,
+      });
+    }
+  }
+  // A tab added by a later version arrives on, at the end, rather than the
+  // update quietly hiding something new.
+  for (const def of DEFAULT_BOTTOM_TABS) {
+    if (!seen.has(def.key)) out.push({ ...def });
+  }
+  return out;
+}
+
+/**
  * Sanitizes the saved list: preserves user order and state, discards unknown
  * keys, and appends new chips not present (so a future version with more chips
  * doesn't break existing config).
@@ -797,6 +844,7 @@ interface SettingsState {
   /** Home explore chips, in order (each with its state). With none active, the
    *  row disappears: that replaces the old toggle. */
   exploreChips: ExploreChip[];
+  bottomTabs: BottomTab[];
   /** Whether those chips carry their icon, or are their name and nothing else. */
   exploreChipIcons: boolean;
   /** Which actions are visible in the song ⋯ menu. */
@@ -928,6 +976,9 @@ interface SettingsState {
   setExploreChip: (key: ExploreChipKey, value: boolean) => void;
   /** Replace the full list (for reordering). */
   setExploreChips: (chips: ExploreChip[]) => void;
+  setBottomTab: (key: TabSegment, value: boolean) => void;
+  /** Replace the full list (for reordering). */
+  setBottomTabs: (tabs: BottomTab[]) => void;
   setExploreChipIcons: (value: boolean) => void;
   setSongMenuAction: (key: SongMenuActionKey, value: boolean) => void;
   setShowFolderBrowser: (value: boolean) => void;
@@ -1042,6 +1093,7 @@ function snapshot(get: () => SettingsState) {
     showGreeting: s.showGreeting,
     customGreeting: s.customGreeting,
     exploreChips: s.exploreChips,
+    bottomTabs: s.bottomTabs,
     exploreChipIcons: s.exploreChipIcons,
     songMenuActions: s.songMenuActions,
     showFolderBrowser: s.showFolderBrowser,
@@ -1149,6 +1201,7 @@ const DEFAULTS = {
   showGreeting: true,
   customGreeting: '',
   exploreChips: DEFAULT_EXPLORE_CHIPS.map((c) => ({ ...c })),
+  bottomTabs: DEFAULT_BOTTOM_TABS.map((t) => ({ ...t })),
   exploreChipIcons: true,
   songMenuActions: { ...DEFAULT_SONG_MENU_ACTIONS },
   showFolderBrowser: false,
@@ -1553,6 +1606,20 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setBottomTab: (key, value) => {
+    // Home's switch is not drawn, but a saved file could still say otherwise.
+    if (key === 'index') return;
+    set((s) => ({
+      bottomTabs: s.bottomTabs.map((x) => (x.key === key ? { ...x, enabled: value } : x)),
+    }));
+    persist(snapshot(get));
+  },
+
+  setBottomTabs: (bottomTabs) => {
+    set({ bottomTabs });
+    persist(snapshot(get));
+  },
+
   setExploreChips: (exploreChips) => {
     set({ exploreChips });
     persist(snapshot(get));
@@ -1764,6 +1831,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           customGreeting: string;
           showExploreChips: boolean;
           exploreChips: unknown;
+          bottomTabs: unknown;
           exploreChipIcons: boolean;
           songMenuActions: unknown;
           showFolderBrowser: boolean;
@@ -2070,6 +2138,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
           // hidden should still not see it, not find the chips back. Turning
           // them all off is exactly what hides it now.
           set({ exploreChips: DEFAULT_EXPLORE_CHIPS.map((c) => ({ ...c, enabled: false })) });
+        }
+        if (Array.isArray(parsed.bottomTabs)) {
+          set({ bottomTabs: normalizeBottomTabs(parsed.bottomTabs) });
         }
         if (typeof parsed.showFolderBrowser === 'boolean') {
           set({ showFolderBrowser: parsed.showFolderBrowser });

@@ -14,6 +14,7 @@ Releases before 0.2.1 are only listed on the
 - The row playing in a list shows a set of bars that move while it plays and settle when you pause it.
 - One tap and two on the player's artwork now offer the same actions, the album among them, so play or pause on one and the lyrics on the other is a choice you can make either way round.
 - Holding a playlist on the Home shelf opens the same menu the library gives it (#182).
+- The tabs at the bottom can be reordered, and all but Home hidden, from Settings > Appearance > Navigation bar.
 - A fourth tab, Explore, holds everything the server has: all albums, all artists, all songs, the genres, the radio stations and the folders, each with its own search and orders.
 
 ### Removed
