@@ -22,7 +22,19 @@ interface Props {
    * `contain` so non-square artwork is shown whole, letterboxed.
    */
   contentFit?: ImageContentFit;
+  /**
+   * Whether animated images (GIF, animated WebP) should auto-play. Disabling
+   * this on off-screen or blurred copies avoids running multiple decoders for
+   * the same animation, which would cause frame drops.
+   */
+  autoplay?: boolean;
   style?: StyleProp<ViewStyle | ImageStyle>;
+  /**
+   * Called when the image loads with whether it is animated. The player uses
+   * this to switch to the animated-cover layout (shrunk cover beside text,
+   * fullscreen animated background).
+   */
+  onAnimatedDetected?: (isAnimated: boolean) => void;
 }
 
 /**
@@ -285,7 +297,9 @@ export function Cover({
   transition = 200,
   placeholderIcon = 'musical-notes',
   contentFit = 'cover',
+  autoplay = true,
   style,
+  onAnimatedDetected,
 }: Props) {
   // If the image fails to load (e.g. offline without cache or download), we fall
   // back to the placeholder instead of leaving a gap. Reset on `uri` change
@@ -362,7 +376,13 @@ export function Cover({
       contentFit={contentFit}
       transition={transition}
       recyclingKey={shown}
+      autoplay={autoplay}
       onDisplay={redraw.onDisplay}
+      onLoad={(e) => {
+        if (onAnimatedDetected) {
+          onAnimatedDetected(!!e.source?.isAnimated);
+        }
+      }}
       // expo-image defaults to 'disk', which keeps the file but not the decoded
       // image: scrolling a list back up decoded every cover again. Covers are
       // small and the same handful come round constantly, which is what a

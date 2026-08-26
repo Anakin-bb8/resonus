@@ -34,6 +34,7 @@ import { ArtistPlayerCard } from '@/components/ArtistPlayerCard';
 import { AudioQualityBadge } from '@/components/AudioQualityBadge';
 import { SeekBar } from '@/components/SeekBar';
 import { Cover, useRedrawOnReturn, useSettledSource } from '@/components/Cover';
+import { useAnimatedCover } from '@/hooks/useAnimatedCover';
 import { ExplicitBadge } from '@/components/ExplicitBadge';
 import { FavoriteButton } from '@/components/FavoriteButton';
 import { CoverLyrics, LyricsCard } from '@/components/LyricsCard';
@@ -283,6 +284,14 @@ export default function PlayerScreen() {
   // a fixed overlay (same look as animating the gradient, which can't be done).
   const background = useSettings((s) => s.playerBackground);
   const colorBackground = background === 'color';
+  const animatedCoverBg = useSettings((s) => s.animatedCoverBackground);
+  // Animated cover detection: when the cover is a GIF/animated WebP/APNG,
+  // the player switches to a Spotify-style layout with the animated cover
+  // fullscreen as background and a shrunk static copy beside the text.
+  // Only when the setting is enabled; otherwise animated covers play inside
+  // the square just like static ones.
+  const { isAnimated: isAnimatedDetected, onCoverLoad } = useAnimatedCover(cover);
+  const isAnimatedCover = animatedCoverBg && isAnimatedDetected;
   // The backdrop holds the previous artwork on purpose while the next decodes,
   // so on its own it cannot tell "not decoded yet" from "never will be". Coming
   // back from the background is the second case (see `useRedrawOnReturn`), and
@@ -296,7 +305,10 @@ export default function PlayerScreen() {
     BACKDROP_FADE,
   );
   const backdrop = useRedrawOnReturn(backdropRef, backdropSource.shown);
-  const dominant = useDominantColor(colorBackground ? cover : undefined);
+  // Always extract dominant color when the cover is animated (needed for the
+  // gradient at the bottom of the fullscreen animated background), even if the
+  // player background setting is not 'color'.
+  const dominant = useDominantColor(colorBackground || isAnimatedCover ? cover : undefined);
   // Under the blurred artwork the flat colour is irrelevant, but it still
   // paints the frame before the image decodes, so it stays dark rather than
   // flashing the old grey.
@@ -719,6 +731,12 @@ export default function PlayerScreen() {
   const rootStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: transY.value }],
   }));
+  // Scroll position as a shared value, so the animated cover background can
+  // translate up with the content instead of staying pinned to the screen.
+  const scrollY = useSharedValue(0);
+  const animatedBgStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: -scrollY.value }],
+  }));
 
   // If there's no song (e.g. after emptying the queue), close the player. In an
   // effect (not in render) to avoid updating the Stack while painting another
@@ -808,7 +826,30 @@ export default function PlayerScreen() {
     <GestureDetector gesture={dismissPan}>
       <Animated.View style={[styles.root, rootStyle]}>
         <Animated.View style={[StyleSheet.absoluteFill, bgStyle]} />
-        {background === 'cover' && backdropSource.shown ? (
+        {isAnimatedCover && cover ? (
+          <>
+            {/* Animated cover fullscreen as background (Spotify-style).
+                No blur, autoplay on, scrolls with the content. */}
+            <Animated.View style={[StyleSheet.absoluteFill, animatedBgStyle]}>
+              <Image
+                source={{ uri: cover }}
+                style={StyleSheet.absoluteFill}
+                contentFit="cover"
+                transition={BACKDROP_FADE}
+                autoplay={true}
+              />
+              {/* Gradient at the bottom edge blending to the accent color,
+                  so the transition to the player content is smooth. Sits
+                  inside the same animated wrapper so it scrolls with the
+                  image. */}
+              <LinearGradient
+                colors={['transparent', dominant]}
+                style={StyleSheet.absoluteFill}
+                locations={[0.7, 1]}
+              />
+            </Animated.View>
+          </>
+        ) : background === 'cover' && backdropSource.shown ? (
           <>
             {/* The artwork itself, blurred, filling the screen. No
                 `recyclingKey`: it blanks the view the moment the song changes,
@@ -823,6 +864,7 @@ export default function PlayerScreen() {
               contentFit="cover"
               blurRadius={60}
               transition={BACKDROP_FADE}
+              autoplay={false}
               onDisplay={() => {
                 backdrop.onDisplay();
                 backdropSource.onDisplay();
@@ -863,7 +905,9 @@ export default function PlayerScreen() {
             setLaidOut(true);
           }}
           onScroll={(e) => {
-            const next = e.nativeEvent.contentOffset.y <= 4;
+            const y = e.nativeEvent.contentOffset.y;
+            scrollY.value = y;
+            const next = y <= 4;
             if (next !== atTopRef.current) {
               atTopRef.current = next;
               setAtTop(next);
@@ -979,28 +1023,34 @@ export default function PlayerScreen() {
             {/* Recycled carousel: the current cover centered and the neighbors at
                 one screen, already entering on drag. No fade (transition 0): a
                 panel's content only changes off-screen and a fade is pointless
-                here. */}
+                here. When the cover is animated, the carousel is fully
+                unmounted and a small static copy sits beside the title/artist
+                instead. */}
             <Animated.View style={[{ width: coverSize, height: coverSize }, coverAppearStyle]}>
-              {paneStyles.map((paneStyle, k) => {
-                const rel = paneRel(k);
-                const paneSong = rel === 0 ? song : rel === 1 ? nextSong : prevSong;
-                const paneCover = rel === 0 ? cover : rel === 1 ? nextCover : prevCover;
-                return (
-                  <Animated.View key={k} style={[styles.coverPane, paneStyle]}>
-                    {/* With lyrics in place the cover is hidden: the lyrics
-                        (transparent background) sit on top of the player background. */}
-                    {paneSong && !inlineLyrics ? (
-                      <Cover
-                        uri={paneCover}
-                        size={coverSize}
-                        contentFit={fitCoverArt ? 'contain' : 'cover'}
-                        transition={0}
-                        placeholderIcon={paneSong.url ? 'radio' : 'musical-notes'}
-                      />
-                    ) : null}
-                  </Animated.View>
-                );
-              })}
+              {!isAnimatedCover ? (
+                paneStyles.map((paneStyle, k) => {
+                  const rel = paneRel(k);
+                  const paneSong = rel === 0 ? song : rel === 1 ? nextSong : prevSong;
+                  const paneCover = rel === 0 ? cover : rel === 1 ? nextCover : prevCover;
+                  return (
+                    <Animated.View key={k} style={[styles.coverPane, paneStyle]}>
+                      {/* With lyrics in place the cover is hidden: the lyrics
+                          (transparent background) sit on top of the player background. */}
+                      {paneSong && !inlineLyrics ? (
+                        <Cover
+                          uri={paneCover}
+                          size={coverSize}
+                          contentFit={fitCoverArt ? 'contain' : 'cover'}
+                          transition={0}
+                          autoplay={rel === 0}
+                          onAnimatedDetected={rel === 0 ? onCoverLoad : undefined}
+                          placeholderIcon={paneSong.url ? 'radio' : 'musical-notes'}
+                        />
+                      ) : null}
+                    </Animated.View>
+                  );
+                })
+              ) : null}
             </Animated.View>
           </GestureDetector>
           {/* Lyrics in place of the cover (setting): same frame, on top. */}
@@ -1043,6 +1093,18 @@ export default function PlayerScreen() {
           ]}
         >
           <View style={styles.meta}>
+            {/* Animated cover: shrunk static copy beside the text (Spotify-style). */}
+            {isAnimatedCover && cover ? (
+              <Cover
+                uri={cover}
+                size={56}
+                contentFit={fitCoverArt ? 'contain' : 'cover'}
+                transition={0}
+                autoplay={false}
+                style={styles.animatedCoverMini}
+                placeholderIcon={song?.url ? 'radio' : 'musical-notes'}
+              />
+            ) : null}
             <View style={{ flex: 1 }}>
               {song.albumId ? (
                 <Pressable
@@ -1431,6 +1493,12 @@ const styles = themed((colors) => ({
     alignItems: 'center',
     gap: spacing.md,
     marginBottom: spacing.md,
+  },
+  // Shrunk cover beside the text when the cover is animated (Spotify-style).
+  // Same border radius as the normal cover (radius.md), sized to match the
+  // two text lines (title + artist).
+  animatedCoverMini: {
+    borderRadius: radius.md,
   },
   // The tappable area fits the text (not the full width), to avoid navigating
   // when tapping the empty space on the right.

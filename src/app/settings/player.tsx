@@ -60,6 +60,8 @@ export default function PlayerSettings() {
   const setPlayerBackground = useSettings((s) => s.setPlayerBackground);
   const fitCoverArt = useSettings((s) => s.fitCoverArt);
   const setFitCoverArt = useSettings((s) => s.setFitCoverArt);
+  const animatedCoverBackground = useSettings((s) => s.animatedCoverBackground);
+  const setAnimatedCoverBackground = useSettings((s) => s.setAnimatedCoverBackground);
   const miniPlayerColorBackground = useSettings((s) => s.miniPlayerColorBackground);
   const setMiniPlayerColorBackground = useSettings((s) => s.setMiniPlayerColorBackground);
   const lyricsBackground = useSettings((s) => s.lyricsBackground);
@@ -126,6 +128,14 @@ export default function PlayerSettings() {
               description: t('Show the whole artwork instead of cropping it to a square.'),
               value: fitCoverArt,
               onChange: setFitCoverArt,
+            },
+            {
+              label: t('Animated cover background'),
+              description: t(
+                'When the cover art is animated (GIF, animated WebP), use it as the fullscreen player background instead of playing it inside the square. The shrunk static copy sits beside the title',
+              ),
+              value: animatedCoverBackground,
+              onChange: setAnimatedCoverBackground,
             },
           ]}
         />

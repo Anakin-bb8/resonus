@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 687 of them.
+Every string the app can show, under the screen it shows up on. 689 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -858,6 +858,7 @@ you are actually typing into, which is easier than reading it here.
 | --- | --- |
 | `A second action for the same artwork, for a hand that is not looking. With this on, a single tap waits a moment to see whether a second one is coming.` |  |
 | `Always previous track` | A value of `Previous button`: never restarts, always goes back a song |
+| `Animated cover background` | When the cover art is animated (GIF, animated WebP), use it as the fullscreen player background instead of playing it inside the square. The shrunk static copy sits beside the title |
 | `Background` | Section header over what is drawn behind the player. Its two values are `Plain` and `Blurred cover` |
 | `Blurred cover` | A value of `Background`: the album art, blurred, behind the player |
 | `Buttons` | Which player buttons to show |
@@ -917,6 +918,7 @@ you are actually typing into, which is easier than reading it here.
 | `What fills the space behind the player.` | The line under “Player background”, explaining it |
 | `What tapping the cover art in the player does.` | The line under “On cover tap”, explaining it |
 | `What the previous button does partway through a song.` | The line under “Previous button”, explaining it |
+| `When the cover art is animated (GIF, animated WebP), use it as the fullscreen player background instead of playing it inside the square. The shrunk static copy sits beside the title` |  |
 | `Where to get lyrics from. Online search uses LRCLIB (sends the artist and title).` |  |
 
 ## Settings › Quick grid

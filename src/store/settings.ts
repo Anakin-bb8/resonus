@@ -745,6 +745,12 @@ interface SettingsState {
   /** Player background: flat, cover color, or blurred cover art. */
   playerBackground: ScreenBackground;
   /**
+   * When the cover art is animated (GIF, animated WebP, APNG), use it as
+   * the fullscreen player background and show a small static copy beside
+   * the title. Off by default: the cover plays inside the square as before.
+   */
+  animatedCoverBackground: boolean;
+  /**
    * Show non-square artwork whole in the player instead of cropping it to a
    * square. Off by default: cropping is what it has always done, and every
    * other place in the app (lists, cards, grids) keeps cropping regardless.
@@ -917,6 +923,7 @@ interface SettingsState {
   setShowGenreChips: (value: boolean) => void;
   setBatteryWarning: (value: boolean) => void;
   setPlayerBackground: (value: ScreenBackground) => void;
+  setAnimatedCoverBackground: (value: boolean) => void;
   setFitCoverArt: (value: boolean) => void;
   setMiniPlayerColorBackground: (value: boolean) => void;
   setShowLyricsCard: (value: boolean) => void;
@@ -1042,6 +1049,7 @@ function snapshot(get: () => SettingsState) {
     showGenreChips: s.showGenreChips,
     batteryWarning: s.batteryWarning,
     playerBackground: s.playerBackground,
+    animatedCoverBackground: s.animatedCoverBackground,
     fitCoverArt: s.fitCoverArt,
     miniPlayerColorBackground: s.miniPlayerColorBackground,
     showLyricsCard: s.showLyricsCard,
@@ -1144,6 +1152,7 @@ const DEFAULTS = {
   showGenreChips: false,
   batteryWarning: true,
   playerBackground: 'cover' as ScreenBackground,
+  animatedCoverBackground: false,
   fitCoverArt: false,
   miniPlayerColorBackground: true,
   // Off by default: the card pushes the controls up on shorter screens, and
@@ -1461,6 +1470,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
 
   setPlayerBackground: (playerBackground) => {
     set({ playerBackground });
+    persist(snapshot(get));
+  },
+
+  setAnimatedCoverBackground: (animatedCoverBackground) => {
+    set({ animatedCoverBackground });
     persist(snapshot(get));
   },
 
@@ -1803,6 +1817,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           showGenreChips: boolean;
           batteryWarning: boolean;
           playerBackground: ScreenBackground;
+          animatedCoverBackground?: boolean;
           fitCoverArt: boolean;
           playerColorBackground: boolean;
           miniPlayerColorBackground: boolean;
@@ -2043,6 +2058,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (typeof parsed.miniPlayerColorBackground === 'boolean') {
           set({ miniPlayerColorBackground: parsed.miniPlayerColorBackground });
+        }
+        if (typeof parsed.animatedCoverBackground === 'boolean') {
+          set({ animatedCoverBackground: parsed.animatedCoverBackground });
         }
         if (typeof parsed.showLyricsCard === 'boolean') {
           set({ showLyricsCard: parsed.showLyricsCard });
