@@ -132,7 +132,7 @@ export default function PlayerSettings() {
             {
               label: t('Animated cover background'),
               description: t(
-                'When the cover art is animated (GIF, animated WebP), use it as the fullscreen player background instead of playing it inside the square. The shrunk static copy sits beside the title',
+                'An animated cover fills the player behind the controls, with a still copy of it beside the title.',
               ),
               value: animatedCoverBackground,
               onChange: setAnimatedCoverBackground,

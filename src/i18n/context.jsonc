@@ -585,7 +585,7 @@
     "Always previous track": "A value of `Previous button`: never restarts, always goes back a song",
     "No": "A setting value meaning none or zero, not the answer to a question: no crossfade, no seek buttons",
     "Fit cover art": "Show the whole cover even if it is not square, instead of cropping it to fill",
-    "Animated cover background": "When the cover art is animated (GIF, animated WebP), use it as the fullscreen player background instead of playing it inside the square. The shrunk static copy sits beside the title",
+    "Animated cover background": "A setting: an animated cover (GIF, animated WebP) is shown full screen behind the player instead of inside the square",
     "Scroll long titles": "A title too long to fit slides sideways, over and over, instead of being cut off",
     "Swap favorite and menu": "Exchange the places of those two buttons in the player, for whichever hand you hold the phone in",
 
