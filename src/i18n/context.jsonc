@@ -113,7 +113,6 @@
     "Custom greeting": "A greeting of your own, replacing Home's \"Good morning\" line",
     "Quick grid": "The grid of shortcut tiles on Home",
     "Home chips": "The row of tappable category chips",
-    "Song menu": "The three-dot menu on a song, drawn as ⋮ in a list and ⋯ in a header. A setting picks which actions it shows",
     "Song lists": "The setting for how song lists look",
     "Show explicit tag": "A switch: whether to draw the E on anything carrying a parental advisory. \"Explicit\" here is the music-industry label for strong language, not \"clear\" or \"stated outright\"",
     "Home sections": "Reorder which sections appear on Home",

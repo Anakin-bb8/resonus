@@ -54,11 +54,6 @@ function settingsKey(): string {
   return `${STORAGE_KEY}.${hashKey(profileScopeId())}`;
 }
 
-/** Marker for the one-off «Rating» migration (see `hydrate`), per profile too. */
-function ratingShownKey(): string {
-  return `${STORAGE_KEY}.ratingShown.${hashKey(profileScopeId())}`;
-}
-
 /**
  * 0 = original quality (no transcoding); the rest is bitrate in kbps.
  *
@@ -555,98 +550,6 @@ function normalizeHomeChips(raw: unknown): HomeChip[] {
   return out;
 }
 
-/**
- * Hideable actions from the song ⋯ menu.
- *
- * «Remove from playlist» is not included: it only appears inside a playlist, so
- * it never gets in the way elsewhere, and it's the only way to remove a single
- * song from the menu. The criterion is not "essential" but "gets in the way
- * somewhere": the rest also have another path (the heart on rows and the
- * player, the cover and card for lyrics, multi-select for download and adding
- * to a list).
- *
- * Except `sleepTimer`, which only lives here: hiding it leaves the timer
- * inaccessible until re-enabled. This is a deliberate choice, not an oversight —
- * the app already allows disabling unique paths (swipe gesture, cover tap). If
- * it ever becomes an issue, the right fix is giving it a second location (the
- * player ⋯), not removing the toggle.
- */
-export type SongMenuActionKey =
-  | 'playlist'
-  | 'artist'
-  | 'album'
-  | 'lyrics'
-  | 'mix'
-  | 'playNext'
-  | 'queue'
-  | 'favorite'
-  | 'rating'
-  | 'download'
-  | 'export'
-  | 'share'
-  | 'sleepTimer'
-  | 'info';
-
-/**
- * Visibility of each action. Map instead of list (unlike chips and Home
- * sections) on purpose: order cannot be changed here, so storing it would imply
- * otherwise.
- */
-export type SongMenuActions = Record<SongMenuActionKey, boolean>;
-
-const SONG_MENU_ACTION_KEYS: SongMenuActionKey[] = [
-  'playlist',
-  'artist',
-  'album',
-  'lyrics',
-  'mix',
-  'playNext',
-  'queue',
-  'favorite',
-  'rating',
-  'download',
-  'export',
-  'share',
-  'sleepTimer',
-  'info',
-];
-
-/**
- * Everything visible. «Rating» used to start hidden, but rating is also off by
- * default in the player, so there was no way to rate a song without first
- * digging a toggle out of Settings — and it was the only action in the menu
- * that started hidden.
- */
-export const DEFAULT_SONG_MENU_ACTIONS: SongMenuActions = {
-  playlist: true,
-  artist: true,
-  album: true,
-  lyrics: true,
-  mix: true,
-  playNext: true,
-  queue: true,
-  favorite: true,
-  rating: true,
-  download: true,
-  export: true,
-  share: true,
-  sleepTimer: true,
-  info: true,
-};
-
-/**
- * Sanitizes saved data: only accepts booleans for known keys. Anything missing
- * (e.g. a new action) stays visible, which is the default.
- */
-function normalizeSongMenuActions(raw: unknown): SongMenuActions {
-  const out = { ...DEFAULT_SONG_MENU_ACTIONS };
-  if (!raw || typeof raw !== 'object') return out;
-  const obj = raw as Record<string, unknown>;
-  for (const key of SONG_MENU_ACTION_KEYS) {
-    if (typeof obj[key] === 'boolean') out[key] = obj[key];
-  }
-  return out;
-}
 
 /** Display name for each font (proper names: not translated). */
 export const APP_FONT_LABELS: Record<AppFont, string> = {
@@ -909,8 +812,6 @@ interface SettingsState {
   bottomTabs: BottomTab[];
   /** Whether those chips carry their icon, or are their name and nothing else. */
   homeChipIcons: boolean;
-  /** Which actions are visible in the song ⋯ menu. */
-  songMenuActions: SongMenuActions;
   /** "Folders" section in the Library (directory browsing; Subsonic). */
   showFolderBrowser: boolean;
   /** The buttons at the top right of Home, in order (each with its state).
@@ -1049,7 +950,6 @@ interface SettingsState {
   /** Replace the full list (for reordering). */
   setBottomTabs: (tabs: BottomTab[]) => void;
   setHomeChipIcons: (value: boolean) => void;
-  setSongMenuAction: (key: SongMenuActionKey, value: boolean) => void;
   setShowFolderBrowser: (value: boolean) => void;
   setHomeButton: (key: HomeButtonKey, value: boolean) => void;
   /** Replace the full list (for reordering). */
@@ -1168,7 +1068,6 @@ function snapshot(get: () => SettingsState) {
     homeChips: s.homeChips,
     bottomTabs: s.bottomTabs,
     homeChipIcons: s.homeChipIcons,
-    songMenuActions: s.songMenuActions,
     showFolderBrowser: s.showFolderBrowser,
     homeButtons: s.homeButtons,
     defaultTab: s.defaultTab,
@@ -1278,7 +1177,6 @@ const DEFAULTS = {
   homeChips: DEFAULT_HOME_CHIPS.map((c) => ({ ...c })),
   bottomTabs: DEFAULT_BOTTOM_TABS.map((t) => ({ ...t })),
   homeChipIcons: true,
-  songMenuActions: { ...DEFAULT_SONG_MENU_ACTIONS },
   showFolderBrowser: false,
   homeButtons: DEFAULT_HOME_BUTTONS.map((b) => ({ ...b })),
   defaultTab: 'index' as DefaultTab,
@@ -1690,11 +1588,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
-  setSongMenuAction: (key, value) => {
-    set((s) => ({ songMenuActions: { ...s.songMenuActions, [key]: value } }));
-    persist(snapshot(get));
-  },
-
   setBottomTab: (key, value) => {
     // Home's switch is not drawn, but a saved file could still say otherwise.
     if (key === 'index') return;
@@ -1851,8 +1744,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
       // default values for the whole read, and anything saved in that window
       // wrote those defaults over the real ones.
       const raw = (await getItem(key)) ?? (await getItem(STORAGE_KEY));
-      // Read here, with `raw`, so nothing is awaited once the store is claimed.
-      const ratingShown = await getItem(ratingShownKey());
       // A newer hydration started while we were reading (profile switch, or
       // the saved session arriving on startup): it owns the store now, and
       // applying this would restore the wrong profile's settings.
@@ -1946,7 +1837,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
           homeChips: unknown;
           bottomTabs: unknown;
           homeChipIcons: boolean;
-          songMenuActions: unknown;
           showFolderBrowser: boolean;
           homeButtons: unknown;
           /** Old setting (boolean); migrated to `homeButtons`. */
@@ -2242,9 +2132,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
         if (typeof parsed.customGreeting === 'string') {
           set({ customGreeting: parsed.customGreeting.slice(0, GREETING_MAX) });
         }
-        if (parsed.songMenuActions) {
-          set({ songMenuActions: normalizeSongMenuActions(parsed.songMenuActions) });
-        }
         // Two older names are still read here, and this is the whole of the
         // rename's cost. The row used to be called the Explore chips, one word
         // away from the Explore tab and meaning something else entirely; a
@@ -2362,18 +2249,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (parsed.appFont && parsed.appFont in APP_FONT_FAMILY) {
           set({ appFont: parsed.appFont });
-        }
-      }
-      // One-off: «Rating» used to start hidden in the song ⋯ menu, so every
-      // profile saved before this carries an explicit `false` that was never a
-      // decision — just the old default. Turn it on once and save it. The
-      // marker is what makes hiding it again from Settings stick, instead of
-      // it coming back on every launch.
-      if (!ratingShown) {
-        void setItem(ratingShownKey(), '1');
-        if (!get().songMenuActions.rating) {
-          set((s) => ({ songMenuActions: { ...s.songMenuActions, rating: true } }));
-          persist(snapshot(get));
         }
       }
       // Language: global (not per profile). If not yet saved separately, it is

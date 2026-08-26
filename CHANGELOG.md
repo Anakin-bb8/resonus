@@ -24,6 +24,7 @@ Releases before 0.2.1 are only listed on the
 
 ### Removed
 
+- The setting that picked which actions a song's ⋯ menu shows: every action is back in it, and each one is still only there when it applies.
 - The avatar on Home, and the setting that showed it: it was never a button, and the account is one tap away behind the gear beside it.
 
 ### Changed

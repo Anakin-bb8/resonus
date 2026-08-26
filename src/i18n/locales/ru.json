@@ -467,8 +467,6 @@
   "Mix started": "Начат новый микс",
   "Couldn't find anything to mix with this song": "Не удалось найти подходящих композиций для микса",
   "Show, hide and reorder the chips at the top of Home.": "Изменить видимость или порядок кнопок в самом верху домашнего экрана.",
-  "Song menu": "Меню композиции",
-  "Choose which actions show in a song's ⋯ menu.": "Выбрать доступные действия в меню по кнопке ⋯.",
   "Stop the mix": "Остановить микс",
   "The mix won't grow any further": "Микс достиг лимита",
   "Keep playing similar songs when your queue ends. A mix you start yourself always does, even with this off.": "Автоматически начать проигрывать похожие композиции по окончанию очереди. Миксы, запущенные Вами самостоятельно, всегда продолжаются автоматически, даже если эта опция выключена.",
