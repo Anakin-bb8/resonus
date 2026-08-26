@@ -32,6 +32,7 @@ Releases before 0.2.1 are only listed on the
 - The library tab is now called "Your library", at the bottom of the screen and at the top of the tab itself.
 - The row of chips on Home is now called "Home chips" and not "Explore chips", which named the Explore tab it has nothing to do with; the order you put them in survives the rename.
 - Albums and artists start as rows rather than as a grid, in Explore and anywhere else they are browsed, and the view button still switches them.
+- "Your library" is the last tab at the bottom rather than the third, behind Explore, and it can still be dragged anywhere from Settings > Appearance > Navigation bar.
 - Browsing all albums, all artists and all songs picks its order from a menu that says which one is on, instead of a scrolling row of pills, and the albums and the songs gained play and shuffle beside it.
 - A genre card now says how many albums it holds and fans out the covers of its first two, in Search and in the genres screen alike.
 - The album and year line in the player scrolls when it does not fit, so a long album name no longer keeps the year off the screen (#183).

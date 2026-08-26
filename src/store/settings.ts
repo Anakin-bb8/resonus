@@ -443,12 +443,19 @@ export interface BottomTab {
 
 const BOTTOM_TAB_KEYS: TabSegment[] = ['index', 'search', 'library', 'explore'];
 
-/** In the order they shipped, all of them on. */
+/**
+ * The order they start in, all of them on.
+ *
+ * "Your library" goes last, behind Explore. It used to sit third, from when it
+ * was the only way to a playlist; Explore now holds those as well as the rest
+ * of the catalogue, so it is the one being reached for, and what is left over
+ * there is the smaller, more personal half.
+ */
 export const DEFAULT_BOTTOM_TABS: BottomTab[] = [
   { key: 'index', enabled: true },
   { key: 'search', enabled: true },
-  { key: 'library', enabled: true },
   { key: 'explore', enabled: true },
+  { key: 'library', enabled: true },
 ];
 
 /** The same sanitising the chips get, plus Home's exemption. */
