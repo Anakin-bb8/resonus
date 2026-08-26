@@ -2467,8 +2467,12 @@ function onStatus(status: AudioStatus) {
   maybeScrobbleThreshold(positionSec);
   maybeDetectStall(intendPlay, buffering, positionSec);
   // Queue sync with the server.
-  if (status.playing) startPeriodicSync();
-  else {
+  if (status.playing) {
+    // Something is actually coming out of the speaker: from here on this
+    // device has an opinion worth sending (see `playedHere`).
+    markPlayedHere();
+    startPeriodicSync();
+  } else {
     stopPeriodicSync();
     if (prev.isPlaying) scheduleSync(); // just paused
   }
@@ -2730,6 +2734,8 @@ async function adoptNewerServerQueue(): Promise<void> {
     return;
   }
   if (!saved || saved.entries.length === 0) return;
+  // Same answer the push guard asks for, already paid for here.
+  lastOwnerCheck = { at: Date.now(), theirs: !!saved.changedBy && saved.changedBy !== CLIENT_NAME };
   if (!saved.changedBy || saved.changedBy === CLIENT_NAME) return;
   // A server that does not date its queue cannot be shown to be newer, and
   // guessing here is how somebody loses what they were listening to.
@@ -2746,6 +2752,69 @@ let syncTimer: ReturnType<typeof setTimeout> | null = null;
 let syncInterval: ReturnType<typeof setInterval> | null = null;
 let appStateAttached = false;
 
+/**
+ * Whether anything has actually been listened to here since this queue arrived.
+ *
+ * A queue that came off the disk or off the server and has not been played is
+ * not this device's opinion about anything, and pushing it says otherwise. The
+ * plainest way to see why that matters: open the app, let it restore what you
+ * were on yesterday, do not press play, leave. That used to write yesterday's
+ * queue over whatever another player had left there since (#188).
+ */
+let playedHere = false;
+
+/** Called when a track actually starts on this device. */
+function markPlayedHere(): void {
+  playedHere = true;
+}
+
+/** And when the queue is somebody else's word rather than ours. */
+function clearPlayedHere(): void {
+  playedHere = false;
+}
+
+let lastOwnerCheck = { at: 0, theirs: false };
+
+/** A push of our own makes this device the last writer, which is the same
+ *  answer the check below would come back with, one request later. */
+function markWeOwnServerQueue(): void {
+  lastOwnerCheck = { at: Date.now(), theirs: false };
+}
+
+/** How long that answer is worth reusing. Pausing and then leaving the app is
+ *  two pushes moments apart, and this asks for the whole queue's worth of JSON. */
+const OWNER_CHECK_TTL = 10_000;
+
+/**
+ * Is the copy on the server somebody else's latest word?
+ *
+ * Asked before a push that is not backed by playback. Subsonic has no
+ * conditional save (no if-match, no revision), so the only way not to trample
+ * a newer queue is to look first. `changedBy` alone answers it: if the last
+ * client to write was not this one, then whoever it was spoke after us, and a
+ * paused queue here has no business overruling that.
+ *
+ * A server that sends no `changedBy` can never be shown to belong to somebody
+ * else, and then this says no and the push goes ahead, which is the behaviour
+ * every version before this one had.
+ */
+async function serverQueueIsSomeoneElses(auth: SubsonicAuth): Promise<boolean> {
+  if (Date.now() - lastOwnerCheck.at < OWNER_CHECK_TTL) return lastOwnerCheck.theirs;
+  let theirs = false;
+  try {
+    const saved = await getPlayQueue(auth);
+    theirs = !!saved && saved.entries.length > 0 && !!saved.changedBy && saved.changedBy !== CLIENT_NAME;
+  } catch {
+    // Unreachable, timed out, or a server with no getPlayQueue at all: not an
+    // answer, and refusing to push on a failed request would quietly stop the
+    // queue syncing for those servers. Not cached either, so the next push
+    // asks again rather than inheriting a guess.
+    return false;
+  }
+  lastOwnerCheck = { at: Date.now(), theirs };
+  return theirs;
+}
+
 /** Saves the queue on this device and, if there is a session, on the server. */
 function syncQueueNow(force = false, syncRemote = true) {
   saveQueueLocal(force);
@@ -2754,12 +2823,33 @@ function syncQueueNow(force = false, syncRemote = true) {
   // none. Without this the queue was pushed every twenty seconds and on every
   // trip to the background, which is a phone using data its owner said not to.
   const { auth, offline } = useAuthStore.getState();
-  const { queue, index, positionSec } = usePlayerStore.getState();
+  const { queue, index, positionSec, isPlaying } = usePlayerStore.getState();
   const current = queue[index];
   if (auth && !offline && current && !current.url && !current.localUri) {
     const ids = queue.filter((s) => !s.url && !s.localUri).map((s) => s.id);
     if (ids.length > 0) {
-      void savePlayQueue(auth, ids, current.id, Math.floor(positionSec * 1000));
+      const positionMs = Math.floor(positionSec * 1000);
+      if (isPlaying) {
+        // Sounding here: this queue is the newest one there is by definition,
+        // and the twenty-second tick must not turn into two requests. Marked
+        // from the store's own state and not only from the native status, so
+        // that a queue playing on a speaker counts the same as one playing on
+        // the phone: the native player is silent during a cast.
+        markPlayedHere();
+        markWeOwnServerQueue();
+        void savePlayQueue(auth, ids, current.id, positionMs);
+      } else if (playedHere) {
+        // Paused, or on the way to the background. One look before writing.
+        void (async () => {
+          if (await serverQueueIsSomeoneElses(auth)) return;
+          // Playback may have resumed while the server answered, and then the
+          // ids and the second gathered above are already out of date; the
+          // tick that comes with playing will push the current ones.
+          if (usePlayerStore.getState().isPlaying) return;
+          markWeOwnServerQueue();
+          await savePlayQueue(auth, ids, current.id, positionMs);
+        })();
+      }
     }
   }
   if (syncRemote && remoteKind() === 'upnp') {
@@ -3889,6 +3979,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     // queue — unless overriding it is the whole request.
     if (!replace && get().queue.length > 0) return false;
     attachAppState();
+    // This queue is the server's word and not this device's, so it is not
+    // pushed back until something is actually played from it (see
+    // `playedHere`). Otherwise adopting a queue and putting the phone away
+    // wrote it straight back, stamped with our name.
+    clearPlayedHere();
     set({
       queue: songs,
       index,
@@ -4023,6 +4118,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
   reset: async (forProfile = false) => {
     get().cancelSleepTimer();
+    clearPlayedHere();
     autoplayFetchedFor = null;
     autoplayRound = null;
     artistFill = null;

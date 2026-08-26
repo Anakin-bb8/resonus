@@ -31,6 +31,7 @@ Releases before 0.2.1 are only listed on the
 - Every sheet rises with the same rounded top; half of them used to be less rounded than the other half.
 - The library tab is now called "Your library", at the bottom of the screen and at the top of the tab itself.
 - The row of chips on Home is now called "Home chips" and not "Explore chips", which named the Explore tab it has nothing to do with; the order you put them in survives the rename.
+- "Pick up the queue from other players" starts on, so a queue left on another device is taken as well as sent; it was only ever sent before (#188).
 - Albums and artists start as rows rather than as a grid, in Explore and anywhere else they are browsed, and the view button still switches them.
 - "Your library" is the last tab at the bottom rather than the third, behind Explore, and it can still be dragged anywhere from Settings > Appearance > Navigation bar.
 - Browsing all albums, all artists and all songs picks its order from a menu that says which one is on, instead of a scrolling row of pills, and the albums and the songs gained play and shuffle beside it.
@@ -47,6 +48,7 @@ Releases before 0.2.1 are only listed on the
 - Opening Your library for the first time no longer draws it under the status bar for an instant before dropping it into place.
 - "New releases" shows the newest records instead of a slice of the alphabet: the list goes by the day each record came out, and by when it reached the server for those tagged with a year and nothing more.
 - Offline mode no longer looks for a new version of Resonus by itself, since asking GitHub is still using the network somebody said not to use (#179).
+- The queue Resonus saves on the server no longer overwrites a newer one another player left there, and a queue that has only been restored, never played, is not sent at all (#188).
 
 ## [0.7.5] - 2026-08-24
 

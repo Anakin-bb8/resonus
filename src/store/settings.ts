@@ -1307,7 +1307,14 @@ const DEFAULTS = {
   shareExpiry: 'never' as ShareExpiry,
   // Off: the server has its own default for this and nothing was overriding it.
   shareDownloadable: false,
-  syncQueueFromServer: false,
+  // On. The queue is pushed to the server whether this is on or off (that is
+  // what lets any client, this one included, pick up where you left off), so
+  // leaving the reading half off by default made the app a writer that never
+  // listened: it would overwrite what another player left and never take it
+  // (#188). Adopting is the conservative half of the pair anyway, since it only
+  // happens with nothing playing here and only for a queue another client
+  // wrote later.
+  syncQueueFromServer: true,
   accentColor: DEFAULT_ACCENT,
   accentColorLight: DEFAULT_ACCENT,
   // Dark: the appearance the app was designed in. Light is opt-in.
