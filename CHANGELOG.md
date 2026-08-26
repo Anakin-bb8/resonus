@@ -9,6 +9,8 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.7.6] - 2026-08-26
+
 ### Added
 
 - The row playing in a list shows a set of bars that move while it plays and settle when you pause it.
@@ -16,12 +18,14 @@ Releases before 0.2.1 are only listed on the
 - Holding a playlist on the Home shelf opens the same menu the library gives it (#182).
 - The tabs at the bottom can be reordered, and all but Home hidden, from Settings > Appearance > Navigation bar.
 - A fourth tab, Explore, holds everything the server has: all albums, all artists, all songs, the genres, the radio stations and the folders, each with its own search and orders.
-- A search button on Home, beside the gear, opens the search box with the cursor already in it.
+- Italian is complete again, and Explicit, Clean and Lyrics read as Italian instead of English, thanks to @Anakin-bb8 (#189).
+- On iOS the app wears an icon of its own, also from @Anakin-bb8 (#189).
 - Playlists are the first section of Explore, with their own search, order and rows-or-cards button, so the server's public ones are reachable from the tab that holds its catalogue.
-- The icons at the top of Home can be reordered, and all but the gear hidden, from Settings > Appearance > Home buttons.
+- The icons at the top of Home can be reordered, and all but the gear hidden, from Settings > Appearance > Home buttons. There is a new one among them, a search button that opens the box with the cursor already in it; it starts off, since searching already has a tab of its own.
 
 ### Removed
 
+- The setting that picked which actions a song's ⋯ menu shows: every action is back in it, and each one is still only there when it applies.
 - The avatar on Home, and the setting that showed it: it was never a button, and the account is one tap away behind the gear beside it.
 
 ### Changed
@@ -38,7 +42,7 @@ Releases before 0.2.1 are only listed on the
 - A genre card now says how many albums it holds and fans out the covers of its first two, in Search and in the genres screen alike.
 - The album and year line in the player scrolls when it does not fit, so a long album name no longer keeps the year off the screen (#183).
 - Folders moved out of Your library and into the new Explore tab, which is where the rest of the server's own catalogue now lives.
-- Settings > Personalization > "Open the app on" can pick the new tab.
+- Settings > Appearance > "Open the app on" can pick the new tab.
 
 ### Fixed
 

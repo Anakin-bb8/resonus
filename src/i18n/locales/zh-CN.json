@@ -506,8 +506,6 @@
   "Mix started": "已开始混合播放",
   "Couldn't find anything to mix with this song": "找不到可与这首歌曲混合播放的相似内容",
   "Show, hide and reorder the chips at the top of Home.": "显示、隐藏或重新排列首页顶部的探索标签。",
-  "Song menu": "歌曲菜单",
-  "Choose which actions show in a song's ⋯ menu.": "选择歌曲 ⋯ 菜单中显示的操作。",
   "Stop the mix": "停止混合播放",
   "The mix won't grow any further": "混合播放不会再继续添加歌曲",
   "Keep playing similar songs when your queue ends. A mix you start yourself always does, even with this off.": "播放队列结束后继续播放相似歌曲。你手动开始的混合播放始终会继续，即使此选项关闭。",

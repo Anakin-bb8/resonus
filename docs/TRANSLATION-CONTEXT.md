@@ -769,7 +769,6 @@ you are actually typing into, which is easier than reading it here.
 | `Appearance` |  |
 | `Artwork, duration, rating and the rest of what a song shows in a list.` | The line under “Song lists”, explaining it |
 | `Browse your library by folders, in the Explore tab (Subsonic servers).` |  |
-| `Choose which actions show in a song's ⋯ menu.` | The line under “Song menu”, explaining it |
 | `Dark or light, and the accent color` | The line under “Theme”, explaining it |
 | `Explore` | The tab holding everything the server has: all albums, artists, songs, genres, stations and folders |
 | `Folder browsing` | Browsing the server's folders as folders, instead of by album and artist |
@@ -794,7 +793,6 @@ you are actually typing into, which is easier than reading it here.
 | `Show, hide and reorder the chips at the top of Home.` | The line under “Home chips”, explaining it |
 | `Show, personalize and size the shortcut cards on Home.` | The line under “Quick grid”, explaining it |
 | `Song lists` | The setting for how song lists look |
-| `Song menu` | The three-dot menu on a song, drawn as ⋮ in a list and ⋯ in a header. A setting picks which actions it shows |
 | `Subtle vibration on key actions.` | The line under “Haptic feedback”, explaining it |
 | `Swipe left` | What dragging a song to the left in a list does |
 | `Swipe right` | What dragging a song to the right in a list does. Its values are the actions listed under it |
@@ -970,12 +968,6 @@ you are actually typing into, which is easier than reading it here.
 | `Show the album's genres as chips; tap one to browse it.` | The line under “Show genres”, explaining it |
 | `Show the playlist description under its name.` | The line under `Show playlist description`. The description is the text whoever made the playlist wrote about it |
 | `Song lists` | The setting for how song lists look |
-
-## Settings › Song menu
-
-| String | What it is |
-| --- | --- |
-| `Song menu` | The three-dot menu on a song, drawn as ⋮ in a list and ⋯ in a header. A setting picks which actions it shows |
 
 ## Settings › Theme
 

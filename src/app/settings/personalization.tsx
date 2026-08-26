@@ -203,12 +203,6 @@ export default function AppearanceSettings() {
           value={swipeLeftAction}
           onChange={setSwipeLeftAction}
         />
-        <SettingRow
-          label={t('Song menu')}
-          description={t("Choose which actions show in a song's ⋯ menu.")}
-          chevron
-          onPress={() => router.push('/settings/song-menu')}
-        />
         <SwitchList
           options={[
             {
