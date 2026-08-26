@@ -498,9 +498,15 @@ export interface HomeButton {
 
 const HOME_BUTTON_KEYS: HomeButtonKey[] = ['search', 'history', 'settings'];
 
-/** Left to right as they shipped, all of them on. */
+/**
+ * Left to right as they shipped.
+ *
+ * Search starts off. Searching already has a tab of its own at the bottom, and
+ * a second way in at the top of Home is a duplicate for most people; it is
+ * there for whoever takes that tab off the bar, or just prefers it up here.
+ */
 export const DEFAULT_HOME_BUTTONS: HomeButton[] = [
-  { key: 'search', enabled: true },
+  { key: 'search', enabled: false },
   { key: 'history', enabled: true },
   { key: 'settings', enabled: true },
 ];

@@ -16,7 +16,7 @@ Releases before 0.2.1 are only listed on the
 - Holding a playlist on the Home shelf opens the same menu the library gives it (#182).
 - The tabs at the bottom can be reordered, and all but Home hidden, from Settings > Appearance > Navigation bar.
 - A fourth tab, Explore, holds everything the server has: all albums, all artists, all songs, the genres, the radio stations and the folders, each with its own search and orders.
-- A search button on Home, beside the gear, opens the search box with the cursor already in it.
+- A search button for the top of Home, which opens the search box with the cursor already in it. It starts off, in Settings > Appearance > Home buttons, since searching already has a tab of its own.
 - Italian is complete again, and Explicit, Clean and Lyrics read as Italian instead of English, thanks to @Anakin-bb8 (#189).
 - On iOS the app wears an icon of its own, also from @Anakin-bb8 (#189).
 - Playlists are the first section of Explore, with their own search, order and rows-or-cards button, so the server's public ones are reachable from the tab that holds its catalogue.
