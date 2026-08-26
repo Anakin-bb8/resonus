@@ -34,6 +34,7 @@ import { SongsBrowser } from '@/app/browse/songs';
 import { GenresBrowser } from '@/app/genres';
 import { RadioBrowser } from '@/app/radio';
 import { FoldersBrowser } from '@/components/FoldersBrowser';
+import { PlaylistsBrowser } from '@/components/PlaylistsBrowser';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { useAccent } from '@/hooks/useAccent';
 import { useT } from '@/i18n';
@@ -41,10 +42,11 @@ import { useAuthStore } from '@/store/auth';
 import { useSettings, type ListLayout } from '@/store/settings';
 import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 
-type Section = 'albums' | 'artists' | 'songs' | 'genres' | 'radio' | 'folders';
+type Section = 'playlists' | 'albums' | 'artists' | 'songs' | 'genres' | 'radio' | 'folders';
 
 /** In the order they are worth reaching for, and the label each goes by. */
 const SECTIONS: { key: Section; label: string }[] = [
+  { key: 'playlists', label: 'Playlists' },
   { key: 'albums', label: 'Albums' },
   { key: 'artists', label: 'Artists' },
   { key: 'songs', label: 'Songs' },
@@ -93,6 +95,10 @@ export default function ExploreScreen() {
         return subsonic && !offline;
       case 'folders':
         return subsonic && !offline && showFolderBrowser;
+      case 'playlists':
+        // Jellyfin answers for them too, and offline the mirror does; it is
+        // the one server-side section the local profile has nothing for.
+        return !!auth || offline;
       default:
         return true;
     }
@@ -104,8 +110,9 @@ export default function ExploreScreen() {
   /**
    * The section's own button, drawn here and acting down there.
    *
-   * Genres and folders have none: one is a grid with nothing to choose about
-   * it and the other is a handful of server roots.
+   * Playlists, genres and folders have none: one is a short list read from the
+   * top, one is a grid with nothing to choose about it, and the last is a
+   * handful of server roots.
    */
   const headerButton =
     current === 'radio'
@@ -174,10 +181,12 @@ export default function ExploreScreen() {
 
       {/* Only the section on screen is mounted, so nothing else is asking the
           server while you are not looking at it. The cost is that coming back
-          to one starts it at the top; the alternative is six lists all live at
+          to one starts it at the top; the alternative is every list live at
           once, which on a big library is what the app spent #50 undoing. */}
       <View style={styles.body}>
-        {current === 'albums' ? (
+        {current === 'playlists' ? (
+          <PlaylistsBrowser />
+        ) : current === 'albums' ? (
           <AlbumsBrowser embedded actionRef={sectionAction} />
         ) : current === 'artists' ? (
           <ArtistsBrowser embedded actionRef={sectionAction} />

@@ -17,6 +17,7 @@ Releases before 0.2.1 are only listed on the
 - The tabs at the bottom can be reordered, and all but Home hidden, from Settings > Appearance > Navigation bar.
 - A fourth tab, Explore, holds everything the server has: all albums, all artists, all songs, the genres, the radio stations and the folders, each with its own search and orders.
 - A search button on Home, beside the gear, opens the search box with the cursor already in it.
+- Playlists are the first section of Explore, with their own search, so the server's public ones are reachable from the tab that holds its catalogue.
 - The icons at the top of Home can be reordered, and all but the gear hidden, from Settings > Appearance > Home buttons.
 
 ### Removed

@@ -694,6 +694,7 @@
     // ── Browsing songs (Home › the Songs chip) ───────────────────────────────
     "Songs": "Always a heading, never a count, so it wants the plain plural your language uses for a list of them (\"Songs\", not \"of songs\"). Counting songs is a different thing and goes through the plural forms",
     "Default": "Sorting pill: what you get when nothing is sorted, which is the order the server keeps its songs in. Not alphabetical, and not Resonus deciding. On a playlist it is the order the list came in, which is the one you made by dragging the songs if it is an ordinary playlist and the one its rules produced if it is a smart one — hence a word that is true of both rather than \"custom\" or \"pre-defined\"",
+    "Find a playlist": "The search box's placeholder on that screen",
     "Find a song": "The search box's placeholder on that screen",
     "No songs yet": "Empty state when the library has no songs",
     "Your recently played songs will show up here.": "Empty state, before anything has been played",
