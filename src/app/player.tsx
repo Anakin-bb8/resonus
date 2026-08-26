@@ -823,6 +823,7 @@ export default function PlayerScreen() {
               contentFit="cover"
               blurRadius={60}
               transition={BACKDROP_FADE}
+              autoplay={false}
               onDisplay={() => {
                 backdrop.onDisplay();
                 backdropSource.onDisplay();
@@ -995,6 +996,7 @@ export default function PlayerScreen() {
                         size={coverSize}
                         contentFit={fitCoverArt ? 'contain' : 'cover'}
                         transition={0}
+                        autoplay={rel === 0}
                         placeholderIcon={paneSong.url ? 'radio' : 'musical-notes'}
                       />
                     ) : null}
