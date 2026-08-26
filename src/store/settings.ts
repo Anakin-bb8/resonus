@@ -155,6 +155,7 @@ export type GridKey =
   | 'library'
   | 'browseArtists'
   | 'browseAlbums'
+  | 'browsePlaylists'
   | 'browseSongs'
   | 'discography'
   | 'genre';
@@ -176,6 +177,7 @@ export const GRID_DEFAULT_COLUMNS: Record<GridKey, number> = {
   library: 3,
   browseArtists: 3,
   browseAlbums: 2,
+  browsePlaylists: 2,
   browseSongs: 2,
   discography: 2,
   genre: 2,
@@ -916,6 +918,12 @@ interface SettingsState {
   browseArtistsLayout: ListLayout;
   /** List or grid when browsing albums. Separate for the same reason as above. */
   browseAlbumsLayout: ListLayout;
+  /** List or grid, and the order, for the playlists section of Explore. Their
+   *  own keys and not `libraryLayout`/`librarySort`: that pair belongs to
+   *  "Your library", and one list rearranging the other on a button press is
+   *  what the split above exists to avoid. */
+  browsePlaylistsLayout: ListLayout;
+  browsePlaylistsSort: LibrarySort;
   /** List or grid when browsing songs. Its own key, same reasoning. */
   browseSongsLayout: ListLayout;
   /** List or grid in an artist's full discography. Its own key, again for the
@@ -1035,6 +1043,8 @@ interface SettingsState {
   setHomeButtons: (buttons: HomeButton[]) => void;
   setDefaultTab: (value: DefaultTab) => void;
   setLibrarySort: (value: LibrarySort) => void;
+  setBrowsePlaylistsLayout: (value: ListLayout) => void;
+  setBrowsePlaylistsSort: (value: LibrarySort) => void;
   setLibraryLayout: (value: ListLayout) => void;
   setBrowseArtistsLayout: (value: ListLayout) => void;
   setBrowseAlbumsLayout: (value: ListLayout) => void;
@@ -1153,6 +1163,8 @@ function snapshot(get: () => SettingsState) {
     libraryLayout: s.libraryLayout,
     browseArtistsLayout: s.browseArtistsLayout,
     browseAlbumsLayout: s.browseAlbumsLayout,
+    browsePlaylistsLayout: s.browsePlaylistsLayout,
+    browsePlaylistsSort: s.browsePlaylistsSort,
     browseSongsLayout: s.browseSongsLayout,
     discographyLayout: s.discographyLayout,
     genreLayout: s.genreLayout,
@@ -1267,6 +1279,11 @@ const DEFAULTS = {
   // Rows, for the same reason. The cover identifies an album you know; the
   // list is what you scan when you do not.
   browseAlbumsLayout: 'list' as ListLayout,
+  // Rows here too, and "Recents" like "Your library" opens on: the two lists
+  // hold the same playlists and landing on a different order in each would
+  // read as a different list.
+  browsePlaylistsLayout: 'list' as ListLayout,
+  browsePlaylistsSort: 'recent' as LibrarySort,
   // Rows: a song is read by its title, and twelve of the same album are twelve
   // copies of one cover. The button is there for whoever disagrees.
   browseSongsLayout: 'list' as ListLayout,
@@ -1718,6 +1735,16 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setBrowsePlaylistsLayout: (browsePlaylistsLayout) => {
+    set({ browsePlaylistsLayout });
+    persist(snapshot(get));
+  },
+
+  setBrowsePlaylistsSort: (browsePlaylistsSort) => {
+    set({ browsePlaylistsSort });
+    persist(snapshot(get));
+  },
+
   setBrowseAlbumsLayout: (browseAlbumsLayout) => {
     set({ browseAlbumsLayout });
     persist(snapshot(get));
@@ -1909,6 +1936,8 @@ export const useSettings = create<SettingsState>((set, get) => ({
           libraryLayout: ListLayout;
           browseArtistsLayout: ListLayout;
           browseAlbumsLayout: ListLayout;
+          browsePlaylistsLayout: ListLayout;
+          browsePlaylistsSort: LibrarySort;
           browseSongsLayout: ListLayout;
           discographyLayout: ListLayout;
           genreLayout: ListLayout;
@@ -2253,6 +2282,16 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (parsed.browseAlbumsLayout === 'list' || parsed.browseAlbumsLayout === 'grid') {
           set({ browseAlbumsLayout: parsed.browseAlbumsLayout });
+        }
+        if (parsed.browsePlaylistsLayout === 'list' || parsed.browsePlaylistsLayout === 'grid') {
+          set({ browsePlaylistsLayout: parsed.browsePlaylistsLayout });
+        }
+        if (
+          parsed.browsePlaylistsSort === 'recent' ||
+          parsed.browsePlaylistsSort === 'added' ||
+          parsed.browsePlaylistsSort === 'alpha'
+        ) {
+          set({ browsePlaylistsSort: parsed.browsePlaylistsSort });
         }
         if (parsed.browseSongsLayout === 'list' || parsed.browseSongsLayout === 'grid') {
           set({ browseSongsLayout: parsed.browseSongsLayout });

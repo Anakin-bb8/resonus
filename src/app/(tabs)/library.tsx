@@ -45,6 +45,7 @@ import { useAuthStore } from '@/store/auth';
 import { useLastPlayed } from '@/store/lastPlayed';
 import { useMediaMenu } from '@/store/mediaMenu';
 import { usePins } from '@/store/pins';
+import { SORT_LABELS, byCodepoint, matches, normQ, sortItems } from '@/lib/librarySort';
 import { useSettings, type LibrarySort } from '@/store/settings';
 import { useAccent } from '@/hooks/useAccent';
 import { useToast } from '@/store/toast';
@@ -91,71 +92,6 @@ function useGridMetrics(): { columns: number; card: number } {
 // In grid mode, the Favorites access goes as the first card of the grid
 // (in list it's the header). This sentinel id marks it within the data.
 const FAVORITES_ID = '__favorites__';
-
-// ── Spotify-style sort (Recent / Recently added / Alphabetical) ──
-
-const SORT_LABELS: Record<LibrarySort, string> = {
-  recent: 'Recents',
-  added: 'Recently added',
-  alpha: 'Alphabetical',
-};
-
-/** Locale-aware name compare: right for accents/ñ (albums, artists). */
-const byLocale = (a: string, b: string) => a.localeCompare(b);
-
-/**
- * Case-insensitive code-point compare. Leading symbols sort before letters by
- * code point ("+" < "[" < a…), so playlists prefixed with "+" to pin them to
- * the top land there — matching Navidrome, Feishin and other clients.
- * localeCompare instead orders "[" before "+", burying the "+" playlists.
- */
-function byCodepoint(a: string, b: string): number {
-  const x = a.toLowerCase();
-  const y = b.toLowerCase();
-  return x < y ? -1 : x > y ? 1 : 0;
-}
-
-/**
- * Sorts by the chosen criterion: alphabetical by name, or by descending score
- * (last play timestamp / added timestamp) with alphabetical tie-break — the
- * never-played ones end up last, in A-Z. `compare` picks the name ordering
- * (locale-aware by default; code point for playlists, see byCodepoint).
- */
-function sortItems<T>(
-  items: T[],
-  sort: LibrarySort,
-  name: (x: T) => string,
-  score: (x: T) => number,
-  compare: (a: string, b: string) => number = byLocale,
-): T[] {
-  // Keys computed once per item, not inside the comparator. A sort asks for
-  // them about `2·n·log n` times, and `score` here parses a date or walks the
-  // play history, so a couple of thousand favourites meant tens of thousands
-  // of date parses on every render of the tab (#50).
-  const keyed = items.map((item) => ({
-    item,
-    name: name(item),
-    score: sort === 'alpha' ? 0 : score(item),
-  }));
-  const byName = (a: (typeof keyed)[number], b: (typeof keyed)[number]) =>
-    compare(a.name, b.name);
-  keyed.sort(sort === 'alpha' ? byName : (a, b) => b.score - a.score || byName(a, b));
-  return keyed.map((k) => k.item);
-}
-
-/**
- * Normalizes for filtering: lowercase and without accents, so "Nino" finds
- * "Niño" and "cafe" finds "Café".
- */
-function normQ(str: string): string {
-  return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-}
-
-/** Does any of the fields contain the (already normalized) query? */
-function matches(query: string, ...fields: (string | undefined)[]): boolean {
-  if (!query) return true;
-  return fields.some((f) => f && normQ(f).includes(query));
-}
 
 /** "⇅ Recent" row under the segments; opens the sort sheet. */
 function SortBar({ onPress }: { onPress: () => void }) {

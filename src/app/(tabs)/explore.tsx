@@ -67,10 +67,11 @@ export default function ExploreScreen() {
   const [section, setSection] = useState<Section>('albums');
   /** Filled in by whichever section is on screen (see `BrowserProps`). */
   const sectionAction = useRef<() => void>(() => {});
-  // Read for all three rather than for the one showing, because hooks cannot
+  // Read for all four rather than for the one showing, because hooks cannot
   // be conditional; it is a selector each, which is what a chip press costs
   // anyway. Only the icon needs them — what the menu writes is its own.
-  const layouts: Record<'albums' | 'artists' | 'songs', ListLayout> = {
+  const layouts: Record<'playlists' | 'albums' | 'artists' | 'songs', ListLayout> = {
+    playlists: useSettings((s) => s.browsePlaylistsLayout),
     albums: useSettings((s) => s.browseAlbumsLayout),
     artists: useSettings((s) => s.browseArtistsLayout),
     songs: useSettings((s) => s.browseSongsLayout),
@@ -110,14 +111,16 @@ export default function ExploreScreen() {
   /**
    * The section's own button, drawn here and acting down there.
    *
-   * Playlists, genres and folders have none: one is a short list read from the
-   * top, one is a grid with nothing to choose about it, and the last is a
-   * handful of server roots.
+   * Genres and folders have none: one is a grid with nothing to choose about
+   * it and the other is a handful of server roots.
    */
   const headerButton =
     current === 'radio'
       ? { icon: 'add' as const, label: t('Add station'), size: 28, color: colors.text }
-      : current === 'albums' || current === 'artists' || current === 'songs'
+      : current === 'playlists' ||
+          current === 'albums' ||
+          current === 'artists' ||
+          current === 'songs'
         ? {
             icon: layouts[current] === 'grid' ? ('grid-outline' as const) : ('list' as const),
             label: t('View'),
@@ -185,7 +188,7 @@ export default function ExploreScreen() {
           once, which on a big library is what the app spent #50 undoing. */}
       <View style={styles.body}>
         {current === 'playlists' ? (
-          <PlaylistsBrowser />
+          <PlaylistsBrowser embedded actionRef={sectionAction} />
         ) : current === 'albums' ? (
           <AlbumsBrowser embedded actionRef={sectionAction} />
         ) : current === 'artists' ? (
