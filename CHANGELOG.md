@@ -27,7 +27,7 @@ Releases before 0.2.1 are only listed on the
 ### Changed
 
 - Song, album and artist rows dim under the finger, late enough that scrolling past one never lights it up.
-- Corners are rounder throughout, and a cover's follows its size instead of being the same on a thumbnail and on the player's artwork.
+- Corners are rounder throughout, sheets and panels most of all. Covers keep the corner they had: letting it grow with the artwork ate into the picture on the big ones.
 - Every sheet rises with the same rounded top; half of them used to be less rounded than the other half.
 - The library tab is now called "Your library", at the bottom of the screen and at the top of the tab itself.
 - The row of chips on Home is now called "Home chips" and not "Explore chips", which named the Explore tab it has nothing to do with; the order you put them in survives the rename.
