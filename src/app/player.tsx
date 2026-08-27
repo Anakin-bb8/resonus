@@ -1502,10 +1502,6 @@ const styles = themed((colors) => ({
     gap: spacing.md,
     marginBottom: spacing.md,
   },
-  // Shrunk cover beside the text when the cover is animated (Spotify-style).
-  // No explicit borderRadius: the Cover component scales it by size via
-  // coverRadius(), which gives a 56px cover radius.sm (6).
-  animatedCoverMini: {},
   // The tappable area fits the text (not the full width), to avoid navigating
   // when tapping the empty space on the right.
   // Hugs the text: the tappable area is just the title/artist, not the row.
