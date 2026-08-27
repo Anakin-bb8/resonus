@@ -20,7 +20,7 @@ import { useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { getSongList, type Song } from '@/api/data';
-import { type SongListSort, type SortDirection } from '@/api/subsonic';
+import { type SongListSort } from '@/api/subsonic';
 import { SortSheet } from '@/components/SortSheet';
 import { useAccent } from '@/hooks/useAccent';
 import { useT } from '@/i18n';
@@ -50,7 +50,6 @@ interface PlayTarget {
 export function BrowseToolbar<T extends string>({
   options,
   value,
-  dir,
   onChange,
   play,
 }: {
@@ -58,14 +57,7 @@ export function BrowseToolbar<T extends string>({
    *  them, or none, is not a choice, and then no control is drawn. */
   options: { key: T; label: string }[];
   value: T;
-  /**
-   * Which way round, for the lists that can be turned round. Left out by the
-   * ones that cannot: browsing all albums and all songs arrives a page at a
-   * time in the order the server sent, and reversing the pages that happen to
-   * be loaded is not the list backwards, it is the loaded part backwards.
-   */
-  dir?: SortDirection;
-  onChange: (value: T, dir: SortDirection) => void;
+  onChange: (value: T) => void;
   play?: PlayTarget;
 }) {
   const t = useT();
@@ -117,13 +109,7 @@ export function BrowseToolbar<T extends string>({
           accessibilityLabel={t('Sort')}
           onPress={() => sortRef.current()}
         >
-          {/* The arrow when there is a direction to show, so which way round
-              the list runs is readable without opening the menu. */}
-          <Ionicons
-            name={dir === undefined ? 'swap-vertical' : dir === 'asc' ? 'arrow-up' : 'arrow-down'}
-            size={18}
-            color={colors.textSecondary}
-          />
+          <Ionicons name="swap-vertical" size={18} color={colors.textSecondary} />
           <Text style={styles.sortText} numberOfLines={1}>
             {t(current.label)}
           </Text>
@@ -158,8 +144,7 @@ export function BrowseToolbar<T extends string>({
       <SortSheet
         options={options}
         field={value}
-        dir={dir}
-        onPick={(key, d) => onChange(key as T, d)}
+        onPick={(key) => onChange(key as T)}
         openRef={sortRef}
       />
     </View>

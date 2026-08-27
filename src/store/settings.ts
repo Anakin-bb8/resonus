@@ -1,7 +1,6 @@
 /** App settings (persisted): streaming quality and language. */
 import { create } from 'zustand';
 
-import { type SortDirection } from '@/api/subsonic';
 import { isLanguage, LANGUAGE_NAMES, type Language } from '@/i18n/languages';
 import { type TabSegment } from '@/lib/tabOrigin';
 import { hashKey } from '@/lib/localLibrary';
@@ -890,10 +889,6 @@ interface SettingsState {
    *  what the split above exists to avoid. */
   browsePlaylistsLayout: ListLayout;
   browsePlaylistsSort: LibrarySort;
-  /** And which way round it reads. Saved next to the order rather than kept for
-   *  the visit, because the order is: half a preference outliving the other
-   *  half is the kind of thing you notice and cannot explain. */
-  browsePlaylistsSortDir: SortDirection;
   /** List or grid when browsing songs. Its own key, same reasoning. */
   browseSongsLayout: ListLayout;
   /** List or grid in an artist's full discography. Its own key, again for the
@@ -1016,7 +1011,6 @@ interface SettingsState {
   setLibrarySort: (value: LibrarySort) => void;
   setBrowsePlaylistsLayout: (value: ListLayout) => void;
   setBrowsePlaylistsSort: (value: LibrarySort) => void;
-  setBrowsePlaylistsSortDir: (value: SortDirection) => void;
   setLibraryLayout: (value: ListLayout) => void;
   setBrowseArtistsLayout: (value: ListLayout) => void;
   setBrowseAlbumsLayout: (value: ListLayout) => void;
@@ -1138,7 +1132,6 @@ function snapshot(get: () => SettingsState) {
     browseAlbumsLayout: s.browseAlbumsLayout,
     browsePlaylistsLayout: s.browsePlaylistsLayout,
     browsePlaylistsSort: s.browsePlaylistsSort,
-    browsePlaylistsSortDir: s.browsePlaylistsSortDir,
     browseSongsLayout: s.browseSongsLayout,
     discographyLayout: s.discographyLayout,
     genreLayout: s.genreLayout,
@@ -1259,7 +1252,6 @@ const DEFAULTS = {
   // read as a different list.
   browsePlaylistsLayout: 'list' as ListLayout,
   browsePlaylistsSort: 'recent' as LibrarySort,
-  browsePlaylistsSortDir: 'desc' as SortDirection,
   // Rows: a song is read by its title, and twelve of the same album are twelve
   // copies of one cover. The button is there for whoever disagrees.
   browseSongsLayout: 'list' as ListLayout,
@@ -1733,11 +1725,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
-  setBrowsePlaylistsSortDir: (browsePlaylistsSortDir) => {
-    set({ browsePlaylistsSortDir });
-    persist(snapshot(get));
-  },
-
   setBrowseAlbumsLayout: (browseAlbumsLayout) => {
     set({ browseAlbumsLayout });
     persist(snapshot(get));
@@ -1930,7 +1917,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
           browseAlbumsLayout: ListLayout;
           browsePlaylistsLayout: ListLayout;
           browsePlaylistsSort: LibrarySort;
-          browsePlaylistsSortDir: SortDirection;
           browseSongsLayout: ListLayout;
           discographyLayout: ListLayout;
           genreLayout: ListLayout;
@@ -2288,15 +2274,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
           parsed.browsePlaylistsSort === 'alpha'
         ) {
           set({ browsePlaylistsSort: parsed.browsePlaylistsSort });
-        }
-        if (parsed.browsePlaylistsSortDir === 'asc' || parsed.browsePlaylistsSortDir === 'desc') {
-          set({ browsePlaylistsSortDir: parsed.browsePlaylistsSortDir });
-        } else if (parsed.browsePlaylistsSort) {
-          // A file written before there was a direction to save. Whichever way
-          // round the saved order has always read is the answer; the default
-          // beside it only fits the order that ships as the default, and
-          // alphabetical coming back Z-A is not an upgrade.
-          set({ browsePlaylistsSortDir: parsed.browsePlaylistsSort === 'alpha' ? 'asc' : 'desc' });
         }
         if (parsed.browseSongsLayout === 'list' || parsed.browseSongsLayout === 'grid') {
           set({ browseSongsLayout: parsed.browseSongsLayout });

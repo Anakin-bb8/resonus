@@ -15,7 +15,6 @@ import {
 import { FlatList as GHFlatList } from 'react-native-gesture-handler';
 
 import { getAlbumList, getArtists, type Album, type Artist } from '@/api/data';
-import { type SortDirection } from '@/api/subsonic';
 import { ArtistCard } from '@/components/ArtistCard';
 import { ArtistGridSkeleton } from '@/components/ArtistGridSkeleton';
 import { ArtistListSkeleton } from '@/components/ArtistListSkeleton';
@@ -71,17 +70,9 @@ const SORTS: { key: ArtistSort; label: string }[] = [
   { key: 'recent', label: 'Recently played' },
   { key: 'frequent', label: 'Most played' },
   { key: 'newest', label: 'Recently added' },
-  // "Alphabetical" and not "A-Z", the same word the playlists use: this list
-  // can be turned round, and A-Z over a list running Z-A contradicts itself.
-  { key: 'alpha', label: 'Alphabetical' },
+  { key: 'alpha', label: 'A-Z' },
   { key: 'random', label: 'Shuffle' },
 ];
-
-/** Which way round each order reads before anybody says otherwise: the alphabet
- *  forwards, everything about time and counting most-recent first. */
-function naturalDir(sort: ArtistSort): SortDirection {
-  return sort === 'alpha' ? 'asc' : 'desc';
-}
 
 /** How many albums are checked to infer frequent / recently added artists. */
 const FREQUENT_POOL = 50;
@@ -107,15 +98,6 @@ export function ArtistsBrowser({ embedded, actionRef, searchOpen }: BrowserProps
   const [sort, setSort] = useState<ArtistSort>(
     SORTS.some((s) => s.key === sortParam) ? (sortParam as ArtistSort) : 'recent',
   );
-  /**
-   * Which way round, which this list can answer because it holds all of it:
-   * `getArtists` brings the whole index and the order is worked out here, so
-   * turning it round is the real thing and not the loaded pages backwards.
-   *
-   * Not saved. An order picked while looking for something is about that visit,
-   * the same as the field beside it.
-   */
-  const [dir, setDir] = useState<SortDirection>(() => naturalDir(sort));
   const layout = useSettings((s) => s.browseArtistsLayout);
   const setLayout = useSettings((s) => s.setBrowseArtistsLayout);
   const grid = layout === 'grid';
@@ -215,11 +197,7 @@ export function ArtistsBrowser({ embedded, actionRef, searchOpen }: BrowserProps
     if (sort === 'random') return shuffledArtists ?? [];
     const all = filtered.slice();
     const byName = (a: Artist, b: Artist) => a.name.localeCompare(b.name);
-    // Every comparator below is written ascending and turned round here, so the
-    // tie-break does not turn round with it: artists with no plays at all
-    // running Z-A under "least played first" is not what that says.
-    const flip = dir === 'asc' ? 1 : -1;
-    if (sort === 'alpha') return all.sort((a, b) => flip * byName(a, b));
+    if (sort === 'alpha') return all.sort(byName);
     const score =
       sort === 'frequent'
         ? (a: Artist) => playedByArtist.get(a.id) ?? 0
@@ -228,8 +206,8 @@ export function ArtistsBrowser({ embedded, actionRef, searchOpen }: BrowserProps
           : (a: Artist) => Math.max(times[`/artist/${a.id}`] ?? 0, byArtist.get(a.id) ?? 0);
     // Tie-break → alphabetical, so the many artists with no plays or counted
     // albums don't get an arbitrary order.
-    return all.sort((a, b) => flip * (score(a) - score(b)) || byName(a, b));
-  }, [filtered, sort, dir, shuffledArtists, times, byArtist, playedByArtist, addedByArtist]);
+    return all.sort((a, b) => score(b) - score(a) || byName(a, b));
+  }, [filtered, sort, shuffledArtists, times, byArtist, playedByArtist, addedByArtist]);
 
   // Embedded, the button that opens this menu is drawn by the Explore tab, in
   // its own header: this is the way down to the menu it belongs to. Kept up to
@@ -302,18 +280,7 @@ export function ArtistsBrowser({ embedded, actionRef, searchOpen }: BrowserProps
       ) : null}
 
       {/* No play beside it: there is no such thing as starting every artist. */}
-      <BrowseToolbar
-        options={SORTS}
-        value={sort}
-        // Shuffle has no way round: it is the one order that is not an order.
-        dir={sort === 'random' ? undefined : dir}
-        onChange={(key, d) => {
-          // A different field arrives the way it is meant to be read; the
-          // direction only carries over when the direction is what was picked.
-          setSort(key);
-          setDir(key === sort ? d : naturalDir(key));
-        }}
-      />
+      <BrowseToolbar options={SORTS} value={sort} onChange={setSort} />
 
       {isLoading ? (
         grid ? (

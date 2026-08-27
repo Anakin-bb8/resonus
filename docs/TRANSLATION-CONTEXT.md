@@ -195,6 +195,7 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
+| `A-Z` | Sort option: the order of a list |
 | `Artists` | A heading over a list of them, never a count |
 | `Couldn't load artists.` | Error on the screen, with a Retry button |
 | `Filter artists` | Search box that narrows the list as you type, rather than a filter you set |

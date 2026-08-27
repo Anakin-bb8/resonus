@@ -6,7 +6,6 @@
  * was not worth a second copy of this. Pure functions only, so neither screen
  * has to import the other.
  */
-import { type SortDirection } from '@/api/subsonic';
 import { type LibrarySort } from '@/store/settings';
 
 export const SORT_LABELS: Record<LibrarySort, string> = {
@@ -30,21 +29,11 @@ export function byCodepoint(a: string, b: string): number {
   return x < y ? -1 : x > y ? 1 : 0;
 }
 
-/** Which way round each order reads before anybody says otherwise. */
-export function naturalDir(sort: LibrarySort): SortDirection {
-  return sort === 'alpha' ? 'asc' : 'desc';
-}
-
 /**
  * Sorts by the chosen criterion: alphabetical by name, or by descending score
  * (last play timestamp / added timestamp) with alphabetical tie-break — the
  * never-played ones end up last, in A-Z. `compare` picks the name ordering
  * (locale-aware by default; code point for playlists, see byCodepoint).
- *
- * `dir` turns the whole thing round, for the lists that offer it; left out, the
- * order reads the way it always has. The tie-break is not turned round with it:
- * it is what separates the many items scoring zero, and running those Z-A under
- * "oldest first" is not what that says.
  */
 export function sortItems<T>(
   items: T[],
@@ -52,7 +41,6 @@ export function sortItems<T>(
   name: (x: T) => string,
   score: (x: T) => number,
   compare: (a: string, b: string) => number = byLocale,
-  dir?: SortDirection,
 ): T[] {
   // Keys computed once per item, not inside the comparator. A sort asks for
   // them about `2·n·log n` times, and `score` here parses a date or walks the
@@ -65,12 +53,7 @@ export function sortItems<T>(
   }));
   const byName = (a: (typeof keyed)[number], b: (typeof keyed)[number]) =>
     compare(a.name, b.name);
-  const flip = (dir ?? naturalDir(sort)) === naturalDir(sort) ? 1 : -1;
-  keyed.sort(
-    sort === 'alpha'
-      ? (a, b) => flip * byName(a, b)
-      : (a, b) => flip * (b.score - a.score) || byName(a, b),
-  );
+  keyed.sort(sort === 'alpha' ? byName : (a, b) => b.score - a.score || byName(a, b));
   return keyed.map((k) => k.item);
 }
 

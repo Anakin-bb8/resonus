@@ -41,7 +41,7 @@ import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { useListPadding } from '@/hooks/useScreenSize';
 import { songsLabel, useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
-import { SORT_LABELS, byCodepoint, matches, naturalDir, normQ, sortItems } from '@/lib/librarySort';
+import { SORT_LABELS, byCodepoint, matches, normQ, sortItems } from '@/lib/librarySort';
 import { listPerf } from '@/lib/listPerf';
 import { useAuthStore } from '@/store/auth';
 import { useLastPlayed } from '@/store/lastPlayed';
@@ -72,8 +72,6 @@ export function PlaylistsBrowser({ embedded, actionRef, searchOpen }: BrowserPro
   const [query, setQuery] = useState('');
   const sort = useSettings((s) => s.browsePlaylistsSort);
   const setSort = useSettings((s) => s.setBrowsePlaylistsSort);
-  const dir = useSettings((s) => s.browsePlaylistsSortDir);
-  const setDir = useSettings((s) => s.setBrowsePlaylistsSortDir);
   const layout = useSettings((s) => s.browsePlaylistsLayout);
   const setLayout = useSettings((s) => s.setBrowsePlaylistsLayout);
   const grid = layout === 'grid';
@@ -113,9 +111,8 @@ export function PlaylistsBrowser({ embedded, actionRef, searchOpen }: BrowserPro
         : (p) => Date.parse(p.created ?? '') || 0,
       // Code point so "+"-prefixed playlists pin to the top like on the server.
       byCodepoint,
-      dir,
     );
-  }, [data, query, sort, dir, times]);
+  }, [data, query, sort, times]);
 
   const body = isLoading ? (
     <ActivityIndicator style={{ marginTop: spacing.xl }} color={colors.accent} />
@@ -208,18 +205,7 @@ export function PlaylistsBrowser({ embedded, actionRef, searchOpen }: BrowserPro
 
       {/* No play pair: the list is playlists, and "play all of them" is not a
           thing anyone asked for. Same shape as browsing all artists. */}
-      <BrowseToolbar
-        options={SORTS}
-        value={sort}
-        dir={dir}
-        // The whole list is here, so turning it round is the real thing. A
-        // different field arrives the way it is meant to be read; the direction
-        // only carries over when the direction is what was picked.
-        onChange={(key, d) => {
-          setSort(key);
-          setDir(key === sort ? d : naturalDir(key));
-        }}
-      />
+      <BrowseToolbar options={SORTS} value={sort} onChange={setSort} />
 
       {body}
       {gridSheet}
