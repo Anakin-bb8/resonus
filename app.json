@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Spotify",
-    "slug": "spotify",
+    "name": "Resonus",
+    "slug": "resonus",
     "version": "0.7.6",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
