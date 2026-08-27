@@ -858,7 +858,8 @@ you are actually typing into, which is easier than reading it here.
 | --- | --- |
 | `A second action for the same artwork, for a hand that is not looking. With this on, a single tap waits a moment to see whether a second one is coming.` |  |
 | `Always previous track` | A value of `Previous button`: never restarts, always goes back a song |
-| `Animated cover background` | When the cover art is animated (GIF, animated WebP), use it as the fullscreen player background instead of playing it inside the square. The shrunk static copy sits beside the title |
+| `An animated cover fills the player behind the controls, with a still copy of it beside the title.` |  |
+| `Animated cover background` | A setting: an animated cover (GIF, animated WebP) is shown full screen behind the player instead of inside the square |
 | `Background` | Section header over what is drawn behind the player. Its two values are `Plain` and `Blurred cover` |
 | `Blurred cover` | A value of `Background`: the album art, blurred, behind the player |
 | `Buttons` | Which player buttons to show |
@@ -918,7 +919,6 @@ you are actually typing into, which is easier than reading it here.
 | `What fills the space behind the player.` | The line under “Player background”, explaining it |
 | `What tapping the cover art in the player does.` | The line under “On cover tap”, explaining it |
 | `What the previous button does partway through a song.` | The line under “Previous button”, explaining it |
-| `When the cover art is animated (GIF, animated WebP), use it as the fullscreen player background instead of playing it inside the square. The shrunk static copy sits beside the title` |  |
 | `Where to get lyrics from. Online search uses LRCLIB (sends the artist and title).` |  |
 
 ## Settings › Quick grid

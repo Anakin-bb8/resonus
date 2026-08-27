@@ -9,6 +9,15 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Added
+
+- An animated cover can fill the player behind the controls, with a still copy of it beside the title, instead of playing inside the square; it starts off, under Settings > Player > Cover art, and comes from @Anakin-bb8 (#190).
+- Ukrainian is complete again, thanks to @albedych (#191).
+
+### Fixed
+
+- An animated cover no longer stutters in the player: only the copy you are looking at plays, and the blurred background behind it holds still.
+
 ## [0.7.6] - 2026-08-26
 
 ### Added

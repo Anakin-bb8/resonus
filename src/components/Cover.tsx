@@ -30,11 +30,12 @@ interface Props {
   autoplay?: boolean;
   style?: StyleProp<ViewStyle | ImageStyle>;
   /**
-   * Called when the image loads with whether it is animated. The player uses
-   * this to switch to the animated-cover layout (shrunk cover beside text,
-   * fullscreen animated background).
+   * Called once the picture has loaded, with the `uri` it was asked for and
+   * whether the decoder found it animated. The player reads it to move an
+   * animated cover to the background (see `useAnimatedCover`); the `uri` comes
+   * back with it because by then the song may have changed.
    */
-  onAnimatedDetected?: (isAnimated: boolean) => void;
+  onAnimatedDetected?: (uri: string, isAnimated: boolean) => void;
 }
 
 /**
@@ -386,9 +387,7 @@ export function Cover({
       autoplay={autoplay}
       onDisplay={redraw.onDisplay}
       onLoad={(e) => {
-        if (onAnimatedDetected) {
-          onAnimatedDetected(!!e.source?.isAnimated);
-        }
+        if (onAnimatedDetected && uri) onAnimatedDetected(uri, !!e.source?.isAnimated);
       }}
       // expo-image defaults to 'disk', which keeps the file but not the decoded
       // image: scrolling a list back up decoded every cover again. Covers are

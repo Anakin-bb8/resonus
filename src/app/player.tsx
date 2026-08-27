@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   AppState,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -20,6 +19,7 @@ import Animated, {
   Extrapolation,
   interpolate,
   ReduceMotion,
+  useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -29,12 +29,11 @@ import Animated, {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { COVER, songCoverUrl, star, unstar, type Song } from '@/api/data';
+import { CACHED_COVER, COVER, songCoverUrl, star, unstar, type Song } from '@/api/data';
 import { ArtistPlayerCard } from '@/components/ArtistPlayerCard';
 import { AudioQualityBadge } from '@/components/AudioQualityBadge';
 import { SeekBar } from '@/components/SeekBar';
 import { Cover, useRedrawOnReturn, useSettledSource } from '@/components/Cover';
-import { useAnimatedCover } from '@/hooks/useAnimatedCover';
 import { ExplicitBadge } from '@/components/ExplicitBadge';
 import { FavoriteButton } from '@/components/FavoriteButton';
 import { CoverLyrics, LyricsCard } from '@/components/LyricsCard';
@@ -42,6 +41,7 @@ import { MarqueeText } from '@/components/MarqueeText';
 import { OutputSheet } from '@/components/OutputSheet';
 import { SpeedSheet } from '@/components/SpeedSheet';
 import { StarRating } from '@/components/StarRating';
+import { useAnimatedCover } from '@/hooks/useAnimatedCover';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { useLocalProfile } from '@/hooks/useLocalProfile';
@@ -108,6 +108,9 @@ const LYRICS_PEEK = 56;
  * `useSettledSource`).
  */
 const BACKDROP_FADE = 600;
+// The still copy of an animated cover, beside the title: the height of the two
+// lines of text it stands next to.
+const MINI_COVER = 56;
 
 function CircleButton({
   name,
@@ -285,18 +288,22 @@ export default function PlayerScreen() {
   const background = useSettings((s) => s.playerBackground);
   const colorBackground = background === 'color';
   const animatedCoverBg = useSettings((s) => s.animatedCoverBackground);
-  // Animated cover detection: when the cover is a GIF/animated WebP/APNG,
-  // the player switches to a Spotify-style layout with the animated cover
-  // fullscreen as background and a shrunk static copy beside the text.
-  // Only when the setting is enabled; otherwise animated covers play inside
-  // the square just like static ones.
+  // An animated cover (GIF, animated WebP, APNG) can take the whole screen
+  // instead of playing inside the square, with a still copy of itself next to
+  // the title. Off by default. A cover that is only in the image cache
+  // (`CACHED_COVER`, offline) is not a URL and would leave the background
+  // empty, so it keeps the ordinary layout, where `Cover` knows how to read it.
   const { isAnimated: isAnimatedDetected, onCoverLoad } = useAnimatedCover(cover);
-  const isAnimatedCover = animatedCoverBg && isAnimatedDetected;
+  const isAnimatedCover =
+    animatedCoverBg && isAnimatedDetected && !!cover && !cover.startsWith(CACHED_COVER);
   // The backdrop holds the previous artwork on purpose while the next decodes,
   // so on its own it cannot tell "not decoded yet" from "never will be". Coming
   // back from the background is the second case (see `useRedrawOnReturn`), and
   // here it would be the whole screen wearing another song's colours.
   const backdropRef = useRef<Image>(null);
+  // Same story for the full-screen animated cover: coming back from the
+  // background the view can claim it drew a picture it is not showing.
+  const animatedBgRef = useRef<Image>(null);
   // One cover at a time, and never mid-fade: skipping through a queue is faster
   // than the fade is long, and handing them over as they come is what made the
   // background jump back to the cover you started from.
@@ -305,9 +312,9 @@ export default function PlayerScreen() {
     BACKDROP_FADE,
   );
   const backdrop = useRedrawOnReturn(backdropRef, backdropSource.shown);
-  // Always extract dominant color when the cover is animated (needed for the
-  // gradient at the bottom of the fullscreen animated background), even if the
-  // player background setting is not 'color'.
+  const animatedBg = useRedrawOnReturn(animatedBgRef, isAnimatedCover ? cover : undefined);
+  // The full-screen animated cover needs the colour too, whatever the
+  // background setting says: the gradient under it fades into that colour.
   const dominant = useDominantColor(colorBackground || isAnimatedCover ? cover : undefined);
   // Under the blurred artwork the flat colour is irrelevant, but it still
   // paints the frame before the image decodes, so it stays dark rather than
@@ -477,7 +484,6 @@ export default function PlayerScreen() {
   // The swipe-to-close gesture should only work when scrolled to the top;
   // otherwise it would steal the gesture when returning from the lyrics card.
   const [atTop, setAtTop] = useState(true);
-  const atTopRef = useRef(true);
 
   // Cover art swipe: left → next, right → previous. It mirrors the prev/next
   // buttons, which don't wrap: you can't go back before the first track, and
@@ -731,12 +737,25 @@ export default function PlayerScreen() {
   const rootStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: transY.value }],
   }));
-  // Scroll position as a shared value, so the animated cover background can
-  // translate up with the content instead of staying pinned to the screen.
+  // The full-screen animated cover travels with the content instead of staying
+  // pinned to the screen, so scrolling down to the lyrics moves it out of the
+  // way. On the UI thread: read off a plain `onScroll` it followed the finger a
+  // JS frame late, which is the tearing #154 was about.
   const scrollY = useSharedValue(0);
+  const atTopSV = useSharedValue(true);
   const animatedBgStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: -scrollY.value }],
   }));
+  const onScroll = useAnimatedScrollHandler((e) => {
+    scrollY.value = e.contentOffset.y;
+    const next = e.contentOffset.y <= 4;
+    if (next !== atTopSV.value) {
+      atTopSV.value = next;
+      // Only on the crossing, not on every frame: this one is a React state,
+      // it decides whether the drag-to-dismiss gesture is armed.
+      scheduleOnRN(setAtTop, next);
+    }
+  });
 
   // If there's no song (e.g. after emptying the queue), close the player. In an
   // effect (not in render) to avoid updating the Stack while painting another
@@ -827,28 +846,26 @@ export default function PlayerScreen() {
       <Animated.View style={[styles.root, rootStyle]}>
         <Animated.View style={[StyleSheet.absoluteFill, bgStyle]} />
         {isAnimatedCover && cover ? (
-          <>
-            {/* Animated cover fullscreen as background (Spotify-style).
-                No blur, autoplay on, scrolls with the content. */}
-            <Animated.View style={[StyleSheet.absoluteFill, animatedBgStyle]}>
-              <Image
-                source={{ uri: cover }}
-                style={StyleSheet.absoluteFill}
-                contentFit="cover"
-                transition={BACKDROP_FADE}
-                autoplay={true}
-              />
-              {/* Gradient at the bottom edge blending to the accent color,
-                  so the transition to the player content is smooth. Sits
-                  inside the same animated wrapper so it scrolls with the
-                  image. */}
-              <LinearGradient
-                colors={['transparent', dominant]}
-                style={StyleSheet.absoluteFill}
-                locations={[0.7, 1]}
-              />
-            </Animated.View>
-          </>
+          /* The animated cover itself, unblurred, over the whole screen. */
+          <Animated.View style={[StyleSheet.absoluteFill, animatedBgStyle]}>
+            <Image
+              key={animatedBg.nonce}
+              ref={animatedBgRef}
+              source={{ uri: cover }}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+              transition={BACKDROP_FADE}
+              onDisplay={animatedBg.onDisplay}
+            />
+            {/* Its bottom edge fades into the cover's own colour, so the
+                picture ends somewhere instead of being cut off. Inside the
+                same wrapper: it has to travel with it. */}
+            <LinearGradient
+              colors={['transparent', dominant]}
+              style={StyleSheet.absoluteFill}
+              locations={[0.7, 1]}
+            />
+          </Animated.View>
         ) : background === 'cover' && backdropSource.shown ? (
           <>
             {/* The artwork itself, blurred, filling the screen. No
@@ -882,7 +899,7 @@ export default function PlayerScreen() {
           style={StyleSheet.absoluteFill}
         />
         <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-        <ScrollView
+        <Animated.ScrollView
           style={{ flex: 1 }}
           // Keeps the lyrics card clear of the navigation bar, and only then:
           // with no card below it the first page is the whole content and it is
@@ -904,15 +921,7 @@ export default function PlayerScreen() {
             setPageH(e.nativeEvent.layout.height);
             setLaidOut(true);
           }}
-          onScroll={(e) => {
-            const y = e.nativeEvent.contentOffset.y;
-            scrollY.value = y;
-            const next = y <= 4;
-            if (next !== atTopRef.current) {
-              atTopRef.current = next;
-              setAtTop(next);
-            }
-          }}
+          onScroll={onScroll}
           scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}
         >
@@ -1023,9 +1032,8 @@ export default function PlayerScreen() {
             {/* Recycled carousel: the current cover centered and the neighbors at
                 one screen, already entering on drag. No fade (transition 0): a
                 panel's content only changes off-screen and a fade is pointless
-                here. When the cover is animated, the carousel is fully
-                unmounted and a small static copy sits beside the title/artist
-                instead. */}
+                here. An animated cover is not here at all: it is the background,
+                and the empty slot it leaves is what the picture shows through. */}
             <Animated.View style={[{ width: coverSize, height: coverSize }, coverAppearStyle]}>
               {!isAnimatedCover ? (
                 paneStyles.map((paneStyle, k) => {
@@ -1093,15 +1101,15 @@ export default function PlayerScreen() {
           ]}
         >
           <View style={styles.meta}>
-            {/* Animated cover: shrunk static copy beside the text (Spotify-style). */}
+            {/* With the cover on the wall behind, a still copy of it sits by
+                the title, the height of the two lines of text. */}
             {isAnimatedCover && cover ? (
               <Cover
                 uri={cover}
-                size={56}
+                size={MINI_COVER}
                 contentFit={fitCoverArt ? 'contain' : 'cover'}
                 transition={0}
                 autoplay={false}
-                style={styles.animatedCoverMini}
                 placeholderIcon={song?.url ? 'radio' : 'musical-notes'}
               />
             ) : null}
@@ -1386,7 +1394,7 @@ export default function PlayerScreen() {
         </View>
         {showsLyricsCard ? <LyricsCard /> : null}
         {wantsArtistCard ? <ArtistPlayerCard /> : null}
-        </ScrollView>
+        </Animated.ScrollView>
         </SafeAreaView>
         <OutputSheet visible={outputOpen} onClose={() => setOutputOpen(false)} />
         <SpeedSheet openRef={openSpeedSheet} />
