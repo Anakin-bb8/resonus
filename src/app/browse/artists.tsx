@@ -15,6 +15,7 @@ import {
 import { FlatList as GHFlatList } from 'react-native-gesture-handler';
 
 import { getAlbumList, getArtists, type Album, type Artist } from '@/api/data';
+import { type SortDirection } from '@/api/subsonic';
 import { ArtistCard } from '@/components/ArtistCard';
 import { ArtistGridSkeleton } from '@/components/ArtistGridSkeleton';
 import { ArtistListSkeleton } from '@/components/ArtistListSkeleton';
@@ -37,7 +38,7 @@ import {
 } from '@/theme';
 import { listPerf } from '@/lib/listPerf';
 import { BackChevron } from '@/components/BackChevron';
-import { BrowseFrame, type BrowserProps } from '@/components/BrowseFrame';
+import { BrowseFrame, useSearchBox, type BrowserProps } from '@/components/BrowseFrame';
 import { BrowseToolbar } from '@/components/BrowseToolbar';
 import { useGridColumns } from '@/hooks/useGridColumns';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
@@ -70,9 +71,17 @@ const SORTS: { key: ArtistSort; label: string }[] = [
   { key: 'recent', label: 'Recently played' },
   { key: 'frequent', label: 'Most played' },
   { key: 'newest', label: 'Recently added' },
-  { key: 'alpha', label: 'A-Z' },
+  // "Alphabetical" and not "A-Z", the same word the playlists use: this list
+  // can be turned round, and A-Z over a list running Z-A contradicts itself.
+  { key: 'alpha', label: 'Alphabetical' },
   { key: 'random', label: 'Shuffle' },
 ];
+
+/** Which way round each order reads before anybody says otherwise: the alphabet
+ *  forwards, everything about time and counting most-recent first. */
+function naturalDir(sort: ArtistSort): SortDirection {
+  return sort === 'alpha' ? 'asc' : 'desc';
+}
 
 /** How many albums are checked to infer frequent / recently added artists. */
 const FREQUENT_POOL = 50;
@@ -84,7 +93,7 @@ export default function BrowseArtistsScreen() {
   return <ArtistsBrowser />;
 }
 
-export function ArtistsBrowser({ embedded, actionRef }: BrowserProps) {
+export function ArtistsBrowser({ embedded, actionRef, searchOpen }: BrowserProps) {
   // Repaints on a change of appearance or accent: a stack keeps this screen
   // mounted while you are on another one, out of reach of anything else.
   useTheme();
@@ -98,6 +107,15 @@ export function ArtistsBrowser({ embedded, actionRef }: BrowserProps) {
   const [sort, setSort] = useState<ArtistSort>(
     SORTS.some((s) => s.key === sortParam) ? (sortParam as ArtistSort) : 'recent',
   );
+  /**
+   * Which way round, which this list can answer because it holds all of it:
+   * `getArtists` brings the whole index and the order is worked out here, so
+   * turning it round is the real thing and not the loaded pages backwards.
+   *
+   * Not saved. An order picked while looking for something is about that visit,
+   * the same as the field beside it.
+   */
+  const [dir, setDir] = useState<SortDirection>(() => naturalDir(sort));
   const layout = useSettings((s) => s.browseArtistsLayout);
   const setLayout = useSettings((s) => s.setBrowseArtistsLayout);
   const grid = layout === 'grid';
@@ -126,12 +144,16 @@ export function ArtistsBrowser({ embedded, actionRef }: BrowserProps) {
   const listRef = useRef<GHFlatList<Artist>>(null);
   const [searching, setSearching] = useState(false);
 
-  function cancelSearch() {
+  function clearSearch() {
     Keyboard.dismiss();
     setQuery('');
     setSearching(false);
     listRef.current?.scrollToOffset({ offset: 0, animated: false });
   }
+
+  // Embedded, whether the box is there is the tab's answer; on this screen it
+  // simply is.
+  const showSearch = useSearchBox(embedded, searchOpen, clearSearch);
 
   /**
    * "Most played" is deduced from your most played albums: Subsonic doesn't
@@ -193,7 +215,11 @@ export function ArtistsBrowser({ embedded, actionRef }: BrowserProps) {
     if (sort === 'random') return shuffledArtists ?? [];
     const all = filtered.slice();
     const byName = (a: Artist, b: Artist) => a.name.localeCompare(b.name);
-    if (sort === 'alpha') return all.sort(byName);
+    // Every comparator below is written ascending and turned round here, so the
+    // tie-break does not turn round with it: artists with no plays at all
+    // running Z-A under "least played first" is not what that says.
+    const flip = dir === 'asc' ? 1 : -1;
+    if (sort === 'alpha') return all.sort((a, b) => flip * byName(a, b));
     const score =
       sort === 'frequent'
         ? (a: Artist) => playedByArtist.get(a.id) ?? 0
@@ -202,8 +228,8 @@ export function ArtistsBrowser({ embedded, actionRef }: BrowserProps) {
           : (a: Artist) => Math.max(times[`/artist/${a.id}`] ?? 0, byArtist.get(a.id) ?? 0);
     // Tie-break → alphabetical, so the many artists with no plays or counted
     // albums don't get an arbitrary order.
-    return all.sort((a, b) => score(b) - score(a) || byName(a, b));
-  }, [filtered, sort, shuffledArtists, times, byArtist, playedByArtist, addedByArtist]);
+    return all.sort((a, b) => flip * (score(a) - score(b)) || byName(a, b));
+  }, [filtered, sort, dir, shuffledArtists, times, byArtist, playedByArtist, addedByArtist]);
 
   // Embedded, the button that opens this menu is drawn by the Explore tab, in
   // its own header: this is the way down to the menu it belongs to. Kept up to
@@ -236,9 +262,10 @@ export function ArtistsBrowser({ embedded, actionRef }: BrowserProps) {
         </View>
       )}
 
-      {/* Always visible: filtering is what you come to this screen to do, so
-          the bar is not worth hiding behind a gesture nobody discovers. */}
-      <View style={styles.searchRow}>
+      {/* Always there on its own screen: filtering is what you come to it for.
+          In the tab the magnifier asks for it (see `useSearchBox`). */}
+      {showSearch ? (
+        <View style={styles.searchRow}>
           <View style={styles.searchBar}>
             <Ionicons name="search" size={18} color={colors.textMuted} />
             <TextInput
@@ -251,6 +278,7 @@ export function ArtistsBrowser({ embedded, actionRef }: BrowserProps) {
               onChangeText={setQuery}
               onFocus={() => setSearching(true)}
               returnKeyType="search"
+              autoFocus={embedded}
             />
             {query.length > 0 ? (
               <Pressable
@@ -263,15 +291,29 @@ export function ArtistsBrowser({ embedded, actionRef }: BrowserProps) {
               </Pressable>
             ) : null}
           </View>
-          {searching ? (
-            <Pressable hitSlop={8} accessibilityRole="button" onPress={cancelSearch}>
+          {/* Only on its own screen: in the tab the X in the header is the way
+              out of the bar. */}
+          {searching && !embedded ? (
+            <Pressable hitSlop={8} accessibilityRole="button" onPress={clearSearch}>
               <Text style={styles.searchCancel}>{t('Cancel')}</Text>
             </Pressable>
           ) : null}
-      </View>
+        </View>
+      ) : null}
 
       {/* No play beside it: there is no such thing as starting every artist. */}
-      <BrowseToolbar options={SORTS} value={sort} onChange={setSort} />
+      <BrowseToolbar
+        options={SORTS}
+        value={sort}
+        // Shuffle has no way round: it is the one order that is not an order.
+        dir={sort === 'random' ? undefined : dir}
+        onChange={(key, d) => {
+          // A different field arrives the way it is meant to be read; the
+          // direction only carries over when the direction is what was picked.
+          setSort(key);
+          setDir(key === sort ? d : naturalDir(key));
+        }}
+      />
 
       {isLoading ? (
         grid ? (

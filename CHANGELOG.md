@@ -13,6 +13,12 @@ Releases before 0.2.1 are only listed on the
 
 - An animated cover can fill the player behind the controls, with a still copy of it beside the title, instead of playing inside the square; it starts off, under Settings > Player > Cover art, and comes from @Anakin-bb8 (#190).
 - Ukrainian is complete again, thanks to @albedych (#191).
+- The sections of Explore can be reordered from Settings > Appearance > Explore sections.
+- The playlists and the artists of Explore can be read either way round, ascending or descending, from the same menu that picks the order.
+
+### Changed
+
+- The search box of Explore is now behind the same magnifier "Your library" has, at the top right, where it becomes the X that puts the box away; Back closes it too, and a section opens on its list rather than on a box you were not looking for.
 
 ### Fixed
 

@@ -1,6 +1,7 @@
 /** App settings (persisted): streaming quality and language. */
 import { create } from 'zustand';
 
+import { type SortDirection } from '@/api/subsonic';
 import { isLanguage, LANGUAGE_NAMES, type Language } from '@/i18n/languages';
 import { type TabSegment } from '@/lib/tabOrigin';
 import { hashKey } from '@/lib/localLibrary';
@@ -360,6 +361,20 @@ export const DEFAULT_HOME_SECTIONS: HomeSection[] = [
   { key: 'randomArtists', enabled: false },
 ];
 
+/** Same as the chips: keeps the saved order, drops what it does not know, and
+ *  appends anything a later version added. */
+function normalizeExploreSections(raw: unknown): ExploreSection[] {
+  if (!Array.isArray(raw)) return [...DEFAULT_EXPLORE_SECTIONS];
+  const out: ExploreSection[] = [];
+  for (const key of raw as ExploreSection[]) {
+    if (DEFAULT_EXPLORE_SECTIONS.includes(key) && !out.includes(key)) out.push(key);
+  }
+  for (const key of DEFAULT_EXPLORE_SECTIONS) {
+    if (!out.includes(key)) out.push(key);
+  }
+  return out;
+}
+
 /**
  * Sanitizes the saved list: preserves user order and state, discards unknown
  * keys, and appends new sections not present (so a future version with more
@@ -421,6 +436,35 @@ export const DEFAULT_HOME_CHIPS: HomeChip[] = [
   { key: 'genres', enabled: true },
   { key: 'radio', enabled: true },
   { key: 'history', enabled: false },
+];
+
+/** One of the pills at the top of Explore. `genres`, `radio` and `folders`
+ *  need a server; the rest the local catalogue answers for too. */
+export type ExploreSection =
+  | 'playlists'
+  | 'albums'
+  | 'artists'
+  | 'songs'
+  | 'genres'
+  | 'radio'
+  | 'folders';
+
+/**
+ * Their order, and only their order.
+ *
+ * No switches, unlike the Home chips: a section that is off is a part of the
+ * catalogue with no way in, and the tab already hides the ones the server
+ * cannot answer for. Which is also why this is a plain list of keys — there is
+ * no second thing to store about each.
+ */
+export const DEFAULT_EXPLORE_SECTIONS: ExploreSection[] = [
+  'playlists',
+  'albums',
+  'artists',
+  'songs',
+  'genres',
+  'radio',
+  'folders',
 ];
 
 /**
@@ -815,6 +859,8 @@ interface SettingsState {
   /** Home explore chips, in order (each with its state). With none active, the
    *  row disappears: that replaces the old toggle. */
   homeChips: HomeChip[];
+  /** The order of the pills at the top of Explore. */
+  exploreSections: ExploreSection[];
   bottomTabs: BottomTab[];
   /** Whether those chips carry their icon, or are their name and nothing else. */
   homeChipIcons: boolean;
@@ -844,6 +890,10 @@ interface SettingsState {
    *  what the split above exists to avoid. */
   browsePlaylistsLayout: ListLayout;
   browsePlaylistsSort: LibrarySort;
+  /** And which way round it reads. Saved next to the order rather than kept for
+   *  the visit, because the order is: half a preference outliving the other
+   *  half is the kind of thing you notice and cannot explain. */
+  browsePlaylistsSortDir: SortDirection;
   /** List or grid when browsing songs. Its own key, same reasoning. */
   browseSongsLayout: ListLayout;
   /** List or grid in an artist's full discography. Its own key, again for the
@@ -953,6 +1003,7 @@ interface SettingsState {
   setHomeChip: (key: HomeChipKey, value: boolean) => void;
   /** Replace the full list (for reordering). */
   setHomeChips: (chips: HomeChip[]) => void;
+  setExploreSections: (sections: ExploreSection[]) => void;
   setBottomTab: (key: TabSegment, value: boolean) => void;
   /** Replace the full list (for reordering). */
   setBottomTabs: (tabs: BottomTab[]) => void;
@@ -965,6 +1016,7 @@ interface SettingsState {
   setLibrarySort: (value: LibrarySort) => void;
   setBrowsePlaylistsLayout: (value: ListLayout) => void;
   setBrowsePlaylistsSort: (value: LibrarySort) => void;
+  setBrowsePlaylistsSortDir: (value: SortDirection) => void;
   setLibraryLayout: (value: ListLayout) => void;
   setBrowseArtistsLayout: (value: ListLayout) => void;
   setBrowseAlbumsLayout: (value: ListLayout) => void;
@@ -1074,6 +1126,7 @@ function snapshot(get: () => SettingsState) {
     showGreeting: s.showGreeting,
     customGreeting: s.customGreeting,
     homeChips: s.homeChips,
+    exploreSections: s.exploreSections,
     bottomTabs: s.bottomTabs,
     homeChipIcons: s.homeChipIcons,
     showFolderBrowser: s.showFolderBrowser,
@@ -1085,6 +1138,7 @@ function snapshot(get: () => SettingsState) {
     browseAlbumsLayout: s.browseAlbumsLayout,
     browsePlaylistsLayout: s.browsePlaylistsLayout,
     browsePlaylistsSort: s.browsePlaylistsSort,
+    browsePlaylistsSortDir: s.browsePlaylistsSortDir,
     browseSongsLayout: s.browseSongsLayout,
     discographyLayout: s.discographyLayout,
     genreLayout: s.genreLayout,
@@ -1184,6 +1238,7 @@ const DEFAULTS = {
   showGreeting: true,
   customGreeting: '',
   homeChips: DEFAULT_HOME_CHIPS.map((c) => ({ ...c })),
+  exploreSections: [...DEFAULT_EXPLORE_SECTIONS],
   bottomTabs: DEFAULT_BOTTOM_TABS.map((t) => ({ ...t })),
   homeChipIcons: true,
   showFolderBrowser: false,
@@ -1204,6 +1259,7 @@ const DEFAULTS = {
   // read as a different list.
   browsePlaylistsLayout: 'list' as ListLayout,
   browsePlaylistsSort: 'recent' as LibrarySort,
+  browsePlaylistsSortDir: 'desc' as SortDirection,
   // Rows: a song is read by its title, and twelve of the same album are twelve
   // copies of one cover. The button is there for whoever disagrees.
   browseSongsLayout: 'list' as ListLayout,
@@ -1621,6 +1677,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setExploreSections: (exploreSections) => {
+    set({ exploreSections });
+    persist(snapshot(get));
+  },
+
   setHomeChipIcons: (homeChipIcons) => {
     set({ homeChipIcons });
     persist(snapshot(get));
@@ -1669,6 +1730,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
 
   setBrowsePlaylistsSort: (browsePlaylistsSort) => {
     set({ browsePlaylistsSort });
+    persist(snapshot(get));
+  },
+
+  setBrowsePlaylistsSortDir: (browsePlaylistsSortDir) => {
+    set({ browsePlaylistsSortDir });
     persist(snapshot(get));
   },
 
@@ -1850,6 +1916,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           exploreChips: unknown;
           exploreChipIcons: boolean;
           homeChips: unknown;
+          exploreSections: unknown;
           bottomTabs: unknown;
           homeChipIcons: boolean;
           showFolderBrowser: boolean;
@@ -1863,6 +1930,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           browseAlbumsLayout: ListLayout;
           browsePlaylistsLayout: ListLayout;
           browsePlaylistsSort: LibrarySort;
+          browsePlaylistsSortDir: SortDirection;
           browseSongsLayout: ListLayout;
           discographyLayout: ListLayout;
           genreLayout: ListLayout;
@@ -2173,6 +2241,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
         if (Array.isArray(parsed.bottomTabs)) {
           set({ bottomTabs: normalizeBottomTabs(parsed.bottomTabs) });
         }
+        if (Array.isArray(parsed.exploreSections)) {
+          set({ exploreSections: normalizeExploreSections(parsed.exploreSections) });
+        }
         if (typeof parsed.showFolderBrowser === 'boolean') {
           set({ showFolderBrowser: parsed.showFolderBrowser });
         }
@@ -2217,6 +2288,15 @@ export const useSettings = create<SettingsState>((set, get) => ({
           parsed.browsePlaylistsSort === 'alpha'
         ) {
           set({ browsePlaylistsSort: parsed.browsePlaylistsSort });
+        }
+        if (parsed.browsePlaylistsSortDir === 'asc' || parsed.browsePlaylistsSortDir === 'desc') {
+          set({ browsePlaylistsSortDir: parsed.browsePlaylistsSortDir });
+        } else if (parsed.browsePlaylistsSort) {
+          // A file written before there was a direction to save. Whichever way
+          // round the saved order has always read is the answer; the default
+          // beside it only fits the order that ships as the default, and
+          // alphabetical coming back Z-A is not an upgrade.
+          set({ browsePlaylistsSortDir: parsed.browsePlaylistsSort === 'alpha' ? 'asc' : 'desc' });
         }
         if (parsed.browseSongsLayout === 'list' || parsed.browseSongsLayout === 'grid') {
           set({ browseSongsLayout: parsed.browseSongsLayout });

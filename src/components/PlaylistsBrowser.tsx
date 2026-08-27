@@ -31,7 +31,7 @@ import {
 
 import { COVER, coverArtUrl, getPlaylists, type Playlist } from '@/api/data';
 import { BrowseToolbar } from '@/components/BrowseToolbar';
-import { type BrowserProps } from '@/components/BrowseFrame';
+import { useSearchBox, type BrowserProps } from '@/components/BrowseFrame';
 import { Cover } from '@/components/Cover';
 import { EmptyState } from '@/components/EmptyState';
 import { Message } from '@/components/Message';
@@ -41,7 +41,7 @@ import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { useListPadding } from '@/hooks/useScreenSize';
 import { songsLabel, useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
-import { SORT_LABELS, byCodepoint, matches, normQ, sortItems } from '@/lib/librarySort';
+import { SORT_LABELS, byCodepoint, matches, naturalDir, normQ, sortItems } from '@/lib/librarySort';
 import { listPerf } from '@/lib/listPerf';
 import { useAuthStore } from '@/store/auth';
 import { useLastPlayed } from '@/store/lastPlayed';
@@ -61,7 +61,7 @@ const SORTS: { key: LibrarySort; label: string }[] = (
   Object.keys(SORT_LABELS) as LibrarySort[]
 ).map((key) => ({ key, label: SORT_LABELS[key] }));
 
-export function PlaylistsBrowser({ actionRef }: BrowserProps) {
+export function PlaylistsBrowser({ embedded, actionRef, searchOpen }: BrowserProps) {
   const t = useT();
   const lang = useSettings((s) => s.language);
   const listPad = useListPadding(spacing.lg);
@@ -72,6 +72,8 @@ export function PlaylistsBrowser({ actionRef }: BrowserProps) {
   const [query, setQuery] = useState('');
   const sort = useSettings((s) => s.browsePlaylistsSort);
   const setSort = useSettings((s) => s.setBrowsePlaylistsSort);
+  const dir = useSettings((s) => s.browsePlaylistsSortDir);
+  const setDir = useSettings((s) => s.setBrowsePlaylistsSortDir);
   const layout = useSettings((s) => s.browsePlaylistsLayout);
   const setLayout = useSettings((s) => s.setBrowsePlaylistsLayout);
   const grid = layout === 'grid';
@@ -87,6 +89,9 @@ export function PlaylistsBrowser({ actionRef }: BrowserProps) {
   useEffect(() => {
     if (actionRef) actionRef.current = openGridMenu;
   });
+
+  // Embedded, whether the box is there is the tab's answer.
+  const showSearch = useSearchBox(embedded, searchOpen, () => setQuery(''));
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['playlists'],
@@ -108,8 +113,9 @@ export function PlaylistsBrowser({ actionRef }: BrowserProps) {
         : (p) => Date.parse(p.created ?? '') || 0,
       // Code point so "+"-prefixed playlists pin to the top like on the server.
       byCodepoint,
+      dir,
     );
-  }, [data, query, sort, times]);
+  }, [data, query, sort, dir, times]);
 
   const body = isLoading ? (
     <ActivityIndicator style={{ marginTop: spacing.xl }} color={colors.accent} />
@@ -171,35 +177,49 @@ export function PlaylistsBrowser({ actionRef }: BrowserProps) {
 
   return (
     <View style={styles.frame}>
-      <View style={styles.searchRow}>
-        <View style={styles.searchBar}>
-          <Ionicons name="search" size={18} color={colors.textMuted} />
-          <TextInput
-            style={styles.input}
-            placeholder={t('Find a playlist')}
-            placeholderTextColor={colors.textMuted}
-            autoCapitalize="none"
-            autoCorrect={false}
-            value={query}
-            onChangeText={setQuery}
-            returnKeyType="search"
-          />
-          {query.length > 0 ? (
-            <Pressable
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel={t('Clear')}
-              onPress={() => setQuery('')}
-            >
-              <Ionicons name="close-circle" size={18} color={colors.textMuted} />
-            </Pressable>
-          ) : null}
+      {showSearch ? (
+        <View style={styles.searchRow}>
+          <View style={styles.searchBar}>
+            <Ionicons name="search" size={18} color={colors.textMuted} />
+            <TextInput
+              style={styles.input}
+              placeholder={t('Find a playlist')}
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="none"
+              autoCorrect={false}
+              value={query}
+              onChangeText={setQuery}
+              returnKeyType="search"
+              autoFocus={embedded}
+            />
+            {query.length > 0 ? (
+              <Pressable
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel={t('Clear')}
+                onPress={() => setQuery('')}
+              >
+                <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+              </Pressable>
+            ) : null}
+          </View>
         </View>
-      </View>
+      ) : null}
 
       {/* No play pair: the list is playlists, and "play all of them" is not a
           thing anyone asked for. Same shape as browsing all artists. */}
-      <BrowseToolbar options={SORTS} value={sort} onChange={setSort} />
+      <BrowseToolbar
+        options={SORTS}
+        value={sort}
+        dir={dir}
+        // The whole list is here, so turning it round is the real thing. A
+        // different field arrives the way it is meant to be read; the direction
+        // only carries over when the direction is what was picked.
+        onChange={(key, d) => {
+          setSort(key);
+          setDir(key === sort ? d : naturalDir(key));
+        }}
+      />
 
       {body}
       {gridSheet}
