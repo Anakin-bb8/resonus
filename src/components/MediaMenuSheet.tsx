@@ -161,9 +161,9 @@ export function MediaMenuSheet() {
 
   /** Copies them into a folder of their own, and says how many made it. */
   async function runExport(songs: Song[]) {
+    closeNow();
     const folder = await pickFolder();
     if (!folder) return;
-    close();
     toast(t('Exporting…'));
     const items = songs.map((s) => ({ song: s, uri: files[s.id] }));
     const { saved, failed } = await exportManyToFolder(items, folder, name);
@@ -316,8 +316,10 @@ export function MediaMenuSheet() {
                 icon="share-social-outline"
                 label={t('Share')}
                 onPress={() => {
-                  close();
-                  useSharePicker.getState().open({ id: album ? album.id : playlist!.id, name });
+                  dismiss(() => {
+                    closeNow();
+                    useSharePicker.getState().open({ id: album ? album.id : playlist!.id, name });
+                  });
                 }}
               />
             ) : null}
@@ -340,8 +342,10 @@ export function MediaMenuSheet() {
                     });
                     return;
                   }
-                  close();
-                  router.push(`/artist/${targets[0].id}`);
+                  dismiss(() => {
+                    closeNow();
+                    router.push(`/artist/${targets[0].id}`);
+                  });
                 }}
               />
             ) : null}

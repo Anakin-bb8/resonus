@@ -1,4 +1,5 @@
 /** App settings (persisted): streaming quality and language. */
+import { Platform } from 'react-native';
 import { create } from 'zustand';
 
 import { isLanguage, LANGUAGE_NAMES, type Language } from '@/i18n/languages';
@@ -237,10 +238,12 @@ export function clampReplayGainPreamp(db: number): number {
 }
 
 /**
- * UI font. These are Android system font families (no packaging or download
- * cost): `system` leaves the default font (Roboto).
+ * UI font. On Android these are system font families (no packaging or download
+ * cost); on iOS the equivalent built-in families are used. `system` leaves the
+ * default font (Roboto / San Francisco). `custom` loads a user-picked font
+ * file at runtime.
  */
-export type AppFont = 'system' | 'condensed' | 'serif' | 'monospace' | 'casual' | 'typewriter';
+export type AppFont = 'system' | 'condensed' | 'serif' | 'monospace' | 'casual' | 'typewriter' | 'custom';
 
 /**
  * Backdrop for the player and the lyrics screen: flat dark, tinted with the
@@ -602,18 +605,35 @@ export const APP_FONT_LABELS: Record<AppFont, string> = {
   monospace: 'Monospace',
   casual: 'Casual',
   typewriter: 'Typewriter',
+  custom: 'Custom',
 };
 
-/** Actual font family for each option; `undefined` = system default font. */
-export const APP_FONT_FAMILY: Record<AppFont, string | undefined> = {
-  system: undefined,
-  condensed: 'sans-serif-condensed',
-  serif: 'serif',
-  monospace: 'monospace',
-  casual: 'casual',
-  // Cutive Mono (AOSP serif-monospace family): typewriter style.
-  typewriter: 'serif-monospace',
-};
+/**
+ * Actual font family for each option; `undefined` = system default font.
+ *
+ * On Android the families are AOSP system fonts. On iOS the equivalent
+ * built-in families are used instead, because Android names like
+ * `sans-serif-condensed` are not recognised by CoreText.
+ */
+export const APP_FONT_FAMILY: Record<Exclude<AppFont, 'custom'>, string | undefined> = Platform.select({
+  ios: {
+    system: undefined,
+    condensed: 'Helvetica Neue',
+    serif: 'Georgia',
+    monospace: 'Menlo',
+    casual: 'Futura',
+    typewriter: 'American Typewriter',
+  },
+  default: {
+    system: undefined,
+    condensed: 'sans-serif-condensed',
+    serif: 'serif',
+    monospace: 'monospace',
+    casual: 'casual',
+    // Cutive Mono (AOSP serif-monospace family): typewriter style.
+    typewriter: 'serif-monospace',
+  },
+});
 
 interface SettingsState {
   /** Streaming quality over Wi-Fi (and any non-cellular network). */
@@ -924,6 +944,10 @@ interface SettingsState {
   themeMode: ThemePreference;
   /** UI font (system font family; `system` = default). */
   appFont: AppFont;
+  /** Loaded custom font family name (the key passed to `Font.loadAsync`). */
+  customFontFamily: string | null;
+  /** URI the custom font was copied to inside the app's document directory. */
+  customFontUri: string | null;
   setMaxBitRate: (value: number) => void;
   setMaxBitRateCellular: (value: number) => void;
   setDownloadBitRate: (value: number) => void;
@@ -1024,6 +1048,7 @@ interface SettingsState {
   setAccentColor: (value: string, appearance: ThemeMode) => void;
   setThemeMode: (value: ThemePreference) => void;
   setAppFont: (value: AppFont) => void;
+  setCustomFont: (fontFamily: string | null, uri: string | null) => void;
   /** Resets to factory defaults (language is preserved). */
   resetToDefaults: () => void;
   /** The saved settings have been read from disk. Until then everything is at
@@ -1143,6 +1168,8 @@ function snapshot(get: () => SettingsState) {
     accentColorLight: s.accentColorLight,
     themeMode: s.themeMode,
     appFont: s.appFont,
+    customFontFamily: s.customFontFamily,
+    customFontUri: s.customFontUri,
   };
 }
 
@@ -1281,6 +1308,8 @@ const DEFAULTS = {
   // Dark: the appearance the app was designed in. Light is opt-in.
   themeMode: 'dark' as ThemePreference,
   appFont: 'system' as AppFont,
+  customFontFamily: null as string | null,
+  customFontUri: null as string | null,
 };
 
 export const useSettings = create<SettingsState>((set, get) => ({
@@ -1787,6 +1816,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setCustomFont: (fontFamily, uri) => {
+    set({ customFontFamily: fontFamily, customFontUri: uri });
+    persist(snapshot(get));
+  },
+
   resetToDefaults: () => {
     // Language is preserved: resetting shouldn't change your language.
     set({ ...DEFAULTS, language: get().language });
@@ -1928,6 +1962,8 @@ export const useSettings = create<SettingsState>((set, get) => ({
           accentColorLight: string;
           themeMode: ThemePreference;
           appFont: AppFont;
+          customFontFamily: string | null;
+          customFontUri: string | null;
         }>;
         if (typeof parsed.maxBitRate === 'number') {
           set({ maxBitRate: parsed.maxBitRate });
@@ -2322,8 +2358,14 @@ export const useSettings = create<SettingsState>((set, get) => ({
           set({ themeMode: parsed.themeMode });
           applyThemePreference(parsed.themeMode);
         }
-        if (parsed.appFont && parsed.appFont in APP_FONT_FAMILY) {
+        if (parsed.appFont && (parsed.appFont in APP_FONT_FAMILY || parsed.appFont === 'custom')) {
           set({ appFont: parsed.appFont });
+        }
+        if (parsed.customFontFamily) {
+          set({ customFontFamily: parsed.customFontFamily });
+        }
+        if (parsed.customFontUri) {
+          set({ customFontUri: parsed.customFontUri });
         }
       }
       // Language: global (not per profile). If not yet saved separately, it is
