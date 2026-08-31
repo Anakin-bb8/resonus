@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 697 of them.
+Every string the app can show, under the screen it shows up on. 699 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -441,6 +441,7 @@ you are actually typing into, which is easier than reading it here.
 | `Auto-download` | Keep this playlist downloaded by itself as songs are added to it |
 | `Auto-download off` | The toast that says it was turned off |
 | `Auto-download on` | The toast that says it was turned on |
+| `Based on the tracks in this playlist` | Subtitle under the suggested tracks heading |
 | `Change cover` | Replace the cover image of a playlist or station |
 | `Confirm your password` | Changing a cover on the server needs the password again. It is not a new password being set |
 | `Couldn't load the playlist.` | Error on the screen, with a Retry button |
@@ -459,11 +460,12 @@ you are actually typing into, which is easier than reading it here.
 | `Playlist updated` | Toast after saving a change |
 | `Playlists are not available in offline mode.` | Shown instead of a playlist when there is no connection |
 | `Public playlist` | Toggle that makes a playlist public on the server |
-| `Refresh` | Ask the server for this playlist again, in case it changed elsewhere |
+| `Refresh` | Ask the server for this playlist again, in case it changed elsewhere. Also the button under suggested tracks to regenerate them |
 | `Remove cover` | Screen reader label for the small x on a chosen picture |
 | `Removed from playlist` | Toast, with an undo button next to it |
 | `Save` | The confirm button of an edit sheet. A verb |
 | `Share` | Make a link on the server that others can open. Getting the file itself out is `Export` |
+| `Suggested tracks` | Section heading at the bottom of a playlist: songs the server recommends based on what is already in the playlist |
 | `This playlist is empty` | Empty state heading |
 | `Turn on` | The confirm button of that question |
 | `Turn on auto-download?` | Asks whether new songs added to this playlist should download by themselves from now on |
