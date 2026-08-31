@@ -274,7 +274,7 @@ function TrackRowBase({
       ) : null}
       {showArtwork ? (
         <View style={styles.artwork}>
-          <Cover uri={songCoverUrl(song, COVER.thumb)} size={44} />
+          <Cover uri={songCoverUrl(song, COVER.thumb)} size={48} />
           {/* Over the picture where there is no number to give up, behind a
               scrim so the bars read on artwork of any colour. */}
           {isCurrent && position === undefined ? (
@@ -329,7 +329,7 @@ function TrackRowBase({
           accessibilityLabel={t('More options')}
           onPress={() => openMenu(song, menuContext)}
         >
-          <Ionicons name="ellipsis-vertical" size={18} color={colors.textSecondary} />
+          <Ionicons name="ellipsis-horizontal" size={18} color={colors.textSecondary} />
         </Pressable>
       ) : null}
     </AnimatedPressable>
@@ -410,8 +410,8 @@ const styles = themed((colors) => ({
     paddingVertical: spacing.md,
   },
   artwork: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
   },
   artworkPlaying: {
     position: 'absolute',

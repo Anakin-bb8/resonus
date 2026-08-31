@@ -701,5 +701,7 @@
   "Nothing here yet": "Nothing here yet",
   "Your playlists and what you star show up here.": "Your playlists and what you star show up here.",
   "Couldn't load your library.": "Couldn't load your library.",
-  "Public": "Public"
+  "Public": "Public",
+  "Suggested tracks": "Suggested tracks",
+  "Based on the tracks in this playlist": "Based on the tracks in this playlist"
 }

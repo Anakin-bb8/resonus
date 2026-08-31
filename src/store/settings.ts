@@ -327,6 +327,7 @@ export type HomeSectionKey =
   | 'recentlyPlayed'
   | 'mostPlayed'
   | 'mostPlayedSongs'
+  | 'randomSongs'
   | 'discover'
   | 'playlists'
   | 'randomAlbums'
@@ -344,6 +345,7 @@ const HOME_SECTION_KEYS: HomeSectionKey[] = [
   'recentlyPlayed',
   'mostPlayed',
   'mostPlayedSongs',
+  'randomSongs',
   'discover',
   'playlists',
   'randomAlbums',
@@ -359,6 +361,7 @@ export const DEFAULT_HOME_SECTIONS: HomeSection[] = [
   { key: 'recentlyPlayed', enabled: true },
   { key: 'mostPlayed', enabled: true },
   { key: 'mostPlayedSongs', enabled: false },
+  { key: 'randomSongs', enabled: false },
   { key: 'randomAlbums', enabled: false },
   { key: 'randomArtists', enabled: false },
 ];

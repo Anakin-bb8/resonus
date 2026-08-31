@@ -2,21 +2,27 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
 import { useShallow } from 'zustand/react/shallow';
 
 import {
   coverArtUrl,
+  songCoverUrl,
   deletePlaylist,
   getPlaylist,
   removeFromPlaylist,
   reorderPlaylist,
   updatePlaylist,
+  addToPlaylist,
+  getSimilarSongs,
   COVER,
 } from '@/api/data';
+import { streamUrl } from '@/api/backend';
 import { type Song } from '@/api/subsonic';
 import { CoverViewer } from '@/components/CoverViewer';
+import { Cover } from '@/components/Cover';
 import { Dialog } from '@/components/Dialog';
 import { EmptyState } from '@/components/EmptyState';
 import { BackButton } from '@/components/BackButton';
@@ -41,6 +47,236 @@ import { currentSong, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
 import { showUndoToast, useToast } from '@/store/toast';
 import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
+
+const SEED_COUNT = 5;
+const SIMILAR_PER_SEED = 3;
+const SUGGESTION_MAX = 5;
+
+async function fetchSuggestions(
+  songs: Song[],
+  existingIds: Set<string>,
+): Promise<Song[]> {
+  if (songs.length === 0) return [];
+  const shuffled = songs.slice().sort(() => Math.random() - 0.5);
+  const seeds = shuffled.slice(0, SEED_COUNT);
+  const results = await Promise.all(
+    seeds.map((s) => getSimilarSongs(s.id, SIMILAR_PER_SEED).catch(() => [])),
+  );
+  const seen = new Set<string>();
+  const out: Song[] = [];
+  for (const list of results) {
+    for (const song of list) {
+      if (!seen.has(song.id) && !existingIds.has(song.id)) {
+        seen.add(song.id);
+        out.push(song);
+        if (out.length >= SUGGESTION_MAX) return out;
+      }
+    }
+  }
+  return out;
+}
+
+function SuggestedTracks({
+  songs,
+  playlistId,
+  playlistName,
+  onAdded,
+}: {
+  songs: Song[];
+  playlistId: string;
+  playlistName: string;
+  onAdded: () => void;
+}) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const auth = useAuthStore((s) => s.auth);
+  const [suggestions, setSuggestions] = useState<Song[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [previewing, setPreviewing] = useState<string | null>(null);
+  const previewPlayer = useRef<AudioPlayer | null>(null);
+  const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wasPlayingRef = useRef(false);
+  const existingIds = useMemo(() => new Set(songs.map((s) => s.id)), [songs]);
+
+  useEffect(() => {
+    return () => {
+      if (previewTimer.current) clearTimeout(previewTimer.current);
+      void previewPlayer.current?.remove();
+    };
+  }, []);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    const result = await fetchSuggestions(songs, existingIds);
+    setSuggestions(result);
+    setLoading(false);
+  }, [songs, existingIds]);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const addSong = useCallback(
+    async (song: Song) => {
+      try {
+        await addToPlaylist(playlistId, song.id);
+        queryClient.invalidateQueries({ queryKey: ['playlist', playlistId] });
+        setSuggestions((prev) => prev.filter((s) => s.id !== song.id));
+        toast.show(t('Added to \u201c{name}\u201d', { name: playlistName }));
+      } catch {
+        toast.show(t("Couldn't add to the playlist"));
+      }
+    },
+    [playlistId, queryClient, toast, t],
+  );
+
+  const stopPreview = useCallback(async () => {
+    if (previewTimer.current) {
+      clearTimeout(previewTimer.current);
+      previewTimer.current = null;
+    }
+    const p = previewPlayer.current;
+    previewPlayer.current = null;
+    setPreviewing(null);
+    if (p) {
+      try {
+        p.pause();
+        await p.remove();
+      } catch {}
+    }
+    if (wasPlayingRef.current) {
+      wasPlayingRef.current = false;
+      usePlayerStore.getState().toggle();
+    }
+  }, []);
+
+  const previewSong = useCallback(
+    async (song: Song) => {
+      if (previewing === song.id) {
+        void stopPreview();
+        return;
+      }
+      await stopPreview();
+      wasPlayingRef.current = usePlayerStore.getState().isPlaying;
+      if (wasPlayingRef.current) usePlayerStore.getState().toggle();
+      if (!auth) return;
+      const url = song.url || streamUrl(auth, song.id);
+      if (!url) return;
+      const player = createAudioPlayer({ uri: url });
+      previewPlayer.current = player;
+      await player.play();
+      const startSec = (song.duration ?? 0) > 38 ? 38 : 0;
+      if (startSec > 0) player.seekTo(startSec);
+      setPreviewing(song.id);
+      previewTimer.current = setTimeout(() => {
+        void stopPreview();
+      }, 45_000);
+    },
+    [auth, previewing, stopPreview],
+  );
+
+  if (loading && suggestions.length === 0) return null;
+  if (!loading && suggestions.length === 0) return null;
+
+  return (
+    <View style={suggestedStyles.section}>
+      <Text style={suggestedStyles.title}>{t('Suggested tracks')}</Text>
+      <Text style={suggestedStyles.subtitle}>
+        {t('Based on the tracks in this playlist')}
+      </Text>
+      {suggestions.map((song) => (
+        <Pressable
+          key={song.id}
+          style={suggestedStyles.row}
+          onPress={() => void previewSong(song)}
+        >
+          <View style={suggestedStyles.artwork}>
+            <Cover uri={songCoverUrl(song, COVER.thumb)} size={48} />
+          </View>
+          <View style={suggestedStyles.info}>
+            <Text
+              style={[
+                suggestedStyles.songTitle,
+                previewing === song.id && { color: colors.accent },
+              ]}
+              numberOfLines={1}
+            >
+              {song.title}
+            </Text>
+            {song.artist ? (
+              <Text style={suggestedStyles.artist} numberOfLines={1}>
+                {song.artist}
+              </Text>
+            ) : null}
+          </View>
+          <Pressable
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel={t('Add to a playlist')}
+            onPress={() => void addSong(song)}
+            style={({ pressed }) => [
+              suggestedStyles.addButton,
+              pressed && { opacity: 0.6 },
+            ]}
+          >
+            <Ionicons name="add-circle-outline" size={26} color={colors.text} />
+          </Pressable>
+        </Pressable>
+      ))}
+      <Pressable
+        onPress={() => void refresh()}
+        style={({ pressed }) => [
+          suggestedStyles.refreshButton,
+          pressed && { opacity: 0.6 },
+        ]}
+      >
+        <Text style={suggestedStyles.refreshText}>{t('Refresh')}</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+const suggestedStyles = themed((colors) => ({
+  section: {
+    marginTop: spacing.xl,
+    paddingBottom: spacing.xl,
+  },
+  title: {
+    color: colors.text,
+    fontSize: fontSize.lg,
+    fontWeight: '700',
+    marginBottom: spacing.xs,
+  },
+  subtitle: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    marginBottom: spacing.lg,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    gap: spacing.md,
+  },
+  artwork: {
+    width: 48,
+    height: 48,
+  },
+  info: { flex: 1 },
+  songTitle: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
+  artist: { color: colors.textSecondary, fontSize: fontSize.xs },
+  addButton: { padding: spacing.xs },
+  refreshButton: {
+    alignSelf: 'center',
+    marginTop: spacing.lg,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    borderRadius: 999,
+    backgroundColor: colors.surfaceHighlight,
+  },
+  refreshText: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
+}));
 
 export default function PlaylistScreen() {
   // Repaints on a change of appearance or accent: a stack keeps this screen
@@ -366,6 +602,16 @@ export default function PlaylistScreen() {
               }
             : undefined,
         }}
+        footer={
+          !offline && data.songs.length > 0 ? (
+            <SuggestedTracks
+              songs={data.songs}
+              playlistId={id}
+              playlistName={data.playlist.name}
+              onAdded={() => {}}
+            />
+          ) : undefined
+        }
         onPlay={(start, opts) =>
           playQueue(displaySongs, start, data.playlist.name, `/playlist/${id}`, opts)
         }

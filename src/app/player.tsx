@@ -998,7 +998,7 @@ export default function PlayerScreen() {
               <FavoriteButton id={song.id} starred={favorited} size={24} />
             </View>
           ) : (
-            <CircleButton name="ellipsis-vertical" label={t('More options')} onPress={() => openMenu(song, undefined, { showLyrics: hasLyrics })} />
+            <CircleButton name="ellipsis-horizontal" label={t('More options')} onPress={() => openMenu(song, undefined, { showLyrics: hasLyrics })} />
           )}
         </View>
 
@@ -1182,7 +1182,7 @@ export default function PlayerScreen() {
             </View>
             {swapButtons ? (
               <CircleButton
-                name="ellipsis-vertical"
+                name="ellipsis-horizontal"
                 label={t('More options')}
                 onPress={() => openMenu(song, undefined, { showLyrics: hasLyrics })}
               />

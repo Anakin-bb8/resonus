@@ -21,6 +21,7 @@ import {
   getArtists,
   getSongList,
   getPlaylists,
+  getRandomSongs,
   type Album,
   type Artist,
   type Playlist,
@@ -36,6 +37,7 @@ import { FavoritesArt } from '@/components/FavoritesArt';
 import { Message } from '@/components/Message';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { SongCard } from '@/components/SongCard';
+import { TrackRow } from '@/components/TrackRow';
 import { songsLabel, useT } from '@/i18n';
 import { greetingHours } from '@/i18n/languages';
 import { useAuthStore } from '@/store/auth';
@@ -289,29 +291,73 @@ function AlbumSection({
 /** How many songs the "Most played" shelf holds, and plays. */
 const MOST_PLAYED_SONGS = 30;
 
+/** How many songs each "page" in the song list carousel shows. */
+const SONG_PAGE_SIZE = 3;
+
 /**
- * The songs played most, as songs.
+ * A horizontal carousel of small vertical song lists.
  *
- * The shelf beside it answers the same question with records, which is the only
- * thing a Subsonic server can sort, and reads wrong for anyone who does not
- * listen to albums whole: a record turns up there because one of its songs is
- * on repeat, which is how a user put it. This is the other half of that answer,
- * and it is a queue rather than a place to go — tapping a song plays the shelf
- * from it, in the order it is drawn in, which is the order of how much each was
- * played.
+ * Each page is a slightly narrower-than-screen card holding up to
+ * SONG_PAGE_SIZE TrackRow items. Swiping reveals the next page peeking from
+ * the right, inviting the user to scroll.
+ */
+function SongListCarousel({ songs, currentId }: { songs: Song[]; currentId?: string }) {
+  const { width: screenWidth } = useScreenSize();
+  const openSongMenu = useSongMenu((s) => s.open);
+  const playQueue = usePlayerStore((s) => s.playQueue);
+  const showArtwork = useSettings((s) => s.showListArtwork);
+
+  const pageWidth = Math.round(screenWidth * 0.85);
+  const gap = spacing.md;
+  const pages: Song[][] = [];
+  for (let i = 0; i < songs.length; i += SONG_PAGE_SIZE) {
+    pages.push(songs.slice(i, i + SONG_PAGE_SIZE));
+  }
+
+  return (
+    <ScrollView
+      horizontal
+      pagingEnabled
+      decelerationRate="fast"
+      snapToInterval={pageWidth + gap}
+      snapToAlignment="start"
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={{ paddingHorizontal: spacing.lg, gap }}
+    >
+      {pages.map((page, pi) => (
+        <View key={pi} style={[songListStyles.page, { width: pageWidth }]}>
+          {page.map((song, ri) => {
+            const globalIndex = pi * SONG_PAGE_SIZE + ri;
+            return (
+              <TrackRow
+                key={song.id}
+                song={song}
+                isCurrent={song.id === currentId}
+                showArtwork={showArtwork}
+                showFavorite={false}
+                onPress={() => void playQueue(songs, globalIndex)}
+                onLongPress={() => {
+                  haptic('light');
+                  openSongMenu(song);
+                }}
+              />
+            );
+          })}
+        </View>
+      ))}
+    </ScrollView>
+  );
+}
+
+/**
+ * The songs played most, as a peek-carousel of small lists.
+ *
+ * Each page shows 3 songs (TrackRow style). The right edge of each page peeks
+ * to hint that there are more pages to scroll through.
  */
 function MostPlayedSongsSection({ title }: { title: string }) {
-  const openSongMenu = useSongMenu((s) => s.open);
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
-  const card = useShelfCard();
-  const playQueue = usePlayerStore((s) => s.playQueue);
   const currentId = usePlayerStore((s) => s.queue[s.index]?.id);
-  const { accent } = useTheme();
-  // Through the same door the Songs screen uses for this order, and not
-  // through `getMostPlayedSongs`: Navidrome and Jellyfin sort songs by plays
-  // themselves, one request, and only a server that can do neither pays for
-  // the fifteen albums the answer has to be built out of (#50). That is also
-  // why this shelf is off until someone turns it on.
   const { data, isLoading } = useQuery({
     queryKey: ['browseSongs', 'frequent', MOST_PLAYED_SONGS],
     queryFn: () => getSongList('frequent', MOST_PLAYED_SONGS),
@@ -331,34 +377,42 @@ function MostPlayedSongsSection({ title }: { title: string }) {
   return (
     <View style={styles.section}>
       <SectionHeader title={title} href="/browse/songs?sort=frequent" />
-      <FlatList
-        {...listPerf}
-        horizontal
-        data={data}
-        keyExtractor={(item: Song) => item.id}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.rowContent}
-        renderItem={({ item, index }) => (
-          <SongCard
-            song={item}
-            width={card}
-            accent={accent}
-            isCurrent={item.id === currentId}
-            // The whole shelf goes into the queue, not the song on its own:
-            // what was asked for is a list of these to listen through.
-            onPress={() => void playQueue(data, index, title)}
-            // What holding an album on the shelf beside it does, for a song:
-            // its own menu, the one the ⋯ of every row opens. Holding a card
-            // in the Songs screen starts selecting instead, which is that
-            // screen's answer and needs a selection to start; here there is
-            // none, and the menu is what the gesture is for everywhere else.
-            onLongPress={() => {
-              haptic('light');
-              openSongMenu(item);
-            }}
-          />
-        )}
-      />
+      <SongListCarousel songs={data} currentId={currentId} />
+    </View>
+  );
+}
+
+/** How many random songs to fetch. */
+const RANDOM_SONGS_COUNT = 30;
+
+/**
+ * Random songs from the library, shown as a peek-carousel of small lists.
+ * Each page shows 3 TrackRow items.
+ */
+function RandomSongsSection({ title }: { title: string }) {
+  const canFetch = useAuthStore((s) => !!s.auth || s.offline);
+  const offline = useAuthStore((s) => s.offline);
+  const currentId = usePlayerStore((s) => s.queue[s.index]?.id);
+  const { data, isLoading } = useQuery({
+    queryKey: ['randomSongs', RANDOM_SONGS_COUNT],
+    queryFn: () => getRandomSongs(RANDOM_SONGS_COUNT),
+    enabled: canFetch,
+  });
+
+  if (isLoading) {
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        <AlbumCardsSkeleton horizontal />
+      </View>
+    );
+  }
+  if (!data || data.length === 0) return null;
+
+  return (
+    <View style={styles.section}>
+      <SectionHeader title={title} href="/browse/songs?sort=random" />
+      <SongListCarousel songs={data} currentId={currentId} />
     </View>
   );
 }
@@ -667,9 +721,10 @@ function ScanningPanel() {
 }
 
 /** Title (i18n key) and list type for the sections that use AlbumSection.
- *  «discover» and «randomArtists» are drawn by components of their own. */
+ *  «discover», «randomArtists», «mostPlayedSongs» and «randomSongs» are drawn
+ *  by components of their own. */
 const HOME_ALBUM_CONFIG: Record<
-  Exclude<HomeSectionKey, 'randomArtists' | 'discover' | 'playlists' | 'mostPlayedSongs'>,
+  Exclude<HomeSectionKey, 'randomArtists' | 'discover' | 'playlists' | 'mostPlayedSongs' | 'randomSongs'>,
   { title: string; type: 'newest' | 'recent' | 'frequent' | 'random' | 'byYear' }
 > = {
   recentlyAdded: { title: 'Recently added', type: 'newest' },
@@ -819,16 +874,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: bottomPad }]}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.accent}
-          />
-        }
-      >
+      <View style={styles.fixedHeader}>
         <View style={styles.header}>
           {/* `flexShrink` and `numberOfLines`: the greeting is customizable,
               and although the setting caps it at GREETING_MAX, those characters
@@ -863,7 +909,18 @@ export default function HomeScreen() {
         {offline && scanning ? <ScanningPanel /> : null}
 
         <HomeChips offline={offline} />
+      </View>
 
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: bottomPad }]}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.accent}
+          />
+        }
+      >
         {!offline && serverUnreachable ? (
           <Message
             text={t("Couldn't reach the server. Check your connection.")}
@@ -901,6 +958,9 @@ export default function HomeScreen() {
               if (s.key === 'mostPlayedSongs') {
                 return <MostPlayedSongsSection key={s.key} title={t('Most played songs')} />;
               }
+              if (s.key === 'randomSongs') {
+                return <RandomSongsSection key={s.key} title={t('Random songs')} />;
+              }
               const cfg = HOME_ALBUM_CONFIG[s.key];
               return <AlbumSection key={s.key} title={t(cfg.title)} type={cfg.type} />;
             })}
@@ -913,7 +973,8 @@ export default function HomeScreen() {
 
 const styles = themed((colors) => ({
   safe: { flex: 1, backgroundColor: colors.background },
-  content: { paddingVertical: spacing.md },
+  fixedHeader: { zIndex: 1, paddingTop: spacing.md },
+  content: { paddingBottom: spacing.md },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1004,3 +1065,9 @@ const styles = themed((colors) => ({
   scanTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
   scanSub: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'] },
 }));
+
+const songListStyles = {
+  page: {
+    overflow: 'hidden' as const,
+  },
+};
