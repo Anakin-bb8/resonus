@@ -347,17 +347,30 @@ const HOME_SECTION_KEYS: HomeSectionKey[] = [
   'randomArtists',
 ];
 
-/** Default order and state (optional ones off to avoid cluttering Home). */
+/**
+ * Default order and state: all of them on.
+ *
+ * Five of these used to start off, to keep Home short. It kept them secret
+ * instead: a section nobody has seen is a section nobody knows to look for in
+ * the settings, and the ones held back were the discoveries (random albums and
+ * artists, new releases) rather than the obvious lists. Showing everything and
+ * letting Home be scrolled is the way round somebody can act on, since turning
+ * one off is a switch away and turning on a row you have never heard of is not.
+ *
+ * A section that is off is not drawn and asks the server nothing (see Home's
+ * own `if (!s.enabled) return null`), so this is nine requests on a first run
+ * where it used to be four. Which is also the only cost of it.
+ */
 export const DEFAULT_HOME_SECTIONS: HomeSection[] = [
   { key: 'discover', enabled: true },
-  { key: 'playlists', enabled: false },
+  { key: 'playlists', enabled: true },
   { key: 'recentlyAdded', enabled: true },
-  { key: 'newReleases', enabled: false },
+  { key: 'newReleases', enabled: true },
   { key: 'recentlyPlayed', enabled: true },
   { key: 'mostPlayed', enabled: true },
-  { key: 'mostPlayedSongs', enabled: false },
-  { key: 'randomAlbums', enabled: false },
-  { key: 'randomArtists', enabled: false },
+  { key: 'mostPlayedSongs', enabled: true },
+  { key: 'randomAlbums', enabled: true },
+  { key: 'randomArtists', enabled: true },
 ];
 
 /** Same as the chips: keeps the saved order, drops what it does not know, and
