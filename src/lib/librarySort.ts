@@ -6,7 +6,11 @@
  * was not worth a second copy of this. Pure functions only, so neither screen
  * has to import the other.
  */
-import { type LibrarySort } from '@/store/settings';
+// `import type`, not an inline `type` specifier: the statement is then erased
+// outright, so importing these pure functions does not drag the settings store
+// (and through it the locales, and expo-secure-store) in behind them. It is
+// what lets `test/librarySort.test.ts` run on Node with nothing stubbed.
+import type { LibrarySort } from '@/store/settings';
 
 export const SORT_LABELS: Record<LibrarySort, string> = {
   recent: 'Recents',
