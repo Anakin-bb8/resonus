@@ -828,9 +828,18 @@ export function getAppearsOn(artistId: string, artistName: string): Promise<Subs
   );
 }
 
-export function getTopSongs(artist: string, count?: number): Promise<Subsonic.Song[]> {
+/**
+ * `artistId` is optional because not every caller has one: the autoplay chain
+ * works from the names of similar artists and never sees their ids. Offline
+ * there is nothing to resolve, the phone's catalog is keyed by name.
+ */
+export function getTopSongs(
+  artist: string,
+  count?: number,
+  artistId?: string,
+): Promise<Subsonic.Song[]> {
   if (isOffline()) return Local.getTopSongs(artist, count);
-  return Subsonic.getTopSongs(auth(), artist, count);
+  return Subsonic.getTopSongs(auth(), artist, count, artistId);
 }
 
 /** Songs similar to a given one (suggestions). Online only. */

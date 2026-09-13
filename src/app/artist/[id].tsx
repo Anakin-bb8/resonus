@@ -187,9 +187,15 @@ export default function ArtistScreen() {
   });
   const name = data?.artist.name;
 
+  // Keyed by id as well as name, and both are load-bearing. The id is what
+  // tells two artists who share a name apart, which is the whole reason it is
+  // sent (see `getTopSongs`); keeping only the name in the key would hand the
+  // second one the first one's songs out of the cache, whatever the server
+  // answered. The name stays because it is what older servers answer by, so a
+  // rename has to miss.
   const { data: topSongs } = useQuery({
-    queryKey: ['topSongs', name],
-    queryFn: () => getTopSongs(name!, 20),
+    queryKey: ['topSongs', id, name],
+    queryFn: () => getTopSongs(name!, 20, id),
     enabled: canFetch && !!name,
   });
 

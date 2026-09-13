@@ -24,6 +24,7 @@ Releases before 0.2.1 are only listed on the
 ### Fixed
 
 - An animated cover no longer stutters in the player: only the copy you are looking at plays, and the blurred background behind it holds still.
+- The popular songs on an artist's page are that artist's, where two of them share a name. They were asked for by name alone, so whichever one the server happened to reach first answered for both.
 
 ## [0.7.6] - 2026-08-26
 

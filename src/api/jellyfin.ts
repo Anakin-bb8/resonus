@@ -614,11 +614,19 @@ export async function getArtistInfo(auth: SubsonicAuth, id: string): Promise<Art
   };
 }
 
-/** Most played songs by an artist (Jellyfin filters by name). */
+/**
+ * Most played songs by an artist (Jellyfin filters by name).
+ *
+ * `_artistId` is taken and ignored: the Subsonic side sends it so Navidrome can
+ * resolve the artist by id, and both modules have to answer to the same call.
+ * Jellyfin's `Artists` filter is a name, and its id-based equivalent
+ * (`ArtistIds`) is a different query than the one this endpoint is.
+ */
 export async function getTopSongs(
   auth: SubsonicAuth,
   artist: string,
   count = 10,
+  _artistId?: string,
 ): Promise<Song[]> {
   const res = await request<JfItems>(auth, `/Users/${auth.jfUserId}/Items`, {
     IncludeItemTypes: 'Audio',

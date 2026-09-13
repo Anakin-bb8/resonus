@@ -1125,16 +1125,32 @@ export async function getSongList(
   return res.searchResult3?.song ?? [];
 }
 
-/** Most popular songs by an artist (by name). */
+/**
+ * Most popular songs by an artist.
+ *
+ * Both the name and the id go up, and which one the server uses is the
+ * server's business. Navidrome 0.64 takes `id` and announces it as the
+ * `topSongsByArtistId` extension; it looks the artist up by id first and falls
+ * back to the name if that finds nothing (`core/external.findArtist`). Older
+ * servers, and every other Subsonic implementation, ignore the parameter they
+ * do not know and answer by name exactly as before.
+ *
+ * So no extension check: asking `getOpenSubsonicExtensions` would spend a
+ * request to learn something that changes nothing about what we send. What the
+ * id buys is the case the name cannot express — two artists with the same name,
+ * where matching by name is `LIKE artist.name` with a limit of one and so
+ * returns whichever of them the database reaches first.
+ */
 export async function getTopSongs(
   auth: SubsonicAuth,
   artist: string,
   count = 10,
+  artistId?: string,
 ): Promise<Song[]> {
   const res = await request<{ topSongs?: { song?: Song[] } }>(
     auth,
     'getTopSongs.view',
-    { artist, count },
+    { artist, count, id: artistId },
   );
   return res.topSongs?.song ?? [];
 }
