@@ -1,5 +1,7 @@
 {
   "Diagnostics": "Diagnostics",
+  "Don't see your language, or want to improve an existing one? You can help by contributing a translation on GitHub. Pull requests are welcome.": "Don't see your language, or want to improve an existing one? You can help by contributing a translation on GitHub. Pull requests are welcome.",
+  "Help translate": "Help translate",
   "Profile": "Profile",
   "Measured over the last {n} min of use.": "Measured over the last {n} min of use.",
   "Interface freezes": "Interface freezes",
@@ -10,6 +12,7 @@
   "Share report": "Share report",
   "Start over": "Start over",
   "Library metadata copy": "Library metadata copy",
+  "Translations": "Translations",
   "Turn on auto-download?": "Turn on auto-download?",
   "{msg} It will keep downloading songs added to this playlist later.": "{msg} It will keep downloading songs added to this playlist later.",
   "Turn on": "Turn on",

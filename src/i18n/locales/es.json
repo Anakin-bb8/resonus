@@ -1,5 +1,7 @@
 {
   "Diagnostics": "Diagnóstico",
+  "Don't see your language, or want to improve an existing one? You can help by contributing a translation on GitHub. Pull requests are welcome.": "¿No ves tu idioma, o quieres mejorar uno que ya está? Puedes ayudar aportando una traducción en GitHub. Los pull requests son bienvenidos.",
+  "Help translate": "Ayuda a traducir",
   "Profile": "Perfil",
   "Measured over the last {n} min of use.": "Medido durante los últimos {n} min de uso.",
   "Interface freezes": "Bloqueos de la interfaz",
@@ -10,6 +12,7 @@
   "Share report": "Compartir informe",
   "Start over": "Empezar de nuevo",
   "Library metadata copy": "Copia de metadatos de la biblioteca",
+  "Translations": "Traducciones",
   "Turn on auto-download?": "¿Activar la descarga automática?",
   "{msg} It will keep downloading songs added to this playlist later.": "{msg} Seguirá descargando las canciones que añadas a esta lista más adelante.",
   "Turn on": "Activar",
