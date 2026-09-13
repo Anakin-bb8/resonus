@@ -1,14 +1,20 @@
 /**
- * Settings › Explore sections: the order of the pills at the top of Explore.
+ * Settings › Explore sections: which pills are at the top of Explore, and in
+ * what order.
  *
- * The same draggable list the Home chips and the navigation bar use, without
- * the switches. Every other list here can be emptied and the thing it feeds
- * simply disappears; a section turned off would be a part of the catalogue with
- * no way in, and the tab already leaves out the ones the server has no answer
- * for (a Jellyfin account has no folder tree, offline there are no stations).
+ * The same draggable list the Home chips and the navigation bar use, switches
+ * and all. Unlike the Home chips, the last one on cannot be turned off: those
+ * can all go and the row simply disappears, while Explore is the only way into
+ * the whole of a library, so a tab with no chips is a catalogue with no way in.
+ * It is the same floor the navigation bar puts under Home and the library
+ * settings put under the last library.
+ *
+ * Every section is listed whether or not this profile can reach it (see the
+ * hint below), and the tab still leaves out what it has no answer for: a
+ * Jellyfin account has no folder tree, and offline there are no stations.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Switch, Text, View } from 'react-native';
 import ReorderableList, {
   useReorderableDrag,
   type ReorderableListReorderEvent,
@@ -19,7 +25,8 @@ import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { centredPadding, useScreenSize } from '@/hooks/useScreenSize';
 import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
-import { useSettings, type ExploreSection } from '@/store/settings';
+import { useSettings, type ExploreSection, type ExploreSectionKey } from '@/store/settings';
+import { useToast } from '@/store/toast';
 import {
   colors,
   fontSize,
@@ -31,7 +38,7 @@ import {
 } from '@/theme';
 
 /** Each section's label, as an i18n key. The same ones the tab draws. */
-const LABEL: Record<ExploreSection, string> = {
+const LABEL: Record<ExploreSectionKey, string> = {
   playlists: 'Playlists',
   albums: 'Albums',
   artists: 'Artists',
@@ -41,9 +48,18 @@ const LABEL: Record<ExploreSection, string> = {
   folders: 'Folders',
 };
 
-function SectionRow({ section }: { section: ExploreSection }) {
+function SectionRow({
+  section,
+  onToggle,
+}: {
+  section: ExploreSection;
+  onToggle: (value: boolean) => void;
+}) {
   const t = useT();
   const drag = useReorderableDrag();
+  // From the store, not `colors.accent`: without subscription the switch would
+  // keep the previous accent while the screen stays mounted.
+  const { accent } = useTheme();
   return (
     <View style={styles.row}>
       <Pressable
@@ -57,7 +73,13 @@ function SectionRow({ section }: { section: ExploreSection }) {
       >
         <Ionicons name="reorder-two" size={24} color={colors.textSecondary} />
       </Pressable>
-      <Text style={styles.label}>{t(LABEL[section])}</Text>
+      <Text style={styles.label}>{t(LABEL[section.key])}</Text>
+      <Switch
+        value={section.enabled}
+        onValueChange={onToggle}
+        trackColor={{ false: colors.control, true: accent }}
+        thumbColor={colors.knob}
+      />
     </View>
   );
 }
@@ -71,6 +93,19 @@ export default function ExploreSectionsSettings() {
   const t = useT();
   const sections = useSettings((s) => s.exploreSections);
   const setSections = useSettings((s) => s.setExploreSections);
+  const setSection = useSettings((s) => s.setExploreSection);
+  const toast = useToast((s) => s.show);
+  const enabledCount = sections.filter((s) => s.enabled).length;
+
+  /** The last one on stays on: see the note at the top of the file. */
+  function toggle(key: ExploreSectionKey, value: boolean) {
+    if (!value && enabledCount <= 1) {
+      toast(t('Keep at least one section on'));
+      return;
+    }
+    setSection(key, value);
+  }
+
   return (
     <SettingsSafeArea>
       <ScreenHeader title={t('Explore sections')} />
@@ -78,11 +113,13 @@ export default function ExploreSectionsSettings() {
           what is stored is a preference about any profile, and a Jellyfin
           account rearranging the list an offline one comes back to is the kind
           of surprise nobody asked for (#114). */}
-      <Text style={styles.hint}>{t('Drag to reorder.')}</Text>
+      <Text style={styles.hint}>{t('Drag to reorder, toggle to show or hide.')}</Text>
       <ReorderableList
         data={sections}
-        keyExtractor={(item) => item}
-        renderItem={({ item }) => <SectionRow section={item} />}
+        keyExtractor={(item) => item.key}
+        renderItem={({ item }) => (
+          <SectionRow section={item} onToggle={(v) => toggle(item.key, v)} />
+        )}
         onReorder={({ from, to }: ReorderableListReorderEvent) => {
           const next = sections.slice();
           const [moved] = next.splice(from, 1);

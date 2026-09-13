@@ -46,10 +46,10 @@ import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { useAccent } from '@/hooks/useAccent';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
-import { useSettings, type ExploreSection, type ListLayout } from '@/store/settings';
+import { useSettings, type ExploreSectionKey, type ListLayout } from '@/store/settings';
 import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 
-type Section = ExploreSection;
+type Section = ExploreSectionKey;
 
 /** The label each goes by. The order is the saved one (Settings › Explore
  *  sections), which starts as the order they are declared in. */
@@ -119,9 +119,18 @@ export default function ExploreScreen() {
         return true;
     }
   };
-  const sections = order.filter(available);
-  // Going offline can take the section you were on with it.
-  const current = available(section) ? section : 'albums';
+  // What the chips are: turned on, and something this profile can answer for.
+  const sections = order.filter((s) => s.enabled && available(s.key)).map((s) => s.key);
+  /**
+   * Going offline can take the section you were on with it, and so can turning
+   * it off in the settings.
+   *
+   * The last resort is albums whatever the switches say, which is the one place
+   * they are not obeyed. It is reachable only by turning off everything the
+   * local catalogue answers for and then losing the server, and a tab with
+   * nothing in it at all is worse than a tab showing a section somebody hid.
+   */
+  const current = sections.includes(section) ? section : (sections[0] ?? 'albums');
 
   /** Folders is the one section with no box: it is a handful of server roots. */
   const searchable = current !== 'folders';

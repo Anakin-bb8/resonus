@@ -14,7 +14,7 @@ Releases before 0.2.1 are only listed on the
 - Chips under the search box narrow the results to songs, artists, albums, playlists or radio. They show up as soon as you type, and pressing the one already lit gives you everything back.
 - An animated cover can fill the player behind the controls, with a still copy of it beside the title, instead of playing inside the square; it starts off, under Settings > Player > Cover art, and comes from @Anakin-bb8 (#190).
 - Ukrainian is complete again, thanks to @albedych (#191).
-- The sections of Explore can be reordered from Settings > Appearance > Explore sections.
+- The sections of Explore can be shown or hidden as well as reordered, from Settings > Appearance > Explore sections. The last one on stays on: Explore is the only way into the whole of a library, so a tab with no chips would be a catalogue with no way in.
 - A playlist can be a favourite, with the heart its albums and artists already have. It needs Navidrome 0.64 or newer, which is where playlist favourites start existing, and the heart simply isn't there on a server that has no way to remember it.
 
 ### Changed

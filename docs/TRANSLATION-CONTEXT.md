@@ -651,8 +651,8 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `Drag to reorder.` |  |
 | `Explore sections` |  |
+| `Keep at least one section on` |  |
 
 ## Settings › Font
 
