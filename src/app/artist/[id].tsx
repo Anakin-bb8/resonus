@@ -189,7 +189,7 @@ export default function ArtistScreen() {
   // The artist's own `coverArt`, not their id, and it is worth the wait for
   // `data`. Navidrome 0.64 stopped treating the two as interchangeable: an
   // artwork id carries a hash of the picture, and only a request that asks for
-  // the current hash is answered `immutable` — a bare id gets `no-cache` and is
+  // the current hash is answered `immutable`. A bare id gets `no-cache` and is
   // revalidated on every single load. Worse, while the server is still
   // resolving the artwork in the background it answers with a placeholder, and
   // `expo-image` on Android caches by URL without consulting the headers that

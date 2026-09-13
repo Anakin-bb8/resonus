@@ -11,7 +11,7 @@
  * `undefined` means no, and it covers a lot of ground: not a Navidrome, a
  * Navidrome too old to have the column, no password saved to reach the native
  * API with, offline, or the request simply failing. All of those are the same
- * thing to a caller — we cannot read the state, so we do not offer to write
+ * thing to a caller: we cannot read the state, so we do not offer to write
  * it. A heart that appears to work and silently forgets is worse than no
  * heart, and on an older server that is exactly what starring a playlist does:
  * the id falls through to `media_file`, matches nothing, and the server says

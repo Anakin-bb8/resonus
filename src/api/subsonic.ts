@@ -580,8 +580,8 @@ const lastVersionSeen = new Map<string, string>();
  *
  * `undefined` for "no idea", which is every case that is not a plain answer:
  * before the first `ping`, and for any version string that does not start with
- * two numbers — a develop build carrying a git sha, a fork with its own
- * scheme, a proxy rewriting it.
+ * two numbers (a develop build carrying a git sha, a fork with its own
+ * scheme, a proxy rewriting it).
  *
  * Worth being clear about what this may and may not be used for. It gates
  * whether a feature is *offered*, where being wrong costs a button that is
@@ -1169,7 +1169,7 @@ export async function getSongList(
  *
  * So no extension check: asking `getOpenSubsonicExtensions` would spend a
  * request to learn something that changes nothing about what we send. What the
- * id buys is the case the name cannot express — two artists with the same name,
+ * id buys is the case the name cannot express: two artists with the same name,
  * where matching by name is `LIKE artist.name` with a limit of one and so
  * returns whichever of them the database reaches first.
  */

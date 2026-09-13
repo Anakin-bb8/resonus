@@ -37,7 +37,7 @@ export function applyStarChange(
   // annotations out of the Subsonic responses, so they are read from its
   // native API under a key of their own (see `usePlaylistStars`). Without this
   // branch a heart on a playlist would fall through to the bottom of this
-  // function and invalidate the whole favourites list — several MB re-parsed
+  // function and invalidate the whole favourites list, several MB re-parsed
   // to record a change that is not even in it.
   if (type === 'playlist') {
     const ids = queryClient.getQueryData<string[] | null>(PLAYLIST_KEY);

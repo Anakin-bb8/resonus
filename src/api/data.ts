@@ -1214,7 +1214,7 @@ async function mirrorStarred(): Promise<Subsonic.Starred> {
     } else if (v.type === 'playlist') {
       // Nowhere to put it: this list is Subsonic's, and Subsonic has no
       // favourite playlists (see `StarType`). The entry still goes up on
-      // reconnect like any other — this only declines to guess it is a song,
+      // reconnect like any other. This only declines to guess it is a song,
       // which is what the branch below would have done with it.
       continue;
     } else if (!songs.some((x) => x.id === id)) {

@@ -487,7 +487,7 @@ export async function listGenres(auth: SubsonicAuth): Promise<NdGenre[]> {
  *
  * Navidrome 0.64 stores stars and ratings per user for playlists the way it
  * always has for songs, albums and artists (navidrome/navidrome#5749), but
- * deliberately keeps them out of the Subsonic playlist responses — there is a
+ * deliberately keeps them out of the Subsonic playlist responses, with a
  * regression test on their absence. So this is the only way to read the state
  * back, and it is why the heart on a playlist is offered only when this
  * request can be made at all.
@@ -501,7 +501,7 @@ export async function listGenres(auth: SubsonicAuth): Promise<NdGenre[]> {
  * An older server has no such column, and what it does with the filter is its
  * own business: refuse the request, or ignore the parameter and answer with
  * the whole library. The second one is the dangerous shape, because an ignored
- * filter looks exactly like a filter that matched everything — so `starred` is
+ * filter looks exactly like a filter that matched everything. So `starred` is
  * read off each row as well as filtered on, and a server that answered with
  * the library hands back nothing instead of marking every playlist a
  * favourite. Which is the safe way to be wrong, but still wrong: the heart

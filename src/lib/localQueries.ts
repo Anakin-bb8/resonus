@@ -84,8 +84,8 @@ async function saveFavs(favs: LocalFavStore) {
  * favourite playlist is Navidrome's own and lives only on its server (see
  * `StarType`). Without saying so, the `else` below would file a playlist id
  * among the songs, where it would come back out as a song that does not exist.
- * Nothing reaches this with one today — the heart is not offered offline — and
- * this is what keeps that from mattering.
+ * Nothing reaches this with one today, since the heart is not offered
+ * offline, and this is what keeps that from mattering.
  */
 export async function starLocal(id: string, type?: StarType) {
   if (type === 'playlist') return;
