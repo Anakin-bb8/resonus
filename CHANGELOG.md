@@ -11,12 +11,15 @@ Releases before 0.2.1 are only listed on the
 
 ### Added
 
+- Chips under the search box narrow the results to songs, artists, albums, playlists or radio. They show up as soon as you type, and pressing the one already lit gives you everything back.
 - An animated cover can fill the player behind the controls, with a still copy of it beside the title, instead of playing inside the square; it starts off, under Settings > Player > Cover art, and comes from @Anakin-bb8 (#190).
 - Ukrainian is complete again, thanks to @albedych (#191).
 - The sections of Explore can be reordered from Settings > Appearance > Explore sections.
 - A playlist can be a favourite, with the heart its albums and artists already have. It needs Navidrome 0.64 or newer, which is where playlist favourites start existing, and the heart simply isn't there on a server that has no way to remember it.
 
 ### Changed
+
+- Home opens with every section on. Five of them used to start off to keep it short, which mostly kept them secret: a section nobody has seen is one nobody knows to look for in the settings. Turn off what you do not want from Settings > Appearance > Home sections. Anyone who has already set these keeps what they chose.
 
 - "Your library" opens on everything you have, playlists, favourite albums and favourite artists in one list saying which is which, and the chips narrow it from there instead of being the only way to see any of it.
 - The chip you press in "Your library" is now the only one left in the row, behind an X that gives the whole library back, and Playlists brings Yours and Public with it, each when it has something to leave out; picking one of those leaves the two words sitting together as one answer.
