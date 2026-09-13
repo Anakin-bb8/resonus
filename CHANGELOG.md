@@ -9,6 +9,8 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.7.7] - 2026-09-13
+
 ### Added
 
 - Chips under the search box narrow the results to songs, artists, albums, playlists or radio. They show up as soon as you type, and pressing the one already lit gives you everything back.
@@ -16,11 +18,12 @@ Releases before 0.2.1 are only listed on the
 - Ukrainian is complete again, thanks to @albedych (#191).
 - The sections of Explore can be shown or hidden as well as reordered, from Settings > Appearance > Explore sections. The last one on stays on: Explore is the only way into the whole of a library, so a tab with no chips would be a catalogue with no way in.
 - A playlist can be a favourite, with the heart its albums and artists already have. It needs Navidrome 0.64 or newer, which is where playlist favourites start existing, and the heart simply isn't there on a server that has no way to remember it.
+- Polish, a complete translation, thanks to @pegaz19803-spec (#200). It also made the Language screen's own three lines translatable, which they were not in any language: they were English sitting in the code.
+- Navidrome 0.64 gives every song, album and playlist a new id, and the music already on the phone is filed under the old ones. Resonus now notices a server that has renumbered and rewrites the downloads, the offline library, the queue, the pins and the listens still waiting to be sent, so nothing has to be downloaded again. It only acts on proof: the server has to answer to the new id and refuse the old one, since a song that was simply deleted looks the same from outside. A server that has not migrated is left alone.
 
 ### Changed
 
 - Home opens with every section on. Five of them used to start off to keep it short, which mostly kept them secret: a section nobody has seen is one nobody knows to look for in the settings. Turn off what you do not want from Settings > Appearance > Home sections. Anyone who has already set these keeps what they chose.
-
 - "Your library" opens on everything you have, playlists, favourite albums and favourite artists in one list saying which is which, and the chips narrow it from there instead of being the only way to see any of it.
 - The chip you press in "Your library" is now the only one left in the row, behind an X that gives the whole library back, and Playlists brings Yours and Public with it, each when it has something to leave out; picking one of those leaves the two words sitting together as one answer.
 - The search box of Explore is now behind the same magnifier "Your library" has, at the top right, where it becomes the X that puts the box away; Back closes it too, and a section opens on its list rather than on a box you were not looking for.
