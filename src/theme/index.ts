@@ -479,7 +479,6 @@ export const radius = {
   sm: 6,
   md: 10,
   lg: 16,
-  /** The cards that peek below the player controls. */
   xl: 24,
   /** A sheet rising from the bottom, and anything else that owns the screen. */
   xxl: 32,
