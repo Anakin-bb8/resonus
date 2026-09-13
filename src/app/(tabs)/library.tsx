@@ -846,9 +846,10 @@ export default function LibraryScreen() {
    * Which chip is pressed, and none of them to start with: the tab opens on
    * everything you have, and a chip is what narrows it (`AllTab`). It used to
    * open on the playlists, which put your albums and your artists behind a tap
-   * nobody had asked for.
+   * nobody had asked for; that is now a setting (#217).
    */
   const [segment, setSegment] = useState<Segment | null>(null);
+  const showsPlaylists = useSettings((s) => s.libraryShowsPlaylists);
   /** And which playlists, once that chip is the one pressed. */
   const [owner, setOwner] = useState<Owner | null>(null);
   /**
@@ -1130,9 +1131,9 @@ export default function LibraryScreen() {
       <SortSheet visible={sortOpen} onClose={() => setSortOpen(false)} />
 
       <View style={{ flex: 1 }}>
-        {segment === null ? (
+        {segment === null && !showsPlaylists ? (
           <AllTab query={filter} onNew={() => setCreating(true)} />
-        ) : segment === 'playlists' ? (
+        ) : segment === null || segment === 'playlists' ? (
           <PlaylistsTab onNew={() => setCreating(true)} query={filter} owner={shownOwner} />
         ) : segment === 'albums' ? (
           <AlbumsTab query={filter} />

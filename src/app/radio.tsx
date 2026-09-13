@@ -158,6 +158,7 @@ export function RadioBrowser({ embedded, actionRef, searchOpen }: BrowserProps) 
     if (!station) return;
     try {
       await deleteRadioStation(auth!, station.id);
+      usePins.getState().unpin(`radio:${station.id}`);
       await refresh();
     } catch {
       toast(t("Couldn't complete the action"));

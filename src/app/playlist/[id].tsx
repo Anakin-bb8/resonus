@@ -38,6 +38,7 @@ import { useSharePicker } from '@/store/sharePicker';
 import { useAuthStore } from '@/store/auth';
 import { useAutoDownloads } from '@/store/autoDownloads';
 import { groupDownloadState, useDownloads } from '@/store/downloads';
+import { usePins } from '@/store/pins';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
 import { showUndoToast, useToast } from '@/store/toast';
@@ -188,7 +189,10 @@ export default function PlaylistScreen() {
     showUndoToast(t('Playlist deleted'), t('Undo'), {
       commit: () => {
         deletePlaylist(id)
-          .then(() => queryClient.invalidateQueries({ queryKey: ['playlists'] }))
+          .then(() => {
+            usePins.getState().unpin(`playlist:${id}`);
+            return queryClient.invalidateQueries({ queryKey: ['playlists'] });
+          })
           .catch(() => {
             useToast.getState().show(t("Couldn't complete the action"));
             queryClient.invalidateQueries({ queryKey: ['playlists'] });

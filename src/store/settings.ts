@@ -912,6 +912,9 @@ interface SettingsState {
   homeButtons: HomeButton[];
   /** App startup tab (Home/Search/Library). */
   defaultTab: DefaultTab;
+  /** Your library with no chip pressed shows Favorites and the playlists, as
+   *  it did before the mixed view, instead of everything (#217). */
+  libraryShowsPlaylists: boolean;
   /** Chosen Library sort order (recent/added/alphabetical). */
   librarySort: LibrarySort;
   /** List or grid in the Library. */
@@ -1051,6 +1054,7 @@ interface SettingsState {
   /** Replace the full list (for reordering). */
   setHomeButtons: (buttons: HomeButton[]) => void;
   setDefaultTab: (value: DefaultTab) => void;
+  setLibraryShowsPlaylists: (value: boolean) => void;
   setLibrarySort: (value: LibrarySort) => void;
   setBrowsePlaylistsLayout: (value: ListLayout) => void;
   setBrowsePlaylistsSort: (value: LibrarySort) => void;
@@ -1168,6 +1172,7 @@ function snapshot(get: () => SettingsState) {
     showFolderBrowser: s.showFolderBrowser,
     homeButtons: s.homeButtons,
     defaultTab: s.defaultTab,
+    libraryShowsPlaylists: s.libraryShowsPlaylists,
     librarySort: s.librarySort,
     libraryLayout: s.libraryLayout,
     browseArtistsLayout: s.browseArtistsLayout,
@@ -1277,6 +1282,7 @@ const DEFAULTS = {
   showFolderBrowser: false,
   homeButtons: DEFAULT_HOME_BUTTONS.map((b) => ({ ...b })),
   defaultTab: 'index' as DefaultTab,
+  libraryShowsPlaylists: false,
   librarySort: 'recent' as LibrarySort,
   libraryLayout: 'list' as ListLayout,
   // Rows, like the songs below and like everything else in Explore. A grid is
@@ -1749,6 +1755,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setLibraryShowsPlaylists: (libraryShowsPlaylists) => {
+    set({ libraryShowsPlaylists });
+    persist(snapshot(get));
+  },
+
   setLibraryLayout: (libraryLayout) => {
     set({ libraryLayout });
     persist(snapshot(get));
@@ -1954,6 +1965,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           /** Old setting (boolean); migrated to `homeButtons`. */
           showHistoryButton: boolean;
           defaultTab: DefaultTab;
+          libraryShowsPlaylists: boolean;
           librarySort: LibrarySort;
           libraryLayout: ListLayout;
           browseArtistsLayout: ListLayout;
@@ -2284,6 +2296,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
           parsed.defaultTab === 'explore'
         ) {
           set({ defaultTab: parsed.defaultTab });
+        }
+        if (typeof parsed.libraryShowsPlaylists === 'boolean') {
+          set({ libraryShowsPlaylists: parsed.libraryShowsPlaylists });
         }
         if (parsed.librarySort === 'recent' || parsed.librarySort === 'added' || parsed.librarySort === 'alpha') {
           set({ librarySort: parsed.librarySort });

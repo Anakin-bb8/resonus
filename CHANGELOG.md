@@ -9,6 +9,18 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Added
+
+- Your library can show Favorites and your playlists again when no chip is pressed, instead of everything mixed together, with Settings > Appearance > Start on your playlists (#217).
+
+### Changed
+
+- You can pin up to 50 items instead of 25 (#217).
+
+### Fixed
+
+- Deleting a playlist or a radio station, or taking an album out of your favourites with its heart, no longer leaves a hidden pin that still counts toward the limit (#217).
+
 ## [0.7.7] - 2026-09-13
 
 ### Added
