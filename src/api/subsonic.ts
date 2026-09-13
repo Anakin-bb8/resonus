@@ -575,6 +575,38 @@ export async function ping(auth: SubsonicAuth): Promise<void> {
  *  work: a miss costs one comparison that was going to happen anyway. */
 const lastVersionSeen = new Map<string, string>();
 
+/**
+ * Whether the server this profile talks to is at least `major.minor`.
+ *
+ * `undefined` for "no idea", which is every case that is not a plain answer:
+ * before the first `ping`, and for any version string that does not start with
+ * two numbers — a develop build carrying a git sha, a fork with its own
+ * scheme, a proxy rewriting it.
+ *
+ * Worth being clear about what this may and may not be used for. It gates
+ * whether a feature is *offered*, where being wrong costs a button that is
+ * there or is not; the repair of the ids deliberately refuses to trust it for
+ * anything else, and says why at length (`navidromeRepair.noteServerVersion`).
+ * The three-valued answer is the whole point: a caller has to decide what to
+ * do about not knowing, and for a feature the answer is to leave it out.
+ *
+ * Only meaningful next to a `serverType` check, since what the string means
+ * depends on who sent it: on Navidrome it is Navidrome's own version, and on a
+ * server that sends no `serverVersion` at all it is the Subsonic API level,
+ * where 1.16 has nothing to do with anybody's release.
+ */
+export function serverAtLeast(
+  auth: SubsonicAuth,
+  major: number,
+  minor: number,
+): boolean | undefined {
+  const seen = lastVersionSeen.get(`${auth.username}|${auth.serverUrl}`);
+  const parts = /^(\d+)\.(\d+)/.exec(seen ?? '');
+  if (!parts) return undefined;
+  const [seenMajor, seenMinor] = [Number(parts[1]), Number(parts[2])];
+  return seenMajor !== major ? seenMajor > major : seenMinor >= minor;
+}
+
 /** Which way round an order is read. It goes into the request, so it lives
  *  here with the rest of what a request can say. */
 export type SortDirection = 'asc' | 'desc';
@@ -1222,12 +1254,30 @@ export async function getStarred(auth: SubsonicAuth, musicFolderId?: string): Pr
   };
 }
 
-export type StarType = 'song' | 'album' | 'artist';
+/**
+ * What a favourite can be about.
+ *
+ * `playlist` is Navidrome 0.64 and up only, and it is not in Subsonic at all.
+ * Starring one is written the same way a song is, with the plain `id`
+ * parameter, and the server works out what the id belongs to
+ * (`GetEntityByID`, navidrome/navidrome#5749). What it is *not* is readable
+ * that way: the same PR keeps annotations out of the Subsonic playlist
+ * responses on purpose, so `getStarred` will never mention a playlist and the
+ * state has to be read through the native API (`listStarredPlaylistIds`).
+ *
+ * On an older Navidrome the plain id falls through to `media_file`, matches
+ * nothing, and the server answers a cheerful OK having done nothing at all,
+ * which is why the heart is only offered where that read path exists (see
+ * `usePlaylistStars`): if we cannot read the state back, we do not pretend to
+ * write it.
+ */
+export type StarType = 'song' | 'album' | 'artist' | 'playlist';
 
 function starParam(id: string, type: StarType): Record<string, string> {
   // Subsonic uses a different parameter depending on the element type.
   if (type === 'album') return { albumId: id };
   if (type === 'artist') return { artistId: id };
+  // Songs, and playlists on Navidrome, which resolves the id itself.
   return { id };
 }
 

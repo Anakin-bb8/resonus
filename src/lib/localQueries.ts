@@ -77,7 +77,18 @@ async function saveFavs(favs: LocalFavStore) {
   if (profileScopeId() === 'local') await deleteItem(FAVS_KEY);
 }
 
+/**
+ * `playlist` is not one of these and is dropped rather than mis-filed.
+ *
+ * This store has three lists and Subsonic's three kinds of favourite; a
+ * favourite playlist is Navidrome's own and lives only on its server (see
+ * `StarType`). Without saying so, the `else` below would file a playlist id
+ * among the songs, where it would come back out as a song that does not exist.
+ * Nothing reaches this with one today — the heart is not offered offline — and
+ * this is what keeps that from mattering.
+ */
 export async function starLocal(id: string, type?: StarType) {
+  if (type === 'playlist') return;
   const favs = await loadFavs();
   if (type === 'album' || type === 'artist') {
     const key = type === 'album' ? 'albums' : 'artists';
@@ -93,7 +104,9 @@ export async function starLocal(id: string, type?: StarType) {
   }
 }
 
+/** See `starLocal`: a playlist is not one of the three lists here. */
 export async function unstarLocal(id: string, type?: StarType) {
+  if (type === 'playlist') return;
   const favs = await loadFavs();
   if (type === 'album' || type === 'artist') {
     const key = type === 'album' ? 'albums' : 'artists';
