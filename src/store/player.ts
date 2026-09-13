@@ -1518,8 +1518,16 @@ async function extendWithArtistCatalog(auth: SubsonicAuth, artistId: string, hre
 
 async function maybeQueueAutoplay() {
   const { queue, index, repeat, radioMode, radioSeed, sourceHref } = usePlayerStore.getState();
-  // With repeat the queue never "runs out"; and if 2+ songs remain, not yet.
-  if (repeat !== 'off' || index < queue.length - 2) return;
+  // With repeat the queue never "runs out", so plain autoplay has no end to
+  // extend past; and if 2+ songs remain, not yet.
+  //
+  // A mix is not that. It was started by hand and the whole point of it is that
+  // it keeps arriving, so repeat does not get to stop it. Letting it was how
+  // "Start mix" came back "Couldn't find anything to mix with this song" for
+  // every song on any account that had left repeat on (#197): the report said
+  // nothing was found, and nothing had been looked for, because this line
+  // returned before a single request went out.
+  if ((repeat !== 'off' && !radioMode) || index < queue.length - 2) return;
   const { auth, offline } = useAuthStore.getState();
   if (!auth || offline) return;
   // Before the mix, and before the autoplay setting has a say: this is not
@@ -3435,6 +3443,12 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         index: 0,
         queuedCount: 0,
         shuffle: false,
+        // Off, for the same reason shuffle is: a mix is an endless line of
+        // tracks arriving, and the two playback modes that rearrange a queue
+        // with an end have nothing to say about one without. `one` is the case
+        // that made this worth doing rather than tidy, since it would hold the
+        // seed on screen for ever with the whole mix waiting behind it (#197).
+        repeat: 'off',
         queueDealt: false,
         originalQueue: null,
         source,
@@ -3442,6 +3456,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         radioMode: true,
         radioSeed: cur,
       });
+      // The player is already loaded and was told to loop when it was, so
+      // turning repeat off in the state above is not enough on its own: the
+      // track would go round again while the mix waited behind it.
+      applyLoop(activePlayer());
       // `loadIndex` isn't running, so nothing else is going to persist this.
       scheduleSync();
       await maybeQueueAutoplay();
@@ -3451,6 +3469,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     // for the server to respond before pressing play would make "start mix" feel
     // broken. Awaiting `maybeQueueAutoplay` afterwards doesn't delay playback,
     // only the answer of whether the mix found anything.
+    //
+    // Repeat goes off before the seed is loaded rather than after, so the load is the thing
+    // that tells the player (`applyLoop` reads the state as it goes), and
+    // `playQueue` writes it down with the rest of the queue.
+    set({ repeat: 'off' });
     await get().playQueue([seed], 0, source);
     set({ radioMode: true, radioSeed: seed });
     await maybeQueueAutoplay();
