@@ -751,23 +751,6 @@ interface SettingsState {
    * to look, who are exactly the ones who did not need it.
    */
   updateCheck: boolean;
-  /**
-   * Whether to repair the offline library when the server renumbers its ids
-   * (Navidrome 0.64 rewrites every one of them).
-   *
-   * Off until the repair has been seen working against a server that really
-   * has migrated, which cannot happen until such a server exists. It is the
-   * only thing in the app that rewrites the whole download catalog, and the
-   * expensive way to be wrong is to run when it should not have: that is us
-   * breaking somebody's downloads ourselves, where not running only leaves
-   * them where they already were.
-   *
-   * The day it is on by default is the day after it has been tested, and this
-   * switch stays for whoever wants it off anyway. Turning it off does not
-   * disarm anything today: no released Navidrome answers to the new ids, so
-   * the repair cannot conclude anything either way.
-   */
-  navidromeIdRepair: boolean;
   /** Crossfade seconds between songs (0 = disabled). */
   crossfadeSec: number;
   /**
@@ -1006,7 +989,6 @@ interface SettingsState {
   setAutoplaySimilar: (value: boolean) => void;
   setDiagnostics: (value: boolean) => void;
   setUpdateCheck: (value: boolean) => void;
-  setNavidromeIdRepair: (value: boolean) => void;
   setCrossfadeSec: (value: number) => void;
   setScrobblePercent: (value: number) => void;
   setScrobbleSeconds: (value: number) => void;
@@ -1136,7 +1118,6 @@ function snapshot(get: () => SettingsState) {
     autoplaySimilar: s.autoplaySimilar,
     diagnostics: s.diagnostics,
     updateCheck: s.updateCheck,
-    navidromeIdRepair: s.navidromeIdRepair,
     crossfadeSec: s.crossfadeSec,
     scrobblePercent: s.scrobblePercent,
     scrobbleSeconds: s.scrobbleSeconds,
@@ -1237,8 +1218,6 @@ const DEFAULTS = {
   diagnostics: false,
   // On: see the note on the field. Nothing is downloaded by it.
   updateCheck: true,
-  // Off until it has been watched doing its job against a migrated server.
-  navidromeIdRepair: false,
   crossfadeSec: 0,
   scrobblePercent: SCROBBLE_PERCENT_DEFAULT,
   scrobbleSeconds: SCROBBLE_SECONDS_DEFAULT,
@@ -1456,11 +1435,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
 
   setUpdateCheck: (updateCheck) => {
     set({ updateCheck });
-    persist(snapshot(get));
-  },
-
-  setNavidromeIdRepair: (navidromeIdRepair) => {
-    set({ navidromeIdRepair });
     persist(snapshot(get));
   },
 
@@ -1918,7 +1892,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
           autoplaySimilar: boolean;
           diagnostics: boolean;
           updateCheck?: boolean;
-          navidromeIdRepair?: boolean;
           crossfadeSec: number;
           scrobblePercent: number;
           scrobbleSeconds: number;
@@ -2071,9 +2044,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (typeof parsed.showExplicitTag === 'boolean') {
           set({ showExplicitTag: parsed.showExplicitTag });
-        }
-        if (typeof parsed.navidromeIdRepair === 'boolean') {
-          set({ navidromeIdRepair: parsed.navidromeIdRepair });
         }
         if (typeof parsed.diagnostics === 'boolean') {
           set({ diagnostics: parsed.diagnostics });

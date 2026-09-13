@@ -464,12 +464,8 @@ async function retryWithCanonicalId<T>(
 ): Promise<T | null> {
   const id = extra.id;
   if (typeof id !== 'string' || !idWouldChange(id)) return null;
-  // Turned off means nothing of this runs, down to the one extra request this
-  // would spend on a song that is simply not there any more. Read through the
-  // repair module rather than the settings store so the API layer keeps its
-  // one-way dependency on it.
   const repair = await import('@/lib/navidromeRepair').catch(() => null);
-  if (!repair?.idRepairEnabled()) return null;
+  if (!repair) return null;
   let res: T;
   try {
     res = await request<T>(auth, endpoint, { ...extra, id: canonicalId(id) }, allowOffline, true);
