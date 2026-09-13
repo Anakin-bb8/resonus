@@ -198,13 +198,21 @@ export function coverArtUrl(id: string | undefined, _size?: number): string | un
 /**
  * The cover for one song, which is not always the same picture offline.
  *
- * Online a song's own art wins, because on a compilation or a live take it is
- * the one that belongs to the track. Offline that art is usually nothing: on a
- * server that gives every track its own cover id, nothing on this phone was
- * ever saved under it. What was saved is the album's, both by a download and
- * by the mirror, so offline the album's is what gets asked for. A picture from
- * the right record beats a grey square, which is what the rows of a playlist
- * were showing.
+ * A song's own art wins where there is any, because on a compilation or a live
+ * take it is the one that belongs to the track. Offline the question is not
+ * which picture is better but which one is here: asking for art that was never
+ * saved draws a grey square, and that is what the rows of a playlist used to
+ * show. So offline the song's own is preferred only once this phone is known to
+ * have it, and the album's is what stands in when it does not.
+ *
+ * Which pulls the two cases apart, and they were one before (#214). A download
+ * saves a track's own picture and files the song under it (`downloadTrackArt`),
+ * so the track that has a sleeve of its own shows it with no connection. The
+ * mirror never saved one and still holds the server's id, which resolves to
+ * nothing here, so those keep the album's exactly as they did.
+ *
+ * The test is `Local.coverUrl`, which is a map lookup rather than a look at the
+ * disk, and it is the same one `coverArtUrl` is about to make anyway.
  *
  * A station has no album to fall back to, and its `url` is what says so.
  */
@@ -213,7 +221,9 @@ export function songCoverUrl(
   size?: number,
 ): string | undefined {
   const album = song.url ? undefined : song.albumId;
-  return coverArtUrl(isOffline() ? (album ?? song.coverArt) : (song.coverArt ?? album), size);
+  if (!isOffline()) return coverArtUrl(song.coverArt ?? album, size);
+  const here = song.coverArt && Local.coverUrl(song.coverArt) ? song.coverArt : undefined;
+  return coverArtUrl(here ?? album ?? song.coverArt, size);
 }
 
 /**
