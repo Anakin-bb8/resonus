@@ -27,6 +27,7 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- "On cover tap" keeps what you picked. "Go to album", "Play or pause" and "Add to favorites" were thrown away when the app reopened and came back as "Open lyrics screen"; the same went for the double tap, which came back off unless it was set to play/pause or favorites. Reported by BrawlReturns.
 - An animated cover no longer stutters in the player: only the copy you are looking at plays, and the blurred background behind it holds still.
 - The popular songs on an artist's page are that artist's, where two of them share a name. They were asked for by name alone, so whichever one the server happened to reach first answered for both.
 - "Start mix" works with repeat turned on. It used to answer that it could not find anything to mix with the song, whichever song it was, and nothing had been looked for: the queue never runs out with repeat on, so the search that fills a mix was skipped before it began. Starting a mix now also turns repeat off, the way it already turned shuffle off (#197).

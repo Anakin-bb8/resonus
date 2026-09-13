@@ -265,13 +265,34 @@ export type CardBackground = 'none' | 'color';
  * and the lyrics on the double is as reasonable as the other way round, and
  * splitting the lists only made half of each unreachable.
  */
-export type CoverTapAction =
-  | 'none'
-  | 'screen'
-  | 'inline'
-  | 'playPause'
-  | 'favorite'
-  | 'album';
+export const COVER_TAP_ACTIONS = [
+  'none',
+  'screen',
+  'inline',
+  'playPause',
+  'favorite',
+  'album',
+] as const;
+
+/**
+ * Derived from the list above rather than written out beside it, which is the
+ * one thing that keeps the two from disagreeing.
+ *
+ * They did. The loader used to spell out which values it would accept, three
+ * each and different threes, because the two settings once had separate lists
+ * and those were the halves. Merging the lists left the loader with the old
+ * ones, so a single tap saved as `album` was refused on the way back in and
+ * came up as `screen`: pick "Go to album", reopen the app, and it says "Open
+ * lyrics screen". The double tap had it worse and nobody noticed, since
+ * everything but play/pause and favourite fell back to `none` and turned the
+ * gesture off.
+ */
+export type CoverTapAction = (typeof COVER_TAP_ACTIONS)[number];
+
+/** Whether a value off the disk is one of them. */
+export function isCoverTapAction(value: unknown): value is CoverTapAction {
+  return COVER_TAP_ACTIONS.includes(value as CoverTapAction);
+}
 
 /**
  * What tapping the cover twice does (#156). The same list as one tap.
@@ -2135,18 +2156,10 @@ export const useSettings = create<SettingsState>((set, get) => ({
         if (typeof parsed.showArtistCard === 'boolean') {
           set({ showArtistCard: parsed.showArtistCard });
         }
-        if (
-          parsed.coverTapAction === 'none' ||
-          parsed.coverTapAction === 'screen' ||
-          parsed.coverTapAction === 'inline'
-        ) {
+        if (isCoverTapAction(parsed.coverTapAction)) {
           set({ coverTapAction: parsed.coverTapAction });
         }
-        if (
-          parsed.coverDoubleTapAction === 'none' ||
-          parsed.coverDoubleTapAction === 'playPause' ||
-          parsed.coverDoubleTapAction === 'favorite'
-        ) {
+        if (isCoverTapAction(parsed.coverDoubleTapAction)) {
           set({ coverDoubleTapAction: parsed.coverDoubleTapAction });
         }
         if (typeof parsed.marqueeTitles === 'boolean') {
