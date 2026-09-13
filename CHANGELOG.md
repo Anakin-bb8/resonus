@@ -25,6 +25,7 @@ Releases before 0.2.1 are only listed on the
 
 - An animated cover no longer stutters in the player: only the copy you are looking at plays, and the blurred background behind it holds still.
 - The popular songs on an artist's page are that artist's, where two of them share a name. They were asked for by name alone, so whichever one the server happened to reach first answered for both.
+- The colour an artist's page is tinted with comes from their photo and not from the grey square standing in for it while the server is still looking the photo up, which it could keep doing for as long as the picture stayed in the cache.
 
 ## [0.7.6] - 2026-08-26
 

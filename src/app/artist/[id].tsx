@@ -124,7 +124,6 @@ export default function ArtistScreen() {
   // account and never gets here.
   const serverType = useAuthStore((s) => s.auth?.serverType);
   const canRate = useAuthStore((s) => !!s.auth) && serverType !== 'jellyfin';
-  const dominant = useDominantColor(canFetch ? coverArtUrl(id, COVER.thumb) : undefined);
 
   // ── Download the discography ────────────────────────────────────────────
   // With `songIds` intentionally empty: `groupDownloadState` can only say
@@ -186,6 +185,21 @@ export default function ArtistScreen() {
     enabled: canFetch && !!id,
   });
   const name = data?.artist.name;
+
+  // The artist's own `coverArt`, not their id, and it is worth the wait for
+  // `data`. Navidrome 0.64 stopped treating the two as interchangeable: an
+  // artwork id carries a hash of the picture, and only a request that asks for
+  // the current hash is answered `immutable` — a bare id gets `no-cache` and is
+  // revalidated on every single load. Worse, while the server is still
+  // resolving the artwork in the background it answers with a placeholder, and
+  // `expo-image` on Android caches by URL without consulting the headers that
+  // say not to. Asking by bare id means that grey square is what this screen's
+  // colour is taken from, and the URL never changes to shake it off. Until
+  // `data` arrives there is nothing to ask for, which is a frame or two of no
+  // tint rather than a wrong one.
+  const dominant = useDominantColor(
+    canFetch && data ? coverArtUrl(data.artist.coverArt ?? id, COVER.thumb) : undefined
+  );
 
   // Keyed by id as well as name, and both are load-bearing. The id is what
   // tells two artists who share a name apart, which is the whole reason it is
