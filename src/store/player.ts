@@ -3033,6 +3033,14 @@ export function initRemoteIntegration() {
       applyLoop(activePlayer());
       scheduleSync();
     },
+    onVolumeChanged: (volume) => {
+      const current = usePlayerStore.getState().volume;
+      const rounded = Math.round(volume * 100) / 100;
+      if (Math.abs(rounded - current) >= 0.01) {
+        usePlayerStore.setState({ volume: rounded });
+        castSetVolumeLevel(rounded);
+      }
+    },
     onFinished: () => {
       if (handleSleepAtSongEnd()) return;
       const { repeat, index } = usePlayerStore.getState();
