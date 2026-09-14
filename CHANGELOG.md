@@ -25,6 +25,8 @@ Releases before 0.2.1 are only listed on the
 - On a UPnP or Sonos speaker the volume starts from the speaker's own level and follows changes made on it, instead of jumping near full at the first press (#218).
 - Offline, a track with its own embedded cover shows it in the album, the queue and the player instead of the album's, also for albums downloaded before 0.7.7 (#214).
 - On Navidrome 0.64 or newer, albums, artists and playlists with no artwork show Resonus' own placeholder instead of Navidrome's, and are no longer asked for it.
+- A Sonos queue that failed to load part way is sent again in full the next time, instead of being taken as already there (#220).
+- Casting to a UPnP or Sonos speaker goes back to the phone, paused where it was, when the phone moves to mobile data or loses the network, but not when only the internet drops (#220).
 
 ## [0.7.7] - 2026-09-13
 
