@@ -12,6 +12,7 @@ Releases before 0.2.1 are only listed on the
 ### Added
 
 - Your library can show Favorites and your playlists again when no chip is pressed, instead of everything mixed together, with Settings > Appearance > Start on your playlists (#217).
+- Lyrics timed word by word light up each word as it is sung, from TTML or enhanced LRC files on Navidrome 0.63 or newer, on Jellyfin, or next to your own music, and downloads keep them for offline (#165).
 
 ### Changed
 
