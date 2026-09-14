@@ -156,6 +156,7 @@ class UpnpCastModule : Module() {
       }
       scope.launch {
         transportMutex.withLock {
+          target.resetQueueState()
           session = target
           clearNativeQueueState()
         }
@@ -348,7 +349,10 @@ class UpnpCastModule : Module() {
           stoppedByUs = true
           observedPlaying = false
           clearNativeQueueState()
-          current?.stop()
+          current?.let {
+            it.stop()
+            it.resetQueueState()
+          }
         }
         promise.resolve(true)
       }
