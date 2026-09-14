@@ -927,9 +927,9 @@ async function loadIndex(index: number, autoplay: boolean): Promise<boolean> {
 }
 
 // ── "Back" history, Spotify-style ────────────────────────────────────────────
-// Stack of already-played contexts so the previous button/gesture returns to
-// the prior song even if it comes from a different playlist or album (not the
-// previous track of the current context). Pushed on each advance/skip forward
+// Stack of already-played contexts so the previous button/gesture, once at the
+// start of the queue, returns to the song played before it even if it comes
+// from a different playlist or album. Pushed on each advance/skip forward
 // and popped in previous(). Entries share the `queue` reference within the
 // same context, so they only weigh what changes between skips.
 type HistoryEntry = {
@@ -3649,7 +3649,14 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       return;
     }
     // At the start of the queue: return to the previous context from history.
-    const entry = playedHistory.pop();
+    // Entries of this same list point further into it, left there by the
+    // advances the steps above walked back over.
+    const { queue, source, sourceHref } = get();
+    const key = contextKey(source, sourceHref);
+    const sameList = (e: HistoryEntry) =>
+      e.queue === queue || (key != null && contextKey(e.source, e.sourceHref) === key);
+    let entry = playedHistory.pop();
+    while (entry && sameList(entry)) entry = playedHistory.pop();
     if (entry) {
       set({
         queue: entry.queue,
