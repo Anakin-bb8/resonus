@@ -24,6 +24,7 @@ Releases before 0.2.1 are only listed on the
 - Previous goes to the track before in the album or playlist that is playing, and only back to what you played before it once you reach the first track (#219).
 - On a UPnP or Sonos speaker the volume starts from the speaker's own level and follows changes made on it, instead of jumping near full at the first press (#218).
 - Offline, a track with its own embedded cover shows it in the album, the queue and the player instead of the album's, also for albums downloaded before 0.7.7 (#214).
+- On Navidrome 0.64 or newer, albums, artists and playlists with no artwork show Resonus' own placeholder instead of Navidrome's, and are no longer asked for it.
 
 ## [0.7.7] - 2026-09-13
 

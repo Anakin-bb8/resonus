@@ -171,6 +171,8 @@ export const CACHED_COVER = 'cached-cover:';
 
 
 export function coverArtUrl(id: string | undefined, _size?: number): string | undefined {
+  // Empty is an item the server says has no artwork (see `lib/absentCovers`).
+  if (!id) return undefined;
   // If the album art is downloaded (album/artist on disk), use it even
   // when in server mode: it works offline and doesn't use data, just
   // like audio plays from the downloaded file.

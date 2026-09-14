@@ -13,6 +13,7 @@ import * as Crypto from 'expo-crypto';
 // This one answers there, and honours `AbortSignal` properly with it.
 import { fetch } from 'expo/fetch';
 
+import { markAbsentCovers, omitsAbsentCovers } from '@/lib/absentCovers';
 import { wordsFromCues } from '@/lib/lyricWords';
 import { canonicalId, idWouldChange } from '@/lib/navidromeIds';
 import { timed } from '@/lib/perfLog';
@@ -532,6 +533,7 @@ async function request<T>(
     }
     throw new SubsonicRequestError(sub.error?.message ?? 'Subsonic error', false, code);
   }
+  if (omitsAbsentCovers(sub)) markAbsentCovers(sub);
   return sub as T;
 }
 
