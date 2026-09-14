@@ -25,7 +25,6 @@ import { fetch as expoFetch } from 'expo/fetch';
 import { AppState } from 'react-native';
 import { create } from 'zustand';
 
-import { CLIENT_NAME } from '@/api/subsonic';
 import {
   getAlbum,
   getArtist,
@@ -45,6 +44,7 @@ import {
   type Song,
   type SubsonicAuth,
 } from '@/api/backend';
+import { CLIENT_NAME } from '@/api/subsonic';
 // The data layer's, not the backend's: `getRandomSongs` honours the library
 // filter and asks each library for its share (the rest of the mix cannot be
 // filtered, see `radioCandidates`), and `coverArtUrl` hands back the file on
@@ -3634,8 +3634,13 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       get().seekTo(0);
       return;
     }
-    // Returns to the previous song in history, even if from another list/album.
     const playing = get().isPlaying;
+    // Step backwards within the current queue as long as we're not at the first track.
+    if (index > 0) {
+      void loadIndex(index - 1, skipAutoplay(playing));
+      return;
+    }
+    // At the start of the queue: return to the previous context from history.
     const entry = playedHistory.pop();
     if (entry) {
       set({
@@ -3653,8 +3658,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       void loadIndex(entry.index, skipAutoplay(playing));
       return;
     }
-    if (index > 0) void loadIndex(index - 1, skipAutoplay(playing));
-    else get().seekTo(0);
+    get().seekTo(0);
   },
 
   seekTo: (sec) => {
