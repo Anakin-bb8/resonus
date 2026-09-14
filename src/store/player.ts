@@ -3057,6 +3057,14 @@ export function initRemoteIntegration() {
   };
   initUpnp(events);
   initJukebox(events);
+  let lastNetworkState = useNetworkType.getState();
+  useNetworkType.subscribe((networkState) => {
+    const changedToUnavailable =
+      (!lastNetworkState.cellular && networkState.cellular) ||
+      (lastNetworkState.connected && !networkState.connected);
+    lastNetworkState = networkState;
+    if (changedToUnavailable && isUpnpConnected()) void upnpDisconnect();
+  });
   // Sync crossfade toggle to Sonos whenever the setting changes.
   let lastCrossfadeSec = useSettings.getState().crossfadeSec;
   useSettings.subscribe((s) => {
