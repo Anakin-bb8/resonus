@@ -25,7 +25,6 @@ import { fetch as expoFetch } from 'expo/fetch';
 import { AppState } from 'react-native';
 import { create } from 'zustand';
 
-import { CLIENT_NAME } from '@/api/subsonic';
 import {
   getAlbum,
   getArtist,
@@ -45,6 +44,7 @@ import {
   type Song,
   type SubsonicAuth,
 } from '@/api/backend';
+import { CLIENT_NAME } from '@/api/subsonic';
 // The data layer's, not the backend's: `getRandomSongs` honours the library
 // filter and asks each library for its share (the rest of the mix cannot be
 // filtered, see `radioCandidates`), and `coverArtUrl` hands back the file on
@@ -3032,6 +3032,14 @@ export function initRemoteIntegration() {
       usePlayerStore.setState({ repeat });
       applyLoop(activePlayer());
       scheduleSync();
+    },
+    onVolumeChanged: (volume) => {
+      const current = usePlayerStore.getState().volume;
+      const rounded = Math.round(volume * 100) / 100;
+      if (Math.abs(rounded - current) >= 0.01) {
+        usePlayerStore.setState({ volume: rounded });
+        castSetVolumeLevel(rounded);
+      }
     },
     onFinished: () => {
       if (handleSleepAtSongEnd()) return;
