@@ -19,6 +19,12 @@ class RendererSession(
   private var avTransport: String? = initialDescription.controlUrl(Services.AV_TRANSPORT)
 
   @Volatile
+  private var cachedCoordinatorTarget: TransportTarget? = null
+
+  @Volatile
+  private var coordinatorResolvedAtMs: Long = 0L
+
+  @Volatile
   private var queueControl: String? = initialDescription.controlUrl(Services.QUEUE)
 
   @Volatile
@@ -647,6 +653,11 @@ class RendererSession(
 
   suspend fun stop(): Boolean = transport("Stop", "<InstanceID>0</InstanceID>")
 
+  fun invalidateCoordinatorTarget() {
+    cachedCoordinatorTarget = null
+    coordinatorResolvedAtMs = 0L
+  }
+
   suspend fun join(target: RendererSession): Boolean {
     val ownControl = avTransport ?: refreshControlUrl() ?: return false
     val targetUid = target.resolveTransportTarget()?.uid ?: return false
@@ -683,13 +694,29 @@ class RendererSession(
 
   private suspend fun resolveTransportTarget(): TransportTarget? {
     val control = avTransport ?: refreshControlUrl() ?: return null
-    val coordinator = SonosTopology.coordinatorTarget(description)
-    if (coordinator != null) {
-      avTransport = coordinator.controlUrl
-      return TransportTarget(coordinator.controlUrl, coordinator.uid)
+    if (!description.isSonos) {
+      val uid = description.udn?.removePrefix("uuid:")?.trim()?.uppercase() ?: deviceId
+      return TransportTarget(control, uid)
     }
-    val uid = description.udn?.removePrefix("uuid:")?.trim()?.uppercase() ?: deviceId
-    return TransportTarget(control, uid)
+
+    val now = System.currentTimeMillis()
+    cachedCoordinatorTarget?.let { cached ->
+      if (now - coordinatorResolvedAtMs < COORDINATOR_CACHE_MS) return cached
+    }
+
+    val coordinator = SonosTopology.coordinatorTarget(description)
+    if (coordinator == null) {
+      // A Sonos group member must not receive transport commands directly.
+      // Keep the last known coordinator usable during a temporary topology
+      // lookup failure, but never fall back to the member itself.
+      return cachedCoordinatorTarget
+    }
+
+    val target = TransportTarget(coordinator.controlUrl, coordinator.uid)
+    cachedCoordinatorTarget = target
+    coordinatorResolvedAtMs = now
+    avTransport = target.controlUrl
+    return target
   }
 
   suspend fun setPlayMode(playMode: String): Boolean {
@@ -769,6 +796,8 @@ class RendererSession(
     val fresh = Soap.fetch(location)?.let { DeviceDescription.parse(it, location) } ?: return null
     description = fresh
     avTransport = fresh.controlUrl(Services.AV_TRANSPORT)
+    cachedCoordinatorTarget = null
+    coordinatorResolvedAtMs = 0L
     queueControl = fresh.controlUrl(Services.QUEUE)
     renderingControl = fresh.controlUrl(Services.RENDERING_CONTROL)
     lastQueueOwnerUid = null
@@ -793,5 +822,6 @@ class RendererSession(
 
   private companion object {
     const val INSTANCE = "<InstanceID>0</InstanceID>"
+    const val COORDINATOR_CACHE_MS = 15_000L
   }
 }

@@ -171,7 +171,11 @@ class UpnpCastModule : Module() {
         promise.resolve(false)
         return@AsyncFunction
       }
-      scope.launch { promise.resolve(device.join(target)) }
+      scope.launch {
+        val ok = device.join(target)
+        if (ok) known.values.forEach(RendererSession::invalidateCoordinatorTarget)
+        promise.resolve(ok)
+      }
     }
 
     AsyncFunction("ungroup") { deviceId: String, promise: Promise ->
@@ -180,7 +184,11 @@ class UpnpCastModule : Module() {
         promise.resolve(false)
         return@AsyncFunction
       }
-      scope.launch { promise.resolve(device.ungroup()) }
+      scope.launch {
+        val ok = device.ungroup()
+        if (ok) known.values.forEach(RendererSession::invalidateCoordinatorTarget)
+        promise.resolve(ok)
+      }
     }
 
     AsyncFunction("load") { url: String, track: TrackInfo, autoplay: Boolean, promise: Promise ->
