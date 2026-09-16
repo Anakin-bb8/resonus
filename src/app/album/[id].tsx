@@ -216,8 +216,17 @@ export default function AlbumScreen() {
   const labelText = labels.length
     ? `℗ ${data.album.year ? `${data.album.year} ` : ''}${labels.join(' · ')}`
     : null;
-  const description =
-    data.album.comment?.trim() || data.songs.find((song) => song.comment?.trim())?.comment;
+  // Subsonic has no album description: `comment` is not part of OpenSubsonic's
+  // album, only Jellyfin's Overview lands there. What is left is the comment
+  // tag of the files, and one track carrying one is a note about that file
+  // ("ripped from the CD"), not about the record; a comment every track repeats
+  // is what a tagger writes when the text is about the album.
+  const firstComment = data.songs[0]?.comment?.trim();
+  const sharedComment =
+    firstComment && data.songs.every((s) => s.comment?.trim() === firstComment)
+      ? firstComment
+      : undefined;
+  const description = data.album.comment?.trim() || sharedComment;
 
   const playAlbum = async (startIndex: number, opts?: { shuffled?: boolean }) => {
     try {

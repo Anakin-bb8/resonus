@@ -147,9 +147,9 @@ function QuickGrid() {
 
   // Spotify-style dynamic grid: mixes playlists and recent albums sorted by
   // last play (same store as "Recents" in the Library). What you just listened
-  // to rises; the rest is filled with recent albums (server order) and fresh
-  // playlists (by modification date). Favorites is always pinned first, outside
-  // this sorting.
+  // to rises; the rest is filled with recent albums (server order) and then
+  // playlists. A playlist you never played doesn't rise for having been edited
+  // on the server. Favorites is always pinned first, outside this sorting.
   // Favorites, if pinned, takes one slot from the total; the rest is
   // distributed among active sources sorted by last play.
   const dynamicCount = Math.max(0, size - (withFavorites ? 1 : 0));
