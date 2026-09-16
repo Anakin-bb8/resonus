@@ -33,6 +33,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { type Song, type StarType } from '@/api/subsonic';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
+import { centredPadding, useScreenSize } from '@/hooks/useScreenSize';
 import { useSelectionMenu } from '@/hooks/useSelectionMenu';
 import { useT } from '@/i18n';
 import { artistTargets } from '@/lib/artistNav';
@@ -46,7 +47,6 @@ import { BackChevron } from './BackChevron';
 import { Cover } from './Cover';
 import { ExplicitBadge, useExplicitBadge } from './ExplicitBadge';
 import { FavoriteButton } from './FavoriteButton';
-import { centredPadding, useScreenSize } from '@/hooks/useScreenSize';
 import { SelectionBar, type SelectionAction } from './SelectionBar';
 import { TrackRow } from './TrackRow';
 
@@ -272,6 +272,8 @@ export function TrackListView({
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [revealed, setRevealed] = useState(false);
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
+  const [descriptionHasMore, setDescriptionHasMore] = useState(false);
   /** Last real scroll offset (the gesture only reveals at the top). */
   const lastOffsetY = useRef(0);
   const searchH = useRef(new Animated.Value(0)).current;
@@ -617,7 +619,48 @@ export function TrackListView({
               )
             ) : null}
             {description?.trim() ? (
-              <Text style={styles.description}>{description.trim()}</Text>
+              <View style={styles.descriptionWrap}>
+                <Text
+                  style={styles.descriptionMeasure}
+                  onTextLayout={(event) => {
+                    const hasMore = event.nativeEvent.lines.length > 2;
+                    if (hasMore !== descriptionHasMore) setDescriptionHasMore(hasMore);
+                  }}
+                >
+                  {description.trim()}
+                </Text>
+                <Text
+                  style={styles.description}
+                  numberOfLines={descriptionExpanded ? undefined : 2}
+                  onTextLayout={(event) => {
+                    if (!descriptionExpanded && event.nativeEvent.lines.length > 2) {
+                      setDescriptionHasMore(true);
+                    }
+                  }}
+                >
+                  {description.trim()}
+                </Text>
+                {!descriptionExpanded && descriptionHasMore ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t('Show more')}
+                    onPress={() => setDescriptionExpanded(true)}
+                    style={styles.descriptionMore}
+                  >
+                    <Text style={styles.descriptionMoreText}>{t('Show more')}</Text>
+                  </Pressable>
+                ) : null}
+                {descriptionExpanded && descriptionHasMore ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t('Show less')}
+                    onPress={() => setDescriptionExpanded(false)}
+                    style={styles.descriptionLess}
+                  >
+                    <Text style={styles.descriptionMoreText}>{t('Show less')}</Text>
+                  </Pressable>
+                ) : null}
+              </View>
             ) : null}
             {showExplicit || meta ? (
               <View style={styles.metaRow}>
@@ -1030,6 +1073,34 @@ const styles = themed((colors) => ({
     color: colors.textSecondary,
     fontSize: fontSize.sm,
     marginTop: spacing.xs,
+    lineHeight: 20,
+  },
+  descriptionWrap: {
+    position: 'relative',
+  },
+  descriptionMeasure: {
+    position: 'absolute',
+    opacity: 0,
+    width: '100%',
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    lineHeight: 20,
+  },
+  descriptionMore: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    paddingLeft: spacing.sm,
+    backgroundColor: colors.background,
+  },
+  descriptionLess: {
+    alignSelf: 'flex-end',
+    marginTop: spacing.xs,
+  },
+  descriptionMoreText: {
+    color: colors.text,
+    fontSize: fontSize.sm,
+    fontWeight: '600',
   },
   // The row keeps the gap the line used to keep for itself, so a header with
   // no badge sits exactly where it always did.
