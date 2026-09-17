@@ -708,5 +708,7 @@
   "Couldn't load your library.": "No se ha podido cargar tu biblioteca.",
   "Public": "Públicas",
   "Start on your playlists": "Empezar por tus listas",
+  "Keep where you were": "Volver donde lo dejaste",
+  "Coming back after a few minutes leaves the app on the screen you left, instead of on the tab above.": "Al volver pasados unos minutos, la app se queda en la pantalla que dejaste en vez de ir a la pestaña de arriba.",
   "With no chip pressed, Your library shows Favorites and your playlists instead of everything mixed together.": "Sin ningún filtro marcado, Tu biblioteca muestra Favoritos y tus listas en vez de todo mezclado."
 }

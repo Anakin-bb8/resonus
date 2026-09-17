@@ -544,6 +544,8 @@
     "Haptic feedback": "The small vibration when something is tapped",
     "Open the app on": "Which tab the app opens on, and comes back to after a while away",
     "Start on your playlists": "A switch: with it on, Your library with no chip pressed shows the Favorites entry and the playlists, the way it used to, instead of albums, artists and playlists mixed together",
+    "Keep where you were": "A switch in Settings \u203a Appearance, right under \u201cOpen the app on\u201d: with it on, reopening the app after a while leaves it where it was instead of going back to that tab",
+    "Coming back after a few minutes leaves the app on the screen you left, instead of on the tab above.": "The line under that switch. \u201cThe tab above\u201d is the \u201cOpen the app on\u201d setting sitting right above it",
     "Home buttons": "The icons at the top right of Home (search, history, settings), which of them show and in what order",
 
     // ── Settings › Network ───────────────────────────────────────────────────

@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 702 of them.
+Every string the app can show, under the screen it shows up on. 704 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -777,6 +777,7 @@ you are actually typing into, which is easier than reading it here.
 | `Appearance` |  |
 | `Artwork, duration, rating and the rest of what a song shows in a list.` | The line under “Song lists”, explaining it |
 | `Browse your library by folders, in the Explore tab (Subsonic servers).` |  |
+| `Coming back after a few minutes leaves the app on the screen you left, instead of on the tab above.` | The line under that switch. “The tab above” is the “Open the app on” setting sitting right above it |
 | `Dark or light, and the accent color` | The line under “Theme”, explaining it |
 | `Explore` | The tab holding everything the server has: all albums, artists, songs, genres, stations and folders |
 | `Explore sections` |  |
@@ -792,6 +793,7 @@ you are actually typing into, which is easier than reading it here.
 | `Interaction` | Section header grouping toggles |
 | `Interface` | Section header grouping toggles |
 | `Keep the tabs at the bottom of every screen. Holding the back arrow goes back to the one you came from either way.` |  |
+| `Keep where you were` | A switch in Settings › Appearance, right under “Open the app on”: with it on, reopening the app after a while leaves it where it was instead of going back to that tab |
 | `Language` |  |
 | `Navigation` | Section header: how you move around the app |
 | `Navigation bar` | Settings screen: which tabs are on the bar at the bottom, and in what order |

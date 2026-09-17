@@ -46,6 +46,8 @@ export default function AppearanceSettings() {
   const setAlwaysShowTabs = useSettings((s) => s.setAlwaysShowTabs);
   const defaultTab = useSettings((s) => s.defaultTab);
   const setDefaultTab = useSettings((s) => s.setDefaultTab);
+  const keepScreenOnReturn = useSettings((s) => s.keepScreenOnReturn);
+  const setKeepScreenOnReturn = useSettings((s) => s.setKeepScreenOnReturn);
   const libraryShowsPlaylists = useSettings((s) => s.libraryShowsPlaylists);
   const setLibraryShowsPlaylists = useSettings((s) => s.setLibraryShowsPlaylists);
   const swipeAction = useSettings((s) => s.swipeAction);
@@ -168,6 +170,14 @@ export default function AppearanceSettings() {
         />
         <SwitchList
           options={[
+            {
+              label: t('Keep where you were'),
+              description: t(
+                'Coming back after a few minutes leaves the app on the screen you left, instead of on the tab above.',
+              ),
+              value: keepScreenOnReturn,
+              onChange: setKeepScreenOnReturn,
+            },
             {
               label: t('Start on your playlists'),
               description: t(
