@@ -46,7 +46,7 @@ import { serializeLrc } from '@/lib/lrc';
 import { siblingLrcUri } from '@/lib/localLyrics';
 import * as Db from '@/lib/downloadsDb';
 import type { DlAlbum } from '@/lib/downloadsDb';
-import { timed } from '@/lib/perfLog';
+import { netTally, timed } from '@/lib/perfLog';
 import { queryClient } from '@/lib/query';
 import { primaryUrl } from '@/lib/serverUrls';
 import { useAuthStore } from './auth';
@@ -794,6 +794,7 @@ async function downloadArt(
       return { uri: file, bytes: (existing as { size?: number }).size ?? 0 };
     }
     await FileSystem.makeDirectoryAsync(`${dir}covers/`, { intermediates: true }).catch(() => {});
+    netTally('coverArt.view (download)');
     const res = await FileSystem.downloadAsync(url, file);
     // Same care as with audio, and we also need to delete: the download writes
     // whatever comes, and with the bad file on disk the shortcut above
@@ -1029,6 +1030,10 @@ export const useDownloads = create<DownloadsState>((set, get) => {
         tasks.add(task);
         try {
           const res = await task.downloadAsync();
+          // The one request in the app that is measured in megabytes. Counted
+          // here rather than guessed at from the catalog, so a report can say
+          // whether the traffic was music or something asking again and again.
+          netTally('stream.view (download)', Number(header(res?.headers, 'content-length')) || 0);
           if (!res || res.status !== 200) throw new TransferError(`HTTP ${res?.status}`, res?.status);
           if (isErrorBody(res.headers)) throw new TransferError('error body, not audio', 200);
           await cacheLyricsForDownload(auth, song, file);

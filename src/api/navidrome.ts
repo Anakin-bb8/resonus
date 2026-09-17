@@ -11,6 +11,7 @@ import { File, UploadType, type UploadResult } from 'expo-file-system';
 import { fetch } from 'expo/fetch';
 import { type Album, type Song, type SortDirection, type SubsonicAuth } from './subsonic';
 import { assertCanRequest } from './netGate';
+import { netTally } from '@/lib/perfLog';
 
 /** Typed error to provide useful messages in the UI. */
 export class NavidromeError extends Error {
@@ -85,6 +86,7 @@ function ndStatusError(status: number): NavidromeError {
 async function ndFetch(auth: SubsonicAuth, path: string, init: RequestInit): Promise<void> {
   const token = await ndLogin(auth, true);
   let res: Response;
+  netTally(`nd ${path.split('?')[0]}`);
   try {
     res = await fetch(`${auth.serverUrl}${path}`, {
       ...init,
@@ -317,6 +319,10 @@ async function ndJson<T>(auth: SubsonicAuth, path: string): Promise<T> {
   for (const fresh of [false, true]) {
     const token = await ndLogin(auth, fresh);
     let res: Response;
+    // By the endpoint and not by the whole path: the sort and the window are
+    // in the query string, and a table keyed by those would have one row per
+    // call and say nothing.
+    netTally(`nd ${path.split('?')[0]}`);
     try {
       res = await fetch(`${auth.serverUrl}${path}`, {
         headers: { 'x-nd-authorization': `Bearer ${token}` },

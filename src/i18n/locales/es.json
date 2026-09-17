@@ -642,6 +642,8 @@
   "{n} of {m} songs exported": "{n} de {m} canciones exportadas",
   "State": "Estado",
   "Counted": "Contado",
+  "Requests": "Peticiones",
+  "Everything asked of the server, most often first. The music itself is not here: the player opens that connection and this never sees it.": "Todo lo que se le pidió al servidor, lo más repetido primero. La música no está aquí: esa conexión la abre el reproductor y esto no la ve.",
   "What happened, rather than how long it took.": "Qué ha pasado, no cuánto ha tardado.",
   "While minimized": "Con la app minimizada",
   "The player keeps beating twice a second while the app is away. Long silences here mean the app stopped following what it was playing.": "El reproductor late dos veces por segundo aunque la app esté minimizada. Un silencio largo aquí significa que la app dejó de seguir lo que sonaba.",

@@ -14,6 +14,7 @@ Releases before 0.2.1 are only listed on the
 - Your library can show Favorites and your playlists again when no chip is pressed, instead of everything mixed together, with Settings > Appearance > Start on your playlists (#217).
 - Lyrics timed word by word light up each word as it is sung, from TTML or enhanced LRC files on Navidrome 0.63 or newer, on Jellyfin, or next to your own music, and downloads keep them for offline (#165).
 - An album shows its description under its name, as a playlist already did, taken from the overview on Jellyfin or from the comment tag the album's files share, and the switch for it is now Settings > Appearance > Song lists > Show description (#223).
+- Diagnostics counts every request made to the server, says how the time since it started measuring splits between the screen being on and the app being away, and how much of that time away the app was actually being run (#221).
 
 ### Changed
 

@@ -45,6 +45,7 @@ import {
 // in `src/api/subsonic.ts`.
 import { fetch } from 'expo/fetch';
 import { assertCanRequest } from './netGate';
+import { netTally } from '@/lib/perfLog';
 
 const CLIENT_VERSION = Constants.expoConfig?.version ?? '0.0.0';
 /**
@@ -190,6 +191,7 @@ async function request<T>(
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   let res: Response;
+  netTally(`jf ${path}`);
   try {
     res = await fetch(buildUrl(auth, path, params), {
       method: init.method ?? 'GET',

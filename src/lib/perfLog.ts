@@ -80,14 +80,79 @@ const running: string[] = [];
  * boolean, so it costs the same whether or not anything is being measured.
  */
 let awake = AppState.currentState === 'active';
+
+/**
+ * How the time since the last reset splits between the two states, and how
+ * often it changed hands.
+ *
+ * Every other number in this report is one without a denominator until these
+ * are here. "Fell into offline: 340" is a broken app over one night and an
+ * unremarkable one over a fortnight, and nothing else written down says which.
+ * The split matters as much as the total, because what a battery report blames
+ * an app for is nearly always the half nobody was looking at.
+ */
+let stateSince = Date.now();
+let foregroundMs = 0;
+let backgroundMs = 0;
+let trips = 0;
+
+/**
+ * Heartbeats that landed while the app was away.
+ *
+ * The block detector says nothing out there on purpose: Android stops handing
+ * the timer its turn, so every silence would read as a freeze. Turned around,
+ * that same silence is the measurement. A backgrounded app that is behaving
+ * gets throttled almost to nothing, so these ticks against their own period
+ * say how much of the night the JS thread was actually being run. Near the
+ * whole of it is the shape of a phone whose battery went somewhere.
+ */
+let bgTicks = 0;
+
+/** Books the time since the last change to whichever state it was spent in. */
+function closeSpan(now: number): void {
+  const span = now - stateSince;
+  stateSince = now;
+  if (awake) foregroundMs += span;
+  else backgroundMs += span;
+}
+
 AppState.addEventListener('change', (state) => {
   const wasAwake = awake;
-  awake = state === 'active';
+  const now = Date.now();
+  const nowAwake = state === 'active';
+  // `inactive` and `background` are both away, and Android sends them one
+  // after the other: without this, one trip to the home screen would count as
+  // two and the spans would be split at a moment nothing happened at.
+  if (nowAwake !== wasAwake) {
+    closeSpan(now);
+    trips++;
+  }
+  awake = nowAwake;
   // Whatever happened out there is not ours to measure, and the clock starts
   // again here.
-  lastTick = Date.now();
+  lastTick = now;
   if (!wasAwake && awake) onReturn();
 });
+
+export interface TimeSplit {
+  foregroundMs: number;
+  backgroundMs: number;
+  /** Trips between the two, counted once each. */
+  trips: number;
+  /** Of `backgroundMs`, how much the JS thread was given its turn. */
+  jsAwayMs: number;
+}
+
+/** The split as it stands, with the span still open included. */
+export function perfTime(): TimeSplit {
+  const open = Date.now() - stateSince;
+  return {
+    foregroundMs: foregroundMs + (awake ? open : 0),
+    backgroundMs: backgroundMs + (awake ? 0 : open),
+    trips,
+    jsAwayMs: bgTicks * TICK_MS,
+  };
+}
 
 /**
  * Starts the heartbeat (idempotent).
@@ -102,11 +167,24 @@ export function startPerfLog(): void {
   if (timer || !enabled) return;
   startedAt = Date.now();
   lastTick = Date.now();
+  // The split runs off the same clock as the rest of the report. Without this
+  // it would run off module load, and measuring switched on an hour later
+  // would hand back more time away than the session it is reporting on.
+  stateSince = startedAt;
+  foregroundMs = 0;
+  backgroundMs = 0;
+  trips = 0;
+  bgTicks = 0;
   timer = setInterval(() => {
     const now = Date.now();
     const late = now - lastTick - TICK_MS;
     lastTick = now;
-    if (!awake || late < BLOCK_MS) return;
+    if (!awake) {
+      // Not a block, and not nothing either: see `bgTicks`.
+      bgTicks++;
+      return;
+    }
+    if (late < BLOCK_MS) return;
     const block: Block = { at: now, ms: late, during: running[running.length - 1] ?? '—' };
     // In development it also goes to the console, where whoever is driving the
     // app can see it land on the screen that caused it.
@@ -184,6 +262,53 @@ const counts = new Map<string, number>();
 export function bump(tag: string, by = 1): void {
   if (!enabled) return;
   counts.set(tag, (counts.get(tag) ?? 0) + by);
+}
+
+// ── What went out over the network ──────────────────────────────────────────
+// `ops` already times every request, but it ranks by total time and keeps the
+// top twenty, which is the wrong end of the telescope for a phone whose
+// battery went flat: a request that storms is fast, and a hundred thousand of
+// them sit below one slow search. So the same traffic is tallied again by how
+// often, with the size of the answers next to it, and nothing is cut.
+//
+// Not everything the app sends is here, and the report says so rather than
+// implying a total: the stream is opened by the native player and never
+// reaches this file, and neither do the artwork files, which is why those are
+// counted apart (`cover saved` and the rest).
+
+export interface NetStat {
+  tag: string;
+  calls: number;
+  /** As the server declared it. Zero where it declared nothing. */
+  bytes: number;
+}
+
+const net = new Map<string, NetStat>();
+
+/** One request that reached the server and came back. */
+export function netTally(tag: string, bytes = 0): void {
+  if (!enabled) return;
+  const cur = net.get(tag);
+  if (cur) {
+    cur.calls++;
+    cur.bytes += bytes;
+    return;
+  }
+  net.set(tag, { tag, calls: 1, bytes });
+}
+
+/** Most often first, which is the question being asked of it. */
+export function perfNet(): NetStat[] {
+  return [...net.values()].sort((a, b) => b.calls - a.calls);
+}
+
+/** Minutes, hours and seconds, short enough to sit in a line of key: value. */
+export function formatMs(ms: number): string {
+  const s = Math.round(ms / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m}m`;
+  return `${Math.floor(m / 60)}h ${m % 60}m`;
 }
 
 // ── The player's own beat ───────────────────────────────────────────────────
@@ -303,8 +428,14 @@ export function resetPerfLog(): void {
   blocks.length = 0;
   ops.clear();
   counts.clear();
+  net.clear();
   startedAt = Date.now();
   lastTick = Date.now();
+  stateSince = Date.now();
+  foregroundMs = 0;
+  backgroundMs = 0;
+  trips = 0;
+  bgTicks = 0;
   away.clear();
   // The next beat is the first one again: the gap across a reset belongs to
   // neither session.
@@ -314,7 +445,21 @@ export function resetPerfLog(): void {
 /** The whole thing as text, to paste into an issue. */
 export function perfReport(): string {
   const mins = Math.max(1, Math.round((Date.now() - startedAt) / 60000));
-  const lines: string[] = [`Resonus diagnostics, ${mins} min of use`, ''];
+  const t = perfTime();
+  const lines: string[] = [
+    `Resonus diagnostics, ${mins} min of use`,
+    `  on screen ${formatMs(t.foregroundMs)} · away ${formatMs(t.backgroundMs)} · ` +
+      `${t.trips} trips · JS ran ${formatMs(t.jsAwayMs)} of the time away`,
+    '',
+  ];
+  const ns = perfNet();
+  if (ns.length > 0) {
+    const calls = ns.reduce((n, x) => n + x.calls, 0);
+    const kb = Math.round(ns.reduce((n, x) => n + x.bytes, 0) / 1024);
+    lines.push(`Requests (${calls} in total, ${kb} KB declared; the stream is not here):`);
+    for (const n of ns) lines.push(`  ${n.tag}: ${n.calls}× · ${Math.round(n.bytes / 1024)} KB`);
+    lines.push('');
+  }
   lines.push('JS thread blocks (worst first):');
   const bs = perfBlocks();
   if (bs.length === 0) lines.push('  none over 120 ms');

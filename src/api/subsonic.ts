@@ -16,7 +16,7 @@ import { fetch } from 'expo/fetch';
 import { markAbsentCovers, omitsAbsentCovers } from '@/lib/absentCovers';
 import { wordsFromCues } from '@/lib/lyricWords';
 import { canonicalId, idWouldChange } from '@/lib/navidromeIds';
-import { timed } from '@/lib/perfLog';
+import { netTally, timed } from '@/lib/perfLog';
 import { assertCanRequest } from './netGate';
 
 export const CLIENT_NAME = 'Resonus';
@@ -502,6 +502,10 @@ async function request<T>(
       fetch(buildUrl(auth, endpoint, extra), { signal: controller.signal }),
     );
   } catch {
+    // Counted too, and apart. A request that never arrives costs the radio the
+    // same as one that does, and a phone talking to a server that is not there
+    // is one of the two shapes this report exists to tell apart.
+    netTally(`${endpoint} (no answer)`);
     if (controller.signal.aborted) {
       throw new SubsonicRequestError('Server took too long to respond', true);
     }
@@ -510,6 +514,9 @@ async function request<T>(
     clearTimeout(timer);
   }
 
+  // Before the status is judged: an error is a request that went out and came
+  // back like any other, and a storm of them is what a tally is for.
+  netTally(endpoint, Number(res.headers.get('content-length')) || 0);
   if (!res.ok) throw new SubsonicRequestError(`Network error (${res.status})`, false);
   // Apart from the request: this is the part that runs on the JS thread, and
   // it grows with the size of the answer.
@@ -920,6 +927,7 @@ export async function reorderPlaylist(
   params.set('playlistId', id);
   for (const sid of songIds) params.append('songId', sid);
   assertCanRequest();
+  netTally('createPlaylist.view', params.toString().length);
   const res = await fetch(`${auth.serverUrl}/rest/createPlaylist.view`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -1474,6 +1482,10 @@ export async function savePlayQueue(
   try {
     // POST with parameters in the body: avoids giant URLs with long queues.
     assertCanRequest();
+    // Tallied by hand: this one does not go through `request`, and it is the
+    // one that grows with the queue. A mix left running all night is a body of
+    // thousands of ids pushed every twenty seconds, which is worth seeing.
+    netTally('savePlayQueue.view', params.toString().length);
     await fetch(`${auth.serverUrl}/rest/savePlayQueue.view`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
