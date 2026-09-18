@@ -42,6 +42,7 @@ import { listPerf } from '@/lib/listPerf';
 import { BackChevron } from '@/components/BackChevron';
 import { BrowseFrame, useSearchBox, type BrowserProps } from '@/components/BrowseFrame';
 import { BrowseToolbar } from '@/components/BrowseToolbar';
+import { useBrowseSort } from '@/hooks/useBrowseSort';
 import { useGridColumns } from '@/hooks/useGridColumns';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 
@@ -102,7 +103,12 @@ export function AlbumsBrowser({ embedded, actionRef, searchOpen }: BrowserProps)
    * each visit is its own screen, so there is nothing here to keep in step.
    */
   const { sort: sortParam } = useLocalSearchParams<{ sort?: string }>();
-  const [sort, setSort] = useState<AlbumListType>(sortFromParam(sortParam) ?? 'recent');
+  const [sort, setSort] = useBrowseSort<AlbumListType>(
+    'browseAlbums',
+    SORTS.map((s) => s.key),
+    'recent',
+    sortFromParam(sortParam),
+  );
   const layout = useSettings((s) => s.browseAlbumsLayout);
   const setLayout = useSettings((s) => s.setBrowseAlbumsLayout);
   const grid = layout === 'grid';

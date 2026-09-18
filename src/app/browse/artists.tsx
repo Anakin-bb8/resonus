@@ -19,6 +19,7 @@ import { ArtistCard } from '@/components/ArtistCard';
 import { ArtistGridSkeleton } from '@/components/ArtistGridSkeleton';
 import { ArtistListSkeleton } from '@/components/ArtistListSkeleton';
 import { ArtistRow } from '@/components/ArtistRow';
+import { useBrowseSort } from '@/hooks/useBrowseSort';
 import { useHistoryTimes } from '@/hooks/useHistoryTimes';
 import { EmptyState } from '@/components/EmptyState';
 import { Message } from '@/components/Message';
@@ -95,8 +96,11 @@ export function ArtistsBrowser({ embedded, actionRef, searchOpen }: BrowserProps
   /** Same as the Albums and Songs screens: a Home shelf can say which order it
    *  was showing, and anything unrecognised is ignored. */
   const { sort: sortParam } = useLocalSearchParams<{ sort?: string }>();
-  const [sort, setSort] = useState<ArtistSort>(
-    SORTS.some((s) => s.key === sortParam) ? (sortParam as ArtistSort) : 'recent',
+  const [sort, setSort] = useBrowseSort<ArtistSort>(
+    'browseArtists',
+    SORTS.map((s) => s.key),
+    'recent',
+    SORTS.some((s) => s.key === sortParam) ? (sortParam as ArtistSort) : undefined,
   );
   const layout = useSettings((s) => s.browseArtistsLayout);
   const setLayout = useSettings((s) => s.setBrowseArtistsLayout);

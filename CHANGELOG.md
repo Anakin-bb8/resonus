@@ -21,6 +21,7 @@ Releases before 0.2.1 are only listed on the
 
 - You can pin up to 50 items instead of 25 (#217).
 - A long playlist or album description is cut to two lines with a Show more under it, instead of filling the whole header (#223).
+- The Artists, Albums and Songs lists remember the order you picked instead of going back to Recently played every time you open them (#226).
 
 ### Fixed
 
