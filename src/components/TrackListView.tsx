@@ -1165,8 +1165,10 @@ const styles = themed((colors) => ({
     top: 0,
     bottom: 0,
     justifyContent: 'center',
-    left: 14,
-    right: 0,
+    // The same clearance on both sides, the width of the back chevron and its
+    // gap: centered on the screen, and a long name stops short of the chevron.
+    left: spacing.lg + 28 + spacing.md,
+    right: spacing.lg + 28 + spacing.md,
     textAlign: 'center',
     includeFontPadding: false,
     color: colors.text,
