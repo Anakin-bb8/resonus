@@ -301,7 +301,16 @@ const SONG_PAGE_SIZE = 3;
  * SONG_PAGE_SIZE TrackRow items. Swiping reveals the next page peeking from
  * the right, inviting the user to scroll.
  */
-function SongListCarousel({ songs, currentId }: { songs: Song[]; currentId?: string }) {
+function SongListCarousel({
+  songs,
+  currentId,
+  title,
+}: {
+  songs: Song[];
+  currentId?: string;
+  /** Section the queue says it plays from. */
+  title: string;
+}) {
   const { width: screenWidth } = useScreenSize();
   const openSongMenu = useSongMenu((s) => s.open);
   const playQueue = usePlayerStore((s) => s.playQueue);
@@ -335,7 +344,8 @@ function SongListCarousel({ songs, currentId }: { songs: Song[]; currentId?: str
                 isCurrent={song.id === currentId}
                 showArtwork={showArtwork}
                 showFavorite={false}
-                onPress={() => void playQueue(songs, globalIndex)}
+                swipeable={false}
+                onPress={() => void playQueue(songs, globalIndex, title)}
                 onLongPress={() => {
                   haptic('light');
                   openSongMenu(song);
@@ -377,7 +387,7 @@ function MostPlayedSongsSection({ title }: { title: string }) {
   return (
     <View style={styles.section}>
       <SectionHeader title={title} href="/browse/songs?sort=frequent" />
-      <SongListCarousel songs={data} currentId={currentId} />
+      <SongListCarousel songs={data} currentId={currentId} title={title} />
     </View>
   );
 }
@@ -412,7 +422,7 @@ function RandomSongsSection({ title }: { title: string }) {
   return (
     <View style={styles.section}>
       <SectionHeader title={title} href="/browse/songs?sort=random" />
-      <SongListCarousel songs={data} currentId={currentId} />
+      <SongListCarousel songs={data} currentId={currentId} title={title} />
     </View>
   );
 }

@@ -51,6 +51,11 @@ interface Props {
   showArtwork?: boolean;
   /** Multi-select mode: check circle and no swipe/menu/heart. */
   selecting?: boolean;
+  /**
+   * Swipe actions (default true). Off inside a horizontal carousel, where a
+   * sideways swipe is meant to scroll it, not to queue the song under the finger.
+   */
+  swipeable?: boolean;
   /** Marked in selection mode. */
   selected?: boolean;
   onLongPress?: () => void;
@@ -108,6 +113,7 @@ function TrackRowBase({
   showMenu = true,
   showArtwork = false,
   selecting = false,
+  swipeable = true,
   selected = false,
   onLongPress,
   onPress,
@@ -222,7 +228,7 @@ function TrackRowBase({
       friction={1}
       overshootLeft={false}
       overshootRight={false}
-      enabled={!selecting && !unavailable && (swipeAction !== 'off' || swipeLeftAction !== 'off')}
+      enabled={swipeable && !selecting && !unavailable && (swipeAction !== 'off' || swipeLeftAction !== 'off')}
       onSwipeableWillOpen={(direction) => {
         // `direction` is the GESTURE direction (not the panel side):
         // swiping right (opens the left strip) arrives as RIGHT.
@@ -363,6 +369,7 @@ function propsEqual(a: Props, b: Props): boolean {
     a.showMenu === b.showMenu &&
     a.showArtwork === b.showArtwork &&
     a.selecting === b.selecting &&
+    a.swipeable === b.swipeable &&
     a.selected === b.selected &&
     !!a.onLongPress === !!b.onLongPress &&
     sameMenuContext(a.menuContext, b.menuContext)
