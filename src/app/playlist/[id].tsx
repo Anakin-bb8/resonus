@@ -100,37 +100,69 @@ function SuggestedTracks({
   const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wasPlayingRef = useRef(false);
   const existingIds = useMemo(() => new Set(songs.map((s) => s.id)), [songs]);
+  // Read by `refresh` without being a dependency: adding a suggestion refetches
+  // the playlist, and that must not throw away and redraw the other suggestions.
+  const songsRef = useRef(songs);
+  songsRef.current = songs;
+  const existingRef = useRef(existingIds);
+  existingRef.current = existingIds;
+  // Only the latest request may land; an older one finishing late is dropped.
+  const requestRef = useRef(0);
+  const unmountedRef = useRef(false);
+
+  /** Puts the music back the way the preview found it. Sets, never toggles:
+   *  if the listener pressed play meanwhile, it is already playing. */
+  const resumeMusic = useCallback(() => {
+    if (!wasPlayingRef.current) return;
+    wasPlayingRef.current = false;
+    if (!usePlayerStore.getState().isPlaying) usePlayerStore.getState().toggle();
+  }, []);
 
   useEffect(() => {
     return () => {
+      unmountedRef.current = true;
+      requestRef.current++;
       if (previewTimer.current) clearTimeout(previewTimer.current);
       void previewPlayer.current?.remove();
+      previewPlayer.current = null;
+      resumeMusic();
     };
-  }, []);
+  }, [resumeMusic]);
 
   const refresh = useCallback(async () => {
+    const request = ++requestRef.current;
     setLoading(true);
-    const result = await fetchSuggestions(songs, existingIds);
+    const result = await fetchSuggestions(songsRef.current, existingRef.current);
+    if (request !== requestRef.current) return;
     setSuggestions(result);
     setLoading(false);
-  }, [songs, existingIds]);
+  }, []);
 
+  // Once, when the playlist's songs are first known. Refresh asks again.
+  const hasSongs = songs.length > 0;
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    if (hasSongs) void refresh();
+  }, [hasSongs, refresh]);
 
   const addSong = useCallback(
     async (song: Song) => {
       try {
         await addToPlaylist(playlistId, song.id);
-        queryClient.invalidateQueries({ queryKey: ['playlist', playlistId] });
         setSuggestions((prev) => prev.filter((s) => s.id !== song.id));
+        // Same as every other way into a playlist: the Library count, the
+        // playlist itself, and its auto-download if it has one.
+        queryClient.setQueryData<{ id: string; songCount?: number }[]>(['playlists'], (list) =>
+          list?.map((p) => (p.id === playlistId ? { ...p, songCount: (p.songCount ?? 0) + 1 } : p)),
+        );
+        queryClient.invalidateQueries({ queryKey: ['playlist', playlistId] });
+        queryClient.invalidateQueries({ queryKey: ['playlists'] });
+        void useAutoDownloads.getState().reconcile(playlistId, true);
         toast.show(t('Added to “{name}”', { name: playlistName }));
       } catch {
         toast.show(t("Couldn't add to the playlist"));
       }
     },
-    [playlistId, queryClient, toast, t],
+    [playlistId, playlistName, queryClient, toast, t],
   );
 
   const stopPreview = useCallback(async () => {
@@ -147,11 +179,8 @@ function SuggestedTracks({
         await p.remove();
       } catch {}
     }
-    if (wasPlayingRef.current) {
-      wasPlayingRef.current = false;
-      usePlayerStore.getState().toggle();
-    }
-  }, []);
+    resumeMusic();
+  }, [resumeMusic]);
 
   const previewSong = useCallback(
     async (song: Song) => {
@@ -160,11 +189,16 @@ function SuggestedTracks({
         return;
       }
       await stopPreview();
-      wasPlayingRef.current = usePlayerStore.getState().isPlaying;
-      if (wasPlayingRef.current) usePlayerStore.getState().toggle();
       if (!auth) return;
       const url = song.url || streamUrl(auth, song.id);
       if (!url) return;
+      wasPlayingRef.current = usePlayerStore.getState().isPlaying;
+      if (wasPlayingRef.current) usePlayerStore.getState().toggle();
+      // Left the screen while the previous preview was being stopped.
+      if (unmountedRef.current) {
+        resumeMusic();
+        return;
+      }
       const player = createAudioPlayer({ uri: url });
       previewPlayer.current = player;
       await player.play();
@@ -175,11 +209,12 @@ function SuggestedTracks({
         void stopPreview();
       }, 45_000);
     },
-    [auth, previewing, stopPreview],
+    [auth, previewing, stopPreview, resumeMusic],
   );
 
-  if (loading && suggestions.length === 0) return null;
-  if (!loading && suggestions.length === 0) return null;
+  // What was added some other way meanwhile is no longer a suggestion.
+  const visible = suggestions.filter((s) => !existingIds.has(s.id));
+  if (visible.length === 0) return null;
 
   return (
     <View style={suggestedStyles.section}>
@@ -187,7 +222,7 @@ function SuggestedTracks({
       <Text style={suggestedStyles.subtitle}>
         {t('Based on the tracks in this playlist')}
       </Text>
-      {suggestions.map((song) => (
+      {visible.map((song) => (
         <Pressable
           key={song.id}
           style={suggestedStyles.row}
