@@ -1,17 +1,14 @@
 /** Font picker — list with radio on the active one, plus custom font. */
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system/legacy';
 import * as Font from 'expo-font';
 import { useState } from 'react';
 import { Alert, ScrollView } from 'react-native';
 
 import { SettingRow, SelectList, SettingsPage, settingsStyles } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
+import { importCustomFont, removeCustomFontFiles } from '@/lib/customFont';
 import { APP_FONT_LABELS, type AppFont, useSettings } from '@/store/settings';
 import { useTheme } from '@/theme';
-
-/** Font family name used as the key for every custom font loaded at runtime. */
-const CUSTOM_FONT_KEY = 'CustomFont';
 
 export default function FontSettings() {
   useTheme();
@@ -43,12 +40,8 @@ export default function FontSettings() {
       });
       if (result.canceled || !result.assets?.[0]) return;
       const asset = result.assets[0];
-      const ext = asset.name.split('.').pop()?.toLowerCase() ?? 'ttf';
-      // Copy to the document directory so the URI survives cache cleanup.
-      const dest = `${FileSystem.documentDirectory}custom-font.${ext}`;
-      await FileSystem.copyAsync({ from: asset.uri, to: dest });
-      await Font.loadAsync({ [CUSTOM_FONT_KEY]: { uri: dest } });
-      setCustomFont(CUSTOM_FONT_KEY, dest);
+      const { family, file } = await importCustomFont(asset.uri, asset.name);
+      setCustomFont(family, file);
       setAppFont('custom');
     } catch {
       Alert.alert(t("Couldn't load the font"), t('Make sure the file is a valid .ttf or .otf font.'));
@@ -60,7 +53,12 @@ export default function FontSettings() {
   function removeCustomFont() {
     setCustomFont(null, null);
     setAppFont('system');
+    void removeCustomFontFiles();
   }
+
+  // Only "Active" when it really is: a font that failed to load (a missing
+  // file, say) leaves the app on the system font.
+  const customActive = appFont === 'custom' && !!customFontFamily && Font.isLoaded(customFontFamily);
 
   return (
     <SettingsPage title={t('Font')}>
@@ -69,12 +67,12 @@ export default function FontSettings() {
         <SettingRow
           label={APP_FONT_LABELS.custom}
           description={
-            appFont === 'custom' && customFontFamily
+            customActive
               ? customFontUri?.split('/').pop() ?? t('Loaded')
               : t('Load a .ttf or .otf file')
           }
           icon="color-filter-outline"
-          right={appFont === 'custom' ? t('Active') : undefined}
+          right={customActive ? t('Active') : undefined}
           onPress={pickFont}
         />
         {appFont === 'custom' && customFontFamily ? (

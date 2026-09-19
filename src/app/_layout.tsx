@@ -27,6 +27,7 @@ import { SongMenuSheet } from '@/components/SongMenuSheet';
 import { Toast } from '@/components/Toast';
 import { UpdatePrompt } from '@/components/UpdatePrompt';
 import { installAppFont, setAppFont } from '@/lib/appFont';
+import { loadCustomFont } from '@/lib/customFont';
 import { removeLegacyRadioCovers } from '@/lib/legacyRadioCovers';
 import { startPerfLog } from '@/lib/perfLog';
 import { queryClient } from '@/lib/query';
@@ -98,25 +99,28 @@ export default function RootLayout() {
   const appFont = useSettings((s) => s.appFont);
   const customFontFamily = useSettings((s) => s.customFontFamily);
   const customFontUri = useSettings((s) => s.customFontUri);
-  const [customLoaded, setCustomLoaded] = useState(false);
+  // The custom family that has actually finished loading. Keyed by name, not a
+  // flag: settings hydrate after the first render, and a flag already set by
+  // then would apply a family that isn't loaded yet.
+  const [loadedCustom, setLoadedCustom] = useState<string | null>(null);
 
-  // Load a custom font once when the setting is 'custom' and a URI is known.
   useEffect(() => {
-    if (appFont !== 'custom' || !customFontFamily || !customFontUri) {
-      setCustomLoaded(true);
-      return;
-    }
+    if (appFont !== 'custom' || !customFontFamily || !customFontUri) return;
     let cancelled = false;
-    Font.loadAsync({ [customFontFamily]: { uri: customFontUri } }).then(
-      () => { if (!cancelled) setCustomLoaded(true); },
-      () => { if (!cancelled) setCustomLoaded(true); },
-    );
+    void loadCustomFont(customFontFamily, customFontUri).then((ok) => {
+      if (!cancelled && ok) setLoadedCustom(customFontFamily);
+    });
     return () => { cancelled = true; };
   }, [appFont, customFontFamily, customFontUri]);
 
-  // Apply the font to the JSX runtime patch.
+  // Apply the font to the JSX runtime patch. A custom font that isn't loaded
+  // (yet, or at all) leaves the system font.
   if (appFont === 'custom') {
-    setAppFont(customLoaded ? (customFontFamily ?? undefined) : undefined);
+    setAppFont(
+      customFontFamily && (loadedCustom === customFontFamily || Font.isLoaded(customFontFamily))
+        ? customFontFamily
+        : undefined,
+    );
   } else {
     setAppFont(APP_FONT_FAMILY[appFont]);
   }
