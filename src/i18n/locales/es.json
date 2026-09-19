@@ -1,7 +1,6 @@
 {
   "All": "Todo",
   "Diagnostics": "Diagnóstico",
-  "Don't see your language, or want to improve an existing one? You can help by contributing a translation on GitHub. Pull requests are welcome.": "¿No ves tu idioma, o quieres mejorar uno que ya está? Puedes ayudar aportando una traducción en GitHub. Los pull requests son bienvenidos.",
   "Help translate": "Ayuda a traducir",
   "Keep at least one section on": "Deja al menos una sección activada",
   "Profile": "Perfil",
@@ -710,5 +709,14 @@
   "Start on your playlists": "Empezar por tus listas",
   "Keep where you were": "Volver donde lo dejaste",
   "Coming back after a few minutes leaves the app on the screen you left, instead of on the tab above.": "Al volver pasados unos minutos, la app se queda en la pantalla que dejaste en vez de ir a la pestaña de arriba.",
-  "With no chip pressed, Your library shows Favorites and your playlists instead of everything mixed together.": "Sin ningún filtro marcado, Tu biblioteca muestra Favoritos y tus listas en vez de todo mezclado."
+  "With no chip pressed, Your library shows Favorites and your playlists instead of everything mixed together.": "Sin ningún filtro marcado, Tu biblioteca muestra Favoritos y tus listas en vez de todo mezclado.",
+  "Suggested tracks": "Canciones sugeridas",
+  "Based on the tracks in this playlist": "A partir de las canciones de esta lista",
+  "Random songs": "Canciones aleatorias",
+  "Couldn't load the font": "No se ha podido cargar la fuente",
+  "Make sure the file is a valid .ttf or .otf font.": "Comprueba que el archivo sea una fuente .ttf u .otf válida.",
+  "Loaded": "Cargada",
+  "Load a .ttf or .otf file": "Carga un archivo .ttf u .otf",
+  "Active": "Activa",
+  "Remove custom font": "Quitar fuente personalizada"
 }

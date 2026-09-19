@@ -36,7 +36,9 @@ export default function LanguageSettings() {
 
         <Text style={settingsStyles.sectionTitle}>{t('Translations')}</Text>
         <Text style={settingsStyles.sectionDescription}>
-          {t("Don't see your language, or want to improve an existing one? You can help by contributing a translation on GitHub. Pull requests are welcome.")}
+          {/* English on purpose, in every language: it is addressed to whoever
+              could translate the app, and a translator reads English. */}
+          {"Don't see your language, or want to improve an existing one? You can help by contributing a translation on GitHub. Pull requests are welcome."}
         </Text>
         <SettingRow
           icon="globe-outline"
