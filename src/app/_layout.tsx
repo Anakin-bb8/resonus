@@ -4,10 +4,11 @@
  */
 import { QueryClientProvider } from '@tanstack/react-query';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
+import * as Font from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -95,7 +96,30 @@ export default function RootLayout() {
   // The selected font is applied on every render (and after hydrating settings):
   // so everything that gets repainted picks up the current family.
   const appFont = useSettings((s) => s.appFont);
-  setAppFont(APP_FONT_FAMILY[appFont]);
+  const customFontFamily = useSettings((s) => s.customFontFamily);
+  const customFontUri = useSettings((s) => s.customFontUri);
+  const [customLoaded, setCustomLoaded] = useState(false);
+
+  // Load a custom font once when the setting is 'custom' and a URI is known.
+  useEffect(() => {
+    if (appFont !== 'custom' || !customFontFamily || !customFontUri) {
+      setCustomLoaded(true);
+      return;
+    }
+    let cancelled = false;
+    Font.loadAsync({ [customFontFamily]: { uri: customFontUri } }).then(
+      () => { if (!cancelled) setCustomLoaded(true); },
+      () => { if (!cancelled) setCustomLoaded(true); },
+    );
+    return () => { cancelled = true; };
+  }, [appFont, customFontFamily, customFontUri]);
+
+  // Apply the font to the JSX runtime patch.
+  if (appFont === 'custom') {
+    setAppFont(customLoaded ? (customFontFamily ?? undefined) : undefined);
+  } else {
+    setAppFont(APP_FONT_FAMILY[appFont]);
+  }
   // The appearance. Everything mounted beside the Stack below (mini player, tab
   // bar, sheets, toast) repaints from here; the screens inside subscribe on
   // their own, because a stack keeps them mounted and out of this render.

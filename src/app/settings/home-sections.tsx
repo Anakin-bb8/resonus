@@ -35,6 +35,7 @@ const LABEL: Record<HomeSectionKey, string> = {
   recentlyPlayed: 'Recently played',
   mostPlayed: 'Most played albums',
   mostPlayedSongs: 'Most played songs',
+  randomSongs: 'Random songs',
   discover: 'Discover',
   playlists: 'Playlists',
   randomAlbums: 'Random albums',

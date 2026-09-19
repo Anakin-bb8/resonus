@@ -197,10 +197,11 @@ export function SongMenuSheet() {
 
   if (!song) return null;
 
-  const go = (path: string) => {
-    close();
-    router.push(path);
-  };
+  const go = (path: string) =>
+    dismiss(() => {
+      closeNow();
+      router.push(path);
+    });
 
   /**
    * Copies the download into a folder the user picks (#57).
@@ -212,9 +213,9 @@ export function SongMenuSheet() {
    */
   async function saveToFolder() {
     if (!song || !dlUri) return;
+    closeNow();
     const folder = await pickFolder();
     if (!folder) return;
-    close();
     toast(t('Exporting…'));
     try {
       const name = await exportToFolder(song, dlUri, folder);
@@ -227,7 +228,7 @@ export function SongMenuSheet() {
   /** Hands the download to another app through the system share sheet (#57). */
   async function sendToApp() {
     if (!song || !dlUri) return;
-    close();
+    closeNow();
     try {
       // Both of these name the button that was pressed, not the mechanism
       // behind it: "share" in this app is the link a server mints, which is in
@@ -671,8 +672,10 @@ export function SongMenuSheet() {
                       icon="share-social-outline"
                       label={t('Share')}
                       onPress={() => {
-                        close();
-                        useSharePicker.getState().open({ id: song.id, name: song.title });
+                        dismiss(() => {
+                          closeNow();
+                          useSharePicker.getState().open({ id: song.id, name: song.title });
+                        });
                       }}
                     />
                   ) : null}
@@ -691,11 +694,10 @@ export function SongMenuSheet() {
                     icon="information-circle-outline"
                     label={t('Song information')}
                     onPress={() => {
-                      // The song travels with the action: the sheet is not
-                      // going to ask the server for it again, and offline
-                      // there would be nobody to ask.
-                      useSongInfo.getState().open(song);
-                      close();
+                      dismiss(() => {
+                        useSongInfo.getState().open(song);
+                        closeNow();
+                      });
                     }}
                   />
                 </ScrollView>

@@ -296,6 +296,7 @@ export function SyncedLyricsView({
             text={line.value.trim() || '♪'}
             words={line.words}
             active={i === current}
+            past={current >= 0 && i < current}
             next={i === current + 1}
             large={large}
             onMeasure={onMeasure}
@@ -327,6 +328,7 @@ const LyricRow = memo(({
   text,
   words,
   active,
+  past,
   next,
   large,
   onMeasure,
@@ -335,16 +337,18 @@ const LyricRow = memo(({
   text: string;
   words?: LyricWord[];
   active: boolean;
+  /** Lines before the current one: same colour as active, slightly dimmer. */
+  past: boolean;
   next: boolean;
   large?: boolean;
   onMeasure: (index: number, y: number, h: number) => void;
 }) => {
   // Memoized, so the screen repainting is not enough to bring this one along.
   useTheme();
-  // Only the active line grows (spring) and is visible at 100%. The rest are
-  // dimmed: the next one about to play a little, the others much more.
+  // Only the active line grows (spring) and is visible at 100%. Past lines are
+  // nearly as bright; the next one is semi-dimmed; everything else is faint.
   const focus = useSharedValue(active ? 1 : 0);
-  const dim = useSharedValue(active ? 1 : next ? 0.55 : 0.3);
+  const dim = useSharedValue(past ? 0.85 : active ? 1 : next ? 0.55 : 0.3);
   // reduceMotion Never: the transition between lines (karaoke) is the essence
   // of the screen; without this, devices with "reduce motion" skip it.
   useEffect(() => {
@@ -356,11 +360,11 @@ const LyricRow = memo(({
     });
   }, [active, focus]);
   useEffect(() => {
-    dim.value = withTiming(active ? 1 : next ? 0.55 : 0.3, {
+    dim.value = withTiming(past ? 0.85 : active ? 1 : next ? 0.55 : 0.3, {
       duration: motion.duration.enter,
       reduceMotion: motion.reduceMotion.essential,
     });
-  }, [active, next, dim]);
+  }, [active, past, next, dim]);
   // The growth (8%) is compensated by the right margin of `content` so the
   // active line, scaling from the left, doesn't overflow the edge.
   const anim = useAnimatedStyle(() => ({

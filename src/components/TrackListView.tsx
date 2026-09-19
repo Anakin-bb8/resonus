@@ -896,7 +896,7 @@ export function TrackListView({
             />
             <BackChevron size={28} label={t('Close')} />
             <Animated.Text
-              style={[styles.barTitle, { opacity: barContentOpacity }]}
+              style={[styles.barTitleCentered, { top: insets.top + 10, opacity: barContentOpacity }]}
               numberOfLines={1}
             >
               {title}
@@ -1156,6 +1156,19 @@ const styles = themed((colors) => ({
   },
   barTitle: {
     flex: 1,
+    color: colors.text,
+    fontSize: fontSize.md,
+    fontWeight: '700',
+  },
+  barTitleCentered: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    left: 14,
+    right: 0,
+    textAlign: 'center',
+    includeFontPadding: false,
     color: colors.text,
     fontSize: fontSize.md,
     fontWeight: '700',
