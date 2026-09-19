@@ -1106,16 +1106,3 @@ you are actually typing into, which is easier than reading it here.
 | `Unknown album` | Fallback when the file and the server have no album |
 | `Unknown artist` | Fallback when the file and the server have no artist |
 | `View` | Title of the menu that chooses how a collection is drawn, and the label of the button that opens it. A noun: what you are looking at, not the verb |
-
-## Left in English on purpose
-
-These are the Diagnostics measurements. They end up in a GitHub issue, often
-as a screenshot, and whoever reads them there does not speak every language we
-ship. `pnpm i18n:status` does not count them as missing.
-
-- `Measured over the last {n} min of use.`
-- `Interface freezes`
-- `Moments when the app stopped responding, longest first.`
-- `None over 120 ms.`
-- `Time spent`
-- `Nothing measured yet.`

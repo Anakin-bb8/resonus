@@ -174,9 +174,14 @@ export default function DiagnosticsSettings() {
         // Any scroll refreshes the numbers; no timer polling behind this.
         onScrollEndDrag={() => setTick(tick + 1)}
       >
+        {/* The measurements are in English in every language, on purpose, and
+            kept out of `t()` so no locale can translate them: they end up in
+            GitHub issues, often as a screenshot, read by people who don't speak
+            every language we ship. The shared report is English for the same
+            reason. */}
         <Text style={settingsStyles.sectionDescription}>
           {enabled
-            ? t('Measured over the last {n} min of use.', { n: minutes })
+            ? `Measured over the last ${minutes} min of use.`
             : t('Measuring is off (Settings › About), so there is nothing to show.')}
         </Text>
 
@@ -216,12 +221,12 @@ export default function DiagnosticsSettings() {
           </>
         ) : null}
 
-        <Text style={settingsStyles.sectionTitle}>{t('Interface freezes')}</Text>
+        <Text style={settingsStyles.sectionTitle}>Interface freezes</Text>
         <Text style={settingsStyles.sectionDescription}>
-          {t('Moments when the app stopped responding, longest first.')}
+          Moments when the app stopped responding, longest first.
         </Text>
         {blocks.length === 0 ? (
-          <Text style={styles.line}>{t('None over 120 ms.')}</Text>
+          <Text style={styles.line}>None over 120 ms.</Text>
         ) : (
           blocks.map((b, i) => (
             <Text key={i} style={styles.line}>
@@ -230,9 +235,9 @@ export default function DiagnosticsSettings() {
           ))
         )}
 
-        <Text style={settingsStyles.sectionTitle}>{t('Time spent')}</Text>
+        <Text style={settingsStyles.sectionTitle}>Time spent</Text>
         {ops.length === 0 ? (
-          <Text style={styles.line}>{t('Nothing measured yet.')}</Text>
+          <Text style={styles.line}>Nothing measured yet.</Text>
         ) : (
           ops.slice(0, 20).map((o) => (
             <View key={o.tag} style={styles.row}>

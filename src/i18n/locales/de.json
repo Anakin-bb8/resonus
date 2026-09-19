@@ -1,12 +1,6 @@
 {
   "Diagnostics": "Diagnose",
   "Profile": "Profil",
-  "Measured over the last {n} min of use.": "Gemessen über die letzten {n} min Nutzung.",
-  "Interface freezes": "Hänger der Oberfläche",
-  "Moments when the app stopped responding, longest first.": "Momente, in denen die App nicht reagiert hat – die längsten zuerst.",
-  "None over 120 ms.": "Keine über 120 ms.",
-  "Time spent": "Zeitaufwand",
-  "Nothing measured yet.": "Noch nichts gemessen.",
   "Share report": "Bericht teilen",
   "Start over": "Neu beginnen",
   "Library metadata copy": "Bibliotheks-Metadaten-Kopie",
