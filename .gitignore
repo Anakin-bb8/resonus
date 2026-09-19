@@ -56,3 +56,7 @@ modules/*/android/.kotlin/
 
 # JetBrains
 .idea/
+
+# pnpm only
+package-lock.json
+yarn.lock
