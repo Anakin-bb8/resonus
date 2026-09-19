@@ -710,5 +710,12 @@
   "Couldn't load your library.": "Couldn't load your library.",
   "Public": "Public",
   "Suggested tracks": "Suggested tracks",
-  "Based on the tracks in this playlist": "Based on the tracks in this playlist"
+  "Based on the tracks in this playlist": "Based on the tracks in this playlist",
+  "Random songs": "Random songs",
+  "Couldn't load the font": "Couldn't load the font",
+  "Make sure the file is a valid .ttf or .otf font.": "Make sure the file is a valid .ttf or .otf font.",
+  "Loaded": "Loaded",
+  "Load a .ttf or .otf file": "Load a .ttf or .otf file",
+  "Active": "Active",
+  "Remove custom font": "Remove custom font"
 }

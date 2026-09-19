@@ -125,7 +125,7 @@ function SuggestedTracks({
         await addToPlaylist(playlistId, song.id);
         queryClient.invalidateQueries({ queryKey: ['playlist', playlistId] });
         setSuggestions((prev) => prev.filter((s) => s.id !== song.id));
-        toast.show(t('Added to \u201c{name}\u201d', { name: playlistName }));
+        toast.show(t('Added to “{name}”', { name: playlistName }));
       } catch {
         toast.show(t("Couldn't add to the playlist"));
       }

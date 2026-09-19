@@ -700,5 +700,12 @@
   "Which icons are at the top of Home, and in what order.": "Quali icone si trovano in alto nella schermata principale e in che ordine.",
   "Always shown": "Sempre visibile",
   "Suggested tracks": "Brani consigliati",
-  "Based on the tracks in this playlist": "In base ai brani di questa playlist"
+  "Based on the tracks in this playlist": "In base ai brani di questa playlist",
+  "Random songs": "Brani casuali",
+  "Couldn't load the font": "Impossibile caricare il carattere",
+  "Make sure the file is a valid .ttf or .otf font.": "Assicurati che il file sia un carattere .ttf o .otf valido.",
+  "Loaded": "Caricato",
+  "Load a .ttf or .otf file": "Carica un file .ttf o .otf",
+  "Active": "Attivo",
+  "Remove custom font": "Rimuovi carattere personalizzato"
 }

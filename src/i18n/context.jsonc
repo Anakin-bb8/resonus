@@ -723,6 +723,17 @@
     "Installing updates needs permission": "Shown when the user came back from Android's «install unknown apps» screen without granting it"
   },
 
+  // ── Custom font ────────────────────────────────────────────────────────
+  "Couldn't load the font": "Toast when the chosen file could not be loaded as a font",
+  "Make sure the file is a valid .ttf or .otf font.": "Line under that toast, explaining what might be wrong",
+  "Loaded": "Toast after a custom font was loaded successfully",
+  "Load a .ttf or .otf file": "Button on the font picker screen to import a custom font file",
+  "Active": "Label showing which custom font is currently applied",
+  "Remove custom font": "Button to remove the custom font and fall back to the system one",
+
+  // ── Home sections ──────────────────────────────────────────────────────
+  "Random songs": "A section of Home: songs picked at random from the library",
+
   // Strings that are meant to stay in English, and are not counted as missing.
   //
   // These are the Diagnostics measurements. They end up in a GitHub issue, often

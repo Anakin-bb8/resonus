@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 706 of them.
+Every string the app can show, under the screen it shows up on. 713 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -313,6 +313,7 @@ you are actually typing into, which is easier than reading it here.
 | `New releases` | Home shelf and album sort: albums by the year they came out, newest first. Not "Recently added", which is when the server got hold of them |
 | `Random albums` | A section of Home: albums picked at random, to happen upon something |
 | `Random artists` | A section of Home: artists picked at random |
+| `Random songs` |  |
 | `Scanning your music…` | Going through the phone's own files |
 
 ## Library
@@ -655,8 +656,14 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
+| `Active` |  |
+| `Couldn't load the font` |  |
 | `default` | Lower case on purpose: it goes in brackets after the system font's name, `Roboto (default)` |
 | `Font` |  |
+| `Load a .ttf or .otf file` |  |
+| `Loaded` |  |
+| `Make sure the file is a valid .ttf or .otf font.` |  |
+| `Remove custom font` |  |
 
 ## Settings › Greeting
 
