@@ -156,6 +156,7 @@ class UpnpCastModule : Module() {
       }
       scope.launch {
         transportMutex.withLock {
+          target.resetQueueState()
           session = target
           clearNativeQueueState()
         }
@@ -171,7 +172,11 @@ class UpnpCastModule : Module() {
         promise.resolve(false)
         return@AsyncFunction
       }
-      scope.launch { promise.resolve(device.join(target)) }
+      scope.launch {
+        val ok = device.join(target)
+        if (ok) known.values.forEach(RendererSession::invalidateCoordinatorTarget)
+        promise.resolve(ok)
+      }
     }
 
     AsyncFunction("ungroup") { deviceId: String, promise: Promise ->
@@ -180,7 +185,11 @@ class UpnpCastModule : Module() {
         promise.resolve(false)
         return@AsyncFunction
       }
-      scope.launch { promise.resolve(device.ungroup()) }
+      scope.launch {
+        val ok = device.ungroup()
+        if (ok) known.values.forEach(RendererSession::invalidateCoordinatorTarget)
+        promise.resolve(ok)
+      }
     }
 
     AsyncFunction("load") { url: String, track: TrackInfo, autoplay: Boolean, promise: Promise ->
@@ -301,6 +310,10 @@ class UpnpCastModule : Module() {
       scope.launch { promise.resolve(transportMutex.withLock { session?.seek(positionMs.toLong()) ?: false }) }
     }
 
+    AsyncFunction("getVolume") { promise: Promise ->
+      scope.launch { promise.resolve(session?.getVolume() ?: -1) }
+    }
+
     AsyncFunction("setVolume") { volume: Int, promise: Promise ->
       scope.launch { promise.resolve(session?.setVolume(volume) ?: false) }
     }
@@ -336,7 +349,10 @@ class UpnpCastModule : Module() {
           stoppedByUs = true
           observedPlaying = false
           clearNativeQueueState()
-          current?.stop()
+          current?.let {
+            it.stop()
+            it.resetQueueState()
+          }
         }
         promise.resolve(true)
       }
@@ -375,6 +391,7 @@ class UpnpCastModule : Module() {
               "playMode" to (playMode ?: ""),
               "nativeQueueManaged" to (nativeQueueManaged && current?.isSonos == false),
               "queueIndex" to if (nativeQueueManaged && current?.isSonos == false) nativeQueueIndex.toDouble() else -1.0,
+              "volume" to (state.volume?.toDouble() ?: -1.0),
             ),
           )
         }

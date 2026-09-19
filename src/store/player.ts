@@ -25,7 +25,6 @@ import { fetch as expoFetch } from 'expo/fetch';
 import { AppState } from 'react-native';
 import { create } from 'zustand';
 
-import { CLIENT_NAME } from '@/api/subsonic';
 import {
   getAlbum,
   getArtist,
@@ -45,6 +44,7 @@ import {
   type Song,
   type SubsonicAuth,
 } from '@/api/backend';
+import { CLIENT_NAME } from '@/api/subsonic';
 // The data layer's, not the backend's: `getRandomSongs` honours the library
 // filter and asks each library for its share (the rest of the mix cannot be
 // filtered, see `radioCandidates`), and `coverArtUrl` hands back the file on
@@ -74,7 +74,7 @@ import {
   jukeboxSetVolume,
 } from './jukebox';
 import { useLastPlayed } from './lastPlayed';
-import { useNetworkType } from './networkType';
+import { offLocalNetwork, useNetworkType } from './networkType';
 import { useOfflineQueue } from './offlineQueue';
 import { usePlayCounts } from './playCounts';
 import { usePlayHistory } from './playHistory';
@@ -927,9 +927,9 @@ async function loadIndex(index: number, autoplay: boolean): Promise<boolean> {
 }
 
 // ── "Back" history, Spotify-style ────────────────────────────────────────────
-// Stack of already-played contexts so the previous button/gesture returns to
-// the prior song even if it comes from a different playlist or album (not the
-// previous track of the current context). Pushed on each advance/skip forward
+// Stack of already-played contexts so the previous button/gesture, once at the
+// start of the queue, returns to the song played before it even if it comes
+// from a different playlist or album. Pushed on each advance/skip forward
 // and popped in previous(). Entries share the `queue` reference within the
 // same context, so they only weigh what changes between skips.
 type HistoryEntry = {
@@ -1518,8 +1518,16 @@ async function extendWithArtistCatalog(auth: SubsonicAuth, artistId: string, hre
 
 async function maybeQueueAutoplay() {
   const { queue, index, repeat, radioMode, radioSeed, sourceHref } = usePlayerStore.getState();
-  // With repeat the queue never "runs out"; and if 2+ songs remain, not yet.
-  if (repeat !== 'off' || index < queue.length - 2) return;
+  // With repeat the queue never "runs out", so plain autoplay has no end to
+  // extend past; and if 2+ songs remain, not yet.
+  //
+  // A mix is not that. It was started by hand and the whole point of it is that
+  // it keeps arriving, so repeat does not get to stop it. Letting it was how
+  // "Start mix" came back "Couldn't find anything to mix with this song" for
+  // every song on any account that had left repeat on (#197): the report said
+  // nothing was found, and nothing had been looked for, because this line
+  // returned before a single request went out.
+  if ((repeat !== 'off' && !radioMode) || index < queue.length - 2) return;
   const { auth, offline } = useAuthStore.getState();
   if (!auth || offline) return;
   // Before the mix, and before the autoplay setting has a say: this is not
@@ -3025,6 +3033,14 @@ export function initRemoteIntegration() {
       applyLoop(activePlayer());
       scheduleSync();
     },
+    onVolumeChanged: (volume) => {
+      const current = usePlayerStore.getState().volume;
+      const rounded = Math.round(volume * 100) / 100;
+      if (Math.abs(rounded - current) >= 0.01) {
+        usePlayerStore.setState({ volume: rounded });
+        castSetVolumeLevel(rounded);
+      }
+    },
     onFinished: () => {
       if (handleSleepAtSongEnd()) return;
       const { repeat, index } = usePlayerStore.getState();
@@ -3041,6 +3057,22 @@ export function initRemoteIntegration() {
   };
   initUpnp(events);
   initJukebox(events);
+  // The speaker is on the phone's own network, so casting goes back to the
+  // phone when the phone leaves it (#220). Only once that has lasted a moment,
+  // since hopping between access points passes through mobile data, and never
+  // for the internet dropping: the store's `connected` is about that, and a
+  // server and a speaker on the same LAN go on working without it.
+  const LEFT_LAN_GRACE_MS = 8000;
+  let leftLanTimer: ReturnType<typeof setTimeout> | undefined;
+  useNetworkType.subscribe(() => {
+    if (!isUpnpConnected()) return;
+    clearTimeout(leftLanTimer);
+    leftLanTimer = setTimeout(() => {
+      void offLocalNetwork().then((off) => {
+        if (off && isUpnpConnected()) void upnpDisconnect();
+      });
+    }, LEFT_LAN_GRACE_MS);
+  });
   // Sync crossfade toggle to Sonos whenever the setting changes.
   let lastCrossfadeSec = useSettings.getState().crossfadeSec;
   useSettings.subscribe((s) => {
@@ -3435,6 +3467,12 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         index: 0,
         queuedCount: 0,
         shuffle: false,
+        // Off, for the same reason shuffle is: a mix is an endless line of
+        // tracks arriving, and the two playback modes that rearrange a queue
+        // with an end have nothing to say about one without. `one` is the case
+        // that made this worth doing rather than tidy, since it would hold the
+        // seed on screen for ever with the whole mix waiting behind it (#197).
+        repeat: 'off',
         queueDealt: false,
         originalQueue: null,
         source,
@@ -3442,6 +3480,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         radioMode: true,
         radioSeed: cur,
       });
+      // The player is already loaded and was told to loop when it was, so
+      // turning repeat off in the state above is not enough on its own: the
+      // track would go round again while the mix waited behind it.
+      applyLoop(activePlayer());
       // `loadIndex` isn't running, so nothing else is going to persist this.
       scheduleSync();
       await maybeQueueAutoplay();
@@ -3451,6 +3493,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     // for the server to respond before pressing play would make "start mix" feel
     // broken. Awaiting `maybeQueueAutoplay` afterwards doesn't delay playback,
     // only the answer of whether the mix found anything.
+    //
+    // Repeat goes off before the seed is loaded rather than after, so the load is the thing
+    // that tells the player (`applyLoop` reads the state as it goes), and
+    // `playQueue` writes it down with the rest of the queue.
+    set({ repeat: 'off' });
     await get().playQueue([seed], 0, source);
     set({ radioMode: true, radioSeed: seed });
     await maybeQueueAutoplay();
@@ -3611,9 +3658,21 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       get().seekTo(0);
       return;
     }
-    // Returns to the previous song in history, even if from another list/album.
     const playing = get().isPlaying;
-    const entry = playedHistory.pop();
+    // Step backwards within the current queue as long as we're not at the first track.
+    if (index > 0) {
+      void loadIndex(index - 1, skipAutoplay(playing));
+      return;
+    }
+    // At the start of the queue: return to the previous context from history.
+    // Entries of this same list point further into it, left there by the
+    // advances the steps above walked back over.
+    const { queue, source, sourceHref } = get();
+    const key = contextKey(source, sourceHref);
+    const sameList = (e: HistoryEntry) =>
+      e.queue === queue || (key != null && contextKey(e.source, e.sourceHref) === key);
+    let entry = playedHistory.pop();
+    while (entry && sameList(entry)) entry = playedHistory.pop();
     if (entry) {
       set({
         queue: entry.queue,
@@ -3630,8 +3689,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       void loadIndex(entry.index, skipAutoplay(playing));
       return;
     }
-    if (index > 0) void loadIndex(index - 1, skipAutoplay(playing));
-    else get().seekTo(0);
+    get().seekTo(0);
   },
 
   seekTo: (sec) => {

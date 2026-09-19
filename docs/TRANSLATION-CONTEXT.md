@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 699 of them.
+Every string the app can show, under the screen it shows up on. 704 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -135,8 +135,6 @@ you are actually typing into, which is easier than reading it here.
 | `Popular` | The artist's popular / top tracks |
 | `Rate` | Verb: give it stars. Used for a song and for an artist. Not "bitrate" |
 | `Remixes` | Shelf heading: records that are mostly remixed material. `Remixes` is widely used as-is in several languages; keep it if that is true of yours |
-| `Show less` | Folds it back |
-| `Show more` | Unfolds the rest of a text that was cut short |
 | `Similar artists` | Related artists |
 | `Singles` | Shelf heading: records built around one song |
 | `Soundtracks` | Shelf heading: the music of a film, a series, a play or a game |
@@ -424,8 +422,6 @@ you are actually typing into, which is easier than reading it here.
 | `Searching for devices…` | In the output sheet: looking for speakers and TVs to cast to |
 | `Server speakers (Jukebox)` | Playing out of the speakers attached to the server itself, rather than the phone. Subsonic calls this jukebox mode |
 | `Show cover` | Lyrics screen: the button that goes back to the cover art |
-| `Show less` | Folds it back |
-| `Show more` | Unfolds the rest of a text that was cut short |
 | `This phone` | The on-device profile, with no server account |
 | `View queue` | Read out by the screen reader for the button that opens the queue |
 
@@ -537,6 +533,7 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
+| `All` |  |
 | `Artist` | In search results, the little word under a result saying what kind of thing it is |
 | `Artists` | A heading over a list of them, never a count |
 | `Clear all` | Throw away the whole list: the history, the queue, or what you searched for |
@@ -586,11 +583,10 @@ you are actually typing into, which is easier than reading it here.
 | --- | --- |
 | `Counted` | Section header on the Diagnostics screen: things that happened and how many times |
 | `Diagnostics` | The screen's title, and the row in About that opens it |
-| `If the server renumbers its ids, rewrite the downloads to match instead of losing them. Off until it has been tested against a server that has.` | The line under that switch, saying why it is off |
+| `Everything asked of the server, most often first. The music itself is not here: the player opens that connection and this never sees it.` | The line under that header, saying what the list covers and what it leaves out |
 | `Measuring is off (Settings › About), so there is nothing to show.` | Empty state on the Diagnostics screen when `Measure performance` has never been switched on |
 | `Profile` | Section header over what kind of server the profile is. Not a user profile |
-| `Repair the offline library` | The switch itself. Navidrome 0.64 gives every song a new id, and the downloads on the phone still hold the old ones; this is what rewrites them so the music stays playable |
-| `Server id repair` | Section title in the hidden Diagnostics screen, above the switch below |
+| `Requests` | Section header on the Diagnostics screen: how many times each server endpoint was asked, and how big the answers were |
 | `Share report` | Button: hands the numbers over as plain text, to paste into an issue |
 | `Start over` | Button: clears the measurements and starts counting again. Not "start playback" |
 | `State` | Section header on the Diagnostics screen: what the app is doing at this moment, as opposed to the timings above it |
@@ -652,8 +648,8 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `Drag to reorder.` |  |
 | `Explore sections` |  |
+| `Keep at least one section on` |  |
 
 ## Settings › Font
 
@@ -700,7 +696,10 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
+| `Don't see your language, or want to improve an existing one? You can help by contributing a translation on GitHub. Pull requests are welcome.` |  |
+| `Help translate` |  |
 | `Language` |  |
+| `Translations` |  |
 
 ## Settings › Library
 
@@ -780,6 +779,7 @@ you are actually typing into, which is easier than reading it here.
 | `Appearance` |  |
 | `Artwork, duration, rating and the rest of what a song shows in a list.` | The line under “Song lists”, explaining it |
 | `Browse your library by folders, in the Explore tab (Subsonic servers).` |  |
+| `Coming back after a few minutes leaves the app on the screen you left, instead of on the tab above.` | The line under that switch. “The tab above” is the “Open the app on” setting sitting right above it |
 | `Dark or light, and the accent color` | The line under “Theme”, explaining it |
 | `Explore` | The tab holding everything the server has: all albums, artists, songs, genres, stations and folders |
 | `Explore sections` |  |
@@ -795,6 +795,7 @@ you are actually typing into, which is easier than reading it here.
 | `Interaction` | Section header grouping toggles |
 | `Interface` | Section header grouping toggles |
 | `Keep the tabs at the bottom of every screen. Holding the back arrow goes back to the one you came from either way.` |  |
+| `Keep where you were` | A switch in Settings › Appearance, right under “Open the app on”: with it on, reopening the app after a while leaves it where it was instead of going back to that tab |
 | `Language` |  |
 | `Navigation` | Section header: how you move around the app |
 | `Navigation bar` | Settings screen: which tabs are on the bar at the bottom, and in what order |
@@ -805,6 +806,7 @@ you are actually typing into, which is easier than reading it here.
 | `Show, hide and reorder the chips at the top of Home.` | The line under “Home chips”, explaining it |
 | `Show, personalize and size the shortcut cards on Home.` | The line under “Quick grid”, explaining it |
 | `Song lists` | The setting for how song lists look |
+| `Start on your playlists` | A switch: with it on, Your library with no chip pressed shows the Favorites entry and the playlists, the way it used to, instead of albums, artists and playlists mixed together |
 | `Subtle vibration on key actions.` | The line under “Haptic feedback”, explaining it |
 | `Swipe left` | What dragging a song to the left in a list does |
 | `Swipe right` | What dragging a song to the right in a list does. Its values are the actions listed under it |
@@ -812,6 +814,7 @@ you are actually typing into, which is easier than reading it here.
 | `Which icons are at the top of Home, and in what order.` | The line under “Home buttons”, explaining it |
 | `Which tab opens on launch, and after a while in the background.` | The line under “Open the app on”, explaining it |
 | `Which tabs are at the bottom, and in what order.` | The line under “Navigation bar”, explaining it |
+| `With no chip pressed, Your library shows Favorites and your playlists instead of everything mixed together.` |  |
 | `Your library` | The tab with your albums, artists and playlists |
 
 ## Settings › Playback
@@ -969,16 +972,16 @@ you are actually typing into, which is easier than reading it here.
 | `Show a round artist photo next to the name on album screens.` | The line under “Show artist photo”, explaining it |
 | `Show artist photo` | Whether the artist's photo shows at the top of their screen |
 | `Show artwork` | Whether song rows carry the album's little picture |
+| `Show description` | A setting: whether playlist and album descriptions are drawn under their names on their screens |
 | `Show disc titles` | On an album in several discs, whether each disc's own name shows |
 | `Show each song's star rating in lists.` | The line under “Show rating”, explaining it |
 | `Show explicit tag` | A switch: whether to draw the E on anything carrying a parental advisory. "Explicit" here is the music-industry label for strong language, not "clear" or "stated outright" |
 | `Show genres` | Whether a song row says its genre |
-| `Show playlist description` | A setting: whether a playlist's own description is drawn under its name on its screen. The description is text whoever made the playlist wrote about it |
+| `Show playlist and album descriptions under their names.` | The line under `Show description`, covering descriptions written for playlists and albums |
 | `Show rating` |  |
 | `Show song duration` | Whether a song row says how long the song is |
 | `Show the album artwork next to each song in playlists and favorites.` | The line under “Show artwork”, explaining it |
 | `Show the album's genres as chips; tap one to browse it.` | The line under “Show genres”, explaining it |
-| `Show the playlist description under its name.` | The line under `Show playlist description`. The description is the text whoever made the playlist wrote about it |
 | `Song lists` | The setting for how song lists look |
 
 ## Settings › Theme
@@ -1081,6 +1084,8 @@ you are actually typing into, which is easier than reading it here.
 | `Select all` | Tick every song in the list at once |
 | `Server default` | Codec option meaning "let the server decide" what to transcode to |
 | `Show all` | Opens the full list of what the row is showing a few of |
+| `Show less` | Folds it back |
+| `Show more` | Unfolds the rest of a text that was cut short |
 | `Shuffle` | Play in random order |
 | `Song downloaded` | Toast: one song finished |
 | `Songs` | Always a heading, never a count, so it wants the plain plural your language uses for a list of them ("Songs", not "of songs"). Counting songs is a different thing and goes through the plural forms |

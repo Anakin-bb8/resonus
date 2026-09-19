@@ -11,19 +11,56 @@ Releases before 0.2.1 are only listed on the
 
 ### Added
 
-- An animated cover can fill the player behind the controls, with a still copy of it beside the title, instead of playing inside the square; it starts off, under Settings > Player > Cover art, and comes from @Anakin-bb8 (#190).
-- Ukrainian is complete again, thanks to @albedych (#191).
-- The sections of Explore can be reordered from Settings > Appearance > Explore sections.
+- Your library can show Favorites and your playlists again when no chip is pressed, instead of everything mixed together, with Settings > Appearance > Start on your playlists (#217).
+- Lyrics timed word by word light up each word as it is sung, from TTML or enhanced LRC files on Navidrome 0.63 or newer, on Jellyfin, or next to your own music, and downloads keep them for offline (#165).
+- An album shows its description under its name, as a playlist already did, taken from the overview on Jellyfin or from the comment tag the album's files share, and the switch for it is now Settings > Appearance > Song lists > Show description (#223).
+- Diagnostics counts every request made to the server, says how the time since it started measuring splits between the screen being on and the app being away, and how much of that time away the app was actually being run (#221).
+- Settings > Appearance > Keep where you were leaves the app on the screen you left when you come back to it, instead of going to the tab it opens on; it starts off, which is what it has always done (#225).
 
 ### Changed
 
+- You can pin up to 50 items instead of 25 (#217).
+- A long playlist or album description is cut to two lines with a Show more under it, instead of filling the whole header (#223).
+- The Artists, Albums and Songs lists remember the order you picked instead of going back to Recently played every time you open them (#226).
+
+### Fixed
+
+- Deleting a playlist or a radio station, or taking an album out of your favourites with its heart, no longer leaves a hidden pin that still counts toward the limit (#217).
+- Previous goes to the track before in the album or playlist that is playing, and only back to what you played before it once you reach the first track (#219).
+- On a UPnP or Sonos speaker the volume starts from the speaker's own level and follows changes made on it, instead of jumping near full at the first press (#218).
+- Offline, a track with its own embedded cover shows it in the album, the queue and the player instead of the album's, also for albums downloaded before 0.7.7 (#214).
+- On Navidrome 0.64 or newer, albums, artists and playlists with no artwork show Resonus' own placeholder instead of Navidrome's, and are no longer asked for it.
+- A Sonos queue that failed to load part way is sent again in full the next time, instead of being taken as already there (#220).
+- Casting to a UPnP or Sonos speaker goes back to the phone, paused where it was, when the phone moves to mobile data or loses the network, but not when only the internet drops (#220).
+- A playlist you have never played no longer rises to the top of the home grid for having been created or edited recently on the server (#222).
+
+## [0.7.7] - 2026-09-13
+
+### Added
+
+- Chips under the search box narrow the results to songs, artists, albums, playlists or radio. They show up as soon as you type, and pressing the one already lit gives you everything back.
+- An animated cover can fill the player behind the controls, with a still copy of it beside the title, instead of playing inside the square; it starts off, under Settings > Player > Cover art, and comes from @Anakin-bb8 (#190).
+- Ukrainian is complete again, thanks to @albedych (#191).
+- The sections of Explore can be shown or hidden as well as reordered, from Settings > Appearance > Explore sections. The last one on stays on: Explore is the only way into the whole of a library, so a tab with no chips would be a catalogue with no way in.
+- A playlist can be a favourite, with the heart its albums and artists already have. It needs Navidrome 0.64 or newer, which is where playlist favourites start existing, and the heart simply isn't there on a server that has no way to remember it.
+- Polish, a complete translation, thanks to @pegaz19803-spec (#200). It also made the Language screen's own three lines translatable, which they were not in any language: they were English sitting in the code.
+- Navidrome 0.64 gives every song, album and playlist a new id, and the music already on the phone is filed under the old ones. Resonus now notices a server that has renumbered and rewrites the downloads, the offline library, the queue, the pins and the listens still waiting to be sent, so nothing has to be downloaded again. It only acts on proof: the server has to answer to the new id and refuse the old one, since a song that was simply deleted looks the same from outside. A server that has not migrated is left alone.
+
+### Changed
+
+- Home opens with every section on. Five of them used to start off to keep it short, which mostly kept them secret: a section nobody has seen is one nobody knows to look for in the settings. Turn off what you do not want from Settings > Appearance > Home sections. Anyone who has already set these keeps what they chose.
 - "Your library" opens on everything you have, playlists, favourite albums and favourite artists in one list saying which is which, and the chips narrow it from there instead of being the only way to see any of it.
 - The chip you press in "Your library" is now the only one left in the row, behind an X that gives the whole library back, and Playlists brings Yours and Public with it, each when it has something to leave out; picking one of those leaves the two words sitting together as one answer.
 - The search box of Explore is now behind the same magnifier "Your library" has, at the top right, where it becomes the X that puts the box away; Back closes it too, and a section opens on its list rather than on a box you were not looking for.
 
 ### Fixed
 
+- "On cover tap" keeps what you picked. "Go to album", "Play or pause" and "Add to favorites" were thrown away when the app reopened and came back as "Open lyrics screen"; the same went for the double tap, which came back off unless it was set to play/pause or favorites. Reported by BrawlReturns.
 - An animated cover no longer stutters in the player: only the copy you are looking at plays, and the blurred background behind it holds still.
+- The popular songs on an artist's page are that artist's, where two of them share a name. They were asked for by name alone, so whichever one the server happened to reach first answered for both.
+- "Start mix" works with repeat turned on. It used to answer that it could not find anything to mix with the song, whichever song it was, and nothing had been looked for: the queue never runs out with repeat on, so the search that fills a mix was skipped before it began. Starting a mix now also turns repeat off, the way it already turned shuffle off (#197).
+- A downloaded track with a sleeve of its own shows it offline, instead of the record's. Its picture was never saved, so offline had nothing to show but the album's; downloading now brings it along, and a track without one still gets the album's as before. Albums already on the phone keep the album cover until they are downloaded again (#214).
+- The colour an artist's page is tinted with comes from their photo and not from the grey square standing in for it while the server is still looking the photo up, which it could keep doing for as long as the picture stayed in the cache.
 
 ## [0.7.6] - 2026-08-26
 

@@ -15,6 +15,7 @@
 import Constants from 'expo-constants';
 import * as Crypto from 'expo-crypto';
 
+import { wordsAt } from '@/lib/lyricWords';
 import {
   CLIENT_NAME,
   normalizeUrl,
@@ -44,6 +45,7 @@ import {
 // in `src/api/subsonic.ts`.
 import { fetch } from 'expo/fetch';
 import { assertCanRequest } from './netGate';
+import { netTally } from '@/lib/perfLog';
 
 const CLIENT_VERSION = Constants.expoConfig?.version ?? '0.0.0';
 /**
@@ -189,6 +191,7 @@ async function request<T>(
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   let res: Response;
+  netTally(`jf ${path}`);
   try {
     res = await fetch(buildUrl(auth, path, params), {
       method: init.method ?? 'GET',
@@ -356,6 +359,9 @@ function toAlbum(it: JfItem): Album {
     artist: it.AlbumArtist ?? it.Artists?.join(', '),
     artistId: it.AlbumArtists?.[0]?.Id,
     artists: it.AlbumArtists?.map((a) => ({ id: a.Id, name: a.Name ?? '' })),
+    // Jellyfin stores album descriptions in Overview, which may contain
+    // markup. Album headers display plain text, like playlist descriptions.
+    comment: it.Overview?.replace(/<[^>]+>/g, '').trim() || undefined,
     coverArt: it.ImageTags?.Primary ? it.Id : undefined,
     songCount: it.ChildCount,
     year: it.ProductionYear,
@@ -614,11 +620,19 @@ export async function getArtistInfo(auth: SubsonicAuth, id: string): Promise<Art
   };
 }
 
-/** Most played songs by an artist (Jellyfin filters by name). */
+/**
+ * Most played songs by an artist (Jellyfin filters by name).
+ *
+ * `_artistId` is taken and ignored: the Subsonic side sends it so Navidrome can
+ * resolve the artist by id, and both modules have to answer to the same call.
+ * Jellyfin's `Artists` filter is a name, and its id-based equivalent
+ * (`ArtistIds`) is a different query than the one this endpoint is.
+ */
 export async function getTopSongs(
   auth: SubsonicAuth,
   artist: string,
   count = 10,
+  _artistId?: string,
 ): Promise<Song[]> {
   const res = await request<JfItems>(auth, `/Users/${auth.jfUserId}/Items`, {
     IncludeItemTypes: 'Audio',
@@ -1034,7 +1048,14 @@ export async function getLyricsBySongId(
   auth: SubsonicAuth,
   id: string,
 ): Promise<SongLyrics | null> {
-  let res: { Lyrics?: { Text?: string; Start?: number }[] };
+  let res: {
+    Lyrics?: {
+      Text?: string;
+      Start?: number;
+      /** Word timings: where each word starts in `Text`, and when, in ticks. */
+      Cues?: { Position: number; Start: number; End?: number | null }[] | null;
+    }[];
+  };
   try {
     res = await request(auth, `/Audio/${id}/Lyrics`);
   } catch {
@@ -1043,12 +1064,28 @@ export async function getLyricsBySongId(
   const lines = res?.Lyrics ?? [];
   if (lines.length === 0) return null;
   const synced = lines.some((l) => l.Start !== undefined);
+  const ms = (ticks: number) => Math.round(ticks / TICKS_PER_MS);
   return {
     synced,
-    lines: lines.map((l) => ({
-      value: l.Text ?? '',
-      ...(synced && l.Start !== undefined ? { start: Math.round(l.Start / TICKS_PER_MS) } : {}),
-    })),
+    lines: lines.map((l) => {
+      const value = l.Text ?? '';
+      const words =
+        synced && l.Cues?.length
+          ? wordsAt(
+              value,
+              l.Cues.map((c) => ({
+                at: c.Position,
+                start: ms(c.Start),
+                ...(c.End != null ? { end: ms(c.End) } : {}),
+              })),
+            )
+          : undefined;
+      return {
+        value,
+        ...(synced && l.Start !== undefined ? { start: ms(l.Start) } : {}),
+        ...(words ? { words } : {}),
+      };
+    }),
   };
 }
 

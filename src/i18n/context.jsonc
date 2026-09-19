@@ -272,10 +272,6 @@
     "New playlist": "Row at the top of the playlist picker, and the button on an empty library: make one",
     "Added to “{name}”": "Toast. `{name}` is the playlist's name",
     "{n} added to “{name}”": "Toast when several songs went in at once. `{n}` is a count of songs",
-    // ── Diagnostics: the server id repair switch ────────────────────────────
-    "Server id repair": "Section title in the hidden Diagnostics screen, above the switch below",
-    "Repair the offline library": "The switch itself. Navidrome 0.64 gives every song a new id, and the downloads on the phone still hold the old ones; this is what rewrites them so the music stays playable",
-    "If the server renumbers its ids, rewrite the downloads to match instead of losing them. Off until it has been tested against a server that has.": "The line under that switch, saying why it is off",
     "Already added": "Title of the dialog that warns the song is in that playlist already",
     "This song is already in “{name}”.": "The line under that title. `{name}` is the playlist",
     "{n} of {songs} are already in “{name}”.": "The same warning when adding several at once and only some of them are already there. `{n}` is how many of them are, and `{songs}` already reads as a count (\"12 songs\"), so the sentence is like \"3 of 12 songs are already in “Rock”.\"",
@@ -440,6 +436,8 @@
     // ── Diagnostics ──────────────────────────────────────────────────────────
     "State": "Section header on the Diagnostics screen: what the app is doing at this moment, as opposed to the timings above it",
     "Counted": "Section header on the Diagnostics screen: things that happened and how many times",
+    "Requests": "Section header on the Diagnostics screen: how many times each server endpoint was asked, and how big the answers were",
+    "Everything asked of the server, most often first. The music itself is not here: the player opens that connection and this never sees it.": "The line under that header, saying what the list covers and what it leaves out",
     "While minimized": "Section header on the Diagnostics screen, over what was measured with the app in the background rather than on screen. Minimized as in put away: the screen off or another app in front, with the music still going",
     "What happened, rather than how long it took.": "The line under `Counted`: that section is a tally of events, next to the sections above it which are timings",
     "The player keeps beating twice a second while the app is away. Long silences here mean the app stopped following what it was playing.": "The line under `While minimized`. \"The player\" is the native audio engine, not the player screen, and \"beating\" is a heartbeat: it sends its state every 500 ms, and the position, the notification and the move to the next track all hang off that. Everything else on this screen stops measuring once the app is minimized, because the system takes its timers away, so this beat is the one clock still running out there. A long gap means the player itself went quiet, which is a different fault from the app coming back with a stale screen. Keep the medical sense of a pulse if your language has one",
@@ -545,6 +543,9 @@
     "Folder browsing": "Browsing the server's folders as folders, instead of by album and artist",
     "Haptic feedback": "The small vibration when something is tapped",
     "Open the app on": "Which tab the app opens on, and comes back to after a while away",
+    "Start on your playlists": "A switch: with it on, Your library with no chip pressed shows the Favorites entry and the playlists, the way it used to, instead of albums, artists and playlists mixed together",
+    "Keep where you were": "A switch in Settings \u203a Appearance, right under \u201cOpen the app on\u201d: with it on, reopening the app after a while leaves it where it was instead of going back to that tab",
+    "Coming back after a few minutes leaves the app on the screen you left, instead of on the tab above.": "The line under that switch. \u201cThe tab above\u201d is the \u201cOpen the app on\u201d setting sitting right above it",
     "Home buttons": "The icons at the top right of Home (search, history, settings), which of them show and in what order",
 
     // ── Settings › Network ───────────────────────────────────────────────────
@@ -703,8 +704,8 @@
     "Your most played songs will show up here.": "Empty state, before anything has been played",
 
     // ── Other ────────────────────────────────────────────────────────────────
-    "Show playlist description": "A setting: whether a playlist's own description is drawn under its name on its screen. The description is text whoever made the playlist wrote about it",
-    "Show the playlist description under its name.": "The line under `Show playlist description`. The description is the text whoever made the playlist wrote about it",
+    "Show description": "A setting: whether playlist and album descriptions are drawn under their names on their screens",
+    "Show playlist and album descriptions under their names.": "The line under `Show description`, covering descriptions written for playlists and albums",
     "Playlist covers": "One line of the storage breakdown in Settings › Downloads: how much room the playlist cover images take. It is a size, not a setting",
     "Free": "Free disk space in the storage bar (Other / Downloads / Free). Not \"free of charge\"",
     "Other": "Two places, and the same word does for both: in that storage bar, the space used by things other than downloads; and on an artist's page, the last shelf of the discography, holding the records that fit none of the kinds above it",

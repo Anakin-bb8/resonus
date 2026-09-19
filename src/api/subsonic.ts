@@ -13,8 +13,10 @@ import * as Crypto from 'expo-crypto';
 // This one answers there, and honours `AbortSignal` properly with it.
 import { fetch } from 'expo/fetch';
 
+import { markAbsentCovers, omitsAbsentCovers } from '@/lib/absentCovers';
+import { wordsFromCues } from '@/lib/lyricWords';
 import { canonicalId, idWouldChange } from '@/lib/navidromeIds';
-import { timed } from '@/lib/perfLog';
+import { netTally, timed } from '@/lib/perfLog';
 import { assertCanRequest } from './netGate';
 
 export const CLIENT_NAME = 'Resonus';
@@ -208,6 +210,8 @@ export interface Album {
   name: string;
   artist?: string;
   artistId?: string;
+  /** Album description from the comment tag (OpenSubsonic; Navidrome sends it). */
+  comment?: string;
   /** Album artist list (OpenSubsonic extension; Navidrome sends it). */
   artists?: { id: string; name: string }[];
   coverArt?: string;
@@ -464,12 +468,8 @@ async function retryWithCanonicalId<T>(
 ): Promise<T | null> {
   const id = extra.id;
   if (typeof id !== 'string' || !idWouldChange(id)) return null;
-  // Turned off means nothing of this runs, down to the one extra request this
-  // would spend on a song that is simply not there any more. Read through the
-  // repair module rather than the settings store so the API layer keeps its
-  // one-way dependency on it.
   const repair = await import('@/lib/navidromeRepair').catch(() => null);
-  if (!repair?.idRepairEnabled()) return null;
+  if (!repair) return null;
   let res: T;
   try {
     res = await request<T>(auth, endpoint, { ...extra, id: canonicalId(id) }, allowOffline, true);
@@ -502,6 +502,10 @@ async function request<T>(
       fetch(buildUrl(auth, endpoint, extra), { signal: controller.signal }),
     );
   } catch {
+    // Counted too, and apart. A request that never arrives costs the radio the
+    // same as one that does, and a phone talking to a server that is not there
+    // is one of the two shapes this report exists to tell apart.
+    netTally(`${endpoint} (no answer)`);
     if (controller.signal.aborted) {
       throw new SubsonicRequestError('Server took too long to respond', true);
     }
@@ -510,6 +514,9 @@ async function request<T>(
     clearTimeout(timer);
   }
 
+  // Before the status is judged: an error is a request that went out and came
+  // back like any other, and a storm of them is what a tally is for.
+  netTally(endpoint, Number(res.headers.get('content-length')) || 0);
   if (!res.ok) throw new SubsonicRequestError(`Network error (${res.status})`, false);
   // Apart from the request: this is the part that runs on the JS thread, and
   // it grows with the size of the answer.
@@ -535,6 +542,7 @@ async function request<T>(
     }
     throw new SubsonicRequestError(sub.error?.message ?? 'Subsonic error', false, code);
   }
+  if (omitsAbsentCovers(sub)) markAbsentCovers(sub);
   return sub as T;
 }
 
@@ -574,6 +582,38 @@ export async function ping(auth: SubsonicAuth): Promise<void> {
 /** Last version each profile answered with, this session. Only ever avoids
  *  work: a miss costs one comparison that was going to happen anyway. */
 const lastVersionSeen = new Map<string, string>();
+
+/**
+ * Whether the server this profile talks to is at least `major.minor`.
+ *
+ * `undefined` for "no idea", which is every case that is not a plain answer:
+ * before the first `ping`, and for any version string that does not start with
+ * two numbers (a develop build carrying a git sha, a fork with its own
+ * scheme, a proxy rewriting it).
+ *
+ * Worth being clear about what this may and may not be used for. It gates
+ * whether a feature is *offered*, where being wrong costs a button that is
+ * there or is not; the repair of the ids deliberately refuses to trust it for
+ * anything else, and says why at length (`navidromeRepair.noteServerVersion`).
+ * The three-valued answer is the whole point: a caller has to decide what to
+ * do about not knowing, and for a feature the answer is to leave it out.
+ *
+ * Only meaningful next to a `serverType` check, since what the string means
+ * depends on who sent it: on Navidrome it is Navidrome's own version, and on a
+ * server that sends no `serverVersion` at all it is the Subsonic API level,
+ * where 1.16 has nothing to do with anybody's release.
+ */
+export function serverAtLeast(
+  auth: SubsonicAuth,
+  major: number,
+  minor: number,
+): boolean | undefined {
+  const seen = lastVersionSeen.get(`${auth.username}|${auth.serverUrl}`);
+  const parts = /^(\d+)\.(\d+)/.exec(seen ?? '');
+  if (!parts) return undefined;
+  const [seenMajor, seenMinor] = [Number(parts[1]), Number(parts[2])];
+  return seenMajor !== major ? seenMajor > major : seenMinor >= minor;
+}
 
 /** Which way round an order is read. It goes into the request, so it lives
  *  here with the rest of what a request can say. */
@@ -887,6 +927,7 @@ export async function reorderPlaylist(
   params.set('playlistId', id);
   for (const sid of songIds) params.append('songId', sid);
   assertCanRequest();
+  netTally('createPlaylist.view', params.toString().length);
   const res = await fetch(`${auth.serverUrl}/rest/createPlaylist.view`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -1125,16 +1166,32 @@ export async function getSongList(
   return res.searchResult3?.song ?? [];
 }
 
-/** Most popular songs by an artist (by name). */
+/**
+ * Most popular songs by an artist.
+ *
+ * Both the name and the id go up, and which one the server uses is the
+ * server's business. Navidrome 0.64 takes `id` and announces it as the
+ * `topSongsByArtistId` extension; it looks the artist up by id first and falls
+ * back to the name if that finds nothing (`core/external.findArtist`). Older
+ * servers, and every other Subsonic implementation, ignore the parameter they
+ * do not know and answer by name exactly as before.
+ *
+ * So no extension check: asking `getOpenSubsonicExtensions` would spend a
+ * request to learn something that changes nothing about what we send. What the
+ * id buys is the case the name cannot express: two artists with the same name,
+ * where matching by name is `LIKE artist.name` with a limit of one and so
+ * returns whichever of them the database reaches first.
+ */
 export async function getTopSongs(
   auth: SubsonicAuth,
   artist: string,
   count = 10,
+  artistId?: string,
 ): Promise<Song[]> {
   const res = await request<{ topSongs?: { song?: Song[] } }>(
     auth,
     'getTopSongs.view',
-    { artist, count },
+    { artist, count, id: artistId },
   );
   return res.topSongs?.song ?? [];
 }
@@ -1206,12 +1263,30 @@ export async function getStarred(auth: SubsonicAuth, musicFolderId?: string): Pr
   };
 }
 
-export type StarType = 'song' | 'album' | 'artist';
+/**
+ * What a favourite can be about.
+ *
+ * `playlist` is Navidrome 0.64 and up only, and it is not in Subsonic at all.
+ * Starring one is written the same way a song is, with the plain `id`
+ * parameter, and the server works out what the id belongs to
+ * (`GetEntityByID`, navidrome/navidrome#5749). What it is *not* is readable
+ * that way: the same PR keeps annotations out of the Subsonic playlist
+ * responses on purpose, so `getStarred` will never mention a playlist and the
+ * state has to be read through the native API (`listStarredPlaylistIds`).
+ *
+ * On an older Navidrome the plain id falls through to `media_file`, matches
+ * nothing, and the server answers a cheerful OK having done nothing at all,
+ * which is why the heart is only offered where that read path exists (see
+ * `usePlaylistStars`): if we cannot read the state back, we do not pretend to
+ * write it.
+ */
+export type StarType = 'song' | 'album' | 'artist' | 'playlist';
 
 function starParam(id: string, type: StarType): Record<string, string> {
   // Subsonic uses a different parameter depending on the element type.
   if (type === 'album') return { albumId: id };
   if (type === 'artist') return { artistId: id };
+  // Songs, and playlists on Navidrome, which resolves the id itself.
   return { id };
 }
 
@@ -1281,10 +1356,24 @@ export async function getLyrics(
   return res.lyrics?.value?.trim() ?? '';
 }
 
+/** A word or a syllable of a synced line, and when it is sung. */
+export interface LyricWord {
+  /** Milliseconds from the start of the track. */
+  start: number;
+  end?: number;
+  /** Its text, with whatever follows it up to the next word (a space, often). */
+  value: string;
+}
+
 export interface LyricLine {
   /** Milliseconds from the start of the track; only in synced lyrics. */
   start?: number;
   value: string;
+  /**
+   * Word by word, when the lyrics were timed that finely (#165). Put back
+   * together they are `value`, spaces included.
+   */
+  words?: LyricWord[];
 }
 
 export interface SongLyrics {
@@ -1296,35 +1385,68 @@ export interface SongLyrics {
  * Structured lyrics by song id (OpenSubsonic extension `songLyrics`,
  * supported by Navidrome and Ampache 7): lines with timestamps if the lyrics
  * are synced. Throws on servers without the extension; null if no lyrics.
+ *
+ * Asked with `enhanced`, which version 2 of the extension answers with each
+ * line's words and when they are sung (`cueLine`): Navidrome 0.63 reads those
+ * out of TTML, enhanced LRC, SRT and YAML files (#165). A server without it
+ * ignores the parameter and answers as before.
  */
 export async function getLyricsBySongId(
   auth: SubsonicAuth,
   id: string,
 ): Promise<SongLyrics | null> {
+  interface CueLine {
+    /** The `line` it times. */
+    index?: number;
+    value?: string;
+    cue?: { start: number; end?: number; value?: string; byteStart?: number }[];
+  }
   interface StructuredLyrics {
+    /** Only with `enhanced`: `main`, `translation` or `pronunciation`. */
+    kind?: string;
     synced?: boolean;
     /** Global offset in ms; positive = lyrics should appear earlier. */
     offset?: number;
     line?: { start?: number; value?: string }[];
+    cueLine?: CueLine[];
   }
   const res = await request<{ lyricsList?: { structuredLyrics?: StructuredLyrics[] } }>(
     auth,
     'getLyricsBySongId.view',
-    { id },
+    { id, enhanced: 'true' },
   );
-  const all = res.lyricsList?.structuredLyrics ?? [];
+  // `enhanced` brings the translations and the pronunciations too, as entries
+  // of their own, and those are not the song's lyrics.
+  const all = (res.lyricsList?.structuredLyrics ?? []).filter((l) => !l.kind || l.kind === 'main');
   const pick = all.find((l) => l.synced && l.line?.length) ?? all.find((l) => l.line?.length);
   if (!pick?.line?.length) return null;
   const synced = !!pick.synced;
   const offset = pick.offset ?? 0;
+  // The first cue line of each index: the spec puts the main voice ahead of
+  // the backing ones that share its line.
+  const cues = new Map<number, CueLine>();
+  if (synced) {
+    pick.cueLine?.forEach((cl, i) => {
+      const at = cl.index ?? i;
+      if (!cues.has(at)) cues.set(at, cl);
+    });
+  }
   return {
     synced,
-    lines: pick.line.map((ln) => ({
-      value: ln.value ?? '',
-      ...(synced && ln.start !== undefined
-        ? { start: Math.max(0, ln.start - offset) }
-        : {}),
-    })),
+    lines: pick.line.map((ln, i) => {
+      const text = cues.get(i)?.value;
+      const cue = cues.get(i)?.cue;
+      const words = text && cue?.length ? wordsFromCues(text, cue, offset) : undefined;
+      return {
+        // The cue line's own text when it has words, since they are cut out of
+        // it, and `line` may carry the backing vocals alongside.
+        value: words && text ? text : (ln.value ?? ''),
+        ...(synced && ln.start !== undefined
+          ? { start: Math.max(0, ln.start - offset) }
+          : {}),
+        ...(words ? { words } : {}),
+      };
+    }),
   };
 }
 
@@ -1360,6 +1482,10 @@ export async function savePlayQueue(
   try {
     // POST with parameters in the body: avoids giant URLs with long queues.
     assertCanRequest();
+    // Tallied by hand: this one does not go through `request`, and it is the
+    // one that grows with the queue. A mix left running all night is a body of
+    // thousands of ids pushed every twenty seconds, which is worth seeing.
+    netTally('savePlayQueue.view', params.toString().length);
     await fetch(`${auth.serverUrl}/rest/savePlayQueue.view`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

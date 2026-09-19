@@ -12,22 +12,27 @@ import { useState } from 'react';
 import { ScrollView, Share, Text, View } from 'react-native';
 
 import { COVER, songCoverUrl, songListSorts } from '@/api/data';
-import { SettingRow, SettingsPage, settingsStyles, SwitchList } from '@/components/SettingsUI';
+import { SettingRow, SettingsPage, settingsStyles } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
 import { coverSourceOf, mirrorCoverState } from '@/lib/mirrorCovers';
 import {
+  formatMs,
   perfAway,
   perfBlocks,
   perfCounts,
+  perfNet,
   perfOps,
   perfReport,
   perfSince,
+  perfTime,
   resetPerfLog,
 } from '@/lib/perfLog';
 import { repairStatus } from '@/lib/navidromeRepair';
 import { useAuthStore } from '@/store/auth';
 import { anyDownloads, useDownloads } from '@/store/downloads';
+import { useJukebox } from '@/store/jukebox';
 import { currentSong, usePlayerStore } from '@/store/player';
+import { useUpnp } from '@/store/upnp';
 import { useSettings } from '@/store/settings';
 import { enabledFolderIds } from '@/store/libraries';
 import { fontSize, spacing, themed, useTheme } from '@/theme';
@@ -49,6 +54,34 @@ export default function DiagnosticsSettings() {
   const auth = useAuthStore((s) => s.auth);
   const offline = useAuthStore((s) => s.offline);
   const folderFilter = enabledFolderIds(auth);
+  const nets = perfNet();
+  const time = perfTime();
+  const netCalls = nets.reduce((n, x) => n + x.calls, 0);
+  const netKb = Math.round(nets.reduce((n, x) => n + x.bytes, 0) / 1024);
+  const costly = useSettings((st) =>
+    [
+      st.preloadUpcoming && 'preload',
+      st.crossfadeSec > 0 && `crossfade ${st.crossfadeSec}s`,
+      st.autoplaySimilar && 'autoplay',
+      st.autoOfflineSwitch && 'auto offline',
+      st.syncQueueFromServer && 'queue sync',
+      st.animatedCoverBackground && 'animated cover',
+      st.updateCheck && 'update check',
+    ]
+      .filter(Boolean)
+      .join(', '),
+  );
+  // Read one at a time rather than as an object: a selector that builds one
+  // hands back a new reference on every store write, and this screen would
+  // then repaint on every beat of the player it is measuring.
+  const queueLen = usePlayerStore((st) => st.queue.length);
+  const queueIndex = usePlayerStore((st) => st.index);
+  const repeat = usePlayerStore((st) => st.repeat);
+  const shuffle = usePlayerStore((st) => st.shuffle);
+  const radioMode = usePlayerStore((st) => st.radioMode);
+  const upnpOn = useUpnp((st) => st.connected);
+  const jukeboxOn = useJukebox((st) => st.active);
+  const downloading = useDownloads((st) => Object.keys(st.active).length);
   const profileLines = [
     // Which build this is, since a test APK carries the same version as the
     // release it was branched from and there is otherwise no telling them
@@ -63,13 +96,16 @@ export default function DiagnosticsSettings() {
     // everywhere else, so this line is the only way to tell what it did.
     `id repair: ${repairStatus()}`,
     `song sorts: ${(auth || offline ? songListSorts() : []).join(', ') || '—'}`,
+    // The switches that cost something while nobody is looking. Half of what a
+    // battery report blames on a version turns out to be a setting somebody
+    // turned on, and asking about them one at a time is three round trips on
+    // an issue.
+    `costly settings: ${costly || 'none'}`,
   ];
   const ops = perfOps();
   const away = perfAway();
   const counts = perfCounts();
   const enabled = useSettings((s) => s.diagnostics);
-  const idRepair = useSettings((s) => s.navidromeIdRepair);
-  const setIdRepair = useSettings((s) => s.setNavidromeIdRepair);
   const covers = mirrorCoverState();
   const downloads = useDownloads((s) => Object.keys(s.files).length);
   const hydrated = useDownloads((s) => s.hydrated);
@@ -113,7 +149,18 @@ export default function DiagnosticsSettings() {
       ]
     : [];
   const stateLines = [
-    `downloads: ${hydrated ? downloads : 'loading'}${anyDl && !hydrated ? ' (some)' : ''}`,
+    // The denominator for every count below. A hundred of anything is one
+    // story over ten minutes and another over a night, and the split says
+    // which side of the screen going off it happened on.
+    `on screen: ${formatMs(time.foregroundMs)} · away: ${formatMs(time.backgroundMs)} · ${time.trips} trips`,
+    // Out there the JS thread should barely be run at all. If this is most of
+    // the time away, something is keeping it busy with nobody watching.
+    `js while away: ${formatMs(time.jsAwayMs)}`,
+    // A mix grows on its own and the whole queue is pushed to the server every
+    // twenty seconds, so its length is a cost rather than a curiosity.
+    `queue: ${queueLen} · at ${queueIndex}${radioMode ? ' · mix' : ''} · repeat ${repeat}${shuffle ? ' · shuffle' : ''}`,
+    `output: ${upnpOn ? 'upnp' : jukeboxOn ? 'jukebox' : 'phone'}`,
+    `downloads: ${hydrated ? downloads : 'loading'}${anyDl && !hydrated ? ' (some)' : ''}${downloading > 0 ? ` · ${downloading} running` : ''}`,
     `mirror covers: ${covers.saved} saved, ${covers.aliases} other names`,
     `screens open: ${navState?.routes?.length ?? '—'}`,
     ...coverLines,
@@ -146,6 +193,28 @@ export default function DiagnosticsSettings() {
             {line}
           </Text>
         ))}
+
+        {nets.length > 0 ? (
+          <>
+            <Text style={settingsStyles.sectionTitle}>{t('Requests')}</Text>
+            <Text style={settingsStyles.sectionDescription}>
+              {t(
+                'Everything asked of the server, most often first. The music itself is not here: the player opens that connection and this never sees it.',
+              )}
+            </Text>
+            <Text style={styles.line}>{`${netCalls} in total · ${netKb} KB declared`}</Text>
+            {nets.map((n) => (
+              <View key={n.tag} style={styles.row}>
+                <Text style={styles.tag} numberOfLines={1}>
+                  {n.tag}
+                </Text>
+                <Text style={styles.value}>
+                  {n.calls}× · {Math.round(n.bytes / 1024)} KB
+                </Text>
+              </View>
+            ))}
+          </>
+        ) : null}
 
         <Text style={settingsStyles.sectionTitle}>{t('Interface freezes')}</Text>
         <Text style={settingsStyles.sectionDescription}>
@@ -214,24 +283,6 @@ export default function DiagnosticsSettings() {
             ))}
           </>
         ) : null}
-
-        {/* Here and not in a settings page: this is not a preference, it is a
-            switch for whoever is testing the repair against a server that has
-            actually renumbered its ids. It stays off until that has been seen
-            working. */}
-        <Text style={settingsStyles.sectionTitle}>{t('Server id repair')}</Text>
-        <SwitchList
-          options={[
-            {
-              label: t('Repair the offline library'),
-              description: t(
-                'If the server renumbers its ids, rewrite the downloads to match instead of losing them. Off until it has been tested against a server that has.',
-              ),
-              value: idRepair,
-              onChange: setIdRepair,
-            },
-          ]}
-        />
 
         <SettingRow
           icon="share-outline"

@@ -11,6 +11,7 @@ import { File, UploadType, type UploadResult } from 'expo-file-system';
 import { fetch } from 'expo/fetch';
 import { type Album, type Song, type SortDirection, type SubsonicAuth } from './subsonic';
 import { assertCanRequest } from './netGate';
+import { netTally } from '@/lib/perfLog';
 
 /** Typed error to provide useful messages in the UI. */
 export class NavidromeError extends Error {
@@ -85,6 +86,7 @@ function ndStatusError(status: number): NavidromeError {
 async function ndFetch(auth: SubsonicAuth, path: string, init: RequestInit): Promise<void> {
   const token = await ndLogin(auth, true);
   let res: Response;
+  netTally(`nd ${path.split('?')[0]}`);
   try {
     res = await fetch(`${auth.serverUrl}${path}`, {
       ...init,
@@ -248,6 +250,8 @@ interface NdSong {
    * so nothing downstream has to know there are two spellings.
    */
   explicitStatus?: string;
+  /** Navidrome 0.64: neither the track nor its album has artwork. */
+  imageAbsent?: boolean;
   size?: number;
   playCount?: number;
   starred?: boolean;
@@ -279,8 +283,9 @@ function toSong(m: NdSong): Song {
     artist: m.artist,
     artistId: m.artistId,
     // Ids are the same ones Subsonic uses here, so the cover, the stream and
-    // everything else keep working through the usual endpoints.
-    coverArt: m.albumId ?? m.id,
+    // everything else keep working through the usual endpoints. Empty when
+    // there is no artwork to ask for (see `lib/absentCovers`).
+    coverArt: m.imageAbsent ? '' : (m.albumId ?? m.id),
     duration: m.duration,
     track: m.trackNumber,
     discNumber: m.discNumber,
@@ -314,6 +319,10 @@ async function ndJson<T>(auth: SubsonicAuth, path: string): Promise<T> {
   for (const fresh of [false, true]) {
     const token = await ndLogin(auth, fresh);
     let res: Response;
+    // By the endpoint and not by the whole path: the sort and the window are
+    // in the query string, and a table keyed by those would have one row per
+    // call and say nothing.
+    netTally(`nd ${path.split('?')[0]}`);
     try {
       res = await fetch(`${auth.serverUrl}${path}`, {
         headers: { 'x-nd-authorization': `Bearer ${token}` },
@@ -407,6 +416,8 @@ interface NdAlbum {
   genre?: string;
   /** Same shorthand as the song's; see `NdSong`. */
   explicitStatus?: string;
+  /** Navidrome 0.64: the album has no artwork. */
+  imageAbsent?: boolean;
 }
 
 function toAlbum(a: NdAlbum): Album {
@@ -419,7 +430,7 @@ function toAlbum(a: NdAlbum): Album {
     artist: a.albumArtist ?? a.artist,
     artistId: a.albumArtistId ?? a.artistId,
     // Same ids as Subsonic, so covers keep coming from the usual endpoint.
-    coverArt: a.id,
+    coverArt: a.imageAbsent ? '' : a.id,
     songCount: a.songCount,
     // The year an album is shown by is the one it finished on, which is what
     // Subsonic's `year` means here too.
@@ -480,4 +491,42 @@ export interface NdGenre {
 export async function listGenres(auth: SubsonicAuth): Promise<NdGenre[]> {
   const rows = await ndJson<NdGenre[]>(auth, '/api/genre?_sort=name&_start=0&_end=1000');
   return Array.isArray(rows) ? rows.filter((g) => g?.id && g?.name) : [];
+}
+
+/**
+ * The ids of the playlists this user has marked as favourites.
+ *
+ * Navidrome 0.64 stores stars and ratings per user for playlists the way it
+ * always has for songs, albums and artists (navidrome/navidrome#5749), but
+ * deliberately keeps them out of the Subsonic playlist responses, with a
+ * regression test on their absence. So this is the only way to read the state
+ * back, and it is why the heart on a playlist is offered only when this
+ * request can be made at all.
+ *
+ * `starred=true` is a real filter on this endpoint (`annotationBoolFilter`),
+ * so the server sends the favourites and not the library: a user with four
+ * starred playlists out of six hundred pays for four. Only the ids come back
+ * because that is all a heart needs, and the playlists themselves are already
+ * on screen from Subsonic.
+ *
+ * An older server has no such column, and what it does with the filter is its
+ * own business: refuse the request, or ignore the parameter and answer with
+ * the whole library. The second one is the dangerous shape, because an ignored
+ * filter looks exactly like a filter that matched everything. So `starred` is
+ * read off each row as well as filtered on, and a server that answered with
+ * the library hands back nothing instead of marking every playlist a
+ * favourite. Which is the safe way to be wrong, but still wrong: the heart
+ * would read "not a favourite" for a state that server cannot hold. That part
+ * is the caller's to settle, by only asking a server new enough to have the
+ * column (see `usePlaylistStars`).
+ */
+export async function listStarredPlaylistIds(auth: SubsonicAuth): Promise<string[]> {
+  const rows = await ndJson<{ id?: string; starred?: boolean }[]>(
+    auth,
+    '/api/playlist?starred=true&_sort=name&_start=0&_end=1000',
+  );
+  if (!Array.isArray(rows)) return [];
+  // `starred` is checked as well as filtered on, so a server that ignored the
+  // filter hands back nothing rather than everything.
+  return rows.filter((p) => p?.id && p.starred).map((p) => p.id as string);
 }

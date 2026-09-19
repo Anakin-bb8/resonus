@@ -35,6 +35,7 @@ import { TrackListSkeleton } from '@/components/TrackListSkeleton';
 import { TrackListView } from '@/components/TrackListView';
 import { useCanShare } from '@/hooks/useCanShare';
 import { useDownloadMessage } from '@/hooks/useDownloadMessage';
+import { usePlaylistStars } from '@/hooks/usePlaylistStars';
 import { useServerCover } from '@/hooks/useServerCover';
 import { useSongSort } from '@/hooks/useSongSort';
 import { songsLabel, useT } from '@/i18n';
@@ -43,6 +44,7 @@ import { useSharePicker } from '@/store/sharePicker';
 import { useAuthStore } from '@/store/auth';
 import { useAutoDownloads } from '@/store/autoDownloads';
 import { groupDownloadState, useDownloads } from '@/store/downloads';
+import { usePins } from '@/store/pins';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
 import { showUndoToast, useToast } from '@/store/toast';
@@ -297,6 +299,10 @@ export default function PlaylistScreen() {
   const playQueue = usePlayerStore((s) => s.playQueue);
   const queueMany = usePlayerStore((s) => s.queueMany);
 
+  // Whether this server keeps favourite playlists, and which ones. Also the
+  // answer to whether there is a heart on this screen at all.
+  const playlistStars = usePlaylistStars();
+
   // The ⋯ menu lives in a SheetModal (opening/closing doesn't re-render the screen).
   const menuRef = useRef<() => void>(() => {});
   const [editing, setEditing] = useState(false);
@@ -419,7 +425,10 @@ export default function PlaylistScreen() {
     showUndoToast(t('Playlist deleted'), t('Undo'), {
       commit: () => {
         deletePlaylist(id)
-          .then(() => queryClient.invalidateQueries({ queryKey: ['playlists'] }))
+          .then(() => {
+            usePins.getState().unpin(`playlist:${id}`);
+            return queryClient.invalidateQueries({ queryKey: ['playlists'] });
+          })
           .catch(() => {
             useToast.getState().show(t("Couldn't complete the action"));
             queryClient.invalidateQueries({ queryKey: ['playlists'] });
@@ -576,6 +585,15 @@ export default function PlaylistScreen() {
         playlistIndices={playlistIndices}
         currentId={playing?.id}
         onMenu={() => menuRef.current()}
+        // Only where the state can be read back, which is Navidrome 0.64 and
+        // up through its native API: `usePlaylistStars` answers `undefined`
+        // for every other case and the heart stays away rather than pretending
+        // (see the hook, and `StarType`).
+        favorite={
+          playlistStars
+            ? { id, type: 'playlist' as const, starred: playlistStars.has(id) }
+            : undefined
+        }
         playlistId={id}
         showArtwork={showListArtwork}
         searchable

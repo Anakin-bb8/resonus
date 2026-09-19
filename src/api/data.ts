@@ -7,6 +7,7 @@ import { profileScopeId, useAuthStore } from '@/store/auth';
 import {
   getDownloadShelf,
   getDownloadsCatalog,
+  noteDownloadedAlbum,
   noteDownloadedArtist,
   useDownloads,
 } from '@/store/downloads';
@@ -48,10 +49,8 @@ function serverOffline(): boolean {
  * `unavailable` (shown grayed out and don't play). In offline mode the
  * set of downloads doesn't change, so the mark is stable during the session.
  *
- * Album art: downloaded art re-pins `coverArt` to `albumId` (the local index
- * goes by albumId). Non-downloaded keeps the server `coverArt`, so the
- * offline URL matches the online one and expo-image serves it from its cache
- * (or downloads it if offline is manual with network); otherwise the placeholder remains.
+ * Album art: `coverArt` is re-pinned to `albumId`, which is what the local
+ * index goes by, except for a track whose own picture a download saved.
  */
 function annotate(songs: Song[]): Song[] {
   const files = useDownloads.getState().files;
@@ -63,14 +62,14 @@ function annotate(songs: Song[]): Song[] {
   const annotated = songs.map((s0) => {
     const s = ratings[s0.id] !== undefined ? { ...s0, userRating: ratings[s0.id] } : s0;
     const uri = files[s.id];
-    // Both point at the album's cover, downloaded or not. A server can give
-    // each song a cover id of its own, and offline that is a file we do not
-    // have and will not keep: one per track, for a picture that is the album's
-    // in all but the rarest case. The album's is saved once and serves the
-    // shelf, the header and every row under it.
+    // The album's cover, saved once for the shelf, the header and every row,
+    // unless the song's own is on this phone. Only a download saves one
+    // (#214): for the rest it would be a file per track that nobody kept.
+    const coverArt =
+      s.coverArt && Local.coverUrl(s.coverArt) ? s.coverArt : (s.albumId ?? s.coverArt);
     return uri
-      ? { ...s, coverArt: s.albumId ?? s.coverArt, localUri: uri, unavailable: false }
-      : { ...s, coverArt: s.albumId ?? s.coverArt, unavailable: true };
+      ? { ...s, coverArt, localUri: uri, unavailable: false }
+      : { ...s, coverArt, unavailable: true };
   });
   return hideUnavailable ? annotated.filter((s) => !s.unavailable) : annotated;
 }
@@ -172,6 +171,8 @@ export const CACHED_COVER = 'cached-cover:';
 
 
 export function coverArtUrl(id: string | undefined, _size?: number): string | undefined {
+  // Empty is an item the server says has no artwork (see `lib/absentCovers`).
+  if (!id) return undefined;
   // If the album art is downloaded (album/artist on disk), use it even
   // when in server mode: it works offline and doesn't use data, just
   // like audio plays from the downloaded file.
@@ -198,13 +199,22 @@ export function coverArtUrl(id: string | undefined, _size?: number): string | un
 /**
  * The cover for one song, which is not always the same picture offline.
  *
- * Online a song's own art wins, because on a compilation or a live take it is
- * the one that belongs to the track. Offline that art is usually nothing: on a
- * server that gives every track its own cover id, nothing on this phone was
- * ever saved under it. What was saved is the album's, both by a download and
- * by the mirror, so offline the album's is what gets asked for. A picture from
- * the right record beats a grey square, which is what the rows of a playlist
- * were showing.
+ * A song's own art wins where there is any, because on a compilation or a live
+ * take it is the one that belongs to the track. Offline the question is not
+ * which picture is better but which one is here: asking for art that was never
+ * saved draws a grey square, and that is what the rows of a playlist used to
+ * show. So offline the song's own is preferred only once this phone is known to
+ * have it, and the album's is what stands in when it does not.
+ *
+ * Which pulls the two cases apart, and they were one before (#214). A download
+ * saves a track's own picture and files the song under it (`downloadTrackArt`),
+ * so the track that has a sleeve of its own shows it with no connection. The
+ * file is registered under the server's id as well, so a song from the mirror
+ * or the queue finds it too; an id nobody downloaded resolves to nothing here
+ * and keeps the album's.
+ *
+ * The test is `Local.coverUrl`, which is a map lookup rather than a look at the
+ * disk, and it is the same one `coverArtUrl` is about to make anyway.
  *
  * A station has no album to fall back to, and its `url` is what says so.
  */
@@ -213,7 +223,9 @@ export function songCoverUrl(
   size?: number,
 ): string | undefined {
   const album = song.url ? undefined : song.albumId;
-  return coverArtUrl(isOffline() ? (album ?? song.coverArt) : (song.coverArt ?? album), size);
+  if (!isOffline()) return coverArtUrl(song.coverArt ?? album, size);
+  const here = song.coverArt && Local.coverUrl(song.coverArt) ? song.coverArt : undefined;
+  return coverArtUrl(here ?? album ?? song.coverArt, size);
 }
 
 /**
@@ -300,6 +312,7 @@ export function getAlbum(id: string): Promise<{ album: Subsonic.Album; songs: Su
   }
   return Subsonic.getAlbum(auth(), id).then((res) => {
     useLibraryMirror.getState().saveAlbum(id, res.album, res.songs, useDownloads.getState());
+    void noteDownloadedAlbum(auth(), res.album, res.songs);
     return res;
   });
 }
@@ -828,9 +841,18 @@ export function getAppearsOn(artistId: string, artistName: string): Promise<Subs
   );
 }
 
-export function getTopSongs(artist: string, count?: number): Promise<Subsonic.Song[]> {
+/**
+ * `artistId` is optional because not every caller has one: the autoplay chain
+ * works from the names of similar artists and never sees their ids. Offline
+ * there is nothing to resolve, the phone's catalog is keyed by name.
+ */
+export function getTopSongs(
+  artist: string,
+  count?: number,
+  artistId?: string,
+): Promise<Subsonic.Song[]> {
   if (isOffline()) return Local.getTopSongs(artist, count);
-  return Subsonic.getTopSongs(auth(), artist, count);
+  return Subsonic.getTopSongs(auth(), artist, count, artistId);
 }
 
 /** Songs similar to a given one (suggestions). Online only. */
@@ -1202,6 +1224,12 @@ async function mirrorStarred(): Promise<Subsonic.Starred> {
         const a = (await mirror.artistDetail(id))?.artist;
         if (a) artists = [a, ...artists];
       }
+    } else if (v.type === 'playlist') {
+      // Nowhere to put it: this list is Subsonic's, and Subsonic has no
+      // favourite playlists (see `StarType`). The entry still goes up on
+      // reconnect like any other. This only declines to guess it is a song,
+      // which is what the branch below would have done with it.
+      continue;
     } else if (!songs.some((x) => x.id === id)) {
       const song = await resolveSong(id);
       if (song) songs = [song, ...songs];

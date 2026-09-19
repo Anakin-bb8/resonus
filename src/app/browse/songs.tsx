@@ -41,6 +41,7 @@ import { SelectionBar } from '@/components/SelectionBar';
 import { SongCard } from '@/components/SongCard';
 import { TrackRow } from '@/components/TrackRow';
 import { useAccent } from '@/hooks/useAccent';
+import { useBrowseSort } from '@/hooks/useBrowseSort';
 import { useSelectionMenu } from '@/hooks/useSelectionMenu';
 import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
@@ -146,8 +147,11 @@ export function SongsBrowser({ embedded, actionRef, searchOpen }: BrowserProps) 
    * where it would do nothing.
    */
   const { sort: sortParam } = useLocalSearchParams<{ sort?: string }>();
-  const [sort, setSort] = useState<SongListSort>(
-    (sorts.find((s) => s === sortParam) ?? sorts[0] ?? 'server') as SongListSort,
+  const [sort, setSort] = useBrowseSort<SongListSort>(
+    'browseSongs',
+    sorts,
+    sorts[0] ?? 'server',
+    sorts.find((s) => s === sortParam),
   );
 
   // When the last song played changes, "Recently played" is a different list:

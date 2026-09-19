@@ -46,6 +46,10 @@ export default function AppearanceSettings() {
   const setAlwaysShowTabs = useSettings((s) => s.setAlwaysShowTabs);
   const defaultTab = useSettings((s) => s.defaultTab);
   const setDefaultTab = useSettings((s) => s.setDefaultTab);
+  const keepScreenOnReturn = useSettings((s) => s.keepScreenOnReturn);
+  const setKeepScreenOnReturn = useSettings((s) => s.setKeepScreenOnReturn);
+  const libraryShowsPlaylists = useSettings((s) => s.libraryShowsPlaylists);
+  const setLibraryShowsPlaylists = useSettings((s) => s.setLibraryShowsPlaylists);
   const swipeAction = useSettings((s) => s.swipeAction);
   const setSwipeAction = useSettings((s) => s.setSwipeAction);
   const swipeLeftAction = useSettings((s) => s.swipeLeftAction);
@@ -163,6 +167,26 @@ export default function AppearanceSettings() {
           ]}
           value={defaultTab}
           onChange={setDefaultTab}
+        />
+        <SwitchList
+          options={[
+            {
+              label: t('Keep where you were'),
+              description: t(
+                'Coming back after a few minutes leaves the app on the screen you left, instead of on the tab above.',
+              ),
+              value: keepScreenOnReturn,
+              onChange: setKeepScreenOnReturn,
+            },
+            {
+              label: t('Start on your playlists'),
+              description: t(
+                'With no chip pressed, Your library shows Favorites and your playlists instead of everything mixed together.',
+              ),
+              value: libraryShowsPlaylists,
+              onChange: setLibraryShowsPlaylists,
+            },
+          ]}
         />
         {/* Guarded as a whole, not with a spread inside the list: SwitchList
             always draws its card, so an empty array left a blank box. */}

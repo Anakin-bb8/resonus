@@ -19,6 +19,12 @@ class RendererSession(
   private var avTransport: String? = initialDescription.controlUrl(Services.AV_TRANSPORT)
 
   @Volatile
+  private var cachedCoordinatorTarget: TransportTarget? = null
+
+  @Volatile
+  private var coordinatorResolvedAtMs: Long = 0L
+
+  @Volatile
   private var queueControl: String? = initialDescription.controlUrl(Services.QUEUE)
 
   @Volatile
@@ -33,7 +39,8 @@ class RendererSession(
   @Volatile
   private var lastQueueUpdateId: Int = 0
 
-  private val renderingControl: String? =
+  @Volatile
+  private var renderingControl: String? =
     initialDescription.controlUrl(Services.RENDERING_CONTROL)
 
   data class State(
@@ -43,6 +50,7 @@ class RendererSession(
     val trackNumber: Int?,
     val playMode: String?,
     val currentUri: String?,
+    val volume: Int?,
   )
 
   private data class TransportTarget(val controlUrl: String, val uid: String)
@@ -65,14 +73,26 @@ class RendererSession(
     val trackUrls = tracks.map { it.url }
     if (description.isSonos && lastQueueTrackUrls.isNotEmpty() && lastQueueTrackUrls == trackUrls) {
       if (!playMode.isNullOrBlank()) {
-        Soap.call(
+        if (!Soap.call(
           target.controlUrl, Services.AV_TRANSPORT, "SetPlayMode",
           "<InstanceID>0</InstanceID><NewPlayMode>${Soap.escape(playMode)}</NewPlayMode>"
-        )
+        ).ok) {
+          resetQueueState()
+          return false
+        }
       }
-      if (!transport("Seek", "<InstanceID>0</InstanceID><Unit>TRACK_NR</Unit><Target>${selectedIndex + 1}</Target>")) return false
-      if (positionMs > 0 && !seek(positionMs)) return false
-      if (autoplay && !play()) return false
+      if (!transport("Seek", "<InstanceID>0</InstanceID><Unit>TRACK_NR</Unit><Target>${selectedIndex + 1}</Target>")) {
+        resetQueueState()
+        return false
+      }
+      if (positionMs > 0 && !seek(positionMs)) {
+        resetQueueState()
+        return false
+      }
+      if (autoplay && !play()) {
+        resetQueueState()
+        return false
+      }
       return true
     }
 
@@ -295,8 +315,14 @@ class RendererSession(
     playMode: String?,
     applyTransport: Boolean = true,
   ): Boolean {
-    val queueSvc = queueControl ?: refreshQueueControlUrl() ?: return false
-    val queueId = resolveQueueId(queueSvc, queueOwnerUid) ?: return false
+    val queueSvc = queueControl ?: refreshQueueControlUrl() ?: run {
+      resetQueueState()
+      return false
+    }
+    val queueId = resolveQueueId(queueSvc, queueOwnerUid) ?: run {
+      resetQueueState()
+      return false
+    }
 
     if (!Soap.call(
         queueSvc,
@@ -305,6 +331,7 @@ class RendererSession(
         "<QueueID>$queueId</QueueID><UpdateID>0</UpdateID>"
       ).ok
     ) {
+      resetQueueState()
       return false
     }
 
@@ -321,11 +348,12 @@ class RendererSession(
           "<DesiredFirstTrackNumberEnqueued>0</DesiredFirstTrackNumberEnqueued>" +
           "<EnqueueAsNext>0</EnqueueAsNext>"
       )
-      if (!result.ok) return false
+      if (!result.ok) {
+        resetQueueState()
+        return false
+      }
       updateId = parseUpdateId(result.body, updateId)
     }
-
-    rememberQueueState(queueOwnerUid, queueId, tracks, updateId)
 
     if (!playMode.isNullOrBlank()) {
       if (!Soap.call(
@@ -335,11 +363,13 @@ class RendererSession(
           "<InstanceID>0</InstanceID><NewPlayMode>${Soap.escape(playMode)}</NewPlayMode>"
         ).ok
       ) {
+        resetQueueState()
         return false
       }
     }
 
     if (!applyTransport) {
+      rememberQueueState(queueOwnerUid, queueId, tracks, updateId)
       return true
     }
 
@@ -354,20 +384,29 @@ class RendererSession(
           "<CurrentURIMetaData>$queueMeta</CurrentURIMetaData>"
       ).ok
     ) {
+      resetQueueState()
       return false
     }
 
     if (!transport("Seek", "<InstanceID>0</InstanceID><Unit>TRACK_NR</Unit><Target>${selectedIndex + 1}</Target>")) {
+      resetQueueState()
       return false
     }
 
     if (positionMs > 0) {
-      if (!seek(positionMs)) return false
+      if (!seek(positionMs)) {
+        resetQueueState()
+        return false
+      }
     }
 
     if (autoplay) {
-      if (!play()) return false
+      if (!play()) {
+        resetQueueState()
+        return false
+      }
     }
+    rememberQueueState(queueOwnerUid, queueId, tracks, updateId)
     return true
   }
 
@@ -645,6 +684,18 @@ class RendererSession(
 
   suspend fun stop(): Boolean = transport("Stop", "<InstanceID>0</InstanceID>")
 
+  fun invalidateCoordinatorTarget() {
+    cachedCoordinatorTarget = null
+    coordinatorResolvedAtMs = 0L
+  }
+
+  fun resetQueueState() {
+    lastQueueOwnerUid = null
+    lastQueueId = null
+    lastQueueTrackUrls = emptyList()
+    lastQueueUpdateId = 0
+  }
+
   suspend fun join(target: RendererSession): Boolean {
     val ownControl = avTransport ?: refreshControlUrl() ?: return false
     val targetUid = target.resolveTransportTarget()?.uid ?: return false
@@ -681,13 +732,29 @@ class RendererSession(
 
   private suspend fun resolveTransportTarget(): TransportTarget? {
     val control = avTransport ?: refreshControlUrl() ?: return null
-    val coordinator = SonosTopology.coordinatorTarget(description)
-    if (coordinator != null) {
-      avTransport = coordinator.controlUrl
-      return TransportTarget(coordinator.controlUrl, coordinator.uid)
+    if (!description.isSonos) {
+      val uid = description.udn?.removePrefix("uuid:")?.trim()?.uppercase() ?: deviceId
+      return TransportTarget(control, uid)
     }
-    val uid = description.udn?.removePrefix("uuid:")?.trim()?.uppercase() ?: deviceId
-    return TransportTarget(control, uid)
+
+    val now = System.currentTimeMillis()
+    cachedCoordinatorTarget?.let { cached ->
+      if (now - coordinatorResolvedAtMs < COORDINATOR_CACHE_MS) return cached
+    }
+
+    val coordinator = SonosTopology.coordinatorTarget(description)
+    if (coordinator == null) {
+      // A Sonos group member must not receive transport commands directly.
+      // Keep the last known coordinator usable during a temporary topology
+      // lookup failure, but never fall back to the member itself.
+      return cachedCoordinatorTarget
+    }
+
+    val target = TransportTarget(coordinator.controlUrl, coordinator.uid)
+    cachedCoordinatorTarget = target
+    coordinatorResolvedAtMs = now
+    avTransport = target.controlUrl
+    return target
   }
 
   suspend fun setPlayMode(playMode: String): Boolean {
@@ -721,6 +788,18 @@ class RendererSession(
     ).ok
   }
 
+  suspend fun getVolume(): Int? {
+    val control = renderingControl ?: return null
+    val result = Soap.call(
+      control,
+      Services.RENDERING_CONTROL,
+      "GetVolume",
+      "<InstanceID>0</InstanceID><Channel>Master</Channel>"
+    )
+    if (!result.ok) return null
+    return Soap.argument(result.body, "CurrentVolume")?.toIntOrNull()
+  }
+
   suspend fun setVolume(volume: Int): Boolean {
     val control = renderingControl ?: return false
     return Soap.call(
@@ -739,13 +818,15 @@ class RendererSession(
     val position = Soap.call(control, Services.AV_TRANSPORT, "GetPositionInfo", INSTANCE)
     val settings = Soap.call(control, Services.AV_TRANSPORT, "GetTransportSettings", INSTANCE)
     val trackNumber = Soap.argument(position.body, "Track")?.toIntOrNull()
+    val volume = getVolume()
     return State(
       playbackState = playbackState,
       positionMs = Didl.parseDuration(Soap.argument(position.body, "RelTime")),
       durationMs = Didl.parseDuration(Soap.argument(position.body, "TrackDuration")),
       trackNumber = trackNumber,
       playMode = Soap.argument(settings.body, "PlayMode"),
-      currentUri = Soap.argument(position.body, "TrackURI")
+      currentUri = Soap.argument(position.body, "TrackURI"),
+      volume = volume
     )
   }
 
@@ -753,11 +834,11 @@ class RendererSession(
     val fresh = Soap.fetch(location)?.let { DeviceDescription.parse(it, location) } ?: return null
     description = fresh
     avTransport = fresh.controlUrl(Services.AV_TRANSPORT)
+    cachedCoordinatorTarget = null
+    coordinatorResolvedAtMs = 0L
     queueControl = fresh.controlUrl(Services.QUEUE)
-    lastQueueOwnerUid = null
-    lastQueueId = null
-    lastQueueTrackUrls = emptyList()
-    lastQueueUpdateId = 0
+    renderingControl = fresh.controlUrl(Services.RENDERING_CONTROL)
+    resetQueueState()
     return avTransport
   }
 
@@ -766,14 +847,13 @@ class RendererSession(
     description = fresh
     queueControl = fresh.controlUrl(Services.QUEUE)
     avTransport = fresh.controlUrl(Services.AV_TRANSPORT)
-    lastQueueOwnerUid = null
-    lastQueueId = null
-    lastQueueTrackUrls = emptyList()
-    lastQueueUpdateId = 0
+    renderingControl = fresh.controlUrl(Services.RENDERING_CONTROL)
+    resetQueueState()
     return queueControl
   }
 
   private companion object {
     const val INSTANCE = "<InstanceID>0</InstanceID>"
+    const val COORDINATOR_CACHE_MS = 15_000L
   }
 }

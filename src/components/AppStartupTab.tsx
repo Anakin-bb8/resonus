@@ -4,7 +4,8 @@
  * - On cold start, if the default tab is not Home, jump to it.
  * - On returning from background after a while (RESET_AFTER_MS), dismiss any
  *   stacked screens and go back to the default tab (like Spotify/YouTube).
- *   A brief app switch preserves where you were.
+ *   A brief app switch preserves where you were, and so does the whole return
+ *   for anyone who asked for it (`keepScreenOnReturn`, #225).
  * - Except the player: whoever left from it comes back to it, however long it
  *   was. The music is still there, and so is the reason they were looking at
  *   it; that is not a screen anyone forgot they had open.
@@ -38,6 +39,7 @@ const PLAYER_PATHS = new Set(['/player', '/queue', '/lyrics']);
 export function AppStartupTab() {
   const router = useRouter();
   const chosenTab = useSettings((s) => s.defaultTab);
+  const keepScreen = useSettings((s) => s.keepScreenOnReturn);
   const bottomTabs = useSettings((s) => s.bottomTabs);
   /**
    * The tab to open on, which is not always the one that was chosen: it can
@@ -113,7 +115,14 @@ export function AppStartupTab() {
         // around now, with the app already coming back.
         const player = leftFromPlayer.current || PLAYER_PATHS.has(path.current);
         leftFromPlayer.current = false;
-        if (since !== null && !player && Date.now() - since > RESET_AFTER_MS) goToDefaultTab();
+        if (
+          !keepScreen &&
+          since !== null &&
+          !player &&
+          Date.now() - since > RESET_AFTER_MS
+        ) {
+          goToDefaultTab();
+        }
         // On return, sync auto-download playlists (catch what was added from
         // another client while the app was in the background).
         void useAutoDownloads.getState().reconcileAll();
@@ -121,7 +130,7 @@ export function AppStartupTab() {
     });
     return () => sub.remove();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [defaultTab]);
+  }, [defaultTab, keepScreen]);
 
   return null;
 }
