@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 712 of them.
+Every string the app can show, under the screen it shows up on. 717 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -1040,6 +1040,7 @@ you are actually typing into, which is easier than reading it here.
 | `Close` | Read out by the screen reader for a button that closes what is open. A verb |
 | `Columns` | The same menu's title on a screen that has no list to switch to, so all it chooses is the density |
 | `Connect to Wi-Fi to download` | Toast: downloading over mobile data is turned off in the settings |
+| `Could not connect to the server` |  |
 | `Couldn't add to the playlist` | Toast: the server refused |
 | `Couldn't complete the action` | What the app says when it does not know what went wrong. Deliberately vague |
 | `Couldn't create the playlist` | Toast: the server refused |
@@ -1089,6 +1090,8 @@ you are actually typing into, which is easier than reading it here.
 | `Search` | The search tab, and the action of searching |
 | `Select all` | Tick every song in the list at once |
 | `Server default` | Codec option meaning "let the server decide" what to transcode to |
+| `Server took too long to respond` |  |
+| `Session expired: sign in again` |  |
 | `Show all` | Opens the full list of what the row is showing a few of |
 | `Show less` | Folds it back |
 | `Show more` | Unfolds the rest of a text that was cut short |
@@ -1103,6 +1106,8 @@ you are actually typing into, which is easier than reading it here.
 | `This song can't be cast` | Toast: the speaker or TV will not take this file |
 | `This song is already in “{name}”.` | The line under that title. `{name}` is the playlist |
 | `Undo` | The button in a toast that takes back what just happened. It is there for a few seconds |
+| `Unexpected server response` |  |
 | `Unknown album` | Fallback when the file and the server have no album |
 | `Unknown artist` | Fallback when the file and the server have no artist |
 | `View` | Title of the menu that chooses how a collection is drawn, and the label of the button that opens it. A noun: what you are looking at, not the verb |
+| `Wrong username or password` |  |

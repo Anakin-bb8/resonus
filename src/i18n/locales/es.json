@@ -712,5 +712,10 @@
   "Loaded": "Cargada",
   "Load a .ttf or .otf file": "Carga un archivo .ttf u .otf",
   "Active": "Activa",
-  "Remove custom font": "Quitar fuente personalizada"
+  "Remove custom font": "Quitar fuente personalizada",
+  "Server took too long to respond": "El servidor tardó demasiado en responder",
+  "Could not connect to the server": "No se pudo conectar con el servidor",
+  "Session expired: sign in again": "Sesión caducada: vuelve a iniciar sesión",
+  "Wrong username or password": "Usuario o contraseña incorrectos",
+  "Unexpected server response": "Respuesta inesperada del servidor"
 }

@@ -710,5 +710,10 @@
   "Loaded": "Loaded",
   "Load a .ttf or .otf file": "Load a .ttf or .otf file",
   "Active": "Active",
-  "Remove custom font": "Remove custom font"
+  "Remove custom font": "Remove custom font",
+  "Server took too long to respond": "Server took too long to respond",
+  "Could not connect to the server": "Could not connect to the server",
+  "Session expired: sign in again": "Session expired: sign in again",
+  "Wrong username or password": "Wrong username or password",
+  "Unexpected server response": "Unexpected server response"
 }

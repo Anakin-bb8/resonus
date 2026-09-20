@@ -17,6 +17,7 @@
 import Constants from 'expo-constants';
 import * as Crypto from 'expo-crypto';
 
+import { tg } from '@/i18n';
 import { wordsAt } from '@/lib/lyricWords';
 import {
   CLIENT_NAME,
@@ -206,17 +207,17 @@ async function request<T>(
     });
   } catch {
     if (controller.signal.aborted) {
-      throw new SubsonicRequestError('El servidor tardó demasiado en responder', true);
+      throw new SubsonicRequestError(tg('Server took too long to respond'), true);
     }
-    throw new SubsonicRequestError('No se pudo conectar con el servidor', true);
+    throw new SubsonicRequestError(tg('Could not connect to the server'), true);
   } finally {
     clearTimeout(timer);
   }
 
   if (res.status === 401) {
-    throw new SubsonicRequestError('Sesión caducada: vuelve a iniciar sesión', false);
+    throw new SubsonicRequestError(tg('Session expired: sign in again'), false);
   }
-  if (!res.ok) throw new SubsonicRequestError(`Error de red (${res.status})`, false, res.status);
+  if (!res.ok) throw new SubsonicRequestError(`Network error (${res.status})`, false, res.status);
   const text = await res.text();
   return (text ? JSON.parse(text) : undefined) as T;
 }
@@ -251,18 +252,18 @@ export async function makeAuth(
     });
   } catch {
     if (controller.signal.aborted) {
-      throw new Error('El servidor tardó demasiado en responder');
+      throw new Error(tg('Server took too long to respond'));
     }
-    throw new Error('No se pudo conectar con el servidor');
+    throw new Error(tg('Could not connect to the server'));
   } finally {
     clearTimeout(timer);
   }
 
-  if (res.status === 401) throw new Error('Usuario o contraseña incorrectos');
-  if (!res.ok) throw new Error(`Error de red (${res.status})`);
+  if (res.status === 401) throw new Error(tg('Wrong username or password'));
+  if (!res.ok) throw new Error(`Network error (${res.status})`);
   const data = (await res.json()) as { AccessToken?: string; User?: { Id?: string } };
   if (!data.AccessToken || !data.User?.Id) {
-    throw new Error('Respuesta inesperada del servidor');
+    throw new Error(tg('Unexpected server response'));
   }
   return {
     serverUrl: url,
@@ -856,7 +857,7 @@ export async function createPlaylist(auth: SubsonicAuth, name: string): Promise<
     {},
     { method: 'POST', body: { Name: name, UserId: auth.jfUserId, MediaType: 'Audio' } },
   );
-  if (!res?.Id) throw new Error('No se encontró la playlist creada');
+  if (!res?.Id) throw new Error('Created playlist not found');
   return res.Id;
 }
 
@@ -916,7 +917,7 @@ export async function removeFromPlaylist(
   index: number,
 ): Promise<void> {
   const entryId = (await playlistEntries(auth, id))[index]?.entryId;
-  if (!entryId) throw new Error('No se encontró la canción en la lista');
+  if (!entryId) throw new Error('Song not found in the playlist');
   await request(auth, `/Playlists/${id}/Items`, { EntryIds: entryId }, { method: 'DELETE' });
 }
 
@@ -1117,7 +1118,7 @@ export async function createRadioStation(
   _streamUrl: string,
   _homePageUrl?: string,
 ): Promise<string | undefined> {
-  throw new Error('Jellyfin no soporta emisoras de radio');
+  throw new Error('Jellyfin does not support radio stations');
 }
 
 export async function updateRadioStation(
@@ -1127,11 +1128,11 @@ export async function updateRadioStation(
   _streamUrl: string,
   _homePageUrl?: string,
 ): Promise<void> {
-  throw new Error('Jellyfin no soporta emisoras de radio');
+  throw new Error('Jellyfin does not support radio stations');
 }
 
 export async function deleteRadioStation(_auth: SubsonicAuth, _id: string): Promise<void> {
-  throw new Error('Jellyfin no soporta emisoras de radio');
+  throw new Error('Jellyfin does not support radio stations');
 }
 
 // ── Playback ──

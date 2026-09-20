@@ -699,5 +699,10 @@
   "Start on your playlists": "Comença per les teves llistes",
   "Keep where you were": "Torna on ho vas deixar",
   "Coming back after a few minutes leaves the app on the screen you left, instead of on the tab above.": "En tornar passats uns minuts, l'app es queda a la pantalla que vas deixar en lloc d'anar a la pestanya de dalt.",
-  "With no chip pressed, Your library shows Favorites and your playlists instead of everything mixed together.": "Sense cap filtre marcat, La teva biblioteca mostra Preferits i les teves llistes en lloc de tot barrejat."
+  "With no chip pressed, Your library shows Favorites and your playlists instead of everything mixed together.": "Sense cap filtre marcat, La teva biblioteca mostra Preferits i les teves llistes en lloc de tot barrejat.",
+  "Server took too long to respond": "El servidor ha trigat massa a respondre",
+  "Could not connect to the server": "No s'ha pogut connectar amb el servidor",
+  "Session expired: sign in again": "Sessió caducada: torna a iniciar la sessió",
+  "Wrong username or password": "Usuari o contrasenya incorrectes",
+  "Unexpected server response": "Resposta inesperada del servidor"
 }
