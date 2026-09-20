@@ -6,7 +6,9 @@
  * the profile (`jfToken`/`jfUserId`); each request carries the
  * `Authorization: MediaBrowser ... Token="..."` header. URLs consumed by
  * native views (cover art, streaming) cannot carry headers, so they use the
- * `api_key` parameter.
+ * `ApiKey` query parameter. Not `api_key`: that one, like the `X-Emby-*`
+ * headers, only works on 12.x with legacy authorization turned on, and the
+ * server answers 401 otherwise (#229). `ApiKey` has been read since 10.8.
  *
  * The exported functions mirror the signatures of `subsonic.ts`; the
  * `backend.ts` module picks one implementation or the other based on server
@@ -1236,13 +1238,13 @@ export function coverArtUrl(
     fillWidth: size,
     fillHeight: size,
     quality: 90,
-    api_key: auth.jfToken,
+    ApiKey: auth.jfToken,
   });
 }
 
 /** Download URL of the original file, without transcoding. */
 export function downloadUrl(auth: SubsonicAuth, id: string): string {
-  return buildUrl(auth, `/Items/${id}/Download`, { api_key: auth.jfToken });
+  return buildUrl(auth, `/Items/${id}/Download`, { ApiKey: auth.jfToken });
 }
 
 /**
@@ -1286,7 +1288,7 @@ export function streamUrl(
   return buildUrl(auth, `/Audio/${id}/universal`, {
     UserId: auth.jfUserId,
     DeviceId: auth.jfDeviceId,
-    api_key: auth.jfToken,
+    ApiKey: auth.jfToken,
     Container: 'opus,webm|opus,mp3,aac,m4a|aac,m4b|aac,flac,webma,webm|webma,wav,ogg',
     TranscodingContainer: target.container,
     TranscodingProtocol: 'http',
