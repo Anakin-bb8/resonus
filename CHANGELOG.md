@@ -23,6 +23,7 @@ Releases before 0.2.1 are only listed on the
 - The mini player floats as a card, with rounder corners, a soft shadow and a little air above the navigation bar.
 - The quick access tiles at the top of Home have rounder corners, with the cover flush against them.
 - Settings cards have rounder corners, and the lines between their rows are finer and start where the text does.
+- Search boxes are fully rounded throughout the app, like the one for adding songs to a playlist.
 
 ## [0.7.8] - 2026-09-23
 

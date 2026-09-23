@@ -969,8 +969,8 @@ const styles = themed((colors) => ({
     gap: spacing.sm,
     // Translucent to let the header's dominant color through (Spotify).
     backgroundColor: colors.highlight,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.lg,
     height: 44,
   },
   searchInput: {

@@ -568,8 +568,8 @@ const styles = themed((colors) => ({
     gap: spacing.sm,
     height: 44,
     backgroundColor: colors.surfaceHighlight,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.pill,
   },
   input: {
     flex: 1,

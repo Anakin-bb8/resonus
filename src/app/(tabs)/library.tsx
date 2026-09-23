@@ -1219,8 +1219,8 @@ const styles = themed((colors) => ({
     gap: spacing.sm,
     height: 44,
     backgroundColor: colors.surfaceHighlight,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.pill,
   },
   searchInput: { flex: 1, color: colors.text, fontSize: fontSize.md, paddingVertical: 0 },
   list: {
