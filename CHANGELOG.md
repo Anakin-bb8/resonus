@@ -20,7 +20,6 @@ Releases before 0.2.1 are only listed on the
 - Big titles and section headings sit a little tighter.
 - Album and playlist headers carry more of the cover's colour, further down the page, and the player lets more of it through behind the controls.
 - The navigation bar stays on every screen by default; Settings > Appearance > Always show the navigation bar turns it back to the tabs only.
-- The tab you are on is marked with a pill behind its icon.
 - The chips at the top of Home scroll away with the page instead of staying on screen.
 - The mini player floats as a card, with rounder corners, a soft shadow and a little air above the navigation bar.
 - The quick access tiles at the top of Home have rounder corners, with the cover flush against them.
