@@ -614,6 +614,9 @@ function metadataFor(song: Song): AudioMetadata {
     artist: live?.artist ?? song.artist ?? undefined,
     albumTitle: song.album ?? undefined,
     artworkUrl: artworkUrlFor(song),
+    // iOS reads it here, for a transcoded stream AVPlayer can't time
+    // (`itemMetadataFor` is the same fallback on Android).
+    durationMs: !song.url && song.duration && song.duration > 0 ? Math.round(song.duration * 1000) : undefined,
   };
 }
 

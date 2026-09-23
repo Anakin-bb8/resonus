@@ -1222,7 +1222,7 @@ index 18203a364d17dcf3de95d22a20175308e3363889..77155f4f348246f218c0736725b0f690
    }
  }
 diff --git a/build/Audio.types.d.ts b/build/Audio.types.d.ts
-index 25604783649fe9b64f6655172f08471a5efcbf45..69dd0038102a3a309ab3515ed4ade66d21e386ac 100644
+index 25604783649fe9b64f6655172f08471a5efcbf45..b80696e3b5d647c53f6e144d830171c6800a9c32 100644
 --- a/build/Audio.types.d.ts
 +++ b/build/Audio.types.d.ts
 @@ -34,6 +34,20 @@ export type AudioSource = string | number | null | {
@@ -1246,7 +1246,7 @@ index 25604783649fe9b64f6655172f08471a5efcbf45..69dd0038102a3a309ab3515ed4ade66d
  };
  /**
   * Options for configuring audio player behavior.
-@@ -618,6 +632,14 @@ export type AudioMetadata = {
+@@ -618,6 +632,15 @@ export type AudioMetadata = {
      artist?: string;
      albumTitle?: string;
      artworkUrl?: string;
@@ -1255,7 +1255,8 @@ index 25604783649fe9b64f6655172f08471a5efcbf45..69dd0038102a3a309ab3515ed4ade66d
 +     * a server transcoding on the fly sends no length, so the player has no
 +     * duration and the system's controls show neither the times nor the
 +     * progress bar. Used only as a fallback, never over a real duration, and
-+     * only when given as the source's `metadata`. Android only.
++     * read from the source's `metadata` on Android and from the lock screen
++     * metadata on iOS.
 +     */
 +    durationMs?: number;
  };
@@ -1355,10 +1356,19 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..90a5811df35aa1ef06fa7743e2c0eca5
  export declare class AudioRecorder extends SharedObject<RecordingEvents> {
      /**
 diff --git a/ios/AudioRecords.swift b/ios/AudioRecords.swift
-index 33db27c..7999534 100644
+index 33db27c3b8fb40fa9db6659a0787c6b2b503d1ab..a5c41356f93d3d4a45bf14020af1cb1943731751 100644
 --- a/ios/AudioRecords.swift
 +++ b/ios/AudioRecords.swift
-@@ -70,6 +70,8 @@ struct LockScreenOptions: Record {
+@@ -64,12 +64,17 @@ struct Metadata: Record {
+   @Field var artist: String?
+   @Field var albumTitle: String?
+   @Field var artworkUrl: URL?
++  // The track's length from the caller, for a stream that can't say (a server
++  // transcoding on the fly sends no length). Fallback only.
++  @Field var durationMs: Double?
+ }
+ 
+ struct LockScreenOptions: Record {
    @Field var showSeekForward: Bool = false
    @Field var showSeekBackward: Bool = false
    @Field var isLiveStream: Bool? = false
@@ -1368,7 +1378,7 @@ index 33db27c..7999534 100644
  
  enum BitRateStrategy: String, Enumerable {
 diff --git a/ios/MediaController.swift b/ios/MediaController.swift
-index e977f57..06d58dc 100644
+index e977f577cd2e16b194b56537ad76b423f40d2496..1f65c7e7cccf4efcf7a71180c93c493b384f682f 100644
 --- a/ios/MediaController.swift
 +++ b/ios/MediaController.swift
 @@ -14,6 +14,7 @@ class MediaController {
@@ -1379,7 +1389,20 @@ index e977f57..06d58dc 100644
  
    func setActivePlayer(_ player: AudioPlayer?, options: LockScreenOptions? = nil) {
      performOnMain {
-@@ -232,6 +233,15 @@ class MediaController {
+@@ -80,7 +81,11 @@ class MediaController {
+       info.removeValue(forKey: MPMediaItemPropertyPlaybackDuration)
+       info.removeValue(forKey: MPNowPlayingInfoPropertyElapsedPlaybackTime)
+     } else {
+-      info[MPMediaItemPropertyPlaybackDuration] = player.duration
++      // AVPlayer has no duration for a transcoded stream, and 0 shows as
++      // --:-- with no progress: the caller's length stands in until it has one.
++      let known = player.duration
++      let fallback = (player.metadata?.durationMs ?? 0) / 1000.0
++      info[MPMediaItemPropertyPlaybackDuration] = known > 0 ? known : fallback
+       info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = player.currentTime
+     }
+     info[MPNowPlayingInfoPropertyPlaybackRate] = player.isPlaying ? player.ref.rate : 0.0
+@@ -232,6 +237,15 @@ class MediaController {
    }
  
    private func enableRemoteCommands(options: LockScreenOptions?) {
@@ -1395,7 +1418,7 @@ index e977f57..06d58dc 100644
      remoteCommandCenter.playCommand.addTarget { [weak self] _ in
        guard let player = self?.activePlayer else {
          return .commandFailed
-@@ -303,12 +313,34 @@ class MediaController {
+@@ -303,12 +317,34 @@ class MediaController {
        return .success
      }
  
@@ -1430,7 +1453,7 @@ index e977f57..06d58dc 100644
    }
  
    private func disableRemoteCommands() {
-@@ -318,6 +350,8 @@ class MediaController {
+@@ -318,6 +354,8 @@ class MediaController {
      remoteCommandCenter.changePlaybackPositionCommand.isEnabled = false
      remoteCommandCenter.skipForwardCommand.isEnabled = false
      remoteCommandCenter.skipBackwardCommand.isEnabled = false

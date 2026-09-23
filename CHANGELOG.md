@@ -27,6 +27,10 @@ Releases before 0.2.1 are only listed on the
 - Settings cards have rounder corners, and the lines between their rows are finer and start where the text does.
 - Search boxes are fully rounded throughout the app, like the one for adding songs to a playlist.
 
+### Fixed
+
+- On iOS the lock screen and the Dynamic Island show the song's length and progress while the server transcodes it, instead of --:--.
+
 ## [0.7.8] - 2026-09-23
 
 ### Added
