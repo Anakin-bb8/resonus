@@ -763,7 +763,7 @@ export const settingsStyles = themed((colors) => ({
     marginBottom: spacing.xs,
   },
   // Rounded box on the background (rows live inside, more readable).
-  cardBox: { backgroundColor: colors.surface, borderRadius: radius.md, overflow: 'hidden' },
+  cardBox: { backgroundColor: colors.surface, borderRadius: radius.lg, overflow: 'hidden' },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -771,7 +771,14 @@ export const settingsStyles = themed((colors) => ({
     paddingHorizontal: spacing.lg,
     gap: spacing.md,
   },
-  rowBorder: { borderTopWidth: 1, borderTopColor: colors.border },
+  // A hairline that starts where the text does: the row trades its left
+  // padding for a margin, so the content stays put and the line is inset.
+  rowBorder: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.highlight,
+    marginLeft: spacing.lg,
+    paddingLeft: 0,
+  },
   rowLabel: { color: colors.text, fontSize: fontSize.md },
   /**
    * Label side of a settings row. The `minWidth` is what keeps it alive: with a
