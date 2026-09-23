@@ -13,15 +13,13 @@
  * hand, and the handover showed as a blink of empty space in the middle of
  * every back animation.
  *
- * The measurements are react-navigation's own (`BottomTabItem`, `TabBarIcon`):
- * icons of 25 inside a 31×28 box, 5 of padding around each tab, labels of 10.
- * They are copied so that turning the setting off, which leaves this bar on the
- * three tab screens alone, changes nothing about how they look.
+ * Icons of 25 in a 56×28 box that the active tab fills with a pill, 5 of
+ * padding around each tab, labels of 10.
  */
 import Icon from '@/components/Icon';
 import { useRouter, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -37,7 +35,7 @@ import { motion } from '@/theme/motion';
 import { useT } from '@/i18n';
 import { rememberTab, reselectTab, tabOrigin, TABS } from '@/lib/tabOrigin';
 import { useSettings } from '@/store/settings';
-import { colors, TAB_BAR_HEIGHT, themed } from '@/theme';
+import { colors, radius, TAB_BAR_HEIGHT, themed } from '@/theme';
 
 const ICONS: Record<string, 'home' | 'search' | 'library' | 'albums'> = {
   index: 'home',
@@ -52,11 +50,9 @@ export function GlobalTabBar() {
   const t = useT();
   const segments = useSegments() as string[];
   const shown = useTabBarShown();
-  // With the setting off the tabs keep their own bar and this draws nothing at
-  // all: off is the app exactly as it was, down to the last pixel. Unless the
-  // bar is blurred, which only works from out here (`BarBlur`).
-  const always = useSettings((s) => s.alwaysShowTabs);
-  // Blurred, it is also the bar of the tab screens (see the tabs layout).
+  // It is also the bar of the tab screens (the tabs navigator draws none):
+  // the blur only works from out here (`BarBlur`), and the active pill is
+  // drawn in one place. The setting only decides where else it shows.
   const blur = useBarBlur();
   const bottomTabs = useSettings((s) => s.bottomTabs);
   const root = segments[0];
@@ -98,8 +94,6 @@ export function GlobalTabBar() {
         });
   }, [shown, fade]);
   const fadeStyle = useAnimatedStyle(() => ({ opacity: fade.value }));
-
-  if (!always && !blur) return null;
 
   /** Leaves for a tab, dropping the screens piled on top of it. */
   const go = (href: string) => {
@@ -153,6 +147,7 @@ export function GlobalTabBar() {
             }}
           >
             <View style={styles.iconBox}>
+              <TabPill on={here} />
               <Icon
                 name={here || from ? ICONS[tab.segment] : `${ICONS[tab.segment]}-outline`}
                 size={25}
@@ -181,6 +176,21 @@ const styles = themed((colors) => ({
   },
   solid: { backgroundColor: colors.background },
   item: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', padding: 5 },
-  iconBox: { width: 31, height: 28, alignItems: 'center', justifyContent: 'center' },
+  iconBox: { width: 56, height: 28, alignItems: 'center', justifyContent: 'center' },
+  pill: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: radius.pill,
+    backgroundColor: colors.highlight,
+  },
   label: { fontSize: 10 },
 }));
+
+/** The active tab's pill, which grows out from the icon when it is picked. */
+function TabPill({ on }: { on: boolean }) {
+  const v = useSharedValue(on ? 1 : 0);
+  useEffect(() => {
+    v.value = withTiming(on ? 1 : 0, { duration: on ? motion.duration.enter : motion.duration.exit });
+  }, [on, v]);
+  const style = useAnimatedStyle(() => ({ opacity: v.value, transform: [{ scaleX: 0.5 + v.value * 0.5 }] }));
+  return <Animated.View pointerEvents="none" style={[styles.pill, style]} />;
+}

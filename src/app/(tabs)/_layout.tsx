@@ -1,20 +1,15 @@
 /**
  * Main tab navigation. Which tabs, and in what order, is the user's
  * (Settings › Appearance › Navigation bar).
- * Solid bottom bar over the app background.
  *
- * With "Always show the navigation bar" on, the drawing is handed over to
- * `GlobalTabBar`, which sits next to the Stack and so can stay on screen
- * outside the tabs too. One bar either way: two would have to be kept looking
- * identical by hand, and the handover between them showed as a blink of empty
- * space in the middle of every back animation.
+ * The bar itself is `GlobalTabBar`, next to the Stack, so it can stay on
+ * screen outside the tabs too and blur what is behind it.
  */
 import Icon from '@/components/Icon';
 import { Tabs } from 'expo-router';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useBarBlur } from '@/components/BarBlur';
 import { useT } from '@/i18n';
 import { type TabSegment } from '@/lib/tabOrigin';
 import { useSettings } from '@/store/settings';
@@ -38,18 +33,13 @@ export default function TabsLayout() {
   useTheme();
   const insets = useSafeAreaInsets();
   const t = useT();
-  const alwaysShowTabs = useSettings((s) => s.alwaysShowTabs);
-  // A blurred bar has to be drawn outside the Stack it blurs (`BarBlur`).
-  const blur = useBarBlur();
-  const globalBar = alwaysShowTabs || blur;
   const bottomTabs = useSettings((s) => s.bottomTabs);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Tabs
-        // `undefined` leaves the navigator's own bar in place; the global one
-        // draws nothing while that is the case.
-        tabBar={globalBar ? () => null : undefined}
+        // `GlobalTabBar` draws the bar, here too.
+        tabBar={() => null}
         screenOptions={{
           headerShown: false,
           // The tab you are not on stops re-rendering, and its views come off

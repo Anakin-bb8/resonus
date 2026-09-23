@@ -19,6 +19,7 @@ Releases before 0.2.1 are only listed on the
 - Big titles and section headings sit a little tighter.
 - Album and playlist headers carry more of the cover's colour, further down the page, and the player lets more of it through behind the controls.
 - The navigation bar stays on every screen by default; Settings > Appearance > Always show the navigation bar turns it back to the tabs only.
+- The tab you are on is marked with a pill behind its icon.
 
 ## [0.7.8] - 2026-09-23
 
