@@ -124,14 +124,18 @@ function pickIosColor(
  * dark band gives white text. Saturation is allowed a little further up there
  * because at that lightness a clamp of 0.55 comes out as grey.
  */
-function normalize(hex: string, mode: ThemeMode): string {
+function normalize(hex: string, mode: ThemeMode, vivid: boolean): string {
   const rgb = hexToRgb(hex);
   if (!rgb) return hex;
   const [h, s, l] = rgbToHsl(rgb[0], rgb[1], rgb[2]);
   if (mode === 'light') {
-    return hslToHex(h, Math.min(s, 0.7), Math.min(Math.max(l, 0.88), 0.94));
+    return vivid
+      ? hslToHex(h, Math.min(s, 0.8), Math.min(Math.max(l, 0.82), 0.9))
+      : hslToHex(h, Math.min(s, 0.7), Math.min(Math.max(l, 0.88), 0.94));
   }
-  return hslToHex(h, Math.min(s, 0.55), Math.min(Math.max(l, 0.2), 0.32));
+  return vivid
+    ? hslToHex(h, Math.min(s, 0.7), Math.min(Math.max(l, 0.28), 0.4))
+    : hslToHex(h, Math.min(s, 0.55), Math.min(Math.max(l, 0.2), 0.32));
 }
 
 /**
@@ -155,7 +159,11 @@ function paletteUri(uri: string): string {
   return uri.replace(/([?&](?:size|fillWidth|fillHeight)=)\d+/g, `$1${PALETTE_SIZE}`);
 }
 
-export function useDominantColor(uri?: string): string {
+/**
+ * `vivid` is a brighter, more saturated band for a header that fades into the
+ * page, where the colour is behind the title rather than under body text.
+ */
+export function useDominantColor(uri?: string, vivid = false): string {
   const [color, setColor] = useState<string>(theme.surfaceHighlight);
   // Switching appearance re-runs the whole thing: the palette `getColors`
   // returns is cached, so this is a second pass through `normalize` and not a
@@ -197,7 +205,7 @@ export function useDominantColor(uri?: string): string {
         } else if (res.platform === 'web') {
           c = res.vibrant || res.darkVibrant || res.dominant || c;
         }
-        setColor(normalize(c, mode));
+        setColor(normalize(c, mode, vivid));
       })
       .catch(() => {
         if (active) setColor(theme.surfaceHighlight);
@@ -205,7 +213,7 @@ export function useDominantColor(uri?: string): string {
     return () => {
       active = false;
     };
-  }, [uri, mode]);
+  }, [uri, mode, vivid]);
 
   return color;
 }

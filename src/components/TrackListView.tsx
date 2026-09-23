@@ -234,7 +234,7 @@ export function TrackListView({
   const insets = useSafeAreaInsets();
   const { width: screenW, height: screenH } = useScreenSize();
   const bottomPad = useScreenBottomPadding();
-  const dominant = useDominantColor(coverUri);
+  const dominant = useDominantColor(coverUri, true);
   const headerColor = accentColor ?? dominant;
   const blurTarget = useBlurTarget();
   const shuffle = usePlayerStore((s) => s.shuffle);
@@ -412,10 +412,9 @@ export function TrackListView({
   const art = coverSize(screenW, screenH);
   const cover = hideCover ? 0 : art;
   const collapse = hideCover ? 120 : art;
-  // The gradient tail dies roughly where the header ends (title + actions):
-  // it blends the color with the list's black without tinting the first row
-  // (tested: extending it to the rows looked messy).
-  const gradientH = insets.top + TOPBAR_H + cover + 120;
+  // Down past the title and the buttons, so the header is the cover's colour
+  // and not only the space around the cover.
+  const gradientH = insets.top + TOPBAR_H + cover + 280;
   const coverOpacity = scrollY.interpolate({
     inputRange: [0, collapse * 0.7],
     outputRange: [1, 0],
@@ -499,7 +498,8 @@ export function TrackListView({
               <View style={[styles.gradientAbove, { backgroundColor: headerColor }]} />
             ) : null}
             <LinearGradient
-              colors={[headerColor, colors.background]}
+              colors={[headerColor, headerColor, colors.background]}
+              locations={[0, 0.35, 1]}
               style={StyleSheet.absoluteFill}
             />
           </Animated.View>

@@ -894,8 +894,11 @@ export default function PlayerScreen() {
             <View style={styles.coverScrim} />
           </>
         ) : null}
+        {/* Only the lower half, where the controls are: the top is left to
+            the cover's colour. */}
         <LinearGradient
-          colors={[colors.background + '00', colors.background] as const}
+          colors={[colors.background + '00', colors.background + 'B3'] as const}
+          locations={[0.45, 1]}
           style={StyleSheet.absoluteFill}
         />
         <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
