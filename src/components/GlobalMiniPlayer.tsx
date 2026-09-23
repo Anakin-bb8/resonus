@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { NO_MINI_PLAYER, useTabBarShown } from '@/hooks/useTabBar';
 import { motion } from '@/theme/motion';
-import { spacing, TAB_BAR_HEIGHT } from '@/theme';
+import { MINI_PLAYER_GAP, spacing, TAB_BAR_HEIGHT } from '@/theme';
 import { MiniPlayer } from './MiniPlayer';
 
 export function GlobalMiniPlayer() {
@@ -26,7 +26,7 @@ export function GlobalMiniPlayer() {
   // cover it. The list is shared because whatever floats at the bottom (the
   // toast, the multi-select bar) has to know where the mini is not.
   const visible = !NO_MINI_PLAYER.includes(root as string);
-  const bottom = withBar ? TAB_BAR_HEIGHT + insets.bottom : insets.bottom + spacing.sm;
+  const bottom = withBar ? TAB_BAR_HEIGHT + MINI_PLAYER_GAP + insets.bottom : insets.bottom + spacing.sm;
 
   // Keep the last visible position so it doesn't jump while fading out
   // when opening a full-screen modal.

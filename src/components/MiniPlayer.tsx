@@ -154,8 +154,10 @@ export function MiniPlayer() {
             up alone on the left with the buttons a forearm away on the right,
             and nothing about a bar with three things in it needs 1280 points
             (#131). */}
+        {/* The shadow sits outside the card, which clips its own contents. */}
+        <View style={[styles.card, wide && styles.narrow]}>
         <Pressable
-          style={[styles.container, wide && styles.narrow, { backgroundColor: blur ? 'transparent' : bg }]}
+          style={[styles.container, { backgroundColor: blur ? 'transparent' : bg }]}
           onPress={() => pushOnce('/player')}
         >
           {blur ? <BarBlur tint={bg} alpha={0.55} /> : null}
@@ -209,28 +211,33 @@ export function MiniPlayer() {
 
           <MiniProgress song={song} />
         </Pressable>
+        </View>
       </Animated.View>
     </GestureDetector>
   );
 }
 
 const styles = themed((colors) => ({
+  card: {
+    marginHorizontal: spacing.sm,
+    borderRadius: radius.lg,
+    boxShadow: '0px 6px 16px rgba(0, 0, 0, 0.3)',
+  },
   container: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     backgroundColor: colors.surfaceHighlight,
-    marginHorizontal: spacing.sm,
     padding: spacing.sm,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     overflow: 'hidden',
   },
   /** Centred and no wider than a wide screen wants it. */
   narrow: { maxWidth: CONTENT_MAX_WIDTH, width: '100%', alignSelf: 'center' },
   progressTrack: {
     position: 'absolute',
-    left: 8,
-    right: 8,
+    left: 14,
+    right: 14,
     bottom: 0,
     height: 3,
     borderRadius: radius.pill,

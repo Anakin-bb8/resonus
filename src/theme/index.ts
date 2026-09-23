@@ -534,6 +534,9 @@ export const TAB_BAR_HEIGHT = 60;
 /** Approximate height of the floating MiniPlayer (44px artwork + padding). */
 export const MINI_PLAYER_HEIGHT = 60;
 
+/** Air between the MiniPlayer and the navigation bar, so it floats. */
+export const MINI_PLAYER_GAP = spacing.xs;
+
 /**
  * Fixed bottom spacing for screen lists WITHOUT a tab bar: the MiniPlayer
  * floats at the bottom and this gap clears it with extra margin.
