@@ -11,7 +11,7 @@ Releases before 0.2.1 are only listed on the
 
 ### Added
 
-- The navigation bar, the mini player and the bar at the top of albums, playlists and artists blur what scrolls under them, on iOS and on Android 12 or newer, and Settings > Appearance > Blur behind the bars turns it off.
+- The navigation bar, the mini player and the bar at the top of albums, playlists and artists blur what scrolls under them, with a hairline marking where the navigation bar starts, on iOS and on Android 12 or newer, and Settings > Appearance > Blur behind the bars turns it off.
 
 ### Changed
 

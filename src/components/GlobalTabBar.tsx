@@ -117,6 +117,8 @@ export function GlobalTabBar() {
       ]}
     >
       {blur && blurOn ? <BarBlur /> : null}
+      {/* Where the glass starts, when something bright passes under it. */}
+      {blur ? <View pointerEvents="none" style={styles.edge} /> : null}
       {/* The user's order, and only the ones they kept (Settings › Appearance
           › Navigation bar). `TABS` stays the catalogue: it is what says where
           each one goes and what it is called. */}
@@ -175,6 +177,14 @@ const styles = themed((colors) => ({
     paddingTop: 6,
   },
   solid: { backgroundColor: colors.background },
+  edge: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.highlight,
+  },
   item: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', padding: 5 },
   iconBox: { width: 56, height: 28, alignItems: 'center', justifyContent: 'center' },
   pill: {
