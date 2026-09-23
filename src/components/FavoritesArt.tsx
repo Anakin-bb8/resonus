@@ -8,7 +8,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { radius } from '@/theme';
 
-export function FavoritesArt({ size }: { size: number }) {
+/** `square` for when a container rounds it from outside. */
+export function FavoritesArt({ size, square }: { size: number; square?: boolean }) {
   return (
     <LinearGradient
       colors={['#450af5', '#8e8ee5'] as const}
@@ -17,7 +18,7 @@ export function FavoritesArt({ size }: { size: number }) {
       style={{
         width: size,
         height: size,
-        borderRadius: radius.md,
+        borderRadius: square ? 0 : radius.md,
         alignItems: 'center',
         justifyContent: 'center',
       }}

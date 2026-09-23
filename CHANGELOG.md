@@ -21,6 +21,7 @@ Releases before 0.2.1 are only listed on the
 - The navigation bar stays on every screen by default; Settings > Appearance > Always show the navigation bar turns it back to the tabs only.
 - The tab you are on is marked with a pill behind its icon.
 - The mini player floats as a card, with rounder corners, a soft shadow and a little air above the navigation bar.
+- The quick access tiles at the top of Home have rounder corners, with the cover flush against them.
 
 ## [0.7.8] - 2026-09-23
 

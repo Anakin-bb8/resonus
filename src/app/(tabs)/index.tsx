@@ -105,9 +105,9 @@ function QuickTile({
           child it clones and refuses a list. */}
       <Pressable style={StyleSheet.flatten([styles.tile, { width }])}>
         {favorites ? (
-          <FavoritesArt size={52} />
+          <FavoritesArt size={52} square />
         ) : (
-          <Cover uri={cover} size={52} />
+          <Cover uri={cover} size={52} style={styles.tileCover} />
         )}
         <Text style={styles.tileText} numberOfLines={2}>
           {name}
@@ -1023,10 +1023,12 @@ const styles = themed((colors) => ({
     alignItems: 'center',
     gap: spacing.sm,
     backgroundColor: colors.surfaceHighlight,
-    borderRadius: radius.sm,
+    borderRadius: radius.md,
     overflow: 'hidden',
     paddingRight: spacing.sm,
   },
+  /** Square: the tile's own corners round it on the outside. */
+  tileCover: { borderRadius: 0 },
   tileText: {
     flex: 1,
     color: colors.text,
