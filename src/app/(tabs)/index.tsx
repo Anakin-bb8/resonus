@@ -917,8 +917,6 @@ export default function HomeScreen() {
         </View>
 
         {offline && scanning ? <ScanningPanel /> : null}
-
-        <HomeChips offline={offline} />
       </View>
 
       <ScrollView
@@ -931,6 +929,9 @@ export default function HomeScreen() {
           />
         }
       >
+        {/* In the scroll, not the fixed header: they are a way in from the top
+            of Home, and scrolled past they were only taking room. */}
+        <HomeChips offline={offline} />
         {!offline && serverUnreachable ? (
           <Message
             text={t("Couldn't reach the server. Check your connection.")}
