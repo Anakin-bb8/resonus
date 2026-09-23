@@ -44,6 +44,7 @@ import { usePlayerStore } from '@/store/player';
 import { colors, fontSize, radius, spacing, themed, tracking } from '@/theme';
 import { motion } from '@/theme/motion';
 import { BackChevron } from './BackChevron';
+import { BarBlurTarget, TopBarBackground, useBlurTarget } from './BarBlur';
 import { Cover } from './Cover';
 import { ExplicitBadge, useExplicitBadge } from './ExplicitBadge';
 import { FavoriteButton } from './FavoriteButton';
@@ -235,6 +236,7 @@ export function TrackListView({
   const bottomPad = useScreenBottomPadding();
   const dominant = useDominantColor(coverUri);
   const headerColor = accentColor ?? dominant;
+  const blurTarget = useBlurTarget();
   const shuffle = usePlayerStore((s) => s.shuffle);
   const queueDealt = usePlayerStore((s) => s.queueDealt);
   // The shuffle button gets tinted only if this list is the one playing;
@@ -465,6 +467,7 @@ export function TrackListView({
 
   return (
     <View style={styles.root}>
+      <BarBlurTarget target={blurTarget}>
       {/* Dominant color gradient; scrolls with 1:1 parallax. Hidden in search
           mode to keep the screen flat black. */}
       {searching ? null : (
@@ -852,6 +855,7 @@ export function TrackListView({
         ListFooterComponent={footer ? <>{footer}</> : null}
       />
       </GestureDetector>
+      </BarBlurTarget>
 
       {/* Fixed top bar: the background and title appear on collapse. In
           selection mode it's replaced by ✕ + counter + select all. */}
@@ -887,13 +891,7 @@ export function TrackListView({
           </>
         ) : (
           <>
-            <Animated.View
-              pointerEvents="none"
-              style={[
-                StyleSheet.absoluteFill,
-                { backgroundColor: headerColor, opacity: barBgOpacity },
-              ]}
-            />
+            <TopBarBackground color={headerColor} opacity={barBgOpacity} target={blurTarget} />
             <BackChevron size={28} label={t('Close')} />
             <Animated.Text
               style={[styles.barTitleCentered, { top: insets.top + 10, opacity: barContentOpacity }]}

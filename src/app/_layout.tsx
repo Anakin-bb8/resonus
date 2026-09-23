@@ -14,6 +14,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AppStartupTab } from '@/components/AppStartupTab';
 import { ArtistPickerSheet } from '@/components/ArtistPickerSheet';
+import { BarBlurTarget } from '@/components/BarBlur';
 import { BatteryWarning } from '@/components/BatteryWarning';
 import { CarAutoSync } from '@/components/CarAutoSync';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -291,6 +292,7 @@ export default function RootLayout() {
         ) : (
           <ErrorBoundary>
           <View style={{ flex: 1 }}>
+            <BarBlurTarget>
             <Stack
               screenOptions={{
                 headerShown: false,
@@ -378,6 +380,7 @@ export default function RootLayout() {
                 options={FULL_MODAL}
               />
             </Stack>
+            </BarBlurTarget>
             {auth || offline ? <AppStartupTab /> : null}
             {auth || offline ? <GlobalMiniPlayer /> : null}
             {auth || offline ? <GlobalTabBar /> : null}

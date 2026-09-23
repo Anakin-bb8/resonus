@@ -20,7 +20,7 @@
  */
 import Icon from '@/components/Icon';
 import { useRouter, useSegments } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -28,6 +28,9 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { scheduleOnRN } from 'react-native-worklets';
+
+import { BarBlur, useBarBlur } from '@/components/BarBlur';
 
 import { useTabBarShown } from '@/hooks/useTabBar';
 import { motion } from '@/theme/motion';
@@ -50,8 +53,11 @@ export function GlobalTabBar() {
   const segments = useSegments() as string[];
   const shown = useTabBarShown();
   // With the setting off the tabs keep their own bar and this draws nothing at
-  // all: off is the app exactly as it was, down to the last pixel.
+  // all: off is the app exactly as it was, down to the last pixel. Unless the
+  // bar is blurred, which only works from out here (`BarBlur`).
   const always = useSettings((s) => s.alwaysShowTabs);
+  // Blurred, it is also the bar of the tab screens (see the tabs layout).
+  const blur = useBarBlur();
   const bottomTabs = useSettings((s) => s.bottomTabs);
   const root = segments[0];
   const inTabs = root === '(tabs)' || root === undefined;
@@ -77,15 +83,23 @@ export function GlobalTabBar() {
    * a little less of something already almost transparent.
    */
   const fade = useSharedValue(shown ? 1 : 0);
+  // The blur redraws every frame it is on screen, invisible or not, so it goes
+  // once the bar has faded out.
+  const [blurOn, setBlurOn] = useState(shown);
+  if (shown && !blurOn) setBlurOn(true);
   useEffect(() => {
     // Straight back on the way in: coming out of the player the bar was there
     // before and belongs there again, and until the modal finishes dismissing
     // nobody can see it anyway.
-    fade.value = shown ? 1 : withTiming(0, { duration: motion.duration.exit });
+    fade.value = shown
+      ? 1
+      : withTiming(0, { duration: motion.duration.exit }, (done) => {
+          if (done) scheduleOnRN(setBlurOn, false);
+        });
   }, [shown, fade]);
   const fadeStyle = useAnimatedStyle(() => ({ opacity: fade.value }));
 
-  if (!always) return null;
+  if (!always && !blur) return null;
 
   /** Leaves for a tab, dropping the screens piled on top of it. */
   const go = (href: string) => {
@@ -104,9 +118,11 @@ export function GlobalTabBar() {
       style={[
         styles.bar,
         { height: TAB_BAR_HEIGHT + insets.bottom, paddingBottom: insets.bottom },
+        blur ? null : styles.solid,
         fadeStyle,
       ]}
     >
+      {blur && blurOn ? <BarBlur /> : null}
       {/* The user's order, and only the ones they kept (Settings › Appearance
           › Navigation bar). `TABS` stays the catalogue: it is what says where
           each one goes and what it is called. */}
@@ -160,10 +176,10 @@ const styles = themed((colors) => ({
     right: 0,
     bottom: 0,
     flexDirection: 'row',
-    backgroundColor: colors.background,
     // What the tabs layout used to pass as `tabBarStyle`.
     paddingTop: 6,
   },
+  solid: { backgroundColor: colors.background },
   item: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', padding: 5 },
   iconBox: { width: 31, height: 28, alignItems: 'center', justifyContent: 'center' },
   label: { fontSize: 10 },

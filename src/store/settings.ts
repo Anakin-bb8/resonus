@@ -744,6 +744,8 @@ interface SettingsState {
   showPlaylistDescription: boolean;
   /** Keep the navigation bar on every screen, not only on the tabs. */
   alwaysShowTabs: boolean;
+  /** Blur what scrolls under the navigation bar and the mini player. */
+  blurBars: boolean;
   /** Song duration in lists (Spotify doesn't show it). */
   showSongDuration: boolean;
   /** Rating stars per song in lists. */
@@ -1025,6 +1027,7 @@ interface SettingsState {
   setShowListArtwork: (value: boolean) => void;
   setShowPlaylistDescription: (value: boolean) => void;
   setAlwaysShowTabs: (value: boolean) => void;
+  setBlurBars: (value: boolean) => void;
   setShowSongDuration: (value: boolean) => void;
   setShowListRating: (value: boolean) => void;
   setShowExplicitTag: (value: boolean) => void;
@@ -1157,6 +1160,7 @@ function snapshot(get: () => SettingsState) {
     showListArtwork: s.showListArtwork,
     showPlaylistDescription: s.showPlaylistDescription,
     alwaysShowTabs: s.alwaysShowTabs,
+    blurBars: s.blurBars,
     showSongDuration: s.showSongDuration,
     showListRating: s.showListRating,
     showExplicitTag: s.showExplicitTag,
@@ -1256,6 +1260,7 @@ const DEFAULTS = {
   showListArtwork: true,
   showPlaylistDescription: true,
   alwaysShowTabs: false,
+  blurBars: true,
   showSongDuration: false,
   showListRating: false,
   // On: it only ever draws where a file says so, which in most libraries is
@@ -1462,6 +1467,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
 
   setAlwaysShowTabs: (alwaysShowTabs) => {
     set({ alwaysShowTabs });
+    persist(snapshot(get));
+  },
+
+  setBlurBars: (blurBars) => {
+    set({ blurBars });
     persist(snapshot(get));
   },
 
@@ -1954,6 +1964,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           showListArtwork: boolean;
           showPlaylistDescription: boolean;
           alwaysShowTabs: boolean;
+          blurBars?: boolean;
           showSongDuration: boolean;
           showListRating: boolean;
           showExplicitTag?: boolean;
@@ -2107,6 +2118,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (typeof parsed.alwaysShowTabs === 'boolean') {
           set({ alwaysShowTabs: parsed.alwaysShowTabs });
+        }
+        if (typeof parsed.blurBars === 'boolean') {
+          set({ blurBars: parsed.blurBars });
         }
         if (typeof parsed.showSongDuration === 'boolean') {
           set({ showSongDuration: parsed.showSongDuration });

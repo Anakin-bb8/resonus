@@ -14,6 +14,7 @@ import { Tabs } from 'expo-router';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useBarBlur } from '@/components/BarBlur';
 import { useT } from '@/i18n';
 import { type TabSegment } from '@/lib/tabOrigin';
 import { useSettings } from '@/store/settings';
@@ -38,6 +39,9 @@ export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const t = useT();
   const alwaysShowTabs = useSettings((s) => s.alwaysShowTabs);
+  // A blurred bar has to be drawn outside the Stack it blurs (`BarBlur`).
+  const blur = useBarBlur();
+  const globalBar = alwaysShowTabs || blur;
   const bottomTabs = useSettings((s) => s.bottomTabs);
 
   return (
@@ -45,7 +49,7 @@ export default function TabsLayout() {
       <Tabs
         // `undefined` leaves the navigator's own bar in place; the global one
         // draws nothing while that is the case.
-        tabBar={alwaysShowTabs ? () => null : undefined}
+        tabBar={globalBar ? () => null : undefined}
         screenOptions={{
           headerShown: false,
           // The tab you are not on stops re-rendering, and its views come off

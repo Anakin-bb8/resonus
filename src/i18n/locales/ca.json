@@ -704,5 +704,7 @@
   "Could not connect to the server": "No s'ha pogut connectar amb el servidor",
   "Session expired: sign in again": "Sessió caducada: torna a iniciar la sessió",
   "Wrong username or password": "Usuari o contrasenya incorrectes",
-  "Unexpected server response": "Resposta inesperada del servidor"
+  "Unexpected server response": "Resposta inesperada del servidor",
+  "Blur behind the bars": "Desenfocament rere les barres",
+  "Lists carry on under the navigation bar and the mini player, blurred.": "Les llistes continuen per sota de la barra de navegació i del mini reproductor, desenfocades."
 }

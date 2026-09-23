@@ -9,6 +9,7 @@ import {
   settingsStyles,
   SwitchList,
 } from '@/components/SettingsUI';
+import { canBlurBars } from '@/components/BarBlur';
 import { useLocalProfile } from '@/hooks/useLocalProfile';
 import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
@@ -44,6 +45,8 @@ export default function AppearanceSettings() {
   const language = useSettings((s) => s.language);
   const alwaysShowTabs = useSettings((s) => s.alwaysShowTabs);
   const setAlwaysShowTabs = useSettings((s) => s.setAlwaysShowTabs);
+  const blurBars = useSettings((s) => s.blurBars);
+  const setBlurBars = useSettings((s) => s.setBlurBars);
   const defaultTab = useSettings((s) => s.defaultTab);
   const setDefaultTab = useSettings((s) => s.setDefaultTab);
   const keepScreenOnReturn = useSettings((s) => s.keepScreenOnReturn);
@@ -104,6 +107,20 @@ export default function AppearanceSettings() {
               value: alwaysShowTabs,
               onChange: setAlwaysShowTabs,
             },
+            // Android draws the blur from Android 12 on; before that there is
+            // only a tint, which is what was tried and dropped (b8bb8b1).
+            ...(canBlurBars
+              ? [
+                  {
+                    label: t('Blur behind the bars'),
+                    description: t(
+                      'Lists carry on under the navigation bar and the mini player, blurred.',
+                    ),
+                    value: blurBars,
+                    onChange: setBlurBars,
+                  },
+                ]
+              : []),
           ]}
         />
         <SettingRow

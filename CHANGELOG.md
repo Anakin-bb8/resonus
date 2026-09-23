@@ -9,6 +9,10 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Added
+
+- The navigation bar, the mini player and the bar at the top of albums, playlists and artists blur what scrolls under them, on iOS and on Android 12 or newer, and Settings > Appearance > Blur behind the bars turns it off.
+
 ### Changed
 
 - New icons throughout the app, from Phosphor.

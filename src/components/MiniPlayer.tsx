@@ -28,6 +28,7 @@ import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
 import { colors, fontSize, radius, spacing, themed } from '@/theme';
 import { motion } from '@/theme/motion';
+import { BarBlur, useBarBlur } from './BarBlur';
 import { Cover } from './Cover';
 import { FavoriteButton } from './FavoriteButton';
 import { MarqueeText } from './MarqueeText';
@@ -135,6 +136,7 @@ export function MiniPlayer() {
     : undefined;
   const dominant = useDominantColor(miniColor ? colorSource : undefined);
   const bg = miniColor ? dominant : colors.surfaceHighlight;
+  const blur = useBarBlur();
   // Not "unless the file is on the phone": see the player screen, which had the
   // same test in the same two places and the same hole under it.
   const favIds = useFavoriteIds(!!song);
@@ -153,9 +155,10 @@ export function MiniPlayer() {
             and nothing about a bar with three things in it needs 1280 points
             (#131). */}
         <Pressable
-          style={[styles.container, wide && styles.narrow, { backgroundColor: bg }]}
+          style={[styles.container, wide && styles.narrow, { backgroundColor: blur ? 'transparent' : bg }]}
           onPress={() => pushOnce('/player')}
         >
+          {blur ? <BarBlur tint={bg} alpha={0.55} /> : null}
       <Animated.View style={[styles.details, detailsStyle]}>
         <Cover uri={cover} size={44} placeholderIcon={song.url ? 'radio' : 'musical-notes'} />
         <View style={styles.info}>

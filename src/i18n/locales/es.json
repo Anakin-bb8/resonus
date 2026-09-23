@@ -717,5 +717,7 @@
   "Could not connect to the server": "No se pudo conectar con el servidor",
   "Session expired: sign in again": "Sesión caducada: vuelve a iniciar sesión",
   "Wrong username or password": "Usuario o contraseña incorrectos",
-  "Unexpected server response": "Respuesta inesperada del servidor"
+  "Unexpected server response": "Respuesta inesperada del servidor",
+  "Blur behind the bars": "Desenfoque tras las barras",
+  "Lists carry on under the navigation bar and the mini player, blurred.": "Las listas siguen por debajo de la barra de navegación y del mini reproductor, desenfocadas."
 }

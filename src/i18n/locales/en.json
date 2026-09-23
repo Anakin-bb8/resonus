@@ -715,5 +715,7 @@
   "Could not connect to the server": "Could not connect to the server",
   "Session expired: sign in again": "Session expired: sign in again",
   "Wrong username or password": "Wrong username or password",
-  "Unexpected server response": "Unexpected server response"
+  "Unexpected server response": "Unexpected server response",
+  "Blur behind the bars": "Blur behind the bars",
+  "Lists carry on under the navigation bar and the mini player, blurred.": "Lists carry on under the navigation bar and the mini player, blurred."
 }
