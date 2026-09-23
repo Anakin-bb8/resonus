@@ -67,7 +67,7 @@ playback.
 - **Android Auto** (experimental)
 - **Landscape and tablet layouts**
 - **Queue sync across devices**
-- **In 8 languages**: English, Spanish, German, Catalan, Russian, Italian, Simplified Chinese, Ukrainian
+- **In 10 languages**: English, Spanish, German, Catalan, Russian, Italian, Simplified Chinese, Ukrainian, Polish, Swedish
 
 ## FAQ
 
@@ -93,6 +93,8 @@ Thanks to the people who have translated the app:
 | Italiano | [Anakin-bb8](https://github.com/Anakin-bb8) |
 | 简体中文 | [xcdmrCHP](https://github.com/xcdmrCHP) |
 | Українська | [albedych](https://github.com/albedych) |
+| Polski | [pegaz19803-spec](https://github.com/pegaz19803-spec) |
+| Svenska | [Jonatan Nyberg](https://github.com/NickWick13) |
 
 ## Community
 
