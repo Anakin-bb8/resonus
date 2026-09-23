@@ -1259,7 +1259,7 @@ const DEFAULTS = {
   showPlayedInQueue: false,
   showListArtwork: true,
   showPlaylistDescription: true,
-  alwaysShowTabs: false,
+  alwaysShowTabs: true,
   blurBars: true,
   showSongDuration: false,
   showListRating: false,
