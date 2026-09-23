@@ -3,7 +3,7 @@
  * queue, under a Cancel / Done header. It always works on the manual order, and
  * confirming hands back the new sequence of ids to rewrite on the server.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import ReorderableList, {
@@ -48,7 +48,7 @@ function ReorderRow({ song }: { song: Song }) {
         ) : null}
       </View>
       <Pressable hitSlop={8} onPressIn={() => { haptic('medium'); drag(); }}>
-        <Ionicons name="reorder-two" size={24} color={colors.textSecondary} />
+        <Icon name="reorder-two" size={24} color={colors.textSecondary} />
       </Pressable>
     </Pressable>
   );

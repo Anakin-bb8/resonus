@@ -3,7 +3,7 @@
  * Cancel/Confirm buttons. Used for create/rename (with input) and to confirm
  * destructive actions (without input).
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useEffect, useRef, useState } from 'react';
 import {
   Modal,
@@ -36,7 +36,7 @@ interface Props {
     label: string;
     onPress: () => void;
     align?: 'start' | 'end';
-    icon?: keyof typeof Ionicons.glyphMap;
+    icon?: keyof typeof Icon.glyphMap;
   };
   destructive?: boolean;
   onCancel: () => void;
@@ -107,7 +107,7 @@ export function Dialog({
             >
               <Text style={styles.cancel}>{neutral.label}</Text>
               {neutral.icon ? (
-                <Ionicons name={neutral.icon} size={15} color={colors.textSecondary} />
+                <Icon name={neutral.icon} size={15} color={colors.textSecondary} />
               ) : null}
             </Pressable>
           ) : null}

@@ -11,7 +11,7 @@
  * a row looks like: a row is an icon, a name, and a tick when it is the one
  * playing, the same as in every other sheet in the app.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -244,7 +244,7 @@ export function OutputSheet({ visible, onClose }: { visible: boolean; onClose: (
           {label}
         </Text>
         <View style={styles.trailing}>
-          {action ?? (active ? <Ionicons name="checkmark" size={20} color={colors.accent} /> : null)}
+          {action ?? (active ? <Icon name="checkmark" size={20} color={colors.accent} /> : null)}
         </View>
       </Pressable>
     );
@@ -253,10 +253,10 @@ export function OutputSheet({ visible, onClose }: { visible: boolean; onClose: (
   /** The icon for an output, by what it is. */
   const outputIcon = (kind: 'phone' | 'server' | 'group' | 'tv' | 'speaker', active?: boolean) => {
     const color = active ? colors.accent : colors.text;
-    if (kind === 'phone') return <Ionicons name="phone-portrait-outline" size={22} color={color} />;
-    if (kind === 'server') return <Ionicons name="server-outline" size={22} color={color} />;
+    if (kind === 'phone') return <Icon name="phone-portrait-outline" size={22} color={color} />;
+    if (kind === 'server') return <Icon name="server-outline" size={22} color={color} />;
     if (kind === 'group') return <MaterialIcons name="speaker-group" size={22} color={color} />;
-    if (kind === 'tv') return <Ionicons name="tv-outline" size={22} color={color} />;
+    if (kind === 'tv') return <Icon name="tv-outline" size={22} color={color} />;
     return <MaterialIcons name="speaker" size={22} color={color} />;
   };
 
@@ -342,7 +342,7 @@ export function OutputSheet({ visible, onClose }: { visible: boolean; onClose: (
                           {actionBusy ? (
                             <ActivityIndicator size="small" color={colors.textSecondary} />
                           ) : (
-                            <Ionicons
+                            <Icon
                               name={canJoin ? 'add-circle-outline' : 'remove-circle-outline'}
                               size={22}
                               color={colors.textSecondary}
@@ -394,7 +394,7 @@ export function OutputSheet({ visible, onClose }: { visible: boolean; onClose: (
                     style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
                     onPress={() => void upnpSearch()}
                   >
-                    <Ionicons name="refresh" size={20} color={colors.textSecondary} />
+                    <Icon name="refresh" size={20} color={colors.textSecondary} />
                     <Text style={[styles.actionText, { color: colors.textSecondary }]}>
                       {t('Search again')}
                     </Text>

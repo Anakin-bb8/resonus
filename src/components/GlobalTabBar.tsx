@@ -18,7 +18,7 @@
  * They are copied so that turning the setting off, which leaves this bar on the
  * three tab screens alone, changes nothing about how they look.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -137,7 +137,7 @@ export function GlobalTabBar() {
             }}
           >
             <View style={styles.iconBox}>
-              <Ionicons
+              <Icon
                 name={here || from ? ICONS[tab.segment] : `${ICONS[tab.segment]}-outline`}
                 size={25}
                 color={color}

@@ -1,11 +1,11 @@
 /** Rich empty state: icon, title, subtitle, and optional action. */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { Pressable, Text, View } from 'react-native';
 
 import { colors, fontSize, radius, spacing, themed } from '@/theme';
 
 interface Props {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: keyof typeof Icon.glyphMap;
   title: string;
   subtitle?: string;
   action?: { label: string; onPress: () => void };
@@ -15,7 +15,7 @@ export function EmptyState({ icon, title, subtitle, action }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.iconWrap}>
-        <Ionicons name={icon} size={40} color={colors.textSecondary} />
+        <Icon name={icon} size={40} color={colors.textSecondary} />
       </View>
       <Text style={styles.title}>{title}</Text>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}

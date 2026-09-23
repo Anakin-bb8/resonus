@@ -1,5 +1,5 @@
 /** Playlist detail with its songs. */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -257,7 +257,7 @@ function SuggestedTracks({
               pressed && { opacity: 0.6 },
             ]}
           >
-            <Ionicons name="add-circle-outline" size={26} color={colors.text} />
+            <Icon name="add-circle-outline" size={26} color={colors.text} />
           </Pressable>
         </Pressable>
       ))}
@@ -724,7 +724,7 @@ export default function PlaylistScreen() {
                 toast(t('Playing next'));
               }}
             >
-              <Ionicons name="play-forward" size={24} color={colors.text} />
+              <Icon name="play-forward" size={24} color={colors.text} />
               <Text style={styles.actionText}>{t('Play next')}</Text>
             </Pressable>
             <Pressable
@@ -735,7 +735,7 @@ export default function PlaylistScreen() {
                 toast(t('Added to queue'));
               }}
             >
-              <Ionicons name="list" size={24} color={colors.text} />
+              <Icon name="list" size={24} color={colors.text} />
               <Text style={styles.actionText}>{t('Add to queue')}</Text>
             </Pressable>
             <Pressable
@@ -745,7 +745,7 @@ export default function PlaylistScreen() {
                 if (displaySongs.length > 0) setAddingSongs(displaySongs);
               }}
             >
-              <Ionicons name="add" size={24} color={colors.text} />
+              <Icon name="add" size={24} color={colors.text} />
               <Text style={styles.actionText}>{t('Add to a playlist')}</Text>
             </Pressable>
             {canReorder ? (
@@ -756,7 +756,7 @@ export default function PlaylistScreen() {
                   setReordering(true);
                 }}
               >
-                <Ionicons name="swap-vertical" size={24} color={colors.text} />
+                <Icon name="swap-vertical" size={24} color={colors.text} />
                 <Text style={styles.actionText}>{t('Reorder')}</Text>
               </Pressable>
             ) : null}
@@ -767,7 +767,7 @@ export default function PlaylistScreen() {
                 setEditing(true);
               }}
             >
-              <Ionicons name="create-outline" size={24} color={colors.text} />
+              <Icon name="create-outline" size={24} color={colors.text} />
               <Text style={styles.actionText}>{t('Edit playlist')}</Text>
             </Pressable>
             {canAutoDownload ? (
@@ -787,7 +787,7 @@ export default function PlaylistScreen() {
                   }
                 }}
               >
-                <Ionicons
+                <Icon
                   name={autoDownload ? 'cloud-done' : 'cloud-download-outline'}
                   size={24}
                   color={autoDownload ? colors.accent : colors.text}
@@ -805,7 +805,7 @@ export default function PlaylistScreen() {
                   void onRefresh();
                 }}
               >
-                <Ionicons name="refresh" size={24} color={colors.text} />
+                <Icon name="refresh" size={24} color={colors.text} />
                 <Text style={styles.actionText}>{t('Refresh')}</Text>
               </Pressable>
             ) : null}
@@ -817,7 +817,7 @@ export default function PlaylistScreen() {
                   useSharePicker.getState().open({ id, name: data.playlist.name });
                 }}
               >
-                <Ionicons name="share-social-outline" size={24} color={colors.text} />
+                <Icon name="share-social-outline" size={24} color={colors.text} />
                 <Text style={styles.actionText}>{t('Share')}</Text>
               </Pressable>
             ) : null}
@@ -832,7 +832,7 @@ export default function PlaylistScreen() {
                   setConfirmDeleteDl(true);
                 }}
               >
-                <Ionicons name="trash-outline" size={24} color={colors.text} />
+                <Icon name="trash-outline" size={24} color={colors.text} />
                 <Text style={styles.actionText}>{t('Delete downloads')}</Text>
               </Pressable>
             ) : null}
@@ -844,7 +844,7 @@ export default function PlaylistScreen() {
                 setDeleting(true);
               }}
             >
-              <Ionicons name="trash-outline" size={24} color={colors.danger} />
+              <Icon name="trash-outline" size={24} color={colors.danger} />
               <Text style={[styles.actionText, { color: colors.danger }]}>{t('Delete playlist')}</Text>
             </Pressable>
           </>

@@ -7,7 +7,7 @@
  * than a list it belongs to, and this sheet could never take one off. It is in
  * the ⋯ menu of the selection now (#164).
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -185,7 +185,7 @@ export function PlaylistPickerSheet({
                 onPress={() => setCreating(true)}
               >
                 <View style={styles.newPlaylistIcon}>
-                  <Ionicons name="add" size={24} color={colors.text} />
+                  <Icon name="add" size={24} color={colors.text} />
                 </View>
                 <Text style={styles.rowText}>{t('New playlist')}</Text>
               </Pressable>

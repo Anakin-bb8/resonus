@@ -4,7 +4,7 @@
  * the bottom. Restoring every setting is in About: sitting here it looked like
  * one more category and was a tap away from the button that goes offline.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
@@ -60,7 +60,7 @@ export default function SettingsScreen() {
   const sections: {
     key: string;
     title: string;
-    icon: keyof typeof Ionicons.glyphMap;
+    icon: keyof typeof Icon.glyphMap;
     disabled?: boolean;
   }[] = [
     { key: 'playback', title: 'Quality & playback', icon: 'musical-notes-outline' as const },
@@ -138,9 +138,9 @@ export default function SettingsScreen() {
             ]}
             onPress={() => router.push(`/settings/${s.key}`)}
           >
-            <Ionicons name={s.icon} size={24} color={colors.text} />
+            <Icon name={s.icon} size={24} color={colors.text} />
             <Text style={styles.sectionRowTitle}>{t(s.title)}</Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+            <Icon name="chevron-forward" size={20} color={colors.textMuted} />
           </Pressable>
         ))}
 
@@ -157,7 +157,7 @@ export default function SettingsScreen() {
                 router.replace('/(tabs)');
               }}
             >
-              <Ionicons name="cloud-offline-outline" size={18} color={colors.onInverse} />
+              <Icon name="cloud-offline-outline" size={18} color={colors.onInverse} />
               <Text style={styles.offlinePillText}>{t('Offline mode')}</Text>
             </Pressable>
           ) : serverOffline ? (
@@ -168,7 +168,7 @@ export default function SettingsScreen() {
                 router.replace('/(tabs)');
               }}
             >
-              <Ionicons name="cloud-outline" size={18} color={colors.onInverse} />
+              <Icon name="cloud-outline" size={18} color={colors.onInverse} />
               <Text style={styles.offlinePillText}>{t('Back online')}</Text>
             </Pressable>
           ) : null}
@@ -180,7 +180,7 @@ export default function SettingsScreen() {
             style={({ pressed }) => [styles.offlinePill, pressed && { opacity: 0.6 }]}
             onPress={() => logout()}
           >
-            <Ionicons name="log-out-outline" size={18} color={colors.onInverse} />
+            <Icon name="log-out-outline" size={18} color={colors.onInverse} />
             <Text style={styles.offlinePillText}>
               {offline && !auth ? t('Exit local mode') : t('Sign out')}
             </Text>

@@ -4,7 +4,7 @@
  * in gray inside the row, a switch on the right, and selectors that open a
  * compact floating menu.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import Slider from '@react-native-community/slider';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -88,7 +88,7 @@ export function SettingRow({
    * Left icon: used by ACTION rows (scan, clear…) to visually stand out from
    * read-only data rows.
    */
-  icon?: keyof typeof Ionicons.glyphMap;
+  icon?: keyof typeof Icon.glyphMap;
   /** Gray text on the right (current value, "Coming soon"…). */
   right?: string;
   /** Right arrow: only for rows that navigate to another screen. */
@@ -99,7 +99,7 @@ export function SettingRow({
   const body = (
     <>
       {icon ? (
-        <Ionicons name={icon} size={20} color={destructive ? colors.danger : colors.text} />
+        <Icon name={icon} size={20} color={destructive ? colors.danger : colors.text} />
       ) : null}
       <View style={settingsStyles.rowLabelBox}>
         <Text style={[settingsStyles.rowLabel, destructive && { color: colors.danger }]}>
@@ -108,7 +108,7 @@ export function SettingRow({
         {description ? <Text style={settingsStyles.rowDescription}>{description}</Text> : null}
       </View>
       {right ? <Text style={settingsStyles.rowValue}>{right}</Text> : null}
-      {chevron ? <Ionicons name="chevron-forward" size={20} color={colors.textMuted} /> : null}
+      {chevron ? <Icon name="chevron-forward" size={20} color={colors.textMuted} /> : null}
     </>
   );
   if (!onPress) {
@@ -226,7 +226,7 @@ export function SelectList<T extends string | number | boolean>({
               }}
             >
               <Text style={[settingsStyles.rowLabel, { flex: 1 }]}>{opt.label}</Text>
-              <Ionicons
+              <Icon
                 name={isActive ? 'radio-button-on' : 'radio-button-off'}
                 size={22}
                 color={isActive ? accent : colors.textMuted}
@@ -273,7 +273,7 @@ export function SelectList<T extends string | number | boolean>({
         {disabled ? (
           <View style={{ width: 18 }} />
         ) : (
-          <Ionicons name="chevron-down" size={18} color={colors.textMuted} />
+          <Icon name="chevron-down" size={18} color={colors.textMuted} />
         )}
       </Pressable>
 
@@ -329,7 +329,7 @@ export function SelectList<T extends string | number | boolean>({
                     <Text style={[settingsStyles.menuItemText, isActive && { color: accent }]}>
                       {opt.label}
                     </Text>
-                    {isActive ? <Ionicons name="checkmark" size={18} color={accent} /> : null}
+                    {isActive ? <Icon name="checkmark" size={18} color={accent} /> : null}
                   </Pressable>
                 );
               })}
@@ -404,8 +404,8 @@ export function SliderRow({
             {/* Two separate icons rather than `chevron-expand`, whose pair sits
                 too tight to read as two directions at a glance. */}
             <View style={settingsStyles.tunableArrows}>
-              <Ionicons name="chevron-up" size={12} color={colors.textMuted} />
-              <Ionicons
+              <Icon name="chevron-up" size={12} color={colors.textMuted} />
+              <Icon
                 name="chevron-down"
                 size={12}
                 color={colors.textMuted}
@@ -577,7 +577,7 @@ function FineTunePad({
         onTouchEnd={release}
         onTouchCancel={release}
       >
-        <Ionicons name={icon} size={28} color={spent ? colors.textMuted : colors.text} />
+        <Icon name={icon} size={28} color={spent ? colors.textMuted : colors.text} />
       </Pressable>
     );
   };

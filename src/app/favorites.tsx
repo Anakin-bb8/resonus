@@ -1,5 +1,5 @@
 /** Favorites screen: starred songs, Spotify-style. */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -231,7 +231,7 @@ export default function FavoritesScreen() {
                 toast(t('Playing next'));
               }}
             >
-              <Ionicons name="play-forward" size={24} color={colors.text} />
+              <Icon name="play-forward" size={24} color={colors.text} />
               <Text style={styles.actionText}>{t('Play next')}</Text>
             </Pressable>
             <Pressable
@@ -242,7 +242,7 @@ export default function FavoritesScreen() {
                 toast(t('Added to queue'));
               }}
             >
-              <Ionicons name="list" size={24} color={colors.text} />
+              <Icon name="list" size={24} color={colors.text} />
               <Text style={styles.actionText}>{t('Add to queue')}</Text>
             </Pressable>
             <Pressable
@@ -252,7 +252,7 @@ export default function FavoritesScreen() {
                 if (displaySongs.length > 0) setAddingSongs(displaySongs);
               }}
             >
-              <Ionicons name="add" size={24} color={colors.text} />
+              <Icon name="add" size={24} color={colors.text} />
               <Text style={styles.actionText}>{t('Add to a playlist')}</Text>
             </Pressable>
             {canAutoDownload ? (
@@ -275,7 +275,7 @@ export default function FavoritesScreen() {
                   }
                 }}
               >
-                <Ionicons
+                <Icon
                   name={autoDownload ? 'cloud-done' : 'cloud-download-outline'}
                   size={24}
                   color={autoDownload ? colors.accent : colors.text}
@@ -295,7 +295,7 @@ export default function FavoritesScreen() {
                   setConfirmDeleteDl(true);
                 }}
               >
-                <Ionicons name="trash-outline" size={24} color={colors.text} />
+                <Icon name="trash-outline" size={24} color={colors.text} />
                 <Text style={styles.actionText}>{t('Delete downloads')}</Text>
               </Pressable>
             ) : null}

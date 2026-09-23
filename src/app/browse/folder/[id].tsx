@@ -4,7 +4,7 @@
  * `getIndexes`; inner directories use `getMusicDirectory`. Reached from the
  * Library's "Folders" section (hidden by default).
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
@@ -120,7 +120,7 @@ export default function FolderBrowseScreen() {
                   </Text>
                   {item.year ? <Text style={styles.dirYear}>{item.year}</Text> : null}
                 </View>
-                <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+                <Icon name="chevron-forward" size={20} color={colors.textMuted} />
               </Pressable>
             ) : (
               <TrackRow

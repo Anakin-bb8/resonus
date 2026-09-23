@@ -6,7 +6,7 @@
  * Tapping plays, holding starts selecting: what the rows do, so switching view
  * doesn't change what your fingers already know.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { memo } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
@@ -67,7 +67,7 @@ export const SongCard = memo(function SongCard({
             would be noise on top of the artwork. */}
         {selecting ? (
           <View style={[styles.check, selected && { backgroundColor: accent }]}>
-            {selected ? <Ionicons name="checkmark" size={16} color={colors.onAccent} /> : null}
+            {selected ? <Icon name="checkmark" size={16} color={colors.onAccent} /> : null}
           </View>
         ) : null}
         {/* Dimmed rather than hidden: it is in the library, it just isn't on

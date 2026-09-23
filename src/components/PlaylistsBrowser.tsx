@@ -15,7 +15,7 @@
  * No pins. What is pinned is a thing you did to your own library, and this
  * side is the server's.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -177,7 +177,7 @@ export function PlaylistsBrowser({ embedded, actionRef, searchOpen }: BrowserPro
       {showSearch ? (
         <View style={styles.searchRow}>
           <View style={styles.searchBar}>
-            <Ionicons name="search" size={18} color={colors.textMuted} />
+            <Icon name="search" size={18} color={colors.textMuted} />
             <TextInput
               style={styles.input}
               placeholder={t('Find a playlist')}
@@ -196,7 +196,7 @@ export function PlaylistsBrowser({ embedded, actionRef, searchOpen }: BrowserPro
                 accessibilityLabel={t('Clear')}
                 onPress={() => setQuery('')}
               >
-                <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+                <Icon name="close-circle" size={18} color={colors.textMuted} />
               </Pressable>
             ) : null}
           </View>

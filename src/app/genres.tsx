@@ -3,7 +3,7 @@
  *
  * A screen of its own and, `embedded`, the Genres section of the Explore tab.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import {
@@ -89,7 +89,7 @@ export function GenresBrowser({ embedded, searchOpen }: BrowserProps) {
 
       {showSearch ? (
         <View style={styles.searchBar}>
-          <Ionicons name="search" size={18} color={colors.textMuted} />
+          <Icon name="search" size={18} color={colors.textMuted} />
           <TextInput
             style={styles.input}
             placeholder={t('Filter genres')}
@@ -102,7 +102,7 @@ export function GenresBrowser({ embedded, searchOpen }: BrowserProps) {
           />
           {query.length > 0 ? (
             <Pressable hitSlop={10} onPress={() => setQuery('')}>
-              <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+              <Icon name="close-circle" size={18} color={colors.textMuted} />
             </Pressable>
           ) : null}
         </View>

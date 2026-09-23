@@ -1,5 +1,5 @@
 /** Square cover art with placeholder when no image. */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { Image, type ImageContentFit, type ImageStyle } from 'expo-image';
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import { AppState, View, type StyleProp, type ViewStyle } from 'react-native';
@@ -15,7 +15,7 @@ interface Props {
   /** Fade when loading/switching the image (ms). 0 for instant changes. */
   transition?: number;
   /** Placeholder icon when no image (e.g. radio). */
-  placeholderIcon?: keyof typeof Ionicons.glyphMap;
+  placeholderIcon?: keyof typeof Icon.glyphMap;
   /**
    * How the artwork fills its square. Defaults to `cover` (fills and crops),
    * which is what every list, card and grid wants. The player can ask for
@@ -371,7 +371,7 @@ export function Cover({
             grey as a Home tile or a sheet, so on those it is the icon or
             nothing, and dimmer than this it read as a picture that had failed
             rather than one that was never there. */}
-        <Ionicons name={placeholderIcon} size={size * 0.4} color={colors.textSecondary} />
+        <Icon name={placeholderIcon} size={size * 0.4} color={colors.textSecondary} />
       </View>
     );
   }

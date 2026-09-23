@@ -1,6 +1,6 @@
 /** Browse all artists on the server, with quick filter. */
 /* A screen of its own and, `embedded`, the Artists section of the Explore tab. */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -228,7 +228,7 @@ export function ArtistsBrowser({ embedded, actionRef, searchOpen }: BrowserProps
       accessibilityLabel={t('View')}
       onPress={openGridMenu}
     >
-      <Ionicons name={grid ? 'grid-outline' : 'list'} size={20} color={colors.textSecondary} />
+      <Icon name={grid ? 'grid-outline' : 'list'} size={20} color={colors.textSecondary} />
     </Pressable>
   );
 
@@ -249,7 +249,7 @@ export function ArtistsBrowser({ embedded, actionRef, searchOpen }: BrowserProps
       {showSearch ? (
         <View style={styles.searchRow}>
           <View style={styles.searchBar}>
-            <Ionicons name="search" size={18} color={colors.textMuted} />
+            <Icon name="search" size={18} color={colors.textMuted} />
             <TextInput
               style={styles.input}
               placeholder={t('Filter artists')}
@@ -269,7 +269,7 @@ export function ArtistsBrowser({ embedded, actionRef, searchOpen }: BrowserProps
                 accessibilityLabel={t('Clear')}
                 onPress={() => setQuery('')}
               >
-                <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+                <Icon name="close-circle" size={18} color={colors.textMuted} />
               </Pressable>
             ) : null}
           </View>

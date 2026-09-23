@@ -2,7 +2,7 @@
  * Compact playback bar above the tab bar. Shows the current song and a
  * play/pause button; tapping it opens the player.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useEffect } from 'react';
 import { ActivityIndicator, Dimensions, Pressable, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -196,7 +196,7 @@ export function MiniPlayer() {
         {isBuffering ? (
           <ActivityIndicator size="small" color={colors.text} style={styles.spinner} />
         ) : (
-          <Ionicons
+          <Icon
             name={isPlaying ? 'pause' : 'play'}
             size={28}
             color={colors.text}

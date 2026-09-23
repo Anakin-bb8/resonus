@@ -1,5 +1,5 @@
 /** Sheet to edit a playlist: cover, name, description, and visibility. */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -125,7 +125,7 @@ export function PlaylistEditSheet({
                     ) : (
                       <View style={styles.coverBadges}>
                         <View style={styles.coverBadge}>
-                          <Ionicons name="camera" size={16} color={colors.onArtwork} />
+                          <Icon name="camera" size={16} color={colors.onArtwork} />
                         </View>
                         <Pressable
                           hitSlop={6}
@@ -134,7 +134,7 @@ export function PlaylistEditSheet({
                           onPress={() => void cover.removeCover()}
                           style={({ pressed }) => [styles.coverBadge, pressed && { opacity: 0.7 }]}
                         >
-                          <Ionicons name="trash-outline" size={16} color={colors.onArtwork} />
+                          <Icon name="trash-outline" size={16} color={colors.onArtwork} />
                         </Pressable>
                       </View>
                     )}

@@ -15,7 +15,7 @@
  * way "Your library" writes it, so nothing is lost by the menu: what the list
  * is sorted by is still readable without opening anything.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
@@ -109,7 +109,7 @@ export function BrowseToolbar<T extends string>({
           accessibilityLabel={t('Sort')}
           onPress={() => sortRef.current()}
         >
-          <Ionicons name="swap-vertical" size={18} color={colors.textSecondary} />
+          <Icon name="swap-vertical" size={18} color={colors.textSecondary} />
           <Text style={styles.sortText} numberOfLines={1}>
             {t(current.label)}
           </Text>
@@ -124,7 +124,7 @@ export function BrowseToolbar<T extends string>({
             accessibilityLabel={t('Shuffle')}
             onPress={() => void onShuffle()}
           >
-            <Ionicons name="shuffle" size={26} color={colors.textSecondary} />
+            <Icon name="shuffle" size={26} color={colors.textSecondary} />
           </Pressable>
           <Pressable
             style={[styles.playButton, { backgroundColor: accent }]}
@@ -135,7 +135,7 @@ export function BrowseToolbar<T extends string>({
             {starting ? (
               <ActivityIndicator color={colors.onAccent} />
             ) : (
-              <Ionicons name="play" size={28} color={colors.onAccent} style={{ marginLeft: 3 }} />
+              <Icon name="play" size={28} color={colors.onAccent} style={{ marginLeft: 3 }} />
             )}
           </Pressable>
         </View>

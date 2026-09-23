@@ -1,5 +1,5 @@
 /** Spotify-style Home: quick access tiles + album carousels. */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, router } from 'expo-router';
 import { useEffect, useMemo, useReducer, useState } from 'react';
@@ -594,7 +594,7 @@ function DiscoverSection({ title, reshuffleKey }: { title: string; reshuffleKey:
 /** Look and target of each chip; order and state are set by the user
  *  (Settings → Appearance → Home chips). Without `href` = plays instead of
  *  navigating (only the shuffle one). */
-const CHIPS: Record<HomeChipKey, { href?: string; icon: keyof typeof Ionicons.glyphMap; label: string }> = {
+const CHIPS: Record<HomeChipKey, { href?: string; icon: keyof typeof Icon.glyphMap; label: string }> = {
   shuffle: { icon: 'shuffle', label: 'Shuffle' },
   favorites: { href: '/favorites', icon: 'heart-outline', label: 'Favorites' },
   albums: { href: '/browse/albums', icon: 'disc-outline', label: 'Albums' },
@@ -668,7 +668,7 @@ function HomeChips({ offline }: { offline: boolean }) {
               {shuffling ? (
                 <ActivityIndicator size={16} color={colors.text} />
               ) : icons ? (
-                <Ionicons name={cfg.icon} size={16} color={colors.text} />
+                <Icon name={cfg.icon} size={16} color={colors.text} />
               ) : null}
               <Text style={styles.chipText}>{t(cfg.label)}</Text>
             </Pressable>
@@ -677,7 +677,7 @@ function HomeChips({ offline }: { offline: boolean }) {
         return (
           <Link key={key} href={cfg.href} asChild>
             <Pressable style={styles.chip}>
-              {icons ? <Ionicons name={cfg.icon} size={16} color={colors.text} /> : null}
+              {icons ? <Icon name={cfg.icon} size={16} color={colors.text} /> : null}
               <Text style={styles.chipText}>{t(cfg.label)}</Text>
             </Pressable>
           </Link>
@@ -775,7 +775,7 @@ function HomeHeaderButton({ which }: { which: HomeButtonKey }) {
           router.navigate('/search');
         }}
       >
-        <Ionicons name="search-outline" size={24} color={colors.textSecondary} />
+        <Icon name="search-outline" size={24} color={colors.textSecondary} />
       </Pressable>
     );
   }
@@ -786,7 +786,7 @@ function HomeHeaderButton({ which }: { which: HomeButtonKey }) {
   return (
     <Link href={href} asChild>
       <Pressable hitSlop={10} accessibilityLabel={t(label)}>
-        <Ionicons name={icon} size={24} color={colors.textSecondary} />
+        <Icon name={icon} size={24} color={colors.textSecondary} />
       </Pressable>
     </Link>
   );

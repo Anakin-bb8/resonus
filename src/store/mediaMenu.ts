@@ -1,12 +1,12 @@
 /** Album/playlist context menu state (long-press on cards). */
-import { type Ionicons } from '@expo/vector-icons';
+import type Icon from '@/components/Icon';
 import { create } from 'zustand';
 
 import { type Album, type Playlist } from '@/api/subsonic';
 
 /** An entry a screen adds to the album sheet, above the stock ones. */
 export type MediaMenuExtraAction = {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: keyof typeof Icon.glyphMap;
   label: string;
   onPress: () => void | Promise<void>;
 };

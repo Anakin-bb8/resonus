@@ -2,7 +2,7 @@
  * History screen in Spotify's "Recently played" style: simple top bar
  * (no hero header) and songs grouped by day.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useState } from 'react';
 import { Pressable, SectionList, Text, View } from 'react-native';
 // gesture-handler doesn't export SectionList; its ScrollView as inner scroll
@@ -93,7 +93,7 @@ export default function HistoryScreen() {
             accessibilityLabel={t('Clear history')}
             onPress={() => setConfirmClear(true)}
           >
-            <Ionicons name="trash-outline" size={22} color={colors.textSecondary} />
+            <Icon name="trash-outline" size={22} color={colors.textSecondary} />
           </Pressable>
         ) : null}
       </View>

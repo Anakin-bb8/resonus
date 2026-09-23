@@ -1,5 +1,5 @@
 /** Song row inside a list (album, playlist, search results). */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { memo, useRef } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -66,7 +66,7 @@ interface Props {
 }
 
 /** Swipe strip icon according to the configured action. */
-const SWIPE_ICON: Record<Exclude<SwipeAction, 'off'>, keyof typeof Ionicons.glyphMap> = {
+const SWIPE_ICON: Record<Exclude<SwipeAction, 'off'>, keyof typeof Icon.glyphMap> = {
   queue: 'list',
   next: 'play-forward',
   favorite: 'heart',
@@ -84,7 +84,7 @@ function SwipeActionPanel({
   side,
 }: {
   progress: SharedValue<number>;
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: keyof typeof Icon.glyphMap;
   /** Side where the strip peeks out: the icon sticks to the edge it enters from. */
   side: 'left' | 'right';
 }) {
@@ -97,7 +97,7 @@ function SwipeActionPanel({
         visible,
       ]}
     >
-      <Ionicons name={icon} size={22} color={colors.onAccent} />
+      <Icon name={icon} size={22} color={colors.onAccent} />
     </Reanimated.View>
   );
 }
@@ -255,7 +255,7 @@ function TrackRowBase({
       onLongPress={onLongPress}
     >
       {selecting ? (
-        <Ionicons
+        <Icon
           name={selected ? 'checkmark-circle' : 'ellipse-outline'}
           size={22}
           color={selected ? colors.accent : colors.textMuted}
@@ -301,7 +301,7 @@ function TrackRowBase({
         {downloaded || explicit || song.artist ? (
           <View style={styles.subRow}>
             {downloaded ? (
-              <Ionicons name="arrow-down-circle" size={13} color={colors.accent} />
+              <Icon name="arrow-down-circle" size={13} color={colors.accent} />
             ) : null}
             {/* Ahead of the name, like every other player draws it: the badge
                 is about the track, and an artist name long enough to be cut
@@ -322,7 +322,7 @@ function TrackRowBase({
       {showRating && song.userRating ? (
         <View style={styles.rating} accessibilityLabel={t('Rate {n} stars', { n: song.userRating })}>
           {Array.from({ length: song.userRating }).map((_, i) => (
-            <Ionicons key={i} name="star" size={12} color={colors.accent} />
+            <Icon key={i} name="star" size={12} color={colors.accent} />
           ))}
         </View>
       ) : null}
@@ -335,7 +335,7 @@ function TrackRowBase({
           accessibilityLabel={t('More options')}
           onPress={() => openMenu(song, menuContext)}
         >
-          <Ionicons name="ellipsis-horizontal" size={18} color={colors.textSecondary} />
+          <Icon name="ellipsis-horizontal" size={18} color={colors.textSecondary} />
         </Pressable>
       ) : null}
     </AnimatedPressable>

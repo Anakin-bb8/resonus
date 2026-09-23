@@ -10,7 +10,7 @@
  * opens it, and the back arrow still knows where it came from. What goes is
  * the way in from the bar.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { Pressable, Switch, Text, View } from 'react-native';
 import ReorderableList, {
   useReorderableDrag,
@@ -55,7 +55,7 @@ function TabRow({ tab }: { tab: BottomTab }) {
         accessibilityRole="button"
         accessibilityLabel={t('Reorder')}
       >
-        <Ionicons name="reorder-two" size={24} color={colors.textSecondary} />
+        <Icon name="reorder-two" size={24} color={colors.textSecondary} />
       </Pressable>
       <Text style={styles.label}>{t(label)}</Text>
       {fixed ? (

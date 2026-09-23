@@ -9,7 +9,7 @@
  * belongs where the choice is made, so nobody picks it and then wonders whether
  * what they are looking at is on purpose.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { SelectList, SettingsPage, settingsStyles } from '@/components/SettingsUI';
@@ -39,7 +39,7 @@ function Swatches({ value, onPick }: { value: string; onPick: (hex: string) => v
                 of whichever one is picked (see `readableOn` in the theme):
                 the same colour, taken down to where it can be read on
                 white. */}
-            {active ? <Ionicons name="checkmark" size={24} color="#000" /> : null}
+            {active ? <Icon name="checkmark" size={24} color="#000" /> : null}
           </Pressable>
         );
       })}

@@ -4,7 +4,7 @@
  * favorites, and random from the library) + a search bar at the bottom. Each
  * row has a ⊕ to favorite the song instantly (and ✓ to undo).
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -162,7 +162,7 @@ export default function FavoritesAddScreen() {
           accessibilityLabel={t('Close')}
           onPress={() => router.back()}
         >
-          <Ionicons name="chevron-back" size={28} color={colors.text} />
+          <Icon name="chevron-back" size={28} color={colors.text} />
         </Pressable>
         <Text style={styles.title} numberOfLines={1}>
           {t('Add to favorites')}
@@ -172,7 +172,7 @@ export default function FavoritesAddScreen() {
 
       <View style={styles.searchWrap}>
         <View style={styles.searchBox}>
-          <Ionicons name="search" size={18} color={colors.textSecondary} />
+          <Icon name="search" size={18} color={colors.textSecondary} />
           <TextInput
             style={styles.searchInput}
             placeholder={t('What would you like to add?')}
@@ -189,7 +189,7 @@ export default function FavoritesAddScreen() {
               accessibilityLabel={t('Clear')}
               onPress={() => setQuery('')}
             >
-              <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+              <Icon name="close-circle" size={18} color={colors.textSecondary} />
             </Pressable>
           ) : null}
         </View>
@@ -278,7 +278,7 @@ function AddRow({
         accessibilityLabel={added ? t('Removed from favorites') : t('Add to favorites')}
         onPress={onToggle}
       >
-        <Ionicons
+        <Icon
           name={added ? 'checkmark-circle' : 'add-circle-outline'}
           size={28}
           color={added ? colors.accent : colors.textSecondary}

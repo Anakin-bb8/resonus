@@ -24,7 +24,7 @@
  * "Downloaded" among the fields, neither of which a paged list can honestly
  * offer.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
@@ -231,7 +231,7 @@ export default function ArtistSongsScreen() {
       <View style={styles.header}>
         {selecting ? (
           <Pressable hitSlop={10} onPress={() => setSelectedIds(null)} accessibilityLabel={t('Close')}>
-            <Ionicons name="close" size={26} color={colors.text} />
+            <Icon name="close" size={26} color={colors.text} />
           </Pressable>
         ) : (
           <BackChevron />
@@ -250,7 +250,7 @@ export default function ArtistSongsScreen() {
               )
             }
           >
-            <Ionicons
+            <Icon
               name="checkmark-done"
               size={24}
               color={shown.length > 0 && selectedIds.size === shown.length ? accent : colors.text}
@@ -282,7 +282,7 @@ export default function ArtistSongsScreen() {
                     </Text>
                   </>
                 ) : (
-                  <Ionicons
+                  <Icon
                     name="arrow-down-circle-outline"
                     size={26}
                     color={colors.textSecondary}
@@ -297,7 +297,7 @@ export default function ArtistSongsScreen() {
                 accessibilityLabel={t('Sort')}
                 onPress={openSort}
               >
-                <Ionicons name="swap-vertical" size={24} color={colors.textSecondary} />
+                <Icon name="swap-vertical" size={24} color={colors.textSecondary} />
               </Pressable>
             ) : null}
             <Pressable
@@ -306,7 +306,7 @@ export default function ArtistSongsScreen() {
               accessibilityLabel={t('More options')}
               onPress={() => menuRef.current()}
             >
-              <Ionicons name="ellipsis-horizontal" size={26} color={colors.textSecondary} />
+              <Icon name="ellipsis-horizontal" size={26} color={colors.textSecondary} />
             </Pressable>
           </View>
           <View style={styles.playRow}>
@@ -315,7 +315,7 @@ export default function ArtistSongsScreen() {
               accessibilityLabel={t('Shuffle')}
               onPress={() => void playQueue(shown, 0, name, `/artist/${id}`, { shuffled: true })}
             >
-              <Ionicons name="shuffle" size={26} color={colors.textSecondary} />
+              <Icon name="shuffle" size={26} color={colors.textSecondary} />
             </Pressable>
             <Pressable
               style={[styles.playButton, { backgroundColor: accent }]}
@@ -323,7 +323,7 @@ export default function ArtistSongsScreen() {
               accessibilityLabel={t('Play')}
               onPress={() => void playQueue(shown, 0, name, `/artist/${id}`)}
             >
-              <Ionicons name="play" size={28} color={colors.onAccent} style={{ marginLeft: 3 }} />
+              <Icon name="play" size={28} color={colors.onAccent} style={{ marginLeft: 3 }} />
             </Pressable>
           </View>
         </View>
@@ -418,7 +418,7 @@ export default function ArtistSongsScreen() {
                 openPlaylistPicker(all);
               }}
             >
-              <Ionicons name="add-circle-outline" size={22} color={colors.text} />
+              <Icon name="add-circle-outline" size={22} color={colors.text} />
               <Text style={styles.actionText}>{t('Add to a playlist')}</Text>
             </Pressable>
             <Pressable
@@ -430,7 +430,7 @@ export default function ArtistSongsScreen() {
             >
               {/* Last, but not in red: a download comes back with one tap, and
                   red is kept for what does not, like deleting a playlist. */}
-              <Ionicons name="trash-outline" size={22} color={colors.text} />
+              <Icon name="trash-outline" size={22} color={colors.text} />
               <Text style={styles.actionText}>{t('Delete downloads')}</Text>
             </Pressable>
           </>

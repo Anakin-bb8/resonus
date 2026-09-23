@@ -3,7 +3,7 @@
  * like Spotify's "Liked Songs". The Favorites screen header uses the darkened
  * indigo (see HEADER_COLOR there).
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { radius } from '@/theme';
@@ -22,7 +22,7 @@ export function FavoritesArt({ size }: { size: number }) {
         justifyContent: 'center',
       }}
     >
-      <Ionicons name="heart" size={size * 0.45} color="#fff" />
+      <Icon name="heart" size={size * 0.45} color="#fff" />
     </LinearGradient>
   );
 }

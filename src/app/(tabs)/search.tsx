@@ -1,5 +1,5 @@
 /** Album and song search on the server. */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useFocusEffect, useNavigation } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -269,7 +269,7 @@ export default function SearchScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.searchBar}>
-        <Ionicons name="search" size={20} color={colors.textMuted} />
+        <Icon name="search" size={20} color={colors.textMuted} />
         <TextInput
           ref={inputRef}
           style={styles.input}
@@ -285,7 +285,7 @@ export default function SearchScreen() {
         />
         {query.length > 0 ? (
           <Pressable hitSlop={10} accessibilityLabel={t('Clear')} onPress={() => setQuery('')}>
-            <Ionicons name="close-circle" size={20} color={colors.textMuted} />
+            <Icon name="close-circle" size={20} color={colors.textMuted} />
           </Pressable>
         ) : null}
         <OfflineIndicator />
@@ -355,7 +355,7 @@ export default function SearchScreen() {
                       accessibilityLabel={t('Clear')}
                       onPress={() => removeRecent(item)}
                     >
-                      <Ionicons name="close" size={20} color={colors.textMuted} />
+                      <Icon name="close" size={20} color={colors.textMuted} />
                     </Pressable>
                   </Pressable>
                 </Link>

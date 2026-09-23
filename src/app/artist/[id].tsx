@@ -1,5 +1,5 @@
 /** Artist detail, Spotify-style: large header, actions, sections. */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
@@ -455,7 +455,7 @@ export default function ArtistScreen() {
                   ) : null}
                 </>
               ) : (
-                <Ionicons name="arrow-down-circle-outline" size={26} color={colors.textSecondary} />
+                <Icon name="arrow-down-circle-outline" size={26} color={colors.textSecondary} />
               )}
             </Pressable>
           ) : null}
@@ -471,7 +471,7 @@ export default function ArtistScreen() {
                 menuRef.current();
               }}
             >
-              <Ionicons name="ellipsis-horizontal" size={26} color={colors.text} />
+              <Icon name="ellipsis-horizontal" size={26} color={colors.text} />
             </Pressable>
           ) : null}
           <View style={{ flex: 1 }} />
@@ -485,7 +485,7 @@ export default function ArtistScreen() {
             {shuffling ? (
               <ActivityIndicator size="small" color={colors.text} />
             ) : (
-              <Ionicons name="shuffle" size={26} color={shuffleActive ? colors.accent : colors.text} />
+              <Icon name="shuffle" size={26} color={shuffleActive ? colors.accent : colors.text} />
             )}
           </Pressable>
           <Pressable
@@ -509,7 +509,7 @@ export default function ArtistScreen() {
             {starting ? (
               <ActivityIndicator size="small" color={colors.onAccent} />
             ) : (
-              <Ionicons
+              <Icon
                 name={showPause ? 'pause' : 'play'}
                 size={28}
                 color={colors.onAccent}
@@ -698,7 +698,7 @@ export default function ArtistScreen() {
           menuMode === 'rating' ? (
             <View>
               <Pressable style={styles.action} onPress={() => setMenuMode('actions')}>
-                <Ionicons name="chevron-back" size={24} color={colors.text} />
+                <Icon name="chevron-back" size={24} color={colors.text} />
                 <Text style={styles.actionText}>{t('Rate')}</Text>
               </Pressable>
               <View style={styles.ratingRow}>
@@ -728,7 +728,7 @@ export default function ArtistScreen() {
                   void playDiscography();
                 }}
               >
-                <Ionicons name="play" size={24} color={colors.text} />
+                <Icon name="play" size={24} color={colors.text} />
                 <Text style={styles.actionText}>{t('Play discography')}</Text>
               </Pressable>
               {/* The way back to the one undivided list the discography was
@@ -750,7 +750,7 @@ export default function ArtistScreen() {
                     router.push(`/artist/discography/${id}`);
                   }}
                 >
-                  <Ionicons name="albums-outline" size={24} color={colors.text} />
+                  <Icon name="albums-outline" size={24} color={colors.text} />
                   <Text style={styles.actionText}>{t('All releases')}</Text>
                 </Pressable>
               ) : null}
@@ -761,7 +761,7 @@ export default function ArtistScreen() {
                   void addToPlaylist();
                 }}
               >
-                <Ionicons name="add" size={24} color={colors.text} />
+                <Icon name="add" size={24} color={colors.text} />
                 <Text style={styles.actionText}>{t('Add to a playlist')}</Text>
               </Pressable>
               {canRate ? (
@@ -769,7 +769,7 @@ export default function ArtistScreen() {
                   style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
                   onPress={() => setMenuMode('rating')}
                 >
-                  <Ionicons name="star-outline" size={24} color={colors.text} />
+                  <Icon name="star-outline" size={24} color={colors.text} />
                   <Text style={styles.actionText}>{t('Rate')}</Text>
                 </Pressable>
               ) : null}
@@ -790,7 +790,7 @@ export default function ArtistScreen() {
                     setConfirmDeleteDl(true);
                   }}
                 >
-                  <Ionicons name="trash-outline" size={24} color={colors.text} />
+                  <Icon name="trash-outline" size={24} color={colors.text} />
                   <Text style={styles.actionText}>{t('Delete downloads')}</Text>
                 </Pressable>
               ) : null}

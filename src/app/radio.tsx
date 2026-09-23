@@ -3,8 +3,7 @@
  *
  * A screen of its own and, `embedded`, the Radio section of the Explore tab.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Icon from '@/components/Icon';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -177,7 +176,7 @@ export function RadioBrowser({ embedded, actionRef, searchOpen }: BrowserProps) 
       onPress={() => setEditForm({ station: null })}
       accessibilityLabel={t('Add station')}
     >
-      <Ionicons name="add" size={28} color={colors.text} />
+      <Icon name="add" size={28} color={colors.text} />
     </Pressable>
   ) : null;
 
@@ -193,7 +192,7 @@ export function RadioBrowser({ embedded, actionRef, searchOpen }: BrowserProps) 
 
       {(embedded ? boxOpen : showSearch) ? (
         <View style={styles.searchBar}>
-          <Ionicons name="search" size={18} color={colors.textMuted} />
+          <Icon name="search" size={18} color={colors.textMuted} />
           <TextInput
             style={styles.searchInput}
             placeholder={t('Find a station')}
@@ -206,7 +205,7 @@ export function RadioBrowser({ embedded, actionRef, searchOpen }: BrowserProps) 
           />
           {query ? (
             <Pressable hitSlop={8} onPress={() => setQuery('')} accessibilityLabel={t('Clear')}>
-              <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+              <Icon name="close-circle" size={18} color={colors.textMuted} />
             </Pressable>
           ) : null}
         </View>
@@ -262,11 +261,10 @@ export function RadioBrowser({ embedded, actionRef, searchOpen }: BrowserProps) 
                 <View style={{ flex: 1 }}>
                   <View style={styles.rowTitleLine}>
                     {pins[`radio:${item.id}`] ? (
-                      <MaterialCommunityIcons
+                      <Icon
                         name="pin"
                         size={13}
                         color={colors.accent}
-                        style={styles.pinIcon}
                       />
                     ) : null}
                     <Text
@@ -283,7 +281,7 @@ export function RadioBrowser({ embedded, actionRef, searchOpen }: BrowserProps) 
                 {/* Always: pinning is ours and works on any server, so there is
                     always something in the menu even where editing is not. */}
                 <Pressable hitSlop={8} onPress={() => setMenu(item)} accessibilityLabel={t('More')}>
-                  <Ionicons name="ellipsis-horizontal" size={22} color={colors.textSecondary} />
+                  <Icon name="ellipsis-horizontal" size={22} color={colors.textSecondary} />
                 </Pressable>
               </Pressable>
             );
@@ -341,11 +339,10 @@ export function RadioBrowser({ embedded, actionRef, searchOpen }: BrowserProps) 
               }
             }}
           >
-            <MaterialCommunityIcons
+            <Icon
               name={menu && pins[`radio:${menu.id}`] ? 'pin' : 'pin-outline'}
               size={24}
               color={colors.text}
-              style={styles.pinIcon}
             />
             <Text style={styles.actionText}>
               {menu && pins[`radio:${menu.id}`] ? t('Unpin') : t('Pin to top')}
@@ -361,7 +358,7 @@ export function RadioBrowser({ embedded, actionRef, searchOpen }: BrowserProps) 
                   setEditForm({ station });
                 }}
               >
-                <Ionicons name="create-outline" size={24} color={colors.text} />
+                <Icon name="create-outline" size={24} color={colors.text} />
                 <Text style={styles.actionText}>{t('Edit station')}</Text>
               </Pressable>
               <Pressable
@@ -372,7 +369,7 @@ export function RadioBrowser({ embedded, actionRef, searchOpen }: BrowserProps) 
                   setDeleting(station);
                 }}
               >
-                <Ionicons name="trash-outline" size={24} color={colors.danger} />
+                <Icon name="trash-outline" size={24} color={colors.danger} />
                 <Text style={[styles.actionText, { color: colors.danger }]}>
                   {t('Delete station')}
                 </Text>
@@ -410,7 +407,6 @@ const styles = themed((colors) => ({
   rowTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '600', flexShrink: 1 },
   // The MCI pin comes vertical; rotated 45° it looks like Spotify's, which is
   // how it is drawn everywhere else in the app.
-  pinIcon: { transform: [{ rotate: '45deg' }] },
   rowSub: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2 },
   // The box "Your library" has, to the same measurements, which is what every
   // section of Explore now opens.

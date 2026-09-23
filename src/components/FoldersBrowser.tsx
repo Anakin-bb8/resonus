@@ -9,7 +9,7 @@
  * A server that declares no libraries still has a tree, so it gets one root
  * entry rather than an empty screen.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
@@ -58,13 +58,13 @@ export function FoldersBrowser() {
             })
           }
         >
-          <Ionicons name="folder" size={44} color={colors.accent} />
+          <Icon name="folder" size={44} color={colors.accent} />
           <View style={styles.rowInfo}>
             <Text style={styles.rowTitle} numberOfLines={1}>
               {item.name}
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+          <Icon name="chevron-forward" size={20} color={colors.textMuted} />
         </Pressable>
       )}
     />

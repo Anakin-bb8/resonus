@@ -1,5 +1,5 @@
 /** Sign in: server type selection + credentials. */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { Image } from 'expo-image';
 import { useState } from 'react';
 import {
@@ -75,7 +75,7 @@ function ProfileRow({ profile, onTap, onRemove }: {
       <View style={styles.profileRow}>
         <Pressable style={styles.profileMain} onPress={onTap}>
           <View style={styles.offlineIcon}>
-            <Ionicons name="phone-portrait-outline" size={22} color={colors.accent} />
+            <Icon name="phone-portrait-outline" size={22} color={colors.accent} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.profileUser} numberOfLines={1}>
@@ -87,7 +87,7 @@ function ProfileRow({ profile, onTap, onRemove }: {
           </View>
         </Pressable>
         <Pressable hitSlop={10} onPress={onRemove}>
-          <Ionicons name="close" size={20} color={colors.textMuted} />
+          <Icon name="close" size={20} color={colors.textMuted} />
         </Pressable>
       </View>
     );
@@ -110,7 +110,7 @@ function ProfileRow({ profile, onTap, onRemove }: {
         </View>
       </Pressable>
       <Pressable hitSlop={10} onPress={onRemove}>
-        <Ionicons name="close" size={20} color={colors.textMuted} />
+        <Icon name="close" size={20} color={colors.textMuted} />
       </Pressable>
     </View>
   );
@@ -245,7 +245,7 @@ export default function LoginScreen() {
                   accessibilityLabel={t('Language')}
                   onPress={() => setShowLanguages(true)}
                 >
-                  <Ionicons name="globe-outline" size={16} color={colors.textSecondary} />
+                  <Icon name="globe-outline" size={16} color={colors.textSecondary} />
                   <Text style={styles.langBtnText}>{LANGUAGE_NAME[language]}</Text>
                 </Pressable>
               </View>
@@ -270,14 +270,14 @@ export default function LoginScreen() {
                       <Text style={styles.showMoreText}>{t('Show all')}</Text>
                       {/* The brand green, not the accent: on login the accent
                           may still be a previous session's. */}
-                      <Ionicons name="chevron-down" size={18} color={colors.brand} />
+                      <Icon name="chevron-down" size={18} color={colors.brand} />
                     </Pressable>
                   ) : null}
                 </View>
               ) : null}
 
               <Pressable style={styles.addAccount} onPress={() => setStep('server')}>
-                <Ionicons name="add" size={22} color={colors.background} />
+                <Icon name="add" size={22} color={colors.background} />
                 <Text style={styles.addAccountText}>{t('Add profile')}</Text>
               </Pressable>
             </>
@@ -290,7 +290,7 @@ export default function LoginScreen() {
                   hitSlop={12}
                   accessibilityLabel={t('Back')}
                 >
-                  <Ionicons name="chevron-back" size={26} color={colors.text} />
+                  <Icon name="chevron-back" size={26} color={colors.text} />
                 </Pressable>
               </View>
               <Text style={styles.stepTitle}>{t('Add profile')}</Text>
@@ -313,13 +313,13 @@ export default function LoginScreen() {
                       <Text style={styles.srvSub}>{t(s.sub)}</Text>
                     </View>
                     {s.soon ? null : (
-                      <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+                      <Icon name="chevron-forward" size={20} color={colors.textMuted} />
                     )}
                   </Pressable>
                 ))}
                 <Pressable style={styles.srvRow} onPress={() => pickServer('local')}>
                   <View style={styles.srvLocalIcon}>
-                    <Ionicons name="phone-portrait-outline" size={26} color={colors.accent} />
+                    <Icon name="phone-portrait-outline" size={26} color={colors.accent} />
                   </View>
                   <View style={{ flex: 1 }}>
                     {/* The same name the profile gets once it exists (the row
@@ -328,7 +328,7 @@ export default function LoginScreen() {
                     <Text style={styles.srvName}>{t('Local profile')}</Text>
                     <Text style={styles.srvSub}>{t('Music on your device')}</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+                  <Icon name="chevron-forward" size={20} color={colors.textMuted} />
                 </Pressable>
               </View>
             </>
@@ -341,12 +341,12 @@ export default function LoginScreen() {
                   hitSlop={12}
                   accessibilityLabel={t('Back')}
                 >
-                  <Ionicons name="chevron-back" size={26} color={colors.text} />
+                  <Icon name="chevron-back" size={26} color={colors.text} />
                 </Pressable>
               </View>
               <View style={styles.serverHero}>
                 {isLocal ? (
-                  <Ionicons name="phone-portrait-outline" size={44} color={colors.accent} />
+                  <Icon name="phone-portrait-outline" size={44} color={colors.accent} />
                 ) : (
                   <Image
                     source={SERVERS.find((s) => s.key === server)?.logo ?? SERVERS[0].logo}
@@ -363,27 +363,27 @@ export default function LoginScreen() {
                   </Text>
 
                   <Pressable style={styles.localOption} onPress={startLocalFolder}>
-                    <Ionicons name="folder-outline" size={26} color={colors.accent} />
+                    <Icon name="folder-outline" size={26} color={colors.accent} />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.localOptTitle}>{t('Choose a folder (recommended)')}</Text>
                       <Text style={styles.localOptSub}>{t('Only the music in the folder you choose.')}</Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+                    <Icon name="chevron-forward" size={20} color={colors.textMuted} />
                   </Pressable>
 
                   <Pressable style={styles.localOption} onPress={startLocalDevice}>
-                    <Ionicons name="phone-portrait-outline" size={26} color={colors.accent} />
+                    <Icon name="phone-portrait-outline" size={26} color={colors.accent} />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.localOptTitle}>{t('Scan the whole phone')}</Text>
                       <Text style={styles.localOptSub}>{t('All the music on your device.')}</Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+                    <Icon name="chevron-forward" size={20} color={colors.textMuted} />
                   </Pressable>
                 </View>
               ) : (
                 <View style={styles.form}>
                   <View style={styles.inputRow}>
-                    <Ionicons name="globe-outline" size={20} color={colors.textMuted} />
+                    <Icon name="globe-outline" size={20} color={colors.textMuted} />
                     <TextInput
                       style={styles.inputFlex}
                        placeholder="https://my-music-server.com"
@@ -396,7 +396,7 @@ export default function LoginScreen() {
                     />
                   </View>
                   <View style={styles.inputRow}>
-                    <Ionicons name="person-outline" size={20} color={colors.textMuted} />
+                    <Icon name="person-outline" size={20} color={colors.textMuted} />
                     <TextInput
                       style={styles.inputFlex}
                       placeholder={t('Username')}
@@ -408,7 +408,7 @@ export default function LoginScreen() {
                     />
                   </View>
                   <View style={styles.inputRow}>
-                    <Ionicons name="lock-closed-outline" size={20} color={colors.textMuted} />
+                    <Icon name="lock-closed-outline" size={20} color={colors.textMuted} />
                     <TextInput
                       style={styles.inputFlex}
                       placeholder={t('Password')}
@@ -428,7 +428,7 @@ export default function LoginScreen() {
                         onPress={() => setShowAdvanced((v) => !v)}
                       >
                         <Text style={styles.advancedLink}>{t('Advanced')}</Text>
-                        <Ionicons
+                        <Icon
                           name={showAdvanced ? 'chevron-up' : 'chevron-down'}
                           size={16}
                           color={colors.textSecondary}
@@ -537,7 +537,7 @@ export default function LoginScreen() {
                 {l.code === language ? (
                   // The brand green, like the chevron above: the accent here
                   // may still be a profile's that is not open yet.
-                  <Ionicons name="checkmark" size={20} color={colors.brand} />
+                  <Icon name="checkmark" size={20} color={colors.brand} />
                 ) : null}
               </Pressable>
             ))}

@@ -14,7 +14,7 @@
  * six-figure library is not something anybody scrolls, and pulling it down to
  * sort it on the phone is not something a phone can do.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -262,7 +262,7 @@ export function SongsBrowser({ embedded, actionRef, searchOpen }: BrowserProps) 
       accessibilityLabel={t('View')}
       onPress={openGridMenu}
     >
-      <Ionicons name={grid ? 'grid-outline' : 'list'} size={22} color={colors.textSecondary} />
+      <Icon name={grid ? 'grid-outline' : 'list'} size={22} color={colors.textSecondary} />
     </Pressable>
   );
   const selectAll = !selecting ? null : (
@@ -276,7 +276,7 @@ export function SongsBrowser({ embedded, actionRef, searchOpen }: BrowserProps) 
         )
       }
     >
-      <Ionicons
+      <Icon
         name="checkmark-done"
         size={24}
         color={songs.length > 0 && selectedIds.size === songs.length ? accent : colors.text}
@@ -301,7 +301,7 @@ export function SongsBrowser({ embedded, actionRef, searchOpen }: BrowserProps) 
               onPress={() => setSelectedIds(null)}
               accessibilityLabel={t('Close')}
             >
-              <Ionicons name="close" size={26} color={colors.text} />
+              <Icon name="close" size={26} color={colors.text} />
             </Pressable>
           ) : embedded ? null : (
             <BackChevron />
@@ -323,7 +323,7 @@ export function SongsBrowser({ embedded, actionRef, searchOpen }: BrowserProps) 
       {showSearch ? (
         <View style={styles.searchRow}>
           <View style={styles.searchBar}>
-            <Ionicons name="search" size={18} color={colors.textMuted} />
+            <Icon name="search" size={18} color={colors.textMuted} />
             <TextInput
               style={styles.input}
               placeholder={t('Find a song')}
@@ -343,7 +343,7 @@ export function SongsBrowser({ embedded, actionRef, searchOpen }: BrowserProps) 
                 accessibilityLabel={t('Clear')}
                 onPress={() => setQuery('')}
               >
-                <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+                <Icon name="close-circle" size={18} color={colors.textMuted} />
               </Pressable>
             ) : null}
           </View>

@@ -5,7 +5,7 @@
  * can hold songs tagged otherwise, and a song of this genre can sit inside an
  * album that isn't. Albums alone would only ever show half the picture.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
@@ -345,7 +345,7 @@ export default function GenreScreen() {
             long press out of here belongs to the chevron. */}
         {selecting ? (
           <Pressable hitSlop={10} onPress={() => setSelectedIds(null)} accessibilityLabel={t('Close')}>
-            <Ionicons name="close" size={26} color={colors.text} />
+            <Icon name="close" size={26} color={colors.text} />
           </Pressable>
         ) : (
           <BackChevron />
@@ -364,7 +364,7 @@ export default function GenreScreen() {
               )
             }
           >
-            <Ionicons
+            <Icon
               name="checkmark-done"
               size={24}
               // From the setting, like the artist's song list draws the same
@@ -386,7 +386,7 @@ export default function GenreScreen() {
                 would give you. It used to be the second, which is how a button
                 that flips between two states reads; it opens a menu now, and a
                 menu is opened from a thing that says where you are. */}
-            <Ionicons name={grid ? 'grid-outline' : 'list'} size={22} color={colors.textSecondary} />
+            <Icon name={grid ? 'grid-outline' : 'list'} size={22} color={colors.textSecondary} />
           </Pressable>
         ) : null}
       </View>
@@ -425,7 +425,7 @@ export default function GenreScreen() {
                     </Text>
                   </>
                 ) : (
-                  <Ionicons
+                  <Icon
                     name="arrow-down-circle-outline"
                     size={26}
                     color={colors.textSecondary}
@@ -443,7 +443,7 @@ export default function GenreScreen() {
                 accessibilityLabel={t('Sort')}
                 onPress={openListSort}
               >
-                <Ionicons name="swap-vertical" size={24} color={colors.textSecondary} />
+                <Icon name="swap-vertical" size={24} color={colors.textSecondary} />
               </Pressable>
             ) : null}
             <Pressable
@@ -452,12 +452,12 @@ export default function GenreScreen() {
               accessibilityLabel={t('More options')}
               onPress={() => menuRef.current()}
             >
-              <Ionicons name="ellipsis-horizontal" size={26} color={colors.textSecondary} />
+              <Icon name="ellipsis-horizontal" size={26} color={colors.textSecondary} />
             </Pressable>
           </View>
           <View style={styles.playRow}>
             <Pressable hitSlop={10} onPress={onShuffle} accessibilityLabel={t('Shuffle')}>
-              <Ionicons name="shuffle" size={26} color={colors.textSecondary} />
+              <Icon name="shuffle" size={26} color={colors.textSecondary} />
             </Pressable>
             <Pressable
               style={[styles.playButton, { backgroundColor: accent }]}
@@ -468,7 +468,7 @@ export default function GenreScreen() {
               {starting ? (
                 <ActivityIndicator color={colors.onAccent} />
               ) : (
-                <Ionicons name="play" size={28} color={colors.onAccent} style={{ marginLeft: 3 }} />
+                <Icon name="play" size={28} color={colors.onAccent} style={{ marginLeft: 3 }} />
               )}
             </Pressable>
           </View>
@@ -649,7 +649,7 @@ export default function GenreScreen() {
                 void addGenreToPlaylist();
               }}
             >
-              <Ionicons name="add-circle-outline" size={22} color={colors.text} />
+              <Icon name="add-circle-outline" size={22} color={colors.text} />
               <Text style={styles.actionText}>{t('Add to a playlist')}</Text>
             </Pressable>
             {/* Shown whatever is on disk: this screen holds a window into the
@@ -666,7 +666,7 @@ export default function GenreScreen() {
             >
               {/* Last, but not in red: a download comes back with one tap, and
                   red is kept for what does not, like deleting a playlist. */}
-              <Ionicons name="trash-outline" size={22} color={colors.text} />
+              <Icon name="trash-outline" size={22} color={colors.text} />
               <Text style={styles.actionText}>{t('Delete downloads')}</Text>
             </Pressable>
           </>

@@ -1,5 +1,5 @@
 /** Full-screen player (modal): cover art, progress and controls. */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -117,7 +117,7 @@ function CircleButton({
   label,
   onPress,
 }: {
-  name: keyof typeof Ionicons.glyphMap;
+  name: keyof typeof Icon.glyphMap;
   label: string;
   onPress: (e: GestureResponderEvent) => void;
 }) {
@@ -129,7 +129,7 @@ function CircleButton({
       accessibilityLabel={label}
       onPress={onPress}
     >
-      <Ionicons name={name} size={22} color={colors.text} />
+      <Icon name={name} size={22} color={colors.text} />
     </Pressable>
   );
 }
@@ -1210,7 +1210,7 @@ export default function PlayerScreen() {
               accessibilityLabel={t('Shuffle')}
               onPress={toggleShuffle}
             >
-              <Ionicons
+              <Icon
                 name="shuffle"
                 size={26}
                 color={shuffle ? colors.accent : colors.text}
@@ -1222,7 +1222,7 @@ export default function PlayerScreen() {
               accessibilityLabel={t('Previous')}
               onPress={previous}
             >
-              <Ionicons name="play-skip-back" size={34} color={colors.text} />
+              <Icon name="play-skip-back" size={34} color={colors.text} />
             </Pressable>
             {seekButtonsSec > 0 ? (
               <Pressable
@@ -1265,7 +1265,7 @@ export default function PlayerScreen() {
               {isBuffering ? (
                 <ActivityIndicator size="small" color={colors.onInverse} />
               ) : (
-                <Ionicons
+                <Icon
                   name={isPlaying ? 'pause' : 'play'}
                   size={34}
                   color={colors.onInverse}
@@ -1301,7 +1301,7 @@ export default function PlayerScreen() {
               accessibilityLabel={t('Next')}
               onPress={next}
             >
-              <Ionicons name="play-skip-forward" size={34} color={colors.text} />
+              <Icon name="play-skip-forward" size={34} color={colors.text} />
             </Pressable>
             <Pressable
               hitSlop={10}

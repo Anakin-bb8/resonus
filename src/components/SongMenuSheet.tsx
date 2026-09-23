@@ -1,5 +1,5 @@
 /** Bottom sheet with actions for a song (⋯ menu). */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -102,7 +102,7 @@ function Action({
   label,
   onPress,
 }: {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: keyof typeof Icon.glyphMap;
   label: string;
   onPress: () => void;
 }) {
@@ -111,7 +111,7 @@ function Action({
       style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
       onPress={onPress}
     >
-      <Ionicons name={icon} size={24} color={colors.text} />
+      <Icon name={icon} size={24} color={colors.text} />
       <Text style={styles.actionText}>{label}</Text>
     </Pressable>
   );
@@ -388,7 +388,7 @@ export function SongMenuSheet() {
                     style={styles.action}
                     onPress={() => setMode('actions')}
                   >
-                    <Ionicons name="chevron-back" size={24} color={colors.text} />
+                    <Icon name="chevron-back" size={24} color={colors.text} />
                     <Text style={styles.actionText}>{t('Add to a playlist')}</Text>
                   </Pressable>
                   <Pressable
@@ -396,7 +396,7 @@ export function SongMenuSheet() {
                     onPress={() => setCreating(true)}
                   >
                     <View style={styles.newPlaylistIcon}>
-                      <Ionicons name="add" size={24} color={colors.text} />
+                      <Icon name="add" size={24} color={colors.text} />
                     </View>
                     <Text style={styles.actionText}>{t('New playlist')}</Text>
                   </Pressable>
@@ -422,7 +422,7 @@ export function SongMenuSheet() {
               ) : mode === 'sleep' ? (
                 <View>
                   <Pressable style={styles.action} onPress={() => setMode('actions')}>
-                    <Ionicons name="chevron-back" size={24} color={colors.text} />
+                    <Icon name="chevron-back" size={24} color={colors.text} />
                     <Text style={styles.actionText}>{t('Sleep timer')}</Text>
                   </Pressable>
                   {[15, 30, 45, 60].map((m) => (
@@ -435,7 +435,7 @@ export function SongMenuSheet() {
                         close();
                       }}
                     >
-                      <Ionicons name="time-outline" size={24} color={colors.text} />
+                      <Icon name="time-outline" size={24} color={colors.text} />
                       <Text style={styles.actionText}>{t('{n} minutes', { n: m })}</Text>
                     </Pressable>
                   ))}
@@ -447,7 +447,7 @@ export function SongMenuSheet() {
                       close();
                     }}
                   >
-                    <Ionicons name="musical-note-outline" size={24} color={colors.text} />
+                    <Icon name="musical-note-outline" size={24} color={colors.text} />
                     <Text style={styles.actionText}>{t('When the song ends')}</Text>
                   </Pressable>
                   {sleepEndsAt || sleepAtSongEnd ? (
@@ -459,7 +459,7 @@ export function SongMenuSheet() {
                         close();
                       }}
                     >
-                      <Ionicons name="close-circle-outline" size={24} color={colors.danger} />
+                      <Icon name="close-circle-outline" size={24} color={colors.danger} />
                       <Text style={[styles.actionText, { color: colors.danger }]}>
                         {t('Turn off')}
                       </Text>
@@ -469,7 +469,7 @@ export function SongMenuSheet() {
               ) : mode === 'export' ? (
                 <View>
                   <Pressable style={styles.action} onPress={() => setMode('actions')}>
-                    <Ionicons name="chevron-back" size={24} color={colors.text} />
+                    <Icon name="chevron-back" size={24} color={colors.text} />
                     <Text style={styles.actionText}>{t('Export')}</Text>
                   </Pressable>
                   {/* Said before the file leaves, not after: a download made at
@@ -501,7 +501,7 @@ export function SongMenuSheet() {
               ) : mode === 'rating' ? (
                 <View>
                   <Pressable style={styles.action} onPress={() => setMode('actions')}>
-                    <Ionicons name="chevron-back" size={24} color={colors.text} />
+                    <Icon name="chevron-back" size={24} color={colors.text} />
                     <Text style={styles.actionText}>{t('Rate')}</Text>
                   </Pressable>
                   <View style={styles.ratingRow}>

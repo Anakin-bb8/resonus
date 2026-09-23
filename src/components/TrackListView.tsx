@@ -3,7 +3,7 @@
  * and a collapsing fixed bar) and the song list. Shared by album and playlist
  * screens.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
 import { useMemo, useRef, useState, type ReactNode } from 'react';
@@ -160,7 +160,7 @@ interface Props {
    * The icon is "+" unless another is specified (the mix screen uses it to
    * reshuffle).
    */
-  addAction?: { label: string; icon?: keyof typeof Ionicons.glyphMap; onPress: () => void };
+  addAction?: { label: string; icon?: keyof typeof Icon.glyphMap; onPress: () => void };
   /** Extra content at the bottom of the list (e.g. "More from this artist"). */
   footer?: ReactNode;
   /** What to show below the header when there are no songs (e.g. empty playlist). */
@@ -551,7 +551,7 @@ export function TrackListView({
               <Animated.View style={[styles.searchClip, { height: searchH }]}>
               <View style={styles.searchRow}>
                 <View style={styles.searchBox}>
-                  <Ionicons name="search" size={18} color={colors.textSecondary} />
+                  <Icon name="search" size={18} color={colors.textSecondary} />
                   <TextInput
                     style={styles.searchInput}
                     placeholder={searchPlaceholder ?? t('Find in playlist')}
@@ -569,7 +569,7 @@ export function TrackListView({
                       accessibilityLabel={t('Clear')}
                       onPress={() => setQuery('')}
                     >
-                      <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+                      <Icon name="close-circle" size={18} color={colors.textSecondary} />
                     </Pressable>
                   ) : null}
                 </View>
@@ -707,7 +707,7 @@ export function TrackListView({
                         </Text>
                       </>
                     ) : (
-                      <Ionicons
+                      <Icon
                         name={
                           download.status === 'done'
                             ? 'arrow-down-circle'
@@ -726,7 +726,7 @@ export function TrackListView({
                     accessibilityLabel={t('Sort')}
                     onPress={onSort}
                   >
-                    <Ionicons name="swap-vertical" size={24} color={colors.textSecondary} />
+                    <Icon name="swap-vertical" size={24} color={colors.textSecondary} />
                   </Pressable>
                 ) : null}
                 {onMenu ? (
@@ -736,7 +736,7 @@ export function TrackListView({
                     accessibilityLabel={t('More options')}
                     onPress={onMenu}
                   >
-                    <Ionicons name="ellipsis-horizontal" size={26} color={colors.textSecondary} />
+                    <Icon name="ellipsis-horizontal" size={26} color={colors.textSecondary} />
                   </Pressable>
                 ) : null}
               </View>
@@ -748,7 +748,7 @@ export function TrackListView({
                   accessibilityLabel={t('Shuffle')}
                   onPress={shufflePlay}
                 >
-                  <Ionicons
+                  <Icon
                     name="shuffle"
                     size={26}
                     color={shuffleActive ? colors.accent : colors.textSecondary}
@@ -760,7 +760,7 @@ export function TrackListView({
                   accessibilityLabel={t('Play')}
                   onPress={() => songs.length > 0 && onPlay(0)}
                 >
-                  <Ionicons
+                  <Icon
                     name="play"
                     size={28}
                     color={colors.onAccent}
@@ -777,7 +777,7 @@ export function TrackListView({
                 style={({ pressed }) => [styles.addRow, pressed && { opacity: 0.6 }]}
               >
                 <View style={styles.addBox}>
-                  <Ionicons
+                  <Icon
                     name={addAction.icon ?? 'add'}
                     size={26}
                     color={colors.textSecondary}
@@ -865,7 +865,7 @@ export function TrackListView({
               accessibilityLabel={t('Close')}
               onPress={() => setSelectedIds(null)}
             >
-              <Ionicons name="close" size={26} color={colors.text} />
+              <Icon name="close" size={26} color={colors.text} />
             </Pressable>
             <Text style={styles.barTitle} numberOfLines={1}>
               {t('{n} selected', { n: selectedIds.size })}
@@ -878,7 +878,7 @@ export function TrackListView({
                 setSelectedIds(allSelected ? new Set() : new Set(rowKeys))
               }
             >
-              <Ionicons
+              <Icon
                 name="checkmark-done"
                 size={24}
                 color={allSelected ? colors.accent : colors.text}

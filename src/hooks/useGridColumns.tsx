@@ -10,7 +10,7 @@
  * something anchored under the button: it is the same gesture, opening from
  * the same kind of icon, and it is the one people here have already learnt.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { memo, type ReactNode, useRef } from 'react';
 import { Pressable, Text } from 'react-native';
 
@@ -77,7 +77,7 @@ const GridSheet = memo(function GridSheet({
     >
       <Text style={[styles.actionText, active && { color: colors.accent }]}>{label}</Text>
       {active ? (
-        <Ionicons
+        <Icon
           name="checkmark"
           size={20}
           color={colors.accent}

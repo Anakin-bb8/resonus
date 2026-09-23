@@ -15,7 +15,7 @@
  * jump — and it survives a reorder too, which is what keeps the headers where
  * they belong when a row is dragged.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useRouter } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -129,10 +129,10 @@ function QueueRow({
       <View style={styles.actions}>
         {current ? <PlayingBars size={18} /> : null}
         <Pressable hitSlop={6} onPress={() => void remove()}>
-          <Ionicons name="close" size={22} color={colors.textSecondary} />
+          <Icon name="close" size={22} color={colors.textSecondary} />
         </Pressable>
         <Pressable hitSlop={6} onPressIn={() => { haptic('medium'); drag(); }}>
-          <Ionicons name="reorder-two" size={24} color={colors.textSecondary} />
+          <Icon name="reorder-two" size={24} color={colors.textSecondary} />
         </Pressable>
       </View>
     </View>
@@ -262,7 +262,7 @@ export default function QueueScreen() {
     <View style={[styles.safe, { paddingTop: topPad, paddingBottom: insets.bottom }]}>
       <View style={styles.header}>
         <Pressable hitSlop={12} onPress={() => router.back()}>
-          <Ionicons name="chevron-down" size={28} color={colors.text} />
+          <Icon name="chevron-down" size={28} color={colors.text} />
         </Pressable>
         <View style={styles.headerCenter} pointerEvents="none">
           <Text style={styles.headerTitle}>{t('Queue')}</Text>
@@ -288,7 +288,7 @@ export default function QueueScreen() {
                 toast(t("The mix won't grow any further"));
               }}
             >
-              <Ionicons name="sparkles" size={22} color={accent} />
+              <Icon name="sparkles" size={22} color={accent} />
             </Pressable>
           ) : null}
           {upcoming.length > 0 ? (
@@ -299,7 +299,7 @@ export default function QueueScreen() {
               accessibilityLabel={t('Clear queue')}
               onPress={() => setConfirmClear(true)}
             >
-              <Ionicons name="trash-outline" size={22} color={colors.textSecondary} />
+              <Icon name="trash-outline" size={22} color={colors.textSecondary} />
             </Pressable>
           ) : null}
           {queue.length > 0 ? (
@@ -310,7 +310,7 @@ export default function QueueScreen() {
               accessibilityLabel={t('More options')}
               onPress={() => menuRef.current()}
             >
-              <Ionicons name="ellipsis-horizontal" size={22} color={colors.text} />
+              <Icon name="ellipsis-horizontal" size={22} color={colors.text} />
             </Pressable>
           ) : null}
         </View>
@@ -379,7 +379,7 @@ export default function QueueScreen() {
                 if (q.length > 0) usePlaylistPicker.getState().open(q);
               }}
             >
-              <Ionicons name="add" size={24} color={colors.text} />
+              <Icon name="add" size={24} color={colors.text} />
               <Text style={styles.actionText}>{t('Add to a playlist')}</Text>
             </Pressable>
             {/* The queue is pushed to the server as it changes, but what comes
@@ -397,7 +397,7 @@ export default function QueueScreen() {
                   });
                 }}
               >
-                <Ionicons name="cloud-download-outline" size={24} color={colors.text} />
+                <Icon name="cloud-download-outline" size={24} color={colors.text} />
                 <Text style={styles.actionText}>{t("Get the server's queue")}</Text>
               </Pressable>
             ) : null}

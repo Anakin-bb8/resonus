@@ -5,11 +5,11 @@
  * The pin is optional because pinning belongs to the Library: when browsing
  * there are no pinned items to show.
  */
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Link } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
+import Icon from '@/components/Icon';
 import { COVER, coverArtUrl, type Album } from '@/api/data';
 import { usePressFeedback } from '@/hooks/usePressFeedback';
 import { haptic } from '@/lib/haptics';
@@ -55,7 +55,7 @@ export function AlbumRow({ album, pinned }: Props) {
             {album.artist || pinned || explicit ? (
               <View style={styles.subLine}>
                 {pinned ? (
-                  <MaterialCommunityIcons name="pin" size={13} color={accent} style={styles.pin} />
+                  <Icon name="pin" size={13} color={accent} />
                 ) : null}
                 <ExplicitBadge status={album.explicitStatus} />
                 {album.artist ? (
@@ -79,5 +79,4 @@ const styles = themed((colors) => ({
   subLine: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   sub: { color: colors.textSecondary, fontSize: fontSize.xs, flexShrink: 1 },
   // The MCI pin icon is vertical; rotated 45° it looks like Spotify's.
-  pin: { transform: [{ rotate: '45deg' }] },
 }));

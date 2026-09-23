@@ -9,7 +9,7 @@
  * Mounted once in the root layout; opened from anywhere with
  * `useSharePicker.getState().open(...)`.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import DateTimePicker, {
   DateTimePickerAndroid,
   type DateTimePickerEvent,
@@ -188,7 +188,7 @@ export function GlobalShareSheet() {
                     {/* The last one used, so sharing the same way twice is a
                         matter of tapping where the tick already is. */}
                     {kind === lastUsed ? (
-                      <Ionicons name="checkmark" size={20} color={accent} />
+                      <Icon name="checkmark" size={20} color={accent} />
                     ) : null}
                   </Pressable>
                 ))}
@@ -198,7 +198,7 @@ export function GlobalShareSheet() {
                   onPress={pickDate}
                 >
                   <Text style={styles.rowText}>{t('Pick a date…')}</Text>
-                  <Ionicons name="calendar-outline" size={20} color={colors.textSecondary} />
+                  <Icon name="calendar-outline" size={20} color={colors.textSecondary} />
                 </Pressable>
                 {/* Below the line because it is not one of the answers: it does
                     not share, it decides what the link will allow. */}

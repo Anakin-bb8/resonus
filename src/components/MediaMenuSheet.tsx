@@ -4,8 +4,7 @@
  * favorite, without entering the screen. Songs are fetched when the action
  * is chosen (same query the screen uses, so cache is shared).
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Icon from '@/components/Icon';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -43,7 +42,7 @@ function Action({
   label,
   onPress,
 }: {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: keyof typeof Icon.glyphMap;
   label: string;
   onPress: () => void;
 }) {
@@ -52,7 +51,7 @@ function Action({
       style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
       onPress={onPress}
     >
-      <Ionicons name={icon} size={24} color={colors.text} />
+      <Icon name={icon} size={24} color={colors.text} />
       <Text style={styles.actionText}>{label}</Text>
     </Pressable>
   );
@@ -356,8 +355,7 @@ export function MediaMenuSheet() {
                 onPress={() => void toggleFavorite()}
               />
             ) : null}
-            {/* Diagonal pin (MaterialCommunity), like Spotify's; the Ionicons one
-                is something else and looks weird. Only makes sense if the item can
+            {/* Only makes sense if the item can
                 appear in the Library: playlists always do, but albums only if
                 favorited (the list comes from getStarred). */}
             {playlist || album?.starred ? (
@@ -369,11 +367,10 @@ export function MediaMenuSheet() {
                   if (!ok) toast(t('You can pin up to {n} items.', { n: MAX_PINS }));
                 }}
               >
-                <MaterialCommunityIcons
+                <Icon
                   name={pinned ? 'pin' : 'pin-outline'}
                   size={24}
                   color={colors.text}
-                  style={styles.pinIcon}
                 />
                 <Text style={styles.actionText}>{pinned ? t('Unpin') : t('Pin to top')}</Text>
               </Pressable>
@@ -509,5 +506,4 @@ const styles = themed((colors) => ({
   },
   actionText: { color: colors.text, fontSize: fontSize.md },
   // The MCI pin comes vertical; rotated 45° it looks like Spotify's.
-  pinIcon: { transform: [{ rotate: '45deg' }] },
 }));

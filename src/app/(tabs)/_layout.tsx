@@ -9,7 +9,7 @@
  * identical by hand, and the handover between them showed as a blink of empty
  * space in the middle of every back animation.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { Tabs } from 'expo-router';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -91,7 +91,7 @@ export default function TabsLayout() {
                 title: t(tab.label),
                 href: enabled ? undefined : null,
                 tabBarIcon: ({ focused, color, size }) => (
-                  <Ionicons
+                  <Icon
                     name={focused ? tab.icon : `${tab.icon}-outline`}
                     color={color}
                     size={size}

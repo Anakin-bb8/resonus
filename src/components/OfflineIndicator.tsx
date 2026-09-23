@@ -12,7 +12,7 @@
  * word in English is two or three elsewhere. It stays as the accessibility
  * label, which is where saying it out loud is the whole point.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
@@ -26,7 +26,7 @@ export function OfflineIndicator() {
   // A step under the 24 of the buttons it sits next to: it is a state, not
   // something to press.
   return (
-    <Ionicons
+    <Icon
       name="cloud-offline-outline"
       size={20}
       color={colors.textMuted}

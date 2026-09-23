@@ -1,6 +1,5 @@
 /** Library: lists (with fixed access to Favorites) and artists. Settings. */
-import Ionicons from '@expo/vector-icons/Ionicons';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Icon from '@/components/Icon';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
@@ -142,7 +141,7 @@ function SortBar({ onPress }: { onPress: () => void }) {
   const sort = useSettings((s) => s.librarySort);
   return (
     <Pressable style={styles.sortBar} hitSlop={8} onPress={onPress}>
-      <Ionicons name="swap-vertical" size={15} color={colors.textSecondary} />
+      <Icon name="swap-vertical" size={15} color={colors.textSecondary} />
       <Text style={styles.sortBarText}>{t(SORT_LABELS[sort])}</Text>
     </Pressable>
   );
@@ -193,7 +192,7 @@ function SortSheet({ visible, onClose }: { visible: boolean; onClose: () => void
                     {t(SORT_LABELS[key])}
                   </Text>
                   {active ? (
-                    <Ionicons name="checkmark" size={20} color={colors.accent} style={{ marginLeft: 'auto' }} />
+                    <Icon name="checkmark" size={20} color={colors.accent} style={{ marginLeft: 'auto' }} />
                   ) : null}
                 </Pressable>
               );
@@ -357,7 +356,7 @@ function PlaylistsTab({
                 </Text>
                 <View style={styles.rowSubLine}>
                   {pins[`playlist:${item.id}`] ? (
-                    <MaterialCommunityIcons name="pin" size={13} color={colors.accent} style={styles.pinIcon} />
+                    <Icon name="pin" size={13} color={colors.accent} />
                   ) : null}
                   <Text style={styles.rowSub}>{songsLabel(item.songCount ?? 0, lang)}</Text>
                 </View>
@@ -717,11 +716,10 @@ function AllTab({ query, onNew }: { query: string; onNew?: () => void }) {
                 </Text>
                 <View style={styles.rowSubLine}>
                   {pins[`${item.kind}:${item.id}`] ? (
-                    <MaterialCommunityIcons
+                    <Icon
                       name="pin"
                       size={13}
                       color={colors.accent}
-                      style={styles.pinIcon}
                     />
                   ) : null}
                   <Text style={styles.rowSub} numberOfLines={1}>
@@ -754,7 +752,7 @@ function LayoutToggle() {
       accessibilityLabel={grid ? t('List view') : t('Grid view')}
       onPress={() => setLayout(grid ? 'list' : 'grid')}
     >
-      <Ionicons name={grid ? 'list' : 'grid-outline'} size={20} color={colors.textSecondary} />
+      <Icon name={grid ? 'list' : 'grid-outline'} size={20} color={colors.textSecondary} />
     </Pressable>
   );
 }
@@ -794,7 +792,7 @@ function GridCard({
         {subtitle ? (
           <View style={styles.cardSubLine}>
             {pinned ? (
-              <MaterialCommunityIcons name="pin" size={12} color={colors.accent} style={styles.pinIcon} />
+              <Icon name="pin" size={12} color={colors.accent} />
             ) : null}
             <Text style={styles.cardSub} numberOfLines={1}>
               {subtitle}
@@ -1016,7 +1014,7 @@ export default function LibraryScreen() {
             accessibilityLabel={searchOpen ? t('Close') : t('Search')}
             onPress={toggleSearch}
           >
-            <Ionicons
+            <Icon
               name={searchOpen ? 'close' : 'search'}
               size={24}
               color={searchOpen ? colors.accent : colors.text}
@@ -1028,7 +1026,7 @@ export default function LibraryScreen() {
             accessibilityLabel={t('New playlist')}
             onPress={() => setCreating(true)}
           >
-            <Ionicons name="add" size={28} color={colors.text} />
+            <Icon name="add" size={28} color={colors.text} />
           </Pressable>
         </View>
       </View>
@@ -1039,7 +1037,7 @@ export default function LibraryScreen() {
       {searchOpen ? (
         <View style={styles.searchRow}>
           <View style={styles.searchBar}>
-            <Ionicons name="search" size={18} color={colors.textMuted} />
+            <Icon name="search" size={18} color={colors.textMuted} />
             <TextInput
               style={styles.searchInput}
               placeholder={t('Search')}
@@ -1058,7 +1056,7 @@ export default function LibraryScreen() {
                 accessibilityLabel={t('Clear')}
                 onPress={() => setQuery('')}
               >
-                <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+                <Icon name="close-circle" size={18} color={colors.textMuted} />
               </Pressable>
             ) : null}
           </View>
@@ -1094,7 +1092,7 @@ export default function LibraryScreen() {
             accessibilityLabel={t('Clear')}
             onPress={clearSegment}
           >
-            <Ionicons name="close" size={18} color={colors.text} />
+            <Icon name="close" size={18} color={colors.text} />
           </Pressable>
         ) : null}
 
@@ -1247,7 +1245,6 @@ const styles = themed((colors) => ({
   // Subtitle with room for the pinned icon.
   rowSubLine: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   // The MCI pin comes vertical; rotated 45° it looks like Spotify's.
-  pinIcon: { transform: [{ rotate: '45deg' }] },
   // Control row: sort on the left ("⇅ Recent"), toggle list/grid on the right.
   controls: {
     flexDirection: 'row',

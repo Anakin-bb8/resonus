@@ -1,5 +1,5 @@
 /** 5-star bar to rate a song (Subsonic setRating). */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -54,7 +54,7 @@ export function StarRating({ id, rating, size = 22, onRated }: Props) {
           accessibilityRole="button"
           accessibilityLabel={t('Rate {n} stars', { n })}
         >
-          <Ionicons
+          <Icon
             name={n <= value ? 'star' : 'star-outline'}
             size={size}
             color={n <= value ? colors.accent : colors.textSecondary}

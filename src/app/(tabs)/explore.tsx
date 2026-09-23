@@ -29,7 +29,7 @@
  * for something you do now and then. It is the one "Your library" has, in the
  * same place and with the same two ways out of it, Back included.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { BackHandler, Pressable, ScrollView, Text, View } from 'react-native';
@@ -194,7 +194,7 @@ export default function ExploreScreen() {
               accessibilityLabel={searchOpen ? t('Close') : t('Search')}
               onPress={() => setSearchFor(searchOpen ? null : current)}
             >
-              <Ionicons
+              <Icon
                 name={searchOpen ? 'close' : 'search'}
                 size={24}
                 color={searchOpen ? accent : colors.text}
@@ -208,7 +208,7 @@ export default function ExploreScreen() {
               accessibilityLabel={headerButton.label}
               onPress={() => sectionAction.current()}
             >
-              <Ionicons
+              <Icon
                 name={headerButton.icon}
                 size={headerButton.size}
                 color={headerButton.color}

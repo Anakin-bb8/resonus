@@ -22,7 +22,7 @@
  * With nothing marked the actions stay visible but dimmed and disabled: they
  * say what selecting is FOR, which an empty bar wouldn't.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useRef } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
@@ -32,7 +32,7 @@ import { colors, fontSize, radius, spacing, themed } from '@/theme';
 import { SheetModal } from './SheetModal';
 
 export interface SelectionAction {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: keyof typeof Icon.glyphMap;
   label: string;
   onPress: () => void;
 }
@@ -94,7 +94,7 @@ export function SelectionBar({
                     close();
                   }}
                 >
-                  <Ionicons name={a.icon} size={24} color={colors.text} />
+                  <Icon name={a.icon} size={24} color={colors.text} />
                   <Text style={styles.rowText}>{a.label}</Text>
                 </Pressable>
               ))}
@@ -111,7 +111,7 @@ function BarButton({
   disabled,
   onPress,
 }: {
-  action: { icon: keyof typeof Ionicons.glyphMap; label: string };
+  action: { icon: keyof typeof Icon.glyphMap; label: string };
   disabled: boolean;
   onPress: () => void;
 }) {
@@ -123,7 +123,7 @@ function BarButton({
       disabled={disabled}
       onPress={onPress}
     >
-      <Ionicons name={action.icon} size={22} color={colors.onSnackbar} />
+      <Icon name={action.icon} size={22} color={colors.onSnackbar} />
       <Text style={styles.label} numberOfLines={1}>
         {action.label}
       </Text>

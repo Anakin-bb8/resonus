@@ -9,6 +9,10 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Changed
+
+- New icons throughout the app, from Phosphor.
+
 ## [0.7.8] - 2026-09-23
 
 ### Added

@@ -13,7 +13,7 @@
  * hint below), and the tab still leaves out what it has no answer for: a
  * Jellyfin account has no folder tree, and offline there are no stations.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { Pressable, Switch, Text, View } from 'react-native';
 import ReorderableList, {
   useReorderableDrag,
@@ -71,7 +71,7 @@ function SectionRow({
         accessibilityRole="button"
         accessibilityLabel={t('Reorder')}
       >
-        <Ionicons name="reorder-two" size={24} color={colors.textSecondary} />
+        <Icon name="reorder-two" size={24} color={colors.textSecondary} />
       </Pressable>
       <Text style={styles.label}>{t(LABEL[section.key])}</Text>
       <Switch

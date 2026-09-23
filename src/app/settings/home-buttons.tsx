@@ -7,7 +7,7 @@
  * only reachable from that icon, so turning it off would leave no way back to
  * this very screen.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { Pressable, Switch, Text, View } from 'react-native';
 import ReorderableList, {
   useReorderableDrag,
@@ -32,7 +32,7 @@ import {
 } from '@/theme';
 
 /** What each row says and wears, so the list reads like the header does. */
-const BUTTONS: Record<HomeButtonKey, { label: string; icon: keyof typeof Ionicons.glyphMap }> = {
+const BUTTONS: Record<HomeButtonKey, { label: string; icon: keyof typeof Icon.glyphMap }> = {
   search: { label: 'Search', icon: 'search-outline' },
   history: { label: 'History', icon: 'time-outline' },
   settings: { label: 'Settings', icon: 'settings-outline' },
@@ -58,9 +58,9 @@ function ButtonRow({ button }: { button: HomeButton }) {
         accessibilityRole="button"
         accessibilityLabel={t('Reorder')}
       >
-        <Ionicons name="reorder-two" size={24} color={colors.textSecondary} />
+        <Icon name="reorder-two" size={24} color={colors.textSecondary} />
       </Pressable>
-      <Ionicons name={icon} size={20} color={colors.textSecondary} />
+      <Icon name={icon} size={20} color={colors.textSecondary} />
       <Text style={styles.label}>{t(label)}</Text>
       {fixed ? (
         <Text style={styles.fixed}>{t('Always shown')}</Text>

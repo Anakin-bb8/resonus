@@ -1,5 +1,5 @@
 /** Heart to mark/unmark favorites (Subsonic star/unstar). */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useEffect, useState } from 'react';
 import { Pressable, type GestureResponderEvent } from 'react-native';
 
@@ -77,7 +77,7 @@ export function FavoriteButton({ id, type = 'song', starred, size = 22, undo }: 
       accessibilityRole="button"
       accessibilityLabel={fav ? t('Remove from favorites') : t('Add to favorites')}
     >
-      <Ionicons
+      <Icon
         name={fav ? 'heart' : 'heart-outline'}
         size={size}
         color={fav ? colors.accent : colors.textSecondary}

@@ -5,7 +5,7 @@
  * ones first (at home the local one wins; outside it falls through to the
  * remote). Only applies to server profiles.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 
@@ -94,7 +94,7 @@ export default function NetworkSettings() {
           {health === 'checking' ? (
             <ActivityIndicator size="small" color={colors.textMuted} />
           ) : (
-            <Ionicons
+            <Icon
               name={health === 'ok' ? 'checkmark-circle' : 'alert-circle'}
               size={22}
               color={health === 'ok' ? colors.success : colors.danger}
@@ -140,7 +140,7 @@ export default function NetworkSettings() {
                   if (!isActive) void setActiveUrl(url);
                 }}
               >
-                <Ionicons
+                <Icon
                   name={isActive ? 'radio-button-on' : 'radio-button-off'}
                   size={20}
                   color={isActive ? accent : colors.textMuted}
@@ -163,7 +163,7 @@ export default function NetworkSettings() {
                     onPress={() => setEditing(url)}
                     style={({ pressed }) => pressed && { opacity: 0.6 }}
                   >
-                    <Ionicons name="create-outline" size={20} color={colors.textMuted} />
+                    <Icon name="create-outline" size={20} color={colors.textMuted} />
                   </Pressable>
                   {/* An account with a single address would be left with none. */}
                   {urls.length > 1 ? (
@@ -172,7 +172,7 @@ export default function NetworkSettings() {
                       onPress={() => void removeServerUrl(url)}
                       style={({ pressed }) => pressed && { opacity: 0.6 }}
                     >
-                      <Ionicons name="trash-outline" size={20} color={colors.danger} />
+                      <Icon name="trash-outline" size={20} color={colors.danger} />
                     </Pressable>
                   ) : null}
                 </View>
@@ -189,7 +189,7 @@ export default function NetworkSettings() {
           ]}
           onPress={() => setAdding(true)}
         >
-          <Ionicons name="add" size={22} color={accent} />
+          <Icon name="add" size={22} color={accent} />
           <Text style={[settingsStyles.rowLabel, { color: accent }]}>
             {t('Add address')}
           </Text>

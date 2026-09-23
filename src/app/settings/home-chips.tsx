@@ -6,7 +6,7 @@
  * With none active the entire row disappears from Home; that's why there's no
  * separate master toggle.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { Pressable, Switch, Text, View } from 'react-native';
 import ReorderableList, {
   useReorderableDrag,
@@ -64,7 +64,7 @@ function ChipRow({ chip, disabled }: { chip: HomeChip; disabled?: boolean }) {
         accessibilityRole="button"
         accessibilityLabel={t('Reorder')}
       >
-        <Ionicons name="reorder-two" size={24} color={colors.textSecondary} />
+        <Icon name="reorder-two" size={24} color={colors.textSecondary} />
       </Pressable>
       <Text style={styles.label}>{t(LABEL[chip.key])}</Text>
       <Switch

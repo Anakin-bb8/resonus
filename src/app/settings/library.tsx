@@ -1,5 +1,5 @@
 /** Settings › Library: scanning, server libraries and cache clearing. */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
@@ -157,7 +157,7 @@ export default function LibrarySettings() {
                 <Text style={settingsStyles.sectionTitle}>{t('Music folders')}</Text>
                 {folderUris.map((uri) => (
                   <View key={uri} style={[settingsStyles.cardBox, settingsStyles.row]}>
-                    <Ionicons name="folder-outline" size={20} color={colors.text} />
+                    <Icon name="folder-outline" size={20} color={colors.text} />
                     <View style={settingsStyles.rowLabelBox}>
                       <Text style={settingsStyles.rowLabel} numberOfLines={1}>
                         {folderNameFromUri(uri)}
@@ -169,7 +169,7 @@ export default function LibrarySettings() {
                       accessibilityLabel={t('Remove')}
                       onPress={() => removeFolder(uri)}
                     >
-                      <Ionicons name="close" size={20} color={colors.textMuted} />
+                      <Icon name="close" size={20} color={colors.textMuted} />
                     </Pressable>
                   </View>
                 ))}
@@ -227,7 +227,7 @@ export default function LibrarySettings() {
           <Text style={sheetStyles.title}>{t('Where should we get your music?')}</Text>
 
           <Pressable style={sheetStyles.option} onPress={chooseFolder}>
-            <Ionicons name="folder-outline" size={26} color={colors.accent} />
+            <Icon name="folder-outline" size={26} color={colors.accent} />
             <View style={{ flex: 1 }}>
               <Text style={sheetStyles.optionTitle}>{t('Choose a folder (recommended)')}</Text>
               <Text style={sheetStyles.optionSub}>{t('Only the music in the folder you choose.')}</Text>
@@ -235,7 +235,7 @@ export default function LibrarySettings() {
           </Pressable>
 
           <Pressable style={sheetStyles.option} onPress={chooseDevice}>
-            <Ionicons name="phone-portrait-outline" size={26} color={colors.accent} />
+            <Icon name="phone-portrait-outline" size={26} color={colors.accent} />
             <View style={{ flex: 1 }}>
               <Text style={sheetStyles.optionTitle}>{t('Scan the whole phone')}</Text>
               <Text style={sheetStyles.optionSub}>{t('All the music on your device.')}</Text>

@@ -3,7 +3,7 @@
  * background from the cover's dominant color, karaoke with tap-line-to-seek
  * and basic controls (progress and play/pause) at the bottom.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -72,7 +72,7 @@ export default function LyricsScreen() {
       <View style={[styles.safe, { paddingTop: topPad, paddingBottom: insets.bottom }]}>
       <View style={styles.header}>
         <Pressable hitSlop={12} accessibilityRole="button" accessibilityLabel={t('Close')} onPress={() => router.back()}>
-          <Ionicons name="close" size={26} color={colors.text} />
+          <Icon name="close" size={26} color={colors.text} />
         </Pressable>
         <View style={styles.titleBox}>
           <Text style={styles.title} numberOfLines={1}>
@@ -114,7 +114,7 @@ export default function LyricsScreen() {
             accessibilityLabel={t('Previous')}
             onPress={previous}
           >
-            <Ionicons name="play-skip-back" size={32} color={colors.text} />
+            <Icon name="play-skip-back" size={32} color={colors.text} />
           </Pressable>
           <Pressable
             style={styles.playButton}
@@ -122,7 +122,7 @@ export default function LyricsScreen() {
             accessibilityLabel={isPlaying ? t('Pause') : t('Play')}
             onPress={toggle}
           >
-            <Ionicons
+            <Icon
               name={isPlaying ? 'pause' : 'play'}
               size={30}
               color={colors.onInverse}
@@ -135,7 +135,7 @@ export default function LyricsScreen() {
             accessibilityLabel={t('Next')}
             onPress={next}
           >
-            <Ionicons name="play-skip-forward" size={32} color={colors.text} />
+            <Icon name="play-skip-forward" size={32} color={colors.text} />
           </Pressable>
         </View>
       </View>

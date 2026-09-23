@@ -3,7 +3,7 @@
  * playlists) to show/hide and reorder the album rows on Home. Changes are
  * applied and saved immediately.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { Pressable, Switch, Text, View } from 'react-native';
 import ReorderableList, {
   useReorderableDrag,
@@ -60,7 +60,7 @@ function SectionRow({ section }: { section: HomeSection }) {
         accessibilityRole="button"
         accessibilityLabel={t('Reorder')}
       >
-        <Ionicons name="reorder-two" size={24} color={colors.textSecondary} />
+        <Icon name="reorder-two" size={24} color={colors.textSecondary} />
       </Pressable>
       <Text style={styles.label}>{t(LABEL[section.key])}</Text>
       <Switch

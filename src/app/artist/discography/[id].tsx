@@ -3,7 +3,7 @@
  * `?section=appears-on` it lists the albums the artist only appears on
  * instead — same screen, same layout preference, only the other row's albums.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
@@ -146,7 +146,7 @@ export default function DiscographyScreen() {
             accessibilityLabel={t('Sort')}
             onPress={openSort}
           >
-            <Ionicons name="swap-vertical" size={20} color={colors.textSecondary} />
+            <Icon name="swap-vertical" size={20} color={colors.textSecondary} />
           </Pressable>
         ) : null}
         <Pressable
@@ -155,7 +155,7 @@ export default function DiscographyScreen() {
           accessibilityLabel={t('View')}
           onPress={openGridMenu}
         >
-          <Ionicons name={grid ? 'grid-outline' : 'list'} size={20} color={colors.textSecondary} />
+          <Icon name={grid ? 'grid-outline' : 'list'} size={20} color={colors.textSecondary} />
         </Pressable>
       </View>
 

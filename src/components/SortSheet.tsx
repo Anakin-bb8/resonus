@@ -10,7 +10,7 @@
  * opening or closing it re-renders the modal rather than the screen and the
  * long list inside it, which was a visible delay on pressing "Sort".
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -65,7 +65,7 @@ export const SortSheet = memo(function SortSheet({
                   {t(o.label)}
                 </Text>
                 {active ? (
-                  <Ionicons
+                  <Icon
                     name="checkmark"
                     size={20}
                     color={colors.accent}
@@ -92,7 +92,7 @@ export const SortSheet = memo(function SortSheet({
                     close();
                   }}
                 >
-                  <Ionicons
+                  <Icon
                     name={d === 'asc' ? 'arrow-up' : 'arrow-down'}
                     size={16}
                     color={active ? colors.onAccent : colors.text}

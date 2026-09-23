@@ -14,7 +14,7 @@
  * not the answer: whoever wants the way out in plain sight turns on the
  * navigation bar in Settings › Appearance.
  */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useRouter } from 'expo-router';
 import { Pressable, type StyleProp, type ViewStyle } from 'react-native';
 
@@ -53,7 +53,7 @@ export function BackChevron({ size = 26, color = colors.text, label, style, onPr
         router.navigate(tabOriginHref());
       }}
     >
-      <Ionicons name="chevron-back" size={size} color={color} />
+      <Icon name="chevron-back" size={size} color={color} />
     </Pressable>
   );
 }

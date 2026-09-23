@@ -1,5 +1,5 @@
 /** Offline mode: initial setup to choose the music source. */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -45,28 +45,28 @@ export default function OfflineScreen() {
           accessibilityLabel={t('Exit')}
           onPress={() => logout()}
         >
-          <Ionicons name="exit-outline" size={24} color={colors.textSecondary} />
+          <Icon name="exit-outline" size={24} color={colors.textSecondary} />
         </Pressable>
       </View>
       <View style={styles.setup}>
         <Text style={styles.setupTitle}>{t('Where should we get your music?')}</Text>
 
         <Pressable style={styles.option} onPress={chooseFolder}>
-          <Ionicons name="folder-outline" size={28} color={colors.accent} />
+          <Icon name="folder-outline" size={28} color={colors.accent} />
           <View style={{ flex: 1 }}>
             <Text style={styles.optionTitle}>{t('Choose a folder (recommended)')}</Text>
             <Text style={styles.optionSub}>{t('Only the music in the folder you choose.')}</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+          <Icon name="chevron-forward" size={20} color={colors.textMuted} />
         </Pressable>
 
         <Pressable style={styles.option} onPress={chooseDevice}>
-          <Ionicons name="phone-portrait-outline" size={28} color={colors.accent} />
+          <Icon name="phone-portrait-outline" size={28} color={colors.accent} />
           <View style={{ flex: 1 }}>
             <Text style={styles.optionTitle}>{t('Scan the whole phone')}</Text>
             <Text style={styles.optionSub}>{t('All the music on your device.')}</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+          <Icon name="chevron-forward" size={20} color={colors.textMuted} />
         </Pressable>
       </View>
     </SafeAreaView>

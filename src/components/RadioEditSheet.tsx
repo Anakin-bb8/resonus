@@ -1,5 +1,5 @@
 /** Sheet to create or edit a radio station: name, URL, and optional website. */
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useState } from 'react';
 import {
@@ -175,7 +175,7 @@ export function RadioEditSheet({
                 ) : !coverEditable ? null : (
                   <View style={styles.coverBadges}>
                     <View style={styles.coverBadge}>
-                      <Ionicons name="camera" size={16} color={colors.onArtwork} />
+                      <Icon name="camera" size={16} color={colors.onArtwork} />
                     </View>
                     {canRemove ? (
                       <Pressable
@@ -185,7 +185,7 @@ export function RadioEditSheet({
                         onPress={() => void clearCover()}
                         style={({ pressed }) => [styles.coverBadge, pressed && { opacity: 0.7 }]}
                       >
-                        <Ionicons name="trash-outline" size={16} color={colors.onArtwork} />
+                        <Icon name="trash-outline" size={16} color={colors.onArtwork} />
                       </Pressable>
                     ) : null}
                   </View>
