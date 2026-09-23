@@ -123,7 +123,7 @@
     "Keep at least one folder": "Refusing to remove the last folder of a local profile, which would leave it with no music",
     "That folder is already there": "The folder just picked is already in the local profile's list",
     "New releases": "Home shelf and album sort: albums by the year they came out, newest first. Not \"Recently added\", which is when the server got hold of them",
-    "Follow system": "Theme setting: use whichever appearance the phone itself is set to, light or dark",
+    "System": "Theme setting: use whichever appearance the phone itself is set to, light or dark",
     "Pin favorites": "Pin favourites to the quick grid",
 
     // ── Actions & verbs (easy to translate as the wrong part of speech) ──────

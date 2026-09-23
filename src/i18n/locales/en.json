@@ -676,7 +676,7 @@
   "Export {songs}?": "Export {songs}?",
   "{size} copied into the folder you pick.": "{size} copied into the folder you pick.",
   "New releases": "New releases",
-  "Follow system": "Follow system",
+  "System": "System",
   "Music folders": "Music folders",
   "Add another folder": "Add another folder",
   "Keep at least one folder": "Keep at least one folder",
@@ -717,5 +717,7 @@
   "Wrong username or password": "Wrong username or password",
   "Unexpected server response": "Unexpected server response",
   "Blur behind the bars": "Blur behind the bars",
-  "Lists carry on under the navigation bar and the mini player, blurred.": "Lists carry on under the navigation bar and the mini player, blurred."
+  "Lists carry on under the navigation bar and the mini player, blurred.": "Lists carry on under the navigation bar and the mini player, blurred.",
+  "Pure black": "Pure black",
+  "A black background instead of dark grey whenever the app is dark. Made for OLED screens.": "A black background instead of dark grey whenever the app is dark. Made for OLED screens."
 }

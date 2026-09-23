@@ -667,7 +667,6 @@
   "Export {songs}?": "Vols exportar {songs}?",
   "{size} copied into the folder you pick.": "{size} copiats a la carpeta que triïs.",
   "New releases": "Novetats",
-  "Follow system": "Segueix el sistema",
   "Music folders": "Carpetes de música",
   "Add another folder": "Afegeix una altra carpeta",
   "Keep at least one folder": "Deixa almenys una carpeta",
@@ -706,5 +705,8 @@
   "Wrong username or password": "Usuari o contrasenya incorrectes",
   "Unexpected server response": "Resposta inesperada del servidor",
   "Blur behind the bars": "Desenfocament rere les barres",
-  "Lists carry on under the navigation bar and the mini player, blurred.": "Les llistes continuen per sota de la barra de navegació i del mini reproductor, desenfocades."
+  "Lists carry on under the navigation bar and the mini player, blurred.": "Les llistes continuen per sota de la barra de navegació i del mini reproductor, desenfocades.",
+  "Pure black": "Negre pur",
+  "A black background instead of dark grey whenever the app is dark. Made for OLED screens.": "Fons negre en lloc de gris fosc quan l'app és en fosc. Pensat per a pantalles OLED.",
+  "System": "Sistema"
 }

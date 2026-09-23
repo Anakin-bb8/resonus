@@ -185,6 +185,22 @@ const DARK: BasePalette = {
 };
 
 /**
+ * The dark appearance on true black, for OLED screens ("Pure black" in
+ * Settings › Theme). Everything that is not the page steps down with it, so
+ * cards and chips keep the same distance from the background they had.
+ */
+const BLACK: BasePalette = {
+  ...DARK,
+  background: '#000000',
+  surface: '#0C0C0C',
+  surfaceHighlight: '#1C1C1C',
+  border: '#1E1E1E',
+  snackbar: '#222222',
+  veil: 'rgba(0,0,0,0.6)',
+  control: '#222222',
+};
+
+/**
  * The light appearance.
  *
  * Not the dark one inverted: white cards on a white page disappear, so the
@@ -294,6 +310,7 @@ let currentMode: ThemeMode = 'dark';
 // Settings is where each is made.
 let darkAccent = DEFAULT_ACCENT;
 let lightAccent = DEFAULT_ACCENT;
+let pureBlack = false;
 
 /** Which appearance is active right now (for code outside a component). */
 export function themeMode(): ThemeMode {
@@ -321,7 +338,7 @@ function subscribe(listener: () => void): () => void {
 /** Rebuilds `colors` from the current mode + accent and wakes everyone up. */
 function rebuild(): void {
   const light = currentMode === 'light';
-  const base = light ? LIGHT : DARK;
+  const base = light ? LIGHT : pureBlack ? BLACK : DARK;
   const picked = light ? lightAccent : darkAccent;
   // On white the accent has to be dark enough to read as text; on near-black
   // it is already fine as picked. `onAccent` follows from that: black on the
@@ -344,6 +361,13 @@ function rebuild(): void {
 export function applyAccents(dark: string, light: string): void {
   darkAccent = dark;
   lightAccent = light;
+  rebuild();
+}
+
+/** True black instead of dark grey, whenever the appearance is dark. */
+export function applyPureBlack(on: boolean): void {
+  if (on === pureBlack) return;
+  pureBlack = on;
   rebuild();
 }
 

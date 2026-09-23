@@ -12,7 +12,7 @@
 import Icon from '@/components/Icon';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { SelectList, SettingsPage, settingsStyles } from '@/components/SettingsUI';
+import { SelectList, SettingsPage, settingsStyles, SwitchList } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
 import { ACCENT_OPTIONS, useSettings } from '@/store/settings';
 import { fontSize, radius, spacing, themed, type ThemePreference, useThemeMode } from '@/theme';
@@ -58,6 +58,8 @@ export default function ThemeSettings() {
   const setAccentColor = useSettings((s) => s.setAccentColor);
   const themeMode = useSettings((s) => s.themeMode);
   const setThemeMode = useSettings((s) => s.setThemeMode);
+  const pureBlack = useSettings((s) => s.pureBlack);
+  const setPureBlack = useSettings((s) => s.setPureBlack);
 
   return (
     <SettingsPage title={t('Theme')}>
@@ -71,9 +73,22 @@ export default function ThemeSettings() {
           value={themeMode}
           onChange={setThemeMode}
           options={[
-            { value: 'system', label: t('Follow system') },
+            { value: 'system', label: t('System') },
             { value: 'dark', label: t('Dark (default)') },
             { value: 'light', label: t('Light (experimental)') },
+          ]}
+        />
+        {/* A variant of dark rather than a fourth mode, so following the
+            system still works with it. */}
+        <View style={styles.gap} />
+        <SwitchList
+          options={[
+            {
+              label: t('Pure black'),
+              description: t('A black background instead of dark grey whenever the app is dark. Made for OLED screens.'),
+              value: pureBlack,
+              onChange: setPureBlack,
+            },
           ]}
         />
 
@@ -99,6 +114,7 @@ const styles = themed((colors) => ({
     marginBottom: spacing.md,
   },
   secondLabel: { marginTop: spacing.xl },
+  gap: { height: spacing.md },
   swatches: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg },
   swatch: {
     width: 56,

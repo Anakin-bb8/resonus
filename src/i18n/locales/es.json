@@ -671,7 +671,6 @@
   "Export {songs}?": "¿Exportar {songs}?",
   "{size} copied into the folder you pick.": "{size} copiados en la carpeta que elijas.",
   "New releases": "Novedades",
-  "Follow system": "Seguir el sistema",
   "Music folders": "Carpetas de música",
   "Add another folder": "Añadir otra carpeta",
   "Keep at least one folder": "Deja al menos una carpeta",
@@ -719,5 +718,8 @@
   "Wrong username or password": "Usuario o contraseña incorrectos",
   "Unexpected server response": "Respuesta inesperada del servidor",
   "Blur behind the bars": "Desenfoque tras las barras",
-  "Lists carry on under the navigation bar and the mini player, blurred.": "Las listas siguen por debajo de la barra de navegación y del mini reproductor, desenfocadas."
+  "Lists carry on under the navigation bar and the mini player, blurred.": "Las listas siguen por debajo de la barra de navegación y del mini reproductor, desenfocadas.",
+  "Pure black": "Negro puro",
+  "A black background instead of dark grey whenever the app is dark. Made for OLED screens.": "Fondo negro en vez de gris oscuro cuando la app está en oscuro. Pensado para pantallas OLED.",
+  "System": "Sistema"
 }

@@ -11,6 +11,7 @@ import { queryClient } from '@/lib/query';
 import { getItem, setItem } from '@/lib/storage';
 import {
   applyAccents,
+  applyPureBlack,
   applyThemePreference,
   DEFAULT_ACCENT,
   isThemePreference,
@@ -1004,6 +1005,8 @@ interface SettingsState {
   accentColorLight: string;
   /** Dark (the app's own look), light, or whichever one the device is in. */
   themeMode: ThemePreference;
+  /** True black instead of dark grey in the dark appearance (OLED). */
+  pureBlack: boolean;
   /** UI font (system font family; `system` = default). */
   appFont: AppFont;
   /** Loaded custom font family name (the key passed to `Font.loadAsync`). */
@@ -1113,6 +1116,7 @@ interface SettingsState {
   setSyncQueueFromServer: (value: boolean) => void;
   setAccentColor: (value: string, appearance: ThemeMode) => void;
   setThemeMode: (value: ThemePreference) => void;
+  setPureBlack: (value: boolean) => void;
   setAppFont: (value: AppFont) => void;
   setCustomFont: (fontFamily: string | null, uri: string | null) => void;
   /** Resets to factory defaults (language is preserved). */
@@ -1235,6 +1239,7 @@ function snapshot(get: () => SettingsState) {
     accentColor: s.accentColor,
     accentColorLight: s.accentColorLight,
     themeMode: s.themeMode,
+    pureBlack: s.pureBlack,
     appFont: s.appFont,
     customFontFamily: s.customFontFamily,
     customFontUri: s.customFontUri,
@@ -1376,6 +1381,7 @@ const DEFAULTS = {
   accentColorLight: DEFAULT_ACCENT,
   // Dark: the appearance the app was designed in. Light is opt-in.
   themeMode: 'dark' as ThemePreference,
+  pureBlack: false,
   appFont: 'system' as AppFont,
   customFontFamily: null as string | null,
   customFontUri: null as string | null,
@@ -1894,6 +1900,12 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setPureBlack: (pureBlack) => {
+    applyPureBlack(pureBlack);
+    set({ pureBlack });
+    persist(snapshot(get));
+  },
+
   setLibrarySort: (librarySort) => {
     set({ librarySort });
     persist(snapshot(get));
@@ -1914,6 +1926,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
     set({ ...DEFAULTS, language: get().language });
     applyAccents(DEFAULT_ACCENT, DEFAULT_ACCENT);
     applyThemePreference(DEFAULTS.themeMode);
+    applyPureBlack(DEFAULTS.pureBlack);
     persist(snapshot(get));
   },
 
@@ -1944,6 +1957,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
       set({ ...DEFAULTS, language: get().language });
       applyAccents(DEFAULT_ACCENT, DEFAULT_ACCENT);
       applyThemePreference(DEFAULTS.themeMode);
+      applyPureBlack(DEFAULTS.pureBlack);
       applied = true;
       if (raw) {
         const parsed = JSON.parse(raw) as Partial<{
@@ -2051,6 +2065,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
           accentColor: string;
           accentColorLight: string;
           themeMode: ThemePreference;
+          pureBlack?: boolean;
           appFont: AppFont;
           customFontFamily: string | null;
           customFontUri: string | null;
@@ -2445,6 +2460,10 @@ export const useSettings = create<SettingsState>((set, get) => ({
         if (isThemePreference(parsed.themeMode)) {
           set({ themeMode: parsed.themeMode });
           applyThemePreference(parsed.themeMode);
+        }
+        if (typeof parsed.pureBlack === 'boolean') {
+          set({ pureBlack: parsed.pureBlack });
+          applyPureBlack(parsed.pureBlack);
         }
         if (parsed.appFont && (parsed.appFont in APP_FONT_FAMILY || parsed.appFont === 'custom')) {
           set({ appFont: parsed.appFont });
