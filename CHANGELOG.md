@@ -9,6 +9,8 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.7.8] - 2026-09-23
+
 ### Added
 
 - Your library can show Favorites and your playlists again when no chip is pressed, instead of everything mixed together, with Settings > Appearance > Start on your playlists (#217).
@@ -16,12 +18,20 @@ Releases before 0.2.1 are only listed on the
 - An album shows its description under its name, as a playlist already did, taken from the overview on Jellyfin or from the comment tag the album's files share, and the switch for it is now Settings > Appearance > Song lists > Show description (#223).
 - Diagnostics counts every request made to the server, says how the time since it started measuring splits between the screen being on and the app being away, and how much of that time away the app was actually being run (#221).
 - Settings > Appearance > Keep where you were leaves the app on the screen you left when you come back to it, instead of going to the tab it opens on; it starts off, which is what it has always done (#225).
+- Swedish, thanks to @NickWick13 (#228).
+- A playlist ends with a few suggested songs picked from the ones already in it, each with a preview you can listen to before adding it and a Refresh button for others, from @Anakin-bb8 (#227).
+- Settings > Appearance > Font can load a .ttf or .otf file of your own, from @Anakin-bb8 (#227).
+- Home has a Random songs section, off to begin with, under Settings > Appearance > Home sections (#227).
 
 ### Changed
 
 - You can pin up to 50 items instead of 25 (#217).
 - A long playlist or album description is cut to two lines with a Show more under it, instead of filling the whole header (#223).
 - The Artists, Albums and Songs lists remember the order you picked instead of going back to Recently played every time you open them (#226).
+- Most played songs on Home is a list of songs three to a column instead of a row of covers (#227).
+- Lyric lines already sung stay lit instead of fading back out (#227).
+- The name of an album or playlist sits centred in the bar that appears when you scroll down it (#227).
+- The progress bar of the mini player is a little thicker and rounded (#227).
 
 ### Fixed
 
@@ -33,6 +43,9 @@ Releases before 0.2.1 are only listed on the
 - A Sonos queue that failed to load part way is sent again in full the next time, instead of being taken as already there (#220).
 - Casting to a UPnP or Sonos speaker goes back to the phone, paused where it was, when the phone moves to mobile data or loses the network, but not when only the internet drops (#220).
 - A playlist you have never played no longer rises to the top of the home grid for having been created or edited recently on the server (#222).
+- Songs play and covers show again on Jellyfin 12, where browsing worked but nothing would play (#229).
+- A failed Jellyfin sign-in explains why in the app's language instead of always in Spanish.
+- On iOS the fonts in Settings > Appearance > Font apply, and Share, Go to artist, Go to album and Song information in the menus open (#227).
 
 ## [0.7.7] - 2026-09-13
 
