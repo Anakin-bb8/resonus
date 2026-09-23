@@ -43,7 +43,7 @@ import { mixSeedOf, SOURCE_FAVORITES, SOURCE_HISTORY, usePlayerStore } from '@/s
 import { usePlaylistPicker } from '@/store/playlistPicker';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
+import { colors, fontSize, spacing, themed, useTheme, tracking } from '@/theme';
 
 // ReorderableList doesn't support removeClippedSubviews (needs cells mounted
 // to animate the drag); we use the rest of the performance props.
@@ -434,7 +434,7 @@ const styles = themed((colors) => ({
   },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   headerAction: { width: 28, alignItems: 'center' },
-  headerTitle: { color: colors.text, fontSize: fontSize.lg, fontWeight: '700' },
+  headerTitle: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '700' },
   headerSub: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2 },
   list: { flexGrow: 1, paddingBottom: spacing.sm },
   emptyWrap: { flex: 1, justifyContent: 'center' },

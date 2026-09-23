@@ -17,7 +17,7 @@ import { CACHED_COVER, COVER, coverArtUrl, getArtistInfo } from '@/api/data';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
 import { currentSong, usePlayerStore } from '@/store/player';
-import { fontSize, radius, spacing, themed } from '@/theme';
+import { fontSize, radius, spacing, themed, tracking } from '@/theme';
 
 /** Lines of biography shown before it is expanded. */
 const BIO_LINES = 3;
@@ -124,6 +124,7 @@ const styles = themed((colors) => ({
   name: {
     color: colors.text,
     fontSize: fontSize.lg,
+    letterSpacing: tracking.heading,
     fontWeight: '700',
   },
   bio: {

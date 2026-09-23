@@ -41,7 +41,7 @@ import { haptic } from '@/lib/haptics';
 import { listPerf } from '@/lib/listPerf';
 import { useArtistPicker } from '@/store/artistPicker';
 import { usePlayerStore } from '@/store/player';
-import { colors, fontSize, radius, spacing, themed } from '@/theme';
+import { colors, fontSize, radius, spacing, themed, tracking } from '@/theme';
 import { motion } from '@/theme/motion';
 import { BackChevron } from './BackChevron';
 import { Cover } from './Cover';
@@ -1033,6 +1033,7 @@ const styles = themed((colors) => ({
   title: {
     color: colors.text,
     fontSize: fontSize.xxl,
+    letterSpacing: tracking.display,
     fontWeight: '600',
   },
   subtitle: {

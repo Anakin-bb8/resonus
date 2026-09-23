@@ -10,7 +10,7 @@ import {
 import { useAuthStore } from '@/store/auth';
 import { useToast } from '@/store/toast';
 import { useT } from '@/i18n';
-import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
+import { colors, fontSize, radius, spacing, themed, useTheme, tracking } from '@/theme';
 
 export default function OfflineScreen() {
   // Repaints on a change of appearance or accent: a stack keeps this screen
@@ -83,11 +83,12 @@ const styles = themed((colors) => ({
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
   },
-  heading: { color: colors.text, fontSize: fontSize.xxl, fontWeight: '600' },
+  heading: { color: colors.text, fontSize: fontSize.xxl, letterSpacing: tracking.display, fontWeight: '600' },
   setup: { paddingHorizontal: spacing.lg, gap: spacing.md, marginTop: spacing.lg },
   setupTitle: {
     color: colors.text,
     fontSize: fontSize.lg,
+    letterSpacing: tracking.heading,
     fontWeight: '700',
     marginBottom: spacing.sm,
   },

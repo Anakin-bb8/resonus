@@ -28,7 +28,7 @@ import { useToast } from '@/store/toast';
 import { useT } from '@/i18n';
 import { LANGUAGES } from '@/i18n/languages';
 import { useSettings } from '@/store/settings';
-import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
+import { colors, fontSize, radius, spacing, themed, useTheme, tracking } from '@/theme';
 
 type ServerKey = 'navidrome' | 'opensubsonic' | 'jellyfin' | 'ampache';
 
@@ -575,6 +575,7 @@ const styles = themed((colors) => ({
     // The brand green: on login the accent may be a previous session's.
     color: colors.brand,
     fontSize: fontSize.xxl,
+    letterSpacing: tracking.display,
     fontWeight: '600',
     textAlign: 'center',
   },
@@ -657,6 +658,7 @@ const styles = themed((colors) => ({
   stepTitle: {
     color: colors.text,
     fontSize: fontSize.xl,
+    letterSpacing: tracking.title,
     fontWeight: '600',
     textAlign: 'center',
     marginBottom: spacing.xs,
@@ -749,7 +751,7 @@ const styles = themed((colors) => ({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  modalTitle: { color: colors.text, fontSize: fontSize.lg, fontWeight: '700' },
+  modalTitle: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '700' },
   modalDone: { color: colors.accent, fontSize: fontSize.md, fontWeight: '600' },
   modalList: { paddingHorizontal: spacing.xl, gap: spacing.sm, paddingBottom: spacing.xl },
 }));

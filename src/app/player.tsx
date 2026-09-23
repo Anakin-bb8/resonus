@@ -70,7 +70,7 @@ import { useSettings, type CoverTapAction } from '@/store/settings';
 import { useSongMenu } from '@/store/songMenu';
 import { useToast } from '@/store/toast';
 import { useUpnp } from '@/store/upnp';
-import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
+import { colors, fontSize, radius, spacing, themed, useTheme, tracking } from '@/theme';
 import { motion } from '@/theme/motion';
 
 /** Floor: below this the cover stops giving up space and the page scrolls. */
@@ -1506,7 +1506,7 @@ const styles = themed((colors) => ({
   // when tapping the empty space on the right.
   // Hugs the text: the tappable area is just the title/artist, not the row.
   tapText: { alignSelf: 'flex-start', maxWidth: '100%' },
-  title: { color: colors.text, fontSize: fontSize.xl, fontWeight: '600' },
+  title: { color: colors.text, fontSize: fontSize.xl, letterSpacing: tracking.title, fontWeight: '600' },
   // The gap the artist line used to keep for itself now belongs to the row it
   // shares with the badge, so the two line up on their middles.
   artistRow: {

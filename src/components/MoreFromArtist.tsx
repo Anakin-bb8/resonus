@@ -11,7 +11,7 @@ import { getArtist } from '@/api/data';
 import { AlbumCard } from '@/components/AlbumCard';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
-import { fontSize, spacing, themed } from '@/theme';
+import { fontSize, spacing, themed, tracking } from '@/theme';
 
 interface Props {
   artistId: string;
@@ -72,6 +72,7 @@ const styles = themed((colors) => ({
   title: {
     color: colors.text,
     fontSize: fontSize.lg,
+    letterSpacing: tracking.heading,
     fontWeight: '700',
     flex: 1,
     marginRight: spacing.md,

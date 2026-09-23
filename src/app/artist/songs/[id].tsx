@@ -67,6 +67,7 @@ import {
   SCREEN_BOTTOM_PADDING,
   themed,
   useTheme,
+  tracking,
 } from '@/theme';
 
 export default function ArtistSongsScreen() {
@@ -473,7 +474,7 @@ const styles = themed((colors) => ({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  title: { flex: 1, color: colors.text, fontSize: fontSize.lg, fontWeight: '600' },
+  title: { flex: 1, color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '600' },
   meta: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,

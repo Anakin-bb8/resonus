@@ -2,7 +2,7 @@
 import { Component, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { colors, fontSize, radius, spacing, themed } from '@/theme';
+import { colors, fontSize, radius, spacing, themed, tracking } from '@/theme';
 
 interface Props {
   children: ReactNode;
@@ -47,7 +47,7 @@ const styles = themed((colors) => ({
     gap: spacing.md,
     padding: spacing.xl,
   },
-  title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '600' },
+  title: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '600' },
   message: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,

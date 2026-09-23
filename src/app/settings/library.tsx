@@ -16,7 +16,7 @@ import { queryClient } from '@/lib/query';
 import { useAuthStore } from '@/store/auth';
 import { profileKeyOf, useLibraries } from '@/store/libraries';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, radius, SHEET_MAX_WIDTH, spacing, themed, useTheme } from '@/theme';
+import { colors, fontSize, radius, SHEET_MAX_WIDTH, spacing, themed, useTheme, tracking } from '@/theme';
 
 export default function LibrarySettings() {
   // Repaints on a change of appearance or accent: a stack keeps this screen
@@ -266,6 +266,7 @@ const sheetStyles = themed((colors) => ({
   title: {
     color: colors.text,
     fontSize: fontSize.lg,
+    letterSpacing: tracking.heading,
     fontWeight: '700',
     marginBottom: spacing.xs,
   },

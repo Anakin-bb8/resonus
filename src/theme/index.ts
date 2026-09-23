@@ -508,6 +508,17 @@ export const fontSize = {
 } as const;
 
 /**
+ * Letter spacing for bold headings, tighter the bigger they are: at these
+ * sizes the default spacing reads loose, and pulling it in is most of what
+ * makes a title look current. Body text keeps the font's own.
+ */
+export const tracking = {
+  heading: -0.2,
+  title: -0.3,
+  display: -0.6,
+} as const;
+
+/**
  * How wide a bottom sheet is allowed to get.
  *
  * A phone never reaches it, so nothing moves there. On a tablet it is what

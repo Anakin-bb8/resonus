@@ -12,6 +12,7 @@ Releases before 0.2.1 are only listed on the
 ### Changed
 
 - New icons throughout the app, from Phosphor.
+- Big titles and section headings sit a little tighter.
 
 ## [0.7.8] - 2026-09-23
 

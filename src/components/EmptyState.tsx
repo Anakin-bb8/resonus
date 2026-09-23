@@ -2,7 +2,7 @@
 import Icon from '@/components/Icon';
 import { Pressable, Text, View } from 'react-native';
 
-import { colors, fontSize, radius, spacing, themed } from '@/theme';
+import { colors, fontSize, radius, spacing, themed, tracking } from '@/theme';
 
 interface Props {
   icon: keyof typeof Icon.glyphMap;
@@ -49,6 +49,7 @@ const styles = themed((colors) => ({
   title: {
     color: colors.text,
     fontSize: fontSize.lg,
+    letterSpacing: tracking.heading,
     fontWeight: '700',
     textAlign: 'center',
   },

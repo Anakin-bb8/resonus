@@ -35,6 +35,7 @@ import {
   SCREEN_BOTTOM_PADDING,
   themed,
   useTheme,
+  tracking,
 } from '@/theme';
 import { listPerf } from '@/lib/listPerf';
 import { BackChevron } from '@/components/BackChevron';
@@ -342,7 +343,7 @@ const styles = themed((colors) => ({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '600' },
+  title: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '600' },
   searchRow: {
     height: SEARCH_H,
     flexDirection: 'row',

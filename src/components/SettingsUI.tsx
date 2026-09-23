@@ -21,7 +21,7 @@ import { useSafeAreaFrame, useSafeAreaInsets } from 'react-native-safe-area-cont
 
 import { useAccent } from '@/hooks/useAccent';
 import { CONTENT_MAX_WIDTH } from '@/hooks/useScreenSize';
-import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING, themed } from '@/theme';
+import { colors, fontSize, radius, spacing, SCREEN_BOTTOM_PADDING, themed, tracking } from '@/theme';
 import { BackChevron } from './BackChevron';
 
 /**
@@ -733,7 +733,7 @@ export const settingsStyles = themed((colors) => ({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  headerTitle: { color: colors.text, fontSize: fontSize.lg, fontWeight: '700' },
+  headerTitle: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '700' },
   content: { padding: spacing.lg, gap: spacing.sm, paddingBottom: SCREEN_BOTTOM_PADDING },
   /** Where the settings themselves live, centred once there is room to spare. */
   pane: { flex: 1, width: '100%', maxWidth: CONTENT_MAX_WIDTH, alignSelf: 'center' },
@@ -741,6 +741,7 @@ export const settingsStyles = themed((colors) => ({
   sectionTitle: {
     color: colors.text,
     fontSize: fontSize.lg,
+    letterSpacing: tracking.heading,
     fontWeight: '700',
     marginTop: spacing.xl,
     marginBottom: spacing.xs,

@@ -14,7 +14,7 @@ import { useAuthStore } from '@/store/auth';
 import { anyDownloads, useDownloads } from '@/store/downloads';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
+import { colors, fontSize, radius, spacing, themed, useTheme, tracking } from '@/theme';
 
 export default function SettingsScreen() {
   // Repaints on a change of appearance or accent: a stack keeps this screen
@@ -210,7 +210,7 @@ const styles = themed((colors) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { color: colors.text, fontSize: fontSize.lg, fontWeight: '700' },
+  avatarText: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '700' },
   profileName: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
   sectionRow: {
     flexDirection: 'row',

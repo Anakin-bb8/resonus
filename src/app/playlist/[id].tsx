@@ -48,7 +48,7 @@ import { usePins } from '@/store/pins';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
 import { showUndoToast, useToast } from '@/store/toast';
-import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
+import { colors, fontSize, spacing, themed, useTheme, tracking } from '@/theme';
 
 const SEED_COUNT = 5;
 const SIMILAR_PER_SEED = 3;
@@ -282,6 +282,7 @@ const suggestedStyles = themed((colors) => ({
   title: {
     color: colors.text,
     fontSize: fontSize.lg,
+    letterSpacing: tracking.heading,
     fontWeight: '700',
     marginBottom: spacing.xs,
   },

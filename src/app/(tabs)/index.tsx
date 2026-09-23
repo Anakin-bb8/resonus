@@ -59,7 +59,7 @@ import {
   type HomeSectionKey,
 } from '@/store/settings';
 import { useSongMenu } from '@/store/songMenu';
-import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
+import { colors, fontSize, radius, spacing, themed, useTheme, tracking } from '@/theme';
 
 /**
  * How wide a quick tile wants to be, in dp.
@@ -993,7 +993,7 @@ const styles = themed((colors) => ({
     marginBottom: spacing.lg,
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 1 },
-  greeting: { color: colors.text, fontSize: fontSize.xxl, fontWeight: '600', flexShrink: 1 },
+  greeting: { color: colors.text, fontSize: fontSize.xxl, letterSpacing: tracking.display, fontWeight: '600', flexShrink: 1 },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1043,11 +1043,12 @@ const styles = themed((colors) => ({
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.md,
   },
-  sectionHeaderTitle: { color: colors.text, fontSize: fontSize.lg, fontWeight: '700' },
+  sectionHeaderTitle: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '700' },
   showAll: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '600' },
   sectionTitle: {
     color: colors.text,
     fontSize: fontSize.lg,
+    letterSpacing: tracking.heading,
     fontWeight: '700',
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.md,

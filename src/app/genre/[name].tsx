@@ -61,6 +61,7 @@ import {
   SCREEN_BOTTOM_PADDING,
   themed,
   useTheme,
+  tracking,
 } from '@/theme';
 import { haptic } from '@/lib/haptics';
 import { listPerf } from '@/lib/listPerf';
@@ -710,7 +711,7 @@ const styles = themed((colors) => ({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  title: { flex: 1, color: colors.text, fontSize: fontSize.lg, fontWeight: '600' },
+  title: { flex: 1, color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '600' },
   // Under the title and to the same margin, like the meta line of an album or
   // a playlist.
   meta: {

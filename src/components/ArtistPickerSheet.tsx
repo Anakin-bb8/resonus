@@ -13,7 +13,7 @@ import { COVER, coverArtUrl } from '@/api/data';
 import { useBottomSheetAnim } from '@/hooks/useBottomSheetAnim';
 import { useT } from '@/i18n';
 import { useArtistPicker } from '@/store/artistPicker';
-import { fontSize, radius, SHEET_MAX_WIDTH, spacing, themed } from '@/theme';
+import { fontSize, radius, SHEET_MAX_WIDTH, spacing, themed, tracking } from '@/theme';
 import { Cover } from './Cover';
 
 export function ArtistPickerSheet() {
@@ -118,6 +118,7 @@ const styles = themed((colors) => ({
   title: {
     color: colors.text,
     fontSize: fontSize.lg,
+    letterSpacing: tracking.heading,
     fontWeight: '700',
     textAlign: 'center',
     marginBottom: spacing.md,

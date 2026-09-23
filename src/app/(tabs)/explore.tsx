@@ -47,7 +47,7 @@ import { useAccent } from '@/hooks/useAccent';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
 import { useSettings, type ExploreSectionKey, type ListLayout } from '@/store/settings';
-import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
+import { colors, fontSize, radius, spacing, themed, useTheme, tracking } from '@/theme';
 
 type Section = ExploreSectionKey;
 
@@ -285,7 +285,7 @@ const styles = themed((colors) => ({
   },
   // The same heading "Your library" has, since they are the two halves of one
   // idea and a different size would read as a different kind of screen.
-  heading: { color: colors.text, fontSize: fontSize.xxl, fontWeight: '600' },
+  heading: { color: colors.text, fontSize: fontSize.xxl, letterSpacing: tracking.display, fontWeight: '600' },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   segments: { flexGrow: 0, paddingBottom: spacing.md },
   segmentsContent: { gap: spacing.sm, paddingHorizontal: spacing.lg },

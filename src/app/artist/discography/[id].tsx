@@ -31,7 +31,7 @@ import {
 import { listPerf } from '@/lib/listPerf';
 import { useAuthStore } from '@/store/auth';
 import { useSettings } from '@/store/settings';
-import { colors, fontSize, spacing, SCREEN_BOTTOM_PADDING, themed, useTheme } from '@/theme';
+import { colors, fontSize, spacing, SCREEN_BOTTOM_PADDING, themed, useTheme, tracking } from '@/theme';
 import { BackChevron } from '@/components/BackChevron';
 import { useAlbumSort } from '@/hooks/useAlbumSort';
 import { useGridColumns } from '@/hooks/useGridColumns';
@@ -224,7 +224,7 @@ const styles = themed((colors) => ({
     paddingTop: spacing.md,
     paddingBottom: spacing.md,
   },
-  title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '700' },
+  title: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '700' },
   subtitle: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: '600' },
   list: {
     paddingHorizontal: spacing.lg,
