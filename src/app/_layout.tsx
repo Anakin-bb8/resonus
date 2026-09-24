@@ -28,6 +28,7 @@ import { SongMenuSheet } from '@/components/SongMenuSheet';
 import { Toast } from '@/components/Toast';
 import { UpdatePrompt } from '@/components/UpdatePrompt';
 import { installAppFont, setAppFont } from '@/lib/appFont';
+import { initAppLocale } from '@/lib/appLocale';
 import { initHomeWidget } from '@/lib/homeWidget';
 import { loadCustomFont } from '@/lib/customFont';
 import { removeLegacyRadioCovers } from '@/lib/legacyRadioCovers';
@@ -181,6 +182,8 @@ export default function RootLayout() {
     initRemoteIntegration();
     // The widget, the Quick Settings tile and the launcher shortcuts.
     initHomeWidget();
+    // The language in Android's per-app language setting, both ways.
+    initAppLocale();
   }, []);
 
   /**

@@ -1,0 +1,7 @@
+{
+  "name": "app-locale",
+  "version": "0.0.1",
+  "description": "Android's per-app language, read and written for Resonus (local Expo module)",
+  "main": "index.ts",
+  "private": true
+}
