@@ -39,6 +39,11 @@ import { MarqueeText } from './MarqueeText';
 // distance the card is thrown to get off screen — describing the other one (#131).
 const SWIPE_SHARE = 0.25;
 const DISMISS_Y = 80;
+/** Upwards opens the player, like tapping it. A shorter pull than dismissing:
+ *  opening is the common case, and nothing is lost if it fires by mistake. */
+const OPEN_Y = 40;
+/** How far the card follows the finger upwards before it stops giving. */
+const OPEN_FOLLOW = 24;
 
 /**
  * Isolated progress bar: the only thing that subscribes to `positionSec`
@@ -72,10 +77,12 @@ export function MiniPlayer() {
   const t = useT();
 
   // Mini-player gestures: swipe left → next, swipe right → previous (same as
-  // the player carousel), swipe down → dismiss (stop and clear). The pan is
-  // locked to the dominant axis to prevent diagonal movement.
+  // the player carousel), swipe down → dismiss (stop and clear), swipe up →
+  // open the player. The pan is locked to the dominant axis to prevent
+  // diagonal movement.
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
+  const openPlayer = () => pushOnce('/player');
   const pan = Gesture.Pan()
     .minDistance(10)
     .onUpdate((e) => {
@@ -83,7 +90,12 @@ export function MiniPlayer() {
         translateX.value = e.translationX;
         translateY.value = 0;
       } else {
-        translateY.value = Math.max(0, e.translationY);
+        // Upwards it only gives a little, with resistance: the player is what
+        // opens, the card itself is not going anywhere.
+        translateY.value =
+          e.translationY >= 0
+            ? e.translationY
+            : -OPEN_FOLLOW * (1 - Math.exp(e.translationY / (OPEN_FOLLOW * 3)));
         translateX.value = 0;
       }
     })
@@ -95,6 +107,9 @@ export function MiniPlayer() {
         else if (e.translationX > swipeX || e.velocityX > 800) scheduleOnRN(previous);
         translateX.value = withSpring(0, { damping: 20, stiffness: 200 });
         translateY.value = 0;
+      } else if (e.translationY < -OPEN_Y || e.velocityY < -600) {
+        scheduleOnRN(openPlayer);
+        translateY.value = withSpring(0, { damping: 20, stiffness: 200 });
       } else if (e.translationY > DISMISS_Y || e.velocityY > 800) {
         translateY.value = withTiming(screenH, { duration: motion.duration.move }, (finished) => {
           if (finished) scheduleOnRN(reset);
