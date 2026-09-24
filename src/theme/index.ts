@@ -174,7 +174,7 @@ const DARK: BasePalette = {
   onArtwork: '#FFFFFF',
   veil: 'rgba(18,18,18,0.6)',
   highlight: 'rgba(255,255,255,0.14)',
-  coverWash: 'rgba(0,0,0,0.3)',
+  coverWash: 'rgba(0,0,0,0.42)',
   playerPlain: '#3a4042',
   mediaTrack: 'rgba(255,255,255,0.35)',
   control: '#2A2A2A',
