@@ -14,6 +14,7 @@ import { useMemo } from 'react';
 
 import { type Song } from '@/api/subsonic';
 import { songsLabel, useT } from '@/i18n';
+import { transcodeTarget } from '@/lib/audioQuality';
 import { formatBytes } from '@/lib/format';
 import { useSettings } from '@/store/settings';
 
@@ -25,12 +26,17 @@ import { useSettings } from '@/store/settings';
  * bitrate of each song is needed; for FLAC it's variable, so the figure bounces
  * a bit.
  */
-function estimateDownloadBytes(songs: Song[], downloadBitRate: number): number | null {
+function estimateDownloadBytes(
+  songs: Song[],
+  downloadBitRate: number,
+  losslessOnly: boolean,
+): number | null {
   let bytes = 0;
   for (const s of songs) {
     // Radio songs and songs that are already local are not downloaded.
     if (s.url || s.localUri) continue;
-    const kbps = downloadBitRate > 0 ? downloadBitRate : s.bitRate;
+    const target = transcodeTarget(s, downloadBitRate, '', losslessOnly).bitRate;
+    const kbps = target > 0 ? target : s.bitRate;
     if (!s.duration || !kbps) return null; // no reliable data, don't say anything
     bytes += (s.duration * kbps * 1000) / 8;
   }
@@ -51,10 +57,11 @@ export function useDownloadMessage(songs: Song[]): { message: string; tight: boo
   const t = useT();
   const lang = useSettings((s) => s.language);
   const downloadBitRate = useSettings((s) => s.downloadBitRate);
+  const losslessOnly = useSettings((s) => s.downloadLosslessOnly);
 
   return useMemo(() => {
     const label = songsLabel(songs.length, lang);
-    const bytes = estimateDownloadBytes(songs, downloadBitRate);
+    const bytes = estimateDownloadBytes(songs, downloadBitRate, losslessOnly);
     if (bytes == null) {
       return { message: t('{songs} will be saved to this device.', { songs: label }), tight: false };
     }
@@ -77,5 +84,5 @@ export function useDownloadMessage(songs: Song[]): { message: string; tight: boo
       }),
       tight: false,
     };
-  }, [songs, lang, downloadBitRate, t]);
+  }, [songs, lang, downloadBitRate, losslessOnly, t]);
 }

@@ -34,6 +34,7 @@ import {
   type SubsonicAuth,
 } from '@/api/backend';
 import { tg } from '@/i18n';
+import { transcodeTarget } from '@/lib/audioQuality';
 import {
   forgetCover,
   hashKey,
@@ -509,7 +510,13 @@ function songFileUrl(
   auth: SubsonicAuth,
   song: Song,
 ): { url: string; ext: string; bitRate?: number } {
-  const { downloadBitRate: bitrate, downloadFormat: format } = useSettings.getState();
+  const s = useSettings.getState();
+  const { bitRate: bitrate, format } = transcodeTarget(
+    song,
+    s.downloadBitRate,
+    s.downloadFormat,
+    s.downloadLosslessOnly,
+  );
   if (bitrate > 0) {
     return {
       url: streamUrl(auth, song.id, bitrate, 0, format),

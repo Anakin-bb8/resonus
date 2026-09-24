@@ -81,6 +81,8 @@ export default function DownloadsSettings() {
   const setDownloadBitRate = useSettings((s) => s.setDownloadBitRate);
   const downloadFormat = useSettings((s) => s.downloadFormat);
   const setDownloadFormat = useSettings((s) => s.setDownloadFormat);
+  const downloadLosslessOnly = useSettings((s) => s.downloadLosslessOnly);
+  const setDownloadLosslessOnly = useSettings((s) => s.setDownloadLosslessOnly);
   const downloadConcurrency = useSettings((s) => s.downloadConcurrency);
   const setDownloadConcurrency = useSettings((s) => s.setDownloadConcurrency);
   const downloadWifiOnly = useSettings((s) => s.downloadWifiOnly);
@@ -172,6 +174,19 @@ export default function DownloadsSettings() {
           onChange={setDownloadFormat}
           disabled={offline || downloadBitRate === 0}
           disabledLabel={downloadBitRate === 0 ? t('Not used') : undefined}
+        />
+        <SwitchList
+          options={[
+            {
+              label: t('Transcode lossless files only'),
+              description: t(
+                'MP3, AAC, Opus and other lossy files are downloaded as they are. Only files like FLAC are transcoded.',
+              ),
+              value: downloadLosslessOnly,
+              onChange: setDownloadLosslessOnly,
+              disabled: offline || downloadBitRate === 0,
+            },
+          ]}
         />
         <SelectList
           label={t('Simultaneous downloads')}

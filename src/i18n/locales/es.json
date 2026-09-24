@@ -721,5 +721,8 @@
   "Lists carry on under the navigation bar and the mini player, blurred.": "Las listas siguen por debajo de la barra de navegación y del mini reproductor, desenfocadas.",
   "Pure black": "Negro puro",
   "A black background instead of dark grey whenever the app is dark. Made for OLED screens.": "Fondo negro en vez de gris oscuro cuando la app está en oscuro. Pensado para pantallas OLED.",
-  "System": "Sistema"
+  "System": "Sistema",
+  "Transcode lossless files only": "Transcodificar solo archivos sin pérdida",
+  "MP3, AAC, Opus and other lossy files are streamed as they are, so they are never encoded twice. Only files like FLAC follow the quality below.": "Los MP3, AAC, Opus y demás archivos con pérdida se reproducen tal cual, así nunca se codifican dos veces. Solo archivos como FLAC siguen la calidad de abajo.",
+  "MP3, AAC, Opus and other lossy files are downloaded as they are. Only files like FLAC are transcoded.": "Los MP3, AAC, Opus y demás archivos con pérdida se descargan tal cual. Solo se transcodifican archivos como FLAC."
 }

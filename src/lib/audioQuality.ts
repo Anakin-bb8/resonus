@@ -6,7 +6,7 @@
  * and the arrow notation for a transcode is the part that must not drift: two
  * screens describing the same file differently is worse than either wording.
  */
-import { type Song } from '@/api/subsonic';
+import type { Song } from '@/api/subsonic';
 
 /** "24-bit / 96 kHz", or nothing if the file says neither. */
 export function sampleLabel(song: Song): string | null {
@@ -18,6 +18,44 @@ export function sampleLabel(song: Song): string | null {
     : '';
   const sample = [depth, rate].filter(Boolean).join(' / ');
   return sample || null;
+}
+
+/** Extensions that only ever hold lossless audio. */
+const LOSSLESS = new Set([
+  'flac', 'wav', 'wave', 'aif', 'aiff', 'aifc', 'alac', 'ape', 'wv',
+  'dsf', 'dff', 'tak', 'tta', 'shn', 'ofr',
+]);
+/** Containers that hold either: ALAC and AAC are both `.m4a`. */
+const EITHER = new Set(['m4a', 'mp4', 'm4b', 'caf', 'mka', 'mkv', 'webm']);
+/** Extensions that only ever hold lossy audio. */
+const LOSSY = new Set(['mp3', 'mp2', 'aac', 'ogg', 'oga', 'opus', 'wma', 'mpc', 'spx', 'amr']);
+
+/**
+ * Is the file on the server lossless? Unknown files count as lossless when
+ * their bitrate is past anything a lossy codec is used at.
+ */
+export function isLossless(song: Pick<Song, 'suffix' | 'bitDepth' | 'bitRate'>): boolean {
+  const ext = song.suffix?.toLowerCase() ?? '';
+  if (LOSSLESS.has(ext)) return true;
+  if (LOSSY.has(ext)) return false;
+  // Servers report a bit depth only for PCM-based codecs.
+  if (EITHER.has(ext) && song.bitDepth) return true;
+  return (song.bitRate ?? 0) > 500;
+}
+
+/**
+ * What to ask the server for, given the quality settings: `bitRate` 0 means
+ * the original file. With `losslessOnly`, a lossy file is never re-encoded
+ * (#216).
+ */
+export function transcodeTarget(
+  song: Pick<Song, 'suffix' | 'bitDepth' | 'bitRate'>,
+  bitRate: number,
+  format: string,
+  losslessOnly: boolean,
+): { bitRate: number; format: string } {
+  if (bitRate <= 0 || (losslessOnly && !isLossless(song))) return { bitRate: 0, format: '' };
+  return { bitRate, format };
 }
 
 export function qualityLabel(

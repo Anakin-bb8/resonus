@@ -2,7 +2,7 @@
 import { Text } from 'react-native';
 
 import { type Song } from '@/api/subsonic';
-import { qualityLabel } from '@/lib/audioQuality';
+import { qualityLabel, transcodeTarget } from '@/lib/audioQuality';
 import { useAuthStore } from '@/store/auth';
 import { useDownloads } from '@/store/downloads';
 import { localSourceFor } from '@/store/player';
@@ -15,6 +15,8 @@ export function AudioQualityBadge({ song }: { song: Song }) {
   const cellular = useNetworkType((s) => s.cellular);
   const maxBitRate = useSettings((s) => (cellular ? s.maxBitRateCellular : s.maxBitRate));
   const streamFormat = useSettings((s) => (cellular ? s.streamFormatCellular : s.streamFormat));
+  const losslessOnly = useSettings((s) => s.streamLosslessOnly);
+  const target = transcodeTarget(song, maxBitRate, streamFormat, losslessOnly);
   const dlUri = useDownloads((s) => s.files[song.id]);
   const dlBitRate = useDownloads((s) => s.dlBitRates[song.id]);
   // Subscribed so the badge follows them; the rule that reads them belongs to
@@ -26,10 +28,10 @@ export function AudioQualityBadge({ song }: { song: Song }) {
   const fromDisk = !!dlUri && !!localSourceFor(song);
   const label = qualityLabel(
     song,
-    maxBitRate,
+    target.bitRate,
     fromDisk ? dlUri : undefined,
     dlBitRate,
-    streamFormat,
+    target.format,
   );
   if (!label) return null;
   return <Text style={styles.badge}>{label}</Text>;

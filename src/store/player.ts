@@ -52,6 +52,7 @@ import { CLIENT_NAME } from '@/api/subsonic';
 import { COVER, coverArtUrl, getRandomSongs } from '@/api/data';
 import { prefetchLyrics } from '@/hooks/useLyrics';
 import { tg } from '@/i18n';
+import { transcodeTarget } from '@/lib/audioQuality';
 import type { Remap } from '@/lib/navidromeRemap';
 import { remapSong } from '@/lib/navidromeRemap';
 import { beat, bump, timed } from '@/lib/perfLog';
@@ -320,6 +321,19 @@ function effectiveStreamFormat(): TranscodeFormat {
 }
 
 /**
+ * What a stream of this song asks the server for: the network's quality, unless
+ * the file is lossy and only lossless ones are to be transcoded (#216).
+ */
+export function streamTargetFor(song: Song): { bitRate: number; format: string } {
+  return transcodeTarget(
+    song,
+    effectiveMaxBitRate(),
+    effectiveStreamFormat(),
+    useSettings.getState().streamLosslessOnly,
+  );
+}
+
+/**
  * The copy of a song that already failed, this run only: `file` sends it to the
  * server, `stream` back to the disk whatever the setting says. Read by
  * `localSourceFor`. Not written down, since neither is a property of the song;
@@ -390,9 +404,9 @@ function sourceFor(song: Song, timeOffsetSec = 0): AudioSource {
       : 'player · streamed, nothing downloaded',
   );
   const auth = useAuthStore.getState().auth!;
-  const format = effectiveStreamFormat();
+  const { bitRate, format } = streamTargetFor(song);
   return {
-    uri: streamUrl(auth, song.id, effectiveMaxBitRate(), timeOffsetSec, format),
+    uri: streamUrl(auth, song.id, bitRate, timeOffsetSec, format),
     metadata,
     mediaId,
   };
@@ -456,7 +470,7 @@ let sourceHasLength: boolean | null = null;
 function isTranscoded(song: Song): boolean {
   // Playing from disk: normal native seek, no timeOffset.
   if (song.url || localSourceFor(song)) return false;
-  const max = effectiveMaxBitRate();
+  const { bitRate: max, format } = streamTargetFor(song);
   // Without limit the server serves the original file (direct, native seek).
   // Forced codec is only sent with `maxBitRate > 0` (see streamUrl), so
   // outside that there is no transcode.
@@ -464,7 +478,7 @@ function isTranscoded(song: Song): boolean {
   // Transcodes if the original exceeds the bitrate OR if an output codec is
   // forced (the server re-encodes even if the bitrate already fit). In both
   // cases the stream loses random access and native seek would restart.
-  return effectiveStreamFormat() !== '' || (song.bitRate != null && song.bitRate > max);
+  return format !== '' || (song.bitRate != null && song.bitRate > max);
 }
 
 /** Does seeking this song need a `timeOffset` re-request instead of a native seek? */
@@ -1770,7 +1784,7 @@ function onTrackTransition() {
 // queued track depends on format and bitrate: all of them have to re-evaluate
 // what is (or is no longer) waiting behind the current track.
 const gaplessSettingsKey = (s: ReturnType<typeof useSettings.getState>) =>
-  `${s.crossfadeSec}|${s.streamFormat}|${s.streamFormatCellular}|${s.maxBitRate}|${s.maxBitRateCellular}`;
+  `${s.crossfadeSec}|${s.streamFormat}|${s.streamFormatCellular}|${s.maxBitRate}|${s.maxBitRateCellular}|${s.streamLosslessOnly}`;
 let lastGaplessSettings = gaplessSettingsKey(useSettings.getState());
 useSettings.subscribe((s) => {
   const key = gaplessSettingsKey(s);

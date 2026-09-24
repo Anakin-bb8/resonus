@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 721 of them.
+Every string the app can show, under the screen it shows up on. 724 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -621,6 +621,7 @@ you are actually typing into, which is easier than reading it here.
 | `In offline mode, hide songs that aren't downloaded instead of showing them greyed out.` |  |
 | `Library metadata copy` | The offline copy of the library: the album, artist and playlist lists kept so the app works with no connection. Not the songs themselves, which are the downloads |
 | `Local library index` | A line of the storage breakdown: what the app remembers about the phone's own music files. A size, not a setting |
+| `MP3, AAC, Opus and other lossy files are downloaded as they are. Only files like FLAC are transcoded.` |  |
 | `Not used` | Replaces the codec's value when that network's quality is `Original`. Nothing is transcoded then, so the codec setting has nothing to do and the row is greyed out |
 | `Offline library` | In the storage bar: the room the offline copy of the library takes. The same thing the line under it calls `Library metadata copy`, so the two should agree |
 | `Original` | Quality option: the file exactly as it is on the server, nothing transcoded. It also appears in quotes inside two descriptions on those screens, so use the same wording in all three |
@@ -632,6 +633,7 @@ you are actually typing into, which is easier than reading it here.
 | `Songs fetched at the same time. Fewer is gentler on the server, network and your phone.` | The line under “Simultaneous downloads”, explaining it |
 | `Storage used` | Section header over the bar showing what is taking up room on the phone |
 | `Switch to your downloads when the server is unreachable, and back when it returns.` |  |
+| `Transcode lossless files only` |  |
 
 ## Settings › Equalizer
 
@@ -846,6 +848,7 @@ you are actually typing into, which is easier than reading it here.
 | `Keep playing similar songs when your queue ends. A mix you start yourself always does, even with this off.` | The line under “Autoplay”, explaining it |
 | `Keep screen on` |  |
 | `Mobile data` | Group header under `Streaming`: the settings that apply on mobile data, as opposed to Wi-Fi |
+| `MP3, AAC, Opus and other lossy files are streamed as they are, so they are never encoded twice. Only files like FLAC follow the quality below.` |  |
 | `Never` | A value of `Play downloaded songs from the phone`: always stream, never use the file on the phone. The share sheet's own "never expires" is a separate key, `Never::expiry`, so a language that needs two different words can have them |
 | `No` | A setting value meaning none or zero, not the answer to a question: no crossfade, no seek buttons |
 | `Normalize volume` |  |
@@ -870,6 +873,7 @@ you are actually typing into, which is easier than reading it here.
 | `Streaming quality (mobile data)` |  |
 | `Streaming quality (Wi-Fi)` |  |
 | `The screen never turns off while the app is visible.` | The line under “Keep screen on”, explaining it |
+| `Transcode lossless files only` |  |
 | `Tune the sound band by band.` | The line under “Equalizer”, explaining it |
 | `Warn about battery optimization` |  |
 | `When a song counts as played.` | Under the `Scrobbling` row, saying what the screen it opens is about |

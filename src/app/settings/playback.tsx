@@ -51,6 +51,8 @@ export default function PlaybackSettings() {
   const setStreamFormat = useSettings((s) => s.setStreamFormat);
   const streamFormatCellular = useSettings((s) => s.streamFormatCellular);
   const setStreamFormatCellular = useSettings((s) => s.setStreamFormatCellular);
+  const streamLosslessOnly = useSettings((s) => s.streamLosslessOnly);
+  const setStreamLosslessOnly = useSettings((s) => s.setStreamLosslessOnly);
   const autoplaySimilar = useSettings((s) => s.autoplaySimilar);
   const syncQueueFromServer = useSettings((s) => s.syncQueueFromServer);
   const setSyncQueueFromServer = useSettings((s) => s.setSyncQueueFromServer);
@@ -126,6 +128,16 @@ export default function PlaybackSettings() {
                   value: preloadUpcoming,
                   onChange: setPreloadUpcoming,
                   disabled: offline,
+                },
+                {
+                  label: t('Transcode lossless files only'),
+                  description: t(
+                    'MP3, AAC, Opus and other lossy files are streamed as they are, so they are never encoded twice. Only files like FLAC follow the quality below.',
+                  ),
+                  value: streamLosslessOnly,
+                  onChange: setStreamLosslessOnly,
+                  // Nothing to skip when neither network transcodes.
+                  disabled: offline || (maxBitRate === 0 && maxBitRateCellular === 0),
                 },
               ]}
             />

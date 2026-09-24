@@ -719,5 +719,8 @@
   "Blur behind the bars": "Blur behind the bars",
   "Lists carry on under the navigation bar and the mini player, blurred.": "Lists carry on under the navigation bar and the mini player, blurred.",
   "Pure black": "Pure black",
-  "A black background instead of dark grey whenever the app is dark. Made for OLED screens.": "A black background instead of dark grey whenever the app is dark. Made for OLED screens."
+  "A black background instead of dark grey whenever the app is dark. Made for OLED screens.": "A black background instead of dark grey whenever the app is dark. Made for OLED screens.",
+  "Transcode lossless files only": "Transcode lossless files only",
+  "MP3, AAC, Opus and other lossy files are streamed as they are, so they are never encoded twice. Only files like FLAC follow the quality below.": "MP3, AAC, Opus and other lossy files are streamed as they are, so they are never encoded twice. Only files like FLAC follow the quality below.",
+  "MP3, AAC, Opus and other lossy files are downloaded as they are. Only files like FLAC are transcoded.": "MP3, AAC, Opus and other lossy files are downloaded as they are. Only files like FLAC are transcoded."
 }

@@ -11,6 +11,7 @@ import { create } from 'zustand';
 
 import { coverArtUrl as serverCoverArtUrl, streamUrl, type Song } from '@/api/backend';
 import { COVER } from '@/api/data';
+import { transcodeTarget } from '@/lib/audioQuality';
 import { localFileUrl, publishLocalFiles, stopLocalHttp } from '@/lib/localHttp';
 import { localCoverUrl } from '@/lib/localLibrary';
 import { useAuthStore } from './auth';
@@ -354,8 +355,14 @@ function buildUpnpTrackInfo(song: Song) {
 function serverStreamUrl(song: Song): string | undefined {
   const { auth, offline } = useAuthStore.getState();
   if (!auth || offline || song.url) return undefined;
-  const settings = useSettings.getState();
-  return streamUrl(auth, song.id, settings.maxBitRate, 0, settings.streamFormat);
+  const { bitRate, format } = castTarget(song);
+  return streamUrl(auth, song.id, bitRate, 0, format);
+}
+
+/** The Wi-Fi quality settings, which are the ones a renderer on the LAN uses. */
+function castTarget(song: Song): { bitRate: number; format: string } {
+  const s = useSettings.getState();
+  return transcodeTarget(song, s.maxBitRate, s.streamFormat, s.streamLosslessOnly);
 }
 
 /**
@@ -452,8 +459,8 @@ function buildUpnpQueuePayload(queue: Song[]) {
  */
 function transcodedTo(song: Song): string | undefined {
   if (!serverStreamUrl(song)) return undefined;
-  const settings = useSettings.getState();
-  return settings.maxBitRate > 0 ? settings.streamFormat : undefined;
+  const { bitRate, format } = castTarget(song);
+  return bitRate > 0 ? format : undefined;
 }
 
 /**
@@ -676,11 +683,11 @@ async function loadGenericUpnpQueue(
 function mp3StreamUrl(song: Song): string | undefined {
   const { auth, offline } = useAuthStore.getState();
   if (!auth || offline || song.url || !serverStreamUrl(song)) return undefined;
-  const settings = useSettings.getState();
+  const { bitRate } = castTarget(song);
   return streamUrl(
     auth,
     song.id,
-    settings.maxBitRate > 0 ? settings.maxBitRate : CAST_MP3_BITRATE,
+    bitRate > 0 ? bitRate : CAST_MP3_BITRATE,
     0,
     'mp3',
   );

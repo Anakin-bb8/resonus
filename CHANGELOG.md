@@ -13,6 +13,7 @@ Releases before 0.2.1 are only listed on the
 
 - Settings > Theme > Pure black puts the dark appearance on a true black background, for OLED screens.
 - The navigation bar, the mini player and the bar at the top of albums, playlists and artists blur what scrolls under them, with a hairline marking where the navigation bar starts, on iOS and on Android 12 or newer, and Settings > Appearance > Blur behind the bars turns it off.
+- Transcode lossless files only, in Settings > Quality & playback and in Settings > Downloads, streams or downloads MP3, AAC, Opus and other lossy files as they are and only transcodes files like FLAC (#216).
 
 ### Changed
 

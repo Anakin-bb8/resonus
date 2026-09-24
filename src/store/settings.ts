@@ -719,6 +719,11 @@ interface SettingsState {
   downloadFormat: TranscodeFormat;
   /** Download only over Wi-Fi (blocks downloads on cellular). */
   downloadWifiOnly: boolean;
+  /** Streaming: lossy files are sent as they are, only lossless ones are
+   *  transcoded (#216). */
+  streamLosslessOnly: boolean;
+  /** The same for downloads. */
+  downloadLosslessOnly: boolean;
   language: Language;
   /** Show format/bitrate/Hi-Res label (player only). */
   showAudioQuality: boolean;
@@ -1021,6 +1026,8 @@ interface SettingsState {
   setStreamFormatCellular: (value: TranscodeFormat) => void;
   setDownloadFormat: (value: TranscodeFormat) => void;
   setDownloadWifiOnly: (value: boolean) => void;
+  setStreamLosslessOnly: (value: boolean) => void;
+  setDownloadLosslessOnly: (value: boolean) => void;
   setLanguage: (language: Language) => void;
   setShowAudioQuality: (value: boolean) => void;
   setShowRating: (value: boolean) => void;
@@ -1155,6 +1162,8 @@ function snapshot(get: () => SettingsState) {
     streamFormatCellular: s.streamFormatCellular,
     downloadFormat: s.downloadFormat,
     downloadWifiOnly: s.downloadWifiOnly,
+    streamLosslessOnly: s.streamLosslessOnly,
+    downloadLosslessOnly: s.downloadLosslessOnly,
     // `language` is not in the profile blob: it's global (see LANG_KEY).
     showAudioQuality: s.showAudioQuality,
     showRating: s.showRating,
@@ -1256,6 +1265,8 @@ const DEFAULTS = {
   streamFormatCellular: '' as TranscodeFormat,
   downloadFormat: '' as TranscodeFormat,
   downloadWifiOnly: false,
+  streamLosslessOnly: false,
+  downloadLosslessOnly: false,
   language: 'en' as Language,
   showAudioQuality: false,
   showRating: false,
@@ -1428,6 +1439,16 @@ export const useSettings = create<SettingsState>((set, get) => ({
 
   setDownloadWifiOnly: (downloadWifiOnly) => {
     set({ downloadWifiOnly });
+    persist(snapshot(get));
+  },
+
+  setStreamLosslessOnly: (streamLosslessOnly) => {
+    set({ streamLosslessOnly });
+    persist(snapshot(get));
+  },
+
+  setDownloadLosslessOnly: (downloadLosslessOnly) => {
+    set({ downloadLosslessOnly });
     persist(snapshot(get));
   },
 
@@ -1969,6 +1990,8 @@ export const useSettings = create<SettingsState>((set, get) => ({
           streamFormatCellular: TranscodeFormat;
           downloadFormat: TranscodeFormat;
           downloadWifiOnly: boolean;
+          streamLosslessOnly: boolean;
+          downloadLosslessOnly: boolean;
           language: Language;
           showAudioQuality: string | boolean;
           showRating: boolean;
@@ -2102,6 +2125,12 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (typeof parsed.downloadWifiOnly === 'boolean') {
           set({ downloadWifiOnly: parsed.downloadWifiOnly });
+        }
+        if (typeof parsed.streamLosslessOnly === 'boolean') {
+          set({ streamLosslessOnly: parsed.streamLosslessOnly });
+        }
+        if (typeof parsed.downloadLosslessOnly === 'boolean') {
+          set({ downloadLosslessOnly: parsed.downloadLosslessOnly });
         }
         // `language` is no longer applied here: it's global, loaded at the end.
         // It used to be a mode ('off'/'player'/'everywhere'); now a simple

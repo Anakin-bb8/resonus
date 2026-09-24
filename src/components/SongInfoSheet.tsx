@@ -21,7 +21,7 @@ import { COVER, songCoverUrl } from '@/api/data';
 import { useBottomSheetAnim } from '@/hooks/useBottomSheetAnim';
 import { useT } from '@/i18n';
 import { artistTargets } from '@/lib/artistNav';
-import { qualityLabel, sampleLabel } from '@/lib/audioQuality';
+import { qualityLabel, sampleLabel, transcodeTarget } from '@/lib/audioQuality';
 import { formatBytes, formatDuration } from '@/lib/format';
 import { useDownloads } from '@/store/downloads';
 import { useNetworkType } from '@/store/networkType';
@@ -84,6 +84,7 @@ export function SongInfoSheet() {
   const cellular = useNetworkType((s) => s.cellular);
   const maxBitRate = useSettings((s) => (cellular ? s.maxBitRateCellular : s.maxBitRate));
   const streamFormat = useSettings((s) => (cellular ? s.streamFormatCellular : s.streamFormat));
+  const losslessOnly = useSettings((s) => s.streamLosslessOnly);
   const dlUri = useDownloads((s) => (song ? s.files[song.id] : undefined));
   const dlBitRate = useDownloads((s) => (song ? s.dlBitRates[song.id] : undefined));
   const { dismiss, pan, makePan, backdropStyle, sheetStyle, onSheetLayout } = useBottomSheetAnim(
@@ -175,7 +176,8 @@ export function SongInfoSheet() {
 
   // The player's exact wording, arrow and all, so the same file is not
   // described two different ways on two screens.
-  const format = qualityLabel(song, maxBitRate, dlUri, dlBitRate, streamFormat);
+  const target = transcodeTarget(song, maxBitRate, streamFormat, losslessOnly);
+  const format = qualityLabel(song, target.bitRate, dlUri, dlBitRate, target.format);
   add(t('Format'), format);
   // `qualityLabel` folds the sample rate in already, except when it took the
   // transcode branch and dropped the original's specs. Only then is it worth
