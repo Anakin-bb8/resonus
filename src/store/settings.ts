@@ -548,7 +548,7 @@ export interface BottomTab {
   enabled: boolean;
 }
 
-const BOTTOM_TAB_KEYS: TabSegment[] = ['index', 'search', 'library', 'explore'];
+const BOTTOM_TAB_KEYS: TabSegment[] = ['index', 'search', 'library', 'explore', 'options'];
 
 /**
  * The order they start in, all of them on.
@@ -563,6 +563,9 @@ export const DEFAULT_BOTTOM_TABS: BottomTab[] = [
   { key: 'search', enabled: true },
   { key: 'explore', enabled: true },
   { key: 'library', enabled: true },
+  // Settings, for whoever goes there often enough to want it one tap away. Off:
+  // the gear on Home already leads there.
+  { key: 'options', enabled: false },
 ];
 
 /** The same sanitising the chips get, plus Home's exemption. */

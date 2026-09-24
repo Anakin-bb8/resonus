@@ -20,11 +20,15 @@ import { colors, TAB_BAR_HEIGHT, useTheme } from '@/theme';
  * the same answer, kept apart because the name is also what the other bar and
  * the back arrow read, and neither of those draws an icon.
  */
-const TAB_OPTIONS: Record<TabSegment, { label: string; icon: 'home' | 'search' | 'library' | 'albums' }> = {
+const TAB_OPTIONS: Record<
+  TabSegment,
+  { label: string; icon: 'home' | 'search' | 'library' | 'albums' | 'settings' }
+> = {
   index: { label: 'Home', icon: 'home' },
   search: { label: 'Search', icon: 'search' },
   library: { label: 'Your library', icon: 'library' },
   explore: { label: 'Explore', icon: 'albums' },
+  options: { label: 'Settings', icon: 'settings' },
 };
 
 export default function TabsLayout() {

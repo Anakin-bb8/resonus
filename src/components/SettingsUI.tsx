@@ -40,11 +40,12 @@ export function SettingsSafeArea({ children }: { children: React.ReactNode }) {
   return <View style={[settingsStyles.safe, { paddingTop: insets.top }]}>{children}</View>;
 }
 
-/** Header with back arrow and centered title. */
-export function ScreenHeader({ title }: { title: string }) {
+/** Header with back arrow and centered title. `back={false}` for a screen that
+ *  is a tab, with nowhere to go back to. */
+export function ScreenHeader({ title, back = true }: { title: string; back?: boolean }) {
   return (
     <View style={settingsStyles.header}>
-      <BackChevron size={28} />
+      {back ? <BackChevron size={28} /> : <View style={{ width: 28 }} />}
       <Text style={settingsStyles.headerTitle}>{title}</Text>
       <View style={{ width: 28 }} />
     </View>

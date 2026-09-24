@@ -16,7 +16,8 @@ import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
 import { colors, fontSize, radius, spacing, themed, useTheme, tracking } from '@/theme';
 
-export default function SettingsScreen() {
+/** `asTab`: shown as the Settings tab (see `(tabs)/options`), with no way back. */
+export default function SettingsScreen({ asTab = false }: { asTab?: boolean }) {
   // Repaints on a change of appearance or accent: a stack keeps this screen
   // mounted while you are on another one, out of reach of anything else.
   useTheme();
@@ -108,7 +109,7 @@ export default function SettingsScreen() {
 
   return (
     <SettingsSafeArea>
-      <ScreenHeader title={t('Settings')} />
+      <ScreenHeader title={t('Settings')} back={!asTab} />
       {/* The same centred pane every other settings screen gets from
           `SettingsPage`; this one draws its own header, so it says it here. */}
       <View style={settingsStyles.pane}>

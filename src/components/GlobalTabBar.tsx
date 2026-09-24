@@ -36,11 +36,12 @@ import { rememberTab, reselectTab, tabOrigin, TABS } from '@/lib/tabOrigin';
 import { useSettings } from '@/store/settings';
 import { colors, TAB_BAR_HEIGHT, themed } from '@/theme';
 
-const ICONS: Record<string, 'home' | 'search' | 'library' | 'albums'> = {
+const ICONS: Record<string, 'home' | 'search' | 'library' | 'albums' | 'settings'> = {
   index: 'home',
   search: 'search',
   library: 'library',
   explore: 'albums',
+  options: 'settings',
 };
 
 export function GlobalTabBar() {
