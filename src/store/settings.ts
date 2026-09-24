@@ -701,7 +701,41 @@ export const APP_FONT_FAMILY: Record<Exclude<AppFont, 'custom'>, string | undefi
   },
 });
 
-interface SettingsState {
+/** Everything that is saved per profile: all of `DEFAULTS` but the language,
+ *  which is global (see LANG_KEY). */
+type Persisted = Omit<typeof DEFAULTS, 'language'>;
+type PersistedKey = keyof Persisted;
+/** Saved settings whose stored shape has changed, so hydrating reads them as
+ *  anything and checks. */
+type Reshaped =
+  | 'showAudioQuality'
+  | 'homeSections'
+  | 'homeChips'
+  | 'exploreSections'
+  | 'bottomTabs'
+  | 'homeButtons';
+
+/**
+ * `setX(value)` for every saved setting: stores it and saves the profile.
+ * Settings that need more than that (side effects, clamping, a key inside a
+ * list) define their own setter, which replaces the generated one.
+ */
+type AutoSetters = {
+  [K in PersistedKey as `set${Capitalize<K>}`]: (value: Persisted[K]) => void;
+};
+
+/** The generated setters that a hand-written one replaces with another shape. */
+type CustomSetter =
+  | 'setDiagnostics'
+  | 'setHideUnavailableOffline'
+  | 'setReplayGainPreampDb'
+  | 'setCustomGreeting'
+  | 'setGridColumns'
+  | 'setAccentColor'
+  | 'setThemeMode'
+  | 'setPureBlack';
+
+interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   /** Streaming quality over Wi-Fi (and any non-cellular network). */
   maxBitRate: number;
   /** Streaming quality over cellular. */
@@ -1025,115 +1059,23 @@ interface SettingsState {
   customFontFamily: string | null;
   /** URI the custom font was copied to inside the app's document directory. */
   customFontUri: string | null;
-  setMaxBitRate: (value: number) => void;
-  setMaxBitRateCellular: (value: number) => void;
-  setDownloadBitRate: (value: number) => void;
-  setStreamFormat: (value: TranscodeFormat) => void;
-  setDownloadConcurrency: (value: number) => void;
-  setStreamFormatCellular: (value: TranscodeFormat) => void;
-  setDownloadFormat: (value: TranscodeFormat) => void;
-  setDownloadWifiOnly: (value: boolean) => void;
-  setStreamLosslessOnly: (value: boolean) => void;
-  setDownloadLosslessOnly: (value: boolean) => void;
-  setSongCache: (value: boolean) => void;
-  setSongCacheLimitGb: (value: number) => void;
   setLanguage: (language: Language) => void;
-  setShowAudioQuality: (value: boolean) => void;
-  setShowRating: (value: boolean) => void;
-  setShowAlbumInfo: (value: boolean) => void;
-  setSwapPlayerButtons: (value: boolean) => void;
-  setShowPlayedInQueue: (value: boolean) => void;
-  setShowListArtwork: (value: boolean) => void;
-  setShowPlaylistDescription: (value: boolean) => void;
-  setAlwaysShowTabs: (value: boolean) => void;
-  setBlurBars: (value: boolean) => void;
-  setShowSongDuration: (value: boolean) => void;
-  setShowListRating: (value: boolean) => void;
-  setShowExplicitTag: (value: boolean) => void;
-  setAutoplaySimilar: (value: boolean) => void;
   setDiagnostics: (value: boolean) => void;
-  setUpdateCheck: (value: boolean) => void;
-  setCrossfadeSec: (value: number) => void;
-  setScrobblePercent: (value: number) => void;
-  setScrobbleSeconds: (value: number) => void;
   resetScrobbleRules: () => void;
-  setPreloadUpcoming: (value: boolean) => void;
-  setAutoOfflineSwitch: (value: boolean) => void;
   setHideUnavailableOffline: (value: boolean) => void;
-  setReplayGain: (value: ReplayGainMode) => void;
   setReplayGainPreampDb: (value: number) => void;
-  setKeepScreenAwake: (value: boolean) => void;
-  setHapticsEnabled: (value: boolean) => void;
-  setLyricsBackground: (value: ScreenBackground) => void;
-  setLyricsCardBackground: (value: CardBackground) => void;
-  setLyricsSource: (value: LyricsSource) => void;
-  setPreferDownloads: (value: PreferDownloads) => void;
-  setShowArtistPhoto: (value: boolean) => void;
-  setShowDiscHeaders: (value: boolean) => void;
-  setShowGenreChips: (value: boolean) => void;
-  setBatteryWarning: (value: boolean) => void;
-  setPlayerBackground: (value: ScreenBackground) => void;
-  setAnimatedCoverBackground: (value: boolean) => void;
-  setFitCoverArt: (value: boolean) => void;
-  setMiniPlayerColorBackground: (value: boolean) => void;
-  setShowLyricsCard: (value: boolean) => void;
-  setShowArtistCard: (value: boolean) => void;
-  setCoverTapAction: (value: CoverTapAction) => void;
-  setCoverDoubleTapAction: (value: CoverDoubleTapAction) => void;
-  setMarqueeTitles: (value: boolean) => void;
-  setShowQueueButton: (value: boolean) => void;
-  setShowDevicesButton: (value: boolean) => void;
-  setShowSpeedButton: (value: boolean) => void;
-  setSeekButtonsSec: (value: number) => void;
-  setPreviousButtonMode: (value: PreviousButtonMode) => void;
-  setKeepPausedOnSkip: (value: boolean) => void;
-  setSwipeAction: (value: SwipeAction) => void;
-  setSwipeLeftAction: (value: SwipeAction) => void;
   setHomeSection: (key: HomeSectionKey, value: boolean) => void;
-  /** Replace the full list (for reordering). */
-  setHomeSections: (sections: HomeSection[]) => void;
-  setShowQuickGrid: (value: boolean) => void;
-  setQuickGridFavorites: (value: boolean) => void;
-  setQuickGridAlbums: (value: boolean) => void;
-  setQuickGridPlaylists: (value: boolean) => void;
-  setQuickGridSize: (value: number) => void;
-  setShowGreeting: (value: boolean) => void;
   /** Trims to GREETING_MAX internally: the cap doesn't depend on the caller. */
   setCustomGreeting: (value: string) => void;
   setHomeChip: (key: HomeChipKey, value: boolean) => void;
-  /** Replace the full list (for reordering). */
-  setHomeChips: (chips: HomeChip[]) => void;
-  setExploreSections: (sections: ExploreSection[]) => void;
   /** One section on or off, by key, the way the Home chips do it. */
   setExploreSection: (key: ExploreSectionKey, value: boolean) => void;
   setBottomTab: (key: TabSegment, value: boolean) => void;
-  /** Replace the full list (for reordering). */
-  setBottomTabs: (tabs: BottomTab[]) => void;
-  setHomeChipIcons: (value: boolean) => void;
-  setShowFolderBrowser: (value: boolean) => void;
   setHomeButton: (key: HomeButtonKey, value: boolean) => void;
-  /** Replace the full list (for reordering). */
-  setHomeButtons: (buttons: HomeButton[]) => void;
-  setDefaultTab: (value: DefaultTab) => void;
-  setKeepScreenOnReturn: (value: boolean) => void;
-  setLibraryShowsPlaylists: (value: boolean) => void;
-  setLibrarySort: (value: LibrarySort) => void;
-  setBrowsePlaylistsLayout: (value: ListLayout) => void;
-  setBrowsePlaylistsSort: (value: LibrarySort) => void;
-  setLibraryLayout: (value: ListLayout) => void;
-  setBrowseArtistsLayout: (value: ListLayout) => void;
-  setBrowseAlbumsLayout: (value: ListLayout) => void;
-  setBrowseSongsLayout: (value: ListLayout) => void;
-  setDiscographyLayout: (value: ListLayout) => void;
-  setGenreLayout: (value: ListLayout) => void;
   setGridColumns: (key: GridSizeKey, value: number) => void;
-  setShareExpiry: (value: ShareExpiry) => void;
-  setShareDownloadable: (value: boolean) => void;
-  setSyncQueueFromServer: (value: boolean) => void;
   setAccentColor: (value: string, appearance: ThemeMode) => void;
   setThemeMode: (value: ThemePreference) => void;
   setPureBlack: (value: boolean) => void;
-  setAppFont: (value: AppFont) => void;
   setCustomFont: (fontFamily: string | null, uri: string | null) => void;
   /** Resets to factory defaults (language is preserved). */
   resetToDefaults: () => void;
@@ -1160,110 +1102,11 @@ function persist(state: ReturnType<typeof snapshot>) {
   void setItem(key, JSON.stringify(state));
 }
 
-function snapshot(get: () => SettingsState) {
+function snapshot(get: () => SettingsState): Persisted {
   const s = get();
-  return {
-    maxBitRate: s.maxBitRate,
-    maxBitRateCellular: s.maxBitRateCellular,
-    downloadBitRate: s.downloadBitRate,
-    downloadConcurrency: s.downloadConcurrency,
-    streamFormat: s.streamFormat,
-    streamFormatCellular: s.streamFormatCellular,
-    downloadFormat: s.downloadFormat,
-    downloadWifiOnly: s.downloadWifiOnly,
-    streamLosslessOnly: s.streamLosslessOnly,
-    downloadLosslessOnly: s.downloadLosslessOnly,
-    songCache: s.songCache,
-    songCacheLimitGb: s.songCacheLimitGb,
-    // `language` is not in the profile blob: it's global (see LANG_KEY).
-    showAudioQuality: s.showAudioQuality,
-    showRating: s.showRating,
-    showAlbumInfo: s.showAlbumInfo,
-    swapPlayerButtons: s.swapPlayerButtons,
-    showPlayedInQueue: s.showPlayedInQueue,
-    showListArtwork: s.showListArtwork,
-    showPlaylistDescription: s.showPlaylistDescription,
-    alwaysShowTabs: s.alwaysShowTabs,
-    blurBars: s.blurBars,
-    showSongDuration: s.showSongDuration,
-    showListRating: s.showListRating,
-    showExplicitTag: s.showExplicitTag,
-    autoplaySimilar: s.autoplaySimilar,
-    diagnostics: s.diagnostics,
-    updateCheck: s.updateCheck,
-    crossfadeSec: s.crossfadeSec,
-    scrobblePercent: s.scrobblePercent,
-    scrobbleSeconds: s.scrobbleSeconds,
-    preloadUpcoming: s.preloadUpcoming,
-    autoOfflineSwitch: s.autoOfflineSwitch,
-    hideUnavailableOffline: s.hideUnavailableOffline,
-    replayGain: s.replayGain,
-    replayGainPreampDb: s.replayGainPreampDb,
-    keepScreenAwake: s.keepScreenAwake,
-    hapticsEnabled: s.hapticsEnabled,
-    lyricsBackground: s.lyricsBackground,
-    lyricsCardBackground: s.lyricsCardBackground,
-    lyricsSource: s.lyricsSource,
-    preferDownloads: s.preferDownloads,
-    showArtistPhoto: s.showArtistPhoto,
-    showDiscHeaders: s.showDiscHeaders,
-    showGenreChips: s.showGenreChips,
-    batteryWarning: s.batteryWarning,
-    playerBackground: s.playerBackground,
-    animatedCoverBackground: s.animatedCoverBackground,
-    fitCoverArt: s.fitCoverArt,
-    miniPlayerColorBackground: s.miniPlayerColorBackground,
-    showLyricsCard: s.showLyricsCard,
-    showArtistCard: s.showArtistCard,
-    coverTapAction: s.coverTapAction,
-    coverDoubleTapAction: s.coverDoubleTapAction,
-    marqueeTitles: s.marqueeTitles,
-    showQueueButton: s.showQueueButton,
-    showDevicesButton: s.showDevicesButton,
-    showSpeedButton: s.showSpeedButton,
-    seekButtonsSec: s.seekButtonsSec,
-    previousButtonMode: s.previousButtonMode,
-    keepPausedOnSkip: s.keepPausedOnSkip,
-    swipeAction: s.swipeAction,
-    swipeLeftAction: s.swipeLeftAction,
-    homeSections: s.homeSections,
-    showQuickGrid: s.showQuickGrid,
-    quickGridFavorites: s.quickGridFavorites,
-    quickGridAlbums: s.quickGridAlbums,
-    quickGridPlaylists: s.quickGridPlaylists,
-    quickGridSize: s.quickGridSize,
-    showGreeting: s.showGreeting,
-    customGreeting: s.customGreeting,
-    homeChips: s.homeChips,
-    exploreSections: s.exploreSections,
-    bottomTabs: s.bottomTabs,
-    homeChipIcons: s.homeChipIcons,
-    showFolderBrowser: s.showFolderBrowser,
-    homeButtons: s.homeButtons,
-    defaultTab: s.defaultTab,
-    keepScreenOnReturn: s.keepScreenOnReturn,
-    libraryShowsPlaylists: s.libraryShowsPlaylists,
-    librarySort: s.librarySort,
-    libraryLayout: s.libraryLayout,
-    browseArtistsLayout: s.browseArtistsLayout,
-    browseAlbumsLayout: s.browseAlbumsLayout,
-    browsePlaylistsLayout: s.browsePlaylistsLayout,
-    browsePlaylistsSort: s.browsePlaylistsSort,
-    browseSongsLayout: s.browseSongsLayout,
-    discographyLayout: s.discographyLayout,
-    genreLayout: s.genreLayout,
-    gridColumns: s.gridColumns,
-    shareExpiry: s.shareExpiry,
-    shareDownloadable: s.shareDownloadable,
-    syncQueueFromServer: s.syncQueueFromServer,
-    accentColor: s.accentColor,
-    accentColorLight: s.accentColorLight,
-    themeMode: s.themeMode,
-    pureBlack: s.pureBlack,
-    appFont: s.appFont,
-    customFontFamily: s.customFontFamily,
-    customFontUri: s.customFontUri,
-  };
+  const out: Partial<Record<PersistedKey, unknown>> = {};
+  for (const key of PERSISTED_KEYS) out[key] = s[key];
+  return out as Persisted;
 }
 
 /** Factory default values for all preferences. */
@@ -1411,163 +1254,37 @@ const DEFAULTS = {
   customFontUri: null as string | null,
 };
 
+const PERSISTED_KEYS = (Object.keys(DEFAULTS) as (keyof typeof DEFAULTS)[]).filter(
+  (key): key is PersistedKey => key !== 'language',
+);
+
+function autoSetters(
+  set: (partial: Partial<SettingsState>) => void,
+  get: () => SettingsState,
+): AutoSetters {
+  const out: Record<string, (value: unknown) => void> = {};
+  for (const key of PERSISTED_KEYS) {
+    out[`set${key[0].toUpperCase()}${key.slice(1)}`] = (value) => {
+      set({ [key]: value } as Partial<SettingsState>);
+      persist(snapshot(get));
+    };
+  }
+  return out as AutoSetters;
+}
+
 export const useSettings = create<SettingsState>((set, get) => ({
   ...DEFAULTS,
   hydrated: false,
-
-  setMaxBitRate: (maxBitRate) => {
-    set({ maxBitRate });
-    persist(snapshot(get));
-  },
-
-  setMaxBitRateCellular: (maxBitRateCellular) => {
-    set({ maxBitRateCellular });
-    persist(snapshot(get));
-  },
-
-  setStreamFormat: (streamFormat) => {
-    set({ streamFormat });
-    persist(snapshot(get));
-  },
-
-  setDownloadConcurrency: (downloadConcurrency) => {
-    set({ downloadConcurrency });
-    persist(snapshot(get));
-  },
-
-  setStreamFormatCellular: (streamFormatCellular) => {
-    set({ streamFormatCellular });
-    persist(snapshot(get));
-  },
-
-  setDownloadFormat: (downloadFormat) => {
-    set({ downloadFormat });
-    persist(snapshot(get));
-  },
-
-  setDownloadBitRate: (downloadBitRate) => {
-    set({ downloadBitRate });
-    persist(snapshot(get));
-  },
-
-  setDownloadWifiOnly: (downloadWifiOnly) => {
-    set({ downloadWifiOnly });
-    persist(snapshot(get));
-  },
-
-  setStreamLosslessOnly: (streamLosslessOnly) => {
-    set({ streamLosslessOnly });
-    persist(snapshot(get));
-  },
-
-  setDownloadLosslessOnly: (downloadLosslessOnly) => {
-    set({ downloadLosslessOnly });
-    persist(snapshot(get));
-  },
-
-  setSongCache: (songCache) => {
-    set({ songCache });
-    persist(snapshot(get));
-  },
-
-  setSongCacheLimitGb: (songCacheLimitGb) => {
-    set({ songCacheLimitGb });
-    persist(snapshot(get));
-  },
+  ...autoSetters(set, get),
 
   setLanguage: (language) => {
     set({ language });
     void setItem(LANG_KEY, language); // global language, not per profile
   },
 
-  setShowAudioQuality: (showAudioQuality) => {
-    set({ showAudioQuality });
-    persist(snapshot(get));
-  },
-
-  setShowAlbumInfo: (showAlbumInfo) => {
-    set({ showAlbumInfo });
-    persist(snapshot(get));
-  },
-
-  setSwapPlayerButtons: (swapPlayerButtons) => {
-    set({ swapPlayerButtons });
-    persist(snapshot(get));
-  },
-
-  setShowPlayedInQueue: (showPlayedInQueue) => {
-    set({ showPlayedInQueue });
-    persist(snapshot(get));
-  },
-
-  setShowRating: (showRating) => {
-    set({ showRating });
-    persist(snapshot(get));
-  },
-
-  setShowListArtwork: (showListArtwork) => {
-    set({ showListArtwork });
-    persist(snapshot(get));
-  },
-
-  setShowPlaylistDescription: (showPlaylistDescription) => {
-    set({ showPlaylistDescription });
-    persist(snapshot(get));
-  },
-
-  setAlwaysShowTabs: (alwaysShowTabs) => {
-    set({ alwaysShowTabs });
-    persist(snapshot(get));
-  },
-
-  setBlurBars: (blurBars) => {
-    set({ blurBars });
-    persist(snapshot(get));
-  },
-
-  setShowSongDuration: (showSongDuration) => {
-    set({ showSongDuration });
-    persist(snapshot(get));
-  },
-
-  setShowListRating: (showListRating) => {
-    set({ showListRating });
-    persist(snapshot(get));
-  },
-
-  setShowExplicitTag: (showExplicitTag) => {
-    set({ showExplicitTag });
-    persist(snapshot(get));
-  },
-
   setDiagnostics: (diagnostics) => {
     set({ diagnostics });
     setPerfEnabled(diagnostics);
-    persist(snapshot(get));
-  },
-
-  setUpdateCheck: (updateCheck) => {
-    set({ updateCheck });
-    persist(snapshot(get));
-  },
-
-  setAutoplaySimilar: (autoplaySimilar) => {
-    set({ autoplaySimilar });
-    persist(snapshot(get));
-  },
-
-  setCrossfadeSec: (crossfadeSec) => {
-    set({ crossfadeSec });
-    persist(snapshot(get));
-  },
-
-  setScrobblePercent: (scrobblePercent) => {
-    set({ scrobblePercent });
-    persist(snapshot(get));
-  },
-
-  setScrobbleSeconds: (scrobbleSeconds) => {
-    set({ scrobbleSeconds });
     persist(snapshot(get));
   },
 
@@ -1581,16 +1298,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
-  setPreloadUpcoming: (preloadUpcoming) => {
-    set({ preloadUpcoming });
-    persist(snapshot(get));
-  },
-
-  setAutoOfflineSwitch: (autoOfflineSwitch) => {
-    set({ autoOfflineSwitch });
-    persist(snapshot(get));
-  },
-
   setHideUnavailableOffline: (hideUnavailableOffline) => {
     set({ hideUnavailableOffline });
     persist(snapshot(get));
@@ -1599,143 +1306,8 @@ export const useSettings = create<SettingsState>((set, get) => ({
     if (useAuthStore.getState().offline) queryClient.invalidateQueries();
   },
 
-  setReplayGain: (replayGain) => {
-    set({ replayGain });
-    persist(snapshot(get));
-  },
-
   setReplayGainPreampDb: (value) => {
     set({ replayGainPreampDb: clampReplayGainPreamp(value) });
-    persist(snapshot(get));
-  },
-
-  setKeepScreenAwake: (keepScreenAwake) => {
-    set({ keepScreenAwake });
-    persist(snapshot(get));
-  },
-
-  setHapticsEnabled: (hapticsEnabled) => {
-    set({ hapticsEnabled });
-    persist(snapshot(get));
-  },
-
-  setLyricsCardBackground: (lyricsCardBackground) => {
-    set({ lyricsCardBackground });
-    persist(snapshot(get));
-  },
-
-  setLyricsBackground: (lyricsBackground) => {
-    set({ lyricsBackground });
-    persist(snapshot(get));
-  },
-
-  setLyricsSource: (lyricsSource) => {
-    set({ lyricsSource });
-    persist(snapshot(get));
-  },
-
-  setPreferDownloads: (preferDownloads) => {
-    set({ preferDownloads });
-    persist(snapshot(get));
-  },
-
-  setShowDiscHeaders: (showDiscHeaders) => {
-    set({ showDiscHeaders });
-    persist(snapshot(get));
-  },
-
-  setShowGenreChips: (showGenreChips) => {
-    set({ showGenreChips });
-    persist(snapshot(get));
-  },
-
-  setBatteryWarning: (batteryWarning) => {
-    set({ batteryWarning });
-    persist(snapshot(get));
-  },
-
-  setShowArtistPhoto: (showArtistPhoto) => {
-    set({ showArtistPhoto });
-    persist(snapshot(get));
-  },
-
-  setFitCoverArt: (fitCoverArt) => {
-    set({ fitCoverArt });
-    persist(snapshot(get));
-  },
-
-  setPlayerBackground: (playerBackground) => {
-    set({ playerBackground });
-    persist(snapshot(get));
-  },
-
-  setAnimatedCoverBackground: (animatedCoverBackground) => {
-    set({ animatedCoverBackground });
-    persist(snapshot(get));
-  },
-
-  setMiniPlayerColorBackground: (miniPlayerColorBackground) => {
-    set({ miniPlayerColorBackground });
-    persist(snapshot(get));
-  },
-
-  setShowLyricsCard: (showLyricsCard) => {
-    set({ showLyricsCard });
-    persist(snapshot(get));
-  },
-
-  setShowArtistCard: (showArtistCard) => {
-    set({ showArtistCard });
-    persist(snapshot(get));
-  },
-
-  setCoverDoubleTapAction: (coverDoubleTapAction) => {
-    set({ coverDoubleTapAction });
-    persist(snapshot(get));
-  },
-
-  setCoverTapAction: (coverTapAction) => {
-    set({ coverTapAction });
-    persist(snapshot(get));
-  },
-
-  setMarqueeTitles: (marqueeTitles) => {
-    set({ marqueeTitles });
-    persist(snapshot(get));
-  },
-
-  setShowQueueButton: (showQueueButton) => {
-    set({ showQueueButton });
-    persist(snapshot(get));
-  },
-
-  setShowDevicesButton: (showDevicesButton) => {
-    set({ showDevicesButton });
-    persist(snapshot(get));
-  },
-
-  setShowSpeedButton: (showSpeedButton) => {
-    set({ showSpeedButton });
-    persist(snapshot(get));
-  },
-
-  setSeekButtonsSec: (seekButtonsSec) => {
-    set({ seekButtonsSec });
-    persist(snapshot(get));
-  },
-
-  setPreviousButtonMode: (previousButtonMode) => {
-    set({ previousButtonMode });
-    persist(snapshot(get));
-  },
-
-  setKeepPausedOnSkip: (keepPausedOnSkip) => {
-    set({ keepPausedOnSkip });
-    persist(snapshot(get));
-  },
-
-  setSwipeLeftAction: (swipeLeftAction) => {
-    set({ swipeLeftAction });
     persist(snapshot(get));
   },
 
@@ -1746,48 +1318,8 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
-  setHomeSections: (homeSections) => {
-    set({ homeSections });
-    persist(snapshot(get));
-  },
-
-  setSwipeAction: (swipeAction) => {
-    set({ swipeAction });
-    persist(snapshot(get));
-  },
-
-  setShowGreeting: (showGreeting) => {
-    set({ showGreeting });
-    persist(snapshot(get));
-  },
-
   setCustomGreeting: (customGreeting) => {
     set({ customGreeting: customGreeting.slice(0, GREETING_MAX) });
-    persist(snapshot(get));
-  },
-
-  setShowQuickGrid: (showQuickGrid) => {
-    set({ showQuickGrid });
-    persist(snapshot(get));
-  },
-
-  setQuickGridFavorites: (quickGridFavorites) => {
-    set({ quickGridFavorites });
-    persist(snapshot(get));
-  },
-
-  setQuickGridAlbums: (quickGridAlbums) => {
-    set({ quickGridAlbums });
-    persist(snapshot(get));
-  },
-
-  setQuickGridPlaylists: (quickGridPlaylists) => {
-    set({ quickGridPlaylists });
-    persist(snapshot(get));
-  },
-
-  setQuickGridSize: (quickGridSize) => {
-    set({ quickGridSize });
     persist(snapshot(get));
   },
 
@@ -1807,37 +1339,12 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
-  setBottomTabs: (bottomTabs) => {
-    set({ bottomTabs });
-    persist(snapshot(get));
-  },
-
-  setHomeChips: (homeChips) => {
-    set({ homeChips });
-    persist(snapshot(get));
-  },
-
   setExploreSection: (key, value) => {
     set({
       exploreSections: get().exploreSections.map((s) =>
         s.key === key ? { ...s, enabled: value } : s,
       ),
     });
-    persist(snapshot(get));
-  },
-
-  setExploreSections: (exploreSections) => {
-    set({ exploreSections });
-    persist(snapshot(get));
-  },
-
-  setHomeChipIcons: (homeChipIcons) => {
-    set({ homeChipIcons });
-    persist(snapshot(get));
-  },
-
-  setShowFolderBrowser: (showFolderBrowser) => {
-    set({ showFolderBrowser });
     persist(snapshot(get));
   },
 
@@ -1851,84 +1358,8 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
-  setHomeButtons: (homeButtons) => {
-    set({ homeButtons });
-    persist(snapshot(get));
-  },
-
-
-  setDefaultTab: (defaultTab) => {
-    set({ defaultTab });
-    persist(snapshot(get));
-  },
-
-  setKeepScreenOnReturn: (keepScreenOnReturn) => {
-    set({ keepScreenOnReturn });
-    persist(snapshot(get));
-  },
-
-  setLibraryShowsPlaylists: (libraryShowsPlaylists) => {
-    set({ libraryShowsPlaylists });
-    persist(snapshot(get));
-  },
-
-  setLibraryLayout: (libraryLayout) => {
-    set({ libraryLayout });
-    persist(snapshot(get));
-  },
-
-  setBrowseArtistsLayout: (browseArtistsLayout) => {
-    set({ browseArtistsLayout });
-    persist(snapshot(get));
-  },
-
-  setBrowsePlaylistsLayout: (browsePlaylistsLayout) => {
-    set({ browsePlaylistsLayout });
-    persist(snapshot(get));
-  },
-
-  setBrowsePlaylistsSort: (browsePlaylistsSort) => {
-    set({ browsePlaylistsSort });
-    persist(snapshot(get));
-  },
-
-  setBrowseAlbumsLayout: (browseAlbumsLayout) => {
-    set({ browseAlbumsLayout });
-    persist(snapshot(get));
-  },
-
-  setBrowseSongsLayout: (browseSongsLayout) => {
-    set({ browseSongsLayout });
-    persist(snapshot(get));
-  },
-
-  setDiscographyLayout: (discographyLayout) => {
-    set({ discographyLayout });
-    persist(snapshot(get));
-  },
-
-  setShareExpiry: (shareExpiry) => {
-    set({ shareExpiry });
-    persist(snapshot(get));
-  },
-
-  setShareDownloadable: (shareDownloadable) => {
-    set({ shareDownloadable });
-    persist(snapshot(get));
-  },
-
-  setGenreLayout: (genreLayout) => {
-    set({ genreLayout });
-    persist(snapshot(get));
-  },
-
   setGridColumns: (key, value) => {
     set({ gridColumns: { ...get().gridColumns, [key]: value } });
-    persist(snapshot(get));
-  },
-
-  setSyncQueueFromServer: (syncQueueFromServer) => {
-    set({ syncQueueFromServer });
     persist(snapshot(get));
   },
 
@@ -1947,16 +1378,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
   setPureBlack: (pureBlack) => {
     applyPureBlack(pureBlack);
     set({ pureBlack });
-    persist(snapshot(get));
-  },
-
-  setLibrarySort: (librarySort) => {
-    set({ librarySort });
-    persist(snapshot(get));
-  },
-
-  setAppFont: (appFont) => {
-    set({ appFont });
     persist(snapshot(get));
   },
 
@@ -2004,120 +1425,33 @@ export const useSettings = create<SettingsState>((set, get) => ({
       applyPureBlack(DEFAULTS.pureBlack);
       applied = true;
       if (raw) {
-        const parsed = JSON.parse(raw) as Partial<{
-          maxBitRate: number;
-          maxBitRateCellular: number;
-          downloadBitRate: number;
-          downloadConcurrency: number;
-          streamFormat: TranscodeFormat;
-          streamFormatCellular: TranscodeFormat;
-          downloadFormat: TranscodeFormat;
-          downloadWifiOnly: boolean;
-          streamLosslessOnly: boolean;
-          downloadLosslessOnly: boolean;
-          songCache: boolean;
-          songCacheLimitGb: number;
-          language: Language;
-          showAudioQuality: string | boolean;
-          showRating: boolean;
-          showAlbumInfo: boolean;
-          swapPlayerButtons: boolean;
-          showPlayedInQueue: boolean;
-          showListArtwork: boolean;
-          showPlaylistDescription: boolean;
-          alwaysShowTabs: boolean;
-          blurBars?: boolean;
-          showSongDuration: boolean;
-          showListRating: boolean;
-          showExplicitTag?: boolean;
-          autoplaySimilar: boolean;
-          diagnostics: boolean;
-          updateCheck?: boolean;
-          crossfadeSec: number;
-          scrobblePercent: number;
-          scrobbleSeconds: number;
-          preloadUpcoming: boolean;
-          autoOfflineSwitch: boolean;
-          hideUnavailableOffline: boolean;
-          replayGain: ReplayGainMode;
-          replayGainPreampDb: number;
-          keepScreenAwake: boolean;
-          hapticsEnabled: boolean;
-          lyricsBackground: ScreenBackground;
-          lyricsCardBackground: CardBackground;
-          lyricsColorBackground: boolean;
-          lyricsSource?: LyricsSource;
-          preferDownloads?: PreferDownloads;
+        // Typed as what this version writes, plus the earlier shapes that are
+        // read only to migrate them. Nothing here is trusted: every value is
+        // checked before it is used.
+        const parsed = JSON.parse(raw) as Partial<Omit<Persisted, Reshaped>> & {
+          showAudioQuality?: string | boolean;
+          homeSections?: unknown;
+          homeChips?: unknown;
+          exploreSections?: unknown;
+          bottomTabs?: unknown;
+          homeButtons?: unknown;
+          lyricsColorBackground?: boolean;
           lyricsOnlineFallback?: boolean;
-          showArtistPhoto: boolean;
-          showDiscHeaders: boolean;
-          showGenreChips: boolean;
-          batteryWarning: boolean;
-          playerBackground: ScreenBackground;
-          animatedCoverBackground?: boolean;
-          fitCoverArt: boolean;
-          playerColorBackground: boolean;
-          miniPlayerColorBackground: boolean;
-          showLyricsCard: boolean;
-          showArtistCard: boolean;
-          coverTapAction: CoverTapAction;
-          coverDoubleTapAction: CoverDoubleTapAction;
-          marqueeTitles: boolean;
-          showQueueButton: boolean;
-          showDevicesButton: boolean;
-          showSpeedButton: boolean;
-          seekButtonsSec: number;
-          previousButtonMode: PreviousButtonMode;
-          keepPausedOnSkip?: boolean;
-          swipeAction: SwipeAction;
-          swipeLeftAction: SwipeAction;
-          homeSections: unknown;
-          /** Old setting (boolean); migrated to swipeAction. */
-          swipeToQueue: boolean;
-          showQuickGrid: boolean;
-          quickGridFavorites: boolean;
-          quickGridAlbums: boolean;
-          quickGridPlaylists: boolean;
-          quickGridSize: number;
-          showGreeting: boolean;
-          customGreeting: string;
-          /** Older names for the two below, from back when the row was
-           *  called the Explore chips: still read, never written. */
-          showExploreChips: boolean;
-          exploreChips: unknown;
-          exploreChipIcons: boolean;
-          homeChips: unknown;
-          exploreSections: unknown;
-          bottomTabs: unknown;
-          homeChipIcons: boolean;
-          showFolderBrowser: boolean;
-          homeButtons: unknown;
-          /** Old setting (boolean); migrated to `homeButtons`. */
-          showHistoryButton: boolean;
-          defaultTab: DefaultTab;
-          keepScreenOnReturn: boolean;
-          libraryShowsPlaylists: boolean;
-          librarySort: LibrarySort;
-          libraryLayout: ListLayout;
-          browseArtistsLayout: ListLayout;
-          browseAlbumsLayout: ListLayout;
-          browsePlaylistsLayout: ListLayout;
-          browsePlaylistsSort: LibrarySort;
-          browseSongsLayout: ListLayout;
-          discographyLayout: ListLayout;
-          genreLayout: ListLayout;
-          gridColumns: Partial<Record<GridSizeKey, number>>;
-          shareExpiry: ShareExpiry;
-          shareDownloadable: boolean;
-          syncQueueFromServer: boolean;
-          accentColor: string;
-          accentColorLight: string;
-          themeMode: ThemePreference;
-          pureBlack?: boolean;
-          appFont: AppFont;
-          customFontFamily: string | null;
-          customFontUri: string | null;
-        }>;
+          playerColorBackground?: boolean;
+          swipeToQueue?: boolean;
+          showExploreChips?: boolean;
+          exploreChips?: unknown;
+          exploreChipIcons?: boolean;
+          showHistoryButton?: boolean;
+        };
+        // Every on/off setting the same way: a saved boolean is taken as is.
+        // The few that also migrate an older value do that further down.
+        const flags: Record<string, boolean> = {};
+        for (const key of PERSISTED_KEYS) {
+          const value: unknown = parsed[key];
+          if (typeof DEFAULTS[key] === 'boolean' && typeof value === 'boolean') flags[key] = value;
+        }
+        set(flags as Partial<SettingsState>);
         if (typeof parsed.maxBitRate === 'number') {
           set({ maxBitRate: parsed.maxBitRate });
         }
@@ -2148,18 +1482,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
         if (TRANSCODE_FORMATS.includes(parsed.downloadFormat as TranscodeFormat)) {
           set({ downloadFormat: parsed.downloadFormat as TranscodeFormat });
         }
-        if (typeof parsed.downloadWifiOnly === 'boolean') {
-          set({ downloadWifiOnly: parsed.downloadWifiOnly });
-        }
-        if (typeof parsed.streamLosslessOnly === 'boolean') {
-          set({ streamLosslessOnly: parsed.streamLosslessOnly });
-        }
-        if (typeof parsed.downloadLosslessOnly === 'boolean') {
-          set({ downloadLosslessOnly: parsed.downloadLosslessOnly });
-        }
-        if (typeof parsed.songCache === 'boolean') {
-          set({ songCache: parsed.songCache });
-        }
         if (SONG_CACHE_LIMITS_GB.includes(parsed.songCacheLimitGb as number)) {
           set({ songCacheLimitGb: parsed.songCacheLimitGb as number });
         }
@@ -2172,48 +1494,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
           set({ showAudioQuality: true });
         } else if (parsed.showAudioQuality === 'off') {
           set({ showAudioQuality: false });
-        }
-        if (typeof parsed.showRating === 'boolean') {
-          set({ showRating: parsed.showRating });
-        }
-        if (typeof parsed.showAlbumInfo === 'boolean') {
-          set({ showAlbumInfo: parsed.showAlbumInfo });
-        }
-        if (typeof parsed.swapPlayerButtons === 'boolean') {
-          set({ swapPlayerButtons: parsed.swapPlayerButtons });
-        }
-        if (typeof parsed.showPlayedInQueue === 'boolean') {
-          set({ showPlayedInQueue: parsed.showPlayedInQueue });
-        }
-        if (typeof parsed.showListArtwork === 'boolean') {
-          set({ showListArtwork: parsed.showListArtwork });
-        }
-        if (typeof parsed.showPlaylistDescription === 'boolean') {
-          set({ showPlaylistDescription: parsed.showPlaylistDescription });
-        }
-        if (typeof parsed.alwaysShowTabs === 'boolean') {
-          set({ alwaysShowTabs: parsed.alwaysShowTabs });
-        }
-        if (typeof parsed.blurBars === 'boolean') {
-          set({ blurBars: parsed.blurBars });
-        }
-        if (typeof parsed.showSongDuration === 'boolean') {
-          set({ showSongDuration: parsed.showSongDuration });
-        }
-        if (typeof parsed.showListRating === 'boolean') {
-          set({ showListRating: parsed.showListRating });
-        }
-        if (typeof parsed.showExplicitTag === 'boolean') {
-          set({ showExplicitTag: parsed.showExplicitTag });
-        }
-        if (typeof parsed.diagnostics === 'boolean') {
-          set({ diagnostics: parsed.diagnostics });
-        }
-        if (typeof parsed.updateCheck === 'boolean') {
-          set({ updateCheck: parsed.updateCheck });
-        }
-        if (typeof parsed.autoplaySimilar === 'boolean') {
-          set({ autoplaySimilar: parsed.autoplaySimilar });
         }
         if (typeof parsed.crossfadeSec === 'number' && parsed.crossfadeSec >= 0) {
           set({ crossfadeSec: parsed.crossfadeSec });
@@ -2229,15 +1509,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
             scrobbleSeconds: Math.min(SCROBBLE_SECONDS_MAX, Math.round(parsed.scrobbleSeconds)),
           });
         }
-        if (typeof parsed.preloadUpcoming === 'boolean') {
-          set({ preloadUpcoming: parsed.preloadUpcoming });
-        }
-        if (typeof parsed.autoOfflineSwitch === 'boolean') {
-          set({ autoOfflineSwitch: parsed.autoOfflineSwitch });
-        }
-        if (typeof parsed.hideUnavailableOffline === 'boolean') {
-          set({ hideUnavailableOffline: parsed.hideUnavailableOffline });
-        }
         if (
           parsed.replayGain === 'off' ||
           parsed.replayGain === 'auto' ||
@@ -2248,12 +1519,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (typeof parsed.replayGainPreampDb === 'number') {
           set({ replayGainPreampDb: clampReplayGainPreamp(parsed.replayGainPreampDb) });
-        }
-        if (typeof parsed.keepScreenAwake === 'boolean') {
-          set({ keepScreenAwake: parsed.keepScreenAwake });
-        }
-        if (typeof parsed.hapticsEnabled === 'boolean') {
-          set({ hapticsEnabled: parsed.hapticsEnabled });
         }
         if (parsed.lyricsBackground === 'none' || parsed.lyricsBackground === 'color' || parsed.lyricsBackground === 'cover') {
           set({ lyricsBackground: parsed.lyricsBackground });
@@ -2288,21 +1553,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
         ) {
           set({ preferDownloads: parsed.preferDownloads });
         }
-        if (typeof parsed.showArtistPhoto === 'boolean') {
-          set({ showArtistPhoto: parsed.showArtistPhoto });
-        }
-        if (typeof parsed.showGenreChips === 'boolean') {
-          set({ showGenreChips: parsed.showGenreChips });
-        }
-        if (typeof parsed.batteryWarning === 'boolean') {
-          set({ batteryWarning: parsed.batteryWarning });
-        }
-        if (typeof parsed.showDiscHeaders === 'boolean') {
-          set({ showDiscHeaders: parsed.showDiscHeaders });
-        }
-        if (typeof parsed.fitCoverArt === 'boolean') {
-          set({ fitCoverArt: parsed.fitCoverArt });
-        }
         if (parsed.playerBackground === 'none' || parsed.playerBackground === 'color' || parsed.playerBackground === 'cover') {
           set({ playerBackground: parsed.playerBackground });
         } else if (typeof parsed.playerColorBackground === 'boolean') {
@@ -2311,44 +1561,17 @@ export const useSettings = create<SettingsState>((set, get) => ({
           // option existed keep looking exactly the same.
           set({ playerBackground: parsed.playerColorBackground ? 'color' : 'none' });
         }
-        if (typeof parsed.miniPlayerColorBackground === 'boolean') {
-          set({ miniPlayerColorBackground: parsed.miniPlayerColorBackground });
-        }
-        if (typeof parsed.animatedCoverBackground === 'boolean') {
-          set({ animatedCoverBackground: parsed.animatedCoverBackground });
-        }
-        if (typeof parsed.showLyricsCard === 'boolean') {
-          set({ showLyricsCard: parsed.showLyricsCard });
-        }
-        if (typeof parsed.showArtistCard === 'boolean') {
-          set({ showArtistCard: parsed.showArtistCard });
-        }
         if (isCoverTapAction(parsed.coverTapAction)) {
           set({ coverTapAction: parsed.coverTapAction });
         }
         if (isCoverTapAction(parsed.coverDoubleTapAction)) {
           set({ coverDoubleTapAction: parsed.coverDoubleTapAction });
         }
-        if (typeof parsed.marqueeTitles === 'boolean') {
-          set({ marqueeTitles: parsed.marqueeTitles });
-        }
-        if (typeof parsed.showQueueButton === 'boolean') {
-          set({ showQueueButton: parsed.showQueueButton });
-        }
-        if (typeof parsed.showSpeedButton === 'boolean') {
-          set({ showSpeedButton: parsed.showSpeedButton });
-        }
-        if (typeof parsed.showDevicesButton === 'boolean') {
-          set({ showDevicesButton: parsed.showDevicesButton });
-        }
         if (parsed.seekButtonsSec === 0 || parsed.seekButtonsSec === 5 || parsed.seekButtonsSec === 10 || parsed.seekButtonsSec === 30) {
           set({ seekButtonsSec: parsed.seekButtonsSec });
         }
         if (parsed.previousButtonMode === 'restart' || parsed.previousButtonMode === 'always') {
           set({ previousButtonMode: parsed.previousButtonMode });
-        }
-        if (typeof parsed.keepPausedOnSkip === 'boolean') {
-          set({ keepPausedOnSkip: parsed.keepPausedOnSkip });
         }
         if (
           parsed.swipeAction === 'off' ||
@@ -2374,23 +1597,8 @@ export const useSettings = create<SettingsState>((set, get) => ({
         if (Array.isArray(parsed.homeSections)) {
           set({ homeSections: normalizeHomeSections(parsed.homeSections) });
         }
-        if (typeof parsed.showQuickGrid === 'boolean') {
-          set({ showQuickGrid: parsed.showQuickGrid });
-        }
-        if (typeof parsed.quickGridFavorites === 'boolean') {
-          set({ quickGridFavorites: parsed.quickGridFavorites });
-        }
-        if (typeof parsed.quickGridAlbums === 'boolean') {
-          set({ quickGridAlbums: parsed.quickGridAlbums });
-        }
-        if (typeof parsed.quickGridPlaylists === 'boolean') {
-          set({ quickGridPlaylists: parsed.quickGridPlaylists });
-        }
         if (parsed.quickGridSize === 4 || parsed.quickGridSize === 6 || parsed.quickGridSize === 8) {
           set({ quickGridSize: parsed.quickGridSize });
-        }
-        if (typeof parsed.showGreeting === 'boolean') {
-          set({ showGreeting: parsed.showGreeting });
         }
         // Truncated on hydrate: a setting saved by a version with a different
         // cap must not sneak in longer than what fits.
@@ -2423,9 +1631,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
         if (Array.isArray(parsed.exploreSections)) {
           set({ exploreSections: normalizeExploreSections(parsed.exploreSections) });
         }
-        if (typeof parsed.showFolderBrowser === 'boolean') {
-          set({ showFolderBrowser: parsed.showFolderBrowser });
-        }
         if (Array.isArray(parsed.homeButtons)) {
           set({ homeButtons: normalizeHomeButtons(parsed.homeButtons) });
         } else if (parsed.showHistoryButton === false) {
@@ -2445,12 +1650,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
           parsed.defaultTab === 'explore'
         ) {
           set({ defaultTab: parsed.defaultTab });
-        }
-        if (typeof parsed.keepScreenOnReturn === 'boolean') {
-          set({ keepScreenOnReturn: parsed.keepScreenOnReturn });
-        }
-        if (typeof parsed.libraryShowsPlaylists === 'boolean') {
-          set({ libraryShowsPlaylists: parsed.libraryShowsPlaylists });
         }
         if (parsed.librarySort === 'recent' || parsed.librarySort === 'added' || parsed.librarySort === 'alpha') {
           set({ librarySort: parsed.librarySort });
@@ -2501,12 +1700,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (SHARE_EXPIRIES.includes(parsed.shareExpiry as ShareExpiry)) {
           set({ shareExpiry: parsed.shareExpiry as ShareExpiry });
-        }
-        if (typeof parsed.shareDownloadable === 'boolean') {
-          set({ shareDownloadable: parsed.shareDownloadable });
-        }
-        if (typeof parsed.syncQueueFromServer === 'boolean') {
-          set({ syncQueueFromServer: parsed.syncQueueFromServer });
         }
         // The light accent falls back to the dark one rather than to the
         // default: every profile that picked a colour before there were two of
