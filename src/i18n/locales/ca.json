@@ -726,5 +726,13 @@
   "Remove from cache": "Treu de la memòria cau",
   "Clear song cache?": "Vols buidar la memòria cau de cançons?",
   "Cached songs will be removed from this device. Your downloads stay.": "Les cançons de la memòria cau s'esborraran d'aquest dispositiu. Les teves baixades es queden.",
-  "Song cache cleared": "Memòria cau de cançons buidada"
+  "Song cache cleared": "Memòria cau de cançons buidada",
+  "Share Resonus link": "Comparteix l'enllaç de Resonus",
+  "Check out {name} by {artist} on {server}": "Escolta {name} de {artist} a {server}",
+  "Check out {name} on {server}": "Escolta {name} a {server}",
+  "Open link": "Obre l'enllaç",
+  "This link isn't one Resonus can open.": "Resonus no pot obrir aquest enllaç.",
+  "None of your profiles is on {server}. Add an account on that server to open it.": "Cap dels teus perfils és a {server}. Afegeix un compte en aquest servidor per obrir-lo.",
+  "This link is for {server}. Open it with:": "Aquest enllaç és de {server}. Obre'l amb:",
+  "Switching profile stops what is playing.": "Canviar de perfil atura el que està sonant."
 }

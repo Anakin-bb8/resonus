@@ -739,5 +739,13 @@
   "Remove from cache": "Quitar de la caché",
   "Clear song cache?": "¿Vaciar la caché de canciones?",
   "Cached songs will be removed from this device. Your downloads stay.": "Las canciones en caché se borrarán de este dispositivo. Tus descargas se quedan.",
-  "Song cache cleared": "Caché de canciones vaciada"
+  "Song cache cleared": "Caché de canciones vaciada",
+  "Share Resonus link": "Compartir enlace de Resonus",
+  "Check out {name} by {artist} on {server}": "Escucha {name} de {artist} en {server}",
+  "Check out {name} on {server}": "Escucha {name} en {server}",
+  "Open link": "Abrir enlace",
+  "This link isn't one Resonus can open.": "Resonus no puede abrir este enlace.",
+  "None of your profiles is on {server}. Add an account on that server to open it.": "Ninguno de tus perfiles está en {server}. Añade una cuenta en ese servidor para abrirlo.",
+  "This link is for {server}. Open it with:": "Este enlace es de {server}. Ábrelo con:",
+  "Switching profile stops what is playing.": "Cambiar de perfil detiene lo que está sonando."
 }

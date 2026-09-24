@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 739 of them.
+Every string the app can show, under the screen it shows up on. 747 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -86,6 +86,7 @@ you are actually typing into, which is easier than reading it here.
 | `Server didn't allow downloads` | Warning after sharing: the link was made and works, but the call that turns downloading on did not go through |
 | `Share` | Make a link on the server that others can open. Getting the file itself out is `Export` |
 | `Share “{name}”` | The sheet's title, with what is being shared |
+| `Share Resonus link` | A link that opens this album, artist or playlist in another person's Resonus, for someone with an account on the same server. Not the public web link that Share makes |
 | `Size` | The size of the quick grid tiles |
 | `Sleep timer` | Stop playing after a while, for falling asleep to |
 | `Sleep timer ({n} min left)` | The menu row while it is counting down. `{n}` is minutes still to go |
@@ -120,6 +121,8 @@ you are actually typing into, which is easier than reading it here.
 | `Audio dramas` | Shelf heading: a play performed for the ear, with several voices rather than one narrator. Radio drama is the same thing where that name is the familiar one |
 | `Audiobooks` | Shelf heading: a book read aloud by one narrator, no music |
 | `Broadcasts` | Shelf heading: records of something first put out on radio, television or as a podcast |
+| `Check out {name} by {artist} on {server}` | The line sent above a Resonus link. {server} is the server's address, like music.example.com |
+| `Check out {name} on {server}` |  |
 | `Compilations` | Shelf heading: records collecting older recordings, a “best of” or a various-artists collection |
 | `Couldn't load the artist.` | Error on the screen, with a Retry button |
 | `Demos` | Shelf heading: rough recordings made to be passed around rather than released. Kept as-is in Spanish and Catalan, though a language with its own word for these should use it |
@@ -135,6 +138,7 @@ you are actually typing into, which is easier than reading it here.
 | `Popular` | The artist's popular / top tracks |
 | `Rate` | Verb: give it stars. Used for a song and for an artist. Not "bitrate" |
 | `Remixes` | Shelf heading: records that are mostly remixed material. `Remixes` is widely used as-is in several languages; keep it if that is true of yours |
+| `Share Resonus link` | A link that opens this album, artist or playlist in another person's Resonus, for someone with an account on the same server. Not the public web link that Share makes |
 | `Similar artists` | Related artists |
 | `Singles` | Shelf heading: records built around one song |
 | `Soundtracks` | Shelf heading: the music of a film, a series, a play or a game |
@@ -393,6 +397,17 @@ you are actually typing into, which is easier than reading it here.
 | `We need permission to read your device music.` | Android has not granted access to the phone's files yet |
 | `Where should we get your music?` | Heading when choosing where the phone's own music is read from |
 
+## Open
+
+| String | What it is |
+| --- | --- |
+| `Couldn't sign in; check the account` | Error when the server answered and refused the credentials |
+| `None of your profiles is on {server}. Add an account on that server to open it.` |  |
+| `Open link` |  |
+| `Switching profile stops what is playing.` |  |
+| `This link is for {server}. Open it with:` |  |
+| `This link isn't one Resonus can open.` |  |
+
 ## Player
 
 | String | What it is |
@@ -439,6 +454,8 @@ you are actually typing into, which is easier than reading it here.
 | `Auto-download on` | The toast that says it was turned on |
 | `Based on the tracks in this playlist` | Subtitle under the suggested tracks heading |
 | `Change cover` | Replace the cover image of a playlist or station |
+| `Check out {name} by {artist} on {server}` | The line sent above a Resonus link. {server} is the server's address, like music.example.com |
+| `Check out {name} on {server}` |  |
 | `Confirm your password` | Changing a cover on the server needs the password again. It is not a new password being set |
 | `Couldn't load the playlist.` | Error on the screen, with a Retry button |
 | `Couldn't update the cover` | Toast: the upload failed |
@@ -461,6 +478,7 @@ you are actually typing into, which is easier than reading it here.
 | `Removed from playlist` | Toast, with an undo button next to it |
 | `Save` | The confirm button of an edit sheet. A verb |
 | `Share` | Make a link on the server that others can open. Getting the file itself out is `Export` |
+| `Share Resonus link` | A link that opens this album, artist or playlist in another person's Resonus, for someone with an account on the same server. Not the public web link that Share makes |
 | `Suggested tracks` | Section heading at the bottom of a playlist: songs the server recommends based on what is already in the playlist |
 | `This playlist is empty` | Empty state heading |
 | `Turn on` | The confirm button of that question |

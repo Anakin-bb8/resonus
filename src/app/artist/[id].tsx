@@ -46,6 +46,7 @@ import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { useT } from '@/i18n';
 import { splitArtistAlbums } from '@/lib/artistAlbums';
 import { groupArtistAlbums, RELEASE_GROUP_TITLE } from '@/lib/releaseGroups';
+import { canShareResonusLink, shareResonusLink } from '@/lib/shareLink';
 import { listPerf } from '@/lib/listPerf';
 import { useAuthStore } from '@/store/auth';
 import { anyDownloads, groupDownloadState, useDownloads } from '@/store/downloads';
@@ -765,6 +766,18 @@ export default function ArtistScreen() {
                 <Icon name="add" size={24} color={colors.text} />
                 <Text style={styles.actionText}>{t('Add to a playlist')}</Text>
               </Pressable>
+              {canShareResonusLink() ? (
+                <Pressable
+                  style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+                  onPress={() => {
+                    close();
+                    void shareResonusLink({ kind: 'artist', id, name: data.artist.name });
+                  }}
+                >
+                  <Icon name="link-outline" size={24} color={colors.text} />
+                  <Text style={styles.actionText}>{t('Share Resonus link')}</Text>
+                </Pressable>
+              ) : null}
               {canRate ? (
                 <Pressable
                   style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}

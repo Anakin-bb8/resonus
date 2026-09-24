@@ -737,5 +737,13 @@
   "Remove from cache": "Remove from cache",
   "Clear song cache?": "Clear song cache?",
   "Cached songs will be removed from this device. Your downloads stay.": "Cached songs will be removed from this device. Your downloads stay.",
-  "Song cache cleared": "Song cache cleared"
+  "Song cache cleared": "Song cache cleared",
+  "Share Resonus link": "Share Resonus link",
+  "Check out {name} by {artist} on {server}": "Check out {name} by {artist} on {server}",
+  "Check out {name} on {server}": "Check out {name} on {server}",
+  "Open link": "Open link",
+  "This link isn't one Resonus can open.": "This link isn't one Resonus can open.",
+  "None of your profiles is on {server}. Add an account on that server to open it.": "None of your profiles is on {server}. Add an account on that server to open it.",
+  "This link is for {server}. Open it with:": "This link is for {server}. Open it with:",
+  "Switching profile stops what is playing.": "Switching profile stops what is playing."
 }
