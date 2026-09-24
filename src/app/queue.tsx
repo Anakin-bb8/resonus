@@ -258,16 +258,33 @@ export default function QueueScreen() {
     return contextHeader;
   };
 
+  // The title is centred over the whole bar, so it has to stay clear of the
+  // icons on both sides: as much room on the left as the right side takes,
+  // or a long word slides under them (#232).
+  const rightIcons = (radioMode ? 1 : 0) + (upcoming.length > 0 ? 1 : 0) + (queue.length > 0 ? 1 : 0);
+  const titleInset =
+    spacing.lg + Math.max(1, rightIcons) * HEADER_ACTION_W + Math.max(0, rightIcons - 1) * spacing.sm;
+
   return (
     <View style={[styles.safe, { paddingTop: topPad, paddingBottom: insets.bottom }]}>
       <View style={styles.header}>
         <Pressable hitSlop={12} onPress={() => router.back()}>
           <Icon name="chevron-down" size={28} color={colors.text} />
         </Pressable>
-        <View style={styles.headerCenter} pointerEvents="none">
-          <Text style={styles.headerTitle}>{t('Queue')}</Text>
+        <View
+          style={[styles.headerCenter, { left: titleInset, right: titleInset }]}
+          pointerEvents="none"
+        >
+          <Text
+            style={styles.headerTitle}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.75}
+          >
+            {t('Queue')}
+          </Text>
           {upcoming.length > 0 && totalSec > 0 ? (
-            <Text style={styles.headerSub}>
+            <Text style={styles.headerSub} numberOfLines={1}>
               {songsLabel(upcoming.length, lang)} · {formatTotalDuration(totalSec)}
             </Text>
           ) : null}
@@ -408,6 +425,9 @@ export default function QueueScreen() {
   );
 }
 
+/** Width of each icon button in the bar, which the centred title keeps clear of. */
+const HEADER_ACTION_W = 28;
+
 const styles = themed((colors) => ({
   safe: { flex: 1, backgroundColor: colors.background },
   // ⋯ menu row (same look as the playlist / media menu).
@@ -433,7 +453,7 @@ const styles = themed((colors) => ({
     justifyContent: 'center',
   },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  headerAction: { width: 28, alignItems: 'center' },
+  headerAction: { width: HEADER_ACTION_W, alignItems: 'center' },
   headerTitle: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '700' },
   headerSub: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2 },
   list: { flexGrow: 1, paddingBottom: spacing.sm },

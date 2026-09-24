@@ -31,6 +31,7 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- A long title on the queue screen, like the German one, no longer runs under the buttons next to it (#232).
 - On iOS the lock screen and the Dynamic Island show the song's length and progress while the server transcodes it, instead of --:--.
 
 ## [0.7.8] - 2026-09-23
