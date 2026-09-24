@@ -154,8 +154,11 @@ class ResonusCarBrowserService : MediaLibraryService() {
       params: LibraryParams?,
     ): ListenableFuture<LibraryResult<MediaItem>> {
       // The car is opening the app: whatever songs the tree is missing, this
-      // is the moment to go and get them, and the phone is awake for it.
-      CarAutoModule.instance?.emitConnected()
+      // is the moment to go and get them, and the phone is awake for it. Not
+      // for a root asked for as "recent": that is the system's own media
+      // resumption (SystemUI on boot, say), not somebody in a car, and taking
+      // it for one filled the whole tree on phones that never saw a car (#221).
+      if (params?.isRecent != true) CarAutoModule.instance?.emitConnected()
       val rootExtras = Bundle().apply {
         // Hints for Android Auto: the root's children are drawn as tabs
         // (category list items), and anything browsable below that as a list.

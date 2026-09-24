@@ -76,7 +76,8 @@
         "@expo/dom-webview"
       ],
       "buildFromSource": [
-        "expo-audio"
+        "expo-audio",
+        "expo-network"
       ]
     }
   }

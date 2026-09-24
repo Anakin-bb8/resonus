@@ -23,6 +23,7 @@ import {
 } from '@/lib/carAuto';
 import { buildBrowseTree, handleBrowsePlay } from '@/lib/carAutoTree';
 import { bump } from '@/lib/perfLog';
+import { getItem, setItem } from '@/lib/storage';
 import { useAuthStore } from '@/store/auth';
 import { useLastPlayed } from '@/store/lastPlayed';
 import { favoriteLabel, favoriteState, onFavoritesChange, toggleFavorite } from '@/lib/remoteFavorite';
@@ -36,6 +37,15 @@ const DEEP_REBUILD_MS = 45_000;
  *  for the root more than once per drive, and each one is dozens of requests. */
 const DEEP_MIN_INTERVAL_MS = 5 * 60_000;
 const POSITION_PUSH_MS = 1000;
+/**
+ * Written the first time a car asks for the tree, and never cleared. The full
+ * tree is dozens of requests (a report for #221 had it at 64, a minute of
+ * network), and it was being built on every Android phone at every launch and
+ * after every album started, car or no car. The lists alone are still built
+ * for everyone; the songs inside them wait for a phone that has been in a car,
+ * and a car connecting always gets them at once.
+ */
+const CAR_SEEN_KEY = 'resonus.carSeen';
 
 /** `live` is what a radio says it is playing, which replaces the title and the
  *  artist and nothing else: the station is not an album. */
@@ -75,16 +85,29 @@ export function CarAutoSync() {
     // while hydrating, and each of those used to mean the full fetch again.
     let deepTimer: ReturnType<typeof setTimeout> | null = null;
     let lastDeepAt = 0;
+    let carSeen = false;
     const scheduleDeep = (delay = DEEP_REBUILD_MS) => {
+      if (!carSeen) return;
       if (deepTimer) clearTimeout(deepTimer);
       deepTimer = setTimeout(() => {
         lastDeepAt = Date.now();
+        // So a report can say how often this runs, which is what #221 needed.
+        bump('car · full tree built');
         rebuild(true);
       }, delay);
     };
     rebuild(false);
-    scheduleDeep();
-    const unsubAuth = useAuthStore.subscribe(() => {
+    void getItem(CAR_SEEN_KEY)
+      .then((seen) => {
+        if (cancelled || !seen) return;
+        carSeen = true;
+        scheduleDeep();
+      })
+      .catch(() => {});
+    // The session or the mode, not every write to the store: it also holds the
+    // profiles and the hydration flag, and each of those restarted the build.
+    const unsubAuth = useAuthStore.subscribe((s, prev) => {
+      if (s.auth === prev.auth && s.offline === prev.offline) return;
       rebuild(false);
       scheduleDeep();
     });
@@ -101,6 +124,10 @@ export function CarAutoSync() {
     // opens Resonus, puts the phone in a pocket and drives off, so what the
     // car got were the lists with no songs inside them.
     const connectSub = onCarConnected(() => {
+      if (!carSeen) {
+        carSeen = true;
+        void setItem(CAR_SEEN_KEY, String(Date.now())).catch(() => {});
+      }
       if (Date.now() - lastDeepAt > DEEP_MIN_INTERVAL_MS) scheduleDeep(0);
     });
 

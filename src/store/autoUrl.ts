@@ -242,7 +242,17 @@ function retryAfterCooldown(): void {
 export function initAutoUrl(): void {
   if (started) return;
   started = true;
-  Network.addNetworkStateListener(() => schedule());
+  // Only for a change that can move where the server answers: another kind of
+  // network, or going on or off it. Android also reports every change in a
+  // network's capabilities (its bandwidth estimate, say), which on mobile data
+  // is several a minute, and each of those used to cost a probe (#221).
+  let last = '';
+  Network.addNetworkStateListener((state) => {
+    const key = `${state.type}|${state.isConnected}|${state.isInternetReachable}`;
+    if (key === last) return;
+    last = key;
+    schedule();
+  });
   // And whenever the app is opened again, which is not the same event. What
   // makes a server unreachable can perfectly well happen while nobody is
   // looking —a VPN dropped, a tunnel that expired, a server rebooted— and none

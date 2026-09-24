@@ -6,6 +6,7 @@ settings:
 
 patchedDependencies:
   expo-audio: ed38d864ca856d4700c164a23f27458ea61e8d31526f6b16cf8d141c6fa581c7
+  expo-network: 014208e6859999aec1b86024c476d2ccccc53f1acce25785c2f8729a8b31ee4f
 
 importers:
 
@@ -73,7 +74,7 @@ importers:
         version: 57.0.4(expo@57.0.15)(react-native@0.86.2(@babel/core@7.29.7)(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))
       expo-network:
         specifier: ~57.0.1
-        version: 57.0.1(expo@57.0.15)(react@19.2.3)
+        version: 57.0.1(patch_hash=014208e6859999aec1b86024c476d2ccccc53f1acce25785c2f8729a8b31ee4f)(expo@57.0.15)(react@19.2.3)
       expo-router:
         specifier: ~57.0.15
         version: 57.0.15(909ce1537abc1d94a0dc05b3c54536d3)
@@ -6853,7 +6854,7 @@ snapshots:
     dependencies:
       react-native: 0.86.2(@babel/core@7.29.7)(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3)
 
-  expo-network@57.0.1(expo@57.0.15)(react@19.2.3):
+  expo-network@57.0.1(patch_hash=014208e6859999aec1b86024c476d2ccccc53f1acce25785c2f8729a8b31ee4f)(expo@57.0.15)(react@19.2.3):
     dependencies:
       expo: 57.0.15(@babel/core@7.29.7)(@expo/dom-webview@57.0.1)(@expo/metro-runtime@57.0.12)(expo-router@57.0.15)(react-dom@19.2.3(react@19.2.3))(react-native-web@0.21.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-native-worklets@0.10.1(@babel/core@7.29.7)(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(react-native@0.86.2(@babel/core@7.29.7)(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3))(react-native@0.86.2(@babel/core@7.29.7)(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)(typescript@6.0.3)
       react: 19.2.3

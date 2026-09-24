@@ -1,0 +1,45 @@
+diff --git a/android/src/main/java/expo/modules/network/NetworkModule.kt b/android/src/main/java/expo/modules/network/NetworkModule.kt
+index d21ae4b45d97d0dd113c4ffda4ada529ed5ef653..27ddcc08e0cccecb45105bf0c73f904fdada2854 100644
+--- a/android/src/main/java/expo/modules/network/NetworkModule.kt
++++ b/android/src/main/java/expo/modules/network/NetworkModule.kt
+@@ -36,6 +36,22 @@ class NetworkModule : Module() {
+ 
+   private val emitRunnable = Runnable { emitNetworkState() }
+ 
++  /**
++   * The last state handed to JS. Android calls `onCapabilitiesChanged` for any
++   * change in a network's capabilities (a new bandwidth estimate, say), which
++   * on mobile data is several times a minute, and each call woke the JS thread
++   * to hear the same three values again, in the background too. Only a state
++   * that differs is sent now (Resonus #221).
++   */
++  private var lastSentState: String? = null
++
++  private fun sendIfChanged(state: Bundle) {
++    val key = "${state.getString("type")}|${state.getBoolean("isConnected")}|${state.getBoolean("isInternetReachable")}"
++    if (key == lastSentState) return
++    lastSentState = key
++    sendEvent(NETWORK_STATE_EVENT_NAME, state)
++  }
++
+   private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+     override fun onAvailable(network: android.net.Network) {
+       asyncEmitNetworkState(DELAY_MS)
+@@ -73,7 +89,7 @@ class NetworkModule : Module() {
+               putBoolean("isInternetReachable", false)
+               putBoolean("isConnected", false)
+             }
+-            sendEvent(NETWORK_STATE_EVENT_NAME, result)
++            sendIfChanged(result)
+           } else {
+             emitNetworkState()
+           }
+@@ -164,7 +180,7 @@ class NetworkModule : Module() {
+   private fun emitNetworkState() {
+     try {
+       val networkState = fetchNetworkState()
+-      sendEvent(NETWORK_STATE_EVENT_NAME, networkState)
++      sendIfChanged(networkState)
+     } catch (e: SecurityException) {
+       Log.w(TAG, "expo-network could not read network state: missing ACCESS_NETWORK_STATE permission", e)
+     } catch (e: Exception) {
