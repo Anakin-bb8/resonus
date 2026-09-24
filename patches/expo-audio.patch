@@ -294,10 +294,10 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..04a46b5a1c184260d41bbd458d66622d
      runBlocking(appContext.mainQueue.coroutineContext) { block() }
  
 diff --git a/android/src/main/java/expo/modules/audio/AudioPlayer.kt b/android/src/main/java/expo/modules/audio/AudioPlayer.kt
-index c76a9fd2a53743a691782e0f67d0d71401df58f6..460b21db9173c33be03e03c661649b833f8cfbc8 100644
+index c76a9fd2a53743a691782e0f67d0d71401df58f6..19ace5e2097c4aa96b3bbe72720ce53bbf1544cf 100644
 --- a/android/src/main/java/expo/modules/audio/AudioPlayer.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioPlayer.kt
-@@ -8,11 +8,14 @@ import android.util.Log
+@@ -8,15 +8,19 @@ import android.util.Log
  import androidx.core.content.ContextCompat
  import androidx.media3.common.AudioAttributes
  import androidx.media3.common.C
@@ -312,7 +312,12 @@ index c76a9fd2a53743a691782e0f67d0d71401df58f6..460b21db9173c33be03e03c661649b83
  import androidx.media3.exoplayer.ExoPlayer
  import androidx.media3.exoplayer.source.MediaSource
  import androidx.media3.session.MediaSession
-@@ -24,6 +27,11 @@ import java.lang.ref.WeakReference
+ import expo.modules.audio.service.AudioPlaybackServiceConnection
++import expo.modules.audio.service.PreloadingBitmapLoader
+ import expo.modules.audio.service.ServiceBindingState
+ import expo.modules.kotlin.AppContext
+ import expo.modules.kotlin.exception.Exceptions
+@@ -24,6 +28,11 @@ import java.lang.ref.WeakReference
  
  private const val PLAYBACK_STATUS_UPDATE = "playbackStatusUpdate"
  private const val AUDIO_SAMPLE_UPDATE = "audioSampleUpdate"
@@ -324,7 +329,7 @@ index c76a9fd2a53743a691782e0f67d0d71401df58f6..460b21db9173c33be03e03c661649b83
  private const val SEEK_JUMP_INTERVAL_MS: Long = 10_000
  
  @UnstableApi
-@@ -36,7 +44,39 @@ class AudioPlayer(
+@@ -36,7 +45,39 @@ class AudioPlayer(
  ) : BaseAudioPlayer(
    player = ExoPlayer.Builder(context)
      .setLooper(context.mainLooper)
@@ -365,7 +370,7 @@ index c76a9fd2a53743a691782e0f67d0d71401df58f6..460b21db9173c33be03e03c661649b83
      .setSeekForwardIncrementMs(SEEK_JUMP_INTERVAL_MS)
      .setSeekBackIncrementMs(SEEK_JUMP_INTERVAL_MS)
      .apply {
-@@ -64,7 +104,20 @@ class AudioPlayer(
+@@ -64,7 +105,20 @@ class AudioPlayer(
    var isActiveForLockScreen = false
    internal var metadata: Metadata? = null
    internal var lockScreenOptions: AudioLockScreenOptions? = null
@@ -387,7 +392,7 @@ index c76a9fd2a53743a691782e0f67d0d71401df58f6..460b21db9173c33be03e03c661649b83
    val serviceConnection = AudioPlaybackServiceConnection(WeakReference(this), appContext)
  
    val isLive: Boolean
-@@ -85,11 +138,46 @@ class AudioPlayer(
+@@ -85,11 +139,46 @@ class AudioPlayer(
  
    init {
      installPlayerListeners()
@@ -434,7 +439,7 @@ index c76a9fd2a53743a691782e0f67d0d71401df58f6..460b21db9173c33be03e03c661649b83
    fun setMediaSource(source: MediaSource) {
      previousPlaybackState = Player.STATE_IDLE
      ref.setMediaSource(source)
-@@ -97,6 +185,50 @@ class AudioPlayer(
+@@ -97,6 +186,54 @@ class AudioPlayer(
      startUpdating()
    }
  
@@ -467,6 +472,10 @@ index c76a9fd2a53743a691782e0f67d0d71401df58f6..460b21db9173c33be03e03c661649b83
 +    }
 +    trimToCurrent()
 +    ref.addMediaSource(source)
++    // Its cover too, so the session has it the moment the track starts (#139).
++    appContext?.reactContext?.let {
++      PreloadingBitmapLoader.preload(it, source.mediaItem.mediaMetadata.artworkUri)
++    }
 +  }
 +
 +  /** Drops the queued track, if any, leaving only the one playing. */
@@ -485,7 +494,7 @@ index c76a9fd2a53743a691782e0f67d0d71401df58f6..460b21db9173c33be03e03c661649b83
    fun setActiveForLockScreen(active: Boolean, metadata: Metadata? = null, options: AudioLockScreenOptions? = null) {
      if (active) {
        this.metadata = metadata
-@@ -221,7 +353,8 @@ class AudioPlayer(
+@@ -221,7 +358,8 @@ class AudioPlayer(
  
    internal fun assignBasicMediaSession() {
      mediaSession.release()
@@ -732,7 +741,7 @@ index 149e9075c8630b14a69318aa6c37d9ff82b23f05..422d2d18677223f48b0106e44f573659
        }
  
 diff --git a/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt b/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
-index 196a5d57f887c2667a88543bd2f6a80044a044f2..f017a6da7498fff92bc5ea9cda1df8cb555489a8 100644
+index 196a5d57f887c2667a88543bd2f6a80044a044f2..6de57276b02bd264aff2c558e13e6afb8cead1fa 100644
 --- a/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
 +++ b/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
 @@ -27,6 +27,7 @@ import expo.modules.audio.AudioLockScreenOptions
@@ -892,11 +901,12 @@ index 196a5d57f887c2667a88543bd2f6a80044a044f2..f017a6da7498fff92bc5ea9cda1df8cb
        override fun getAvailableCommands(): Player.Commands {
          return super.getAvailableCommands().buildUpon()
            .remove(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)
-@@ -371,7 +446,12 @@ class AudioControlsService : MediaSessionService() {
+@@ -371,7 +446,13 @@ class AudioControlsService : MediaSessionService() {
            updateMetadata(metadata)
          }
          val session = MediaSession.Builder(context, sessionPlayer)
 -          .setCallback(AudioMediaSessionCallback())
++          .setBitmapLoader(PreloadingBitmapLoader(context))
 +          .setCallback(
 +            AudioMediaSessionCallback(
 +              onSkipPrevious = { currentPlayer?.emitRemotePrevious() },
@@ -906,11 +916,12 @@ index 196a5d57f887c2667a88543bd2f6a80044a044f2..f017a6da7498fff92bc5ea9cda1df8cb
            .build()
  
          // Replace the basic media session with a session connected to our playback service.
-@@ -452,7 +532,12 @@ class AudioControlsService : MediaSessionService() {
+@@ -452,7 +533,13 @@ class AudioControlsService : MediaSessionService() {
            updateMetadata(metadata)
          }
          val session = MediaSession.Builder(context, sessionPlayer)
 -          .setCallback(AudioMediaSessionCallback())
++          .setBitmapLoader(PreloadingBitmapLoader(context))
 +          .setCallback(
 +            AudioMediaSessionCallback(
 +              onSkipPrevious = { currentPlayer?.emitRemotePrevious() },
@@ -920,7 +931,7 @@ index 196a5d57f887c2667a88543bd2f6a80044a044f2..f017a6da7498fff92bc5ea9cda1df8cb
            .build()
  
          player.mediaSession.release()
-@@ -558,6 +643,8 @@ class AudioControlsService : MediaSessionService() {
+@@ -558,6 +645,8 @@ class AudioControlsService : MediaSessionService() {
  
      const val ACTION_SEEK_FORWARD = "expo.modules.audio.action.SEEK_FORWARD"
      const val ACTION_SEEK_BACKWARD = "expo.modules.audio.action.SEEK_BACKWARD"
@@ -1221,6 +1232,89 @@ index 18203a364d17dcf3de95d22a20175308e3363889..77155f4f348246f218c0736725b0f690
 +      listener.onMetadata(metadata)
    }
  }
+diff --git a/android/src/main/java/expo/modules/audio/service/PreloadingBitmapLoader.kt b/android/src/main/java/expo/modules/audio/service/PreloadingBitmapLoader.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..6ee23d594c66abe46d7991de793d6de992febdf9
+--- /dev/null
++++ b/android/src/main/java/expo/modules/audio/service/PreloadingBitmapLoader.kt
+@@ -0,0 +1,77 @@
++package expo.modules.audio.service
++
++import android.content.Context
++import android.graphics.Bitmap
++import android.net.Uri
++import android.util.LruCache
++import androidx.media3.common.util.BitmapLoader
++import androidx.media3.common.util.UnstableApi
++import androidx.media3.datasource.DataSourceBitmapLoader
++import com.google.common.util.concurrent.FutureCallback
++import com.google.common.util.concurrent.Futures
++import com.google.common.util.concurrent.ListenableFuture
++import com.google.common.util.concurrent.MoreExecutors
++
++/**
++ * The media session's artwork loader, able to have a cover ready before the
++ * track it belongs to starts (#139).
++ *
++ * media3 publishes a track change to the platform session straight away, with
++ * no picture if the cover's future is not done yet, and again once it is. The
++ * Bluetooth stack forwards both, but a car told "new track, no cover" does not
++ * always come back for the second one: a Tesla keeps showing nothing. A cover
++ * fetched while the previous track plays is a done future, so the title and
++ * the picture reach the car in the same update.
++ */
++@UnstableApi
++internal class PreloadingBitmapLoader(context: Context) : BitmapLoader {
++  private val delegate = loaderFor(context)
++
++  override fun supportsMimeType(mimeType: String): Boolean = delegate.supportsMimeType(mimeType)
++
++  override fun decodeBitmap(data: ByteArray): ListenableFuture<Bitmap> = delegate.decodeBitmap(data)
++
++  override fun loadBitmap(uri: Uri): ListenableFuture<Bitmap> {
++    ready.get(uri.toString())?.let { return Futures.immediateFuture(it) }
++    return load(delegate, uri)
++  }
++
++  companion object {
++    /** A few: the track playing, the one queued behind it, and some slack. */
++    private val ready = LruCache<String, Bitmap>(4)
++
++    @Volatile private var shared: BitmapLoader? = null
++
++    private fun loaderFor(context: Context): BitmapLoader =
++      shared ?: synchronized(this) {
++        shared ?: DataSourceBitmapLoader.Builder(context.applicationContext)
++          // The session scales it down again to its own limit.
++          .setMaximumOutputDimension(1024)
++          .build()
++          .also { shared = it }
++      }
++
++    private fun load(loader: BitmapLoader, uri: Uri): ListenableFuture<Bitmap> {
++      val key = uri.toString()
++      val future = loader.loadBitmap(uri)
++      Futures.addCallback(
++        future,
++        object : FutureCallback<Bitmap> {
++          override fun onSuccess(result: Bitmap) {
++            ready.put(key, result)
++          }
++
++          override fun onFailure(t: Throwable) {}
++        },
++        MoreExecutors.directExecutor()
++      )
++      return future
++    }
++
++    /** Fetches a cover ahead of its track. Does nothing if it is already here. */
++    fun preload(context: Context, uri: Uri?) {
++      if (uri == null || ready.get(uri.toString()) != null) return
++      load(loaderFor(context), uri)
++    }
++  }
++}
 diff --git a/build/Audio.types.d.ts b/build/Audio.types.d.ts
 index 25604783649fe9b64f6655172f08471a5efcbf45..b80696e3b5d647c53f6e144d830171c6800a9c32 100644
 --- a/build/Audio.types.d.ts
