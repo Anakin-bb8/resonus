@@ -738,5 +738,11 @@
   "Shuffle favorites": "Preferits en aleatori",
   "Continue listening": "Continua escoltant",
   "No favorite songs to play": "No hi ha cançons preferides per reproduir",
-  "Nothing to continue": "No hi ha res per continuar"
+  "Nothing to continue": "No hi ha res per continuar",
+  "Playing on {player}": "Sonant a {player}",
+  "Paused on {player}": "En pausa a {player}",
+  "another device": "un altre dispositiu",
+  "Play here": "Reprodueix aquí",
+  "Playing on other devices": "El que sona en altres dispositius",
+  "At the top of Home, what is playing in your other apps and devices, ready to carry on here.": "A dalt de tot a Inici, el que sona a les teves altres apps i dispositius, a punt per continuar aquí."
 }

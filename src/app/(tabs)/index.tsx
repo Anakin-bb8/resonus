@@ -31,6 +31,7 @@ import {
 import { AlbumCard } from '@/components/AlbumCard';
 import { AlbumCardsSkeleton } from '@/components/AlbumCardsSkeleton';
 import { ArtistCard } from '@/components/ArtistCard';
+import { PlayingElsewhereCard } from '@/components/PlayingElsewhereCard';
 import { Cover } from '@/components/Cover';
 import { FavoritesArt } from '@/components/FavoritesArt';
 import { Message } from '@/components/Message';
@@ -811,6 +812,7 @@ export default function HomeScreen() {
   const [reshuffleKey, setReshuffleKey] = useState(0);
   const homeButtons = useSettings((s) => s.homeButtons);
   const showQuickGrid = useSettings((s) => s.showQuickGrid);
+  const showPlayingElsewhere = useSettings((s) => s.showPlayingElsewhere);
   const showGreeting = useSettings((s) => s.showGreeting);
   const customGreeting = useSettings((s) => s.customGreeting);
   const language = useSettings((s) => s.language);
@@ -927,6 +929,9 @@ export default function HomeScreen() {
           />
         }
       >
+        {/* First, above the chips: what was playing on the computer is the
+            thing to pick up on opening the app, when there is one. */}
+        {showPlayingElsewhere ? <PlayingElsewhereCard /> : null}
         {/* In the scroll, not the fixed header: they are a way in from the top
             of Home, and scrolled past they were only taking room. */}
         <HomeChips offline={offline} />

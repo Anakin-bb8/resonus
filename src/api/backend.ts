@@ -243,6 +243,10 @@ export const savePlayQueue = (
 
 export const getPlayQueue = (auth: SubsonicAuth) => api(auth).getPlayQueue(auth);
 
+/** Subsonic only: Jellyfin keeps its sessions behind an API of its own. */
+export const getNowPlaying = async (auth: SubsonicAuth): Promise<Subsonic.NowPlayingEntry[]> =>
+  auth.serverType === 'jellyfin' ? [] : Subsonic.getNowPlaying(auth);
+
 export const scrobble = (auth: SubsonicAuth, id: string, submission?: boolean) =>
   api(auth).scrobble(auth, id, submission);
 

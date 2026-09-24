@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 751 of them.
+Every string the app can show, under the screen it shows up on. 757 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -305,6 +305,7 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
+| `another device` |  |
 | `Couldn't reach the server. Check your connection.` | Error on Home when the server does not answer at all |
 | `Discover` | Home section: discovery suggestions |
 | `Good afternoon` | Home's greeting. The hours it changes at are part of the language too, see TRANSLATING.md |
@@ -316,6 +317,9 @@ you are actually typing into, which is easier than reading it here.
 | `Most played albums` | A section of Home: the records played most |
 | `Most played songs` | A section of Home: the songs played most, as songs |
 | `New releases` | Home shelf and album sort: albums by the year they came out, newest first. Not "Recently added", which is when the server got hold of them |
+| `Paused on {player}` |  |
+| `Play here` |  |
+| `Playing on {player}` | Heading of the card at the top of Home: a song playing right now in another app or on another device of the same account. {player} is that app's name, like Feishin |
 | `Random albums` | A section of Home: albums picked at random, to happen upon something |
 | `Random artists` | A section of Home: artists picked at random |
 | `Random songs` |  |
@@ -824,6 +828,7 @@ you are actually typing into, which is easier than reading it here.
 | `Always show the navigation bar` |  |
 | `Appearance` |  |
 | `Artwork, duration, rating and the rest of what a song shows in a list.` | The line under “Song lists”, explaining it |
+| `At the top of Home, what is playing in your other apps and devices, ready to carry on here.` |  |
 | `Blur behind the bars` |  |
 | `Browse your library by folders, in the Explore tab (Subsonic servers).` |  |
 | `Coming back after a few minutes leaves the app on the screen you left, instead of on the tab above.` | The line under that switch. “The tab above” is the “Open the app on” setting sitting right above it |
@@ -849,6 +854,7 @@ you are actually typing into, which is easier than reading it here.
 | `Navigation bar` | Settings screen: which tabs are on the bar at the bottom, and in what order |
 | `Off` | A setting value meaning disabled (crossfade, normalization…) |
 | `Open the app on` | Which tab the app opens on, and comes back to after a while away |
+| `Playing on other devices` |  |
 | `Quick grid` | The grid of shortcut tiles on Home |
 | `Show, hide and reorder the album rows on Home.` | The line under “Home sections”, explaining it |
 | `Show, hide and reorder the chips at the top of Home.` | The line under “Home chips”, explaining it |

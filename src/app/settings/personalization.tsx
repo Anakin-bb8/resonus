@@ -45,6 +45,8 @@ export default function AppearanceSettings() {
   const language = useSettings((s) => s.language);
   const alwaysShowTabs = useSettings((s) => s.alwaysShowTabs);
   const setAlwaysShowTabs = useSettings((s) => s.setAlwaysShowTabs);
+  const showPlayingElsewhere = useSettings((s) => s.showPlayingElsewhere);
+  const setShowPlayingElsewhere = useSettings((s) => s.setShowPlayingElsewhere);
   const blurBars = useSettings((s) => s.blurBars);
   const setBlurBars = useSettings((s) => s.setBlurBars);
   const defaultTab = useSettings((s) => s.defaultTab);
@@ -137,6 +139,18 @@ export default function AppearanceSettings() {
         />
 
         <Text style={settingsStyles.sectionTitle}>{t('Home')}</Text>
+        <SwitchList
+          options={[
+            {
+              label: t('Playing on other devices'),
+              description: t(
+                'At the top of Home, what is playing in your other apps and devices, ready to carry on here.',
+              ),
+              value: showPlayingElsewhere,
+              onChange: setShowPlayingElsewhere,
+            },
+          ]}
+        />
         <SettingRow
           label={t('Home buttons')}
           description={t('Which icons are at the top of Home, and in what order.')}

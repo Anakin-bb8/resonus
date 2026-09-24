@@ -957,6 +957,8 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   homeSections: HomeSection[];
   /** Quick access grid (Favorites + recent) at the top of Home. */
   showQuickGrid: boolean;
+  /** The card at the top of Home with what plays on the user's other players. */
+  showPlayingElsewhere: boolean;
   /** Pin the Favorites tile first in the quick grid. */
   quickGridFavorites: boolean;
   /** Include recent albums in the quick grid. */
@@ -1190,6 +1192,7 @@ const DEFAULTS = {
   swipeLeftAction: 'off' as SwipeAction,
   homeSections: DEFAULT_HOME_SECTIONS.map((s) => ({ ...s })),
   showQuickGrid: true,
+  showPlayingElsewhere: true,
   quickGridFavorites: true,
   quickGridAlbums: true,
   quickGridPlaylists: true,

@@ -1519,6 +1519,43 @@ export async function getPlayQueue(auth: SubsonicAuth): Promise<SavedQueue | nul
   };
 }
 
+/** A song playing on one of the user's players, from `getNowPlaying`. */
+export interface NowPlayingEntry {
+  song: Song;
+  username: string;
+  minutesAgo: number;
+  playerName?: string;
+  /** Only with the OpenSubsonic `playbackReport` extension. */
+  state?: 'starting' | 'playing' | 'paused' | 'stopped';
+  /** Same: where it was at the last report, worked out by the server. */
+  positionMs?: number;
+}
+
+/** What every player on the server is playing, for every user it can see. */
+export async function getNowPlaying(auth: SubsonicAuth): Promise<NowPlayingEntry[]> {
+  const res = await request<{
+    nowPlaying?: {
+      entry?: (Song & {
+        username?: string;
+        minutesAgo?: number;
+        playerName?: string;
+        state?: NowPlayingEntry['state'];
+        positionMs?: number;
+      })[];
+    };
+  }>(auth, 'getNowPlaying.view');
+  return (res.nowPlaying?.entry ?? []).map(
+    ({ username, minutesAgo, playerName, state, positionMs, ...song }) => ({
+      song: song as Song,
+      username: username ?? '',
+      minutesAgo: minutesAgo ?? 0,
+      playerName,
+      state,
+      positionMs,
+    }),
+  );
+}
+
 /** Notifies the server that a song has been played (scrobble). */
 /**
  * `submission=false` announces "now playing" (doesn't count as play);
