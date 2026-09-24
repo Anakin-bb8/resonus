@@ -36,7 +36,6 @@ import { FavoritesArt } from '@/components/FavoritesArt';
 import { Message } from '@/components/Message';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { PlaylistCard } from '@/components/PlaylistCard';
-import { SongCard } from '@/components/SongCard';
 import { TrackRow } from '@/components/TrackRow';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { columnsFor, useScreenSize } from '@/hooks/useScreenSize';
@@ -401,7 +400,6 @@ const RANDOM_SONGS_COUNT = 30;
  */
 function RandomSongsSection({ title }: { title: string }) {
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
-  const offline = useAuthStore((s) => s.offline);
   const currentId = usePlayerStore((s) => s.queue[s.index]?.id);
   const { data, isLoading } = useQuery({
     queryKey: ['randomSongs', RANDOM_SONGS_COUNT],

@@ -41,6 +41,52 @@ import {
 } from '@/store/upnp';
 import { colors, fontSize, radius, SHEET_MAX_WIDTH, spacing, themed } from '@/theme';
 
+/**
+ * One output. The tick and the accent name the one that is playing, which is
+ * how every list in the app says "this one"; `action` is the extra control a
+ * Sonos room gets, and it sits where the tick would be because a room that
+ * can be grouped is never the room already playing.
+ */
+function Row({
+  icon,
+  label,
+  active,
+  onPress,
+  action,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  active?: boolean;
+  onPress?: () => void;
+  action?: React.ReactNode;
+}) {
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.action, pressed && !!onPress && { opacity: 0.6 }]}
+      disabled={!onPress}
+      onPress={onPress}
+    >
+      {icon}
+      <Text style={[styles.actionText, active && { color: colors.accent }]} numberOfLines={1}>
+        {label}
+      </Text>
+      <View style={styles.trailing}>
+        {action ?? (active ? <Icon name="checkmark" size={20} color={colors.accent} /> : null)}
+      </View>
+    </Pressable>
+  );
+}
+
+/** The icon for an output, by what it is. */
+function outputIcon(kind: 'phone' | 'server' | 'group' | 'tv' | 'speaker', active?: boolean) {
+  const color = active ? colors.accent : colors.text;
+  if (kind === 'phone') return <Icon name="phone-portrait-outline" size={22} color={color} />;
+  if (kind === 'server') return <Icon name="server-outline" size={22} color={color} />;
+  if (kind === 'group') return <MaterialIcons name="speaker-group" size={22} color={color} />;
+  if (kind === 'tv') return <Icon name="tv-outline" size={22} color={color} />;
+  return <MaterialIcons name="speaker" size={22} color={color} />;
+}
+
 export function OutputSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const insets = useSafeAreaInsets();
   const t = useT();
@@ -213,52 +259,6 @@ export function OutputSheet({ visible, onClose }: { visible: boolean; onClose: (
       return upnpConnect(device);
     });
   }
-
-  /**
-   * One output. The tick and the accent name the one that is playing, which is
-   * how every list in the app says "this one"; `action` is the extra control a
-   * Sonos room gets, and it sits where the tick would be because a room that
-   * can be grouped is never the room already playing.
-   */
-  function Row({
-    icon,
-    label,
-    active,
-    onPress,
-    action,
-  }: {
-    icon: React.ReactNode;
-    label: string;
-    active?: boolean;
-    onPress?: () => void;
-    action?: React.ReactNode;
-  }) {
-    return (
-      <Pressable
-        style={({ pressed }) => [styles.action, pressed && !!onPress && { opacity: 0.6 }]}
-        disabled={!onPress}
-        onPress={onPress}
-      >
-        {icon}
-        <Text style={[styles.actionText, active && { color: colors.accent }]} numberOfLines={1}>
-          {label}
-        </Text>
-        <View style={styles.trailing}>
-          {action ?? (active ? <Icon name="checkmark" size={20} color={colors.accent} /> : null)}
-        </View>
-      </Pressable>
-    );
-  }
-
-  /** The icon for an output, by what it is. */
-  const outputIcon = (kind: 'phone' | 'server' | 'group' | 'tv' | 'speaker', active?: boolean) => {
-    const color = active ? colors.accent : colors.text;
-    if (kind === 'phone') return <Icon name="phone-portrait-outline" size={22} color={color} />;
-    if (kind === 'server') return <Icon name="server-outline" size={22} color={color} />;
-    if (kind === 'group') return <MaterialIcons name="speaker-group" size={22} color={color} />;
-    if (kind === 'tv') return <Icon name="tv-outline" size={22} color={color} />;
-    return <MaterialIcons name="speaker" size={22} color={color} />;
-  };
 
   return (
     <Modal transparent visible={visible} animationType="none" onRequestClose={close}>

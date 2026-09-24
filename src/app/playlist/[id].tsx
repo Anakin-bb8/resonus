@@ -95,7 +95,6 @@ function SuggestedTracks({
   const toast = useToast();
   const auth = useAuthStore((s) => s.auth);
   const [suggestions, setSuggestions] = useState<Song[]>([]);
-  const [loading, setLoading] = useState(true);
   const [previewing, setPreviewing] = useState<string | null>(null);
   const previewPlayer = useRef<AudioPlayer | null>(null);
   const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -132,11 +131,9 @@ function SuggestedTracks({
 
   const refresh = useCallback(async () => {
     const request = ++requestRef.current;
-    setLoading(true);
     const result = await fetchSuggestions(songsRef.current, existingRef.current);
     if (request !== requestRef.current) return;
     setSuggestions(result);
-    setLoading(false);
   }, []);
 
   // Once, when the playlist's songs are first known. Refresh asks again.
