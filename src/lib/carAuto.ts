@@ -68,7 +68,7 @@ export interface CarTrack {
 }
 
 export type TransportEvent =
-  | { action: 'play' | 'pause' | 'next' | 'previous' }
+  | { action: 'play' | 'pause' | 'next' | 'previous' | 'favorite' }
   | { action: 'seek'; value: number } // ms
   | { action: 'seekToIndex'; value: number }
   | { action: 'shuffle'; value: number } // 1/0
@@ -96,6 +96,10 @@ export function setPlaybackState(state: {
   positionMs: number;
   shuffle: boolean;
   repeatMode: 'off' | 'all' | 'one';
+  /** The heart on the car's playback screen; null hides it. */
+  favorite: boolean | null;
+  /** What the heart is called, in the app's language. */
+  favoriteLabel?: string;
 }): void {
   native?.setPlaybackState(JSON.stringify(state));
 }

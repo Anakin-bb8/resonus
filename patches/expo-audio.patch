@@ -12,7 +12,7 @@ index 36a19f2d9c4a979a940ab681a1fb844ce45f7c75..3509de4747f3ebdda1a014f05fb02f07
 +  <uses-permission android:name="android.permission.WAKE_LOCK" />
  </manifest>
 diff --git a/android/src/main/java/expo/modules/audio/AudioModule.kt b/android/src/main/java/expo/modules/audio/AudioModule.kt
-index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..04a46b5a1c184260d41bbd458d66622d829306c0 100644
+index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..7ecb7e02f69d99e7bf1cfdd420dce47559520911 100644
 --- a/android/src/main/java/expo/modules/audio/AudioModule.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioModule.kt
 @@ -18,6 +18,7 @@ import androidx.media3.common.C.CONTENT_TYPE_HLS
@@ -156,7 +156,19 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..04a46b5a1c184260d41bbd458d66622d
        Function("setActiveForLockScreen") { ref: AudioPlayer, active: Boolean, metadata: Metadata?, options: AudioLockScreenOptions? ->
          runOnMain {
            ref.setActiveForLockScreen(active, metadata, options)
-@@ -525,6 +589,14 @@ class AudioModule : Module() {
+@@ -519,12 +583,26 @@ class AudioModule : Module() {
+         }
+       }
+ 
++      Function("setLockScreenFavorite") { ref: AudioPlayer, favorite: Boolean?, label: String? ->
++        runOnMain {
++          ref.setLockScreenFavorite(favorite, label)
++        }
++      }
++
+       Function("clearLockScreenControls") { ref: AudioPlayer ->
+         runOnMain {
+           ref.clearLockScreenControls()
          }
        }
  
@@ -171,7 +183,7 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..04a46b5a1c184260d41bbd458d66622d
        Function("setAudioSamplingEnabled") { player: AudioPlayer, enabled: Boolean ->
          runOnMain {
            player.setSamplingEnabled(enabled)
-@@ -685,7 +757,16 @@ class AudioModule : Module() {
+@@ -685,7 +763,16 @@ class AudioModule : Module() {
            }
            playlist.loadInitialPlaylist()
            playlist.onPlaybackStateChange = { isPlaying ->
@@ -189,7 +201,7 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..04a46b5a1c184260d41bbd458d66622d
                releaseAudioFocus()
              }
            }
-@@ -860,13 +941,29 @@ class AudioModule : Module() {
+@@ -860,13 +947,29 @@ class AudioModule : Module() {
  
    private fun createMediaItem(source: AudioSource?): MediaSource? = source?.uri?.let { uriString ->
      val uri = uriString.toUri()
@@ -220,7 +232,7 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..04a46b5a1c184260d41bbd458d66622d
  
      val preloadedBytes = AudioPreloadManager.get(uriString)
      val factory: DataSource.Factory = if (preloadedBytes != null) {
-@@ -914,10 +1011,32 @@ class AudioModule : Module() {
+@@ -914,10 +1017,32 @@ class AudioModule : Module() {
      }
    }
  
@@ -254,7 +266,7 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..04a46b5a1c184260d41bbd458d66622d
    }
  
    private fun retrieveStreamType(uri: Uri): Int = Util.inferContentType(uri)
-@@ -931,11 +1050,37 @@ class AudioModule : Module() {
+@@ -931,11 +1056,37 @@ class AudioModule : Module() {
        CONTENT_TYPE_SS -> SsMediaSource.Factory(factory)
        CONTENT_TYPE_DASH -> DashMediaSource.Factory(factory)
        CONTENT_TYPE_HLS -> HlsMediaSource.Factory(factory)
@@ -294,7 +306,7 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..04a46b5a1c184260d41bbd458d66622d
      runBlocking(appContext.mainQueue.coroutineContext) { block() }
  
 diff --git a/android/src/main/java/expo/modules/audio/AudioPlayer.kt b/android/src/main/java/expo/modules/audio/AudioPlayer.kt
-index c76a9fd2a53743a691782e0f67d0d71401df58f6..19ace5e2097c4aa96b3bbe72720ce53bbf1544cf 100644
+index c76a9fd2a53743a691782e0f67d0d71401df58f6..7c9025af6a1645f79f9964b67e040764d8eceb71 100644
 --- a/android/src/main/java/expo/modules/audio/AudioPlayer.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioPlayer.kt
 @@ -8,15 +8,19 @@ import android.util.Log
@@ -317,19 +329,20 @@ index c76a9fd2a53743a691782e0f67d0d71401df58f6..19ace5e2097c4aa96b3bbe72720ce53b
  import expo.modules.audio.service.ServiceBindingState
  import expo.modules.kotlin.AppContext
  import expo.modules.kotlin.exception.Exceptions
-@@ -24,6 +28,11 @@ import java.lang.ref.WeakReference
+@@ -24,6 +28,12 @@ import java.lang.ref.WeakReference
  
  private const val PLAYBACK_STATUS_UPDATE = "playbackStatusUpdate"
  private const val AUDIO_SAMPLE_UPDATE = "audioSampleUpdate"
 +private const val REMOTE_PREVIOUS = "remotePrevious"
 +private const val REMOTE_NEXT = "remoteNext"
++private const val REMOTE_FAVORITE = "remoteFavorite"
 +private const val REMOTE_SEEK = "remoteSeek"
 +private const val TRACK_TRANSITION = "trackTransition"
 +private const val STREAM_METADATA = "streamMetadata"
  private const val SEEK_JUMP_INTERVAL_MS: Long = 10_000
  
  @UnstableApi
-@@ -36,7 +45,39 @@ class AudioPlayer(
+@@ -36,7 +46,39 @@ class AudioPlayer(
  ) : BaseAudioPlayer(
    player = ExoPlayer.Builder(context)
      .setLooper(context.mainLooper)
@@ -370,7 +383,7 @@ index c76a9fd2a53743a691782e0f67d0d71401df58f6..19ace5e2097c4aa96b3bbe72720ce53b
      .setSeekForwardIncrementMs(SEEK_JUMP_INTERVAL_MS)
      .setSeekBackIncrementMs(SEEK_JUMP_INTERVAL_MS)
      .apply {
-@@ -64,7 +105,20 @@ class AudioPlayer(
+@@ -64,7 +106,20 @@ class AudioPlayer(
    var isActiveForLockScreen = false
    internal var metadata: Metadata? = null
    internal var lockScreenOptions: AudioLockScreenOptions? = null
@@ -392,7 +405,7 @@ index c76a9fd2a53743a691782e0f67d0d71401df58f6..19ace5e2097c4aa96b3bbe72720ce53b
    val serviceConnection = AudioPlaybackServiceConnection(WeakReference(this), appContext)
  
    val isLive: Boolean
-@@ -85,11 +139,46 @@ class AudioPlayer(
+@@ -85,11 +140,46 @@ class AudioPlayer(
  
    init {
      installPlayerListeners()
@@ -439,12 +452,35 @@ index c76a9fd2a53743a691782e0f67d0d71401df58f6..19ace5e2097c4aa96b3bbe72720ce53b
    fun setMediaSource(source: MediaSource) {
      previousPlaybackState = Player.STATE_IDLE
      ref.setMediaSource(source)
-@@ -97,6 +186,54 @@ class AudioPlayer(
+@@ -97,6 +187,77 @@ class AudioPlayer(
      startUpdating()
    }
  
 +  fun emitRemotePrevious() = emit(REMOTE_PREVIOUS)
 +  fun emitRemoteNext() = emit(REMOTE_NEXT)
++
++  /** The heart was pressed on the notification, the lock screen or the car. */
++  fun emitRemoteFavorite() = emit(REMOTE_FAVORITE)
++
++  /**
++   * Whether the song playing is a favourite, as JS knows it, for the heart the
++   * session shows; null hides the heart. With its label, which is in the app's
++   * language and the platform reads out.
++   */
++  var lockScreenFavorite: Boolean? = null
++    private set
++  var lockScreenFavoriteLabel: String? = null
++    private set
++
++  fun setLockScreenFavorite(favorite: Boolean?, label: String?) {
++    lockScreenFavorite = favorite
++    lockScreenFavoriteLabel = label
++    if (!isActiveForLockScreen) return
++    val serviceBinder = serviceConnection.playbackServiceBinder
++    if (serviceBinder != null && serviceConnection.bindingState == ServiceBindingState.BOUND) {
++      serviceBinder.service.refreshFavorite(this)
++    }
++  }
 +
 +  /**
 +   * Somebody dragged the progress bar somewhere the source cannot go on its
@@ -494,7 +530,7 @@ index c76a9fd2a53743a691782e0f67d0d71401df58f6..19ace5e2097c4aa96b3bbe72720ce53b
    fun setActiveForLockScreen(active: Boolean, metadata: Metadata? = null, options: AudioLockScreenOptions? = null) {
      if (active) {
        this.metadata = metadata
-@@ -221,7 +358,8 @@ class AudioPlayer(
+@@ -221,7 +382,8 @@ class AudioPlayer(
  
    internal fun assignBasicMediaSession() {
      mediaSession.release()
@@ -741,7 +777,7 @@ index 149e9075c8630b14a69318aa6c37d9ff82b23f05..422d2d18677223f48b0106e44f573659
        }
  
 diff --git a/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt b/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
-index 196a5d57f887c2667a88543bd2f6a80044a044f2..6de57276b02bd264aff2c558e13e6afb8cead1fa 100644
+index 196a5d57f887c2667a88543bd2f6a80044a044f2..4e093dc6d2dea7acb919a41f694db6bf04772752 100644
 --- a/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
 +++ b/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
 @@ -27,6 +27,7 @@ import expo.modules.audio.AudioLockScreenOptions
@@ -752,16 +788,17 @@ index 196a5d57f887c2667a88543bd2f6a80044a044f2..6de57276b02bd264aff2c558e13e6afb
  import expo.modules.kotlin.AppContext
  import kotlinx.coroutines.CoroutineScope
  import kotlinx.coroutines.Dispatchers
-@@ -90,6 +91,8 @@ class AudioControlsService : MediaSessionService() {
+@@ -90,6 +91,9 @@ class AudioControlsService : MediaSessionService() {
  
          ACTION_SEEK_FORWARD -> currentPlayerRef.seekTo(currentPlayerRef.currentPosition + SEEK_INTERVAL_MS)
          ACTION_SEEK_BACKWARD -> currentPlayerRef.seekTo(currentPlayerRef.currentPosition - SEEK_INTERVAL_MS)
 +        ACTION_SKIP_PREVIOUS -> currentPlayer?.emitRemotePrevious()
 +        ACTION_SKIP_NEXT -> currentPlayer?.emitRemoteNext()
++        ACTION_TOGGLE_FAVORITE -> currentPlayer?.emitRemoteFavorite()
        }
      }
  
-@@ -192,6 +195,18 @@ class AudioControlsService : MediaSessionService() {
+@@ -192,6 +196,18 @@ class AudioControlsService : MediaSessionService() {
        val compactViewIndices = mutableListOf<Int>()
        var currentIndex = 0
  
@@ -780,7 +817,7 @@ index 196a5d57f887c2667a88543bd2f6a80044a044f2..6de57276b02bd264aff2c558e13e6afb
        if (currentOptions?.showSeekBackward == true) {
          builder.addAction(
            NotificationCompat.Action(
-@@ -227,6 +242,18 @@ class AudioControlsService : MediaSessionService() {
+@@ -227,6 +243,33 @@ class AudioControlsService : MediaSessionService() {
            )
          )
          compactViewIndices.add(currentIndex)
@@ -796,10 +833,25 @@ index 196a5d57f887c2667a88543bd2f6a80044a044f2..6de57276b02bd264aff2c558e13e6afb
 +          )
 +        )
 +        compactViewIndices.add(currentIndex)
++      }
++
++      // Last and out of the compact view, which keeps to the transport.
++      currentPlayer?.lockScreenFavorite?.let { favorite ->
++        builder.addAction(
++          NotificationCompat.Action(
++            if (favorite) {
++              androidx.media3.session.R.drawable.media3_icon_heart_filled
++            } else {
++              androidx.media3.session.R.drawable.media3_icon_heart_unfilled
++            },
++            currentPlayer?.lockScreenFavoriteLabel ?: "Favorite",
++            buildActionPendingIntent(ACTION_TOGGLE_FAVORITE)
++          )
++        )
        }
  
        style.setShowActionsInCompactView(*compactViewIndices.toIntArray())
-@@ -240,19 +267,41 @@ class AudioControlsService : MediaSessionService() {
+@@ -240,19 +283,41 @@ class AudioControlsService : MediaSessionService() {
      val session = mediaSession ?: return
      val mediaButtons = mutableListOf<CommandButton>()
  
@@ -844,7 +896,7 @@ index 196a5d57f887c2667a88543bd2f6a80044a044f2..6de57276b02bd264aff2c558e13e6afb
      mediaButtons.add(
        CommandButton.Builder(if (isPlaying) CommandButton.ICON_PAUSE else CommandButton.ICON_PLAY)
          .setDisplayName(if (isPlaying) "Pause" else "Play")
-@@ -263,13 +312,30 @@ class AudioControlsService : MediaSessionService() {
+@@ -263,13 +328,47 @@ class AudioControlsService : MediaSessionService() {
      )
  
      // Add seek forward button if enabled
@@ -874,10 +926,43 @@ index 196a5d57f887c2667a88543bd2f6a80044a044f2..6de57276b02bd264aff2c558e13e6afb
 +          .setEnabled(true)
 +          .setSessionCommand(SessionCommand(ACTION_SKIP_NEXT, Bundle.EMPTY))
 +          .setSlots(CommandButton.SLOT_FORWARD, CommandButton.SLOT_OVERFLOW)
++          .build()
++      )
++    }
++
++    // The heart, where the platform puts actions of the app's own: beside the
++    // transport controls on the notification and the lock screen, and on the
++    // car's playback screen. Only while JS says the song can be one (not a
++    // radio, say), and drawn as what pressing it would undo.
++    currentPlayer?.lockScreenFavorite?.let { favorite ->
++      mediaButtons.add(
++        CommandButton.Builder(
++          if (favorite) CommandButton.ICON_HEART_FILLED else CommandButton.ICON_HEART_UNFILLED
++        )
++          .setDisplayName(currentPlayer?.lockScreenFavoriteLabel ?: "Favorite")
++          .setEnabled(true)
++          .setSessionCommand(SessionCommand(ACTION_TOGGLE_FAVORITE, Bundle.EMPTY))
++          .setSlots(CommandButton.SLOT_OVERFLOW)
            .build()
        )
      }
-@@ -321,12 +387,21 @@ class AudioControlsService : MediaSessionService() {
+@@ -278,6 +377,15 @@ class AudioControlsService : MediaSessionService() {
+     session.setMediaButtonPreferences(mediaButtons)
+   }
+ 
++  /** The heart changed for this player: the buttons and the notification again. */
++  fun refreshFavorite(player: AudioPlayer) {
++    if (player != currentPlayer) return
++    appContext?.mainQueue?.launch {
++      updateSessionCustomLayout(player.ref.isPlaying)
++      postOrStartForegroundNotificationNow(startInForeground = false)
++    }
++  }
++
+   private fun postOrStartForegroundNotification(startInForeground: Boolean) {
+     if (startInForeground) {
+       postOrStartForegroundNotificationNow(startInForeground = true)
+@@ -321,12 +429,21 @@ class AudioControlsService : MediaSessionService() {
    }
  
    private fun resolveSessionPlayer(player: AudioPlayer, options: AudioLockScreenOptions?): Player {
@@ -901,7 +986,7 @@ index 196a5d57f887c2667a88543bd2f6a80044a044f2..6de57276b02bd264aff2c558e13e6afb
        override fun getAvailableCommands(): Player.Commands {
          return super.getAvailableCommands().buildUpon()
            .remove(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)
-@@ -371,7 +446,13 @@ class AudioControlsService : MediaSessionService() {
+@@ -371,7 +488,14 @@ class AudioControlsService : MediaSessionService() {
            updateMetadata(metadata)
          }
          val session = MediaSession.Builder(context, sessionPlayer)
@@ -910,13 +995,14 @@ index 196a5d57f887c2667a88543bd2f6a80044a044f2..6de57276b02bd264aff2c558e13e6afb
 +          .setCallback(
 +            AudioMediaSessionCallback(
 +              onSkipPrevious = { currentPlayer?.emitRemotePrevious() },
-+              onSkipNext = { currentPlayer?.emitRemoteNext() }
++              onSkipNext = { currentPlayer?.emitRemoteNext() },
++              onToggleFavorite = { currentPlayer?.emitRemoteFavorite() }
 +            )
 +          )
            .build()
  
          // Replace the basic media session with a session connected to our playback service.
-@@ -452,7 +533,13 @@ class AudioControlsService : MediaSessionService() {
+@@ -452,7 +576,14 @@ class AudioControlsService : MediaSessionService() {
            updateMetadata(metadata)
          }
          val session = MediaSession.Builder(context, sessionPlayer)
@@ -925,23 +1011,25 @@ index 196a5d57f887c2667a88543bd2f6a80044a044f2..6de57276b02bd264aff2c558e13e6afb
 +          .setCallback(
 +            AudioMediaSessionCallback(
 +              onSkipPrevious = { currentPlayer?.emitRemotePrevious() },
-+              onSkipNext = { currentPlayer?.emitRemoteNext() }
++              onSkipNext = { currentPlayer?.emitRemoteNext() },
++              onToggleFavorite = { currentPlayer?.emitRemoteFavorite() }
 +            )
 +          )
            .build()
  
          player.mediaSession.release()
-@@ -558,6 +645,8 @@ class AudioControlsService : MediaSessionService() {
+@@ -558,6 +689,9 @@ class AudioControlsService : MediaSessionService() {
  
      const val ACTION_SEEK_FORWARD = "expo.modules.audio.action.SEEK_FORWARD"
      const val ACTION_SEEK_BACKWARD = "expo.modules.audio.action.SEEK_BACKWARD"
 +    const val ACTION_SKIP_PREVIOUS = "expo.modules.audio.action.SKIP_PREVIOUS"
 +    const val ACTION_SKIP_NEXT = "expo.modules.audio.action.SKIP_NEXT"
++    const val ACTION_TOGGLE_FAVORITE = "expo.modules.audio.action.TOGGLE_FAVORITE"
  
      const val SEEK_INTERVAL_MS = 10000L
    }
 diff --git a/android/src/main/java/expo/modules/audio/service/AudioMediaSessionCallback.kt b/android/src/main/java/expo/modules/audio/service/AudioMediaSessionCallback.kt
-index 839aaef12d7699ea1a89037b31849775daa079f4..a1fce18411843a6aa636e83576371a078b00c228 100644
+index 839aaef12d7699ea1a89037b31849775daa079f4..1aff5091d68c19523e2374c0231f4c1da1a69163 100644
 --- a/android/src/main/java/expo/modules/audio/service/AudioMediaSessionCallback.kt
 +++ b/android/src/main/java/expo/modules/audio/service/AudioMediaSessionCallback.kt
 @@ -1,6 +1,9 @@
@@ -954,28 +1042,31 @@ index 839aaef12d7699ea1a89037b31849775daa079f4..a1fce18411843a6aa636e83576371a07
  import androidx.media3.common.Player
  import androidx.media3.session.MediaSession
  import androidx.media3.session.SessionCommand
-@@ -10,7 +13,10 @@ import androidx.media3.common.util.UnstableApi
+@@ -10,7 +13,12 @@ import androidx.media3.common.util.UnstableApi
  import com.google.common.util.concurrent.ListenableFuture
  
  @OptIn(UnstableApi::class)
 -class AudioMediaSessionCallback : MediaSession.Callback {
 +class AudioMediaSessionCallback(
 +  private val onSkipPrevious: () -> Unit = {},
-+  private val onSkipNext: () -> Unit = {}
++  private val onSkipNext: () -> Unit = {},
++  /** The heart in the notification, the lock screen and the car. */
++  private val onToggleFavorite: () -> Unit = {}
 +) : MediaSession.Callback {
    override fun onConnect(
      session: MediaSession,
      controller: MediaSession.ControllerInfo
-@@ -35,6 +41,8 @@ class AudioMediaSessionCallback : MediaSession.Callback {
+@@ -35,6 +43,9 @@ class AudioMediaSessionCallback : MediaSession.Callback {
            MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
              .add(SessionCommand(AudioControlsService.ACTION_SEEK_BACKWARD, Bundle.EMPTY))
              .add(SessionCommand(AudioControlsService.ACTION_SEEK_FORWARD, Bundle.EMPTY))
 +            .add(SessionCommand(AudioControlsService.ACTION_SKIP_PREVIOUS, Bundle.EMPTY))
 +            .add(SessionCommand(AudioControlsService.ACTION_SKIP_NEXT, Bundle.EMPTY))
++            .add(SessionCommand(AudioControlsService.ACTION_TOGGLE_FAVORITE, Bundle.EMPTY))
              .build()
          )
          .build()
-@@ -43,6 +51,40 @@ class AudioMediaSessionCallback : MediaSession.Callback {
+@@ -43,6 +54,40 @@ class AudioMediaSessionCallback : MediaSession.Callback {
      }
    }
  
@@ -1016,12 +1107,13 @@ index 839aaef12d7699ea1a89037b31849775daa079f4..a1fce18411843a6aa636e83576371a07
    override fun onCustomCommand(
      session: MediaSession,
      controller: MediaSession.ControllerInfo,
-@@ -56,6 +98,8 @@ class AudioMediaSessionCallback : MediaSession.Callback {
+@@ -56,6 +101,9 @@ class AudioMediaSessionCallback : MediaSession.Callback {
        AudioControlsService.ACTION_SEEK_BACKWARD -> {
          session.player.seekTo(session.player.currentPosition - AudioControlsService.SEEK_INTERVAL_MS)
        }
 +      AudioControlsService.ACTION_SKIP_PREVIOUS -> onSkipPrevious()
 +      AudioControlsService.ACTION_SKIP_NEXT -> onSkipNext()
++      AudioControlsService.ACTION_TOGGLE_FAVORITE -> onToggleFavorite()
      }
      return super.onCustomCommand(session, controller, command, args)
    }
@@ -1372,7 +1464,7 @@ index cfd92ad0ff5765254c4e6db974fe44bce34aad06..78fa084cf34a5f56743d636b6501f909
  //# sourceMappingURL=AudioConstants.d.ts.map
 \ No newline at end of file
 diff --git a/build/AudioModule.types.d.ts b/build/AudioModule.types.d.ts
-index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..90a5811df35aa1ef06fa7743e2c0eca571f41430 100644
+index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..99f02c0d2f36b738c1993cd5b08e3c8c17882d07 100644
 --- a/build/AudioModule.types.d.ts
 +++ b/build/AudioModule.types.d.ts
 @@ -31,6 +31,11 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
@@ -1402,7 +1494,7 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..90a5811df35aa1ef06fa7743e2c0eca5
      /**
       * Seeks the playback by the given number of seconds.
       * @param seconds The number of seconds to seek by.
-@@ -183,6 +196,18 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
+@@ -183,6 +196,24 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
       * This will clear the lock screen's now playing info.
       */
      clearLockScreenControls(): void;
@@ -1418,10 +1510,16 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..90a5811df35aa1ef06fa7743e2c0eca5
 +     * with the app about where the song is.
 +     */
 +    setSessionPositionOffset(offsetMs: number): void;
++    /**
++     * The heart on the notification, the lock screen and the car (Android
++     * only): whether the song is a favourite, or null to hide it, and what the
++     * button is called. Pressing it emits `remoteFavorite`.
++     */
++    setLockScreenFavorite(favorite: boolean | null, label: string | null): void;
      /**
       * Remove the player from memory to free up resources.
       */
-@@ -222,6 +247,27 @@ export type AudioEvents = {
+@@ -222,6 +253,29 @@ export type AudioEvents = {
      playbackStatusUpdate(status: AudioStatus): void;
      /** Fired when audio sampling is enabled and new sample data is available. */
      audioSampleUpdate(data: AudioSample): void;
@@ -1429,6 +1527,8 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..90a5811df35aa1ef06fa7743e2c0eca5
 +    remotePrevious(): void;
 +    /** Fired when the user taps skip-next on the lock screen / notification. */
 +    remoteNext(): void;
++    /** Fired when the heart is pressed on the notification, lock screen or car. */
++    remoteFavorite(): void;
 +    /** Fired when the progress bar of the lock screen / notification / car is
 +     *  dragged on a source the player cannot seek by itself (a stream a server
 +     *  generates on the fly). Whoever queued the track is expected to get

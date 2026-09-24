@@ -46,6 +46,21 @@ class JsProxyPlayer : SimpleBasePlayer(Looper.getMainLooper()) {
   @Volatile private var shuffle: Boolean = false
   @Volatile private var repeatMode: Int = Player.REPEAT_MODE_OFF
 
+  /** Whether the song is a favourite, for the heart; null hides it. Not player
+   *  state, so it is the service that draws it (see `onFavoriteChanged`). */
+  @Volatile var favorite: Boolean? = null
+    private set
+  @Volatile var favoriteLabel: String? = null
+    private set
+  var onFavoriteChanged: (() -> Unit)? = null
+
+  fun applyFavorite(value: Boolean?, label: String?) = runOnMain {
+    if (favorite == value && favoriteLabel == label) return@runOnMain
+    favorite = value
+    favoriteLabel = label
+    onFavoriteChanged?.invoke()
+  }
+
   private val mainHandler = Handler(Looper.getMainLooper())
 
   // SimpleBasePlayer insists on its application thread (main), and calls from

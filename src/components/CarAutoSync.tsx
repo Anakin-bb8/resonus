@@ -25,7 +25,8 @@ import { buildBrowseTree, handleBrowsePlay } from '@/lib/carAutoTree';
 import { bump } from '@/lib/perfLog';
 import { useAuthStore } from '@/store/auth';
 import { useLastPlayed } from '@/store/lastPlayed';
-import { usePlayerStore, type StreamInfo } from '@/store/player';
+import { favoriteLabel, favoriteState, onFavoritesChange, toggleFavorite } from '@/lib/remoteFavorite';
+import { currentSong, usePlayerStore, type StreamInfo } from '@/store/player';
 
 const REBUILD_DEBOUNCE_MS = 600;
 /** How long after opening before the tree is filled in. Long enough that the
@@ -118,12 +119,16 @@ export function CarAutoSync() {
       );
     };
     const pushState = () => {
-      const { isPlaying, positionSec, shuffle, repeat } = usePlayerStore.getState();
+      const state = usePlayerStore.getState();
+      const { isPlaying, positionSec, shuffle, repeat } = state;
+      const favorite = favoriteState(currentSong(state));
       setPlaybackState({
         isPlaying,
         positionMs: Math.round(positionSec * 1000),
         shuffle,
         repeatMode: repeat,
+        favorite,
+        favoriteLabel: favorite == null ? undefined : favoriteLabel(favorite),
       });
     };
     pushNowPlaying();
@@ -141,11 +146,15 @@ export function CarAutoSync() {
       if (
         state.isPlaying !== prev.isPlaying ||
         state.shuffle !== prev.shuffle ||
-        state.repeat !== prev.repeat
+        state.repeat !== prev.repeat ||
+        state.queue !== prev.queue ||
+        state.index !== prev.index
       ) {
         pushState();
       }
     });
+    // The heart follows a song starred anywhere in the app.
+    const unsubFavorites = onFavoritesChange(pushState);
     const interval = setInterval(pushState, POSITION_PUSH_MS);
 
     // ── Events from the car ──
@@ -184,6 +193,9 @@ export function CarAutoSync() {
         case 'shuffle':
           if (Boolean(e.value) !== store.shuffle) store.toggleShuffle();
           break;
+        case 'favorite':
+          void toggleFavorite(currentSong(store));
+          break;
         case 'repeat': {
           // The store cycles off→all→one; advance until the target is reached.
           for (let i = 0; i < 3 && usePlayerStore.getState().repeat !== e.value; i++) {
@@ -202,6 +214,7 @@ export function CarAutoSync() {
       unsubAuth();
       unsubRecent();
       unsubPlayer();
+      unsubFavorites();
       connectSub?.remove();
       playSub?.remove();
       transportSub?.remove();

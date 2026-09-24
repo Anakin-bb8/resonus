@@ -12,6 +12,8 @@ import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaConstants
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionResult
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -50,6 +52,7 @@ class ResonusCarBrowserService : MediaLibraryService() {
       override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) = refreshModeButtons()
       override fun onRepeatModeChanged(repeatMode: Int) = refreshModeButtons()
     })
+    player.onFavoriteChanged = { refreshModeButtons() }
   }
 
   private fun refreshModeButtons() {
@@ -66,14 +69,15 @@ class ResonusCarBrowserService : MediaLibraryService() {
    * parameter media3 toggles shuffle by reading the player back, and cycling
    * repeat is ours to define anyway (off, all, one).
    */
-  private fun modeButtons(player: Player): ImmutableList<CommandButton> {
+  private fun modeButtons(player: JsProxyPlayer): ImmutableList<CommandButton> {
     val shuffleOn = player.shuffleModeEnabled
     val nextRepeat = when (player.repeatMode) {
       Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
       Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
       else -> Player.REPEAT_MODE_OFF
     }
-    return ImmutableList.of(
+    val buttons = ImmutableList.builder<CommandButton>()
+    buttons.add(
       CommandButton.Builder(
         if (shuffleOn) CommandButton.ICON_SHUFFLE_ON else CommandButton.ICON_SHUFFLE_OFF,
       )
@@ -93,6 +97,19 @@ class ResonusCarBrowserService : MediaLibraryService() {
         .setSlots(CommandButton.SLOT_FORWARD_SECONDARY, CommandButton.SLOT_OVERFLOW)
         .build(),
     )
+    // The heart: a command of our own, since favourites are not player state.
+    player.favorite?.let { favorite ->
+      buttons.add(
+        CommandButton.Builder(
+          if (favorite) CommandButton.ICON_HEART_FILLED else CommandButton.ICON_HEART_UNFILLED,
+        )
+          .setSessionCommand(SessionCommand(FAVORITE_COMMAND, Bundle.EMPTY))
+          .setDisplayName(player.favoriteLabel ?: "Favorite")
+          .setSlots(CommandButton.SLOT_OVERFLOW)
+          .build(),
+      )
+    }
+    return buttons.build()
   }
 
   override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? = session
@@ -106,6 +123,31 @@ class ResonusCarBrowserService : MediaLibraryService() {
   }
 
   private inner class LibraryCallback : MediaLibrarySession.Callback {
+    override fun onConnect(
+      session: MediaSession,
+      controller: MediaSession.ControllerInfo,
+    ): MediaSession.ConnectionResult =
+      MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+        .setAvailableSessionCommands(
+          MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS.buildUpon()
+            .add(SessionCommand(FAVORITE_COMMAND, Bundle.EMPTY))
+            .build(),
+        )
+        .build()
+
+    override fun onCustomCommand(
+      session: MediaSession,
+      controller: MediaSession.ControllerInfo,
+      customCommand: SessionCommand,
+      args: Bundle,
+    ): ListenableFuture<SessionResult> {
+      if (customCommand.customAction == FAVORITE_COMMAND) {
+        CarAutoModule.instance?.emitTransport("favorite", null)
+        return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+      }
+      return super.onCustomCommand(session, controller, customCommand, args)
+    }
+
     override fun onGetLibraryRoot(
       session: MediaLibrarySession,
       browser: MediaSession.ControllerInfo,
@@ -369,6 +411,9 @@ class ResonusCarBrowserService : MediaLibraryService() {
   companion object {
     @Volatile var activePlayer: JsProxyPlayer? = null
       private set
+
+    /** The heart on the car's playback screen. */
+    const val FAVORITE_COMMAND = "expo.modules.carauto.FAVORITE"
 
     /**
      * How much cover art one page of browse results may carry. Below the

@@ -13,6 +13,7 @@ Releases before 0.2.1 are only listed on the
 
 - Settings > Theme > Pure black puts the dark appearance on a true black background, for OLED screens.
 - The navigation bar, the mini player and the bar at the top of albums, playlists and artists blur what scrolls under them, with a hairline marking where the navigation bar starts, on iOS and on Android 12 or newer, and Settings > Appearance > Blur behind the bars turns it off.
+- On Android, a heart on the notification, the lock screen and Android Auto adds the song playing to your favorites or takes it out.
 - On Android 13 or newer, Resonus shows up in the system's per-app language settings, and a language chosen there or in the app is the same everywhere.
 - On Android, a Now playing widget for the home screen in two sizes, a strip and a square with the cover filling it, both with previous, play and next buttons, a Resonus tile in Quick Settings to play and pause, and Shuffle favorites, Continue listening and Search on a long press of the app icon.
 - Share Resonus link, in the ⋯ menu of albums, artists and public playlists, sends a resonus:// link that opens it in the Resonus of someone with an account on the same server, asking which profile to use when more than one fits; pasting the link into Search opens it too (#176).

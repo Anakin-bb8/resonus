@@ -53,6 +53,7 @@ import { COVER, coverArtUrl, getRandomSongs } from '@/api/data';
 import { prefetchLyrics } from '@/hooks/useLyrics';
 import { tg } from '@/i18n';
 import { transcodeTarget } from '@/lib/audioQuality';
+import { favoriteLabel, favoriteState, onFavoritesChange, toggleFavorite } from '@/lib/remoteFavorite';
 import type { Remap } from '@/lib/navidromeRemap';
 import { remapSong } from '@/lib/navidromeRemap';
 import { beat, bump, timed } from '@/lib/perfLog';
@@ -231,6 +232,9 @@ function ensurePlayer(idx: number): AudioPlayer {
   // Only the session owner emits these events; there are no double skips.
   p.addListener('remotePrevious', () => usePlayerStore.getState().previous());
   p.addListener('remoteNext', () => usePlayerStore.getState().next());
+  p.addListener('remoteFavorite', () => {
+    if (activePlayer() === p) void toggleFavorite(currentSong(usePlayerStore.getState()));
+  });
   // Dragging the bar of the notification, the lock screen or the car on a
   // stream the player cannot seek by itself. It reaches us instead of the
   // player, and `seekTo` is the one that knows how: ask the server for the
@@ -663,6 +667,7 @@ function applyLockScreen(p: AudioPlayer, song: Song) {
   const meta = metadataFor(song);
   if (lockOwner === p) {
     p.updateLockScreenMetadata(meta);
+    applyLockScreenFavorite(p, song);
     return;
   }
   lockOwner = p;
@@ -672,6 +677,29 @@ function applyLockScreen(p: AudioPlayer, song: Song) {
     showSkipPrevious: true,
     showSkipNext: true,
   });
+  applyLockScreenFavorite(p, song);
+}
+
+/** What each player's session was last told about the heart. */
+const lockFavoriteSent = new WeakMap<AudioPlayer, string>();
+
+/**
+ * The heart on the notification and the lock screen (Android Auto has its own,
+ * see `CarAutoSync`). Hidden for a radio. Set on every track change here, and again
+ * whenever the favourites list changes (see the bottom of this file).
+ */
+function applyLockScreenFavorite(p: AudioPlayer, song: Song) {
+  const favorite = favoriteState(song);
+  // The list reports every step of a refetch; the notification is only
+  // redrawn when the heart actually changes.
+  const key = `${song.id}|${favorite}`;
+  if (lockFavoriteSent.get(p) === key) return;
+  lockFavoriteSent.set(p, key);
+  try {
+    p.setLockScreenFavorite(favorite, favorite == null ? null : favoriteLabel(favorite));
+  } catch {
+    // Android-only, and only in a build carrying the patch.
+  }
 }
 
 // ── What a radio says it is playing ─────────────────────────────────────────
@@ -4362,4 +4390,11 @@ usePlayerStore.subscribe((st, prev) => {
   ) {
     queueDirty = true;
   }
+});
+
+// A song starred or unstarred anywhere in the app: the heart outside it follows.
+onFavoritesChange(() => {
+  const p = activePlayer();
+  const song = currentSong(usePlayerStore.getState());
+  if (p && song && lockOwner === p) applyLockScreenFavorite(p, song);
 });
