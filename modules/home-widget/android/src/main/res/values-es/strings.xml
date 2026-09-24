@@ -6,4 +6,5 @@
   <string name="widget_previous">Anterior</string>
   <string name="widget_play_pause">Reproducir o pausar</string>
   <string name="widget_next">Siguiente</string>
+  <string name="widget_square_name">Reproduciendo (carátula)</string>
 </resources>

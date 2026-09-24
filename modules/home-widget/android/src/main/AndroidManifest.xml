@@ -12,6 +12,18 @@
         android:resource="@xml/resonus_widget_info" />
     </receiver>
 
+    <receiver
+      android:name="expo.modules.homewidget.ResonusSquareWidgetProvider"
+      android:exported="true"
+      android:label="@string/widget_square_name">
+      <intent-filter>
+        <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+      </intent-filter>
+      <meta-data
+        android:name="android.appwidget.provider"
+        android:resource="@xml/resonus_widget_square_info" />
+    </receiver>
+
     <!-- The widget's buttons. Not exported: only our own PendingIntents reach it. -->
     <receiver
       android:name="expo.modules.homewidget.WidgetActionReceiver"

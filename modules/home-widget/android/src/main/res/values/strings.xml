@@ -7,4 +7,5 @@
   <string name="widget_previous">Previous</string>
   <string name="widget_play_pause">Play or pause</string>
   <string name="widget_next">Next</string>
+  <string name="widget_square_name">Now playing (cover)</string>
 </resources>

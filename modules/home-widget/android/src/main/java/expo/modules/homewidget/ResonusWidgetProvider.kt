@@ -6,24 +6,49 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.view.View
 import android.widget.RemoteViews
 
-/** The "Now playing" home screen widget. JS pushes, this only draws. */
-class ResonusWidgetProvider : AppWidgetProvider() {
+/** The "Now playing" widget, a strip. JS pushes, this only draws. */
+open class ResonusWidgetProvider : AppWidgetProvider() {
+  internal open val look: Look = Look.STRIP
+
   override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
-    render(context, manager, ids)
+    render(context, manager, ids, look)
+  }
+
+  /** How each size is drawn: its layout and the icons that read on it. */
+  internal enum class Look(
+    val layout: Int,
+    val play: Int,
+    val pause: Int,
+    /** A cover that fills the widget, over a placeholder of its own. */
+    val fullCover: Boolean,
+  ) {
+    STRIP(R.layout.hw_widget, R.drawable.hw_ic_play, R.drawable.hw_ic_pause, false),
+    SQUARE(
+      R.layout.hw_widget_square,
+      R.drawable.hw_ic_play_light,
+      R.drawable.hw_ic_pause_light,
+      true,
+    ),
   }
 
   companion object {
     fun renderAll(context: Context) {
       val manager = AppWidgetManager.getInstance(context)
-      val ids = manager.getAppWidgetIds(ComponentName(context, ResonusWidgetProvider::class.java))
-      if (ids.isNotEmpty()) render(context, manager, ids)
+      for ((provider, look) in listOf(
+        ResonusWidgetProvider::class.java to Look.STRIP,
+        ResonusSquareWidgetProvider::class.java to Look.SQUARE,
+      )) {
+        val ids = manager.getAppWidgetIds(ComponentName(context, provider))
+        if (ids.isNotEmpty()) render(context, manager, ids, look)
+      }
     }
 
-    private fun render(context: Context, manager: AppWidgetManager, ids: IntArray) {
+    internal fun render(context: Context, manager: AppWidgetManager, ids: IntArray, look: Look) {
       val state = NowPlaying.read(context)
-      val views = RemoteViews(context.packageName, R.layout.hw_widget)
+      val views = RemoteViews(context.packageName, look.layout)
       val open = openApp(context)
       if (state.active && state.title.isNotEmpty()) {
         views.setTextViewText(R.id.hw_title, state.title)
@@ -33,15 +58,16 @@ class ResonusWidgetProvider : AppWidgetProvider() {
         views.setTextViewText(R.id.hw_artist, context.getString(R.string.widget_idle))
       }
       val cover = if (state.active) NowPlaying.cover(context) else null
-      if (cover != null) {
+      if (look.fullCover) {
+        if (cover != null) views.setImageViewBitmap(R.id.hw_cover, cover)
+        views.setViewVisibility(R.id.hw_cover, if (cover != null) View.VISIBLE else View.GONE)
+        views.setViewVisibility(R.id.hw_placeholder, if (cover != null) View.GONE else View.VISIBLE)
+      } else if (cover != null) {
         views.setImageViewBitmap(R.id.hw_cover, cover)
       } else {
         views.setImageViewResource(R.id.hw_cover, R.drawable.hw_ic_note)
       }
-      views.setImageViewResource(
-        R.id.hw_play_pause,
-        if (state.playing) R.drawable.hw_ic_pause else R.drawable.hw_ic_play,
-      )
+      views.setImageViewResource(R.id.hw_play_pause, if (state.playing) look.pause else look.play)
       views.setOnClickPendingIntent(R.id.hw_root, open)
       views.setOnClickPendingIntent(R.id.hw_cover, open)
       // Buttons only do something with a queue loaded in this process; before
@@ -84,4 +110,9 @@ class ResonusWidgetProvider : AppWidgetProvider() {
       )
     }
   }
+}
+
+/** The same widget as a square, with the cover filling it. */
+class ResonusSquareWidgetProvider : ResonusWidgetProvider() {
+  override val look: Look = Look.SQUARE
 }

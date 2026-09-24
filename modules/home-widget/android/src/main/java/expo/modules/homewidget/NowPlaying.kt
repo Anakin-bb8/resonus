@@ -29,8 +29,9 @@ import java.util.concurrent.Executors
 internal object NowPlaying {
   private const val PREFS = "resonus_home_widget"
   private const val COVER_FILE = "home_widget_cover.png"
-  /** Cover size in pixels: enough for the widget, cheap to send across processes. */
-  private const val COVER_PX = 192
+  /** Cover size in pixels: enough for the square widget, still small enough to
+   *  send across processes (320² ARGB is 400 KB, under the binder limit). */
+  private const val COVER_PX = 320
 
   @Volatile var live = false
     private set
