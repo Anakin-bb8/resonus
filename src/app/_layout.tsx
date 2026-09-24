@@ -374,15 +374,19 @@ export default function RootLayout() {
                   opaque surface over it. */}
               <Stack.Screen
                 name="player"
-                options={{
+                options={({ route }) => ({
                   presentation: 'containedTransparentModal',
-                  animation: 'fade_from_bottom',
+                  // Pulled up out of the mini player it has no animation of its
+                  // own: the finger is what brings it up (see `playerReveal`).
+                  animation: (route.params as { reveal?: string } | undefined)?.reveal
+                    ? 'none'
+                    : 'fade_from_bottom',
                   // Override the global opaque contentStyle: without this the
                   // modal container itself is painted with colors.background and
                   // dragging the player only exposes that dark surface, never the
                   // screen behind.
                   contentStyle: { backgroundColor: 'transparent' },
-                }}
+                })}
               />
               <Stack.Screen
                 name="queue"

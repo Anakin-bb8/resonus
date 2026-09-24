@@ -48,6 +48,7 @@ import { useLocalProfile } from '@/hooks/useLocalProfile';
 import { useLyrics } from '@/hooks/useLyrics';
 import { useScreenSize } from '@/hooks/useScreenSize';
 import { useT } from '@/i18n';
+import { revealOffset } from '@/lib/playerReveal';
 import { artistTargets } from '@/lib/artistNav';
 import { formatGroupedDeviceLabel } from '@/lib/format';
 import { applyStarChange, resyncFavorites } from '@/lib/favoritesCache';
@@ -734,8 +735,15 @@ export default function PlayerScreen() {
         transY.value = withSpring(0, { damping: 20, stiffness: 200 });
       }
     });
+  // While it is being pulled up out of the mini player, the finger places it
+  // (see `playerReveal`); otherwise its own drag down does.
+  // A pull that was let go of ends with the player closing while still held
+  // at the bottom; it is released here, once it is off the screen for good.
+  useEffect(() => () => {
+    revealOffset.value = -1;
+  }, []);
   const rootStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: transY.value }],
+    transform: [{ translateY: revealOffset.value >= 0 ? revealOffset.value : transY.value }],
   }));
   // The full-screen animated cover travels with the content instead of staying
   // pinned to the screen, so scrolling down to the lyrics moves it out of the

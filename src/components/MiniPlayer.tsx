@@ -21,6 +21,8 @@ import { useDominantColor } from '@/hooks/useDominantColor';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
+import { router } from 'expo-router';
+import { revealOffset } from '@/lib/playerReveal';
 import { pushOnce } from '@/lib/pushOnce';
 import { currentSong, useLiveInfo, usePlayerStore } from '@/store/player';
 import { CONTENT_MAX_WIDTH, useScreenSize } from '@/hooks/useScreenSize';
@@ -39,11 +41,10 @@ import { MarqueeText } from './MarqueeText';
 // distance the card is thrown to get off screen — describing the other one (#131).
 const SWIPE_SHARE = 0.25;
 const DISMISS_Y = 80;
-/** Upwards opens the player, like tapping it. A shorter pull than dismissing:
- *  opening is the common case, and nothing is lost if it fires by mistake. */
-const OPEN_Y = 40;
-/** How far the card follows the finger upwards before it stops giving. */
-const OPEN_FOLLOW = 24;
+/** How far up the finger goes before the player starts coming up after it. */
+const REVEAL_START = 12;
+/** Past this share of the screen, letting go finishes opening it. */
+const REVEAL_COMMIT = 0.2;
 
 /**
  * Isolated progress bar: the only thing that subscribes to `positionSec`
@@ -82,34 +83,61 @@ export function MiniPlayer() {
   // diagonal movement.
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
-  const openPlayer = () => pushOnce('/player');
+  // Pulled up, the player comes with the finger (see `playerReveal`): it is
+  // opened with no animation and `revealOffset` places it.
+  const revealing = useSharedValue(false);
+  const startReveal = () => pushOnce('/player?reveal=1');
+  // Down at the bottom, out of sight: it is let go of (`revealOffset` back to
+  // -1) by the player as it unmounts, or it would flash back up for a frame.
+  const cancelReveal = () => {
+    if (router.canGoBack()) router.back();
+    else revealOffset.value = -1;
+  };
   const pan = Gesture.Pan()
     .minDistance(10)
     .onUpdate((e) => {
+      // Once the player is coming up, the pull is only ever vertical.
+      if (revealing.value) {
+        revealOffset.value = Math.min(screenH, Math.max(0, screenH + e.translationY + REVEAL_START));
+        return;
+      }
       if (Math.abs(e.translationX) > Math.abs(e.translationY)) {
         translateX.value = e.translationX;
         translateY.value = 0;
-      } else {
-        // Upwards it only gives a little, with resistance: the player is what
-        // opens, the card itself is not going anywhere.
-        translateY.value =
-          e.translationY >= 0
-            ? e.translationY
-            : -OPEN_FOLLOW * (1 - Math.exp(e.translationY / (OPEN_FOLLOW * 3)));
+      } else if (e.translationY >= 0) {
+        translateY.value = e.translationY;
         translateX.value = 0;
+      } else {
+        translateX.value = 0;
+        translateY.value = 0;
+        if (e.translationY < -REVEAL_START) {
+          revealing.value = true;
+          revealOffset.value = screenH;
+          scheduleOnRN(startReveal);
+        }
       }
     })
     .onEnd((e) => {
-      const horizontal = Math.abs(e.translationX) > Math.abs(e.translationY);
+      const horizontal = !revealing.value && Math.abs(e.translationX) > Math.abs(e.translationY);
       if (horizontal) {
         const swipeX = screenW * SWIPE_SHARE;
         if (e.translationX < -swipeX || e.velocityX < -800) scheduleOnRN(next);
         else if (e.translationX > swipeX || e.velocityX > 800) scheduleOnRN(previous);
         translateX.value = withSpring(0, { damping: 20, stiffness: 200 });
         translateY.value = 0;
-      } else if (e.translationY < -OPEN_Y || e.velocityY < -600) {
-        scheduleOnRN(openPlayer);
-        translateY.value = withSpring(0, { damping: 20, stiffness: 200 });
+      } else if (revealing.value) {
+        revealing.value = false;
+        const opened = -e.translationY > screenH * REVEAL_COMMIT || e.velocityY < -600;
+        if (opened) {
+          revealOffset.value = withTiming(0, { duration: motion.duration.move }, () => {
+            revealOffset.value = -1;
+          });
+        } else {
+          revealOffset.value = withTiming(screenH, { duration: motion.duration.move }, (f) => {
+            if (f) scheduleOnRN(cancelReveal);
+            else revealOffset.value = -1;
+          });
+        }
       } else if (e.translationY > DISMISS_Y || e.velocityY > 800) {
         translateY.value = withTiming(screenH, { duration: motion.duration.move }, (finished) => {
           if (finished) scheduleOnRN(reset);
@@ -118,6 +146,15 @@ export function MiniPlayer() {
         translateX.value = withSpring(0, { damping: 20, stiffness: 200 });
         translateY.value = withSpring(0, { damping: 20, stiffness: 200 });
       }
+    })
+    // A pull that was cut off (the system took the touch) still ends somewhere:
+    // opened, since the player is already up on the screen.
+    .onFinalize(() => {
+      if (!revealing.value) return;
+      revealing.value = false;
+      revealOffset.value = withTiming(0, { duration: motion.duration.move }, () => {
+        revealOffset.value = -1;
+      });
     });
   // The entire card only moves (and fades) when dismissed downward.
   const cardStyle = useAnimatedStyle(() => ({
