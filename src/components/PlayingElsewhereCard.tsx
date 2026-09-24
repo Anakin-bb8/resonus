@@ -27,6 +27,7 @@ import Icon from '@/components/Icon';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
+import { queryClient } from '@/lib/query';
 import { useAuthStore } from '@/store/auth';
 import { usePlayerStore } from '@/store/player';
 import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
@@ -41,6 +42,18 @@ const STALE_MINUTES = 10;
 const LEFT_DAYS = 3;
 /** The saved queue is the heavy request: asked for less often. */
 const QUEUE_POLL_MS = 60_000;
+
+/**
+ * What has been carried on here with "Play here", by player and song. The
+ * server goes on listing it (the other player is still on that song, playing
+ * or paused), so without this the card came straight back as soon as the song
+ * was paused here. A different song on that player is a new offer.
+ */
+const taken = new Set<string>();
+
+function offerKey(e: { playerName?: string; song: { id: string } }): string {
+  return `${e.playerName ?? ''}|${e.song.id}`;
+}
 
 /** Where the card's song comes from: playing or paused there right now, or a
  *  queue left there. */
@@ -82,6 +95,7 @@ function pickEntry(
     if (e.playerName === CLIENT_NAME && e.song.id === ownSongId) return false;
     // Already carried on here.
     if (ownPlaying && e.song.id === ownSongId) return false;
+    if (taken.has(offerKey(e))) return false;
     return true;
   });
   const rank = (e: NowPlayingEntry) => (e.state === 'paused' ? 1 : 0);
@@ -153,7 +167,8 @@ export function PlayingElsewhereCard() {
   });
   // Not while something plays here: that is newer than whatever was left, and
   // the server hears so at the next save.
-  const left = live || ownPlaying ? null : leftQueue(saved);
+  const leftOffer = live || ownPlaying ? null : leftQueue(saved);
+  const left = leftOffer && !taken.has(offerKey(leftOffer)) ? leftOffer : null;
   const entry: Offer | null = live ?? left;
   const fetchedAt = live ? dataUpdatedAt : savedAt;
   const cover = entry ? songCoverUrl(entry.song, COVER.card) : undefined;
@@ -180,9 +195,13 @@ export function PlayingElsewhereCard() {
     setBusy(true);
     try {
       await playHere(entry, fetchedAt);
+      taken.add(offerKey(entry));
     } finally {
       setBusy(false);
     }
+    // Asked again, so what the card shows next is the server after the switch.
+    void queryClient.invalidateQueries({ queryKey: ['nowPlaying'] });
+    void queryClient.invalidateQueries({ queryKey: ['leftQueue'] });
     router.push('/player');
   };
 
