@@ -28,6 +28,7 @@ import { usePlayHistory } from '@/store/playHistory';
 import { isManualOffline } from './netGate';
 import { getLocalLyrics, getOnlineLyrics } from '@/lib/localLyrics';
 import { useSettings, type LyricsSource } from '@/store/settings';
+import { cachedUri } from '@/store/songCache';
 import * as Navidrome from './navidrome';
 import * as Subsonic from './backend';
 import * as Local from '@/lib/localQueries';
@@ -61,7 +62,7 @@ function annotate(songs: Song[]): Song[] {
   const hideUnavailable = useSettings.getState().hideUnavailableOffline;
   const annotated = songs.map((s0) => {
     const s = ratings[s0.id] !== undefined ? { ...s0, userRating: ratings[s0.id] } : s0;
-    const uri = files[s.id];
+    const uri = files[s.id] ?? cachedUri(s.id);
     // The album's cover, saved once for the shelf, the header and every row,
     // unless the song's own is on this phone. Only a download saves one
     // (#214): for the rest it would be a file per track that nobody kept.
@@ -241,7 +242,7 @@ export function markUnplayableOffline(songs: Song[]): Song[] {
   if (!isOffline()) return songs;
   const files = useDownloads.getState().files;
   return songs.map((s) => {
-    const uri = s.localUri ?? files[s.id];
+    const uri = s.localUri ?? files[s.id] ?? cachedUri(s.id);
     if (s.url) return { ...s, unavailable: false };
     return uri ? { ...s, localUri: uri, unavailable: false } : { ...s, unavailable: true };
   });
@@ -1503,7 +1504,8 @@ export async function getSongLyrics(
 ): Promise<Subsonic.SongLyrics | null> {
   const allowOnline = source !== 'off';
   const preferOnline = source === 'online';
-  const downloaded = () => song.localUri ?? useDownloads.getState().files[song.id];
+  const downloaded = () =>
+    song.localUri ?? useDownloads.getState().files[song.id] ?? cachedUri(song.id);
   // Offline: the phone first, and the question is whether anything else is
   // allowed at all. LRCLIB is not this server: an offline the app fell into
   // means one server stopped answering, and the phone's connection is very

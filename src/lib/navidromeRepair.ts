@@ -32,6 +32,7 @@ import { useAutoDownloads } from '@/store/autoDownloads';
 import { useOfflineQueue } from '@/store/offlineQueue';
 import { remapQueueIds } from '@/store/player';
 import { usePins } from '@/store/pins';
+import { clearSongCacheFor } from '@/store/songCache';
 import { hashKey } from '@/lib/localLibrary';
 import { primaryUrl } from '@/lib/serverUrls';
 
@@ -219,6 +220,8 @@ export async function repairIfMigrated(auth: SubsonicAuth): Promise<Verdict> {
     await remapMirrorIds(mirror.dir, mirror.profile, canonicalId).catch(() => {});
 
     useOfflineQueue.getState().remapIds(canonicalId);
+    // Cheaper to refill than to remap.
+    await clearSongCacheFor(auth).catch(() => {});
 
     // The three that are only visible, after the three that hold data. Each is
     // in memory as well as on disk and each belongs to whichever profile is

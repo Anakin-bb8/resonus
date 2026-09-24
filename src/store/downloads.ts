@@ -470,7 +470,7 @@ function invalidate() {
 // ── File download ─────────────────────────────────────────────────────────
 
 /** Reads a header case-insensitively (casing varies by platform). */
-function header(headers: Record<string, string> | undefined, name: string): string {
+export function header(headers: Record<string, string> | undefined, name: string): string {
   if (!headers) return '';
   const key = Object.keys(headers).find((k) => k.toLowerCase() === name);
   return key ? headers[key] : '';
@@ -494,7 +494,7 @@ function header(headers: Record<string, string> | undefined, name: string): stri
  * what cannot possibly be audio is rejected: the API's own JSON/XML, and
  * incidentally the HTML from a proxy or a wifi captive portal.
  */
-function isErrorBody(headers: Record<string, string> | undefined): boolean {
+export function isErrorBody(headers: Record<string, string> | undefined): boolean {
   return /^\s*(application\/json|application\/xml|text\/xml|text\/html)/i.test(
     header(headers, 'content-type'),
   );
@@ -511,12 +511,22 @@ function songFileUrl(
   song: Song,
 ): { url: string; ext: string; bitRate?: number } {
   const s = useSettings.getState();
-  const { bitRate: bitrate, format } = transcodeTarget(
+  const { bitRate, format } = transcodeTarget(
     song,
     s.downloadBitRate,
     s.downloadFormat,
     s.downloadLosslessOnly,
   );
+  return fileUrlFor(auth, song, bitRate, format);
+}
+
+/** Where to fetch a song's file from at this quality, and what it will be. */
+export function fileUrlFor(
+  auth: SubsonicAuth,
+  song: Song,
+  bitrate: number,
+  format: string,
+): { url: string; ext: string; bitRate?: number } {
   if (bitrate > 0) {
     return {
       url: streamUrl(auth, song.id, bitrate, 0, format),
@@ -734,7 +744,7 @@ async function measureMissing(
 }
 
 /** Size of a file, 0 if it can't be read. */
-async function fileSize(uri: string): Promise<number> {
+export async function fileSize(uri: string): Promise<number> {
   try {
     const info = await FileSystem.getInfoAsync(uri);
     return info.exists ? ((info as { size?: number }).size ?? 0) : 0;

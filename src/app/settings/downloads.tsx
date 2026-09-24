@@ -7,6 +7,7 @@
  * working, since freeing space needs no network.
  */
 import { Paths } from 'expo-file-system';
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
@@ -27,9 +28,11 @@ import { useLibraryMirror, type MirrorStats } from '@/store/libraryMirror';
 import {
   BITRATE_OPTIONS,
   DOWNLOAD_CONCURRENCY_OPTIONS,
+  SONG_CACHE_LIMITS_GB,
   TRANSCODE_FORMATS,
   useSettings,
 } from '@/store/settings';
+import { cacheBytes, useSongCache } from '@/store/songCache';
 import { useToast } from '@/store/toast';
 import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 
@@ -62,6 +65,8 @@ const OTHER_COLOR = '#7a7a7a';
 /** The offline copy's share of the bar. Not the accent, which is the music
  *  itself, and not the grey of what belongs to other apps. */
 const OFFLINE_COLOR = '#4a6fa5';
+/** The song cache's share: music too, but none of it kept on purpose. */
+const CACHE_COLOR = '#8a6bb0';
 /** Below this, naming a folder says less than the line costs to read. It is
  *  still counted in the bar; it just isn't worth a line of its own. */
 const LISTED_MIN = 100 * 1024;
@@ -71,6 +76,7 @@ export default function DownloadsSettings() {
   // mounted while you are on another one, out of reach of anything else.
   useTheme();
   const t = useT();
+  const router = useRouter();
   const toast = useToast((s) => s.show);
   const offline = useAuthStore((s) => s.offline);
   const lang = useSettings((s) => s.language);
@@ -91,6 +97,13 @@ export default function DownloadsSettings() {
   const setAutoOfflineSwitch = useSettings((s) => s.setAutoOfflineSwitch);
   const hideUnavailableOffline = useSettings((s) => s.hideUnavailableOffline);
   const setHideUnavailableOffline = useSettings((s) => s.setHideUnavailableOffline);
+  const songCache = useSettings((s) => s.songCache);
+  const setSongCache = useSettings((s) => s.setSongCache);
+  const songCacheLimitGb = useSettings((s) => s.songCacheLimitGb);
+  const setSongCacheLimitGb = useSettings((s) => s.setSongCacheLimitGb);
+  const cacheEntries = useSongCache((s) => s.entries);
+  const cacheCount = Object.keys(cacheEntries).length;
+  const cacheUsed = cacheBytes(cacheEntries);
   const files = useDownloads((s) => s.files);
   const usageBytes = useDownloads((s) => s.usageBytes);
   const clearAll = useDownloads((s) => s.clearAll);
@@ -207,6 +220,39 @@ export default function DownloadsSettings() {
             },
           ]}
         />
+        <Text style={settingsStyles.sectionTitle}>{t('Song cache')}</Text>
+        <SwitchList
+          options={[
+            {
+              label: t('Cache songs you play'),
+              description: t(
+                'Songs you stream are kept on this phone and play from it next time, with or without a connection. The next song in the queue is fetched ahead, so it is not streamed at all. When the cache is full, the songs played longest ago make room.',
+              ),
+              value: songCache,
+              onChange: setSongCache,
+            },
+          ]}
+        />
+        <SelectList
+          label={t('Cache size')}
+          options={SONG_CACHE_LIMITS_GB.map((gb) => ({ value: gb, label: `${gb} GB` }))}
+          value={songCacheLimitGb}
+          onChange={(gb) => {
+            setSongCacheLimitGb(gb);
+            void useSongCache.getState().trim();
+          }}
+          disabled={!songCache}
+        />
+        {/* Also with the cache off, while it still holds something: that is
+            where it is emptied. */}
+        {songCache || cacheCount > 0 ? (
+          <SettingRow
+            label={t('Cached songs')}
+            right={`${formatBytes(cacheUsed)} · ${songsLabel(cacheCount, lang)}`}
+            chevron
+            onPress={() => router.push('/settings/cache')}
+          />
+        ) : null}
         <Text style={settingsStyles.sectionTitle}>{t('Offline')}</Text>
         <SwitchList
           options={[
@@ -241,7 +287,7 @@ export default function DownloadsSettings() {
           const offline =
             (mirror ? mirror.bytes + mirror.coverBytes : 0) +
             (parts ? appStorageTotal(parts) : 0);
-          const other = Math.max(0, disk.total - disk.free - usage - offline);
+          const other = Math.max(0, disk.total - disk.free - usage - offline - cacheUsed);
           // Fractions with a visible minimum: small downloads on a large disk
           // should appear as a sliver, not disappear.
           const frac = (n: number) => Math.max(n > 0 ? 0.012 : 0, n / disk.total);
@@ -250,6 +296,7 @@ export default function DownloadsSettings() {
               <View style={styles.bar}>
                 <View style={{ flex: frac(other), backgroundColor: OTHER_COLOR }} />
                 <View style={{ flex: frac(usage), backgroundColor: accent }} />
+                <View style={{ flex: frac(cacheUsed), backgroundColor: CACHE_COLOR }} />
                 <View style={{ flex: frac(offline), backgroundColor: OFFLINE_COLOR }} />
                 <View style={{ flex: frac(disk.free), backgroundColor: colors.surfaceHighlight }} />
               </View>
@@ -260,6 +307,13 @@ export default function DownloadsSettings() {
                   label={t('Downloads')}
                   value={`${formatBytes(usage)} (${songsLabel(count, lang)})`}
                 />
+                {cacheUsed > 0 ? (
+                  <LegendItem
+                    color={CACHE_COLOR}
+                    label={t('Song cache')}
+                    value={formatBytes(cacheUsed)}
+                  />
+                ) : null}
                 <LegendItem
                   color={OFFLINE_COLOR}
                   label={t('Offline library')}

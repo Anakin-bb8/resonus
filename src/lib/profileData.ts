@@ -20,6 +20,7 @@ import { hashKey } from './localLibrary';
 import { closeMirrorFor } from './mirrorDb';
 import { removeMirrorCovers } from './mirrorCovers';
 import { primaryUrl } from './serverUrls';
+import { closeCacheDb } from './songCacheDb';
 import { deleteItem } from './storage';
 
 /** Preferences kept per profile, each stored as `<key>.<hash>`. */
@@ -36,6 +37,7 @@ const SCOPED_KEYS = [
 
 const DOWNLOADS_DIR = `${FileSystem.documentDirectory}downloads/`;
 const MIRROR_DIR = `${FileSystem.documentDirectory}library-mirror/`;
+const SONG_CACHE_DIR = `${FileSystem.documentDirectory}song-cache/`;
 
 async function remove(uri: string): Promise<void> {
   await FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
@@ -59,6 +61,11 @@ export async function deleteProfileData(auth: SubsonicAuth): Promise<void> {
 
   // The downloads: the audio, the covers and the catalog that indexed them.
   await remove(dir);
+
+  // The song cache, index and all (#180).
+  const cacheDir = `${SONG_CACHE_DIR}${scope}/`;
+  await closeCacheDb(cacheDir);
+  await remove(cacheDir);
 
   // The offline copy, which is three files, plus the JSON it came from if it
   // was never migrated or was kept behind as a backup.

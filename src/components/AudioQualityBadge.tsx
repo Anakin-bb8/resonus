@@ -8,6 +8,7 @@ import { useDownloads } from '@/store/downloads';
 import { localSourceFor } from '@/store/player';
 import { useNetworkType } from '@/store/networkType';
 import { useSettings } from '@/store/settings';
+import { useSongCache } from '@/store/songCache';
 import { fontSize, themed } from '@/theme';
 
 export function AudioQualityBadge({ song }: { song: Song }) {
@@ -19,18 +20,22 @@ export function AudioQualityBadge({ song }: { song: Song }) {
   const target = transcodeTarget(song, maxBitRate, streamFormat, losslessOnly);
   const dlUri = useDownloads((s) => s.files[song.id]);
   const dlBitRate = useDownloads((s) => s.dlBitRates[song.id]);
+  const cached = useSongCache((s) => s.entries[song.id]);
   // Subscribed so the badge follows them; the rule that reads them belongs to
   // the player, and being downloaded no longer means being played from disk
   // (#108). Saying "128 kbps copy" while streaming the original is the kind of
   // lie this badge exists to prevent.
   useSettings((s) => s.preferDownloads);
   useAuthStore((s) => s.offline);
-  const fromDisk = !!dlUri && !!localSourceFor(song);
+  const source = localSourceFor(song);
+  const fromDownload = !!dlUri && !!source;
+  // The cache's copy is only the one playing when the player picked it.
+  const fromCache = !fromDownload && !!cached && source === cached.uri;
   const label = qualityLabel(
     song,
     target.bitRate,
-    fromDisk ? dlUri : undefined,
-    dlBitRate,
+    fromDownload ? dlUri : fromCache ? cached.uri : undefined,
+    fromCache ? cached.bitRate : dlBitRate,
     target.format,
   );
   if (!label) return null;

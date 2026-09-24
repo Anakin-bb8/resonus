@@ -711,5 +711,20 @@
   "System": "Sistema",
   "Transcode lossless files only": "Transcodificar només fitxers sense pèrdua",
   "MP3, AAC, Opus and other lossy files are streamed as they are, so they are never encoded twice. Only files like FLAC follow the quality below.": "Els MP3, AAC, Opus i altres fitxers amb pèrdua es reprodueixen tal com són, així mai no es codifiquen dues vegades. Només fitxers com FLAC segueixen la qualitat de sota.",
-  "MP3, AAC, Opus and other lossy files are downloaded as they are. Only files like FLAC are transcoded.": "Els MP3, AAC, Opus i altres fitxers amb pèrdua es baixen tal com són. Només es transcodifiquen fitxers com FLAC."
+  "MP3, AAC, Opus and other lossy files are downloaded as they are. Only files like FLAC are transcoded.": "Els MP3, AAC, Opus i altres fitxers amb pèrdua es baixen tal com són. Només es transcodifiquen fitxers com FLAC.",
+  "Song cache": "Memòria cau de cançons",
+  "Cache songs you play": "Desar a la memòria cau el que escoltes",
+  "Songs you stream are kept on this phone and play from it next time, with or without a connection. The next song in the queue is fetched ahead, so it is not streamed at all. When the cache is full, the songs played longest ago make room.": "Les cançons que reprodueixes en streaming es desen al mòbil i la propera vegada sonen des d'allà, amb connexió o sense. La cançó següent de la cua es porta per endavant, així que no arriba a fer streaming. Quan la memòria cau s'omple, deixen lloc les que fa més temps que no sonen.",
+  "Cache size": "Mida de la memòria cau",
+  "Cached songs": "Cançons a la memòria cau",
+  "Clear song cache": "Buida la memòria cau de cançons",
+  "Nothing cached yet": "Encara no hi ha res a la memòria cau",
+  "Songs you stream will show up here.": "Aquí apareixeran les cançons que reprodueixis en streaming.",
+  "{used} of {limit}": "{used} de {limit}",
+  "Played {date}": "Va sonar el {date}",
+  "Cached {date}": "Desada el {date}",
+  "Remove from cache": "Treu de la memòria cau",
+  "Clear song cache?": "Vols buidar la memòria cau de cançons?",
+  "Cached songs will be removed from this device. Your downloads stay.": "Les cançons de la memòria cau s'esborraran d'aquest dispositiu. Les teves baixades es queden.",
+  "Song cache cleared": "Memòria cau de cançons buidada"
 }

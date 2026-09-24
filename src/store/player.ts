@@ -80,6 +80,7 @@ import { useOfflineQueue } from './offlineQueue';
 import { usePlayCounts } from './playCounts';
 import { usePlayHistory } from './playHistory';
 import { scrobbleThresholdSec, useSettings, type TranscodeFormat } from './settings';
+import { cachedUri, useSongCache } from './songCache';
 import { useToast } from './toast';
 import {
   initUpnp,
@@ -283,13 +284,18 @@ function downloadedUri(song: Song): string | undefined {
   return useDownloads.getState().files[song.id];
 }
 
+/** A file of this server song on the phone: its download, or its cached copy. */
+function copyOnPhone(song: Song): string | undefined {
+  return downloadedUri(song) ?? cachedUri(song.id);
+}
+
 /**
  * Can this track be played offline? Radio (own url), local library track
- * (localUri) or on-disk download. Offline, those that only exist as a server
- * stream cannot be played and must be skipped.
+ * (localUri) or on-disk download or cached copy. Offline, those that only exist
+ * as a server stream cannot be played and must be skipped.
  */
 function playableOffline(song: Song | null | undefined): boolean {
-  return !!song && (!!song.url || !!song.localUri || !!downloadedUri(song));
+  return !!song && (!!song.url || !!song.localUri || !!copyOnPhone(song));
 }
 
 /** The same song as it goes into the queue by hand: autoplay's mark comes off
@@ -361,7 +367,7 @@ export function localSourceFor(song: Song): string | undefined {
   // The phone's own library is not a download and there is nothing to stream.
   if (song.localUri) return song.localUri;
   const file = downloadedUri(song);
-  if (!file) return undefined;
+  if (!file) return cachedSourceFor(song, offline || !auth || failed === 'stream');
   if (offline || !auth) return file;
   if (failed === 'stream') return file;
   switch (useSettings.getState().preferDownloads) {
@@ -377,6 +383,19 @@ export function localSourceFor(song: Song): string | undefined {
     default:
       return file;
   }
+}
+
+/**
+ * The cached copy (#180), when it is no worse than what a stream would bring
+ * now: a copy made on mobile data at 128 kbps is not played over a Wi-Fi set
+ * to the original. `always` is for when there is no stream to compare with.
+ */
+function cachedSourceFor(song: Song, always: boolean): string | undefined {
+  const cached = useSongCache.getState().entries[song.id];
+  if (!cached) return undefined;
+  if (always || !cached.bitRate) return cached.uri;
+  const { bitRate } = streamTargetFor(song);
+  return bitRate > 0 && cached.bitRate >= bitRate ? cached.uri : undefined;
 }
 
 function sourceFor(song: Song, timeOffsetSec = 0): AudioSource {
@@ -1188,6 +1207,7 @@ function endBootQuiet(catchUp = false) {
   scheduleNextSource();
   prefetchLyrics(song);
   warmUpcoming();
+  cacheUpcoming();
 }
 
 /** Now playing / history + syncs the queue on track change. */
@@ -1224,12 +1244,42 @@ function onTrackChanged(song: Song) {
   }, NEXT_LYRICS_DELAY_MS);
   scheduleSync();
   warmUpcoming();
+  useSongCache.getState().touch(song.id);
+  cacheUpcoming();
   // The mix only grows when the queue is running out under somebody who is
   // listening, and asking the server for it is not work for the cold start.
   if (!bootQuiet) void maybeQueueAutoplay();
   // Casting: reflect the new track in the media session (lock/volume).
   syncCastMedia();
 }
+
+// ── Song cache (#180) ─────────────────────────────────────────────────────────
+
+/**
+ * Asks the cache for the next song and the one playing, in that order: the
+ * next one fetched ahead plays from the phone instead of being streamed.
+ */
+function cacheUpcoming() {
+  if (bootQuiet || !useSettings.getState().songCache) return;
+  const { auth, offline } = useAuthStore.getState();
+  // A renderer fetches from the server itself; nothing plays on the phone.
+  if (!auth || offline || remoteKind()) return;
+  const st = usePlayerStore.getState();
+  const current = st.queue[st.index];
+  if (!current) return;
+  const ni = nextIndex(false);
+  const next = ni == null ? undefined : st.queue[ni];
+  const songs = next && next.id !== current.id ? [next, current] : [current];
+  useSongCache.getState().want(songs, streamTargetFor);
+}
+
+// The next track may already sit in the native player as a stream: once its
+// copy lands it is queued again, from the phone.
+useSongCache.subscribe((s, prev) => {
+  const id = queuedNext?.id;
+  if (!id || s.entries === prev.entries) return;
+  if (s.entries[id] && !prev.entries[id]) scheduleNextSource(true);
+});
 
 // ── Preload upcoming tracks (warms up the stream in advance) ──────────────────
 // For proxies like Octo Fiesta that fetch the track on demand: asking for the
@@ -2322,7 +2372,7 @@ function maybeDetectStall(intendPlay: boolean, buffering: boolean, positionSec: 
   // the disk: play that instead, from where it stopped. Only once per stall, and
   // only for a song that has a file. For the rest there is nothing to move to,
   // and the probe above is already asking whether the server is there at all.
-  if (!stallFellBack && now - stallSince >= STALL_FALLBACK_MS && song && downloadedUri(song)) {
+  if (!stallFellBack && now - stallSince >= STALL_FALLBACK_MS && song && copyOnPhone(song)) {
     stallFellBack = true;
     bump('player · fell back to the file after a stall');
     failedSource.set(song.id, 'stream');
@@ -2392,12 +2442,13 @@ function onPlaybackError(message: string, wasPlaying: boolean): void {
       // one with a `localUri` and no download: the mark of a download built
       // offline is that same field (see `markUnplayableOffline`), and behind
       // that one there is a server.
-      const phoneOnly = !!song.localUri && !downloadedUri(song);
+      const phoneOnly = !!song.localUri && !copyOnPhone(song);
       if (!phoneOnly && auth && !offline) failedSource.set(song.id, 'file');
       // And a download whose file is not there at all should stop being
       // promised, by its badge and by the catalog behind it.
       void useDownloads.getState().forgetIfMissing(song.id);
-    } else if (downloadedUri(song)) {
+      void useSongCache.getState().forgetIfMissing(song.id);
+    } else if (copyOnPhone(song)) {
       failedSource.set(song.id, 'stream');
     }
   }
@@ -4284,6 +4335,7 @@ usePlayerStore.subscribe((st, prev) => {
     // else first. Cheap when nothing changed: it is off unless asked for, and
     // it remembers what it has already warmed.
     warmUpcoming();
+    cacheUpcoming();
   }
   // Pausing, resuming and stopping, told to the server (see `reportState`).
   // Watching the store is what makes this cover every way playback stops: the

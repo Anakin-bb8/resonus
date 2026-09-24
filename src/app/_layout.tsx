@@ -49,6 +49,7 @@ import { initRemoteIntegration, usePlayerStore } from '@/store/player';
 import { usePlayHistory } from '@/store/playHistory';
 import { useRecentSearches } from '@/store/recentSearches';
 import { APP_FONT_FAMILY, useSettings } from '@/store/settings';
+import { useSongCache } from '@/store/songCache';
 import { useSortPrefs } from '@/store/sortPrefs';
 import { colors, themeMode, useTheme } from '@/theme';
 
@@ -202,7 +203,12 @@ export default function RootLayout() {
     // After the session is restored, never before: the downloads store reads
     // the account's own catalog, and with no account yet it falls back to
     // reading every one of them, which is both slow and wrong (#50).
-    const downloadsReady = authReady.then(() => useDownloads.getState().hydrate());
+    // The song cache first: offline, what the restored queue can play is read
+    // from both, and the queue waits on the downloads alone.
+    const downloadsReady = authReady.then(async () => {
+      await useSongCache.getState().hydrate();
+      await useDownloads.getState().hydrate();
+    });
     // Mirror + outbox for offline. Offline it is the library, so it is opened
     // right away: a query could otherwise resolve before it is readable and
     // stay empty until manually reloaded. Online nothing reads it, only writes
@@ -329,6 +335,7 @@ export default function RootLayout() {
                 <Stack.Screen name="history" />
                 <Stack.Screen name="settings/index" />
                 <Stack.Screen name="settings/downloads" />
+                <Stack.Screen name="settings/cache" />
                 <Stack.Screen name="settings/library" />
                 <Stack.Screen name="settings/playback" />
                 <Stack.Screen name="settings/player" />

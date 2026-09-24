@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 724 of them.
+Every string the app can show, under the screen it shows up on. 739 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -287,7 +287,6 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `Clear all` | Throw away the whole list: the history, the queue, or what you searched for |
 | `Clear history` | Throw the listening history away |
 | `History` | The listening history: what was played and when |
 | `History cleared` | Toast |
@@ -479,7 +478,6 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `At the end of the queue` | Queue screen header: the songs 'Add to queue' put after everything else |
-| `Clear all` | Throw away the whole list: the history, the queue, or what you searched for |
 | `Clear queue` | Menu action: empty the list of what is coming |
 | `Explicit` | A value of `Content`: the recording carries a parental advisory (strong language). Also read out for the E badge next to a title |
 | `Get the server's queue` | Queue screen action: replace what is playing here with the queue the server has, which is the one left on another player |
@@ -537,7 +535,6 @@ you are actually typing into, which is easier than reading it here.
 | `All` |  |
 | `Artist` | In search results, the little word under a result saying what kind of thing it is |
 | `Artists` | A heading over a list of them, never a count |
-| `Clear all` | Throw away the whole list: the history, the queue, or what you searched for |
 | `Couldn't reach the server. Check your connection.` | Error on Home when the server does not answer at all |
 | `Radio` | Internet radio stations. Most languages keep the word |
 | `Recent searches` | What was searched for before, kept on the phone |
@@ -578,6 +575,22 @@ you are actually typing into, which is easier than reading it here.
 | `You're on the latest version` | Answer when that check finds nothing newer |
 | `Your preferences will go back to their defaults. Your language stays.` | The line under that dialog |
 
+## Settings › Cache
+
+| String | What it is |
+| --- | --- |
+| `{used} of {limit}` |  |
+| `Cached {date}` |  |
+| `Cached songs` |  |
+| `Cached songs will be removed from this device. Your downloads stay.` |  |
+| `Clear song cache` |  |
+| `Clear song cache?` |  |
+| `Nothing cached yet` |  |
+| `Played {date}` |  |
+| `Remove from cache` |  |
+| `Song cache cleared` |  |
+| `Songs you stream will show up here.` |  |
+
 ## Settings › Diagnostics
 
 | String | What it is |
@@ -603,6 +616,9 @@ you are actually typing into, which is easier than reading it here.
 | `Applies to new downloads only.` | The line under “Download quality”, explaining it |
 | `Automatic offline mode` | Fall into offline mode by itself when the server cannot be reached, and come back when it can |
 | `Block downloads on mobile data.` | The line under “Download over Wi-Fi only”, explaining it |
+| `Cache size` |  |
+| `Cache songs you play` |  |
+| `Cached songs` |  |
 | `Codec to transcode to. At “Original” quality nothing is transcoded.` |  |
 | `Codec to transcode to. Your server must support it.` |  |
 | `Cover art` | Three places, one word: a section header in Settings › Player, a line of the storage bar in Settings › Downloads, and what the screen reader calls the picture in the song information sheet |
@@ -630,7 +646,9 @@ you are actually typing into, which is easier than reading it here.
 | `Playlist covers` | One line of the storage breakdown in Settings › Downloads: how much room the playlist cover images take. It is a size, not a setting |
 | `Radio station art` | A line of the storage breakdown: the pictures of radio stations. A size, not a setting |
 | `Simultaneous downloads` |  |
+| `Song cache` | Copies of streamed songs the app keeps by itself and deletes to make room. Not the same as Downloads, which the person chose |
 | `Songs fetched at the same time. Fewer is gentler on the server, network and your phone.` | The line under “Simultaneous downloads”, explaining it |
+| `Songs you stream are kept on this phone and play from it next time, with or without a connection. The next song in the queue is fetched ahead, so it is not streamed at all. When the cache is full, the songs played longest ago make room.` |  |
 | `Storage used` | Section header over the bar showing what is taking up room on the phone |
 | `Switch to your downloads when the server is unreachable, and back when it returns.` |  |
 | `Transcode lossless files only` |  |
@@ -1045,6 +1063,7 @@ you are actually typing into, which is easier than reading it here.
 | `Back online` | The toast shown when the server answers again and the app comes out of offline mode |
 | `Cancel` | The button that closes a dialog without doing anything, and the one beside a search box |
 | `Clear` | Read out by the screen reader for the small x that empties a search box. A verb |
+| `Clear all` | Throw away the whole list: the history, the queue, or what you searched for |
 | `Close` | Read out by the screen reader for a button that closes what is open. A verb |
 | `Columns` | The same menu's title on a screen that has no list to switch to, so all it chooses is the density |
 | `Connect to Wi-Fi to download` | Toast: downloading over mobile data is turned off in the settings |

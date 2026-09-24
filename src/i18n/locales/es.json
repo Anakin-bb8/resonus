@@ -724,5 +724,20 @@
   "System": "Sistema",
   "Transcode lossless files only": "Transcodificar solo archivos sin pérdida",
   "MP3, AAC, Opus and other lossy files are streamed as they are, so they are never encoded twice. Only files like FLAC follow the quality below.": "Los MP3, AAC, Opus y demás archivos con pérdida se reproducen tal cual, así nunca se codifican dos veces. Solo archivos como FLAC siguen la calidad de abajo.",
-  "MP3, AAC, Opus and other lossy files are downloaded as they are. Only files like FLAC are transcoded.": "Los MP3, AAC, Opus y demás archivos con pérdida se descargan tal cual. Solo se transcodifican archivos como FLAC."
+  "MP3, AAC, Opus and other lossy files are downloaded as they are. Only files like FLAC are transcoded.": "Los MP3, AAC, Opus y demás archivos con pérdida se descargan tal cual. Solo se transcodifican archivos como FLAC.",
+  "Song cache": "Caché de canciones",
+  "Cache songs you play": "Guardar en caché lo que escuchas",
+  "Songs you stream are kept on this phone and play from it next time, with or without a connection. The next song in the queue is fetched ahead, so it is not streamed at all. When the cache is full, the songs played longest ago make room.": "Las canciones que reproduces por streaming se guardan en el móvil y la próxima vez suenan desde ahí, con o sin conexión. La siguiente canción de la cola se trae por adelantado, así que no llega a hacer streaming. Cuando la caché se llena, dejan sitio las que llevan más tiempo sin sonar.",
+  "Cache size": "Tamaño de la caché",
+  "Cached songs": "Canciones en caché",
+  "Clear song cache": "Vaciar la caché de canciones",
+  "Nothing cached yet": "Aún no hay nada en caché",
+  "Songs you stream will show up here.": "Aquí aparecerán las canciones que reproduzcas por streaming.",
+  "{used} of {limit}": "{used} de {limit}",
+  "Played {date}": "Sonó el {date}",
+  "Cached {date}": "Guardada el {date}",
+  "Remove from cache": "Quitar de la caché",
+  "Clear song cache?": "¿Vaciar la caché de canciones?",
+  "Cached songs will be removed from this device. Your downloads stay.": "Las canciones en caché se borrarán de este dispositivo. Tus descargas se quedan.",
+  "Song cache cleared": "Caché de canciones vaciada"
 }

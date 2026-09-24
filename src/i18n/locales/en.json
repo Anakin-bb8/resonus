@@ -722,5 +722,20 @@
   "A black background instead of dark grey whenever the app is dark. Made for OLED screens.": "A black background instead of dark grey whenever the app is dark. Made for OLED screens.",
   "Transcode lossless files only": "Transcode lossless files only",
   "MP3, AAC, Opus and other lossy files are streamed as they are, so they are never encoded twice. Only files like FLAC follow the quality below.": "MP3, AAC, Opus and other lossy files are streamed as they are, so they are never encoded twice. Only files like FLAC follow the quality below.",
-  "MP3, AAC, Opus and other lossy files are downloaded as they are. Only files like FLAC are transcoded.": "MP3, AAC, Opus and other lossy files are downloaded as they are. Only files like FLAC are transcoded."
+  "MP3, AAC, Opus and other lossy files are downloaded as they are. Only files like FLAC are transcoded.": "MP3, AAC, Opus and other lossy files are downloaded as they are. Only files like FLAC are transcoded.",
+  "Song cache": "Song cache",
+  "Cache songs you play": "Cache songs you play",
+  "Songs you stream are kept on this phone and play from it next time, with or without a connection. The next song in the queue is fetched ahead, so it is not streamed at all. When the cache is full, the songs played longest ago make room.": "Songs you stream are kept on this phone and play from it next time, with or without a connection. The next song in the queue is fetched ahead, so it is not streamed at all. When the cache is full, the songs played longest ago make room.",
+  "Cache size": "Cache size",
+  "Cached songs": "Cached songs",
+  "Clear song cache": "Clear song cache",
+  "Nothing cached yet": "Nothing cached yet",
+  "Songs you stream will show up here.": "Songs you stream will show up here.",
+  "{used} of {limit}": "{used} of {limit}",
+  "Played {date}": "Played {date}",
+  "Cached {date}": "Cached {date}",
+  "Remove from cache": "Remove from cache",
+  "Clear song cache?": "Clear song cache?",
+  "Cached songs will be removed from this device. Your downloads stay.": "Cached songs will be removed from this device. Your downloads stay.",
+  "Song cache cleared": "Song cache cleared"
 }

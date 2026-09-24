@@ -92,6 +92,9 @@ export type TranscodeFormat = '' | 'mp3' | 'opus' | 'aac';
  *  is translated on each screen with `t('Server default')`. */
 export const TRANSCODE_FORMATS: TranscodeFormat[] = ['', 'mp3', 'opus', 'aac'];
 
+/** Size limits offered for the cache of played songs, in GB (#180). */
+export const SONG_CACHE_LIMITS_GB = [1, 2, 4, 8, 16, 32, 64];
+
 /** Ceilings for the two scrobble rules, so the sliders and the stored values
  *  agree on what is a number somebody could have meant. */
 export const SCROBBLE_SECONDS_MAX = 600;
@@ -724,6 +727,10 @@ interface SettingsState {
   streamLosslessOnly: boolean;
   /** The same for downloads. */
   downloadLosslessOnly: boolean;
+  /** Keep a copy of streamed songs on the phone, evicted by size (#180). */
+  songCache: boolean;
+  /** Ceiling of that cache, in GB. */
+  songCacheLimitGb: number;
   language: Language;
   /** Show format/bitrate/Hi-Res label (player only). */
   showAudioQuality: boolean;
@@ -1028,6 +1035,8 @@ interface SettingsState {
   setDownloadWifiOnly: (value: boolean) => void;
   setStreamLosslessOnly: (value: boolean) => void;
   setDownloadLosslessOnly: (value: boolean) => void;
+  setSongCache: (value: boolean) => void;
+  setSongCacheLimitGb: (value: number) => void;
   setLanguage: (language: Language) => void;
   setShowAudioQuality: (value: boolean) => void;
   setShowRating: (value: boolean) => void;
@@ -1164,6 +1173,8 @@ function snapshot(get: () => SettingsState) {
     downloadWifiOnly: s.downloadWifiOnly,
     streamLosslessOnly: s.streamLosslessOnly,
     downloadLosslessOnly: s.downloadLosslessOnly,
+    songCache: s.songCache,
+    songCacheLimitGb: s.songCacheLimitGb,
     // `language` is not in the profile blob: it's global (see LANG_KEY).
     showAudioQuality: s.showAudioQuality,
     showRating: s.showRating,
@@ -1267,6 +1278,8 @@ const DEFAULTS = {
   downloadWifiOnly: false,
   streamLosslessOnly: false,
   downloadLosslessOnly: false,
+  songCache: false,
+  songCacheLimitGb: 4,
   language: 'en' as Language,
   showAudioQuality: false,
   showRating: false,
@@ -1449,6 +1462,16 @@ export const useSettings = create<SettingsState>((set, get) => ({
 
   setDownloadLosslessOnly: (downloadLosslessOnly) => {
     set({ downloadLosslessOnly });
+    persist(snapshot(get));
+  },
+
+  setSongCache: (songCache) => {
+    set({ songCache });
+    persist(snapshot(get));
+  },
+
+  setSongCacheLimitGb: (songCacheLimitGb) => {
+    set({ songCacheLimitGb });
     persist(snapshot(get));
   },
 
@@ -1992,6 +2015,8 @@ export const useSettings = create<SettingsState>((set, get) => ({
           downloadWifiOnly: boolean;
           streamLosslessOnly: boolean;
           downloadLosslessOnly: boolean;
+          songCache: boolean;
+          songCacheLimitGb: number;
           language: Language;
           showAudioQuality: string | boolean;
           showRating: boolean;
@@ -2131,6 +2156,12 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (typeof parsed.downloadLosslessOnly === 'boolean') {
           set({ downloadLosslessOnly: parsed.downloadLosslessOnly });
+        }
+        if (typeof parsed.songCache === 'boolean') {
+          set({ songCache: parsed.songCache });
+        }
+        if (SONG_CACHE_LIMITS_GB.includes(parsed.songCacheLimitGb as number)) {
+          set({ songCacheLimitGb: parsed.songCacheLimitGb as number });
         }
         // `language` is no longer applied here: it's global, loaded at the end.
         // It used to be a mode ('off'/'player'/'everywhere'); now a simple
