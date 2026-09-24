@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 757 of them.
+Every string the app can show, under the screen it shows up on. 758 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -312,6 +312,7 @@ you are actually typing into, which is easier than reading it here.
 | `Good evening` | Home's greeting. The hours it changes at are part of the language too, see TRANSLATING.md |
 | `Good morning` | Home's greeting. The hours it changes at are part of the language too, see TRANSLATING.md |
 | `Good night` | Home's greeting, for the small hours. Spanish uses the same words as for the evening, which is fine |
+| `Left on {player}` | Same card, when that app is no longer playing but its queue is the last one saved: where the person left off. {player} is the app's name |
 | `Loading covers…` | Still pulling the pictures out of the phone's own files |
 | `Looking for music…` | Reading the phone's own files, before anything can be shown |
 | `Most played albums` | A section of Home: the records played most |

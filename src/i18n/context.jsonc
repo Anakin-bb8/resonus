@@ -31,6 +31,7 @@
     "Check out {name} by {artist} on {server}": "The line sent above a Resonus link. {server} is the server's address, like music.example.com",
     "Shuffle favorites": "Shortcut on the app's launcher icon (long press). Short: launchers cut long labels",
     "Continue listening": "Shortcut on the app's launcher icon (long press): resumes the last queue. Short: launchers cut long labels",
+    "Left on {player}": "Same card, when that app is no longer playing but its queue is the last one saved: where the person left off. {player} is the app's name",
     "Playing on {player}": "Heading of the card at the top of Home: a song playing right now in another app or on another device of the same account. {player} is that app's name, like Feishin",
     "Song cache": "Copies of streamed songs the app keeps by itself and deletes to make room. Not the same as Downloads, which the person chose",
 

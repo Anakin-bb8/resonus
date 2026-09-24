@@ -744,5 +744,6 @@
   "another device": "un altre dispositiu",
   "Play here": "Reprodueix aquí",
   "Playing on other devices": "El que sona en altres dispositius",
-  "At the top of Home, what is playing in your other apps and devices, ready to carry on here.": "A dalt de tot a Inici, el que sona a les teves altres apps i dispositius, a punt per continuar aquí."
+  "At the top of Home, what is playing in your other apps and devices, ready to carry on here.": "A dalt de tot a Inici, el que sona a les teves altres apps i dispositius, a punt per continuar aquí.",
+  "Left on {player}": "Ho vas deixar a {player}"
 }

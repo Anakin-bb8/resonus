@@ -4,6 +4,12 @@
  * server says that player is on (`getNowPlaying`) and plays it here, from
  * where it had got to.
  *
+ * A player that was paused and left is usually gone from that list: servers
+ * drop an entry soon after it stops being reported, and many players never
+ * report a pause at all. What stays is the queue it saved on the server, which
+ * says who saved it last. Playing here saves ours over it, so a queue last
+ * saved by another player is one left there after the last thing played here.
+ *
  * Nothing here can stop the other player: Subsonic has no remote control. So
  * the card only offers to carry on, and says where the music was.
  */
@@ -15,7 +21,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { getNowPlaying, getPlayQueue } from '@/api/backend';
 import { COVER, songCoverUrl } from '@/api/data';
-import { CLIENT_NAME, type NowPlayingEntry } from '@/api/subsonic';
+import { CLIENT_NAME, type NowPlayingEntry, type SavedQueue } from '@/api/subsonic';
 import { Cover } from '@/components/Cover';
 import Icon from '@/components/Icon';
 import { useDominantColor } from '@/hooks/useDominantColor';
@@ -31,6 +37,32 @@ const POLL_MS = 20_000;
 /** Without the playback report a server says nothing of pauses; past this an
  *  entry is taken to be a player that stopped. */
 const STALE_MINUTES = 10;
+/** A queue left on another player is offered for this long. */
+const LEFT_DAYS = 3;
+/** The saved queue is the heavy request: asked for less often. */
+const QUEUE_POLL_MS = 60_000;
+
+/** Where the card's song comes from: playing or paused there right now, or a
+ *  queue left there. */
+type Offer = NowPlayingEntry & { left?: boolean };
+
+/** The queue another player left on the server, as an offer, if it is one. */
+function leftQueue(saved: SavedQueue | null | undefined): Offer | null {
+  if (!saved?.changedBy || saved.changedBy === CLIENT_NAME || !saved.changed) return null;
+  const minutes = (Date.now() - saved.changed) / 60_000;
+  if (minutes > LEFT_DAYS * 24 * 60) return null;
+  const song = saved.entries.find((s) => s.id === saved.current) ?? saved.entries[0];
+  if (!song || song.url) return null;
+  return {
+    song,
+    username: '',
+    minutesAgo: Math.round(minutes),
+    playerName: saved.changedBy,
+    state: 'paused',
+    positionMs: saved.position,
+    left: true,
+  };
+}
 
 /**
  * The entry worth offering: this user's, not this phone's own report, and
@@ -98,14 +130,32 @@ export function PlayingElsewhereCard() {
       return () => setFocused(false);
     }, []),
   );
-  const { data, dataUpdatedAt } = useQuery({
+  const { data, dataUpdatedAt, isError } = useQuery({
     queryKey: ['nowPlaying'],
     queryFn: () => getNowPlaying(auth!),
     enabled: !!auth && !offline && auth.serverType !== 'jellyfin',
     staleTime: POLL_MS,
+    // The card is what shows this, so none of the retries a list gets.
+    retry: false,
     refetchInterval: focused ? POLL_MS : false,
   });
-  const entry = data && auth ? pickEntry(data, auth.username, ownSongId, ownPlaying) : null;
+  const live = data && auth ? pickEntry(data, auth.username, ownSongId, ownPlaying) : null;
+  const serverSide = !!auth && !offline && auth.serverType !== 'jellyfin';
+  // Only asked for when nothing is playing elsewhere: it is the whole queue.
+  const { data: saved, dataUpdatedAt: savedAt } = useQuery({
+    queryKey: ['leftQueue'],
+    queryFn: () => getPlayQueue(auth!),
+    // After the live list has answered, or failed to: a server without it can
+    // still have a queue somebody left.
+    enabled: serverSide && (!!data || isError) && !live,
+    staleTime: QUEUE_POLL_MS,
+    refetchInterval: focused ? QUEUE_POLL_MS : false,
+  });
+  // Not while something plays here: that is newer than whatever was left, and
+  // the server hears so at the next save.
+  const left = live || ownPlaying ? null : leftQueue(saved);
+  const entry: Offer | null = live ?? left;
+  const fetchedAt = live ? dataUpdatedAt : savedAt;
   const cover = entry ? songCoverUrl(entry.song, COVER.card) : undefined;
   const vivid = useDominantColor(cover, true);
   const calm = useDominantColor(cover);
@@ -113,8 +163,9 @@ export function PlayingElsewhereCard() {
   if (!entry) return null;
 
   const player = entry.playerName || t('another device');
-  const heading =
-    entry.state === 'paused'
+  const heading = entry.left
+    ? t('Left on {player}', { player })
+    : entry.state === 'paused'
       ? t('Paused on {player}', { player })
       : t('Playing on {player}', { player });
   const duration = entry.song.duration ?? 0;
@@ -128,7 +179,7 @@ export function PlayingElsewhereCard() {
     haptic('light');
     setBusy(true);
     try {
-      await playHere(entry, dataUpdatedAt);
+      await playHere(entry, fetchedAt);
     } finally {
       setBusy(false);
     }
