@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 762 of them.
+Every string the app can show, under the screen it shows up on. 758 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -945,7 +945,6 @@ you are actually typing into, which is easier than reading it here.
 | `Jump back or forward next to the play button.` | The line under “Skip buttons”, explaining it |
 | `Keep paused when skipping` |  |
 | `Keep the tracks before the current one in the queue, dimmed. Tap one to go back.` |  |
-| `Line` | A style of the player's progress bar: a plain line, as opposed to Waveform |
 | `Lyrics background` | What is drawn behind the lyrics screen, the full screen one |
 | `Lyrics card background` | What is drawn behind the small lyrics card that peeks under the player. Not the same thing as `Lyrics background` |
 | `Lyrics source` | Where lyrics are looked for. Its values are the three `Prefer…`/`Disable…` lines |
@@ -962,7 +961,6 @@ you are actually typing into, which is easier than reading it here.
 | `Prefer local lyrics` | A value of `Lyrics source`: use the ones that came with the file first |
 | `Prefer online search` | A value of `Lyrics source`: look them up on the internet first |
 | `Previous button` | What the previous button does when a song is already playing. Its values are the two lines below it |
-| `Progress bar` |  |
 | `Put the ⋯ menu next to the title and the heart in the top bar, easier to reach one-handed.` |  |
 | `Queue` | The list of songs waiting to play. Not a playlist |
 | `Restart, then previous track` | A value of `Previous button`: the first press goes back to the start of this song, the second to the one before |
@@ -988,9 +986,7 @@ you are actually typing into, which is easier than reading it here.
 | `The artist's photo and biography, below the player controls.` | The line under “Show artist card”, explaining it |
 | `The card that peeks below the player controls.` | The line under “Lyrics card background”, explaining it |
 | `The lyrics card below the player controls.` | The line under “Show lyrics card”, explaining it |
-| `The waveform is drawn for the look of it, not from the sound: the same song always has the same shape.` |  |
 | `Tint the mini player with the cover color.` | The line under “Colored mini player”, explaining it |
-| `Waveform` | One of the values of “Progress bar” |
 | `What fills the space behind the lyrics screen.` | The line under “Lyrics background”, explaining it |
 | `What fills the space behind the player.` | The line under “Player background”, explaining it |
 | `What tapping the cover art in the player does.` | The line under “On cover tap”, explaining it |

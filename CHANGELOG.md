@@ -14,7 +14,6 @@ Releases before 0.2.1 are only listed on the
 - Settings > Theme > Pure black puts the dark appearance on a true black background, for OLED screens.
 - The navigation bar, the mini player and the bar at the top of albums, playlists and artists blur what scrolls under them, with a hairline marking where the navigation bar starts, on iOS and on Android 12 or newer, and Settings > Appearance > Blur behind the bars turns it off.
 - Swiping the mini player up opens the player.
-- Settings > Player > Progress bar can draw the player's progress as a waveform instead of a line; the shape is for the look, the same for a song every time, not taken from its sound.
 - Home shows what is playing in your other apps and devices on the same account, like Feishin on the computer, or paused or left there, with a button to carry on here from where it was, on Navidrome and other OpenSubsonic servers. Settings > Appearance turns it off.
 - On Android, a heart on the notification, the lock screen and Android Auto adds the song playing to your favorites or takes it out.
 - On Android 13 or newer, Resonus shows up in the system's per-app language settings, and a language chosen there or in the app is the same everywhere.

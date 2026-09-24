@@ -745,9 +745,5 @@
   "Play here": "Reprodueix aquí",
   "Playing on other devices": "El que sona en altres dispositius",
   "At the top of Home, what is playing in your other apps and devices, ready to carry on here.": "A dalt de tot a Inici, el que sona a les teves altres apps i dispositius, a punt per continuar aquí.",
-  "Left on {player}": "Ho vas deixar a {player}",
-  "Progress bar": "Barra de progrés",
-  "Line": "Línia",
-  "Waveform": "Ona",
-  "The waveform is drawn for the look of it, not from the sound: the same song always has the same shape.": "L'ona és decorativa, no surt del so: la mateixa cançó sempre té la mateixa forma."
+  "Left on {player}": "Ho vas deixar a {player}"
 }

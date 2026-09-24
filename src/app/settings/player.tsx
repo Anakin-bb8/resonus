@@ -14,7 +14,6 @@ import {
   type LyricsSource,
   type ScreenBackground,
   type PreviousButtonMode,
-  type SeekBarStyle,
   useSettings,
 } from '@/store/settings';
 
@@ -59,8 +58,6 @@ export default function PlayerSettings() {
   const setShowPlayedInQueue = useSettings((s) => s.setShowPlayedInQueue);
   const playerBackground = useSettings((s) => s.playerBackground);
   const setPlayerBackground = useSettings((s) => s.setPlayerBackground);
-  const seekBarStyle = useSettings((s) => s.seekBarStyle);
-  const setSeekBarStyle = useSettings((s) => s.setSeekBarStyle);
   const fitCoverArt = useSettings((s) => s.fitCoverArt);
   const setFitCoverArt = useSettings((s) => s.setFitCoverArt);
   const animatedCoverBackground = useSettings((s) => s.animatedCoverBackground);
@@ -121,19 +118,6 @@ export default function PlayerSettings() {
               onChange: setMiniPlayerColorBackground,
             },
           ]}
-        />
-
-        <SelectList<SeekBarStyle>
-          label={t('Progress bar')}
-          description={t(
-            'The waveform is drawn for the look of it, not from the sound: the same song always has the same shape.',
-          )}
-          options={[
-            { value: 'line', label: t('Line') },
-            { value: 'waveform', label: t('Waveform') },
-          ]}
-          value={seekBarStyle}
-          onChange={setSeekBarStyle}
         />
 
         <Text style={settingsStyles.sectionTitle}>{t('Cover art')}</Text>

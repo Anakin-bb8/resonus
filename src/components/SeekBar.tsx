@@ -18,10 +18,8 @@ import { useState } from 'react';
 import { Platform, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { formatDuration } from '@/lib/format';
-import { currentSong, usePlayerStore } from '@/store/player';
-import { useSettings } from '@/store/settings';
+import { usePlayerStore } from '@/store/player';
 import { colors, fontSize, themed, useTheme } from '@/theme';
-import { WaveformBar } from './WaveformBar';
 
 export function SeekBar({
   duration,
@@ -42,44 +40,29 @@ export function SeekBar({
   const [held, setHeld] = useState<number | null>(null);
   const shown = held ?? positionSec;
   const timeStyle = [styles.time, timeColor ? { color: timeColor } : null];
-  const waveform = useSettings((s) => s.seekBarStyle === 'waveform');
-  const songId = usePlayerStore((s) => currentSong(s)?.id ?? '');
 
   return (
     <View style={style}>
-      {waveform ? (
-        <WaveformBar
-          id={songId}
-          progress={duration > 0 ? shown / duration : 0}
-          onSeekStart={() => setHeld(positionSec)}
-          onSeekMove={(f) => setHeld(f * duration)}
-          onSeekEnd={(f) => {
-            setHeld(null);
-            seekTo(f * duration);
-          }}
-        />
-      ) : (
-        <Slider
-          style={[styles.slider, Platform.OS === 'ios' && styles.sliderIos]}
-          thumbSize={Platform.OS === 'ios' ? 12 : undefined}
-          minimumValue={0}
-          maximumValue={duration}
-          value={shown}
-          // Held down without moving yet: the thumb is already the finger's, so
-          // the position stops being sent to it from here on.
-          onSlidingStart={() => setHeld(positionSec)}
-          onValueChange={setHeld}
-          onSlidingComplete={(value) => {
-            // Let go before the store is told, since `seekTo` writes the new
-            // position straight away: there is no moment showing the old one.
-            setHeld(null);
-            seekTo(value);
-          }}
-          minimumTrackTintColor={colors.text}
-          maximumTrackTintColor={colors.mediaTrack}
-          thumbTintColor={colors.text}
-        />
-      )}
+      <Slider
+        style={[styles.slider, Platform.OS === 'ios' && styles.sliderIos]}
+        thumbSize={Platform.OS === 'ios' ? 12 : undefined}
+        minimumValue={0}
+        maximumValue={duration}
+        value={shown}
+        // Held down without moving yet: the thumb is already the finger's, so
+        // the position stops being sent to it from here on.
+        onSlidingStart={() => setHeld(positionSec)}
+        onValueChange={setHeld}
+        onSlidingComplete={(value) => {
+          // Let go before the store is told, since `seekTo` writes the new
+          // position straight away: there is no moment showing the old one.
+          setHeld(null);
+          seekTo(value);
+        }}
+        minimumTrackTintColor={colors.text}
+        maximumTrackTintColor={colors.mediaTrack}
+        thumbTintColor={colors.text}
+      />
       <View style={styles.times}>
         <Text style={timeStyle}>{formatDuration(shown)}</Text>
         <Text style={timeStyle}>{formatDuration(duration)}</Text>
