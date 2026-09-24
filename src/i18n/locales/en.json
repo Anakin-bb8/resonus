@@ -756,5 +756,9 @@
   "Play here": "Play here",
   "Playing on other devices": "Playing on other devices",
   "At the top of Home, what is playing in your other apps and devices, ready to carry on here.": "At the top of Home, what is playing in your other apps and devices, ready to carry on here.",
-  "Left on {player}": "Left on {player}"
+  "Left on {player}": "Left on {player}",
+  "Progress bar": "Progress bar",
+  "Line": "Line",
+  "Waveform": "Waveform",
+  "The waveform is drawn for the look of it, not from the sound: the same song always has the same shape.": "The waveform is drawn for the look of it, not from the sound: the same song always has the same shape."
 }

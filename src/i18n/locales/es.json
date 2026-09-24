@@ -758,5 +758,9 @@
   "Play here": "Reproducir aquí",
   "Playing on other devices": "Lo que suena en otros dispositivos",
   "At the top of Home, what is playing in your other apps and devices, ready to carry on here.": "Arriba del todo en Inicio, lo que suena en tus otras apps y dispositivos, listo para seguir aquí.",
-  "Left on {player}": "Lo dejaste en {player}"
+  "Left on {player}": "Lo dejaste en {player}",
+  "Progress bar": "Barra de progreso",
+  "Line": "Línea",
+  "Waveform": "Onda",
+  "The waveform is drawn for the look of it, not from the sound: the same song always has the same shape.": "La onda es decorativa, no sale del sonido: la misma canción siempre tiene la misma forma."
 }

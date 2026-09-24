@@ -92,6 +92,9 @@ export type TranscodeFormat = '' | 'mp3' | 'opus' | 'aac';
  *  is translated on each screen with `t('Server default')`. */
 export const TRANSCODE_FORMATS: TranscodeFormat[] = ['', 'mp3', 'opus', 'aac'];
 
+/** How the player draws its progress: the usual line, or a waveform. */
+export type SeekBarStyle = 'line' | 'waveform';
+
 /** Size limits offered for the cache of played songs, in GB (#180). */
 export const SONG_CACHE_LIMITS_GB = [1, 2, 4, 8, 16, 32, 64];
 
@@ -959,6 +962,8 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   showQuickGrid: boolean;
   /** The card at the top of Home with what plays on the user's other players. */
   showPlayingElsewhere: boolean;
+  /** The player's progress bar: a line, or a waveform (decorative). */
+  seekBarStyle: SeekBarStyle;
   /** Pin the Favorites tile first in the quick grid. */
   quickGridFavorites: boolean;
   /** Include recent albums in the quick grid. */
@@ -1193,6 +1198,7 @@ const DEFAULTS = {
   homeSections: DEFAULT_HOME_SECTIONS.map((s) => ({ ...s })),
   showQuickGrid: true,
   showPlayingElsewhere: true,
+  seekBarStyle: 'line' as SeekBarStyle,
   quickGridFavorites: true,
   quickGridAlbums: true,
   quickGridPlaylists: true,
@@ -1484,6 +1490,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (TRANSCODE_FORMATS.includes(parsed.downloadFormat as TranscodeFormat)) {
           set({ downloadFormat: parsed.downloadFormat as TranscodeFormat });
+        }
+        if (parsed.seekBarStyle === 'line' || parsed.seekBarStyle === 'waveform') {
+          set({ seekBarStyle: parsed.seekBarStyle });
         }
         if (SONG_CACHE_LIMITS_GB.includes(parsed.songCacheLimitGb as number)) {
           set({ songCacheLimitGb: parsed.songCacheLimitGb as number });
