@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="widget_name">Reproduciendo</string>
+  <string name="widget_description">Lo que suena en Resonus, con reproducir, pausar y saltar.</string>
+  <string name="widget_idle">Toca para abrir Resonus</string>
+  <string name="widget_previous">Anterior</string>
+  <string name="widget_play_pause">Reproducir o pausar</string>
+  <string name="widget_next">Siguiente</string>
+</resources>

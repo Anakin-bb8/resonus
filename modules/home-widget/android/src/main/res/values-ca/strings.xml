@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="widget_name">Reproduint</string>
+  <string name="widget_description">El que sona a Resonus, amb reproduir, pausar i saltar.</string>
+  <string name="widget_idle">Toca per obrir Resonus</string>
+  <string name="widget_previous">Anterior</string>
+  <string name="widget_play_pause">Reproduir o pausar</string>
+  <string name="widget_next">Següent</string>
+</resources>

@@ -28,6 +28,7 @@ import { SongMenuSheet } from '@/components/SongMenuSheet';
 import { Toast } from '@/components/Toast';
 import { UpdatePrompt } from '@/components/UpdatePrompt';
 import { installAppFont, setAppFont } from '@/lib/appFont';
+import { initHomeWidget } from '@/lib/homeWidget';
 import { loadCustomFont } from '@/lib/customFont';
 import { removeLegacyRadioCovers } from '@/lib/legacyRadioCovers';
 import { startPerfLog } from '@/lib/perfLog';
@@ -178,6 +179,8 @@ export default function RootLayout() {
     // Server URL switching on network change (profiles with multiple URLs).
     initAutoUrl();
     initRemoteIntegration();
+    // The widget, the Quick Settings tile and the launcher shortcuts.
+    initHomeWidget();
   }, []);
 
   /**

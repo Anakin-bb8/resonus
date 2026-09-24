@@ -607,7 +607,7 @@ function seekActive(sec: number) {
  * screen resolves it: that path hands back the file on disk, which is the only
  * place a cover comes from with no connection.
  */
-function artworkUrlFor(song: Song): string | undefined {
+export function artworkUrlFor(song: Song): string | undefined {
   // A radio has no album to fall back to, but the server may hold an image for
   // the station, and one picked on the device arrives as a file:// path.
   return coverArtUrl(song.coverArt ?? (song.url ? undefined : song.albumId), COVER.card);

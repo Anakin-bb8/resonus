@@ -29,6 +29,8 @@
     "Offline mode": "The app working with no server: downloads only",
     "Share Resonus link": "A link that opens this album, artist or playlist in another person's Resonus, for someone with an account on the same server. Not the public web link that Share makes",
     "Check out {name} by {artist} on {server}": "The line sent above a Resonus link. {server} is the server's address, like music.example.com",
+    "Shuffle favorites": "Shortcut on the app's launcher icon (long press). Short: launchers cut long labels",
+    "Continue listening": "Shortcut on the app's launcher icon (long press): resumes the last queue. Short: launchers cut long labels",
     "Song cache": "Copies of streamed songs the app keeps by itself and deletes to make room. Not the same as Downloads, which the person chose",
 
     // ── Sorting & filtering ──────────────────────────────────────────────────

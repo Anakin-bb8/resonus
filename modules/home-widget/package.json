@@ -1,0 +1,7 @@
+{
+  "name": "home-widget",
+  "version": "0.0.1",
+  "description": "Home screen widget, Quick Settings tile and launcher shortcuts for Resonus (local Expo module)",
+  "main": "index.ts",
+  "private": true
+}

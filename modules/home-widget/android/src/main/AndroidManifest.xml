@@ -1,0 +1,34 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <application>
+    <receiver
+      android:name="expo.modules.homewidget.ResonusWidgetProvider"
+      android:exported="true"
+      android:label="@string/widget_name">
+      <intent-filter>
+        <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+      </intent-filter>
+      <meta-data
+        android:name="android.appwidget.provider"
+        android:resource="@xml/resonus_widget_info" />
+    </receiver>
+
+    <!-- The widget's buttons. Not exported: only our own PendingIntents reach it. -->
+    <receiver
+      android:name="expo.modules.homewidget.WidgetActionReceiver"
+      android:exported="false" />
+
+    <service
+      android:name="expo.modules.homewidget.ResonusTileService"
+      android:exported="true"
+      android:icon="@drawable/hw_ic_tile"
+      android:label="@string/tile_label"
+      android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+      <intent-filter>
+        <action android:name="android.service.quicksettings.action.QS_TILE" />
+      </intent-filter>
+      <meta-data
+        android:name="android.service.quicksettings.ACTIVE_TILE"
+        android:value="true" />
+    </service>
+  </application>
+</manifest>

@@ -745,5 +745,9 @@
   "This link isn't one Resonus can open.": "This link isn't one Resonus can open.",
   "None of your profiles is on {server}. Add an account on that server to open it.": "None of your profiles is on {server}. Add an account on that server to open it.",
   "This link is for {server}. Open it with:": "This link is for {server}. Open it with:",
-  "Switching profile stops what is playing.": "Switching profile stops what is playing."
+  "Switching profile stops what is playing.": "Switching profile stops what is playing.",
+  "Shuffle favorites": "Shuffle favorites",
+  "Continue listening": "Continue listening",
+  "No favorite songs to play": "No favorite songs to play",
+  "Nothing to continue": "Nothing to continue"
 }

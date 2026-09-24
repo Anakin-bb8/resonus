@@ -734,5 +734,9 @@
   "This link isn't one Resonus can open.": "Resonus no pot obrir aquest enllaç.",
   "None of your profiles is on {server}. Add an account on that server to open it.": "Cap dels teus perfils és a {server}. Afegeix un compte en aquest servidor per obrir-lo.",
   "This link is for {server}. Open it with:": "Aquest enllaç és de {server}. Obre'l amb:",
-  "Switching profile stops what is playing.": "Canviar de perfil atura el que està sonant."
+  "Switching profile stops what is playing.": "Canviar de perfil atura el que està sonant.",
+  "Shuffle favorites": "Preferits en aleatori",
+  "Continue listening": "Continua escoltant",
+  "No favorite songs to play": "No hi ha cançons preferides per reproduir",
+  "Nothing to continue": "No hi ha res per continuar"
 }

@@ -747,5 +747,9 @@
   "This link isn't one Resonus can open.": "Resonus no puede abrir este enlace.",
   "None of your profiles is on {server}. Add an account on that server to open it.": "Ninguno de tus perfiles está en {server}. Añade una cuenta en ese servidor para abrirlo.",
   "This link is for {server}. Open it with:": "Este enlace es de {server}. Ábrelo con:",
-  "Switching profile stops what is playing.": "Cambiar de perfil detiene lo que está sonando."
+  "Switching profile stops what is playing.": "Cambiar de perfil detiene lo que está sonando.",
+  "Shuffle favorites": "Favoritos en aleatorio",
+  "Continue listening": "Seguir escuchando",
+  "No favorite songs to play": "No hay canciones favoritas que reproducir",
+  "Nothing to continue": "No hay nada que continuar"
 }
