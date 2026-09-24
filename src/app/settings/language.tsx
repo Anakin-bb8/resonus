@@ -14,7 +14,13 @@ import { useTheme } from '@/theme';
 const TRANSLATIONS_URL = 'https://github.com/juananzzz/resonus/blob/main/TRANSLATING.md';
 
 // Derived from the single source: a row added there appears here by itself.
-const LANGUAGE_OPTIONS = LANGUAGES.map((l) => ({ value: l.code, label: l.name }));
+// Sorted once, and by a fixed collation: with no locale given, `localeCompare`
+// follows the app's own language, which changes as soon as one is picked. In
+// Russian, Cyrillic sorts before Latin, so choosing Русский jumped it and
+// Українська to the top of the list under the finger.
+const LANGUAGE_OPTIONS = LANGUAGES.map((l) => ({ value: l.code, label: l.name })).sort((a, b) =>
+  a.label.localeCompare(b.label, 'en'),
+);
 
 export default function LanguageSettings() {
   // Repaints on a change of appearance or accent: a stack keeps this screen
@@ -28,7 +34,7 @@ export default function LanguageSettings() {
     <SettingsPage title={t('Language')}>
       <ScrollView contentContainerStyle={settingsStyles.content}>
         <SelectList
-          options={[...LANGUAGE_OPTIONS].sort((a, b) => a.label.localeCompare(b.label))}
+          options={LANGUAGE_OPTIONS}
           value={language}
           onChange={setLanguage}
           collapsible={false}
