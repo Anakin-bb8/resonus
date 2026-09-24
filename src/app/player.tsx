@@ -1273,6 +1273,12 @@ export default function PlayerScreen() {
                   });
               }}
             >
+              {/* Phosphor's play triangle is not centred in its own box: it is
+                  drawn from 256 to 960 of a 1024-unit em, so the tip almost
+                  touches the right edge while the base sits a quarter of the
+                  way in. Centred as it comes, the icon still reads as pushed
+                  right, so the box itself moves left — padding on the right,
+                  the only side with room to take it. */}
               {isBuffering ? (
                 <ActivityIndicator size="small" color={colors.onInverse} />
               ) : (
@@ -1280,7 +1286,7 @@ export default function PlayerScreen() {
                   name={isPlaying ? 'pause' : 'play'}
                   size={34}
                   color={colors.onInverse}
-                  style={!isPlaying && { marginLeft: 3 }}
+                  style={!isPlaying && { paddingRight: 4.5 }}
                 />
               )}
             </Pressable>

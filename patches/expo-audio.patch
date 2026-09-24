@@ -1,5 +1,5 @@
 diff --git a/android/src/main/AndroidManifest.xml b/android/src/main/AndroidManifest.xml
-index 36a19f2d9c4a979a940ab681a1fb844ce45f7c75..3509de4747f3ebdda1a014f05fb02f0710563498 100644
+index 36a19f2..3509de4 100644
 --- a/android/src/main/AndroidManifest.xml
 +++ b/android/src/main/AndroidManifest.xml
 @@ -1,3 +1,8 @@
@@ -12,7 +12,7 @@ index 36a19f2d9c4a979a940ab681a1fb844ce45f7c75..3509de4747f3ebdda1a014f05fb02f07
 +  <uses-permission android:name="android.permission.WAKE_LOCK" />
  </manifest>
 diff --git a/android/src/main/java/expo/modules/audio/AudioModule.kt b/android/src/main/java/expo/modules/audio/AudioModule.kt
-index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..7ecb7e02f69d99e7bf1cfdd420dce47559520911 100644
+index 992239b..7ecb7e0 100644
 --- a/android/src/main/java/expo/modules/audio/AudioModule.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioModule.kt
 @@ -18,6 +18,7 @@ import androidx.media3.common.C.CONTENT_TYPE_HLS
@@ -306,7 +306,7 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..7ecb7e02f69d99e7bf1cfdd420dce475
      runBlocking(appContext.mainQueue.coroutineContext) { block() }
  
 diff --git a/android/src/main/java/expo/modules/audio/AudioPlayer.kt b/android/src/main/java/expo/modules/audio/AudioPlayer.kt
-index c76a9fd2a53743a691782e0f67d0d71401df58f6..7c9025af6a1645f79f9964b67e040764d8eceb71 100644
+index c76a9fd..7c9025a 100644
 --- a/android/src/main/java/expo/modules/audio/AudioPlayer.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioPlayer.kt
 @@ -8,15 +8,19 @@ import android.util.Log
@@ -541,7 +541,7 @@ index c76a9fd2a53743a691782e0f67d0d71401df58f6..7c9025af6a1645f79f9964b67e040764
  
    private fun sendAudioSampleUpdate(sample: List<Float>) {
 diff --git a/android/src/main/java/expo/modules/audio/AudioRecords.kt b/android/src/main/java/expo/modules/audio/AudioRecords.kt
-index 86880d92fd5b6413e8596e1b2b8ae28f2981addd..34044354b228072c1020dfbde62fee049d1521fe 100644
+index 86880d9..3404435 100644
 --- a/android/src/main/java/expo/modules/audio/AudioRecords.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioRecords.kt
 @@ -12,7 +12,27 @@ import expo.modules.kotlin.types.OptimizedRecord
@@ -602,7 +602,7 @@ index 86880d92fd5b6413e8596e1b2b8ae28f2981addd..34044354b228072c1020dfbde62fee04
  
  enum class InterruptionMode(val value: String) : Enumerable {
 diff --git a/android/src/main/java/expo/modules/audio/AudioUtils.kt b/android/src/main/java/expo/modules/audio/AudioUtils.kt
-index dca91c32a2787a7bc3ecba26f0f3f2ad9cc40d3d..089dcee0b9fe6a369f0809ecdf99a1fa42ea9ef3 100644
+index dca91c3..089dcee 100644
 --- a/android/src/main/java/expo/modules/audio/AudioUtils.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioUtils.kt
 @@ -3,6 +3,8 @@ package expo.modules.audio
@@ -742,7 +742,7 @@ index dca91c32a2787a7bc3ecba26f0f3f2ad9cc40d3d..089dcee0b9fe6a369f0809ecdf99a1fa
      .build()
  }
 diff --git a/android/src/main/java/expo/modules/audio/BaseAudioPlayer.kt b/android/src/main/java/expo/modules/audio/BaseAudioPlayer.kt
-index 149e9075c8630b14a69318aa6c37d9ff82b23f05..422d2d18677223f48b0106e44f573659b90160dd 100644
+index 149e907..422d2d1 100644
 --- a/android/src/main/java/expo/modules/audio/BaseAudioPlayer.kt
 +++ b/android/src/main/java/expo/modules/audio/BaseAudioPlayer.kt
 @@ -78,7 +78,6 @@ abstract class BaseAudioPlayer(
@@ -777,7 +777,7 @@ index 149e9075c8630b14a69318aa6c37d9ff82b23f05..422d2d18677223f48b0106e44f573659
        }
  
 diff --git a/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt b/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
-index 196a5d57f887c2667a88543bd2f6a80044a044f2..4e093dc6d2dea7acb919a41f694db6bf04772752 100644
+index 196a5d5..4e093dc 100644
 --- a/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
 +++ b/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
 @@ -27,6 +27,7 @@ import expo.modules.audio.AudioLockScreenOptions
@@ -1029,7 +1029,7 @@ index 196a5d57f887c2667a88543bd2f6a80044a044f2..4e093dc6d2dea7acb919a41f694db6bf
      const val SEEK_INTERVAL_MS = 10000L
    }
 diff --git a/android/src/main/java/expo/modules/audio/service/AudioMediaSessionCallback.kt b/android/src/main/java/expo/modules/audio/service/AudioMediaSessionCallback.kt
-index 839aaef12d7699ea1a89037b31849775daa079f4..1aff5091d68c19523e2374c0231f4c1da1a69163 100644
+index 839aaef..1aff509 100644
 --- a/android/src/main/java/expo/modules/audio/service/AudioMediaSessionCallback.kt
 +++ b/android/src/main/java/expo/modules/audio/service/AudioMediaSessionCallback.kt
 @@ -1,6 +1,9 @@
@@ -1118,7 +1118,7 @@ index 839aaef12d7699ea1a89037b31849775daa079f4..1aff5091d68c19523e2374c0231f4c1d
      return super.onCustomCommand(session, controller, command, args)
    }
 diff --git a/android/src/main/java/expo/modules/audio/service/MetadataInjectingPlayer.kt b/android/src/main/java/expo/modules/audio/service/MetadataInjectingPlayer.kt
-index 18203a364d17dcf3de95d22a20175308e3363889..77155f4f348246f218c0736725b0f690f1f31d61 100644
+index 18203a3..77155f4 100644
 --- a/android/src/main/java/expo/modules/audio/service/MetadataInjectingPlayer.kt
 +++ b/android/src/main/java/expo/modules/audio/service/MetadataInjectingPlayer.kt
 @@ -3,10 +3,20 @@ package expo.modules.audio.service
@@ -1326,7 +1326,7 @@ index 18203a364d17dcf3de95d22a20175308e3363889..77155f4f348246f218c0736725b0f690
  }
 diff --git a/android/src/main/java/expo/modules/audio/service/PreloadingBitmapLoader.kt b/android/src/main/java/expo/modules/audio/service/PreloadingBitmapLoader.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..6ee23d594c66abe46d7991de793d6de992febdf9
+index 0000000..6ee23d5
 --- /dev/null
 +++ b/android/src/main/java/expo/modules/audio/service/PreloadingBitmapLoader.kt
 @@ -0,0 +1,77 @@
@@ -1408,7 +1408,7 @@ index 0000000000000000000000000000000000000000..6ee23d594c66abe46d7991de793d6de9
 +  }
 +}
 diff --git a/build/Audio.types.d.ts b/build/Audio.types.d.ts
-index 25604783649fe9b64f6655172f08471a5efcbf45..b80696e3b5d647c53f6e144d830171c6800a9c32 100644
+index 2560478..b80696e 100644
 --- a/build/Audio.types.d.ts
 +++ b/build/Audio.types.d.ts
 @@ -34,6 +34,20 @@ export type AudioSource = string | number | null | {
@@ -1449,7 +1449,7 @@ index 25604783649fe9b64f6655172f08471a5efcbf45..b80696e3b5d647c53f6e144d830171c6
  /**
   * Loop mode for audio playlist playback.
 diff --git a/build/AudioConstants.d.ts b/build/AudioConstants.d.ts
-index cfd92ad0ff5765254c4e6db974fe44bce34aad06..78fa084cf34a5f56743d636b6501f90971d7898b 100644
+index cfd92ad..78fa084 100644
 --- a/build/AudioConstants.d.ts
 +++ b/build/AudioConstants.d.ts
 @@ -15,5 +15,9 @@ export type AudioLockScreenOptions = {
@@ -1464,7 +1464,7 @@ index cfd92ad0ff5765254c4e6db974fe44bce34aad06..78fa084cf34a5f56743d636b6501f909
  //# sourceMappingURL=AudioConstants.d.ts.map
 \ No newline at end of file
 diff --git a/build/AudioModule.types.d.ts b/build/AudioModule.types.d.ts
-index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..99f02c0d2f36b738c1993cd5b08e3c8c17882d07 100644
+index f3ae4ee..99f02c0 100644
 --- a/build/AudioModule.types.d.ts
 +++ b/build/AudioModule.types.d.ts
 @@ -31,6 +31,11 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
@@ -1549,8 +1549,358 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..99f02c0d2f36b738c1993cd5b08e3c8c
  };
  export declare class AudioRecorder extends SharedObject<RecordingEvents> {
      /**
+diff --git a/ios/AnimatedArtwork.swift b/ios/AnimatedArtwork.swift
+new file mode 100644
+index 0000000..bcc6994
+--- /dev/null
++++ b/ios/AnimatedArtwork.swift
+@@ -0,0 +1,344 @@
++import AVFoundation
++import CoreGraphics
++import CoreMedia
++import CoreVideo
++import CryptoKit
++import Foundation
++import ImageIO
++import MediaPlayer
++import UIKit
++
++#if compiler(>=6.2)
++
++@available(iOS 26.0, tvOS 26.0, *)
++final class AnimatedArtwork {
++  private static let maxSide = 720
++  private static let maxFrames = 300
++  private static let maxDuration = 30.0
++  private static let minFrameDelay = 1.0 / 60.0
++  private static let fallbackDelay = 0.1
++  private static let browserDelayFloor = 0.011
++  private static let frameOptions = [kCGImageSourceShouldCache: false] as CFDictionary
++
++  private struct Sample {
++    let index: Int
++    let time: Double
++  }
++
++  private struct Schedule {
++    let samples: [Sample]
++    let total: Double
++  }
++
++  private let artworkID: String
++  private let preview: UIImage
++  private let side: Int
++  private let destination: URL
++  private var data: Data?
++  private let lock = NSLock()
++  private var encodeTask: Task<URL?, Never>?
++
++  static func make(url: URL, data: Data) -> MPMediaItemAnimatedArtwork? {
++    guard let source = CGImageSourceCreateWithData(data as CFData, nil),
++          CGImageSourceGetCount(source) > 1,
++          let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any]
++    else {
++      return nil
++    }
++    let width = (properties[kCGImagePropertyPixelWidth as String] as? NSNumber)?.intValue ?? 0
++    let height = (properties[kCGImagePropertyPixelHeight as String] as? NSNumber)?.intValue ?? 0
++    guard width > 0, height > 0, abs(width - height) * 100 <= max(width, height) else {
++      return nil
++    }
++    guard let frame = CGImageSourceCreateImageAtIndex(source, 0, frameOptions),
++          let destination = cacheFile(for: url)
++    else {
++      return nil
++    }
++    let side = evenSide(longest: max(width, height))
++    let artwork = AnimatedArtwork(
++      artworkID: identifier(for: url),
++      preview: render(frame, side: side),
++      side: side,
++      destination: destination,
++      data: data
++    )
++    let preview = artwork.preview
++    let artworkID = artwork.artworkID
++    return MPMediaItemAnimatedArtwork(
++      artworkID: artworkID,
++      previewImageRequestHandler: { _ in preview },
++      videoAssetFileURLRequestHandler: { _ in await artwork.videoURL() }
++    )
++  }
++
++  private init(artworkID: String, preview: UIImage, side: Int, destination: URL, data: Data) {
++    self.artworkID = artworkID
++    self.preview = preview
++    self.side = side
++    self.destination = destination
++    self.data = data
++  }
++
++  private func videoURL() async -> URL? {
++    if FileManager.default.fileExists(atPath: destination.path) {
++      return destination
++    }
++    return await encodeTaskValue().value
++  }
++
++  private func encodeTaskValue() -> Task<URL?, Never> {
++    lock.lock()
++    defer { lock.unlock() }
++    if let encodeTask {
++      return encodeTask
++    }
++    let created = Task.detached(priority: .utility) {
++      await self.encode()
++    }
++    encodeTask = created
++    return created
++  }
++
++  private func encode() async -> URL? {
++    defer {
++      lock.lock()
++      data = nil
++      lock.unlock()
++    }
++    if FileManager.default.fileExists(atPath: destination.path) {
++      return destination
++    }
++    lock.lock()
++    let data = self.data
++    lock.unlock()
++    guard let data, let source = CGImageSourceCreateWithData(data as CFData, nil) else {
++      return nil
++    }
++    guard let schedule = Self.schedule(source: source, count: CGImageSourceGetCount(source)) else {
++      return nil
++    }
++    return await write(source: source, schedule: schedule)
++  }
++
++  private func write(source: CGImageSource, schedule: Schedule) async -> URL? {
++    let fileManager = FileManager.default
++    guard !fileManager.fileExists(atPath: destination.path) else {
++      return destination
++    }
++    let directory = destination.deletingLastPathComponent()
++    try? fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
++    let temporary = directory.appendingPathComponent("tmp-" + UUID().uuidString + ".mp4")
++    defer {
++      if fileManager.fileExists(atPath: temporary.path) {
++        try? fileManager.removeItem(at: temporary)
++      }
++    }
++
++    let settings: [String: Any] = [
++      AVVideoCodecKey: AVVideoCodecType.h264,
++      AVVideoWidthKey: side,
++      AVVideoHeightKey: side,
++      AVVideoCompressionPropertiesKey: [
++        AVVideoAverageBitRateKey: side * side * 2,
++        AVVideoMaxKeyFrameIntervalKey: 30,
++        AVVideoAllowFrameReorderingKey: false,
++      ] as [String: Any],
++    ]
++    guard let writer = try? AVAssetWriter(outputURL: temporary, fileType: .mp4) else {
++      return nil
++    }
++    let input = AVAssetWriterInput(mediaType: .video, outputSettings: settings)
++    input.expectsMediaDataInRealTime = false
++    guard writer.canAdd(input) else {
++      return nil
++    }
++    writer.add(input)
++    let adaptor = AVAssetWriterInputPixelBufferAdaptor(
++      assetWriterInput: input,
++      sourcePixelBufferAttributes: [
++        kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
++        kCVPixelBufferWidthKey as String: side,
++        kCVPixelBufferHeightKey as String: side,
++        kCVPixelBufferCGImageCompatibilityKey as String: true,
++        kCVPixelBufferCGBitmapContextCompatibilityKey as String: true,
++      ]
++    )
++    guard writer.startWriting() else {
++      return nil
++    }
++    writer.startSession(atSourceTime: .zero)
++    defer {
++      if writer.status == .writing {
++        writer.cancelWriting()
++      }
++    }
++
++    for sample in schedule.samples {
++      guard let frame = CGImageSourceCreateImageAtIndex(source, sample.index, Self.frameOptions),
++            let buffer = pixelBuffer(adaptor: adaptor, frame: frame),
++            await isReady(input, writer: writer),
++            adaptor.append(buffer, withPresentationTime: CMTime(seconds: sample.time, preferredTimescale: 600))
++      else {
++        return nil
++      }
++    }
++
++    guard let lastIndex = schedule.samples.last?.index,
++          let lastFrame = CGImageSourceCreateImageAtIndex(source, lastIndex, Self.frameOptions),
++          let lastBuffer = pixelBuffer(adaptor: adaptor, frame: lastFrame),
++          await isReady(input, writer: writer)
++    else {
++      return nil
++    }
++    guard adaptor.append(lastBuffer, withPresentationTime: CMTime(seconds: schedule.total, preferredTimescale: 600)) else {
++      return nil
++    }
++
++    input.markAsFinished()
++    await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
++      writer.finishWriting {
++        continuation.resume()
++      }
++    }
++    guard writer.status == .completed else {
++      return nil
++    }
++
++    do {
++      try fileManager.moveItem(at: temporary, to: destination)
++    } catch {
++      return fileManager.fileExists(atPath: destination.path) ? destination : nil
++    }
++    return destination
++  }
++
++  private func isReady(_ input: AVAssetWriterInput, writer: AVAssetWriter) async -> Bool {
++    while !input.isReadyForMoreMediaData {
++      if writer.status != .writing {
++        return false
++      }
++      try? await Task.sleep(nanoseconds: 4_000_000)
++    }
++    return true
++  }
++
++  private func pixelBuffer(adaptor: AVAssetWriterInputPixelBufferAdaptor, frame: CGImage) -> CVPixelBuffer? {
++    guard let pool = adaptor.pixelBufferPool else {
++      return nil
++    }
++    var created: CVPixelBuffer?
++    guard CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pool, &created) == kCVReturnSuccess,
++          let buffer = created
++    else {
++      return nil
++    }
++    CVPixelBufferLockBaseAddress(buffer, [])
++    defer { CVPixelBufferUnlockBaseAddress(buffer, []) }
++    let bounds = CGRect(x: 0, y: 0, width: side, height: side)
++    guard let context = CGContext(
++      data: CVPixelBufferGetBaseAddress(buffer),
++      width: side,
++      height: side,
++      bitsPerComponent: 8,
++      bytesPerRow: CVPixelBufferGetBytesPerRow(buffer),
++      space: CGColorSpaceCreateDeviceRGB(),
++      bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
++    ) else {
++      return nil
++    }
++    context.setFillColor(red: 0, green: 0, blue: 0, alpha: 1)
++    context.fill(bounds)
++    context.interpolationQuality = .high
++    context.draw(frame, in: bounds)
++    return buffer
++  }
++
++  private static func schedule(source: CGImageSource, count: Int) -> Schedule? {
++    let step = max(1, Int((Double(count) / Double(maxFrames)).rounded(.up)))
++    var samples: [Sample] = []
++    var time = 0.0
++    var index = 0
++    while index < count {
++      var delay = 0.0
++      var cursor = index
++      let end = min(index + step, count)
++      while cursor < end {
++        delay += frameDelay(at: cursor, source: source)
++        cursor += 1
++      }
++      if time + delay > maxDuration {
++        delay = maxDuration - time
++      }
++      guard delay > 0 else {
++        break
++      }
++      samples.append(Sample(index: index, time: time))
++      time += delay
++      if time >= maxDuration {
++        break
++      }
++      index += step
++    }
++    guard !samples.isEmpty else {
++      return nil
++    }
++    return Schedule(samples: samples, total: time)
++  }
++
++  private static func frameDelay(at index: Int, source: CGImageSource) -> Double {
++    guard let properties = CGImageSourceCopyPropertiesAtIndex(source, index, nil) as? [String: Any] else {
++      return fallbackDelay
++    }
++    for name in ["GIF", "PNG", "WebP"] {
++      guard let dictionary = properties[name] as? [String: Any] else {
++        continue
++      }
++      let unclamped = (dictionary["UnclampedDelayTime"] as? NSNumber)?.doubleValue ?? 0
++      let clamped = (dictionary["DelayTime"] as? NSNumber)?.doubleValue ?? 0
++      let value = unclamped > 0 ? unclamped : clamped
++      guard value > 0 else {
++        continue
++      }
++      return value < browserDelayFloor ? fallbackDelay : max(value, minFrameDelay)
++    }
++    return fallbackDelay
++  }
++
++  private static func evenSide(longest: Int) -> Int {
++    let capped = min(maxSide, longest)
++    return max(2, capped - (capped % 2))
++  }
++
++  private static func render(_ frame: CGImage, side: Int) -> UIImage {
++    let size = CGSize(width: side, height: side)
++    let bounds = CGRect(origin: .zero, size: size)
++    let format = UIGraphicsImageRendererFormat()
++    format.scale = 1
++    format.opaque = true
++    return UIGraphicsImageRenderer(size: size, format: format).image { context in
++      let cgContext = context.cgContext
++      cgContext.setFillColor(red: 0, green: 0, blue: 0, alpha: 1)
++      cgContext.fill(bounds)
++      cgContext.interpolationQuality = .high
++      cgContext.draw(frame, in: bounds)
++    }
++  }
++
++  private static func identifier(for url: URL) -> String {
++    SHA256.hash(data: Data(url.absoluteString.utf8))
++      .map { String(format: "%02x", $0) }
++      .joined()
++  }
++
++  private static func cacheFile(for url: URL) -> URL? {
++    guard let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else {
++      return nil
++    }
++    return base
++      .appendingPathComponent("animated-artwork", isDirectory: true)
++      .appendingPathComponent(identifier(for: url) + ".mp4")
++  }
++}
++
++#endif
 diff --git a/ios/AudioRecords.swift b/ios/AudioRecords.swift
-index 33db27c3b8fb40fa9db6659a0787c6b2b503d1ab..a5c41356f93d3d4a45bf14020af1cb1943731751 100644
+index 33db27c..a5c4135 100644
 --- a/ios/AudioRecords.swift
 +++ b/ios/AudioRecords.swift
 @@ -64,12 +64,17 @@ struct Metadata: Record {
@@ -1572,10 +1922,14 @@ index 33db27c3b8fb40fa9db6659a0787c6b2b503d1ab..a5c41356f93d3d4a45bf14020af1cb19
  
  enum BitRateStrategy: String, Enumerable {
 diff --git a/ios/MediaController.swift b/ios/MediaController.swift
-index e977f577cd2e16b194b56537ad76b423f40d2496..1f65c7e7cccf4efcf7a71180c93c493b384f682f 100644
+index e977f57..a78c975 100644
 --- a/ios/MediaController.swift
 +++ b/ios/MediaController.swift
-@@ -14,6 +14,7 @@ class MediaController {
+@@ -11,9 +11,11 @@ class MediaController {
+ 
+   private var currentArtworkUrl: URL?
+   private var cachedArtwork: MPMediaItemArtwork?
++  private var cachedAnimatedArtwork: AnyObject?
    private var artworkLoadToken: UUID?
    private var currentArtworkItemIdentifier: ObjectIdentifier?
    private var isLiveStream = false
@@ -1583,7 +1937,15 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..1f65c7e7cccf4efcf7a71180c93c493b
  
    func setActivePlayer(_ player: AudioPlayer?, options: LockScreenOptions? = nil) {
      performOnMain {
-@@ -80,7 +81,11 @@ class MediaController {
+@@ -68,6 +70,7 @@ class MediaController {
+     } else {
+       resetArtworkState()
+       nowPlayingInfo.removeValue(forKey: MPMediaItemPropertyArtwork)
++      removeAnimatedArtwork(&nowPlayingInfo)
+       applyAssetMetadata(&nowPlayingInfo, for: player)
+     }
+ 
+@@ -80,7 +83,11 @@ class MediaController {
        info.removeValue(forKey: MPMediaItemPropertyPlaybackDuration)
        info.removeValue(forKey: MPNowPlayingInfoPropertyElapsedPlaybackTime)
      } else {
@@ -1596,9 +1958,122 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..1f65c7e7cccf4efcf7a71180c93c493b
        info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = player.currentTime
      }
      info[MPNowPlayingInfoPropertyPlaybackRate] = player.isPlaying ? player.ref.rate : 0.0
-@@ -232,6 +237,15 @@ class MediaController {
+@@ -139,17 +146,20 @@ class MediaController {
+     guard let artworkUrl = metadata.artworkUrl else {
+       resetArtworkState()
+       info.removeValue(forKey: MPMediaItemPropertyArtwork)
++      removeAnimatedArtwork(&info)
+       return
+     }
+ 
+     if currentArtworkUrl != artworkUrl {
+       currentArtworkUrl = artworkUrl
+       cachedArtwork = nil
++      cachedAnimatedArtwork = nil
+       artworkLoadToken = nil
+     }
+ 
+     if let cachedArtwork {
+       info[MPMediaItemPropertyArtwork] = cachedArtwork
++      applyAnimatedArtwork(&info)
+       return
+     }
+ 
+@@ -173,14 +183,16 @@ class MediaController {
+         return
+       }
+ 
+-      guard let artwork else {
++      guard let still = artwork.still else {
+         return
+       }
+ 
+-      self.cachedArtwork = artwork
++      self.cachedArtwork = still
++      self.cachedAnimatedArtwork = artwork.animated
+ 
+       var latestNowPlayingInfo = self.nowPlayingInfoCenter.nowPlayingInfo ?? [String: Any]()
+-      latestNowPlayingInfo[MPMediaItemPropertyArtwork] = artwork
++      latestNowPlayingInfo[MPMediaItemPropertyArtwork] = still
++      self.applyAnimatedArtwork(&latestNowPlayingInfo)
+       self.nowPlayingInfoCenter.nowPlayingInfo = latestNowPlayingInfo
+     }
+   }
+@@ -204,34 +216,82 @@ class MediaController {
+   private func resetArtworkState() {
+     currentArtworkUrl = nil
+     cachedArtwork = nil
++    cachedAnimatedArtwork = nil
+     artworkLoadToken = nil
    }
  
+-  private func loadArtworkFromURL(url: URL, completion: @escaping (MPMediaItemArtwork?) -> Void) {
++  private struct LoadedArtwork {
++    let still: MPMediaItemArtwork?
++    let animated: AnyObject?
++  }
++
++  private func loadArtworkFromURL(url: URL, completion: @escaping (LoadedArtwork) -> Void) {
+     URLSession.shared.dataTask(with: url) { data, _, error in
+       if error != nil {
+         self.performOnMain {
+-          completion(nil)
++          completion(LoadedArtwork(still: nil, animated: nil))
+         }
+         return
+       }
+ 
+       guard let data, let image = UIImage(data: data) else {
+         self.performOnMain {
+-          completion(nil)
++          completion(LoadedArtwork(still: nil, animated: nil))
+         }
+         return
+       }
+ 
+-      let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
++      let still = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
++      let animated: AnyObject?
++#if compiler(>=6.2)
++      if #available(iOS 26.0, tvOS 26.0, *),
++         MPNowPlayingInfoCenter.supportedAnimatedArtworkKeys.contains(MPNowPlayingInfoProperty1x1AnimatedArtwork) {
++        animated = AnimatedArtwork.make(url: url, data: data)
++      } else {
++        animated = nil
++      }
++#else
++      animated = nil
++#endif
+       self.performOnMain {
+-        completion(artwork)
++        completion(LoadedArtwork(still: still, animated: animated))
+       }
+     }
+     .resume()
+   }
+ 
++  private func applyAnimatedArtwork(_ info: inout [String: Any]) {
++#if compiler(>=6.2)
++    if #available(iOS 26.0, tvOS 26.0, *) {
++      guard let artwork = cachedAnimatedArtwork as? MPMediaItemAnimatedArtwork,
++            MPNowPlayingInfoCenter.supportedAnimatedArtworkKeys.contains(MPNowPlayingInfoProperty1x1AnimatedArtwork)
++      else {
++        removeAnimatedArtwork(&info)
++        return
++      }
++      info[MPNowPlayingInfoProperty1x1AnimatedArtwork] = artwork
++    }
++#endif
++  }
++
++  private func removeAnimatedArtwork(_ info: inout [String: Any]) {
++#if compiler(>=6.2)
++    if #available(iOS 26.0, tvOS 26.0, *) {
++      info.removeValue(forKey: MPNowPlayingInfoProperty1x1AnimatedArtwork)
++    }
++#endif
++  }
++
    private func enableRemoteCommands(options: LockScreenOptions?) {
 +    updateRemoteCommandAvailability(options: options)
 +
@@ -1612,7 +2087,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..1f65c7e7cccf4efcf7a71180c93c493b
      remoteCommandCenter.playCommand.addTarget { [weak self] _ in
        guard let player = self?.activePlayer else {
          return .commandFailed
-@@ -303,12 +317,34 @@ class MediaController {
+@@ -303,12 +363,34 @@ class MediaController {
        return .success
      }
  
@@ -1647,7 +2122,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..1f65c7e7cccf4efcf7a71180c93c493b
    }
  
    private func disableRemoteCommands() {
-@@ -318,6 +354,8 @@ class MediaController {
+@@ -318,6 +400,8 @@ class MediaController {
      remoteCommandCenter.changePlaybackPositionCommand.isEnabled = false
      remoteCommandCenter.skipForwardCommand.isEnabled = false
      remoteCommandCenter.skipBackwardCommand.isEnabled = false

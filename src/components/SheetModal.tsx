@@ -27,11 +27,13 @@ export function SheetModal({
   /** Runs once the sheet is off screen, however it was closed. For an action
    *  that unmounts the sheet along with whatever declares it. */
   onClosed?: () => void;
+  /** `close()` closes the sheet. */
   children: (close: () => void) => ReactNode;
 }) {
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   openRef.current = () => setOpen(true);
+
   const closeNow = () => {
     setOpen(false);
     onClosed?.();
@@ -40,17 +42,22 @@ export function SheetModal({
     open,
     closeNow,
   );
-  // The sheet slides down and only then is the Modal unmounted. Actions close
+  // The sheet slides down and only then is the Modal dismissed. Actions close
   // through here, so choosing one looks the same as swiping it away.
   const close = () => dismiss(closeNow);
 
   return (
-    <Modal transparent animationType="none" visible={open} onRequestClose={close}>
+    <Modal
+      transparent
+      animationType="none"
+      visible={open}
+      onRequestClose={() => close()}
+    >
       {/* Gestures inside an RN Modal need a root view of their own: the Modal
           renders in a native hierarchy outside the app's. */}
       <GestureHandlerRootView style={StyleSheet.absoluteFill}>
         <Animated.View style={[styles.backdrop, backdropStyle]}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={close} />
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => close()} />
         </Animated.View>
         {/* One drag around everything: what goes in here is a short list of
             actions that never scrolls, so nothing else competes for the

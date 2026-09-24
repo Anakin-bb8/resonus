@@ -117,6 +117,8 @@ export function MediaMenuSheet() {
 
   if (!item) return null;
 
+  // The sheet slides down, the Modal dismisses after it, and only then is the
+  // item let go. Actions close through here.
   const close = () => dismiss(closeNow);
   const album = item.kind === 'album' ? item.album : null;
   const playlist = item.kind === 'playlist' ? item.playlist : null;
@@ -207,12 +209,12 @@ export function MediaMenuSheet() {
   }
 
   return (
-    <Modal transparent animationType="none" visible onRequestClose={close}>
+    <Modal transparent animationType="none" visible onRequestClose={() => close()}>
       {/* Gestures inside an RN Modal need a root view of their own: the
           Modal renders in a native hierarchy outside the app's. */}
       <GestureHandlerRootView style={StyleSheet.absoluteFill}>
         <Animated.View style={[styles.backdrop, backdropStyle]}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={close} />
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => close()} />
         </Animated.View>
         {/* One drag around the whole sheet: this list of actions never
             scrolls, so nothing else competes for the gesture. */}
@@ -331,14 +333,18 @@ export function MediaMenuSheet() {
               <Action
                 icon="link-outline"
                 label={t('Share Resonus link')}
-                onPress={() => {
-                  close();
+                onPress={() =>
+                  // The system sheet goes up over this one, which stays behind
+                  // it and closes only once the user is done with it: closing
+                  // first hands UIKit a controller that is on its way out, and
+                  // the share sheet comes down with it (the same order the
+                  // normal share has used since it was fixed).
                   void shareResonusLink(
                     album
                       ? { kind: 'album', id: album.id, name, artist: album.artist }
                       : { kind: 'playlist', id: playlist!.id, name },
-                  );
-                }}
+                  ).finally(() => close())
+                }
               />
             ) : null}
             {/* Albums only: a playlist is nobody's. The song menu has had this

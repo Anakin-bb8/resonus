@@ -769,10 +769,18 @@ export default function ArtistScreen() {
               {canShareResonusLink() ? (
                 <Pressable
                   style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
-                  onPress={() => {
-                    close();
-                    void shareResonusLink({ kind: 'artist', id, name: data.artist.name });
-                  }}
+                  onPress={() =>
+                    // The system sheet goes up over this one, which stays
+                    // behind it and closes only once the user is done with it:
+                    // closing first hands UIKit a controller that is on its
+                    // way out, and the share sheet comes down with it (the
+                    // order the normal share has used since it was fixed).
+                    void shareResonusLink({
+                      kind: 'artist',
+                      id,
+                      name: data.artist.name,
+                    }).finally(() => close())
+                  }
                 >
                   <Icon name="link-outline" size={24} color={colors.text} />
                   <Text style={styles.actionText}>{t('Share Resonus link')}</Text>
