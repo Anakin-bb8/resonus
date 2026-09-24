@@ -1,0 +1,45 @@
+name: Checks
+
+# Types, lint and the unit tests, on every pull request and every push to main.
+# Nothing else in CI compiled the app's TypeScript: a pull request could break
+# the build and nobody would know until the next release tried to make an APK.
+#
+# Lint fails on errors only. Its warnings are the React Compiler list kept in
+# sight on purpose (see eslint.config.js), not something to block on.
+#
+# Node 24: the tests import the TypeScript modules directly, which needs a Node
+# that strips types on its own.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Types
+        run: pnpm typecheck
+      - name: Lint
+        if: always()
+        run: pnpm lint
+      - name: Tests
+        if: always()
+        run: pnpm test
