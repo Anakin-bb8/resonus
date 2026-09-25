@@ -616,9 +616,8 @@ const HOME_BUTTON_KEYS: HomeButtonKey[] = ['search', 'history', 'settings'];
  * there for whoever takes that tab off the bar, or just prefers it up here.
  */
 export const DEFAULT_HOME_BUTTONS: HomeButton[] = [
-  { key: 'search', enabled: false },
-  // History is a chip now.
-  { key: 'history', enabled: false },
+  { key: 'search', enabled: true },
+  { key: 'history', enabled: true },
   { key: 'settings', enabled: true },
 ];
 
