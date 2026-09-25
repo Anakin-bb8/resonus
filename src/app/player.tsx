@@ -1243,16 +1243,17 @@ export default function PlayerScreen() {
             )}
           </View>
 
+          {showQualityBadge ? (
+            <View style={styles.subInfo}>
+              <AudioQualityBadge song={song} />
+            </View>
+          ) : null}
+
           {/* Its own component so a position tick does not repaint this one,
               which is large: cover, gradient, quality badge, controls, queue
               sheet (#50). The seek buttons read the position when they are
               pressed instead of subscribing to it. */}
-          <SeekBar
-            duration={duration}
-            style={styles.progress}
-            timeColor={colors.textMuted}
-            center={showQualityBadge ? <AudioQualityBadge song={song} /> : null}
-          />
+          <SeekBar duration={duration} style={styles.progress} timeColor={colors.textMuted} />
 
           <View style={styles.controls}>
             <Pressable
@@ -1596,6 +1597,7 @@ const styles = themed((colors) => ({
     color: colors.textSecondary,
     fontSize: fontSize.sm,
   },
+  subInfo: { marginTop: -spacing.sm, marginBottom: spacing.xs },
   progress: { marginBottom: spacing.xs },
   controls: {
     flexDirection: 'row',
