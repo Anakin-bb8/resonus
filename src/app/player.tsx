@@ -42,7 +42,6 @@ import { OutputSheet } from '@/components/OutputSheet';
 import { SpeedSheet } from '@/components/SpeedSheet';
 import { StarRating } from '@/components/StarRating';
 import { useAnimatedCover } from '@/hooks/useAnimatedCover';
-import { useCanShare } from '@/hooks/useCanShare';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { useLocalProfile } from '@/hooks/useLocalProfile';
@@ -69,7 +68,6 @@ import {
   usePlayerStore,
 } from '@/store/player';
 import { useSettings, type CoverTapAction } from '@/store/settings';
-import { useSharePicker } from '@/store/sharePicker';
 import { useSongMenu } from '@/store/songMenu';
 import { useToast } from '@/store/toast';
 import { useUpnp } from '@/store/upnp';
@@ -251,7 +249,6 @@ export default function PlayerScreen() {
   const showDevicesButton =
     useSettings((s) => s.showDevicesButton) && (!local || localHttpAvailable);
   const showSpeedButton = useSettings((s) => s.showSpeedButton);
-  const canShare = useCanShare();
   const seekButtonsSec = useSettings((s) => s.seekButtonsSec);
   const serverType = useAuthStore((s) => s.auth?.serverType);
   const hasAccount = useAuthStore((s) => !!s.auth);
@@ -887,7 +884,6 @@ export default function PlayerScreen() {
    */
   const showSpeed = showSpeedButton || speed !== 1;
   const canSpeed = !song.url && !remoteDevice;
-  const canShareSong = canShare && !song.url;
 
   return (
     <GestureDetector gesture={dismissPan}>
@@ -1436,18 +1432,6 @@ export default function PlayerScreen() {
               style={styles.bottomButton}
             >
               <MaterialIcons name="equalizer" size={22} color={colors.text} />
-            </Pressable>
-            {/* Only with a server that mints share links, and never for a
-                station: its `url` is not the server's to share. */}
-            <Pressable
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel={t('Share')}
-              disabled={!canShareSong}
-              onPress={() => useSharePicker.getState().open({ id: song.id, name: song.title })}
-              style={[styles.bottomButton, !canShareSong && styles.bottomButtonOff]}
-            >
-              <MaterialIcons name="share" size={20} color={colors.text} />
             </Pressable>
             {showQueueButton ? (
               <Pressable
