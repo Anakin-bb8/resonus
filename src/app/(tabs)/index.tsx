@@ -774,7 +774,7 @@ function HomeHeaderButton({ which }: { which: HomeButtonKey }) {
           router.navigate('/search');
         }}
       >
-        <Icon name="search-outline" size={24} color={colors.textSecondary} />
+        <Icon name="search-outline" size={24} color={colors.text} />
       </Pressable>
     );
   }
@@ -785,7 +785,7 @@ function HomeHeaderButton({ which }: { which: HomeButtonKey }) {
   return (
     <Link href={href} asChild>
       <Pressable hitSlop={10} accessibilityLabel={t(label)}>
-        <Icon name={icon} size={24} color={colors.textSecondary} />
+        <Icon name={icon} size={24} color={colors.text} />
       </Pressable>
     </Link>
   );
@@ -886,13 +886,24 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.fixedHeader}>
         <View style={styles.header}>
-          {/* Nothing but the buttons up here in the local profile either.
-              There used to be a phone in the accent colour on the left, and it
-              was the one thing on the screen saying which profile you were in.
-              That is the trouble with it: the local profile is not a state you
-              are waiting to come out of, it is where somebody has chosen to
-              be, and a permanent badge for it is decoration. Offline is a
-              different matter and still says so, on the right. */}
+          {/* `flexShrink` and `numberOfLines`: the greeting is customizable,
+              and although the setting caps it at GREETING_MAX, those characters
+              measure differently depending on the chosen font. Shrinking and
+              trimming, no text can push the buttons off-screen. */}
+          <View style={styles.headerLeft}>
+            {/* Nothing beside the greeting in the local profile. There used to
+                be a phone in the accent colour here, and it was the one thing
+                on the screen saying which profile you were in. That is the
+                trouble with it: the local profile is not a state you are
+                waiting to come out of, it is where somebody has chosen to be,
+                and a permanent badge for it is decoration. Offline is a
+                different matter and still says so, on the right. */}
+            {/* The screen's name when there is no greeting, where Explore and
+                Your library have theirs. */}
+            <Text style={styles.greeting} numberOfLines={1}>
+              {showGreeting ? greeting : t('Home')}
+            </Text>
+          </View>
           <View style={styles.headerRight}>
             {/* Before the buttons, and dimmer than them, so it reads as a state
                 and not as something to press. */}
@@ -918,12 +929,6 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* Under the buttons and scrolling away, the greeting or the screen's
-            name. `numberOfLines`: the greeting is customizable, and its
-            characters measure differently depending on the chosen font. */}
-        <Text style={styles.greeting} numberOfLines={1}>
-          {showGreeting ? greeting : t('Home')}
-        </Text>
         {/* First, above the chips: what was playing on the computer is the
             thing to pick up on opening the app, when there is one. */}
         {showPlayingElsewhere ? <PlayingElsewhereCard /> : null}
@@ -987,18 +992,12 @@ const styles = themed((colors) => ({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.sm,
-  },
-  greeting: {
-    color: colors.text,
-    fontSize: fontSize.xxl,
-    letterSpacing: tracking.display,
-    fontWeight: '400',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.lg,
   },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 1 },
+  greeting: { color: colors.text, fontSize: fontSize.xxl, letterSpacing: tracking.display, fontWeight: '400', flexShrink: 1 },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
