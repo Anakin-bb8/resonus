@@ -621,6 +621,42 @@ export const DEFAULT_HOME_BUTTONS: HomeButton[] = [
   { key: 'settings', enabled: true },
 ];
 
+/** The row of buttons under the player's controls, in order. */
+export type PlayerButtonKey = 'devices' | 'lyrics' | 'speed' | 'sleep' | 'equalizer' | 'queue';
+
+export interface PlayerButton {
+  key: PlayerButtonKey;
+  enabled: boolean;
+}
+
+export const DEFAULT_PLAYER_BUTTONS: PlayerButton[] = [
+  { key: 'devices', enabled: true },
+  { key: 'lyrics', enabled: true },
+  { key: 'speed', enabled: true },
+  { key: 'sleep', enabled: true },
+  { key: 'equalizer', enabled: true },
+  { key: 'queue', enabled: true },
+];
+
+/** Saved order kept, unknown keys dropped, new ones added at the end. */
+function normalizePlayerButtons(raw: unknown): PlayerButton[] {
+  if (!Array.isArray(raw)) return DEFAULT_PLAYER_BUTTONS.map((b) => ({ ...b }));
+  const known = new Set(DEFAULT_PLAYER_BUTTONS.map((b) => b.key));
+  const seen = new Set<PlayerButtonKey>();
+  const out: PlayerButton[] = [];
+  for (const item of raw) {
+    const key = item?.key as PlayerButtonKey;
+    if (known.has(key) && !seen.has(key)) {
+      seen.add(key);
+      out.push({ key, enabled: typeof item.enabled === 'boolean' ? item.enabled : true });
+    }
+  }
+  for (const def of DEFAULT_PLAYER_BUTTONS) {
+    if (!seen.has(def.key)) out.push({ ...def });
+  }
+  return out;
+}
+
 /** The same sanitising as the tabs, with the gear in Home's place. */
 function normalizeHomeButtons(raw: unknown): HomeButton[] {
   if (!Array.isArray(raw)) return DEFAULT_HOME_BUTTONS.map((b) => ({ ...b }));
@@ -716,7 +752,8 @@ type Reshaped =
   | 'homeChips'
   | 'exploreSections'
   | 'bottomTabs'
-  | 'homeButtons';
+  | 'homeButtons'
+  | 'playerButtons';
 
 /**
  * `setX(value)` for every saved setting: stores it and saves the profile.
@@ -929,16 +966,8 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   coverDoubleTapAction: CoverDoubleTapAction;
   /** Marquee: long titles in the player auto-scroll. */
   marqueeTitles: boolean;
-  /** Player bottom buttons (queue and devices). */
-  showQueueButton: boolean;
-  showDevicesButton: boolean;
-  /**
-   * The playback speed button, in the middle of the same row. Off by default,
-   * unlike the other two: playing a record at anything other than its own
-   * speed is a thing you go looking for (#151), and the player is a screen
-   * where an unused control costs everybody room.
-   */
-  showSpeedButton: boolean;
+  /** The row under the player's controls: which buttons, in what order. */
+  playerButtons: PlayerButton[];
   /** Seek ±N seconds buttons next to play (0 = hidden). Only 5/10/30: these are the numbered icons that exist in MaterialIcons. */
   seekButtonsSec: number;
   /** "Previous" button behavior (restart track or always go to previous). */
@@ -1077,6 +1106,7 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   setExploreSection: (key: ExploreSectionKey, value: boolean) => void;
   setBottomTab: (key: TabSegment, value: boolean) => void;
   setHomeButton: (key: HomeButtonKey, value: boolean) => void;
+  setPlayerButton: (key: PlayerButtonKey, value: boolean) => void;
   setGridColumns: (key: GridSizeKey, value: number) => void;
   setAccentColor: (value: string, appearance: ThemeMode) => void;
   setThemeMode: (value: ThemePreference) => void;
@@ -1183,9 +1213,7 @@ const DEFAULTS = {
   // Nothing: see `CoverDoubleTapAction`.
   coverDoubleTapAction: 'none' as CoverDoubleTapAction,
   marqueeTitles: true,
-  showQueueButton: true,
-  showDevicesButton: true,
-  showSpeedButton: true,
+  playerButtons: DEFAULT_PLAYER_BUTTONS.map((b) => ({ ...b })),
   seekButtonsSec: 0,
   previousButtonMode: 'restart' as PreviousButtonMode,
   keepPausedOnSkip: false,
@@ -1364,6 +1392,13 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setPlayerButton: (key, value) => {
+    set((s) => ({
+      playerButtons: s.playerButtons.map((x) => (x.key === key ? { ...x, enabled: value } : x)),
+    }));
+    persist(snapshot(get));
+  },
+
   setGridColumns: (key, value) => {
     set({ gridColumns: { ...get().gridColumns, [key]: value } });
     persist(snapshot(get));
@@ -1441,6 +1476,10 @@ export const useSettings = create<SettingsState>((set, get) => ({
           exploreSections?: unknown;
           bottomTabs?: unknown;
           homeButtons?: unknown;
+          playerButtons?: unknown;
+          showQueueButton?: boolean;
+          showDevicesButton?: boolean;
+          showSpeedButton?: boolean;
           lyricsColorBackground?: boolean;
           lyricsOnlineFallback?: boolean;
           playerColorBackground?: boolean;
@@ -1647,6 +1686,19 @@ export const useSettings = create<SettingsState>((set, get) => ({
             homeButtons: DEFAULT_HOME_BUTTONS.map((b) =>
               b.key === 'history' ? { ...b, enabled: false } : { ...b },
             ),
+          });
+        }
+        if (Array.isArray(parsed.playerButtons)) {
+          set({ playerButtons: normalizePlayerButtons(parsed.playerButtons) });
+        } else {
+          // From the three switches there were before: whoever had one of them
+          // off does not find it back. Speed was off unless turned on.
+          const off = new Set<PlayerButtonKey>();
+          if (parsed.showQueueButton === false) off.add('queue');
+          if (parsed.showDevicesButton === false) off.add('devices');
+          if (parsed.showSpeedButton !== true && 'showQueueButton' in parsed) off.add('speed');
+          set({
+            playerButtons: DEFAULT_PLAYER_BUTTONS.map((b) => ({ ...b, enabled: !off.has(b.key) })),
           });
         }
         if (

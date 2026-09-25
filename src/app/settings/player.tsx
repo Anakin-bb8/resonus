@@ -1,9 +1,9 @@
 /** Settings › Player: looks and extras for the playback screen. */
+import { useRouter } from 'expo-router';
 import { ScrollView, Text } from 'react-native';
 
-import { SelectList, SettingsPage, settingsStyles, SwitchList } from '@/components/SettingsUI';
+import { SelectList, SettingRow, SettingsPage, settingsStyles, SwitchList } from '@/components/SettingsUI';
 import { useLocalProfile } from '@/hooks/useLocalProfile';
-import { localHttpAvailable } from '@/lib/localHttp';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
 import { useTheme } from '@/theme';
@@ -39,6 +39,7 @@ export default function PlayerSettings() {
   // mounted while you are on another one, out of reach of anything else.
   useTheme();
   const t = useT();
+  const router = useRouter();
   // Rating is a Subsonic thing: needs a server account and doesn't apply to
   // Jellyfin. It does work offline (queued in the outbox and uploaded on
   // reconnect), so its toggle is also shown offline, same as in the player.
@@ -80,12 +81,6 @@ export default function PlayerSettings() {
   const setLyricsSource = useSettings((s) => s.setLyricsSource);
   const marqueeTitles = useSettings((s) => s.marqueeTitles);
   const setMarqueeTitles = useSettings((s) => s.setMarqueeTitles);
-  const showQueueButton = useSettings((s) => s.showQueueButton);
-  const setShowQueueButton = useSettings((s) => s.setShowQueueButton);
-  const showDevicesButton = useSettings((s) => s.showDevicesButton);
-  const setShowDevicesButton = useSettings((s) => s.setShowDevicesButton);
-  const showSpeedButton = useSettings((s) => s.showSpeedButton);
-  const setShowSpeedButton = useSettings((s) => s.setShowSpeedButton);
   const seekButtonsSec = useSettings((s) => s.seekButtonsSec);
   const setSeekButtonsSec = useSettings((s) => s.setSeekButtonsSec);
   const previousButtonMode = useSettings((s) => s.previousButtonMode);
@@ -217,33 +212,14 @@ export default function PlayerSettings() {
         />
 
         <Text style={settingsStyles.sectionTitle}>{t('Buttons')}</Text>
+        <SettingRow
+          label={t('Bottom row')}
+          description={t('Which buttons are under the controls, and in what order.')}
+          chevron
+          onPress={() => router.push('/settings/player-buttons')}
+        />
         <SwitchList
           options={[
-            {
-              label: t('Show queue button'),
-              value: showQueueButton,
-              onChange: setShowQueueButton,
-            },
-            // Was greyed out without a network and gone in the local profile,
-            // both because a renderer could only be handed a URL on the server.
-            // The phone serves its own files now (`lib/localHttp`), so the only
-            // build where this switches nothing is one without that native
-            // module under a local profile.
-            ...(local && !localHttpAvailable
-              ? []
-              : [
-                  {
-                    label: t('Show devices button'),
-                    value: showDevicesButton,
-                    onChange: setShowDevicesButton,
-                  },
-                ]),
-            {
-              label: t('Show speed button'),
-              description: t('Play the music slower or faster, keeping its pitch.'),
-              value: showSpeedButton,
-              onChange: setShowSpeedButton,
-            },
             {
               label: t('Swap favorite and menu'),
               description: t(

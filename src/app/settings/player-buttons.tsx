@@ -1,0 +1,135 @@
+/**
+ * Settings › Player › Bottom row: the buttons under the player's controls, and
+ * in what order. The same draggable list as the Home buttons, with no
+ * exemption: every one of them has another way in.
+ */
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Icon from '@/components/Icon';
+import { Pressable, Switch, Text, View } from 'react-native';
+import ReorderableList, {
+  useReorderableDrag,
+  type ReorderableListReorderEvent,
+} from 'react-native-reorderable-list';
+
+import { ScreenHeader, SettingsSafeArea } from '@/components/SettingsUI';
+import { useAccent } from '@/hooks/useAccent';
+import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
+import { centredPadding, useScreenSize } from '@/hooks/useScreenSize';
+import { useT } from '@/i18n';
+import { haptic } from '@/lib/haptics';
+import { useSettings, type PlayerButton, type PlayerButtonKey } from '@/store/settings';
+import {
+  colors,
+  fontSize,
+  radius,
+  spacing,
+  SCREEN_BOTTOM_PADDING,
+  themed,
+  useTheme,
+} from '@/theme';
+
+/** The icon each one wears in the player, so the list reads like the row. */
+const BUTTONS: Record<
+  PlayerButtonKey,
+  { label: string; icon: keyof typeof MaterialIcons.glyphMap; description?: string }
+> = {
+  devices: { label: 'Devices', icon: 'devices' },
+  lyrics: { label: 'Lyrics', icon: 'lyrics' },
+  speed: {
+    label: 'Playback speed',
+    icon: 'speed',
+    description: 'Play the music slower or faster, keeping its pitch.',
+  },
+  sleep: { label: 'Sleep timer', icon: 'bedtime' },
+  equalizer: { label: 'Equalizer', icon: 'equalizer' },
+  queue: { label: 'Queue', icon: 'queue-music' },
+};
+
+function ButtonRow({ button }: { button: PlayerButton }) {
+  const t = useT();
+  const drag = useReorderableDrag();
+  const setPlayerButton = useSettings((s) => s.setPlayerButton);
+  const accent = useAccent();
+  const { label, icon, description } = BUTTONS[button.key];
+  return (
+    <View style={styles.row}>
+      <Pressable
+        hitSlop={8}
+        onPressIn={() => {
+          haptic('medium');
+          drag();
+        }}
+        accessibilityRole="button"
+        accessibilityLabel={t('Reorder')}
+      >
+        <Icon name="reorder-two" size={24} color={colors.textSecondary} />
+      </Pressable>
+      <MaterialIcons name={icon} size={22} color={colors.textSecondary} />
+      <View style={styles.text}>
+        <Text style={styles.label}>{t(label)}</Text>
+        {description ? <Text style={styles.description}>{t(description)}</Text> : null}
+      </View>
+      <Switch
+        value={button.enabled}
+        onValueChange={(v) => setPlayerButton(button.key, v)}
+        trackColor={{ false: colors.control, true: accent }}
+        thumbColor={colors.knob}
+      />
+    </View>
+  );
+}
+
+export default function PlayerButtonsSettings() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
+  useTheme();
+  const bottomPad = useScreenBottomPadding();
+  const { width } = useScreenSize();
+  const t = useT();
+  const playerButtons = useSettings((s) => s.playerButtons);
+  const setPlayerButtons = useSettings((s) => s.setPlayerButtons);
+  return (
+    <SettingsSafeArea>
+      <ScreenHeader title={t('Bottom row')} />
+      <Text style={styles.hint}>{t('Drag to reorder, toggle to show or hide.')}</Text>
+      <ReorderableList
+        data={playerButtons}
+        keyExtractor={(item) => item.key}
+        renderItem={({ item }) => <ButtonRow button={item} />}
+        onReorder={({ from, to }: ReorderableListReorderEvent) => {
+          const next = playerButtons.slice();
+          const [moved] = next.splice(from, 1);
+          next.splice(to, 0, moved);
+          setPlayerButtons(next);
+        }}
+        contentContainerStyle={[
+          styles.list,
+          { paddingBottom: bottomPad, paddingHorizontal: centredPadding(width, spacing.lg) },
+        ]}
+      />
+    </SettingsSafeArea>
+  );
+}
+
+const styles = themed((colors) => ({
+  hint: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  list: { paddingHorizontal: spacing.lg, paddingBottom: SCREEN_BOTTOM_PADDING },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+  },
+  text: { flex: 1 },
+  label: { color: colors.text, fontSize: fontSize.md },
+  description: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: 2 },
+}));

@@ -241,14 +241,12 @@ export default function PlayerScreen() {
   const coverTapAction = useSettings((s) => s.coverTapAction);
   const coverDoubleTapAction = useSettings((s) => s.coverDoubleTapAction);
   const marqueeTitles = useSettings((s) => s.marqueeTitles);
-  const showQueueButton = useSettings((s) => s.showQueueButton);
+  const playerButtons = useSettings((s) => s.playerButtons);
   const local = useLocalProfile();
   // The local profile can cast now that the phone serves its own files
   // (`lib/localHttp`), so the only reason left to hide the button there is a
   // build without the native module behind it.
-  const showDevicesButton =
-    useSettings((s) => s.showDevicesButton) && (!local || localHttpAvailable);
-  const showSpeedButton = useSettings((s) => s.showSpeedButton);
+  const canDevices = !local || localHttpAvailable;
   const seekButtonsSec = useSettings((s) => s.seekButtonsSec);
   const serverType = useAuthStore((s) => s.auth?.serverType);
   const hasAccount = useAuthStore((s) => !!s.auth);
@@ -882,7 +880,6 @@ export default function PlayerScreen() {
    * arrives in real time and a renderer plays at its own pace, so there is
    * nothing to offer while either is what is playing.
    */
-  const showSpeed = showSpeedButton || speed !== 1;
   const canSpeed = !song.url && !remoteDevice;
 
   return (
@@ -1380,82 +1377,107 @@ export default function PlayerScreen() {
               !(wantsLyricsCard || wantsArtistCard) && { marginTop: spacing.xl },
             ]}
           >
-            {/* Connected to a remote device it's always shown: it's the only
-                way to disconnect the cast. Never disabled any more: downloads
-                cast from the phone, so offline there is something to send, and
-                going offline mid-cast used to leave the way out barred. */}
-            {showDevicesButton || remoteDevice ? (
-              <Pressable
-                hitSlop={10}
-                accessibilityRole="button"
-                accessibilityLabel={t('Devices')}
-                onPress={() => setOutputOpen(true)}
-                style={styles.deviceRow}
-              >
-                <MaterialIcons
-                  name="devices"
-                  size={26}
-                  color={remoteDevice ? colors.accent : colors.text}
-                />
-                {remoteDevice ? (
-                  <Text style={[styles.deviceName, { color: colors.accent }]} numberOfLines={1}>
-                    {remoteDevice}
-                  </Text>
-                ) : null}
-              </Pressable>
-            ) : null}
-            <Pressable
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel={t('Lyrics')}
-              disabled={!hasLyrics}
-              onPress={() => pushOnce('/lyrics')}
-              style={[styles.bottomButton, !hasLyrics && styles.bottomButtonOff]}
-            >
-              <MaterialIcons name="lyrics" size={26} color={colors.text} />
-            </Pressable>
-            {showSpeed ? (
-              <Pressable
-                hitSlop={10}
-                accessibilityRole="button"
-                accessibilityLabel={t('Playback speed')}
-                disabled={!canSpeed}
-                onPress={() => openSpeedSheet.current()}
-                style={[styles.bottomButton, !canSpeed && styles.bottomButtonOff]}
-              >
-                <MaterialIcons
-                  name="speed"
-                  size={26}
-                  color={speed === 1 ? colors.text : colors.accent}
-                />
-                {/* The number only once it says something, in the accent like
-                    the device name beside its own icon. */}
-                {speed === 1 ? null : <Text style={styles.speedText}>{`${speed}×`}</Text>}
-              </Pressable>
-            ) : null}
-            <SleepButton
-              onPress={() => openMenu(song, undefined, { showLyrics: hasLyrics, sleep: true })}
-            />
-            {/* Nothing behind it yet. */}
-            <Pressable
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel={t('Equalizer')}
-              style={styles.bottomButton}
-            >
-              <MaterialIcons name="equalizer" size={26} color={colors.text} />
-            </Pressable>
-            {showQueueButton ? (
-              <Pressable
-                hitSlop={10}
-                accessibilityRole="button"
-                accessibilityLabel={t('View queue')}
-                onPress={() => pushOnce('/queue')}
-                style={styles.bottomButton}
-              >
-                <MaterialIcons name="queue-music" size={28} color={colors.text} />
-              </Pressable>
-            ) : null}
+            {playerButtons.map(({ key, enabled }) => {
+              switch (key) {
+                case 'devices':
+                  // Connected to a remote device it's always shown: it's the
+                  // only way to disconnect the cast. Never disabled any more:
+                  // downloads cast from the phone, so offline there is
+                  // something to send, and going offline mid-cast used to
+                  // leave the way out barred.
+                  return (enabled && canDevices) || remoteDevice ? (
+                    <Pressable
+                      key={key}
+                      hitSlop={10}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('Devices')}
+                      onPress={() => setOutputOpen(true)}
+                      style={styles.deviceRow}
+                    >
+                      <MaterialIcons
+                        name="devices"
+                        size={26}
+                        color={remoteDevice ? colors.accent : colors.text}
+                      />
+                      {remoteDevice ? (
+                        <Text style={[styles.deviceName, { color: colors.accent }]} numberOfLines={1}>
+                          {remoteDevice}
+                        </Text>
+                      ) : null}
+                    </Pressable>
+                  ) : null;
+                case 'lyrics':
+                  return enabled ? (
+                    <Pressable
+                      key={key}
+                      hitSlop={10}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('Lyrics')}
+                      disabled={!hasLyrics}
+                      onPress={() => pushOnce('/lyrics')}
+                      style={[styles.bottomButton, !hasLyrics && styles.bottomButtonOff]}
+                    >
+                      <MaterialIcons name="lyrics" size={26} color={colors.text} />
+                    </Pressable>
+                  ) : null;
+                case 'speed':
+                  // Also while hidden, as long as the speed is not 1×: a mode
+                  // that is on has to be seen to be turned off.
+                  return enabled || speed !== 1 ? (
+                    <Pressable
+                      key={key}
+                      hitSlop={10}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('Playback speed')}
+                      disabled={!canSpeed}
+                      onPress={() => openSpeedSheet.current()}
+                      style={[styles.bottomButton, !canSpeed && styles.bottomButtonOff]}
+                    >
+                      <MaterialIcons
+                        name="speed"
+                        size={26}
+                        color={speed === 1 ? colors.text : colors.accent}
+                      />
+                      {/* The number only once it says something, in the accent
+                          like the device name beside its own icon. */}
+                      {speed === 1 ? null : <Text style={styles.speedText}>{`${speed}×`}</Text>}
+                    </Pressable>
+                  ) : null;
+                case 'sleep':
+                  return enabled ? (
+                    <SleepButton
+                      key={key}
+                      onPress={() => openMenu(song, undefined, { showLyrics: hasLyrics, sleep: true })}
+                    />
+                  ) : null;
+                case 'equalizer':
+                  // Nothing behind it yet.
+                  return enabled ? (
+                    <Pressable
+                      key={key}
+                      hitSlop={10}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('Equalizer')}
+                      style={styles.bottomButton}
+                    >
+                      <MaterialIcons name="equalizer" size={26} color={colors.text} />
+                    </Pressable>
+                  ) : null;
+                case 'queue':
+                  return enabled ? (
+                    <Pressable
+                      key={key}
+                      hitSlop={10}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('View queue')}
+                      onPress={() => pushOnce('/queue')}
+                      style={styles.bottomButton}
+                    >
+                      <MaterialIcons name="queue-music" size={28} color={colors.text} />
+                    </Pressable>
+                  ) : null;
+              }
+            })}
           </View>
         </View>
         </View>
