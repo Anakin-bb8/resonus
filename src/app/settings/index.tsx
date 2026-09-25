@@ -148,9 +148,10 @@ export default function SettingsScreen({ asTab = false }: { asTab?: boolean }) {
               />
             </View>
           ) : null}
-          {/* In the local profile it's "Exit local mode". Signing out keeps the
-              profile, so this is also how to switch to another one. logout()
-              doesn't need network, so it works offline. */}
+          {/* "Change profile" and not "Sign out": the profile and its password
+              are kept, and this leads to the list of them. Not red, since
+              nothing is lost. In the local profile it's "Exit local mode".
+              logout() doesn't need network, so it works offline. */}
           <Pressable
             accessibilityRole="button"
             style={({ pressed }) => [
@@ -160,9 +161,9 @@ export default function SettingsScreen({ asTab = false }: { asTab?: boolean }) {
             ]}
             onPress={() => logout()}
           >
-            <Icon name="log-out-outline" size={22} color={colors.danger} />
-            <Text style={[settingsStyles.rowLabel, styles.danger]}>
-              {offline && !auth ? t('Exit local mode') : t('Sign out')}
+            <Icon name="people-outline" size={22} color={colors.textSecondary} />
+            <Text style={settingsStyles.rowLabel}>
+              {offline && !auth ? t('Exit local mode') : t('Change profile')}
             </Text>
           </Pressable>
         </View>
@@ -207,7 +208,6 @@ const styles = themed((colors) => ({
   avatarText: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '500' },
   profileName: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
   flex: { flex: 1 },
-  danger: { color: colors.danger },
   sectionRow: {
     flexDirection: 'row',
     alignItems: 'center',

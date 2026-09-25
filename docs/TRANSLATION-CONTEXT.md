@@ -576,13 +576,13 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
+| `Change profile` | Go back to the list of saved profiles. The password is kept, so nothing has to be typed again |
 | `Exit local mode` | Leave the profile that plays the phone's own files |
 | `Local profile` | The on-device profile, with no server account. Its library screen is `Local music` |
 | `Music on your device` | Signing in to nothing at all and playing the phone's own files |
 | `Offline · your downloads` | Settings subtitle shown in offline mode |
 | `Offline mode` | The app working with no server: downloads only |
 | `Settings` | The app's settings, and the button that opens them |
-| `Sign out` | Leave the account. Its downloads stay on the phone |
 
 ## Settings › About
 

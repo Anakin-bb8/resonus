@@ -12,6 +12,7 @@ Releases before 0.2.1 are only listed on the
 ### Added
 
 - Settings > Player > Bottom row can spread the buttons under the player controls across the width with equal gaps, instead of grouping them in the middle.
+- Sign out in Settings is now Change profile, since the password is kept and the next screen is the list of saved profiles.
 
 ### Fixed
 
