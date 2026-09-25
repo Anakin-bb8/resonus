@@ -11,10 +11,13 @@ import { queryClient } from '@/lib/query';
 import { getItem, setItem } from '@/lib/storage';
 import {
   applyAccents,
+  applyBackgroundTint,
   applyPureBlack,
+  BACKGROUND_TINTS,
   applyThemePreference,
   DEFAULT_ACCENT,
   isThemePreference,
+  type BackgroundTint,
   type ThemeMode,
   type ThemePreference,
 } from '@/theme';
@@ -776,7 +779,8 @@ type CustomSetter =
   | 'setGridColumns'
   | 'setAccentColor'
   | 'setThemeMode'
-  | 'setPureBlack';
+  | 'setPureBlack'
+  | 'setBackgroundTint';
 
 interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   /** Streaming quality over Wi-Fi (and any non-cellular network). */
@@ -1090,6 +1094,8 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   themeMode: ThemePreference;
   /** True black instead of dark grey in the dark appearance (OLED). */
   pureBlack: boolean;
+  /** The hue in the dark appearance's greys. */
+  backgroundTint: BackgroundTint;
   /** UI font (system font family; `system` = default). */
   appFont: AppFont;
   /** Loaded custom font family name (the key passed to `Font.loadAsync`). */
@@ -1114,6 +1120,7 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   setAccentColor: (value: string, appearance: ThemeMode) => void;
   setThemeMode: (value: ThemePreference) => void;
   setPureBlack: (value: boolean) => void;
+  setBackgroundTint: (value: BackgroundTint) => void;
   setCustomFont: (fontFamily: string | null, uri: string | null) => void;
   /** Resets to factory defaults (language is preserved). */
   resetToDefaults: () => void;
@@ -1286,6 +1293,7 @@ const DEFAULTS = {
   // Dark: the appearance the app was designed in. Light is opt-in.
   themeMode: 'dark' as ThemePreference,
   pureBlack: false,
+  backgroundTint: 'blue' as BackgroundTint,
   appFont: 'system' as AppFont,
   customFontFamily: null as string | null,
   customFontUri: null as string | null,
@@ -1425,6 +1433,12 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setBackgroundTint: (backgroundTint) => {
+    applyBackgroundTint(backgroundTint);
+    set({ backgroundTint });
+    persist(snapshot(get));
+  },
+
   setCustomFont: (fontFamily, uri) => {
     set({ customFontFamily: fontFamily, customFontUri: uri });
     persist(snapshot(get));
@@ -1436,6 +1450,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
     applyAccents(DEFAULT_ACCENT, DEFAULT_ACCENT);
     applyThemePreference(DEFAULTS.themeMode);
     applyPureBlack(DEFAULTS.pureBlack);
+    applyBackgroundTint(DEFAULTS.backgroundTint);
     persist(snapshot(get));
   },
 
@@ -1467,6 +1482,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
       applyAccents(DEFAULT_ACCENT, DEFAULT_ACCENT);
       applyThemePreference(DEFAULTS.themeMode);
       applyPureBlack(DEFAULTS.pureBlack);
+    applyBackgroundTint(DEFAULTS.backgroundTint);
       applied = true;
       if (raw) {
         // Typed as what this version writes, plus the earlier shapes that are
@@ -1778,6 +1794,10 @@ export const useSettings = create<SettingsState>((set, get) => ({
         if (typeof parsed.pureBlack === 'boolean') {
           set({ pureBlack: parsed.pureBlack });
           applyPureBlack(parsed.pureBlack);
+        }
+        if (typeof parsed.backgroundTint === 'string' && parsed.backgroundTint in BACKGROUND_TINTS) {
+          set({ backgroundTint: parsed.backgroundTint });
+          applyBackgroundTint(parsed.backgroundTint);
         }
         if (parsed.appFont && (parsed.appFont in APP_FONT_FAMILY || parsed.appFont === 'custom')) {
           set({ appFont: parsed.appFont });

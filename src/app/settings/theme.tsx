@@ -15,7 +15,62 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SelectList, SettingsPage, settingsStyles, SwitchList } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
 import { ACCENT_OPTIONS, useSettings } from '@/store/settings';
-import { fontSize, radius, spacing, themed, type ThemePreference, useThemeMode } from '@/theme';
+import {
+  BACKGROUND_TINTS,
+  fontSize,
+  radius,
+  spacing,
+  themed,
+  type BackgroundTint,
+  type ThemePreference,
+  useThemeMode,
+} from '@/theme';
+
+/** In the order they are offered, the default first. */
+const TINTS: { key: BackgroundTint; name: string }[] = [
+  { key: 'blue', name: 'Blue' },
+  { key: 'neutral', name: 'Neutral' },
+  { key: 'purple', name: 'Purple' },
+  { key: 'green', name: 'Green' },
+  { key: 'warm', name: 'Warm' },
+];
+
+/** The dark appearance's backgrounds, each drawn as the card grey it gives. */
+function TintSwatches({
+  value,
+  onPick,
+  dimmed,
+}: {
+  value: BackgroundTint;
+  onPick: (tint: BackgroundTint) => void;
+  dimmed: boolean;
+}) {
+  const t = useT();
+  return (
+    <View style={[styles.swatches, dimmed && styles.dimmed]}>
+      {TINTS.map(({ key, name }) => {
+        const active = key === value;
+        return (
+          <Pressable
+            key={key}
+            onPress={() => onPick(key)}
+            accessibilityRole="button"
+            accessibilityLabel={t(name)}
+            accessibilityState={{ selected: active }}
+            style={[
+              styles.swatch,
+              styles.tintSwatch,
+              { backgroundColor: BACKGROUND_TINTS[key].surfaceHighlight },
+              active && styles.swatchActive,
+            ]}
+          >
+            {active ? <Icon name="checkmark" size={24} color="#FFF" /> : null}
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
 
 /** The row of colours. Which appearance it is picking for is the one on screen;
  *  see the note where it is used. */
@@ -60,6 +115,8 @@ export default function ThemeSettings() {
   const setThemeMode = useSettings((s) => s.setThemeMode);
   const pureBlack = useSettings((s) => s.pureBlack);
   const setPureBlack = useSettings((s) => s.setPureBlack);
+  const backgroundTint = useSettings((s) => s.backgroundTint);
+  const setBackgroundTint = useSettings((s) => s.setBackgroundTint);
 
   return (
     <SettingsPage title={t('Theme')}>
@@ -90,6 +147,16 @@ export default function ThemeSettings() {
               onChange: setPureBlack,
             },
           ]}
+        />
+
+        {/* Still pickable in light or with pure black, for when the app is
+            next dark; dimmed so it is clear it is not what is on screen. */}
+        <Text style={[styles.label, styles.secondLabel]}>{t('Background')}</Text>
+        <Text style={styles.hint}>{t('The shade of the dark appearance, without pure black.')}</Text>
+        <TintSwatches
+          value={backgroundTint}
+          onPick={setBackgroundTint}
+          dimmed={mode === 'light' || pureBlack}
         />
 
         {/* One row, and it belongs to the appearance you are looking at: each
@@ -124,4 +191,7 @@ const styles = themed((colors) => ({
     justifyContent: 'center',
   },
   swatchActive: { borderWidth: 3, borderColor: colors.text },
+  tintSwatch: { borderWidth: 1, borderColor: colors.textMuted },
+  dimmed: { opacity: 0.4 },
+  hint: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: -spacing.sm, marginBottom: spacing.md },
 }));

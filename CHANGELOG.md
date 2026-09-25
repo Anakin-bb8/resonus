@@ -13,6 +13,7 @@ Releases before 0.2.1 are only listed on the
 
 - Settings > Theme > Pure black puts the dark appearance on a true black background, for OLED screens.
 - A gray accent colour, after the rest in Settings > Theme.
+- Settings > Theme > Background picks the shade of the dark appearance: blue, the new default, the neutral grey from before, purple, green or warm.
 - The navigation bar, the mini player and the bar at the top of albums, playlists and artists blur what scrolls under them, with a hairline marking where the navigation bar starts, on iOS and on Android 12 or newer, and Settings > Appearance > Blur behind the bars turns it off.
 - Swiping the mini player up brings the player up with your finger, and letting go early sends it back down.
 - Settings can be a tab in the navigation bar, turned on in Settings > Appearance > Navigation bar.

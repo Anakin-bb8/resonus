@@ -185,6 +185,84 @@ const DARK: BasePalette = {
 };
 
 /**
+ * The tints the dark appearance can take (Settings › Theme › Background): the
+ * greys that carry it, each with a touch of one hue. Blue is the default;
+ * neutral is the plain grey the app had before it.
+ */
+export type BackgroundTint = 'blue' | 'neutral' | 'purple' | 'green' | 'warm';
+
+type TintGreys = Pick<
+  BasePalette,
+  | 'background'
+  | 'surface'
+  | 'surfaceHighlight'
+  | 'border'
+  | 'control'
+  | 'snackbar'
+  | 'veil'
+  | 'textSecondary'
+  | 'textMuted'
+>;
+
+export const BACKGROUND_TINTS: Record<BackgroundTint, TintGreys> = {
+  blue: {
+    background: '#141619',
+    surface: '#1E2026',
+    surfaceHighlight: '#2A2C33',
+    border: '#2B2D34',
+    control: '#2B2D34',
+    snackbar: '#30323A',
+    veil: 'rgba(20,22,25,0.6)',
+    textSecondary: '#A0A3AB',
+    textMuted: '#72757D',
+  },
+  neutral: {
+    background: '#121212',
+    surface: '#1C1C1C',
+    surfaceHighlight: '#282828',
+    border: '#2A2A2A',
+    control: '#2A2A2A',
+    snackbar: '#2E2E2E',
+    veil: 'rgba(18,18,18,0.6)',
+    textSecondary: '#B3B3B3',
+    textMuted: '#727272',
+  },
+  purple: {
+    background: '#17141C',
+    surface: '#211D27',
+    surfaceHighlight: '#2E2935',
+    border: '#302B37',
+    control: '#302B37',
+    snackbar: '#34303B',
+    veil: 'rgba(23,20,28,0.6)',
+    textSecondary: '#A7A1B0',
+    textMuted: '#78727F',
+  },
+  green: {
+    background: '#131815',
+    surface: '#1C221E',
+    surfaceHighlight: '#28302A',
+    border: '#2A322C',
+    control: '#2A322C',
+    snackbar: '#2F3731',
+    veil: 'rgba(19,24,21,0.6)',
+    textSecondary: '#9FA8A2',
+    textMuted: '#717A74',
+  },
+  warm: {
+    background: '#181512',
+    surface: '#221E1A',
+    surfaceHighlight: '#2F2A25',
+    border: '#312C27',
+    control: '#312C27',
+    snackbar: '#36312B',
+    veil: 'rgba(24,21,18,0.6)',
+    textSecondary: '#AAA39B',
+    textMuted: '#7B746D',
+  },
+};
+
+/**
  * The dark appearance on true black, for OLED screens ("Pure black" in
  * Settings › Theme). Everything that is not the page steps down with it, so
  * cards and chips keep the same distance from the background they had.
@@ -313,6 +391,7 @@ let currentMode: ThemeMode = 'dark';
 let darkAccent = DEFAULT_ACCENT;
 let lightAccent = DEFAULT_ACCENT;
 let pureBlack = false;
+let tint: BackgroundTint = 'blue';
 
 /** Which appearance is active right now (for code outside a component). */
 export function themeMode(): ThemeMode {
@@ -340,7 +419,7 @@ function subscribe(listener: () => void): () => void {
 /** Rebuilds `colors` from the current mode + accent and wakes everyone up. */
 function rebuild(): void {
   const light = currentMode === 'light';
-  const base = light ? LIGHT : pureBlack ? BLACK : DARK;
+  const base = light ? LIGHT : pureBlack ? BLACK : { ...DARK, ...BACKGROUND_TINTS[tint] };
   const picked = light ? lightAccent : darkAccent;
   // On white the accent has to be dark enough to read as text; on near-black
   // it is already fine as picked. `onAccent` follows from that: black on the
@@ -370,6 +449,13 @@ export function applyAccents(dark: string, light: string): void {
 export function applyPureBlack(on: boolean): void {
   if (on === pureBlack) return;
   pureBlack = on;
+  rebuild();
+}
+
+/** The tint of the dark appearance's greys; true black and light ignore it. */
+export function applyBackgroundTint(next: BackgroundTint): void {
+  if (next === tint) return;
+  tint = next;
   rebuild();
 }
 
