@@ -399,7 +399,7 @@ export const DEFAULT_HOME_SECTIONS: HomeSection[] = [
   { key: 'recentlyPlayed', enabled: true },
   { key: 'mostPlayed', enabled: true },
   { key: 'mostPlayedSongs', enabled: true },
-  { key: 'randomSongs', enabled: false },
+  { key: 'randomSongs', enabled: true },
   { key: 'randomAlbums', enabled: true },
   { key: 'randomArtists', enabled: true },
 ];
