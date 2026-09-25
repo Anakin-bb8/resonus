@@ -343,7 +343,7 @@ const styles = themed((colors) => ({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  title: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '600' },
+  title: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '500' },
   searchRow: {
     height: SEARCH_H,
     flexDirection: 'row',
@@ -364,7 +364,7 @@ const styles = themed((colors) => ({
     borderRadius: radius.pill,
   },
   input: { flex: 1, color: colors.text, fontSize: fontSize.md, paddingVertical: 0 },
-  searchCancel: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
+  searchCancel: { color: colors.text, fontSize: fontSize.sm, fontWeight: '500' },
   headerAction: { width: 26, alignItems: 'flex-end' },
 
   list: {

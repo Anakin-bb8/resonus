@@ -83,13 +83,13 @@ const styles = themed((colors) => ({
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
   },
-  heading: { color: colors.text, fontSize: fontSize.xxl, letterSpacing: tracking.display, fontWeight: '600' },
+  heading: { color: colors.text, fontSize: fontSize.xxl, letterSpacing: tracking.display, fontWeight: '400' },
   setup: { paddingHorizontal: spacing.lg, gap: spacing.md, marginTop: spacing.lg },
   setupTitle: {
     color: colors.text,
     fontSize: fontSize.lg,
     letterSpacing: tracking.heading,
-    fontWeight: '700',
+    fontWeight: '500',
     marginBottom: spacing.sm,
   },
   option: {
@@ -100,6 +100,6 @@ const styles = themed((colors) => ({
     borderRadius: radius.md,
     padding: spacing.lg,
   },
-  optionTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
+  optionTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
   optionSub: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: 2 },
 }));

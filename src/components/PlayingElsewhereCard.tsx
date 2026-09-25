@@ -271,11 +271,11 @@ const styles = themed((colors) => ({
   heading: {
     color: colors.textSecondary,
     fontSize: fontSize.xs,
-    fontWeight: '600',
+    fontWeight: '500',
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
-  title: { color: colors.text, fontSize: fontSize.md, fontWeight: '700', marginTop: 2 },
+  title: { color: colors.text, fontSize: fontSize.md, fontWeight: '500', marginTop: 2 },
   subtitle: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: 2 },
   play: {
     width: 52,

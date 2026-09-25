@@ -44,7 +44,7 @@ export function AudioQualityBadge({ song }: { song: Song }) {
 
 const styles = themed((colors) => ({
   badge: {
-    color: colors.textMuted,
+    color: colors.textSecondary,
     fontSize: fontSize.xs,
     fontWeight: '500',
   },

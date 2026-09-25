@@ -1,12 +1,12 @@
 /**
- * Spotify-style Settings: the account at the top as a profile row (avatar +
- * name + server), categories as flat rows, and the mode and sign out pills at
- * the bottom. Restoring every setting is in About: sitting here it looked like
+ * Spotify-style Settings: the account at the top as a card (avatar, name and
+ * server, the offline switch and signing out), then the categories as flat
+ * rows. Restoring every setting is in About: sitting here it looked like
  * one more category and was a tap away from the button that goes offline.
  */
 import Icon from '@/components/Icon';
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
 
 import { ScreenHeader, SettingsSafeArea, settingsStyles } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
@@ -24,7 +24,6 @@ export default function SettingsScreen({ asTab = false }: { asTab?: boolean }) {
   const router = useRouter();
   const t = useT();
   const auth = useAuthStore((s) => s.auth);
-  // The avatar ring reads the store's accent to recolor when changed.
   const { accent: accentColor } = useTheme();
   useSettings((s) => s.appFont); // re-render when font changes
   const logout = useAuthStore((s) => s.logout);
@@ -114,16 +113,58 @@ export default function SettingsScreen({ asTab = false }: { asTab?: boolean }) {
           `SettingsPage`; this one draws its own header, so it says it here. */}
       <View style={settingsStyles.pane}>
       <ScrollView contentContainerStyle={settingsStyles.content}>
-        <View style={styles.profileRow}>
-          <View style={[styles.avatar, { borderColor: accentColor }]}>
-            <Text style={styles.avatarText}>{initial}</Text>
+        <View style={[settingsStyles.cardBox, styles.accountCard]}>
+          <View style={[settingsStyles.row, styles.profileRow]}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{initial}</Text>
+            </View>
+            <View style={settingsStyles.rowLabelBox}>
+              <Text style={styles.profileName}>{name}</Text>
+              <Text style={settingsStyles.rowDescription} numberOfLines={1}>
+                {detail}
+              </Text>
+            </View>
           </View>
-          <View style={settingsStyles.rowLabelBox}>
-            <Text style={styles.profileName}>{name}</Text>
-            <Text style={settingsStyles.rowDescription} numberOfLines={1}>
-              {detail}
+          {/* A mode, so a switch: it says whether it is on as well as turning
+              it on. Only with something to go offline to, or while offline
+              already, to come back. Either way the library reloads, so Home. */}
+          {auth && (serverOffline || hasDownloads) ? (
+            <View style={[settingsStyles.row, settingsStyles.rowBorder]}>
+              <Icon name="cloud-offline-outline" size={22} color={colors.textSecondary} />
+              <Text style={[settingsStyles.rowLabel, styles.flex]}>{t('Offline mode')}</Text>
+              <Switch
+                value={serverOffline}
+                onValueChange={(on) => {
+                  if (on) {
+                    void goOffline(false);
+                    toast(t('Offline'));
+                  } else {
+                    void goOnline();
+                  }
+                  router.replace('/(tabs)');
+                }}
+                trackColor={{ false: colors.control, true: accentColor }}
+                thumbColor={colors.knob}
+              />
+            </View>
+          ) : null}
+          {/* In the local profile it's "Exit local mode". Signing out keeps the
+              profile, so this is also how to switch to another one. logout()
+              doesn't need network, so it works offline. */}
+          <Pressable
+            accessibilityRole="button"
+            style={({ pressed }) => [
+              settingsStyles.row,
+              settingsStyles.rowBorder,
+              pressed && { opacity: 0.6 },
+            ]}
+            onPress={() => logout()}
+          >
+            <Icon name="log-out-outline" size={22} color={colors.danger} />
+            <Text style={[settingsStyles.rowLabel, styles.danger]}>
+              {offline && !auth ? t('Exit local mode') : t('Sign out')}
             </Text>
-          </View>
+          </Pressable>
         </View>
 
         {sections.map((s) => (
@@ -145,48 +186,6 @@ export default function SettingsScreen({ asTab = false }: { asTab?: boolean }) {
           </Pressable>
         ))}
 
-        <View style={styles.sessionRow}>
-          {/* MODE action (outline pill, left): same placement online and offline.
-              Online with downloads: go offline manually; server offline: go back
-              online. Both reload the library, so they navigate to Home. */}
-          {!offline && auth && hasDownloads ? (
-            <Pressable
-              style={({ pressed }) => [styles.offlinePill, pressed && { opacity: 0.6 }]}
-              onPress={() => {
-                void goOffline(false);
-                toast(t('Offline'));
-                router.replace('/(tabs)');
-              }}
-            >
-              <Icon name="cloud-offline-outline" size={18} color={colors.onInverse} />
-              <Text style={styles.offlinePillText}>{t('Offline mode')}</Text>
-            </Pressable>
-          ) : serverOffline ? (
-            <Pressable
-              style={({ pressed }) => [styles.offlinePill, pressed && { opacity: 0.6 }]}
-              onPress={() => {
-                void goOnline();
-                router.replace('/(tabs)');
-              }}
-            >
-              <Icon name="cloud-outline" size={18} color={colors.onInverse} />
-              <Text style={styles.offlinePillText}>{t('Back online')}</Text>
-            </Pressable>
-          ) : null}
-
-          {/* Sign out (dark outline pill + icon): same style and position online
-              and offline. In local profile it's "Exit local mode". logout()
-              doesn't need network, so it works offline. */}
-          <Pressable
-            style={({ pressed }) => [styles.offlinePill, pressed && { opacity: 0.6 }]}
-            onPress={() => logout()}
-          >
-            <Icon name="log-out-outline" size={18} color={colors.onInverse} />
-            <Text style={styles.offlinePillText}>
-              {offline && !auth ? t('Exit local mode') : t('Sign out')}
-            </Text>
-          </Pressable>
-        </View>
       </ScrollView>
       </View>
     </SettingsSafeArea>
@@ -194,51 +193,26 @@ export default function SettingsScreen({ asTab = false }: { asTab?: boolean }) {
 }
 
 const styles = themed((colors) => ({
-  profileRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  // Same avatar as the Home header (accent ring) for consistency.
+  accountCard: { marginBottom: spacing.md },
+  profileRow: { paddingVertical: spacing.lg },
+  // No ring: the card is what sets the account apart now.
   avatar: {
     width: 44,
     height: 44,
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceHighlight,
-    borderWidth: 2,
-    borderColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '700' },
-  profileName: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
+  avatarText: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '500' },
+  profileName: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
+  flex: { flex: 1 },
+  danger: { color: colors.danger },
   sectionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     paddingVertical: spacing.md + 2,
   },
-  sectionRowTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '600', flex: 1 },
-  // Row with session actions (manual offline + exit), centered.
-  sessionRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginTop: spacing.lg,
-  },
-  // Solid pill for session actions (mode toggle and sign out): the page's own
-  // text colour as a fill, so it reads as the loudest thing on the screen in
-  // either appearance.
-  offlinePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    borderRadius: radius.pill,
-    backgroundColor: colors.text,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  offlinePillText: { color: colors.onInverse, fontSize: fontSize.sm, fontWeight: '600' },
+  sectionRowTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '500', flex: 1 },
 }));

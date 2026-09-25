@@ -69,7 +69,7 @@ const styles = themed((colors) => ({
     alignItems: 'center',
   },
   pillRow: { flexDirection: 'row', gap: spacing.lg },
-  text: { color: colors.onSnackbar, fontSize: fontSize.sm, fontWeight: '600' },
+  text: { color: colors.onSnackbar, fontSize: fontSize.sm, fontWeight: '500' },
   textLeft: { flex: 1 },
-  action: { fontSize: fontSize.sm, fontWeight: '700' },
+  action: { fontSize: fontSize.sm, fontWeight: '600' },
 }));

@@ -149,7 +149,7 @@ const styles = themed((colors) => ({
     paddingVertical: spacing.md,
     gap: spacing.md,
   },
-  title: { flex: 1, color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '600', textAlign: 'center' },
+  title: { flex: 1, color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '500', textAlign: 'center' },
   list: { paddingHorizontal: spacing.lg, paddingBottom: SCREEN_BOTTOM_PADDING },
   // Same rhythm as TrackRow so folders and songs line up when a directory
   // holds both.
@@ -161,7 +161,7 @@ const styles = themed((colors) => ({
   },
   pressed: { opacity: 0.6 },
   dirInfo: { flex: 1 },
-  dirName: { color: colors.text, fontSize: fontSize.md, fontWeight: '600' },
+  dirName: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
   // The year of an album folder, under its name: the folder view sorts by it,
   // and until now there was no way to see it (#97).
   dirYear: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2 },

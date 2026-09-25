@@ -163,7 +163,7 @@ const styles = themed((colors) => ({
   // Room to shrink: a long order name gives way to the buttons rather than
   // pushing them off the edge.
   sort: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1 },
-  sortText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '600' },
+  sortText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '500' },
   playRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   // Same measurements as `TrackListView`, which is what an album and a playlist
   // put in this corner.

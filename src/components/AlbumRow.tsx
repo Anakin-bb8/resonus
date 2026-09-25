@@ -75,7 +75,7 @@ export function AlbumRow({ album, pinned }: Props) {
 const styles = themed((colors) => ({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   info: { flex: 1 },
-  name: { color: colors.text, fontSize: fontSize.md, fontWeight: '600' },
+  name: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
   subLine: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   sub: { color: colors.textSecondary, fontSize: fontSize.xs, flexShrink: 1 },
   // The MCI pin icon is vertical; rotated 45° it looks like Spotify's.

@@ -77,5 +77,5 @@ const styles = themed((colors) => ({
   list: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, gap: spacing.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   rowInfo: { flex: 1 },
-  rowTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '600' },
+  rowTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
 }));

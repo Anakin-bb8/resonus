@@ -239,6 +239,6 @@ const styles = themed((colors) => ({
   grid: { paddingHorizontal: spacing.lg, gap: GAP },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   rowInfo: { flex: 1 },
-  rowTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '600' },
+  rowTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
   rowSub: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2 },
 }));

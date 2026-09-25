@@ -267,7 +267,7 @@ const sheetStyles = themed((colors) => ({
     color: colors.text,
     fontSize: fontSize.lg,
     letterSpacing: tracking.heading,
-    fontWeight: '700',
+    fontWeight: '500',
     marginBottom: spacing.xs,
   },
   option: {
@@ -278,6 +278,6 @@ const sheetStyles = themed((colors) => ({
     borderRadius: radius.md,
     padding: spacing.lg,
   },
-  optionTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
+  optionTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
   optionSub: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: 2 },
 }));

@@ -711,7 +711,7 @@ const styles = themed((colors) => ({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  title: { flex: 1, color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '600' },
+  title: { flex: 1, color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '500' },
   // Under the title and to the same margin, like the meta line of an album or
   // a playlist.
   meta: {
@@ -748,7 +748,7 @@ const styles = themed((colors) => ({
   chipText: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,
-    fontWeight: '600',
+    fontWeight: '500',
     includeFontPadding: false,
     textAlignVertical: 'center',
   },
@@ -769,7 +769,7 @@ const styles = themed((colors) => ({
   downloadProgress: {
     color: colors.accent,
     fontSize: fontSize.xs,
-    fontWeight: '600',
+    fontWeight: '500',
     minWidth: 32,
   },
   // Same measurements as `TrackListView`, which is what an album and a playlist

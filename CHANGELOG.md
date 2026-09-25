@@ -9,9 +9,13 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.7.9] - 2026-09-25
+
 ### Added
 
 - Settings > Theme > Pure black puts the dark appearance on a true black background, for OLED screens.
+- A gray accent colour, after the rest in Settings > Theme.
+- Settings > Theme > Background picks the shade of the greys in the dark and light appearances: blue, the new default, the neutral grey from before, purple, green, warm, teal, rose or olive.
 - The navigation bar, the mini player and the bar at the top of albums, playlists and artists blur what scrolls under them, with a hairline marking where the navigation bar starts, on iOS and on Android 12 or newer, and Settings > Appearance > Blur behind the bars turns it off.
 - Swiping the mini player up brings the player up with your finger, and letting go early sends it back down.
 - Settings can be a tab in the navigation bar, turned on in Settings > Appearance > Navigation bar.
@@ -26,14 +30,19 @@ Releases before 0.2.1 are only listed on the
 ### Changed
 
 - New icons throughout the app, from Phosphor.
-- Big titles and section headings sit a little tighter.
+- Text is lighter throughout the app, with only action buttons left semibold, and the dark theme sits on greys with a touch of blue instead of neutral ones.
 - Album and playlist headers carry more of the cover's colour, further down the page, and the player lets more of it through behind the controls.
 - The navigation bar stays on every screen by default; Settings > Appearance > Always show the navigation bar turns it back to the tabs only.
 - The chips at the top of Home scroll away with the page instead of staying on screen.
 - The mini player floats as a card, with rounder corners, a soft shadow and a little air above the navigation bar.
 - The quick access tiles at the top of Home have rounder corners, with the cover flush against them.
 - Settings cards have rounder corners, and the lines between their rows are finer and start where the text does.
+- The account at the top of Settings is a card, with offline mode as a switch and signing out as a row in it, instead of the two black buttons at the bottom, and the category names are lighter.
 - Search boxes are fully rounded throughout the app, like the one for adding songs to a playlist.
+- Home shows its name next to the buttons at the top, like Explore and Your library, and the greeting starts off.
+- Search opens on your recent searches instead of the genres, which stay in Explore, and says what it searches when there are none yet.
+- The row under the player controls has lyrics, playback speed and a sleep timer that shows the minutes left, next to devices and the queue, and Settings > Player > Bottom row turns each one on or off and puts them in any order.
+- The play button and the progress bar take the hue of the background shade chosen in Settings > Theme, and on the light theme the controls are a deep tone of it instead of black.
 
 ### Fixed
 
@@ -41,6 +50,7 @@ Releases before 0.2.1 are only listed on the
 - A car connected by Bluetooth gets each song's cover along with its title, instead of only for the first song (#139).
 - A long title on the queue screen, like the German one, no longer runs under the buttons next to it (#232).
 - On iOS the lock screen and the Dynamic Island show the song's length and progress while the server transcodes it, instead of --:--.
+- A suggested track previewed in a playlist stops when you leave the playlist, put the app in the background or play something else, instead of playing on with no way to stop it (#234).
 
 ## [0.7.8] - 2026-09-23
 

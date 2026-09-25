@@ -150,7 +150,7 @@ const styles = themed((colors) => ({
   label: {
     color: colors.onSnackbar,
     fontSize: fontSize.xs,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   row: {
     flexDirection: 'row',

@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 758 of them.
+Every string the app can show, under the screen it shows up on. 760 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -39,6 +39,7 @@ you are actually typing into, which is easier than reading it here.
 | `Android may stop playback in the background, interrupt downloads or delay the sleep timer. Allowing unrestricted battery use fixes it.` |  |
 | `Artist` | In search results, the little word under a result saying what kind of thing it is |
 | `Artists` | A heading over a list of them, never a count |
+| `Back online` | The toast shown when the server answers again and the app comes out of offline mode |
 | `Battery optimization is on` | Title of the card warning that Android may cut playback off |
 | `BPM` | A property of the audio: beats per minute |
 | `Channels` | A property of the audio: mono, stereo |
@@ -306,12 +307,14 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `another device` |  |
+| `Back online` | The toast shown when the server answers again and the app comes out of offline mode |
 | `Couldn't reach the server. Check your connection.` | Error on Home when the server does not answer at all |
 | `Discover` | Home section: discovery suggestions |
 | `Good afternoon` | Home's greeting. The hours it changes at are part of the language too, see TRANSLATING.md |
 | `Good evening` | Home's greeting. The hours it changes at are part of the language too, see TRANSLATING.md |
 | `Good morning` | Home's greeting. The hours it changes at are part of the language too, see TRANSLATING.md |
 | `Good night` | Home's greeting, for the small hours. Spanish uses the same words as for the evening, which is fine |
+| `Home` | The first tab, and a folder in the car |
 | `Left on {player}` | Same card, when that app is no longer playing but its queue is the last one saved: where the person left off. {player} is the app's name |
 | `Loading covers…` | Still pulling the pictures out of the phone's own files |
 | `Looking for music…` | Reading the phone's own files, before anything can be shown |
@@ -444,6 +447,7 @@ you are actually typing into, which is easier than reading it here.
 | `Searching for devices…` | In the output sheet: looking for speakers and TVs to cast to |
 | `Server speakers (Jukebox)` | Playing out of the speakers attached to the server itself, rather than the phone. Subsonic calls this jukebox mode |
 | `Show cover` | Lyrics screen: the button that goes back to the cover art |
+| `Sleep timer` | Stop playing after a while, for falling asleep to |
 | `This phone` | The on-device profile, with no server account |
 | `View queue` | Read out by the screen reader for the button that opens the queue |
 
@@ -563,7 +567,9 @@ you are actually typing into, which is easier than reading it here.
 | `Couldn't reach the server. Check your connection.` | Error on Home when the server does not answer at all |
 | `Radio` | Internet radio stations. Most languages keep the word |
 | `Recent searches` | What was searched for before, kept on the phone |
+| `Search your music` |  |
 | `Song` | In search results, the little word under a result saying what kind of thing it is |
+| `Songs, albums, artists and playlists. What you open from here is kept for next time.` |  |
 | `What do you want to listen to?` | The placeholder in the search box, worded as a question |
 
 ## Settings
@@ -808,6 +814,7 @@ you are actually typing into, which is easier than reading it here.
 | `Address added` | Toast |
 | `Address updated` | Toast |
 | `Automatic URL switching` | Try the addresses and use whichever answers, so leaving the house needs nothing done by hand |
+| `Back online` | The toast shown when the server answers again and the app comes out of offline mode |
 | `Couldn't reach this address with your account.` | Validation message: nothing answered there, or the account was refused |
 | `Current server address` | The one being used right now, of those |
 | `Edit server address` | Title of the same dialog when changing one |
@@ -934,6 +941,7 @@ you are actually typing into, which is easier than reading it here.
 | `Animated cover background` | A setting: an animated cover (GIF, animated WebP) is shown full screen behind the player instead of inside the square |
 | `Background` | Section header over what is drawn behind the player. Its two values are `Plain` and `Blurred cover` |
 | `Blurred cover` | A value of `Background`: the album art, blurred, behind the player |
+| `Bottom row` |  |
 | `Buttons` | Which player buttons to show |
 | `Colored mini player` | Tint the mini player with the colour of the cover art |
 | `Cover art` | Three places, one word: a section header in Settings › Player, a line of the storage bar in Settings › Downloads, and what the screen reader calls the picture in the song information sheet |
@@ -955,7 +963,6 @@ you are actually typing into, which is easier than reading it here.
 | `Open lyrics screen` | A value of `On cover tap` |
 | `Plain` | A value of `Background`: a flat colour behind the player, no picture |
 | `Play or pause` | One of its options: the same as the play button |
-| `Play the music slower or faster, keeping its pitch.` | The line under “Show speed button”, explaining it |
 | `Player` |  |
 | `Player background` | What is drawn behind the player: the blurred artwork, or a flat tint |
 | `Prefer local lyrics` | A value of `Lyrics source`: use the ones that came with the file first |
@@ -968,15 +975,12 @@ you are actually typing into, which is easier than reading it here.
 | `Show a star rating bar to rate the current song.` | The line under “Show rating”, explaining it |
 | `Show album & year` |  |
 | `Show artist card` |  |
-| `Show devices button` |  |
 | `Show format and bitrate in the player.` | The line under “Show quality label”, explaining it |
 | `Show lyrics card` |  |
 | `Show lyrics on the cover` | A value of `On cover tap`: the lyrics take the cover's place, without leaving the player |
 | `Show previous tracks` | Whether the queue keeps the songs already played, dimmed, above the current one |
 | `Show quality label` |  |
-| `Show queue button` |  |
 | `Show rating` |  |
-| `Show speed button` |  |
 | `Show the album name and release year next to the artist.` | The line under “Show album & year”, explaining it |
 | `Show the whole artwork instead of cropping it to a square.` | The line under “Fit cover art”, explaining it |
 | `Skip buttons` | The seek forward / back buttons setting |
@@ -992,6 +996,14 @@ you are actually typing into, which is easier than reading it here.
 | `What tapping the cover art in the player does.` | The line under “On cover tap”, explaining it |
 | `What the previous button does partway through a song.` | The line under “Previous button”, explaining it |
 | `Where to get lyrics from. Online search uses LRCLIB (sends the artist and title).` |  |
+| `Which buttons are under the controls, and in what order.` | The line under “Bottom row”, explaining it |
+
+## Settings › Player buttons
+
+| String | What it is |
+| --- | --- |
+| `Bottom row` |  |
+| `Play the music slower or faster, keeping its pitch.` |  |
 
 ## Settings › Quick grid
 
@@ -1047,11 +1059,13 @@ you are actually typing into, which is easier than reading it here.
 | --- | --- |
 | `A black background instead of dark grey whenever the app is dark. Made for OLED screens.` | The line under “Pure black”, explaining it |
 | `Accent color` | The colour the app uses for buttons, links and anything it wants you to notice |
+| `Background` | Section header over what is drawn behind the player. Its two values are `Plain` and `Blurred cover` |
 | `Dark (default)` | The appearance the app has always had, and what it uses unless the other is chosen. The word in brackets is the same one as `Default` |
 | `Light (experimental)` | The light appearance. The word in brackets is a warning that it is new and may still have rough edges |
 | `Mode` | Heading over the two appearances on the Theme screen. Not a playback mode and not a profile: dark or light. It is called this and not "Appearance" because Appearance is the settings screen one level up |
 | `Pure black` |  |
 | `System` | Theme setting: use whichever appearance the phone itself is set to, light or dark |
+| `The shade of the greys, dark or light. Pure black keeps its own.` |  |
 | `Theme` | The screen where the appearance and the accent colour are chosen, and the name of the row that opens it |
 
 ## Shortcut
@@ -1096,7 +1110,6 @@ you are actually typing into, which is easier than reading it here.
 | `Already added` | Title of the dialog that warns the song is in that playlist already |
 | `Ascending` | Sort option: the order of a list |
 | `Back` | Screen reader label for the back arrow. A direction, not a verb |
-| `Back online` | The toast shown when the server answers again and the app comes out of offline mode |
 | `Cancel` | The button that closes a dialog without doing anything, and the one beside a search box |
 | `Clear` | Read out by the screen reader for the small x that empties a search box. A verb |
 | `Clear all` | Throw away the whole list: the history, the queue, or what you searched for |

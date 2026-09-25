@@ -285,7 +285,7 @@ const styles = themed((colors) => ({
   },
   // The same heading "Your library" has, since they are the two halves of one
   // idea and a different size would read as a different kind of screen.
-  heading: { color: colors.text, fontSize: fontSize.xxl, letterSpacing: tracking.display, fontWeight: '600' },
+  heading: { color: colors.text, fontSize: fontSize.xxl, letterSpacing: tracking.display, fontWeight: '400' },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   segments: { flexGrow: 0, paddingBottom: spacing.md },
   segmentsContent: { gap: spacing.sm, paddingHorizontal: spacing.lg },
@@ -295,7 +295,7 @@ const styles = themed((colors) => ({
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceHighlight,
   },
-  segmentText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '600' },
+  segmentText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '500' },
   segmentTextActive: { color: colors.onAccent },
   body: { flex: 1 },
 }));

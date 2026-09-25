@@ -734,7 +734,7 @@ export const settingsStyles = themed((colors) => ({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  headerTitle: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '700' },
+  headerTitle: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '500' },
   content: { padding: spacing.lg, gap: spacing.sm, paddingBottom: SCREEN_BOTTOM_PADDING },
   /** Where the settings themselves live, centred once there is room to spare. */
   pane: { flex: 1, width: '100%', maxWidth: CONTENT_MAX_WIDTH, alignSelf: 'center' },
@@ -743,7 +743,7 @@ export const settingsStyles = themed((colors) => ({
     color: colors.text,
     fontSize: fontSize.lg,
     letterSpacing: tracking.heading,
-    fontWeight: '700',
+    fontWeight: '500',
     marginTop: spacing.xl,
     marginBottom: spacing.xs,
   },
@@ -759,7 +759,7 @@ export const settingsStyles = themed((colors) => ({
   groupTitle: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,
-    fontWeight: '600',
+    fontWeight: '500',
     marginTop: spacing.md,
     marginBottom: spacing.xs,
   },
@@ -847,13 +847,13 @@ export const settingsStyles = themed((colors) => ({
   padValue: {
     color: colors.text,
     fontSize: fontSize.xl,
-    fontWeight: '600',
+    fontWeight: '500',
     minWidth: 120,
     textAlign: 'center',
   },
   padArrow: { paddingVertical: spacing.xs, paddingHorizontal: spacing.xl },
   padDone: { alignSelf: 'flex-end', marginTop: spacing.sm },
-  padDoneLabel: { fontSize: fontSize.md, fontWeight: '700' },
+  padDoneLabel: { fontSize: fontSize.md, fontWeight: '600' },
   // Floating menu anchored to the right (Android-style dropdown).
   menu: {
     position: 'absolute',
@@ -896,5 +896,5 @@ export const settingsStyles = themed((colors) => ({
     paddingVertical: spacing.md,
     marginTop: spacing.lg,
   },
-  pillButtonText: { color: colors.onInverse, fontSize: fontSize.md, fontWeight: '700' },
+  pillButtonText: { color: colors.onInverse, fontSize: fontSize.md, fontWeight: '600' },
 }));

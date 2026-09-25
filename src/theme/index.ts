@@ -156,32 +156,252 @@ type BasePalette = Omit<
   'accent' | 'accentPressed' | 'accentVivid' | 'onAccent' | 'brand'
 >;
 
-/** The dark appearance: the app's original look, unchanged. */
+/** The dark appearance, on greys with a touch of blue: a neutral grey reads flat. */
 const DARK: BasePalette = {
-  background: '#121212',
-  surface: '#181818',
-  surfaceHighlight: '#282828',
-  border: '#2A2A2A',
+  background: '#141619',
+  surface: '#1E2026',
+  surfaceHighlight: '#2A2C33',
+  border: '#2B2D34',
   text: '#FFFFFF',
-  textSecondary: '#B3B3B3',
-  textMuted: '#727272',
+  textSecondary: '#A0A3AB',
+  textMuted: '#72757D',
   onInverse: '#000000',
-  snackbar: '#2E2E2E',
+  snackbar: '#30323A',
   onSnackbar: '#FFFFFF',
   backdrop: 'rgba(0,0,0,0.5)',
   backdropStrong: 'rgba(0,0,0,0.6)',
   scrim: 'rgba(0,0,0,0.45)',
   onArtwork: '#FFFFFF',
-  veil: 'rgba(18,18,18,0.6)',
+  veil: 'rgba(20,22,25,0.6)',
   highlight: 'rgba(255,255,255,0.14)',
   coverWash: 'rgba(0,0,0,0.42)',
   playerPlain: '#3a4042',
   mediaTrack: 'rgba(255,255,255,0.35)',
-  control: '#2A2A2A',
+  control: '#2B2D34',
   knob: '#FFFFFF',
   shadow: '#000000',
   danger: '#E03131',
   success: '#2F9E44',
+};
+
+/**
+ * The tints the greys can take (Settings › Theme › Background), in both
+ * appearances: each is a set of greys with a touch of one hue. Blue is the
+ * default, and in light it keeps the white page the app always had; neutral
+ * is the plain grey from before.
+ */
+export type BackgroundTint =
+  | 'blue'
+  | 'neutral'
+  | 'purple'
+  | 'green'
+  | 'warm'
+  | 'teal'
+  | 'rose'
+  | 'olive';
+
+type TintGreys = Pick<
+  BasePalette,
+  | 'surface'
+  | 'surfaceHighlight'
+  | 'border'
+  | 'control'
+  | 'snackbar'
+  | 'textSecondary'
+  | 'textMuted'
+> &
+  Partial<Pick<BasePalette, 'background' | 'veil'>>;
+
+export const BACKGROUND_TINTS: Record<BackgroundTint, { dark: TintGreys; light: TintGreys }> = {
+  blue: {
+    dark: {
+      background: '#141619',
+      surface: '#1E2026',
+      surfaceHighlight: '#2A2C33',
+      border: '#2B2D34',
+      control: '#2B2D34',
+      snackbar: '#30323A',
+      veil: 'rgba(20,22,25,0.6)',
+      textSecondary: '#A0A3AB',
+      textMuted: '#72757D',
+    },
+    // The default light look as it was: a white page, cards a hair blue.
+    light: {
+      surface: '#F4F4F6',
+      surfaceHighlight: '#E7E7EB',
+      border: '#E1E1E6',
+      control: '#BFBFC8',
+      snackbar: '#303036',
+      textSecondary: '#5C5C66',
+      textMuted: '#84848F',
+    },
+  },
+  neutral: {
+    dark: {
+      background: '#121212',
+      surface: '#1C1C1C',
+      surfaceHighlight: '#282828',
+      border: '#2A2A2A',
+      control: '#2A2A2A',
+      snackbar: '#2E2E2E',
+      veil: 'rgba(18,18,18,0.6)',
+      textSecondary: '#B3B3B3',
+      textMuted: '#727272',
+    },
+    light: {
+      surface: '#F4F4F4',
+      surfaceHighlight: '#E8E8E8',
+      border: '#E2E2E2',
+      control: '#C0C0C0',
+      snackbar: '#303030',
+      textSecondary: '#5E5E5E',
+      textMuted: '#858585',
+    },
+  },
+  purple: {
+    dark: {
+      background: '#17141C',
+      surface: '#211D27',
+      surfaceHighlight: '#2E2935',
+      border: '#302B37',
+      control: '#302B37',
+      snackbar: '#34303B',
+      veil: 'rgba(23,20,28,0.6)',
+      textSecondary: '#A7A1B0',
+      textMuted: '#78727F',
+    },
+    light: {
+      background: '#F8F5FB',
+      veil: 'rgba(248,245,251,0.65)',
+      surface: '#F0ECF5',
+      surfaceHighlight: '#E5DFEC',
+      border: '#DED7E6',
+      control: '#C3BCCB',
+      snackbar: '#332E3A',
+      textSecondary: '#605A6A',
+      textMuted: '#88818F',
+    },
+  },
+  green: {
+    dark: {
+      background: '#131815',
+      surface: '#1C221E',
+      surfaceHighlight: '#28302A',
+      border: '#2A322C',
+      control: '#2A322C',
+      snackbar: '#2F3731',
+      veil: 'rgba(19,24,21,0.6)',
+      textSecondary: '#9FA8A2',
+      textMuted: '#717A74',
+    },
+    light: {
+      background: '#F4F8F6',
+      veil: 'rgba(244,248,246,0.65)',
+      surface: '#ECF2EE',
+      surfaceHighlight: '#DFE8E2',
+      border: '#D8E1DB',
+      control: '#BAC4BD',
+      snackbar: '#2E3531',
+      textSecondary: '#56615A',
+      textMuted: '#7F8983',
+    },
+  },
+  warm: {
+    dark: {
+      background: '#181512',
+      surface: '#221E1A',
+      surfaceHighlight: '#2F2A25',
+      border: '#312C27',
+      control: '#312C27',
+      snackbar: '#36312B',
+      veil: 'rgba(24,21,18,0.6)',
+      textSecondary: '#AAA39B',
+      textMuted: '#7B746D',
+    },
+    light: {
+      background: '#FAF6F2',
+      veil: 'rgba(250,246,242,0.65)',
+      surface: '#F3EEE9',
+      surfaceHighlight: '#E8E0D8',
+      border: '#E1D9D0',
+      control: '#C6BDB4',
+      snackbar: '#36302A',
+      textSecondary: '#645C54',
+      textMuted: '#8B837B',
+    },
+  },
+  teal: {
+    dark: {
+      background: '#141C1B',
+      surface: '#1D2726',
+      surfaceHighlight: '#293534',
+      border: '#2B3736',
+      control: '#2B3736',
+      snackbar: '#303B3A',
+      veil: 'rgba(20,28,27,0.6)',
+      textSecondary: '#A1B0AF',
+      textMuted: '#727F7E',
+    },
+    light: {
+      background: '#F5FBFA',
+      surface: '#ECF5F4',
+      surfaceHighlight: '#DFECEB',
+      border: '#D7E6E5',
+      control: '#BCCBCA',
+      snackbar: '#2E3A39',
+      veil: 'rgba(245,251,250,0.65)',
+      textSecondary: '#5A6A69',
+      textMuted: '#818F8E',
+    },
+  },
+  rose: {
+    dark: {
+      background: '#1C1417',
+      surface: '#271D20',
+      surfaceHighlight: '#35292D',
+      border: '#372B2F',
+      control: '#372B2F',
+      snackbar: '#3B3034',
+      veil: 'rgba(28,20,23,0.6)',
+      textSecondary: '#B0A1A6',
+      textMuted: '#7F7276',
+    },
+    light: {
+      background: '#FBF5F7',
+      surface: '#F5ECEF',
+      surfaceHighlight: '#ECDFE3',
+      border: '#E6D7DC',
+      control: '#CBBCC1',
+      snackbar: '#3A2E32',
+      veil: 'rgba(251,245,247,0.65)',
+      textSecondary: '#6A5A5F',
+      textMuted: '#8F8186',
+    },
+  },
+  olive: {
+    dark: {
+      background: '#1A1C14',
+      surface: '#24271D',
+      surfaceHighlight: '#323529',
+      border: '#34372B',
+      control: '#34372B',
+      snackbar: '#383B30',
+      veil: 'rgba(26,28,20,0.6)',
+      textSecondary: '#ACB0A1',
+      textMuted: '#7C7F72',
+    },
+    light: {
+      background: '#F9FBF5',
+      surface: '#F3F5EC',
+      surfaceHighlight: '#E9ECDF',
+      border: '#E2E6D7',
+      control: '#C7CBBC',
+      snackbar: '#373A2E',
+      veil: 'rgba(249,251,245,0.65)',
+      textSecondary: '#666A5A',
+      textMuted: '#8C8F81',
+    },
+  },
 };
 
 /**
@@ -191,6 +411,8 @@ const DARK: BasePalette = {
  */
 const BLACK: BasePalette = {
   ...DARK,
+  textSecondary: '#B3B3B3',
+  textMuted: '#727272',
   background: '#000000',
   surface: '#0C0C0C',
   surfaceHighlight: '#1C1C1C',
@@ -311,6 +533,7 @@ let currentMode: ThemeMode = 'dark';
 let darkAccent = DEFAULT_ACCENT;
 let lightAccent = DEFAULT_ACCENT;
 let pureBlack = false;
+let tint: BackgroundTint = 'blue';
 
 /** Which appearance is active right now (for code outside a component). */
 export function themeMode(): ThemeMode {
@@ -338,7 +561,11 @@ function subscribe(listener: () => void): () => void {
 /** Rebuilds `colors` from the current mode + accent and wakes everyone up. */
 function rebuild(): void {
   const light = currentMode === 'light';
-  const base = light ? LIGHT : pureBlack ? BLACK : DARK;
+  const base = light
+    ? { ...LIGHT, ...BACKGROUND_TINTS[tint].light }
+    : pureBlack
+      ? BLACK
+      : { ...DARK, ...BACKGROUND_TINTS[tint].dark };
   const picked = light ? lightAccent : darkAccent;
   // On white the accent has to be dark enough to read as text; on near-black
   // it is already fine as picked. `onAccent` follows from that: black on the
@@ -368,6 +595,13 @@ export function applyAccents(dark: string, light: string): void {
 export function applyPureBlack(on: boolean): void {
   if (on === pureBlack) return;
   pureBlack = on;
+  rebuild();
+}
+
+/** The tint of the greys, dark and light; true black ignores it. */
+export function applyBackgroundTint(next: BackgroundTint): void {
+  if (next === tint) return;
+  tint = next;
   rebuild();
 }
 
@@ -532,14 +766,14 @@ export const fontSize = {
 } as const;
 
 /**
- * Letter spacing for bold headings, tighter the bigger they are: at these
+ * Letter spacing for headings, tighter the bigger they are: at these
  * sizes the default spacing reads loose, and pulling it in is most of what
  * makes a title look current. Body text keeps the font's own.
  */
 export const tracking = {
-  heading: -0.2,
+  heading: -0.1,
   title: -0.3,
-  display: -0.6,
+  display: -0.3,
 } as const;
 
 /**

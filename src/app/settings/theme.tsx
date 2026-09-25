@@ -15,7 +15,67 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SelectList, SettingsPage, settingsStyles, SwitchList } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
 import { ACCENT_OPTIONS, useSettings } from '@/store/settings';
-import { fontSize, radius, spacing, themed, type ThemePreference, useThemeMode } from '@/theme';
+import {
+  BACKGROUND_TINTS,
+  fontSize,
+  radius,
+  spacing,
+  themed,
+  type BackgroundTint,
+  type ThemePreference,
+  useThemeMode,
+} from '@/theme';
+
+/** In the order they are offered, the default first. */
+const TINTS: { key: BackgroundTint; name: string }[] = [
+  { key: 'blue', name: 'Blue' },
+  { key: 'neutral', name: 'Neutral' },
+  { key: 'purple', name: 'Purple' },
+  { key: 'green', name: 'Green' },
+  { key: 'warm', name: 'Warm' },
+  { key: 'teal', name: 'Teal' },
+  { key: 'rose', name: 'Rose' },
+  { key: 'olive', name: 'Olive' },
+];
+
+/** The backgrounds, each drawn as the card grey it gives in the appearance on screen. */
+function TintSwatches({
+  value,
+  onPick,
+  dimmed,
+  light,
+}: {
+  value: BackgroundTint;
+  onPick: (tint: BackgroundTint) => void;
+  dimmed: boolean;
+  light: boolean;
+}) {
+  const t = useT();
+  return (
+    <View style={[styles.swatches, dimmed && styles.dimmed]}>
+      {TINTS.map(({ key, name }) => {
+        const active = key === value;
+        return (
+          <Pressable
+            key={key}
+            onPress={() => onPick(key)}
+            accessibilityRole="button"
+            accessibilityLabel={t(name)}
+            accessibilityState={{ selected: active }}
+            style={[
+              styles.swatch,
+              styles.tintSwatch,
+              { backgroundColor: BACKGROUND_TINTS[key][light ? 'light' : 'dark'].surfaceHighlight },
+              active && styles.swatchActive,
+            ]}
+          >
+            {active ? <Icon name="checkmark" size={24} color={light ? '#000' : '#FFF'} /> : null}
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
 
 /** The row of colours. Which appearance it is picking for is the one on screen;
  *  see the note where it is used. */
@@ -60,6 +120,8 @@ export default function ThemeSettings() {
   const setThemeMode = useSettings((s) => s.setThemeMode);
   const pureBlack = useSettings((s) => s.pureBlack);
   const setPureBlack = useSettings((s) => s.setPureBlack);
+  const backgroundTint = useSettings((s) => s.backgroundTint);
+  const setBackgroundTint = useSettings((s) => s.setBackgroundTint);
 
   return (
     <SettingsPage title={t('Theme')}>
@@ -92,6 +154,17 @@ export default function ThemeSettings() {
           ]}
         />
 
+        {/* Still pickable with pure black, for when it is turned off; dimmed
+            so it is clear it is not what is on screen. */}
+        <Text style={[styles.label, styles.secondLabel]}>{t('Background')}</Text>
+        <Text style={styles.hint}>{t('The shade of the greys, dark or light. Pure black keeps its own.')}</Text>
+        <TintSwatches
+          value={backgroundTint}
+          onPick={setBackgroundTint}
+          dimmed={mode !== 'light' && pureBlack}
+          light={mode === 'light'}
+        />
+
         {/* One row, and it belongs to the appearance you are looking at: each
             keeps its own colour, so switching mode brings back the one chosen
             there rather than repainting it with the other's. Nothing has to say
@@ -110,7 +183,7 @@ const styles = themed((colors) => ({
   label: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,
-    fontWeight: '700',
+    fontWeight: '500',
     marginBottom: spacing.md,
   },
   secondLabel: { marginTop: spacing.xl },
@@ -124,4 +197,7 @@ const styles = themed((colors) => ({
     justifyContent: 'center',
   },
   swatchActive: { borderWidth: 3, borderColor: colors.text },
+  tintSwatch: { borderWidth: 1, borderColor: colors.textMuted },
+  dimmed: { opacity: 0.4 },
+  hint: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: -spacing.sm, marginBottom: spacing.md },
 }));

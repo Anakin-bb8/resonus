@@ -4,7 +4,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useIsFocused, useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   AppState,
@@ -42,7 +42,7 @@ import { OutputSheet } from '@/components/OutputSheet';
 import { SpeedSheet } from '@/components/SpeedSheet';
 import { StarRating } from '@/components/StarRating';
 import { useAnimatedCover } from '@/hooks/useAnimatedCover';
-import { useDominantColor } from '@/hooks/useDominantColor';
+import { toneOf, useDominantColor } from '@/hooks/useDominantColor';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { useLocalProfile } from '@/hooks/useLocalProfile';
 import { useLyrics } from '@/hooks/useLyrics';
@@ -71,7 +71,17 @@ import { useSettings, type CoverTapAction } from '@/store/settings';
 import { useSongMenu } from '@/store/songMenu';
 import { useToast } from '@/store/toast';
 import { useUpnp } from '@/store/upnp';
-import { colors, fontSize, radius, spacing, themed, useTheme, tracking } from '@/theme';
+import {
+  BACKGROUND_TINTS,
+  colors,
+  fontSize,
+  radius,
+  spacing,
+  themed,
+  tracking,
+  useTheme,
+  useThemeMode,
+} from '@/theme';
 import { motion } from '@/theme/motion';
 
 /** Floor: below this the cover stops giving up space and the page scrolls. */
@@ -145,6 +155,41 @@ function CircleButton({
  * so committing a swipe doesn't move any visible panel: the one that was the
  * neighbor stays centered and only the hidden panel's content changes.
  */
+/**
+ * The sleep timer's way in, which says when it is on: in the accent, with the
+ * minutes left beside it, or with nothing beside it when it waits for the song
+ * to end. Its own component so the minute tick repaints this and not the
+ * player.
+ */
+function SleepButton({ onPress, color }: { onPress: () => void; color: string }) {
+  const t = useT();
+  const endsAt = usePlayerStore((s) => s.sleepEndsAt);
+  const atSongEnd = usePlayerStore((s) => s.sleepAtSongEnd);
+  const [, tick] = useReducer((n: number) => n + 1, 0);
+  useEffect(() => {
+    if (!endsAt) return;
+    const id = setInterval(tick, 15_000);
+    return () => clearInterval(id);
+  }, [endsAt]);
+  const on = !!endsAt || atSongEnd;
+  return (
+    <Pressable
+      hitSlop={10}
+      accessibilityRole="button"
+      accessibilityLabel={t('Sleep timer')}
+      onPress={onPress}
+      style={styles.bottomButton}
+    >
+      <Icon name="moon-outline" size={26} color={on ? colors.accent : color} />
+      {endsAt ? (
+        <Text style={styles.speedText}>
+          {`${Math.max(1, Math.ceil((endsAt - Date.now()) / 60_000))}′`}
+        </Text>
+      ) : null}
+    </Pressable>
+  );
+}
+
 function usePaneStyle(offset: SharedValue<number>, k: number, step: SharedValue<number>) {
   return useAnimatedStyle(() => {
     // A screen's width, and it is a shared value rather than a constant
@@ -206,14 +251,12 @@ export default function PlayerScreen() {
   const coverTapAction = useSettings((s) => s.coverTapAction);
   const coverDoubleTapAction = useSettings((s) => s.coverDoubleTapAction);
   const marqueeTitles = useSettings((s) => s.marqueeTitles);
-  const showQueueButton = useSettings((s) => s.showQueueButton);
+  const playerButtons = useSettings((s) => s.playerButtons);
   const local = useLocalProfile();
   // The local profile can cast now that the phone serves its own files
   // (`lib/localHttp`), so the only reason left to hide the button there is a
   // build without the native module behind it.
-  const showDevicesButton =
-    useSettings((s) => s.showDevicesButton) && (!local || localHttpAvailable);
-  const showSpeedButton = useSettings((s) => s.showSpeedButton);
+  const canDevices = !local || localHttpAvailable;
   const seekButtonsSec = useSettings((s) => s.seekButtonsSec);
   const serverType = useAuthStore((s) => s.auth?.serverType);
   const hasAccount = useAuthStore((s) => !!s.auth);
@@ -287,6 +330,8 @@ export default function PlayerScreen() {
   // change: a flat color is animated and the gradient toward the background is
   // a fixed overlay (same look as animating the gradient, which can't be done).
   const background = useSettings((s) => s.playerBackground);
+  const backgroundTint = useSettings((s) => s.backgroundTint);
+  const pureBlack = useSettings((s) => s.pureBlack);
   const colorBackground = background === 'color';
   const animatedCoverBg = useSettings((s) => s.animatedCoverBackground);
   // An animated cover (GIF, animated WebP, APNG) can take the whole screen
@@ -317,6 +362,16 @@ export default function PlayerScreen() {
   // The full-screen animated cover needs the colour too, whatever the
   // background setting says: the gradient under it fades into that colour.
   const dominant = useDominantColor(colorBackground || isAnimatedCover ? cover : undefined);
+  const lightMode = useThemeMode() === 'light';
+  // Play, the played part of the bar and, on light, the controls take the hue
+  // of the background shade the user picked, rather than pure black or white:
+  // pale with a deep icon on dark, deep with a pale icon on light. Pure black
+  // is neutral, like its greys.
+  const tintBase =
+    BACKGROUND_TINTS[pureBlack && !lightMode ? 'neutral' : backgroundTint].dark.surfaceHighlight;
+  const playFill = lightMode ? toneOf(tintBase, 0.22, 0.2) : toneOf(tintBase, 0.9, 0.3);
+  const playInk = lightMode ? toneOf(tintBase, 0.97, 0.2) : toneOf(tintBase, 0.14, 0.3);
+  const ink = lightMode ? toneOf(tintBase, 0.2, 0.2) : colors.text;
   // Under the blurred artwork the flat colour is irrelevant, but it still
   // paints the frame before the image decodes, so it stays dark rather than
   // flashing the old grey.
@@ -847,7 +902,7 @@ export default function PlayerScreen() {
    * arrives in real time and a renderer plays at its own pace, so there is
    * nothing to offer while either is what is playing.
    */
-  const showSpeed = (showSpeedButton || speed !== 1) && !song.url && !remoteDevice;
+  const canSpeed = !song.url && !remoteDevice;
 
   return (
     <GestureDetector gesture={dismissPan}>
@@ -1108,7 +1163,12 @@ export default function PlayerScreen() {
           style={[
             styles.bottom,
             landscape && styles.bottomColumn,
-            { paddingBottom: insets.bottom + spacing.md },
+            // With no card peeking below, the row of buttons would sit on the
+            // navigation bar; the room comes out of the spare height above.
+            {
+              paddingBottom:
+                insets.bottom + (wantsLyricsCard || wantsArtistCard ? spacing.md : spacing.xl),
+            },
           ]}
         >
           <View style={styles.meta}>
@@ -1212,7 +1272,12 @@ export default function PlayerScreen() {
               which is large: cover, gradient, quality badge, controls, queue
               sheet (#50). The seek buttons read the position when they are
               pressed instead of subscribing to it. */}
-          <SeekBar duration={duration} style={styles.progress} timeColor={colors.textMuted} />
+          <SeekBar
+            duration={duration}
+            style={styles.progress}
+            timeColor={colors.textMuted}
+            tint={playFill}
+          />
 
           <View style={styles.controls}>
             <Pressable
@@ -1224,7 +1289,7 @@ export default function PlayerScreen() {
               <Icon
                 name="shuffle"
                 size={26}
-                color={shuffle ? colors.accent : colors.text}
+                color={shuffle ? colors.accent : ink}
               />
             </Pressable>
             <Pressable
@@ -1233,7 +1298,7 @@ export default function PlayerScreen() {
               accessibilityLabel={t('Previous')}
               onPress={previous}
             >
-              <Icon name="play-skip-back" size={34} color={colors.text} />
+              <Icon name="play-skip-back" size={34} color={ink} />
             </Pressable>
             {seekButtonsSec > 0 ? (
               <Pressable
@@ -1249,12 +1314,12 @@ export default function PlayerScreen() {
                 <MaterialIcons
                   name={`replay-${seekButtonsSec}` as 'replay-10'}
                   size={28}
-                  color={colors.text}
+                  color={ink}
                 />
               </Pressable>
             ) : null}
             <Pressable
-              style={styles.playButton}
+              style={[styles.playButton, { backgroundColor: playFill }]}
               accessibilityRole="button"
               accessibilityLabel={isPlaying ? t('Pause') : t('Play')}
               onPress={toggle}
@@ -1280,12 +1345,12 @@ export default function PlayerScreen() {
                   right, so the box itself moves left — padding on the right,
                   the only side with room to take it. */}
               {isBuffering ? (
-                <ActivityIndicator size="small" color={colors.onInverse} />
+                <ActivityIndicator size="small" color={playInk} />
               ) : (
                 <Icon
                   name={isPlaying ? 'pause' : 'play'}
                   size={34}
-                  color={colors.onInverse}
+                  color={playInk}
                   style={!isPlaying && { paddingRight: 4.5 }}
                 />
               )}
@@ -1308,7 +1373,7 @@ export default function PlayerScreen() {
                 <MaterialIcons
                   name={`forward-${seekButtonsSec}` as 'forward-10'}
                   size={28}
-                  color={colors.text}
+                  color={ink}
                 />
               </Pressable>
             ) : null}
@@ -1318,7 +1383,7 @@ export default function PlayerScreen() {
               accessibilityLabel={t('Next')}
               onPress={next}
             >
-              <Icon name="play-skip-forward" size={34} color={colors.text} />
+              <Icon name="play-skip-forward" size={34} color={ink} />
             </Pressable>
             <Pressable
               hitSlop={10}
@@ -1326,86 +1391,115 @@ export default function PlayerScreen() {
               accessibilityLabel={t('Repeat')}
               onPress={cycleRepeat}
             >
-              <MaterialIcons
-                name={repeat === 'one' ? 'repeat-one' : 'repeat'}
+              <Icon
+                name={repeat === 'one' ? 'repeat-outline' : 'repeat'}
                 size={26}
-                color={repeatActive ? colors.accent : colors.text}
+                color={repeatActive ? colors.accent : ink}
               />
             </Pressable>
           </View>
 
-          {showDevicesButton || showQueueButton || remoteDevice || showSpeed ? (
-            <View style={styles.bottomRow}>
-              <View style={styles.bottomSlot}>
-                {/* Connected to a remote device it's always shown: it's the
-                    only way to disconnect the cast.
-                    Never disabled any more. It was, without a connection, back
-                    when a renderer could only be given a URL on the server:
-                    downloads cast from the phone now, so offline there is
-                    something to send. And it left the way out drawn and barred
-                    — going offline mid-cast used to leave the cast on with
-                    nothing that could end it. */}
-                {showDevicesButton || remoteDevice ? (
-                  <Pressable
-                    hitSlop={10}
-                    accessibilityRole="button"
-                    accessibilityLabel={t('Devices')}
-                    onPress={() => setOutputOpen(true)}
-                    style={styles.deviceRow}
-                  >
-                    <MaterialIcons
-                      name="devices"
-                      size={22}
-                      color={remoteDevice ? colors.accent : colors.text}
+          {/* Grouped in the middle, each one where it always is: one that
+              cannot do anything for this song is dimmed rather than taken out,
+              so the others do not move from song to song. */}
+          <View
+            style={[
+              styles.bottomRow,
+              // Set a little apart from the controls, in the room the padding
+              // below gave up.
+              !(wantsLyricsCard || wantsArtistCard) && { marginTop: spacing.xl },
+            ]}
+          >
+            {playerButtons.map(({ key, enabled }) => {
+              switch (key) {
+                case 'devices':
+                  // Connected to a remote device it's always shown: it's the
+                  // only way to disconnect the cast. Never disabled any more:
+                  // downloads cast from the phone, so offline there is
+                  // something to send, and going offline mid-cast used to
+                  // leave the way out barred.
+                  return (enabled && canDevices) || remoteDevice ? (
+                    <Pressable
+                      key={key}
+                      hitSlop={10}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('Devices')}
+                      onPress={() => setOutputOpen(true)}
+                      style={styles.deviceRow}
+                    >
+                      <Icon
+                        name="laptop-outline"
+                        size={26}
+                        color={remoteDevice ? colors.accent : ink}
+                      />
+                      {remoteDevice ? (
+                        <Text style={[styles.deviceName, { color: colors.accent }]} numberOfLines={1}>
+                          {remoteDevice}
+                        </Text>
+                      ) : null}
+                    </Pressable>
+                  ) : null;
+                case 'lyrics':
+                  return enabled ? (
+                    <Pressable
+                      key={key}
+                      hitSlop={10}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('Lyrics')}
+                      disabled={!hasLyrics}
+                      onPress={() => pushOnce('/lyrics')}
+                      style={[styles.bottomButton, !hasLyrics && styles.bottomButtonOff]}
+                    >
+                      <Icon name="mic-outline" size={26} color={ink} />
+                    </Pressable>
+                  ) : null;
+                case 'speed':
+                  // Also while hidden, as long as the speed is not 1×: a mode
+                  // that is on has to be seen to be turned off.
+                  return enabled || speed !== 1 ? (
+                    <Pressable
+                      key={key}
+                      hitSlop={10}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('Playback speed')}
+                      disabled={!canSpeed}
+                      onPress={() => openSpeedSheet.current()}
+                      style={[styles.bottomButton, !canSpeed && styles.bottomButtonOff]}
+                    >
+                      <Icon
+                        name="speedometer-outline"
+                        size={26}
+                        color={speed === 1 ? ink : colors.accent}
+                      />
+                      {/* The number only once it says something, in the accent
+                          like the device name beside its own icon. */}
+                      {speed === 1 ? null : <Text style={styles.speedText}>{`${speed}×`}</Text>}
+                    </Pressable>
+                  ) : null;
+                case 'sleep':
+                  return enabled ? (
+                    <SleepButton
+                      key={key}
+                      color={ink}
+                      onPress={() => openMenu(song, undefined, { showLyrics: hasLyrics, sleep: true })}
                     />
-                    {remoteDevice ? (
-                      <Text style={[styles.deviceName, { color: colors.accent }]} numberOfLines={1}>
-                        {remoteDevice}
-                      </Text>
-                    ) : null}
-                  </Pressable>
-                ) : null}
-              </View>
-              {/* Dead centre of the row, between the devices and the queue: it
-                  is about the music itself rather than about where it goes or
-                  what comes next, and it is the one of the three you reach for
-                  while the song plays. */}
-              {showSpeed ? (
-                <Pressable
-                  hitSlop={10}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('Playback speed')}
-                  onPress={() => openSpeedSheet.current()}
-                  style={styles.speedButton}
-                >
-                  <MaterialIcons
-                    name="speed"
-                    size={24}
-                    color={speed === 1 ? colors.text : colors.accent}
-                  />
-                  {/* The number only once it says something. Beside the icon in
-                      the accent, like the device name next to its own. */}
-                  {speed === 1 ? null : (
-                    <Text style={styles.speedText}>{`${speed}×`}</Text>
-                  )}
-                </Pressable>
-              ) : null}
-              {/* Same width as the slot on the left, so what sits between them
-                  is centred on the screen and not on what is left over. */}
-              <View style={styles.bottomSlotEnd}>
-                {showQueueButton ? (
-                  <Pressable
-                    hitSlop={10}
-                    accessibilityRole="button"
-                    accessibilityLabel={t('View queue')}
-                    onPress={() => pushOnce('/queue')}
-                  >
-                    <MaterialIcons name="queue-music" size={24} color={colors.text} />
-                  </Pressable>
-                ) : null}
-              </View>
-            </View>
-          ) : null}
+                  ) : null;
+                case 'queue':
+                  return enabled ? (
+                    <Pressable
+                      key={key}
+                      hitSlop={10}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('View queue')}
+                      onPress={() => pushOnce('/queue')}
+                      style={styles.bottomButton}
+                    >
+                      <Icon name="layers-outline" size={26} color={ink} />
+                    </Pressable>
+                  ) : null;
+              }
+            })}
+          </View>
         </View>
         </View>
         </View>
@@ -1449,19 +1543,19 @@ const styles = themed((colors) => ({
   topTitle: {
     color: colors.text,
     fontSize: fontSize.sm,
-    fontWeight: '700',
+    fontWeight: '500',
     letterSpacing: 1.5,
   },
   topLabel: {
     color: colors.textSecondary,
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '500',
     letterSpacing: 1.2,
   },
   topSource: {
     color: colors.text,
     fontSize: fontSize.sm,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   // The elastic slot: takes whatever the rest leaves over, and `coverSize` is
   // measured from here. `minHeight: 0` so it can actually shrink.
@@ -1523,7 +1617,7 @@ const styles = themed((colors) => ({
   // when tapping the empty space on the right.
   // Hugs the text: the tappable area is just the title/artist, not the row.
   tapText: { alignSelf: 'flex-start', maxWidth: '100%' },
-  title: { color: colors.text, fontSize: fontSize.xl, letterSpacing: tracking.title, fontWeight: '600' },
+  title: { color: colors.text, fontSize: fontSize.xl, letterSpacing: tracking.title, fontWeight: '500' },
   // The gap the artist line used to keep for itself now belongs to the row it
   // shares with the badge, so the two line up on their middles.
   artistRow: {
@@ -1532,18 +1626,19 @@ const styles = themed((colors) => ({
     gap: 6,
     marginTop: spacing.xs,
   },
+  // In the text colour, so artist and album are two steps and not one grey.
   artist: {
-    color: colors.textSecondary,
+    color: colors.text,
     fontSize: fontSize.md,
     flexShrink: 1,
   },
   // The gap belongs to the line and not to the text: the text is handed to a
   // marquee, which draws it twice.
   albumLine: { alignSelf: 'flex-start', maxWidth: '100%', marginTop: 2 },
-  // A step below the artist so the three lines read as a hierarchy
-  // (title → artist → album) instead of three rows of the same weight.
+  // A step below the artist by size, so the three lines read as a hierarchy
+  // (title → artist → album). The muted grey was lost over the backdrop.
   album: {
-    color: colors.textMuted,
+    color: colors.textSecondary,
     fontSize: fontSize.sm,
   },
   subInfo: { marginTop: -spacing.sm, marginBottom: spacing.xs },
@@ -1567,20 +1662,14 @@ const styles = themed((colors) => ({
   // Same footprint as the CircleButton it replaces when swapped, so the
   // centered title doesn't shift.
   topFavorite: { width: 40, alignItems: 'center', justifyContent: 'center' },
+  // A group in the middle rather than spread to the edges.
   bottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    gap: spacing.xxl,
     paddingHorizontal: spacing.sm,
     marginTop: spacing.xs,
-  },
-  // Flexible slot for the devices button: keeps the queue in place even if
-  // the button is hidden, and lets the device name expand.
-  bottomSlot: {
-    flex: 1,
-    height: 40,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
   },
   // Like Spotify Connect: icon + device name in accent when casting.
   deviceRow: {
@@ -1593,29 +1682,21 @@ const styles = themed((colors) => ({
   deviceName: {
     color: colors.accent,
     fontSize: fontSize.xs,
-    fontWeight: '600',
+    fontWeight: '500',
     flexShrink: 1,
   },
-  // Mirrors `bottomSlot` on the other side, so the speed button between the two
-  // sits in the middle of the screen. The queue icon ends up exactly where it
-  // was before, at the right edge.
-  bottomSlotEnd: {
-    flex: 1,
-    height: 40,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-  },
-  speedButton: {
+  bottomButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
     height: 40,
   },
+  bottomButtonOff: { opacity: 0.35 },
   // In the accent like the device name beside its own icon: it is a mode that
   // is on, which is what the accent means everywhere else on this screen.
   speedText: {
     color: colors.accent,
     fontSize: fontSize.xs,
-    fontWeight: '700',
+    fontWeight: '600',
   },
 }));

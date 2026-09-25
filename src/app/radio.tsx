@@ -400,11 +400,11 @@ const styles = themed((colors) => ({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  title: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '600' },
+  title: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '500' },
   list: { paddingHorizontal: spacing.lg, paddingBottom: SCREEN_BOTTOM_PADDING, gap: spacing.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   rowTitleLine: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  rowTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '600', flexShrink: 1 },
+  rowTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '500', flexShrink: 1 },
   // The MCI pin comes vertical; rotated 45° it looks like Spotify's, which is
   // how it is drawn everywhere else in the app.
   rowSub: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2 },
@@ -439,7 +439,7 @@ const styles = themed((colors) => ({
   sheetTitle: {
     color: colors.text,
     fontSize: fontSize.md,
-    fontWeight: '700',
+    fontWeight: '500',
     marginBottom: spacing.sm,
   },
   action: {

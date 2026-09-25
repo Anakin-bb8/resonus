@@ -50,7 +50,7 @@ const styles = themed((colors) => ({
     color: colors.text,
     fontSize: fontSize.lg,
     letterSpacing: tracking.heading,
-    fontWeight: '700',
+    fontWeight: '500',
     textAlign: 'center',
   },
   subtitle: {
@@ -66,5 +66,5 @@ const styles = themed((colors) => ({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xl,
   },
-  buttonText: { color: colors.onAccent, fontSize: fontSize.sm, fontWeight: '700' },
+  buttonText: { color: colors.onAccent, fontSize: fontSize.sm, fontWeight: '600' },
 }));

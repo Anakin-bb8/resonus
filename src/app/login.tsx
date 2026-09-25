@@ -583,7 +583,7 @@ const styles = themed((colors) => ({
   groupTitle: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,
-    fontWeight: '600',
+    fontWeight: '500',
     marginTop: spacing.sm,
   },
   profileRow: {
@@ -601,7 +601,7 @@ const styles = themed((colors) => ({
     gap: spacing.md,
   },
   profileLogo: { width: 36, height: 36 },
-  profileUser: { color: colors.text, fontSize: fontSize.md, fontWeight: '600' },
+  profileUser: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
   profileUrl: { color: colors.textMuted, fontSize: fontSize.xs },
   offlineIcon: {
     width: 36,
@@ -618,7 +618,7 @@ const styles = themed((colors) => ({
     gap: spacing.xs,
     paddingVertical: spacing.sm,
   },
-  showMoreText: { color: colors.brand, fontSize: fontSize.sm, fontWeight: '600' },
+  showMoreText: { color: colors.brand, fontSize: fontSize.sm, fontWeight: '500' },
   addAccount: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -629,7 +629,7 @@ const styles = themed((colors) => ({
     borderRadius: radius.pill,
     backgroundColor: colors.brand,
   },
-  addAccountText: { color: colors.onAccent, fontSize: fontSize.md, fontWeight: '700' },
+  addAccountText: { color: colors.onAccent, fontSize: fontSize.md, fontWeight: '600' },
   hero: { alignItems: 'center', marginBottom: spacing.xl },
   appIcon: { width: 88, height: 88, borderRadius: 22, marginBottom: spacing.md },
   topBar: { height: 32, justifyContent: 'center', marginBottom: spacing.md },
@@ -653,13 +653,13 @@ const styles = themed((colors) => ({
     borderRadius: radius.md,
     backgroundColor: colors.surface,
   },
-  langRowText: { color: colors.text, fontSize: fontSize.md, fontWeight: '600' },
+  langRowText: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
   backBtn: { alignSelf: 'flex-start' },
   stepTitle: {
     color: colors.text,
     fontSize: fontSize.xl,
     letterSpacing: tracking.title,
-    fontWeight: '600',
+    fontWeight: '500',
     textAlign: 'center',
     marginBottom: spacing.xs,
   },
@@ -688,7 +688,7 @@ const styles = themed((colors) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  srvName: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
+  srvName: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
   srvSub: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2 },
   serverHero: {
     alignItems: 'center',
@@ -715,7 +715,7 @@ const styles = themed((colors) => ({
     borderRadius: radius.md,
     padding: spacing.lg,
   },
-  localOptTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
+  localOptTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
   localOptSub: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2 },
   form: { gap: spacing.md },
   advancedToggle: {
@@ -725,14 +725,14 @@ const styles = themed((colors) => ({
     alignSelf: 'flex-start',
     paddingVertical: spacing.xs,
   },
-  advancedLink: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '600' },
+  advancedLink: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '500' },
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     marginTop: spacing.sm,
   },
-  switchLabel: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
+  switchLabel: { color: colors.text, fontSize: fontSize.sm, fontWeight: '500' },
   switchDesc: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: 2 },
   error: { color: colors.danger, fontSize: fontSize.sm },
   button: {
@@ -742,7 +742,7 @@ const styles = themed((colors) => ({
     marginTop: spacing.sm,
   },
   buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: colors.onAccent, fontSize: fontSize.md, fontWeight: '700' },
+  buttonText: { color: colors.onAccent, fontSize: fontSize.md, fontWeight: '600' },
   modalSafe: { flex: 1, backgroundColor: colors.background },
   modalHeader: {
     flexDirection: 'row',
@@ -751,7 +751,7 @@ const styles = themed((colors) => ({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  modalTitle: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '700' },
+  modalTitle: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '500' },
   modalDone: { color: colors.accent, fontSize: fontSize.md, fontWeight: '600' },
   modalList: { paddingHorizontal: spacing.xl, gap: spacing.sm, paddingBottom: spacing.xl },
 }));

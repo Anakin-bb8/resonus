@@ -148,7 +148,7 @@ const styles = themed((colors) => ({
     padding: spacing.xl,
     gap: spacing.md,
   },
-  title: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '600' },
+  title: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '500' },
   message: { color: colors.textSecondary, fontSize: fontSize.md },
   input: {
     backgroundColor: colors.surface,
@@ -171,6 +171,6 @@ const styles = themed((colors) => ({
     alignItems: 'center',
     gap: spacing.xs + 2,
   },
-  cancel: { color: colors.textSecondary, fontSize: fontSize.md, fontWeight: '600' },
-  confirm: { color: colors.accent, fontSize: fontSize.md, fontWeight: '700' },
+  cancel: { color: colors.textSecondary, fontSize: fontSize.md, fontWeight: '500' },
+  confirm: { color: colors.accent, fontSize: fontSize.md, fontWeight: '600' },
 }));

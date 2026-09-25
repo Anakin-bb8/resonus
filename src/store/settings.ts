@@ -11,10 +11,13 @@ import { queryClient } from '@/lib/query';
 import { getItem, setItem } from '@/lib/storage';
 import {
   applyAccents,
+  applyBackgroundTint,
   applyPureBlack,
+  BACKGROUND_TINTS,
   applyThemePreference,
   DEFAULT_ACCENT,
   isThemePreference,
+  type BackgroundTint,
   type ThemeMode,
   type ThemePreference,
 } from '@/theme';
@@ -39,6 +42,9 @@ export const ACCENT_OPTIONS: { name: string; color: string }[] = [
   { name: 'Orange', color: '#F58C3C' },
   { name: 'Yellow', color: '#F5C53C' },
   { name: 'Lime', color: '#A6D93C' },
+  // After the rainbow, having no hue: a silver with the same touch of blue as
+  // the dark greys.
+  { name: 'Gray', color: '#C3C8D2' },
 ];
 
 // Base settings key. Settings are PER PROFILE: each one stores under
@@ -399,7 +405,7 @@ export const DEFAULT_HOME_SECTIONS: HomeSection[] = [
   { key: 'recentlyPlayed', enabled: true },
   { key: 'mostPlayed', enabled: true },
   { key: 'mostPlayedSongs', enabled: true },
-  { key: 'randomSongs', enabled: false },
+  { key: 'randomSongs', enabled: true },
   { key: 'randomAlbums', enabled: true },
   { key: 'randomArtists', enabled: true },
 ];
@@ -483,13 +489,13 @@ const HOME_CHIP_KEYS: HomeChipKey[] = [
 /** Default order and state: the usual ones, all visible. */
 export const DEFAULT_HOME_CHIPS: HomeChip[] = [
   { key: 'shuffle', enabled: true },
-  { key: 'favorites', enabled: false },
+  { key: 'favorites', enabled: true },
+  { key: 'history', enabled: true },
   { key: 'albums', enabled: true },
   { key: 'artists', enabled: true },
   { key: 'songs', enabled: true },
   { key: 'genres', enabled: true },
   { key: 'radio', enabled: true },
-  { key: 'history', enabled: false },
 ];
 
 /** One of the pills at the top of Explore. `genres`, `radio` and `folders`
@@ -616,10 +622,45 @@ const HOME_BUTTON_KEYS: HomeButtonKey[] = ['search', 'history', 'settings'];
  * there for whoever takes that tab off the bar, or just prefers it up here.
  */
 export const DEFAULT_HOME_BUTTONS: HomeButton[] = [
-  { key: 'search', enabled: false },
+  { key: 'search', enabled: true },
   { key: 'history', enabled: true },
   { key: 'settings', enabled: true },
 ];
+
+/** The row of buttons under the player's controls, in order. */
+export type PlayerButtonKey = 'devices' | 'lyrics' | 'speed' | 'sleep' | 'queue';
+
+export interface PlayerButton {
+  key: PlayerButtonKey;
+  enabled: boolean;
+}
+
+export const DEFAULT_PLAYER_BUTTONS: PlayerButton[] = [
+  { key: 'devices', enabled: true },
+  { key: 'lyrics', enabled: true },
+  { key: 'speed', enabled: true },
+  { key: 'sleep', enabled: true },
+  { key: 'queue', enabled: true },
+];
+
+/** Saved order kept, unknown keys dropped, new ones added at the end. */
+function normalizePlayerButtons(raw: unknown): PlayerButton[] {
+  if (!Array.isArray(raw)) return DEFAULT_PLAYER_BUTTONS.map((b) => ({ ...b }));
+  const known = new Set(DEFAULT_PLAYER_BUTTONS.map((b) => b.key));
+  const seen = new Set<PlayerButtonKey>();
+  const out: PlayerButton[] = [];
+  for (const item of raw) {
+    const key = item?.key as PlayerButtonKey;
+    if (known.has(key) && !seen.has(key)) {
+      seen.add(key);
+      out.push({ key, enabled: typeof item.enabled === 'boolean' ? item.enabled : true });
+    }
+  }
+  for (const def of DEFAULT_PLAYER_BUTTONS) {
+    if (!seen.has(def.key)) out.push({ ...def });
+  }
+  return out;
+}
 
 /** The same sanitising as the tabs, with the gear in Home's place. */
 function normalizeHomeButtons(raw: unknown): HomeButton[] {
@@ -716,7 +757,8 @@ type Reshaped =
   | 'homeChips'
   | 'exploreSections'
   | 'bottomTabs'
-  | 'homeButtons';
+  | 'homeButtons'
+  | 'playerButtons';
 
 /**
  * `setX(value)` for every saved setting: stores it and saves the profile.
@@ -736,7 +778,8 @@ type CustomSetter =
   | 'setGridColumns'
   | 'setAccentColor'
   | 'setThemeMode'
-  | 'setPureBlack';
+  | 'setPureBlack'
+  | 'setBackgroundTint';
 
 interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   /** Streaming quality over Wi-Fi (and any non-cellular network). */
@@ -929,16 +972,8 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   coverDoubleTapAction: CoverDoubleTapAction;
   /** Marquee: long titles in the player auto-scroll. */
   marqueeTitles: boolean;
-  /** Player bottom buttons (queue and devices). */
-  showQueueButton: boolean;
-  showDevicesButton: boolean;
-  /**
-   * The playback speed button, in the middle of the same row. Off by default,
-   * unlike the other two: playing a record at anything other than its own
-   * speed is a thing you go looking for (#151), and the player is a screen
-   * where an unused control costs everybody room.
-   */
-  showSpeedButton: boolean;
+  /** The row under the player's controls: which buttons, in what order. */
+  playerButtons: PlayerButton[];
   /** Seek ±N seconds buttons next to play (0 = hidden). Only 5/10/30: these are the numbered icons that exist in MaterialIcons. */
   seekButtonsSec: number;
   /** "Previous" button behavior (restart track or always go to previous). */
@@ -1058,6 +1093,8 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   themeMode: ThemePreference;
   /** True black instead of dark grey in the dark appearance (OLED). */
   pureBlack: boolean;
+  /** The hue in the dark appearance's greys. */
+  backgroundTint: BackgroundTint;
   /** UI font (system font family; `system` = default). */
   appFont: AppFont;
   /** Loaded custom font family name (the key passed to `Font.loadAsync`). */
@@ -1077,10 +1114,12 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   setExploreSection: (key: ExploreSectionKey, value: boolean) => void;
   setBottomTab: (key: TabSegment, value: boolean) => void;
   setHomeButton: (key: HomeButtonKey, value: boolean) => void;
+  setPlayerButton: (key: PlayerButtonKey, value: boolean) => void;
   setGridColumns: (key: GridSizeKey, value: number) => void;
   setAccentColor: (value: string, appearance: ThemeMode) => void;
   setThemeMode: (value: ThemePreference) => void;
   setPureBlack: (value: boolean) => void;
+  setBackgroundTint: (value: BackgroundTint) => void;
   setCustomFont: (fontFamily: string | null, uri: string | null) => void;
   /** Resets to factory defaults (language is preserved). */
   resetToDefaults: () => void;
@@ -1183,9 +1222,7 @@ const DEFAULTS = {
   // Nothing: see `CoverDoubleTapAction`.
   coverDoubleTapAction: 'none' as CoverDoubleTapAction,
   marqueeTitles: true,
-  showQueueButton: true,
-  showDevicesButton: true,
-  showSpeedButton: false,
+  playerButtons: DEFAULT_PLAYER_BUTTONS.map((b) => ({ ...b })),
   seekButtonsSec: 0,
   previousButtonMode: 'restart' as PreviousButtonMode,
   keepPausedOnSkip: false,
@@ -1200,7 +1237,7 @@ const DEFAULTS = {
   quickGridAlbums: true,
   quickGridPlaylists: true,
   quickGridSize: 8,
-  showGreeting: true,
+  showGreeting: false,
   customGreeting: '',
   homeChips: DEFAULT_HOME_CHIPS.map((c) => ({ ...c })),
   exploreSections: DEFAULT_EXPLORE_SECTIONS.map((s) => ({ ...s })),
@@ -1255,6 +1292,7 @@ const DEFAULTS = {
   // Dark: the appearance the app was designed in. Light is opt-in.
   themeMode: 'dark' as ThemePreference,
   pureBlack: false,
+  backgroundTint: 'blue' as BackgroundTint,
   appFont: 'system' as AppFont,
   customFontFamily: null as string | null,
   customFontUri: null as string | null,
@@ -1364,6 +1402,13 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setPlayerButton: (key, value) => {
+    set((s) => ({
+      playerButtons: s.playerButtons.map((x) => (x.key === key ? { ...x, enabled: value } : x)),
+    }));
+    persist(snapshot(get));
+  },
+
   setGridColumns: (key, value) => {
     set({ gridColumns: { ...get().gridColumns, [key]: value } });
     persist(snapshot(get));
@@ -1387,6 +1432,12 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setBackgroundTint: (backgroundTint) => {
+    applyBackgroundTint(backgroundTint);
+    set({ backgroundTint });
+    persist(snapshot(get));
+  },
+
   setCustomFont: (fontFamily, uri) => {
     set({ customFontFamily: fontFamily, customFontUri: uri });
     persist(snapshot(get));
@@ -1398,6 +1449,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
     applyAccents(DEFAULT_ACCENT, DEFAULT_ACCENT);
     applyThemePreference(DEFAULTS.themeMode);
     applyPureBlack(DEFAULTS.pureBlack);
+    applyBackgroundTint(DEFAULTS.backgroundTint);
     persist(snapshot(get));
   },
 
@@ -1429,6 +1481,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
       applyAccents(DEFAULT_ACCENT, DEFAULT_ACCENT);
       applyThemePreference(DEFAULTS.themeMode);
       applyPureBlack(DEFAULTS.pureBlack);
+    applyBackgroundTint(DEFAULTS.backgroundTint);
       applied = true;
       if (raw) {
         // Typed as what this version writes, plus the earlier shapes that are
@@ -1441,6 +1494,10 @@ export const useSettings = create<SettingsState>((set, get) => ({
           exploreSections?: unknown;
           bottomTabs?: unknown;
           homeButtons?: unknown;
+          playerButtons?: unknown;
+          showQueueButton?: boolean;
+          showDevicesButton?: boolean;
+          showSpeedButton?: boolean;
           lyricsColorBackground?: boolean;
           lyricsOnlineFallback?: boolean;
           playerColorBackground?: boolean;
@@ -1649,6 +1706,19 @@ export const useSettings = create<SettingsState>((set, get) => ({
             ),
           });
         }
+        if (Array.isArray(parsed.playerButtons)) {
+          set({ playerButtons: normalizePlayerButtons(parsed.playerButtons) });
+        } else {
+          // From the three switches there were before: whoever had one of them
+          // off does not find it back. Speed was off unless turned on.
+          const off = new Set<PlayerButtonKey>();
+          if (parsed.showQueueButton === false) off.add('queue');
+          if (parsed.showDevicesButton === false) off.add('devices');
+          if (parsed.showSpeedButton !== true && 'showQueueButton' in parsed) off.add('speed');
+          set({
+            playerButtons: DEFAULT_PLAYER_BUTTONS.map((b) => ({ ...b, enabled: !off.has(b.key) })),
+          });
+        }
         if (
           parsed.defaultTab === 'index' ||
           parsed.defaultTab === 'search' ||
@@ -1723,6 +1793,10 @@ export const useSettings = create<SettingsState>((set, get) => ({
         if (typeof parsed.pureBlack === 'boolean') {
           set({ pureBlack: parsed.pureBlack });
           applyPureBlack(parsed.pureBlack);
+        }
+        if (typeof parsed.backgroundTint === 'string' && parsed.backgroundTint in BACKGROUND_TINTS) {
+          set({ backgroundTint: parsed.backgroundTint });
+          applyBackgroundTint(parsed.backgroundTint);
         }
         if (parsed.appFont && (parsed.appFont in APP_FONT_FAMILY || parsed.appFont === 'custom')) {
           set({ appFont: parsed.appFont });

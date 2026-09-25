@@ -869,7 +869,7 @@ const styles = themed((colors) => ({
     color: colors.text,
     fontSize: fontSize.xxl,
     letterSpacing: tracking.display,
-    fontWeight: '600',
+    fontWeight: '500',
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
   },
@@ -888,7 +888,7 @@ const styles = themed((colors) => ({
   },
   downloadProgress: {
     fontSize: fontSize.xs,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   playButton: {
     backgroundColor: colors.accent,
@@ -907,13 +907,13 @@ const styles = themed((colors) => ({
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.md,
   },
-  sectionHeaderTitle: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '700' },
-  showAll: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '600' },
+  sectionHeaderTitle: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '500' },
+  showAll: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '500' },
   sectionTitle: {
     color: colors.text,
     fontSize: fontSize.lg,
     letterSpacing: tracking.heading,
-    fontWeight: '700',
+    fontWeight: '500',
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.md,
   },
@@ -926,7 +926,7 @@ const styles = themed((colors) => ({
   bioToggle: {
     color: colors.text,
     fontSize: fontSize.sm,
-    fontWeight: '700',
+    fontWeight: '500',
     paddingHorizontal: spacing.lg,
     marginTop: spacing.sm,
   },
@@ -935,7 +935,7 @@ const styles = themed((colors) => ({
   similarName: {
     color: colors.text,
     fontSize: fontSize.sm,
-    fontWeight: '600',
+    fontWeight: '500',
     textAlign: 'center',
   },
   back: {
@@ -960,6 +960,6 @@ const styles = themed((colors) => ({
     flex: 1,
     color: colors.text,
     fontSize: fontSize.md,
-    fontWeight: '700',
+    fontWeight: '500',
   },
 }));

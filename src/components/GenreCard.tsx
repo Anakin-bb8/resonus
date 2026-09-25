@@ -162,7 +162,7 @@ const styles = themed((colors) => ({
   card: { height: GENRE_CARD_HEIGHT, borderRadius: radius.lg, overflow: 'hidden' },
   /** The right inset is what keeps the name clear of the covers. */
   label: { paddingTop: spacing.md, paddingLeft: spacing.md, paddingRight: ART_SIZE },
-  name: { fontSize: fontSize.md, fontWeight: '600' },
+  name: { fontSize: fontSize.md, fontWeight: '500' },
   count: { fontSize: fontSize.sm, marginTop: 2 },
   // Both hang off the right edge and out of the bottom; the card clips them,
   // which is what makes the pair read as a stack rather than as two pictures.

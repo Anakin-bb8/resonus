@@ -264,7 +264,7 @@ const styles = themed((colors) => ({
     opacity: 0.5,
     marginBottom: spacing.md,
   },
-  title: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
+  title: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
   subtitle: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,

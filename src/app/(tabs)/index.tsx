@@ -601,7 +601,7 @@ const CHIPS: Record<HomeChipKey, { href?: string; icon: keyof typeof Icon.glyphM
   songs: { href: '/browse/songs', icon: 'musical-notes-outline', label: 'Songs' },
   genres: { href: '/genres', icon: 'pricetags-outline', label: 'Genres' },
   radio: { href: '/radio', icon: 'radio-outline', label: 'Radio' },
-  history: { href: '/history', icon: 'time-outline', label: 'Recently played' },
+  history: { href: '/history', icon: 'time-outline', label: 'History' },
 };
 
 // Locally there is shuffle, albums, artists and songs (radio and genres are
@@ -774,7 +774,7 @@ function HomeHeaderButton({ which }: { which: HomeButtonKey }) {
           router.navigate('/search');
         }}
       >
-        <Icon name="search-outline" size={24} color={colors.textSecondary} />
+        <Icon name="search-outline" size={24} color={colors.text} />
       </Pressable>
     );
   }
@@ -785,7 +785,7 @@ function HomeHeaderButton({ which }: { which: HomeButtonKey }) {
   return (
     <Link href={href} asChild>
       <Pressable hitSlop={10} accessibilityLabel={t(label)}>
-        <Icon name={icon} size={24} color={colors.textSecondary} />
+        <Icon name={icon} size={24} color={colors.text} />
       </Pressable>
     </Link>
   );
@@ -898,11 +898,11 @@ export default function HomeScreen() {
                 waiting to come out of, it is where somebody has chosen to be,
                 and a permanent badge for it is decoration. Offline is a
                 different matter and still says so, on the right. */}
-            {showGreeting ? (
-              <Text style={styles.greeting} numberOfLines={1}>
-                {greeting}
-              </Text>
-            ) : null}
+            {/* The screen's name when there is no greeting, where Explore and
+                Your library have theirs. */}
+            <Text style={styles.greeting} numberOfLines={1}>
+              {showGreeting ? greeting : t('Home')}
+            </Text>
           </View>
           <View style={styles.headerRight}>
             {/* Before the buttons, and dimmer than them, so it reads as a state
@@ -997,7 +997,7 @@ const styles = themed((colors) => ({
     marginBottom: spacing.lg,
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 1 },
-  greeting: { color: colors.text, fontSize: fontSize.xxl, letterSpacing: tracking.display, fontWeight: '600', flexShrink: 1 },
+  greeting: { color: colors.text, fontSize: fontSize.xxl, letterSpacing: tracking.display, fontWeight: '400', flexShrink: 1 },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1014,7 +1014,7 @@ const styles = themed((colors) => ({
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceHighlight,
   },
-  chipText: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
+  chipText: { color: colors.text, fontSize: fontSize.sm, fontWeight: '500' },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1026,7 +1026,7 @@ const styles = themed((colors) => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.surfaceHighlight,
+    backgroundColor: colors.surface,
     borderRadius: radius.md,
     overflow: 'hidden',
     paddingRight: spacing.sm,
@@ -1037,7 +1037,7 @@ const styles = themed((colors) => ({
     flex: 1,
     color: colors.text,
     fontSize: fontSize.sm,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   section: { marginBottom: spacing.xl },
   // Same shape as the artist's shelves: title on the left, the way in on the
@@ -1049,13 +1049,13 @@ const styles = themed((colors) => ({
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.md,
   },
-  sectionHeaderTitle: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '700' },
-  showAll: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '600' },
+  sectionHeaderTitle: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '500' },
+  showAll: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '500' },
   sectionTitle: {
     color: colors.text,
     fontSize: fontSize.lg,
     letterSpacing: tracking.heading,
-    fontWeight: '700',
+    fontWeight: '500',
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.md,
   },
@@ -1079,7 +1079,7 @@ const styles = themed((colors) => ({
     marginTop: spacing.xs,
   },
   scanBarFill: { height: '100%', borderRadius: radius.pill, backgroundColor: colors.accent },
-  scanTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
+  scanTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
   scanSub: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'] },
 }));
 

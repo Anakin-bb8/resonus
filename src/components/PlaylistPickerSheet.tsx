@@ -315,7 +315,7 @@ const styles = themed((colors) => ({
     opacity: 0.5,
     marginBottom: spacing.md,
   },
-  title: { color: colors.text, fontSize: fontSize.md, fontWeight: '700', paddingBottom: spacing.md },
+  title: { color: colors.text, fontSize: fontSize.md, fontWeight: '500', paddingBottom: spacing.md },
   divider: { height: 1, backgroundColor: colors.border, marginBottom: spacing.sm },
   row: {
     flexDirection: 'row',
