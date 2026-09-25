@@ -312,6 +312,7 @@ you are actually typing into, which is easier than reading it here.
 | `Good evening` | Home's greeting. The hours it changes at are part of the language too, see TRANSLATING.md |
 | `Good morning` | Home's greeting. The hours it changes at are part of the language too, see TRANSLATING.md |
 | `Good night` | Home's greeting, for the small hours. Spanish uses the same words as for the evening, which is fine |
+| `Home` | The first tab, and a folder in the car |
 | `Left on {player}` | Same card, when that app is no longer playing but its queue is the last one saved: where the person left off. {player} is the app's name |
 | `Loading covers…` | Still pulling the pictures out of the phone's own files |
 | `Looking for music…` | Reading the phone's own files, before anything can be shown |

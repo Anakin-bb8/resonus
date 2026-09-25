@@ -34,7 +34,7 @@ Releases before 0.2.1 are only listed on the
 - The quick access tiles at the top of Home have rounder corners, with the cover flush against them.
 - Settings cards have rounder corners, and the lines between their rows are finer and start where the text does.
 - Search boxes are fully rounded throughout the app, like the one for adding songs to a playlist.
-- Home starts without the greeting, with Random songs on, and History is one of the chips at the top instead of a button.
+- Home shows its name in large type under the buttons, or the greeting when it is on, and it scrolls away with the page; Random songs is on and History is a chip instead of a button.
 
 ### Fixed
 
