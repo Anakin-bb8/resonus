@@ -25,11 +25,14 @@ export function SeekBar({
   duration,
   style,
   timeColor,
+  tint,
 }: {
   duration: number;
   style?: StyleProp<ViewStyle>;
   /** The times are quieter over the player's controls than over the lyrics. */
   timeColor?: string;
+  /** The played part and the thumb, the text colour if not given. */
+  tint?: string;
 }) {
   // Its own subscription to the theme: the screens around it have one, but a
   // component that reads a colour is the one that has to be told to paint again.
@@ -59,9 +62,9 @@ export function SeekBar({
           setHeld(null);
           seekTo(value);
         }}
-        minimumTrackTintColor={colors.text}
+        minimumTrackTintColor={tint ?? colors.text}
         maximumTrackTintColor={colors.mediaTrack}
-        thumbTintColor={colors.text}
+        thumbTintColor={tint ?? colors.text}
       />
       <View style={styles.times}>
         <Text style={timeStyle}>{formatDuration(shown)}</Text>

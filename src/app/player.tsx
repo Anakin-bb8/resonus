@@ -42,7 +42,7 @@ import { OutputSheet } from '@/components/OutputSheet';
 import { SpeedSheet } from '@/components/SpeedSheet';
 import { StarRating } from '@/components/StarRating';
 import { useAnimatedCover } from '@/hooks/useAnimatedCover';
-import { useDominantColor } from '@/hooks/useDominantColor';
+import { toneOf, useDominantColor } from '@/hooks/useDominantColor';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { useLocalProfile } from '@/hooks/useLocalProfile';
 import { useLyrics } from '@/hooks/useLyrics';
@@ -71,7 +71,7 @@ import { useSettings, type CoverTapAction } from '@/store/settings';
 import { useSongMenu } from '@/store/songMenu';
 import { useToast } from '@/store/toast';
 import { useUpnp } from '@/store/upnp';
-import { colors, fontSize, radius, spacing, themed, useTheme, tracking } from '@/theme';
+import { colors, fontSize, radius, spacing, themed, useTheme, useThemeMode, tracking } from '@/theme';
 import { motion } from '@/theme/motion';
 
 /** Floor: below this the cover stops giving up space and the page scrolls. */
@@ -151,7 +151,7 @@ function CircleButton({
  * to end. Its own component so the minute tick repaints this and not the
  * player.
  */
-function SleepButton({ onPress }: { onPress: () => void }) {
+function SleepButton({ onPress, color }: { onPress: () => void; color: string }) {
   const t = useT();
   const endsAt = usePlayerStore((s) => s.sleepEndsAt);
   const atSongEnd = usePlayerStore((s) => s.sleepAtSongEnd);
@@ -170,7 +170,7 @@ function SleepButton({ onPress }: { onPress: () => void }) {
       onPress={onPress}
       style={styles.bottomButton}
     >
-      <Icon name="moon-outline" size={26} color={on ? colors.accent : colors.text} />
+      <Icon name="moon-outline" size={26} color={on ? colors.accent : color} />
       {endsAt ? (
         <Text style={styles.speedText}>
           {`${Math.max(1, Math.ceil((endsAt - Date.now()) / 60_000))}′`}
@@ -347,9 +347,18 @@ export default function PlayerScreen() {
   );
   const backdrop = useRedrawOnReturn(backdropRef, backdropSource.shown);
   const animatedBg = useRedrawOnReturn(animatedBgRef, isAnimatedCover ? cover : undefined);
-  // The full-screen animated cover needs the colour too, whatever the
-  // background setting says: the gradient under it fades into that colour.
-  const dominant = useDominantColor(colorBackground || isAnimatedCover ? cover : undefined);
+  // Always: besides the colour background and the animated cover's gradient,
+  // the controls take their tones from it. The mini player asks for the same
+  // small palette, so it comes from cache.
+  const dominant = useDominantColor(cover);
+  const lightMode = useThemeMode() === 'light';
+  // Play and the played part of the bar are a fill in the cover's hue, pale on
+  // the dark theme and deep on the light one, with the icon on it in the other
+  // end of the same hue. The other controls stay white on dark; on light,
+  // black was harsh over a tinted backdrop, so they take a deep tone too.
+  const playFill = lightMode ? toneOf(dominant, 0.26, 0.5) : toneOf(dominant, 0.84, 0.6);
+  const playInk = lightMode ? toneOf(dominant, 0.95, 0.5) : toneOf(dominant, 0.2, 0.6);
+  const ink = lightMode ? toneOf(dominant, 0.2, 0.4) : colors.text;
   // Under the blurred artwork the flat colour is irrelevant, but it still
   // paints the frame before the image decodes, so it stays dark rather than
   // flashing the old grey.
@@ -1250,7 +1259,12 @@ export default function PlayerScreen() {
               which is large: cover, gradient, quality badge, controls, queue
               sheet (#50). The seek buttons read the position when they are
               pressed instead of subscribing to it. */}
-          <SeekBar duration={duration} style={styles.progress} timeColor={colors.textMuted} />
+          <SeekBar
+            duration={duration}
+            style={styles.progress}
+            timeColor={colors.textMuted}
+            tint={playFill}
+          />
 
           <View style={styles.controls}>
             <Pressable
@@ -1262,7 +1276,7 @@ export default function PlayerScreen() {
               <Icon
                 name="shuffle"
                 size={26}
-                color={shuffle ? colors.accent : colors.text}
+                color={shuffle ? colors.accent : ink}
               />
             </Pressable>
             <Pressable
@@ -1271,7 +1285,7 @@ export default function PlayerScreen() {
               accessibilityLabel={t('Previous')}
               onPress={previous}
             >
-              <Icon name="play-skip-back" size={34} color={colors.text} />
+              <Icon name="play-skip-back" size={34} color={ink} />
             </Pressable>
             {seekButtonsSec > 0 ? (
               <Pressable
@@ -1287,12 +1301,12 @@ export default function PlayerScreen() {
                 <MaterialIcons
                   name={`replay-${seekButtonsSec}` as 'replay-10'}
                   size={28}
-                  color={colors.text}
+                  color={ink}
                 />
               </Pressable>
             ) : null}
             <Pressable
-              style={styles.playButton}
+              style={[styles.playButton, { backgroundColor: playFill }]}
               accessibilityRole="button"
               accessibilityLabel={isPlaying ? t('Pause') : t('Play')}
               onPress={toggle}
@@ -1312,12 +1326,12 @@ export default function PlayerScreen() {
               }}
             >
               {isBuffering ? (
-                <ActivityIndicator size="small" color={colors.onInverse} />
+                <ActivityIndicator size="small" color={playInk} />
               ) : (
                 <Icon
                   name={isPlaying ? 'pause' : 'play'}
                   size={34}
-                  color={colors.onInverse}
+                  color={playInk}
                   style={!isPlaying && { marginLeft: 3 }}
                 />
               )}
@@ -1340,7 +1354,7 @@ export default function PlayerScreen() {
                 <MaterialIcons
                   name={`forward-${seekButtonsSec}` as 'forward-10'}
                   size={28}
-                  color={colors.text}
+                  color={ink}
                 />
               </Pressable>
             ) : null}
@@ -1350,7 +1364,7 @@ export default function PlayerScreen() {
               accessibilityLabel={t('Next')}
               onPress={next}
             >
-              <Icon name="play-skip-forward" size={34} color={colors.text} />
+              <Icon name="play-skip-forward" size={34} color={ink} />
             </Pressable>
             <Pressable
               hitSlop={10}
@@ -1361,7 +1375,7 @@ export default function PlayerScreen() {
               <Icon
                 name={repeat === 'one' ? 'repeat-outline' : 'repeat'}
                 size={26}
-                color={repeatActive ? colors.accent : colors.text}
+                color={repeatActive ? colors.accent : ink}
               />
             </Pressable>
           </View>
@@ -1397,7 +1411,7 @@ export default function PlayerScreen() {
                       <Icon
                         name="laptop-outline"
                         size={26}
-                        color={remoteDevice ? colors.accent : colors.text}
+                        color={remoteDevice ? colors.accent : ink}
                       />
                       {remoteDevice ? (
                         <Text style={[styles.deviceName, { color: colors.accent }]} numberOfLines={1}>
@@ -1417,7 +1431,7 @@ export default function PlayerScreen() {
                       onPress={() => pushOnce('/lyrics')}
                       style={[styles.bottomButton, !hasLyrics && styles.bottomButtonOff]}
                     >
-                      <Icon name="mic-outline" size={26} color={colors.text} />
+                      <Icon name="mic-outline" size={26} color={ink} />
                     </Pressable>
                   ) : null;
                 case 'speed':
@@ -1436,7 +1450,7 @@ export default function PlayerScreen() {
                       <Icon
                         name="speedometer-outline"
                         size={26}
-                        color={speed === 1 ? colors.text : colors.accent}
+                        color={speed === 1 ? ink : colors.accent}
                       />
                       {/* The number only once it says something, in the accent
                           like the device name beside its own icon. */}
@@ -1447,6 +1461,7 @@ export default function PlayerScreen() {
                   return enabled ? (
                     <SleepButton
                       key={key}
+                      color={ink}
                       onPress={() => openMenu(song, undefined, { showLyrics: hasLyrics, sleep: true })}
                     />
                   ) : null;
@@ -1460,7 +1475,7 @@ export default function PlayerScreen() {
                       onPress={() => pushOnce('/queue')}
                       style={styles.bottomButton}
                     >
-                      <Icon name="layers-outline" size={26} color={colors.text} />
+                      <Icon name="layers-outline" size={26} color={ink} />
                     </Pressable>
                   ) : null;
               }

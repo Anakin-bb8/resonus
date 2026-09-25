@@ -71,6 +71,17 @@ function hslToHex(h: number, s: number, l: number): string {
   return `#${to(r)}${to(g)}${to(b)}`;
 }
 
+/**
+ * The same hue at another lightness, saturation capped: a cover's colour made
+ * into a fill or an ink that reads against the page (the player's controls).
+ */
+export function toneOf(hex: string, lightness: number, maxSaturation: number): string {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return hex;
+  const [h, s] = rgbToHsl(rgb[0], rgb[1], rgb[2]);
+  return hslToHex(h, Math.min(s, maxSaturation), lightness);
+}
+
 /** Saturation of a hex color in HSL, or -1 if it cannot be read. */
 function saturationOf(hex: string): number {
   const rgb = hexToRgb(hex);
