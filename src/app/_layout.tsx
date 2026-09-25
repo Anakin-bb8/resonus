@@ -380,10 +380,7 @@ export default function RootLayout() {
                   // own: the finger is what brings it up (see `playerReveal`).
                   animation: (route.params as { reveal?: string } | undefined)?.reveal
                     ? 'none'
-                    // A whole sheet sliding up, like the pull. Fading at the
-                    // same time let Home show through the player while it
-                    // moved, which read as the player's pieces moving.
-                    : 'slide_from_bottom',
+                    : 'fade_from_bottom',
                   // Override the global opaque contentStyle: without this the
                   // modal container itself is painted with colors.background and
                   // dragging the player only exposes that dark surface, never the

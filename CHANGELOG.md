@@ -11,7 +11,7 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
-- The player opens in one piece, sliding up whole with its cover already in place, instead of the cover and the stars arriving a moment after the rest, and the controls no longer shift when the next song has no album or no audio details (#155).
+- The player opens in one piece, with its cover already in place, instead of the cover and the stars arriving a moment after the rest, and the controls no longer shift when the next song has no album or no audio details (#155).
 
 ## [0.7.9] - 2026-09-25
 
