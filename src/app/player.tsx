@@ -1144,7 +1144,13 @@ export default function PlayerScreen() {
           style={[
             styles.bottom,
             landscape && styles.bottomColumn,
-            { paddingBottom: insets.bottom + spacing.md },
+            // With no card peeking below, the row of buttons would sit on the
+            // navigation bar; the room comes out of the spare height above.
+            {
+              paddingBottom:
+                insets.bottom +
+                (wantsLyricsCard || wantsArtistCard ? spacing.md : spacing.xxl + spacing.sm),
+            },
           ]}
         >
           <View style={styles.meta}>
