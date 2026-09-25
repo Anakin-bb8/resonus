@@ -1201,7 +1201,7 @@ const DEFAULTS = {
   quickGridFavorites: true,
   quickGridAlbums: true,
   quickGridPlaylists: true,
-  quickGridSize: 6,
+  quickGridSize: 8,
   showGreeting: false,
   customGreeting: '',
   homeChips: DEFAULT_HOME_CHIPS.map((c) => ({ ...c })),

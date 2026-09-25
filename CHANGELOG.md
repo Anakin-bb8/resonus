@@ -34,7 +34,7 @@ Releases before 0.2.1 are only listed on the
 - The quick access tiles at the top of Home have rounder corners, with the cover flush against them.
 - Settings cards have rounder corners, and the lines between their rows are finer and start where the text does.
 - Search boxes are fully rounded throughout the app, like the one for adding songs to a playlist.
-- Home starts without the greeting, with the chips in its place next to the gear, only Shuffle, Favorites and History among them, and six quick access tiles instead of eight.
+- Home starts without the greeting, with the chips in its place next to the gear, and only Shuffle, Favorites and History among them.
 
 ### Fixed
 
