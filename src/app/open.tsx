@@ -162,7 +162,7 @@ const styles = themed((colors) => ({
     color: colors.text,
     fontSize: fontSize.lg,
     letterSpacing: tracking.heading,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   center: { flex: 1, justifyContent: 'center' },
   content: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl, gap: spacing.md },

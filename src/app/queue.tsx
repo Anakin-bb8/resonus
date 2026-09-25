@@ -454,7 +454,7 @@ const styles = themed((colors) => ({
   },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   headerAction: { width: HEADER_ACTION_W, alignItems: 'center' },
-  headerTitle: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '700' },
+  headerTitle: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '500' },
   headerSub: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2 },
   list: { flexGrow: 1, paddingBottom: spacing.sm },
   emptyWrap: { flex: 1, justifyContent: 'center' },

@@ -156,28 +156,28 @@ type BasePalette = Omit<
   'accent' | 'accentPressed' | 'accentVivid' | 'onAccent' | 'brand'
 >;
 
-/** The dark appearance: the app's original look, unchanged. */
+/** The dark appearance, on greys with a touch of blue: a neutral grey reads flat. */
 const DARK: BasePalette = {
-  background: '#121212',
-  surface: '#181818',
-  surfaceHighlight: '#282828',
-  border: '#2A2A2A',
+  background: '#141619',
+  surface: '#1A1C21',
+  surfaceHighlight: '#2A2C33',
+  border: '#2B2D34',
   text: '#FFFFFF',
-  textSecondary: '#B3B3B3',
-  textMuted: '#727272',
+  textSecondary: '#A0A3AB',
+  textMuted: '#72757D',
   onInverse: '#000000',
-  snackbar: '#2E2E2E',
+  snackbar: '#30323A',
   onSnackbar: '#FFFFFF',
   backdrop: 'rgba(0,0,0,0.5)',
   backdropStrong: 'rgba(0,0,0,0.6)',
   scrim: 'rgba(0,0,0,0.45)',
   onArtwork: '#FFFFFF',
-  veil: 'rgba(18,18,18,0.6)',
+  veil: 'rgba(20,22,25,0.6)',
   highlight: 'rgba(255,255,255,0.14)',
   coverWash: 'rgba(0,0,0,0.42)',
   playerPlain: '#3a4042',
   mediaTrack: 'rgba(255,255,255,0.35)',
-  control: '#2A2A2A',
+  control: '#2B2D34',
   knob: '#FFFFFF',
   shadow: '#000000',
   danger: '#E03131',
@@ -191,6 +191,8 @@ const DARK: BasePalette = {
  */
 const BLACK: BasePalette = {
   ...DARK,
+  textSecondary: '#B3B3B3',
+  textMuted: '#727272',
   background: '#000000',
   surface: '#0C0C0C',
   surfaceHighlight: '#1C1C1C',
@@ -532,14 +534,14 @@ export const fontSize = {
 } as const;
 
 /**
- * Letter spacing for bold headings, tighter the bigger they are: at these
+ * Letter spacing for headings, tighter the bigger they are: at these
  * sizes the default spacing reads loose, and pulling it in is most of what
  * makes a title look current. Body text keeps the font's own.
  */
 export const tracking = {
-  heading: -0.2,
+  heading: -0.1,
   title: -0.3,
-  display: -0.6,
+  display: -0.3,
 } as const;
 
 /**

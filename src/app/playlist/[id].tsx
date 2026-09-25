@@ -306,7 +306,7 @@ const suggestedStyles = themed((colors) => ({
     color: colors.text,
     fontSize: fontSize.lg,
     letterSpacing: tracking.heading,
-    fontWeight: '700',
+    fontWeight: '500',
     marginBottom: spacing.xs,
   },
   subtitle: {

@@ -224,7 +224,7 @@ const styles = themed((colors) => ({
     paddingTop: spacing.md,
     paddingBottom: spacing.md,
   },
-  title: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '700' },
+  title: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '500' },
   subtitle: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: '600' },
   list: {
     paddingHorizontal: spacing.lg,

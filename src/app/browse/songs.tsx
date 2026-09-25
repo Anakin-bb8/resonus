@@ -547,7 +547,7 @@ const styles = themed((colors) => ({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  title: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '600' },
+  title: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '500' },
   // The same width as the back chevron, so the title stays centred.
   headerAction: { width: 26, alignItems: 'flex-end' },
   // The same row an album, a playlist and a genre have, to the same margins:

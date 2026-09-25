@@ -1032,7 +1032,7 @@ const styles = themed((colors) => ({
     color: colors.text,
     fontSize: fontSize.xxl,
     letterSpacing: tracking.display,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   subtitle: {
     color: colors.textSecondary,

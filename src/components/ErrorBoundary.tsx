@@ -47,7 +47,7 @@ const styles = themed((colors) => ({
     gap: spacing.md,
     padding: spacing.xl,
   },
-  title: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '600' },
+  title: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '500' },
   message: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,
