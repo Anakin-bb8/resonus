@@ -9,6 +9,8 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.7.9] - 2026-09-25
+
 ### Added
 
 - Settings > Theme > Pure black puts the dark appearance on a true black background, for OLED screens.
@@ -37,9 +39,9 @@ Releases before 0.2.1 are only listed on the
 - Settings cards have rounder corners, and the lines between their rows are finer and start where the text does.
 - The account at the top of Settings is a card, with offline mode as a switch and signing out as a row in it, instead of the two black buttons at the bottom, and the category names are lighter.
 - Search boxes are fully rounded throughout the app, like the one for adding songs to a playlist.
-- Home shows its name at the top next to the buttons, like Explore and Your library, or the greeting when it is on; Random songs is on, and the search, history and settings buttons are all there.
+- Home shows its name next to the buttons at the top, like Explore and Your library, and the greeting starts off.
 - Search opens on your recent searches instead of the genres, which stay in Explore, and says what it searches when there are none yet.
-- The row under the player controls has lyrics, playback speed and sleep timer next to devices and the queue, and Settings > Player > Bottom row turns each one on or off and puts them in any order; the sleep timer shows the minutes left.
+- The row under the player controls has lyrics, playback speed and a sleep timer that shows the minutes left, next to devices and the queue, and Settings > Player > Bottom row turns each one on or off and puts them in any order.
 - The play button and the progress bar take the hue of the background shade chosen in Settings > Theme, and on the light theme the controls are a deep tone of it instead of black.
 
 ### Fixed
