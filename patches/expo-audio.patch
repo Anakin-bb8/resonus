@@ -1551,10 +1551,10 @@ index f3ae4ee..99f02c0 100644
      /**
 diff --git a/ios/AnimatedArtwork.swift b/ios/AnimatedArtwork.swift
 new file mode 100644
-index 0000000..e7113a5
+index 0000000..080efcf
 --- /dev/null
 +++ b/ios/AnimatedArtwork.swift
-@@ -0,0 +1,535 @@
+@@ -0,0 +1,536 @@
 +import AVFoundation
 +import CoreGraphics
 +import CoreImage
@@ -1756,10 +1756,11 @@ index 0000000..e7113a5
 +      UIColor.white.cgColor,
 +      UIColor.white.withAlphaComponent(0).cgColor,
 +    ] as CFArray
++    let featherLocations: [CGFloat] = [0, 0.16, 0.84, 1]
 +    if let gradient = CGGradient(
 +      colorsSpace: CGColorSpaceCreateDeviceRGB(),
 +      colors: colors,
-+      locations: [0, 0.16, 0.84, 1]
++      locations: featherLocations
 +    ) {
 +      offscreen.setBlendMode(.destinationIn)
 +      offscreen.drawLinearGradient(
