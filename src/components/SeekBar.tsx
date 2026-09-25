@@ -14,7 +14,7 @@
  * the lyrics screen is following the song word by word.
  */
 import Slider from '@react-native-community/slider';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Platform, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { formatDuration } from '@/lib/format';
@@ -25,11 +25,14 @@ export function SeekBar({
   duration,
   style,
   timeColor,
+  center,
 }: {
   duration: number;
   style?: StyleProp<ViewStyle>;
   /** The times are quieter over the player's controls than over the lyrics. */
   timeColor?: string;
+  /** Between the two times, centred on the bar (the player's audio quality). */
+  center?: ReactNode;
 }) {
   // Its own subscription to the theme: the screens around it have one, but a
   // component that reads a colour is the one that has to be told to paint again.
@@ -66,6 +69,11 @@ export function SeekBar({
       <View style={styles.times}>
         <Text style={timeStyle}>{formatDuration(shown)}</Text>
         <Text style={timeStyle}>{formatDuration(duration)}</Text>
+        {center ? (
+          <View style={styles.center} pointerEvents="none">
+            {center}
+          </View>
+        ) : null}
       </View>
     </View>
   );
@@ -85,4 +93,7 @@ const styles = themed((colors) => ({
     marginTop: -2,
   },
   time: { color: colors.textSecondary, fontSize: fontSize.xs },
+  // Over the row rather than in it, so it sits on the bar's middle whatever
+  // the two times measure.
+  center: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
 }));
