@@ -71,7 +71,17 @@ import { useSettings, type CoverTapAction } from '@/store/settings';
 import { useSongMenu } from '@/store/songMenu';
 import { useToast } from '@/store/toast';
 import { useUpnp } from '@/store/upnp';
-import { colors, fontSize, radius, spacing, themed, useTheme, useThemeMode, tracking } from '@/theme';
+import {
+  BACKGROUND_TINTS,
+  colors,
+  fontSize,
+  radius,
+  spacing,
+  themed,
+  tracking,
+  useTheme,
+  useThemeMode,
+} from '@/theme';
 import { motion } from '@/theme/motion';
 
 /** Floor: below this the cover stops giving up space and the page scrolls. */
@@ -320,6 +330,8 @@ export default function PlayerScreen() {
   // change: a flat color is animated and the gradient toward the background is
   // a fixed overlay (same look as animating the gradient, which can't be done).
   const background = useSettings((s) => s.playerBackground);
+  const backgroundTint = useSettings((s) => s.backgroundTint);
+  const pureBlack = useSettings((s) => s.pureBlack);
   const colorBackground = background === 'color';
   const animatedCoverBg = useSettings((s) => s.animatedCoverBackground);
   // An animated cover (GIF, animated WebP, APNG) can take the whole screen
@@ -347,18 +359,19 @@ export default function PlayerScreen() {
   );
   const backdrop = useRedrawOnReturn(backdropRef, backdropSource.shown);
   const animatedBg = useRedrawOnReturn(animatedBgRef, isAnimatedCover ? cover : undefined);
-  // Always: besides the colour background and the animated cover's gradient,
-  // the controls take their tones from it. The mini player asks for the same
-  // small palette, so it comes from cache.
-  const dominant = useDominantColor(cover);
+  // The full-screen animated cover needs the colour too, whatever the
+  // background setting says: the gradient under it fades into that colour.
+  const dominant = useDominantColor(colorBackground || isAnimatedCover ? cover : undefined);
   const lightMode = useThemeMode() === 'light';
-  // Play and the played part of the bar are a fill in the cover's hue, pale on
-  // the dark theme and deep on the light one, with the icon on it in the other
-  // end of the same hue. The other controls stay white on dark; on light,
-  // black was harsh over a tinted backdrop, so they take a deep tone too.
-  const playFill = lightMode ? toneOf(dominant, 0.26, 0.5) : toneOf(dominant, 0.84, 0.6);
-  const playInk = lightMode ? toneOf(dominant, 0.95, 0.5) : toneOf(dominant, 0.2, 0.6);
-  const ink = lightMode ? toneOf(dominant, 0.2, 0.4) : colors.text;
+  // Play, the played part of the bar and, on light, the controls take the hue
+  // of the background shade the user picked, rather than pure black or white:
+  // pale with a deep icon on dark, deep with a pale icon on light. Pure black
+  // is neutral, like its greys.
+  const tintBase =
+    BACKGROUND_TINTS[pureBlack && !lightMode ? 'neutral' : backgroundTint].dark.surfaceHighlight;
+  const playFill = lightMode ? toneOf(tintBase, 0.22, 0.2) : toneOf(tintBase, 0.9, 0.3);
+  const playInk = lightMode ? toneOf(tintBase, 0.97, 0.2) : toneOf(tintBase, 0.14, 0.3);
+  const ink = lightMode ? toneOf(tintBase, 0.2, 0.2) : colors.text;
   // Under the blurred artwork the flat colour is irrelevant, but it still
   // paints the frame before the image decodes, so it stays dark rather than
   // flashing the old grey.
