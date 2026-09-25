@@ -2,7 +2,7 @@
 import Icon from '@/components/Icon';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useFocusEffect, useNavigation, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Keyboard,
@@ -17,12 +17,10 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { COVER, coverArtUrl, getPlaylists, search } from '@/api/data';
-import { getGenres, getRadioStations } from '@/api/backend';
+import { getRadioStations } from '@/api/backend';
 import { AlbumCard } from '@/components/AlbumCard';
 import { Cover } from '@/components/Cover';
 import { EmptyState } from '@/components/EmptyState';
-import { GenreCard } from '@/components/GenreCard';
-import { GenreGridSkeleton } from '@/components/GenreGridSkeleton';
 import { Message } from '@/components/Message';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { TrackRow } from '@/components/TrackRow';
@@ -41,10 +39,6 @@ import { useAccent } from '@/hooks/useAccent';
 import { colors, fontSize, radius, spacing, themed, useTheme, tracking } from '@/theme';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { centredPadding, useScreenSize } from '@/hooks/useScreenSize';
-
-/** How wide a genre card wants to be, in dp: two across a phone, and as many
- *  as fit at that size on anything wider (#131). */
-const GENRE_IDEAL = 220;
 
 /**
  * What the chips under the box narrow the answer to.
@@ -76,15 +70,10 @@ export default function SearchScreen() {
   // mounted while you are on another one, out of reach of anything else.
   useTheme();
   useSettings((s) => s.appFont); // re-render when font changes
-  // Worked out while rendering, so turning the phone re-lays the cards out.
   // The whole page is one centred column on a wide screen, like the lists and
-  // the settings, and the cards are measured against that column and not
-  // against the screen (#131).
+  // the settings (#131).
   const { width } = useScreenSize();
   const pagePad = centredPadding(width, spacing.lg);
-  const inner = width - pagePad * 2;
-  const genreCols = Math.max(2, Math.min(5, Math.round(inner / GENRE_IDEAL)));
-  const genreW = (inner - spacing.sm * (genreCols - 1)) / genreCols;
   const offline = useAuthStore((s) => s.offline);
   const canSearch = useAuthStore((s) => !!s.auth || s.offline);
   const auth = useAuthStore((s) => s.auth);
@@ -92,7 +81,6 @@ export default function SearchScreen() {
   const lang = useSettings((s) => s.language);
   const bottomPad = useScreenBottomPadding();
   const [query, setQuery] = useState('');
-  const [focused, setFocused] = useState(false);
   const debouncedQuery = useDebounce(query.trim(), 350);
   const playing = usePlayerStore(currentSong);
   const showListArtwork = useSettings((s) => s.showListArtwork);
@@ -104,8 +92,8 @@ export default function SearchScreen() {
 
   // Tapping the Search tab while already on Search raises the keyboard.
   //
-  // Entering here doesn't focus on purpose: without focus the screen offers
-  // the genre grid, and the keyboard would cover it. But whoever already knows
+  // Entering here doesn't focus on purpose: the keyboard would cover the
+  // recent searches the screen opens on. But whoever already knows
   // what they want was paying an extra tap on the box, always. So both
   // intentions coexist, each with its own gesture.
   //
@@ -177,17 +165,6 @@ export default function SearchScreen() {
     enabled: canSearch && debouncedQuery.length > 1,
   });
 
-  // Genres for the browse grid (server only) when there's no active search.
-  //
-  // Not offline: a genre is the server's idea and there is no local index of
-  // them, so the section had nothing to open even when it drew. What it did
-  // instead was ask, fail, and leave its skeleton behind on the way.
-  const { data: genres, isLoading: genresLoading } = useQuery({
-    queryKey: ['genres'],
-    queryFn: () => getGenres(auth!),
-    enabled: !!auth && !offline,
-  });
-
   const openMediaMenu = useMediaMenu((s) => s.open);
   // Playlists: Subsonic's search3 doesn't return them, so they're filtered by
   // name client-side (the full list is already cached by other screens).
@@ -219,20 +196,6 @@ export default function SearchScreen() {
         )
       : [];
 
-  // Built once per genre list and not on every render of this screen. There is
-  // no ceiling on how many a library has, they are all laid out at once (no
-  // list to recycle them), and this screen re-renders for reasons that have
-  // nothing to do with them: a setting, the song that started playing, a
-  // keystroke. Same elements, so React walks past the whole grid instead of
-  // rebuilding it.
-  const genreGrid = useMemo(
-    () =>
-      genres?.map((g) => (
-        <GenreCard key={g.value} name={g.value} albumCount={g.albumCount} width={genreW} />
-      )),
-    [genres, genreW],
-  );
-
   /**
    * Which kind of result the screen is showing, and `all` to start with.
    *
@@ -257,9 +220,9 @@ export default function SearchScreen() {
     (shows('radio') ? stationMatches.length : 0);
 
   const isEmpty = query.trim().length === 0;
-  const showRecent = focused && isEmpty && recent.length > 0;
-  const showBrowse = isEmpty && !showRecent && !!genres && genres.length > 0;
-  const showBrowseSkeleton = isEmpty && !showRecent && !!auth && !offline && genresLoading;
+  // With the box empty the screen is what was opened from it before. Genres
+  // are Explore's, and were a second Explore here.
+  const showRecent = isEmpty && recent.length > 0;
 
   /** Recent item subtitle: type (+ artist for albums/songs). */
   const recentLabel = (item: RecentItem): string => {
@@ -292,8 +255,6 @@ export default function SearchScreen() {
             setQuery(text);
           }}
           returnKeyType="search"
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
         />
         {query.length > 0 ? (
           <Pressable hitSlop={10} accessibilityLabel={t('Clear')} onPress={() => setQuery('')}>
@@ -304,8 +265,8 @@ export default function SearchScreen() {
       </View>
 
       {/* Only while something is being searched for. With the box empty this
-          screen is the recent searches or the genres to browse, and a filter
-          over either of those narrows nothing: a chip is worth drawing where
+          screen is the recent searches, and a filter over those narrows
+          nothing: a chip is worth drawing where
           it leaves something out. */}
       {isEmpty ? null : (
         <View style={[styles.filters, { paddingHorizontal: pagePad }]}>
@@ -376,14 +337,12 @@ export default function SearchScreen() {
           </View>
         ) : null}
 
-        {showBrowse ? (
-          <View style={styles.section}>
-            <View style={styles.genreGrid}>{genreGrid}</View>
-          </View>
-        ) : showBrowseSkeleton ? (
-          <View style={styles.section}>
-            <GenreGridSkeleton width={genreW} />
-          </View>
+        {isEmpty && recent.length === 0 ? (
+          <EmptyState
+            icon="search-outline"
+            title={t('Search your music')}
+            subtitle={t('Songs, albums, artists and playlists. What you open from here is kept for next time.')}
+          />
         ) : null}
 
         {isFetching ? (
@@ -660,11 +619,6 @@ const styles = themed((colors) => ({
   recentSub: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2 },
   albumRow: {
     gap: spacing.md,
-  },
-  genreGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
   },
   artist: {
     width: 110,

@@ -35,6 +35,7 @@ Releases before 0.2.1 are only listed on the
 - Settings cards have rounder corners, and the lines between their rows are finer and start where the text does.
 - Search boxes are fully rounded throughout the app, like the one for adding songs to a playlist.
 - Home shows its name at the top next to the buttons, like Explore and Your library, or the greeting when it is on; Random songs is on, and the search, history and settings buttons are all there.
+- Search opens on your recent searches instead of the genres, which stay in Explore, and says what it searches when there are none yet.
 
 ### Fixed
 
