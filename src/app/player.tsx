@@ -1583,8 +1583,9 @@ const styles = themed((colors) => ({
     gap: 6,
     marginTop: spacing.xs,
   },
+  // In the text colour, so artist and album are two steps and not one grey.
   artist: {
-    color: colors.textSecondary,
+    color: colors.text,
     fontSize: fontSize.md,
     flexShrink: 1,
   },
