@@ -1,9 +1,9 @@
 /** Playlist detail with its songs. */
 import Icon from '@/components/Icon';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, AppState, Pressable, StyleSheet, Text, View } from 'react-native';
 import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -54,6 +54,10 @@ import { colors, fontSize, spacing, themed, useTheme, tracking } from '@/theme';
 const SEED_COUNT = 5;
 const SIMILAR_PER_SEED = 3;
 const SUGGESTION_MAX = 5;
+
+/** Stops the preview playing on whichever playlist screen started it, so a
+ *  second screen never plays over the first. */
+let activePreview: { player: AudioPlayer; stop: () => void } | null = null;
 
 async function fetchSuggestions(
   songs: Song[],
@@ -122,12 +126,8 @@ function SuggestedTracks({
     return () => {
       unmountedRef.current = true;
       requestRef.current++;
-      if (previewTimer.current) clearTimeout(previewTimer.current);
-      void previewPlayer.current?.remove();
-      previewPlayer.current = null;
-      resumeMusic();
     };
-  }, [resumeMusic]);
+  }, []);
 
   const refresh = useCallback(async () => {
     const request = ++requestRef.current;
@@ -163,51 +163,76 @@ function SuggestedTracks({
     [playlistId, playlistName, queryClient, toast, t],
   );
 
-  const stopPreview = useCallback(async () => {
+  // `remove()` alone leaves the native player sounding until it is collected.
+  const stopPreview = useCallback(() => {
     if (previewTimer.current) {
       clearTimeout(previewTimer.current);
       previewTimer.current = null;
     }
     const p = previewPlayer.current;
     previewPlayer.current = null;
-    setPreviewing(null);
+    if (p && activePreview?.player === p) activePreview = null;
+    if (!unmountedRef.current) setPreviewing(null);
     if (p) {
       try {
         p.pause();
-        await p.remove();
+        p.remove();
       } catch {}
     }
     resumeMusic();
   }, [resumeMusic]);
 
+  // Leaving the screen, or the app, ends the preview.
+  const focusedRef = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      focusedRef.current = true;
+      const sub = AppState.addEventListener('change', (state) => {
+        if (state === 'background') stopPreview();
+      });
+      return () => {
+        focusedRef.current = false;
+        sub.remove();
+        stopPreview();
+      };
+    }, [stopPreview]),
+  );
+
+  // The music starting some other way ends the preview, and it stays playing.
+  useEffect(
+    () =>
+      usePlayerStore.subscribe((s, prev) => {
+        if (s.isPlaying && !prev.isPlaying && previewPlayer.current) {
+          wasPlayingRef.current = false;
+          stopPreview();
+        }
+      }),
+    [stopPreview],
+  );
+
   const previewSong = useCallback(
-    async (song: Song) => {
+    (song: Song) => {
       if (previewing === song.id) {
-        void stopPreview();
+        stopPreview();
         return;
       }
-      await stopPreview();
+      activePreview?.stop();
+      stopPreview();
       if (!auth) return;
       const url = song.url || streamUrl(auth, song.id);
       if (!url) return;
       wasPlayingRef.current = usePlayerStore.getState().isPlaying;
       if (wasPlayingRef.current) usePlayerStore.getState().toggle();
-      // Left the screen while the previous preview was being stopped.
-      if (unmountedRef.current) {
-        resumeMusic();
-        return;
-      }
       const player = createAudioPlayer({ uri: url });
       previewPlayer.current = player;
-      await player.play();
+      activePreview = { player, stop: stopPreview };
+      player.play();
       const startSec = (song.duration ?? 0) > 38 ? 38 : 0;
       if (startSec > 0) player.seekTo(startSec);
       setPreviewing(song.id);
-      previewTimer.current = setTimeout(() => {
-        void stopPreview();
-      }, 45_000);
+      previewTimer.current = setTimeout(stopPreview, 45_000);
     },
-    [auth, previewing, stopPreview, resumeMusic],
+    [auth, previewing, stopPreview],
   );
 
   // What was added some other way meanwhile is no longer a suggestion.
@@ -224,7 +249,7 @@ function SuggestedTracks({
         <Pressable
           key={song.id}
           style={suggestedStyles.row}
-          onPress={() => void previewSong(song)}
+          onPress={() => previewSong(song)}
         >
           <View style={suggestedStyles.artwork}>
             <Cover uri={songCoverUrl(song, COVER.thumb)} size={48} />

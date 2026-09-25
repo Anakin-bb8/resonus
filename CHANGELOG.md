@@ -41,6 +41,7 @@ Releases before 0.2.1 are only listed on the
 - A car connected by Bluetooth gets each song's cover along with its title, instead of only for the first song (#139).
 - A long title on the queue screen, like the German one, no longer runs under the buttons next to it (#232).
 - On iOS the lock screen and the Dynamic Island show the song's length and progress while the server transcodes it, instead of --:--.
+- A suggested track previewed in a playlist stops when you leave the playlist, put the app in the background or play something else, instead of playing on with no way to stop it (#234).
 
 ## [0.7.8] - 2026-09-23
 
