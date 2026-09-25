@@ -1551,12 +1551,13 @@ index f3ae4ee..99f02c0 100644
      /**
 diff --git a/ios/AnimatedArtwork.swift b/ios/AnimatedArtwork.swift
 new file mode 100644
-index 0000000..bcc6994
+index 0000000..bdc5944
 --- /dev/null
 +++ b/ios/AnimatedArtwork.swift
-@@ -0,0 +1,344 @@
+@@ -0,0 +1,449 @@
 +import AVFoundation
 +import CoreGraphics
++import CoreImage
 +import CoreMedia
 +import CoreVideo
 +import CryptoKit
@@ -1571,11 +1572,27 @@ index 0000000..bcc6994
 +final class AnimatedArtwork {
 +  private static let maxSide = 720
 +  private static let maxFrames = 300
-+  private static let maxDuration = 30.0
++  // The system prefers a clip that is *less than* 30 seconds, so stop at 29.
++  private static let maxDuration = 29.0
 +  private static let minFrameDelay = 1.0 / 60.0
 +  private static let fallbackDelay = 0.1
 +  private static let browserDelayFloor = 0.011
 +  private static let frameOptions = [kCGImageSourceShouldCache: false] as CFDictionary
++  private static let blurContext = CIContext()
++
++  private enum Ratio {
++    case square
++    case tall
++
++    var suffix: String {
++      switch self {
++      case .square:
++        return "1x1"
++      case .tall:
++        return "3x4"
++      }
++    }
++  }
 +
 +  private struct Sample {
 +    let index: Int
@@ -1588,53 +1605,145 @@ index 0000000..bcc6994
 +  }
 +
 +  private let artworkID: String
-+  private let preview: UIImage
-+  private let side: Int
++  private let ratio: Ratio
++  private let sourceSize: CGSize
 +  private let destination: URL
 +  private var data: Data?
 +  private let lock = NSLock()
 +  private var encodeTask: Task<URL?, Never>?
 +
-+  static func make(url: URL, data: Data) -> MPMediaItemAnimatedArtwork? {
++  /// Both variants the system can ask for. The square one needs a square
++  /// source, the tall one takes any cover: it is the key the iPhone lock
++  /// screen draws full screen, and providing only `1x1` left that screen with
++  /// the static artwork.
++  static func make(url: URL, data: Data) -> (square: MPMediaItemAnimatedArtwork?, tall: MPMediaItemAnimatedArtwork?) {
 +    guard let source = CGImageSourceCreateWithData(data as CFData, nil),
 +          CGImageSourceGetCount(source) > 1,
 +          let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any]
 +    else {
-+      return nil
++      return (nil, nil)
 +    }
 +    let width = (properties[kCGImagePropertyPixelWidth as String] as? NSNumber)?.intValue ?? 0
 +    let height = (properties[kCGImagePropertyPixelHeight as String] as? NSNumber)?.intValue ?? 0
-+    guard width > 0, height > 0, abs(width - height) * 100 <= max(width, height) else {
-+      return nil
-+    }
-+    guard let frame = CGImageSourceCreateImageAtIndex(source, 0, frameOptions),
-+          let destination = cacheFile(for: url)
++    guard width > 0, height > 0,
++          let frame = CGImageSourceCreateImageAtIndex(source, 0, frameOptions)
 +    else {
++      return (nil, nil)
++    }
++    let sourceSize = CGSize(width: width, height: height)
++    let id = identifier(for: url)
++    let square: MPMediaItemAnimatedArtwork?
++    if abs(width - height) * 100 <= max(width, height) {
++      square = variant(id: id, ratio: .square, sourceSize: sourceSize, frame: frame, url: url, data: data)
++    } else {
++      square = nil
++    }
++    let tall = variant(id: id, ratio: .tall, sourceSize: sourceSize, frame: frame, url: url, data: data)
++    return (square: square, tall: tall)
++  }
++
++  private static func variant(
++    id: String,
++    ratio: Ratio,
++    sourceSize: CGSize,
++    frame: CGImage,
++    url: URL,
++    data: Data
++  ) -> MPMediaItemAnimatedArtwork? {
++    guard let destination = cacheFile(id: id, ratio: ratio) else {
 +      return nil
 +    }
-+    let side = evenSide(longest: max(width, height))
 +    let artwork = AnimatedArtwork(
-+      artworkID: identifier(for: url),
-+      preview: render(frame, side: side),
-+      side: side,
++      artworkID: id + "-" + ratio.suffix,
++      ratio: ratio,
++      sourceSize: sourceSize,
 +      destination: destination,
 +      data: data
 +    )
-+    let preview = artwork.preview
-+    let artworkID = artwork.artworkID
++    let preview = artwork.previewFrame(frame)
 +    return MPMediaItemAnimatedArtwork(
-+      artworkID: artworkID,
++      artworkID: artwork.artworkID,
 +      previewImageRequestHandler: { _ in preview },
 +      videoAssetFileURLRequestHandler: { _ in await artwork.videoURL() }
 +    )
 +  }
 +
-+  private init(artworkID: String, preview: UIImage, side: Int, destination: URL, data: Data) {
++  private init(artworkID: String, ratio: Ratio, sourceSize: CGSize, destination: URL, data: Data) {
 +    self.artworkID = artworkID
-+    self.preview = preview
-+    self.side = side
++    self.ratio = ratio
++    self.sourceSize = sourceSize
 +    self.destination = destination
 +    self.data = data
++  }
++
++  private var canvas: CGSize {
++    let longest = max(Int(sourceSize.width), Int(sourceSize.height))
++    let side = Self.evenSide(longest: longest)
++    switch ratio {
++    case .square:
++      return CGSize(width: side, height: side)
++    case .tall:
++      // A multiple of 6 keeps both edges even and makes 3:4 exact, which the
++      // system checks the same way it checks the preview.
++      let width = max(6, side - (side % 6))
++      return CGSize(width: width, height: width * 4 / 3)
++    }
++  }
++
++  /// The preview is built with the variant's aspect ratio from the first
++  /// frame: a preview that does not match the key makes the system drop the
++  /// animated artwork and fall back to the static one.
++  private func previewFrame(_ frame: CGImage) -> UIImage {
++    let size = canvas
++    let format = UIGraphicsImageRendererFormat()
++    format.scale = 1
++    format.opaque = true
++    let backdrop = ratio == .tall ? Self.blurred(frame) : nil
++    return UIGraphicsImageRenderer(size: size, format: format).image { renderer in
++      draw(frame, in: renderer.cgContext, canvas: size, backdrop: backdrop)
++    }
++  }
++
++  private func draw(_ frame: CGImage, in context: CGContext, canvas: CGSize, backdrop: CGImage?) {
++    let bounds = CGRect(origin: .zero, size: canvas)
++    context.setFillColor(red: 0, green: 0, blue: 0, alpha: 1)
++    context.fill(bounds)
++    context.interpolationQuality = .high
++    guard ratio == .tall, let backdrop else {
++      context.draw(frame, in: bounds)
++      return
++    }
++    // The cover keeps its square shape over a blurred copy of itself, so the
++    // tall canvas is filled without stretching the artwork.
++    context.draw(backdrop, in: Self.aspectFill(CGSize(width: backdrop.width, height: backdrop.height), in: bounds))
++    let side = min(canvas.width, canvas.height)
++    context.draw(
++      frame,
++      in: CGRect(x: 0, y: (canvas.height - side) / 2, width: side, height: side)
++    )
++  }
++
++  private static func blurred(_ frame: CGImage) -> CGImage? {
++    let input = CIImage(cgImage: frame)
++    guard let filter = CIFilter(name: "CIGaussianBlur") else {
++      return nil
++    }
++    filter.setValue(input, forKey: kCIInputImageKey)
++    filter.setValue(64.0, forKey: kCIInputRadiusKey)
++    guard let output = filter.outputImage?.cropped(to: input.extent) else {
++      return nil
++    }
++    return blurContext.createCGImage(output, from: output.extent)
++  }
++
++  private static func aspectFill(_ size: CGSize, in bounds: CGRect) -> CGRect {
++    guard size.width > 0, size.height > 0 else {
++      return bounds
++    }
++    let scale = max(bounds.width / size.width, bounds.height / size.height)
++    let width = size.width * scale
++    let height = size.height * scale
++    return CGRect(x: bounds.midX - width / 2, y: bounds.midY - height / 2, width: width, height: height)
 +  }
 +
 +  private func videoURL() async -> URL? {
@@ -1692,12 +1801,15 @@ index 0000000..bcc6994
 +      }
 +    }
 +
++    let canvas = self.canvas
++    let width = Int(canvas.width)
++    let height = Int(canvas.height)
 +    let settings: [String: Any] = [
 +      AVVideoCodecKey: AVVideoCodecType.h264,
-+      AVVideoWidthKey: side,
-+      AVVideoHeightKey: side,
++      AVVideoWidthKey: width,
++      AVVideoHeightKey: height,
 +      AVVideoCompressionPropertiesKey: [
-+        AVVideoAverageBitRateKey: side * side * 2,
++        AVVideoAverageBitRateKey: width * height * 2,
 +        AVVideoMaxKeyFrameIntervalKey: 30,
 +        AVVideoAllowFrameReorderingKey: false,
 +      ] as [String: Any],
@@ -1715,8 +1827,8 @@ index 0000000..bcc6994
 +      assetWriterInput: input,
 +      sourcePixelBufferAttributes: [
 +        kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
-+        kCVPixelBufferWidthKey as String: side,
-+        kCVPixelBufferHeightKey as String: side,
++        kCVPixelBufferWidthKey as String: width,
++        kCVPixelBufferHeightKey as String: height,
 +        kCVPixelBufferCGImageCompatibilityKey as String: true,
 +        kCVPixelBufferCGBitmapContextCompatibilityKey as String: true,
 +      ]
@@ -1731,9 +1843,16 @@ index 0000000..bcc6994
 +      }
 +    }
 +
++    let backdrop: CGImage?
++    if ratio == .tall, let first = CGImageSourceCreateImageAtIndex(source, 0, Self.frameOptions) {
++      backdrop = Self.blurred(first)
++    } else {
++      backdrop = nil
++    }
++
 +    for sample in schedule.samples {
 +      guard let frame = CGImageSourceCreateImageAtIndex(source, sample.index, Self.frameOptions),
-+            let buffer = pixelBuffer(adaptor: adaptor, frame: frame),
++            let buffer = pixelBuffer(adaptor: adaptor, frame: frame, canvas: canvas, backdrop: backdrop),
 +            await isReady(input, writer: writer),
 +            adaptor.append(buffer, withPresentationTime: CMTime(seconds: sample.time, preferredTimescale: 600))
 +      else {
@@ -1743,7 +1862,7 @@ index 0000000..bcc6994
 +
 +    guard let lastIndex = schedule.samples.last?.index,
 +          let lastFrame = CGImageSourceCreateImageAtIndex(source, lastIndex, Self.frameOptions),
-+          let lastBuffer = pixelBuffer(adaptor: adaptor, frame: lastFrame),
++          let lastBuffer = pixelBuffer(adaptor: adaptor, frame: lastFrame, canvas: canvas, backdrop: backdrop),
 +          await isReady(input, writer: writer)
 +    else {
 +      return nil
@@ -1780,7 +1899,12 @@ index 0000000..bcc6994
 +    return true
 +  }
 +
-+  private func pixelBuffer(adaptor: AVAssetWriterInputPixelBufferAdaptor, frame: CGImage) -> CVPixelBuffer? {
++  private func pixelBuffer(
++    adaptor: AVAssetWriterInputPixelBufferAdaptor,
++    frame: CGImage,
++    canvas: CGSize,
++    backdrop: CGImage?
++  ) -> CVPixelBuffer? {
 +    guard let pool = adaptor.pixelBufferPool else {
 +      return nil
 +    }
@@ -1792,11 +1916,10 @@ index 0000000..bcc6994
 +    }
 +    CVPixelBufferLockBaseAddress(buffer, [])
 +    defer { CVPixelBufferUnlockBaseAddress(buffer, []) }
-+    let bounds = CGRect(x: 0, y: 0, width: side, height: side)
 +    guard let context = CGContext(
 +      data: CVPixelBufferGetBaseAddress(buffer),
-+      width: side,
-+      height: side,
++      width: Int(canvas.width),
++      height: Int(canvas.height),
 +      bitsPerComponent: 8,
 +      bytesPerRow: CVPixelBufferGetBytesPerRow(buffer),
 +      space: CGColorSpaceCreateDeviceRGB(),
@@ -1804,10 +1927,7 @@ index 0000000..bcc6994
 +    ) else {
 +      return nil
 +    }
-+    context.setFillColor(red: 0, green: 0, blue: 0, alpha: 1)
-+    context.fill(bounds)
-+    context.interpolationQuality = .high
-+    context.draw(frame, in: bounds)
++    draw(frame, in: context, canvas: canvas, backdrop: backdrop)
 +    return buffer
 +  }
 +
@@ -1867,34 +1987,19 @@ index 0000000..bcc6994
 +    return max(2, capped - (capped % 2))
 +  }
 +
-+  private static func render(_ frame: CGImage, side: Int) -> UIImage {
-+    let size = CGSize(width: side, height: side)
-+    let bounds = CGRect(origin: .zero, size: size)
-+    let format = UIGraphicsImageRendererFormat()
-+    format.scale = 1
-+    format.opaque = true
-+    return UIGraphicsImageRenderer(size: size, format: format).image { context in
-+      let cgContext = context.cgContext
-+      cgContext.setFillColor(red: 0, green: 0, blue: 0, alpha: 1)
-+      cgContext.fill(bounds)
-+      cgContext.interpolationQuality = .high
-+      cgContext.draw(frame, in: bounds)
-+    }
-+  }
-+
 +  private static func identifier(for url: URL) -> String {
 +    SHA256.hash(data: Data(url.absoluteString.utf8))
 +      .map { String(format: "%02x", $0) }
 +      .joined()
 +  }
 +
-+  private static func cacheFile(for url: URL) -> URL? {
++  private static func cacheFile(id: String, ratio: Ratio) -> URL? {
 +    guard let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else {
 +      return nil
 +    }
 +    return base
 +      .appendingPathComponent("animated-artwork", isDirectory: true)
-+      .appendingPathComponent(identifier(for: url) + ".mp4")
++      .appendingPathComponent(id + "-" + ratio.suffix + ".mp4")
 +  }
 +}
 +
@@ -1971,14 +2076,15 @@ index 33db27c..a5c4135 100644
  
  enum BitRateStrategy: String, Enumerable {
 diff --git a/ios/MediaController.swift b/ios/MediaController.swift
-index e977f57..a78c975 100644
+index e977f57..8599115 100644
 --- a/ios/MediaController.swift
 +++ b/ios/MediaController.swift
-@@ -11,9 +11,11 @@ class MediaController {
+@@ -11,9 +11,12 @@ class MediaController {
  
    private var currentArtworkUrl: URL?
    private var cachedArtwork: MPMediaItemArtwork?
-+  private var cachedAnimatedArtwork: AnyObject?
++  private var cachedAnimatedSquareArtwork: AnyObject?
++  private var cachedAnimatedTallArtwork: AnyObject?
    private var artworkLoadToken: UUID?
    private var currentArtworkItemIdentifier: ObjectIdentifier?
    private var isLiveStream = false
@@ -1986,7 +2092,7 @@ index e977f57..a78c975 100644
  
    func setActivePlayer(_ player: AudioPlayer?, options: LockScreenOptions? = nil) {
      performOnMain {
-@@ -68,6 +70,7 @@ class MediaController {
+@@ -68,6 +71,7 @@ class MediaController {
      } else {
        resetArtworkState()
        nowPlayingInfo.removeValue(forKey: MPMediaItemPropertyArtwork)
@@ -1994,7 +2100,7 @@ index e977f57..a78c975 100644
        applyAssetMetadata(&nowPlayingInfo, for: player)
      }
  
-@@ -80,7 +83,11 @@ class MediaController {
+@@ -80,7 +84,11 @@ class MediaController {
        info.removeValue(forKey: MPMediaItemPropertyPlaybackDuration)
        info.removeValue(forKey: MPNowPlayingInfoPropertyElapsedPlaybackTime)
      } else {
@@ -2007,7 +2113,7 @@ index e977f57..a78c975 100644
        info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = player.currentTime
      }
      info[MPNowPlayingInfoPropertyPlaybackRate] = player.isPlaying ? player.ref.rate : 0.0
-@@ -139,17 +146,20 @@ class MediaController {
+@@ -139,17 +147,21 @@ class MediaController {
      guard let artworkUrl = metadata.artworkUrl else {
        resetArtworkState()
        info.removeValue(forKey: MPMediaItemPropertyArtwork)
@@ -2018,7 +2124,8 @@ index e977f57..a78c975 100644
      if currentArtworkUrl != artworkUrl {
        currentArtworkUrl = artworkUrl
        cachedArtwork = nil
-+      cachedAnimatedArtwork = nil
++      cachedAnimatedSquareArtwork = nil
++      cachedAnimatedTallArtwork = nil
        artworkLoadToken = nil
      }
  
@@ -2028,7 +2135,7 @@ index e977f57..a78c975 100644
        return
      }
  
-@@ -173,14 +183,16 @@ class MediaController {
+@@ -173,14 +185,17 @@ class MediaController {
          return
        }
  
@@ -2039,7 +2146,8 @@ index e977f57..a78c975 100644
  
 -      self.cachedArtwork = artwork
 +      self.cachedArtwork = still
-+      self.cachedAnimatedArtwork = artwork.animated
++      self.cachedAnimatedSquareArtwork = artwork.square
++      self.cachedAnimatedTallArtwork = artwork.tall
  
        var latestNowPlayingInfo = self.nowPlayingInfoCenter.nowPlayingInfo ?? [String: Any]()
 -      latestNowPlayingInfo[MPMediaItemPropertyArtwork] = artwork
@@ -2048,18 +2156,20 @@ index e977f57..a78c975 100644
        self.nowPlayingInfoCenter.nowPlayingInfo = latestNowPlayingInfo
      }
    }
-@@ -204,34 +216,82 @@ class MediaController {
+@@ -204,34 +219,96 @@ class MediaController {
    private func resetArtworkState() {
      currentArtworkUrl = nil
      cachedArtwork = nil
-+    cachedAnimatedArtwork = nil
++    cachedAnimatedSquareArtwork = nil
++    cachedAnimatedTallArtwork = nil
      artworkLoadToken = nil
    }
  
 -  private func loadArtworkFromURL(url: URL, completion: @escaping (MPMediaItemArtwork?) -> Void) {
 +  private struct LoadedArtwork {
 +    let still: MPMediaItemArtwork?
-+    let animated: AnyObject?
++    let square: AnyObject?
++    let tall: AnyObject?
 +  }
 +
 +  private func loadArtworkFromURL(url: URL, completion: @escaping (LoadedArtwork) -> Void) {
@@ -2067,7 +2177,7 @@ index e977f57..a78c975 100644
        if error != nil {
          self.performOnMain {
 -          completion(nil)
-+          completion(LoadedArtwork(still: nil, animated: nil))
++          completion(LoadedArtwork(still: nil, square: nil, tall: nil))
          }
          return
        }
@@ -2075,42 +2185,53 @@ index e977f57..a78c975 100644
        guard let data, let image = UIImage(data: data) else {
          self.performOnMain {
 -          completion(nil)
-+          completion(LoadedArtwork(still: nil, animated: nil))
++          completion(LoadedArtwork(still: nil, square: nil, tall: nil))
          }
          return
        }
  
 -      let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
 +      let still = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
-+      let animated: AnyObject?
++      let square: AnyObject?
++      let tall: AnyObject?
 +#if compiler(>=6.2)
-+      if #available(iOS 26.0, tvOS 26.0, *),
-+         MPNowPlayingInfoCenter.supportedAnimatedArtworkKeys.contains(MPNowPlayingInfoProperty1x1AnimatedArtwork) {
-+        animated = AnimatedArtwork.make(url: url, data: data)
++      if #available(iOS 26.0, tvOS 26.0, *) {
++        let artwork = AnimatedArtwork.make(url: url, data: data)
++        square = artwork.square
++        tall = artwork.tall
 +      } else {
-+        animated = nil
++        square = nil
++        tall = nil
 +      }
 +#else
-+      animated = nil
++      square = nil
++      tall = nil
 +#endif
        self.performOnMain {
 -        completion(artwork)
-+        completion(LoadedArtwork(still: still, animated: animated))
++        completion(LoadedArtwork(still: still, square: square, tall: tall))
        }
      }
      .resume()
    }
  
++  // Both variants are published: the system drops the key it does not support
++  // on its own, and gating on `supportedAnimatedArtworkKeys` is what kept the
++  // lock screen on the static artwork — the tall 3:4 variant is the one the
++  // iPhone lock screen draws full screen.
 +  private func applyAnimatedArtwork(_ info: inout [String: Any]) {
 +#if compiler(>=6.2)
 +    if #available(iOS 26.0, tvOS 26.0, *) {
-+      guard let artwork = cachedAnimatedArtwork as? MPMediaItemAnimatedArtwork,
-+            MPNowPlayingInfoCenter.supportedAnimatedArtworkKeys.contains(MPNowPlayingInfoProperty1x1AnimatedArtwork)
-+      else {
-+        removeAnimatedArtwork(&info)
-+        return
++      if let artwork = cachedAnimatedSquareArtwork as? MPMediaItemAnimatedArtwork {
++        info[MPNowPlayingInfoProperty1x1AnimatedArtwork] = artwork
++      } else {
++        info.removeValue(forKey: MPNowPlayingInfoProperty1x1AnimatedArtwork)
 +      }
-+      info[MPNowPlayingInfoProperty1x1AnimatedArtwork] = artwork
++      if let artwork = cachedAnimatedTallArtwork as? MPMediaItemAnimatedArtwork {
++        info[MPNowPlayingInfoProperty3x4AnimatedArtwork] = artwork
++      } else {
++        info.removeValue(forKey: MPNowPlayingInfoProperty3x4AnimatedArtwork)
++      }
 +    }
 +#endif
 +  }
@@ -2119,6 +2240,7 @@ index e977f57..a78c975 100644
 +#if compiler(>=6.2)
 +    if #available(iOS 26.0, tvOS 26.0, *) {
 +      info.removeValue(forKey: MPNowPlayingInfoProperty1x1AnimatedArtwork)
++      info.removeValue(forKey: MPNowPlayingInfoProperty3x4AnimatedArtwork)
 +    }
 +#endif
 +  }
@@ -2136,7 +2258,7 @@ index e977f57..a78c975 100644
      remoteCommandCenter.playCommand.addTarget { [weak self] _ in
        guard let player = self?.activePlayer else {
          return .commandFailed
-@@ -303,12 +363,34 @@ class MediaController {
+@@ -303,12 +380,34 @@ class MediaController {
        return .success
      }
  
@@ -2171,7 +2293,7 @@ index e977f57..a78c975 100644
    }
  
    private func disableRemoteCommands() {
-@@ -318,6 +400,8 @@ class MediaController {
+@@ -318,6 +417,8 @@ class MediaController {
      remoteCommandCenter.changePlaybackPositionCommand.isEnabled = false
      remoteCommandCenter.skipForwardCommand.isEnabled = false
      remoteCommandCenter.skipBackwardCommand.isEnabled = false
