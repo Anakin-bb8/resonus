@@ -1063,7 +1063,7 @@ you are actually typing into, which is easier than reading it here.
 | `Mode` | Heading over the two appearances on the Theme screen. Not a playback mode and not a profile: dark or light. It is called this and not "Appearance" because Appearance is the settings screen one level up |
 | `Pure black` |  |
 | `System` | Theme setting: use whichever appearance the phone itself is set to, light or dark |
-| `The shade of the dark appearance, without pure black.` |  |
+| `The shade of the greys, dark or light. Pure black keeps its own.` |  |
 | `Theme` | The screen where the appearance and the accent colour are chosen, and the name of the row that opens it |
 
 ## Shortcut

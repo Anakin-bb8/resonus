@@ -185,80 +185,135 @@ const DARK: BasePalette = {
 };
 
 /**
- * The tints the dark appearance can take (Settings › Theme › Background): the
- * greys that carry it, each with a touch of one hue. Blue is the default;
- * neutral is the plain grey the app had before it.
+ * The tints the greys can take (Settings › Theme › Background), in both
+ * appearances: each is a set of greys with a touch of one hue. Blue is the
+ * default; neutral is the plain grey the app had before it. The light page
+ * stays white and only what sits on it takes the hue.
  */
 export type BackgroundTint = 'blue' | 'neutral' | 'purple' | 'green' | 'warm';
 
 type TintGreys = Pick<
   BasePalette,
-  | 'background'
   | 'surface'
   | 'surfaceHighlight'
   | 'border'
   | 'control'
   | 'snackbar'
-  | 'veil'
   | 'textSecondary'
   | 'textMuted'
->;
+> &
+  Partial<Pick<BasePalette, 'background' | 'veil'>>;
 
-export const BACKGROUND_TINTS: Record<BackgroundTint, TintGreys> = {
+export const BACKGROUND_TINTS: Record<BackgroundTint, { dark: TintGreys; light: TintGreys }> = {
   blue: {
-    background: '#141619',
-    surface: '#1E2026',
-    surfaceHighlight: '#2A2C33',
-    border: '#2B2D34',
-    control: '#2B2D34',
-    snackbar: '#30323A',
-    veil: 'rgba(20,22,25,0.6)',
-    textSecondary: '#A0A3AB',
-    textMuted: '#72757D',
+    dark: {
+      background: '#141619',
+      surface: '#1E2026',
+      surfaceHighlight: '#2A2C33',
+      border: '#2B2D34',
+      control: '#2B2D34',
+      snackbar: '#30323A',
+      veil: 'rgba(20,22,25,0.6)',
+      textSecondary: '#A0A3AB',
+      textMuted: '#72757D',
+    },
+    light: {
+      surface: '#F4F4F6',
+      surfaceHighlight: '#E7E7EB',
+      border: '#E1E1E6',
+      control: '#BFBFC8',
+      snackbar: '#303036',
+      textSecondary: '#5C5C66',
+      textMuted: '#84848F',
+    },
   },
   neutral: {
-    background: '#121212',
-    surface: '#1C1C1C',
-    surfaceHighlight: '#282828',
-    border: '#2A2A2A',
-    control: '#2A2A2A',
-    snackbar: '#2E2E2E',
-    veil: 'rgba(18,18,18,0.6)',
-    textSecondary: '#B3B3B3',
-    textMuted: '#727272',
+    dark: {
+      background: '#121212',
+      surface: '#1C1C1C',
+      surfaceHighlight: '#282828',
+      border: '#2A2A2A',
+      control: '#2A2A2A',
+      snackbar: '#2E2E2E',
+      veil: 'rgba(18,18,18,0.6)',
+      textSecondary: '#B3B3B3',
+      textMuted: '#727272',
+    },
+    light: {
+      surface: '#F4F4F4',
+      surfaceHighlight: '#E8E8E8',
+      border: '#E2E2E2',
+      control: '#C0C0C0',
+      snackbar: '#303030',
+      textSecondary: '#5E5E5E',
+      textMuted: '#858585',
+    },
   },
   purple: {
-    background: '#17141C',
-    surface: '#211D27',
-    surfaceHighlight: '#2E2935',
-    border: '#302B37',
-    control: '#302B37',
-    snackbar: '#34303B',
-    veil: 'rgba(23,20,28,0.6)',
-    textSecondary: '#A7A1B0',
-    textMuted: '#78727F',
+    dark: {
+      background: '#17141C',
+      surface: '#211D27',
+      surfaceHighlight: '#2E2935',
+      border: '#302B37',
+      control: '#302B37',
+      snackbar: '#34303B',
+      veil: 'rgba(23,20,28,0.6)',
+      textSecondary: '#A7A1B0',
+      textMuted: '#78727F',
+    },
+    light: {
+      surface: '#F6F3F9',
+      surfaceHighlight: '#EAE5F0',
+      border: '#E4DEEB',
+      control: '#C3BCCB',
+      snackbar: '#332E3A',
+      textSecondary: '#605A6A',
+      textMuted: '#88818F',
+    },
   },
   green: {
-    background: '#131815',
-    surface: '#1C221E',
-    surfaceHighlight: '#28302A',
-    border: '#2A322C',
-    control: '#2A322C',
-    snackbar: '#2F3731',
-    veil: 'rgba(19,24,21,0.6)',
-    textSecondary: '#9FA8A2',
-    textMuted: '#717A74',
+    dark: {
+      background: '#131815',
+      surface: '#1C221E',
+      surfaceHighlight: '#28302A',
+      border: '#2A322C',
+      control: '#2A322C',
+      snackbar: '#2F3731',
+      veil: 'rgba(19,24,21,0.6)',
+      textSecondary: '#9FA8A2',
+      textMuted: '#717A74',
+    },
+    light: {
+      surface: '#F2F6F3',
+      surfaceHighlight: '#E4EBE6',
+      border: '#DDE5DF',
+      control: '#BAC4BD',
+      snackbar: '#2E3531',
+      textSecondary: '#56615A',
+      textMuted: '#7F8983',
+    },
   },
   warm: {
-    background: '#181512',
-    surface: '#221E1A',
-    surfaceHighlight: '#2F2A25',
-    border: '#312C27',
-    control: '#312C27',
-    snackbar: '#36312B',
-    veil: 'rgba(24,21,18,0.6)',
-    textSecondary: '#AAA39B',
-    textMuted: '#7B746D',
+    dark: {
+      background: '#181512',
+      surface: '#221E1A',
+      surfaceHighlight: '#2F2A25',
+      border: '#312C27',
+      control: '#312C27',
+      snackbar: '#36312B',
+      veil: 'rgba(24,21,18,0.6)',
+      textSecondary: '#AAA39B',
+      textMuted: '#7B746D',
+    },
+    light: {
+      surface: '#F7F4F1',
+      surfaceHighlight: '#ECE6E0',
+      border: '#E6DFD8',
+      control: '#C6BDB4',
+      snackbar: '#36302A',
+      textSecondary: '#645C54',
+      textMuted: '#8B837B',
+    },
   },
 };
 
@@ -419,7 +474,11 @@ function subscribe(listener: () => void): () => void {
 /** Rebuilds `colors` from the current mode + accent and wakes everyone up. */
 function rebuild(): void {
   const light = currentMode === 'light';
-  const base = light ? LIGHT : pureBlack ? BLACK : { ...DARK, ...BACKGROUND_TINTS[tint] };
+  const base = light
+    ? { ...LIGHT, ...BACKGROUND_TINTS[tint].light }
+    : pureBlack
+      ? BLACK
+      : { ...DARK, ...BACKGROUND_TINTS[tint].dark };
   const picked = light ? lightAccent : darkAccent;
   // On white the accent has to be dark enough to read as text; on near-black
   // it is already fine as picked. `onAccent` follows from that: black on the
@@ -452,7 +511,7 @@ export function applyPureBlack(on: boolean): void {
   rebuild();
 }
 
-/** The tint of the dark appearance's greys; true black and light ignore it. */
+/** The tint of the greys, dark and light; true black ignores it. */
 export function applyBackgroundTint(next: BackgroundTint): void {
   if (next === tint) return;
   tint = next;

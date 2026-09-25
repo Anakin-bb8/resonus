@@ -35,15 +35,17 @@ const TINTS: { key: BackgroundTint; name: string }[] = [
   { key: 'warm', name: 'Warm' },
 ];
 
-/** The dark appearance's backgrounds, each drawn as the card grey it gives. */
+/** The backgrounds, each drawn as the card grey it gives in the appearance on screen. */
 function TintSwatches({
   value,
   onPick,
   dimmed,
+  light,
 }: {
   value: BackgroundTint;
   onPick: (tint: BackgroundTint) => void;
   dimmed: boolean;
+  light: boolean;
 }) {
   const t = useT();
   return (
@@ -60,11 +62,11 @@ function TintSwatches({
             style={[
               styles.swatch,
               styles.tintSwatch,
-              { backgroundColor: BACKGROUND_TINTS[key].surfaceHighlight },
+              { backgroundColor: BACKGROUND_TINTS[key][light ? 'light' : 'dark'].surfaceHighlight },
               active && styles.swatchActive,
             ]}
           >
-            {active ? <Icon name="checkmark" size={24} color="#FFF" /> : null}
+            {active ? <Icon name="checkmark" size={24} color={light ? '#000' : '#FFF'} /> : null}
           </Pressable>
         );
       })}
@@ -149,14 +151,15 @@ export default function ThemeSettings() {
           ]}
         />
 
-        {/* Still pickable in light or with pure black, for when the app is
-            next dark; dimmed so it is clear it is not what is on screen. */}
+        {/* Still pickable with pure black, for when it is turned off; dimmed
+            so it is clear it is not what is on screen. */}
         <Text style={[styles.label, styles.secondLabel]}>{t('Background')}</Text>
-        <Text style={styles.hint}>{t('The shade of the dark appearance, without pure black.')}</Text>
+        <Text style={styles.hint}>{t('The shade of the greys, dark or light. Pure black keeps its own.')}</Text>
         <TintSwatches
           value={backgroundTint}
           onPick={setBackgroundTint}
-          dimmed={mode === 'light' || pureBlack}
+          dimmed={mode !== 'light' && pureBlack}
+          light={mode === 'light'}
         />
 
         {/* One row, and it belongs to the appearance you are looking at: each
