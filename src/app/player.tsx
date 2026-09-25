@@ -170,7 +170,7 @@ function SleepButton({ onPress }: { onPress: () => void }) {
       onPress={onPress}
       style={styles.bottomButton}
     >
-      <MaterialIcons name="bedtime" size={22} color={on ? colors.accent : colors.text} />
+      <MaterialIcons name="bedtime" size={26} color={on ? colors.accent : colors.text} />
       {endsAt ? (
         <Text style={styles.speedText}>
           {`${Math.max(1, Math.ceil((endsAt - Date.now()) / 60_000))}′`}
@@ -1394,7 +1394,7 @@ export default function PlayerScreen() {
               >
                 <MaterialIcons
                   name="devices"
-                  size={22}
+                  size={26}
                   color={remoteDevice ? colors.accent : colors.text}
                 />
                 {remoteDevice ? (
@@ -1412,7 +1412,7 @@ export default function PlayerScreen() {
               onPress={() => pushOnce('/lyrics')}
               style={[styles.bottomButton, !hasLyrics && styles.bottomButtonOff]}
             >
-              <MaterialIcons name="lyrics" size={22} color={colors.text} />
+              <MaterialIcons name="lyrics" size={26} color={colors.text} />
             </Pressable>
             {showSpeed ? (
               <Pressable
@@ -1425,7 +1425,7 @@ export default function PlayerScreen() {
               >
                 <MaterialIcons
                   name="speed"
-                  size={22}
+                  size={26}
                   color={speed === 1 ? colors.text : colors.accent}
                 />
                 {/* The number only once it says something, in the accent like
@@ -1443,7 +1443,7 @@ export default function PlayerScreen() {
               accessibilityLabel={t('Equalizer')}
               style={styles.bottomButton}
             >
-              <MaterialIcons name="equalizer" size={22} color={colors.text} />
+              <MaterialIcons name="equalizer" size={26} color={colors.text} />
             </Pressable>
             {showQueueButton ? (
               <Pressable
@@ -1453,7 +1453,7 @@ export default function PlayerScreen() {
                 onPress={() => pushOnce('/queue')}
                 style={styles.bottomButton}
               >
-                <MaterialIcons name="queue-music" size={24} color={colors.text} />
+                <MaterialIcons name="queue-music" size={28} color={colors.text} />
               </Pressable>
             ) : null}
           </View>
