@@ -1590,10 +1590,10 @@ const styles = themed((colors) => ({
   // The gap belongs to the line and not to the text: the text is handed to a
   // marquee, which draws it twice.
   albumLine: { alignSelf: 'flex-start', maxWidth: '100%', marginTop: 2 },
-  // A step below the artist so the three lines read as a hierarchy
-  // (title → artist → album) instead of three rows of the same weight.
+  // A step below the artist by size, so the three lines read as a hierarchy
+  // (title → artist → album). The muted grey was lost over the backdrop.
   album: {
-    color: colors.textMuted,
+    color: colors.textSecondary,
     fontSize: fontSize.sm,
   },
   progress: { marginBottom: spacing.xs },
