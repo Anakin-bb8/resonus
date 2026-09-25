@@ -55,6 +55,7 @@ import { applyStarChange, resyncFavorites } from '@/lib/favoritesCache';
 import { haptic } from '@/lib/haptics';
 import { localHttpAvailable } from '@/lib/localHttp';
 import { pushOnce } from '@/lib/pushOnce';
+import { getItem, setItem } from '@/lib/storage';
 import { useArtistPicker } from '@/store/artistPicker';
 import { useAuthStore } from '@/store/auth';
 import { useJukebox } from '@/store/jukebox';
@@ -103,13 +104,26 @@ const DISMISS_THRESHOLD = 120;
  * of it belongs to the song; `for` is the screen height it does belong to, and
  * on another one it would size the page for a screen nobody is on (#131).
  */
-let lastLayout: {
+type PlayerLayout = {
   for: number;
   pageH: number;
   coverH: number;
   coverW: number;
   starsH: number;
-} | null = null;
+};
+let lastLayout: PlayerLayout | null = null;
+/** Kept across launches too, so the first open of a run is not the one that
+ *  waits to measure. Read once, early; a first open that beats it measures. */
+const LAYOUT_KEY = 'resonus.playerLayout';
+getItem(LAYOUT_KEY)
+  .then((raw) => {
+    if (!raw || lastLayout) return;
+    const v = JSON.parse(raw) as PlayerLayout;
+    if ([v.for, v.pageH, v.coverH, v.coverW, v.starsH].every((n) => typeof n === 'number')) {
+      lastLayout = v;
+    }
+  })
+  .catch(() => {});
 // How much of the lyrics card peeks below the first page (invites swipe).
 const LYRICS_PEEK = 56;
 /**
@@ -447,12 +461,19 @@ export default function PlayerScreen() {
   // from the cover slot's onLayout once the ScrollView's real height is known
   // (or right away if the approximation already matched it); a timeout is a
   // safety net so the cover can never stay hidden if the callbacks don't line up.
-  const [coverStable, setCoverStable] = useState(false);
-  const coverAppear = useSharedValue(0);
+  //
+  // With a remembered layout none of that waiting happens: the cover is drawn
+  // from the first frame at the size it had. Hiding it until the layout agreed
+  // is what made every open arrive in pieces, the page first and the cover and
+  // stars a fifth of a second later. The block under the cover has a fixed
+  // height (see the album line and the quality badge), so what was remembered
+  // holds for every song on this screen.
+  const [coverStable, setCoverStable] = useState(!!remembered);
+  const coverAppear = useSharedValue(remembered ? 1 : 0);
   /** The numbers this open started with, to know later whether they held. */
   const startedWith = useRef(remembered);
   /** So the reveal below happens once, whatever moves after it. */
-  const revealed = useRef(false);
+  const revealed = useRef(!!remembered);
   useEffect(() => {
     if (!coverStable || revealed.current) return;
     revealed.current = true;
@@ -507,7 +528,10 @@ export default function PlayerScreen() {
   useEffect(() => {
     if (!laidOut || pageH <= 0 || coverBoxH <= 0 || coverBoxW <= 0) return;
     if (canRate && starsH <= 0) return;
-    lastLayout = { for: screenH, pageH, coverH: coverBoxH, coverW: coverBoxW, starsH };
+    const next = { for: screenH, pageH, coverH: coverBoxH, coverW: coverBoxW, starsH };
+    if (JSON.stringify(next) === JSON.stringify(lastLayout)) return;
+    lastLayout = next;
+    void setItem(LAYOUT_KEY, JSON.stringify(next));
   }, [laidOut, screenH, pageH, coverBoxH, coverBoxW, starsH, canRate]);
   /**
    * Coming back to the player from the queue or the lyrics screen, which open
@@ -1228,6 +1252,9 @@ export default function PlayerScreen() {
                         the album was hard to pick out. It scrolls like the
                         title does, since the year sits at the end of it and a
                         long album name was all anyone ever saw (#183). */}
+                    {/* Kept, empty, for a song with neither album nor year: the
+                        cover takes what the block leaves, and a line that came
+                        and went per song resized it on the skip. */}
                     {albumInfo ? (
                       goAlbum ? (
                         <Pressable style={styles.albumLine} hitSlop={6} onPress={goAlbum}>
@@ -1246,6 +1273,10 @@ export default function PlayerScreen() {
                           />
                         </View>
                       )
+                    ) : showAlbumInfo ? (
+                      <View style={styles.albumLine}>
+                        <Text style={styles.album}>{'\u00A0'}</Text>
+                      </View>
                     ) : null}
                   </>
                 );

@@ -38,8 +38,9 @@ export function AudioQualityBadge({ song }: { song: Song }) {
     fromCache ? cached.bitRate : dlBitRate,
     target.format,
   );
-  if (!label) return null;
-  return <Text style={styles.badge}>{label}</Text>;
+  // With nothing to say it still takes its line: the player's cover is sized
+  // from what is left, and a line coming and going per song resized it.
+  return <Text style={styles.badge}>{label || '\u00A0'}</Text>;
 }
 
 const styles = themed((colors) => ({
