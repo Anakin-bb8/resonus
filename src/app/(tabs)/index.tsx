@@ -617,7 +617,7 @@ const OFFLINE_KEYS = new Set<HomeChipKey>([
   'history',
 ]);
 
-function HomeChips({ offline, inHeader }: { offline: boolean; inHeader?: boolean }) {
+function HomeChips({ offline }: { offline: boolean }) {
   const t = useT();
   const chips = useSettings((s) => s.homeChips).filter(
     (c) => c.enabled && (!offline || OFFLINE_KEYS.has(c.key)),
@@ -645,8 +645,8 @@ function HomeChips({ offline, inHeader }: { offline: boolean; inHeader?: boolean
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      style={inHeader ? styles.chipsInHeader : styles.chipsRow}
-      contentContainerStyle={inHeader ? styles.chipsInHeaderContent : styles.chips}
+      style={styles.chipsRow}
+      contentContainerStyle={styles.chips}
     >
       {chips.map(({ key }) => {
         const cfg = CHIPS[key];
@@ -885,28 +885,25 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.fixedHeader}>
-        <View style={[styles.header, !showGreeting && styles.headerWithChips]}>
+        <View style={styles.header}>
           {/* `flexShrink` and `numberOfLines`: the greeting is customizable,
               and although the setting caps it at GREETING_MAX, those characters
               measure differently depending on the chosen font. Shrinking and
               trimming, no text can push the buttons off-screen. */}
-          {/* Nothing beside the greeting in the local profile. There used to
-              be a phone in the accent colour here, and it was the one thing
-              on the screen saying which profile you were in. That is the
-              trouble with it: the local profile is not a state you are
-              waiting to come out of, it is where somebody has chosen to be,
-              and a permanent badge for it is decoration. Offline is a
-              different matter and still says so, on the right. */}
-          {showGreeting ? (
-            <View style={styles.headerLeft}>
+          <View style={styles.headerLeft}>
+            {/* Nothing beside the greeting in the local profile. There used to
+                be a phone in the accent colour here, and it was the one thing
+                on the screen saying which profile you were in. That is the
+                trouble with it: the local profile is not a state you are
+                waiting to come out of, it is where somebody has chosen to be,
+                and a permanent badge for it is decoration. Offline is a
+                different matter and still says so, on the right. */}
+            {showGreeting ? (
               <Text style={styles.greeting} numberOfLines={1}>
                 {greeting}
               </Text>
-            </View>
-          ) : (
-            // With no greeting the chips take its place, a row saved.
-            <HomeChips offline={offline} inHeader />
-          )}
+            ) : null}
+          </View>
           <View style={styles.headerRight}>
             {/* Before the buttons, and dimmer than them, so it reads as a state
                 and not as something to press. */}
@@ -937,7 +934,7 @@ export default function HomeScreen() {
         {showPlayingElsewhere ? <PlayingElsewhereCard /> : null}
         {/* In the scroll, not the fixed header: they are a way in from the top
             of Home, and scrolled past they were only taking room. */}
-        {showGreeting ? <HomeChips offline={offline} /> : null}
+        <HomeChips offline={offline} />
         {!offline && serverUnreachable ? (
           <Message
             text={t("Couldn't reach the server. Check your connection.")}
@@ -999,20 +996,15 @@ const styles = themed((colors) => ({
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.lg,
   },
-  // The chips run to the left edge as they scroll.
-  headerWithChips: { paddingLeft: 0 },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 1 },
   greeting: { color: colors.text, fontSize: fontSize.xxl, letterSpacing: tracking.display, fontWeight: '400', flexShrink: 1 },
   headerRight: {
-    marginLeft: 'auto',
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
   },
   chipsRow: { flexGrow: 0, marginBottom: spacing.lg },
   chips: { gap: spacing.sm, paddingHorizontal: spacing.lg },
-  chipsInHeader: { flex: 1, marginRight: spacing.md },
-  chipsInHeaderContent: { gap: spacing.sm, paddingLeft: spacing.lg },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
