@@ -9,6 +9,10 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Added
+
+- Settings > Player > Bottom row can spread the buttons under the player controls across the width with equal gaps, instead of grouping them in the middle.
+
 ### Fixed
 
 - Going back from an album, a playlist, Favorites or an artist fades straight into the screen before instead of flashing an empty page first; the bar at the top of those screens is a solid colour again rather than blurred.

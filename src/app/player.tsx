@@ -266,6 +266,7 @@ export default function PlayerScreen() {
   const coverDoubleTapAction = useSettings((s) => s.coverDoubleTapAction);
   const marqueeTitles = useSettings((s) => s.marqueeTitles);
   const playerButtons = useSettings((s) => s.playerButtons);
+  const spreadButtons = useSettings((s) => s.playerButtonsLayout === 'spread');
   const local = useLocalProfile();
   // The local profile can cast now that the phone serves its own files
   // (`lib/localHttp`), so the only reason left to hide the button there is a
@@ -1430,6 +1431,7 @@ export default function PlayerScreen() {
           <View
             style={[
               styles.bottomRow,
+              spreadButtons && styles.bottomRowSpread,
               // Set a little apart from the controls, in the room the padding
               // below gave up.
               !(wantsLyricsCard || wantsArtistCard) && { marginTop: spacing.xl },
@@ -1687,7 +1689,7 @@ const styles = themed((colors) => ({
   // Same footprint as the CircleButton it replaces when swapped, so the
   // centered title doesn't shift.
   topFavorite: { width: 40, alignItems: 'center', justifyContent: 'center' },
-  // A group in the middle rather than spread to the edges.
+  // A group in the middle, or (setting) spread to the edges.
   bottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1696,6 +1698,7 @@ const styles = themed((colors) => ({
     paddingHorizontal: spacing.sm,
     marginTop: spacing.xs,
   },
+  bottomRowSpread: { justifyContent: 'space-between', gap: 0 },
   // Like Spotify Connect: icon + device name in accent when casting.
   // The same box as the other buttons in the row; only the device name, while
   // casting, makes it wider, and it is capped so the row stays centred.
