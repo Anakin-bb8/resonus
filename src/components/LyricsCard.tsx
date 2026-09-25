@@ -5,7 +5,7 @@
  * the current line (the rest are dimmed). Button to expand to full screen
  * (/lyrics). If the song has no lyrics, nothing is rendered.
  */
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Icon from '@/components/Icon';
 import { LinearGradient } from 'expo-linear-gradient';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
@@ -75,7 +75,7 @@ export function LyricsCard() {
         hitSlop={8}
         onPress={() => pushOnce('/lyrics')}
       >
-        <MaterialIcons name="open-in-full" size={16} color={colors.onInverse} />
+        <Icon name="expand-outline" size={16} color={colors.onInverse} />
       </Pressable>
     </View>
   );
@@ -118,7 +118,7 @@ export function CoverLyrics({ size, onClose }: { size: number; onClose: () => vo
         hitSlop={8}
         onPress={onClose}
       >
-        <MaterialIcons name="image" size={16} color={colors.onInverse} />
+        <Icon name="image-outline" size={16} color={colors.onInverse} />
       </Pressable>
     </View>
   );

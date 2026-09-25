@@ -427,7 +427,6 @@ you are actually typing into, which is easier than reading it here.
 | `Back {n} seconds` | Read out by the screen reader for the seek button. `{n}` is how many seconds it is set to |
 | `Currently playing on` | Heading above the output the music is coming out of right now, at the top of the output sheet |
 | `Devices` | The audio output devices to cast to |
-| `Equalizer` |  |
 | `Explicit` | A value of `Content`: the recording carries a parental advisory (strong language). Also read out for the E badge next to a title |
 | `Forward {n} seconds` | Read out by the screen reader for the seek button. `{n}` is how many seconds it is set to |
 | `History` | The listening history: what was played and when |

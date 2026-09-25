@@ -12,7 +12,6 @@
  * playing, the same as in every other sheet in the app.
  */
 import Icon from '@/components/Icon';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -82,9 +81,9 @@ function outputIcon(kind: 'phone' | 'server' | 'group' | 'tv' | 'speaker', activ
   const color = active ? colors.accent : colors.text;
   if (kind === 'phone') return <Icon name="phone-portrait-outline" size={22} color={color} />;
   if (kind === 'server') return <Icon name="server-outline" size={22} color={color} />;
-  if (kind === 'group') return <MaterialIcons name="speaker-group" size={22} color={color} />;
+  if (kind === 'group') return <Icon name="volume-medium-outline" size={22} color={color} />;
   if (kind === 'tv') return <Icon name="tv-outline" size={22} color={color} />;
-  return <MaterialIcons name="speaker" size={22} color={color} />;
+  return <Icon name="volume-high-outline" size={22} color={color} />;
 }
 
 export function OutputSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {

@@ -39,7 +39,7 @@ Releases before 0.2.1 are only listed on the
 - Search boxes are fully rounded throughout the app, like the one for adding songs to a playlist.
 - Home shows its name at the top next to the buttons, like Explore and Your library, or the greeting when it is on; Random songs is on, and the search, history and settings buttons are all there.
 - Search opens on your recent searches instead of the genres, which stay in Explore, and says what it searches when there are none yet.
-- The row under the player controls has lyrics, playback speed, sleep timer and an equalizer that does nothing yet, next to devices and the queue, and Settings > Player > Bottom row turns each one on or off and puts them in any order; the sleep timer shows the minutes left.
+- The row under the player controls has lyrics, playback speed and sleep timer next to devices and the queue, and Settings > Player > Bottom row turns each one on or off and puts them in any order; the sleep timer shows the minutes left.
 
 ### Fixed
 

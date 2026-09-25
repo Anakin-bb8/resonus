@@ -170,7 +170,7 @@ function SleepButton({ onPress }: { onPress: () => void }) {
       onPress={onPress}
       style={styles.bottomButton}
     >
-      <MaterialIcons name="bedtime" size={26} color={on ? colors.accent : colors.text} />
+      <Icon name="moon-outline" size={26} color={on ? colors.accent : colors.text} />
       {endsAt ? (
         <Text style={styles.speedText}>
           {`${Math.max(1, Math.ceil((endsAt - Date.now()) / 60_000))}′`}
@@ -1358,8 +1358,8 @@ export default function PlayerScreen() {
               accessibilityLabel={t('Repeat')}
               onPress={cycleRepeat}
             >
-              <MaterialIcons
-                name={repeat === 'one' ? 'repeat-one' : 'repeat'}
+              <Icon
+                name={repeat === 'one' ? 'repeat-outline' : 'repeat'}
                 size={26}
                 color={repeatActive ? colors.accent : colors.text}
               />
@@ -1394,8 +1394,8 @@ export default function PlayerScreen() {
                       onPress={() => setOutputOpen(true)}
                       style={styles.deviceRow}
                     >
-                      <MaterialIcons
-                        name="devices"
+                      <Icon
+                        name="laptop-outline"
                         size={26}
                         color={remoteDevice ? colors.accent : colors.text}
                       />
@@ -1417,7 +1417,7 @@ export default function PlayerScreen() {
                       onPress={() => pushOnce('/lyrics')}
                       style={[styles.bottomButton, !hasLyrics && styles.bottomButtonOff]}
                     >
-                      <MaterialIcons name="lyrics" size={26} color={colors.text} />
+                      <Icon name="mic-outline" size={26} color={colors.text} />
                     </Pressable>
                   ) : null;
                 case 'speed':
@@ -1433,8 +1433,8 @@ export default function PlayerScreen() {
                       onPress={() => openSpeedSheet.current()}
                       style={[styles.bottomButton, !canSpeed && styles.bottomButtonOff]}
                     >
-                      <MaterialIcons
-                        name="speed"
+                      <Icon
+                        name="speedometer-outline"
                         size={26}
                         color={speed === 1 ? colors.text : colors.accent}
                       />
@@ -1450,19 +1450,6 @@ export default function PlayerScreen() {
                       onPress={() => openMenu(song, undefined, { showLyrics: hasLyrics, sleep: true })}
                     />
                   ) : null;
-                case 'equalizer':
-                  // Nothing behind it yet.
-                  return enabled ? (
-                    <Pressable
-                      key={key}
-                      hitSlop={10}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('Equalizer')}
-                      style={styles.bottomButton}
-                    >
-                      <MaterialIcons name="equalizer" size={26} color={colors.text} />
-                    </Pressable>
-                  ) : null;
                 case 'queue':
                   return enabled ? (
                     <Pressable
@@ -1473,7 +1460,7 @@ export default function PlayerScreen() {
                       onPress={() => pushOnce('/queue')}
                       style={styles.bottomButton}
                     >
-                      <MaterialIcons name="queue-music" size={28} color={colors.text} />
+                      <Icon name="layers-outline" size={26} color={colors.text} />
                     </Pressable>
                   ) : null;
               }

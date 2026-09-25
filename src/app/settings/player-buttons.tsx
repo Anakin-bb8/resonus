@@ -3,7 +3,6 @@
  * in what order. The same draggable list as the Home buttons, with no
  * exemption: every one of them has another way in.
  */
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Icon from '@/components/Icon';
 import { Pressable, Switch, Text, View } from 'react-native';
 import ReorderableList, {
@@ -31,18 +30,17 @@ import {
 /** The icon each one wears in the player, so the list reads like the row. */
 const BUTTONS: Record<
   PlayerButtonKey,
-  { label: string; icon: keyof typeof MaterialIcons.glyphMap; description?: string }
+  { label: string; icon: keyof typeof Icon.glyphMap; description?: string }
 > = {
-  devices: { label: 'Devices', icon: 'devices' },
-  lyrics: { label: 'Lyrics', icon: 'lyrics' },
+  devices: { label: 'Devices', icon: 'laptop-outline' },
+  lyrics: { label: 'Lyrics', icon: 'mic-outline' },
   speed: {
     label: 'Playback speed',
-    icon: 'speed',
+    icon: 'speedometer-outline',
     description: 'Play the music slower or faster, keeping its pitch.',
   },
-  sleep: { label: 'Sleep timer', icon: 'bedtime' },
-  equalizer: { label: 'Equalizer', icon: 'equalizer' },
-  queue: { label: 'Queue', icon: 'queue-music' },
+  sleep: { label: 'Sleep timer', icon: 'moon-outline' },
+  queue: { label: 'Queue', icon: 'layers-outline' },
 };
 
 function ButtonRow({ button }: { button: PlayerButton }) {
@@ -64,7 +62,7 @@ function ButtonRow({ button }: { button: PlayerButton }) {
       >
         <Icon name="reorder-two" size={24} color={colors.textSecondary} />
       </Pressable>
-      <MaterialIcons name={icon} size={22} color={colors.textSecondary} />
+      <Icon name={icon} size={22} color={colors.textSecondary} />
       <View style={styles.text}>
         <Text style={styles.label}>{t(label)}</Text>
         {description ? <Text style={styles.description}>{t(description)}</Text> : null}

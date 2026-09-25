@@ -628,7 +628,7 @@ export const DEFAULT_HOME_BUTTONS: HomeButton[] = [
 ];
 
 /** The row of buttons under the player's controls, in order. */
-export type PlayerButtonKey = 'devices' | 'lyrics' | 'speed' | 'sleep' | 'equalizer' | 'queue';
+export type PlayerButtonKey = 'devices' | 'lyrics' | 'speed' | 'sleep' | 'queue';
 
 export interface PlayerButton {
   key: PlayerButtonKey;
@@ -640,7 +640,6 @@ export const DEFAULT_PLAYER_BUTTONS: PlayerButton[] = [
   { key: 'lyrics', enabled: true },
   { key: 'speed', enabled: true },
   { key: 'sleep', enabled: true },
-  { key: 'equalizer', enabled: true },
   { key: 'queue', enabled: true },
 ];
 
