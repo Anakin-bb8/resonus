@@ -1551,10 +1551,10 @@ index f3ae4ee..99f02c0 100644
      /**
 diff --git a/ios/AnimatedArtwork.swift b/ios/AnimatedArtwork.swift
 new file mode 100644
-index 0000000..c5a1206
+index 0000000..e7113a5
 --- /dev/null
 +++ b/ios/AnimatedArtwork.swift
-@@ -0,0 +1,536 @@
+@@ -0,0 +1,535 @@
 +import AVFoundation
 +import CoreGraphics
 +import CoreImage
@@ -1801,8 +1801,7 @@ index 0000000..c5a1206
 +  /// the gaussian filter refuses the image.
 +  private static func downscaleBlur(_ frame: CGImage) -> CGImage? {
 +    let width = 24
-+    let ratio = frame.height / max(1, frame.width)
-+    let height = max(1, Int((CGFloat(width) * ratio).rounded()))
++    let height = max(1, Int((CGFloat(width) * CGFloat(frame.height) / CGFloat(max(1, frame.width))).rounded()))
 +    guard let context = CGContext(
 +      data: nil,
 +      width: width,
