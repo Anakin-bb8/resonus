@@ -482,14 +482,15 @@ const HOME_CHIP_KEYS: HomeChipKey[] = [
 
 /** Default order and state: the usual ones, all visible. */
 export const DEFAULT_HOME_CHIPS: HomeChip[] = [
+  // Only what Explore does not already have.
   { key: 'shuffle', enabled: true },
-  { key: 'favorites', enabled: false },
-  { key: 'albums', enabled: true },
-  { key: 'artists', enabled: true },
-  { key: 'songs', enabled: true },
-  { key: 'genres', enabled: true },
-  { key: 'radio', enabled: true },
-  { key: 'history', enabled: false },
+  { key: 'favorites', enabled: true },
+  { key: 'history', enabled: true },
+  { key: 'albums', enabled: false },
+  { key: 'artists', enabled: false },
+  { key: 'songs', enabled: false },
+  { key: 'genres', enabled: false },
+  { key: 'radio', enabled: false },
 ];
 
 /** One of the pills at the top of Explore. `genres`, `radio` and `folders`
@@ -617,7 +618,8 @@ const HOME_BUTTON_KEYS: HomeButtonKey[] = ['search', 'history', 'settings'];
  */
 export const DEFAULT_HOME_BUTTONS: HomeButton[] = [
   { key: 'search', enabled: false },
-  { key: 'history', enabled: true },
+  // History is a chip now.
+  { key: 'history', enabled: false },
   { key: 'settings', enabled: true },
 ];
 
@@ -1199,8 +1201,8 @@ const DEFAULTS = {
   quickGridFavorites: true,
   quickGridAlbums: true,
   quickGridPlaylists: true,
-  quickGridSize: 8,
-  showGreeting: true,
+  quickGridSize: 6,
+  showGreeting: false,
   customGreeting: '',
   homeChips: DEFAULT_HOME_CHIPS.map((c) => ({ ...c })),
   exploreSections: DEFAULT_EXPLORE_SECTIONS.map((s) => ({ ...s })),
