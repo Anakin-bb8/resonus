@@ -1148,8 +1148,7 @@ export default function PlayerScreen() {
             // navigation bar; the room comes out of the spare height above.
             {
               paddingBottom:
-                insets.bottom +
-                (wantsLyricsCard || wantsArtistCard ? spacing.md : spacing.xxl + spacing.sm),
+                insets.bottom + (wantsLyricsCard || wantsArtistCard ? spacing.md : spacing.xl),
             },
           ]}
         >
@@ -1373,7 +1372,14 @@ export default function PlayerScreen() {
           {/* Spread across the width, each one where it always is: one that
               cannot do anything for this song is dimmed rather than taken out,
               so the others do not move from song to song. */}
-          <View style={styles.bottomRow}>
+          <View
+            style={[
+              styles.bottomRow,
+              // Set a little apart from the controls, in the room the padding
+              // below gave up.
+              !(wantsLyricsCard || wantsArtistCard) && { marginTop: spacing.xl },
+            ]}
+          >
             {/* Connected to a remote device it's always shown: it's the only
                 way to disconnect the cast. Never disabled any more: downloads
                 cast from the phone, so offline there is something to send, and
