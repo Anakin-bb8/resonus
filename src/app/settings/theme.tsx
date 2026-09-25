@@ -33,6 +33,9 @@ const TINTS: { key: BackgroundTint; name: string }[] = [
   { key: 'purple', name: 'Purple' },
   { key: 'green', name: 'Green' },
   { key: 'warm', name: 'Warm' },
+  { key: 'teal', name: 'Teal' },
+  { key: 'rose', name: 'Rose' },
+  { key: 'olive', name: 'Olive' },
 ];
 
 /** The backgrounds, each drawn as the card grey it gives in the appearance on screen. */

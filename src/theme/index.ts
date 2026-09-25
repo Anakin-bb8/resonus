@@ -190,7 +190,15 @@ const DARK: BasePalette = {
  * default, and in light it keeps the white page the app always had; neutral
  * is the plain grey from before.
  */
-export type BackgroundTint = 'blue' | 'neutral' | 'purple' | 'green' | 'warm';
+export type BackgroundTint =
+  | 'blue'
+  | 'neutral'
+  | 'purple'
+  | 'green'
+  | 'warm'
+  | 'teal'
+  | 'rose'
+  | 'olive';
 
 type TintGreys = Pick<
   BasePalette,
@@ -320,6 +328,78 @@ export const BACKGROUND_TINTS: Record<BackgroundTint, { dark: TintGreys; light: 
       snackbar: '#36302A',
       textSecondary: '#645C54',
       textMuted: '#8B837B',
+    },
+  },
+  teal: {
+    dark: {
+      background: '#141C1B',
+      surface: '#1D2726',
+      surfaceHighlight: '#293534',
+      border: '#2B3736',
+      control: '#2B3736',
+      snackbar: '#303B3A',
+      veil: 'rgba(20,28,27,0.6)',
+      textSecondary: '#A1B0AF',
+      textMuted: '#727F7E',
+    },
+    light: {
+      background: '#F5FBFA',
+      surface: '#ECF5F4',
+      surfaceHighlight: '#DFECEB',
+      border: '#D7E6E5',
+      control: '#BCCBCA',
+      snackbar: '#2E3A39',
+      veil: 'rgba(245,251,250,0.65)',
+      textSecondary: '#5A6A69',
+      textMuted: '#818F8E',
+    },
+  },
+  rose: {
+    dark: {
+      background: '#1C1417',
+      surface: '#271D20',
+      surfaceHighlight: '#35292D',
+      border: '#372B2F',
+      control: '#372B2F',
+      snackbar: '#3B3034',
+      veil: 'rgba(28,20,23,0.6)',
+      textSecondary: '#B0A1A6',
+      textMuted: '#7F7276',
+    },
+    light: {
+      background: '#FBF5F7',
+      surface: '#F5ECEF',
+      surfaceHighlight: '#ECDFE3',
+      border: '#E6D7DC',
+      control: '#CBBCC1',
+      snackbar: '#3A2E32',
+      veil: 'rgba(251,245,247,0.65)',
+      textSecondary: '#6A5A5F',
+      textMuted: '#8F8186',
+    },
+  },
+  olive: {
+    dark: {
+      background: '#1A1C14',
+      surface: '#24271D',
+      surfaceHighlight: '#323529',
+      border: '#34372B',
+      control: '#34372B',
+      snackbar: '#383B30',
+      veil: 'rgba(26,28,20,0.6)',
+      textSecondary: '#ACB0A1',
+      textMuted: '#7C7F72',
+    },
+    light: {
+      background: '#F9FBF5',
+      surface: '#F3F5EC',
+      surfaceHighlight: '#E9ECDF',
+      border: '#E2E6D7',
+      control: '#C7CBBC',
+      snackbar: '#373A2E',
+      veil: 'rgba(249,251,245,0.65)',
+      textSecondary: '#666A5A',
+      textMuted: '#8C8F81',
     },
   },
 };
