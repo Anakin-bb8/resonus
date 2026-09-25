@@ -39,6 +39,9 @@ export const ACCENT_OPTIONS: { name: string; color: string }[] = [
   { name: 'Orange', color: '#F58C3C' },
   { name: 'Yellow', color: '#F5C53C' },
   { name: 'Lime', color: '#A6D93C' },
+  // After the rainbow, having no hue: a silver with the same touch of blue as
+  // the dark greys.
+  { name: 'Gray', color: '#C3C8D2' },
 ];
 
 // Base settings key. Settings are PER PROFILE: each one stores under
