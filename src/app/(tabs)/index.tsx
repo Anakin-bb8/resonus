@@ -1014,7 +1014,7 @@ const styles = themed((colors) => ({
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceHighlight,
   },
-  chipText: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
+  chipText: { color: colors.text, fontSize: fontSize.sm, fontWeight: '500' },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1026,7 +1026,7 @@ const styles = themed((colors) => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.surfaceHighlight,
+    backgroundColor: colors.surface,
     borderRadius: radius.md,
     overflow: 'hidden',
     paddingRight: spacing.sm,
@@ -1037,7 +1037,7 @@ const styles = themed((colors) => ({
     flex: 1,
     color: colors.text,
     fontSize: fontSize.sm,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   section: { marginBottom: spacing.xl },
   // Same shape as the artist's shelves: title on the left, the way in on the
@@ -1050,7 +1050,7 @@ const styles = themed((colors) => ({
     marginBottom: spacing.md,
   },
   sectionHeaderTitle: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '500' },
-  showAll: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '600' },
+  showAll: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '500' },
   sectionTitle: {
     color: colors.text,
     fontSize: fontSize.lg,

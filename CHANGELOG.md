@@ -26,7 +26,7 @@ Releases before 0.2.1 are only listed on the
 ### Changed
 
 - New icons throughout the app, from Phosphor.
-- Screen titles and section headings are lighter, and the dark theme sits on greys with a touch of blue instead of neutral ones.
+- Screen titles, section headings, the names under covers and the tiles and chips on Home are lighter, and the dark theme sits on greys with a touch of blue instead of neutral ones.
 - Album and playlist headers carry more of the cover's colour, further down the page, and the player lets more of it through behind the controls.
 - The navigation bar stays on every screen by default; Settings > Appearance > Always show the navigation bar turns it back to the tabs only.
 - The chips at the top of Home scroll away with the page instead of staying on screen.

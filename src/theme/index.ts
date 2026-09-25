@@ -159,7 +159,7 @@ type BasePalette = Omit<
 /** The dark appearance, on greys with a touch of blue: a neutral grey reads flat. */
 const DARK: BasePalette = {
   background: '#141619',
-  surface: '#1A1C21',
+  surface: '#1E2026',
   surfaceHighlight: '#2A2C33',
   border: '#2B2D34',
   text: '#FFFFFF',

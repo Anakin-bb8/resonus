@@ -50,7 +50,7 @@ const styles = themed((colors) => ({
   title: {
     color: colors.text,
     fontSize: fontSize.sm,
-    fontWeight: '600',
+    fontWeight: '500',
     marginTop: spacing.xs,
   },
   sub: {
