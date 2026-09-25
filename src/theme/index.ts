@@ -187,8 +187,8 @@ const DARK: BasePalette = {
 /**
  * The tints the greys can take (Settings › Theme › Background), in both
  * appearances: each is a set of greys with a touch of one hue. Blue is the
- * default; neutral is the plain grey the app had before it, and in light the
- * plain white page.
+ * default, and in light it keeps the white page the app always had; neutral
+ * is the plain grey from before.
  */
 export type BackgroundTint = 'blue' | 'neutral' | 'purple' | 'green' | 'warm';
 
@@ -217,12 +217,11 @@ export const BACKGROUND_TINTS: Record<BackgroundTint, { dark: TintGreys; light: 
       textSecondary: '#A0A3AB',
       textMuted: '#72757D',
     },
+    // The default light look as it was: a white page, cards a hair blue.
     light: {
-      background: '#F4F6FA',
-      veil: 'rgba(244,246,250,0.65)',
-      surface: '#ECEEF3',
-      surfaceHighlight: '#E0E3EA',
-      border: '#DADDE5',
+      surface: '#F4F4F6',
+      surfaceHighlight: '#E7E7EB',
+      border: '#E1E1E6',
       control: '#BFBFC8',
       snackbar: '#303036',
       textSecondary: '#5C5C66',
