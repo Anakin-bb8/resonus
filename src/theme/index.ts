@@ -187,8 +187,8 @@ const DARK: BasePalette = {
 /**
  * The tints the greys can take (Settings › Theme › Background), in both
  * appearances: each is a set of greys with a touch of one hue. Blue is the
- * default; neutral is the plain grey the app had before it. The light page
- * stays white and only what sits on it takes the hue.
+ * default; neutral is the plain grey the app had before it, and in light the
+ * plain white page.
  */
 export type BackgroundTint = 'blue' | 'neutral' | 'purple' | 'green' | 'warm';
 
@@ -218,6 +218,8 @@ export const BACKGROUND_TINTS: Record<BackgroundTint, { dark: TintGreys; light: 
       textMuted: '#72757D',
     },
     light: {
+      background: '#F9FAFC',
+      veil: 'rgba(249,250,252,0.65)',
       surface: '#F4F4F6',
       surfaceHighlight: '#E7E7EB',
       border: '#E1E1E6',
@@ -262,6 +264,8 @@ export const BACKGROUND_TINTS: Record<BackgroundTint, { dark: TintGreys; light: 
       textMuted: '#78727F',
     },
     light: {
+      background: '#FBFAFD',
+      veil: 'rgba(251,250,253,0.65)',
       surface: '#F6F3F9',
       surfaceHighlight: '#EAE5F0',
       border: '#E4DEEB',
@@ -284,6 +288,8 @@ export const BACKGROUND_TINTS: Record<BackgroundTint, { dark: TintGreys; light: 
       textMuted: '#717A74',
     },
     light: {
+      background: '#F9FBFA',
+      veil: 'rgba(249,251,250,0.65)',
       surface: '#F2F6F3',
       surfaceHighlight: '#E4EBE6',
       border: '#DDE5DF',
@@ -306,6 +312,8 @@ export const BACKGROUND_TINTS: Record<BackgroundTint, { dark: TintGreys; light: 
       textMuted: '#7B746D',
     },
     light: {
+      background: '#FCFAF8',
+      veil: 'rgba(252,250,248,0.65)',
       surface: '#F7F4F1',
       surfaceHighlight: '#ECE6E0',
       border: '#E6DFD8',
