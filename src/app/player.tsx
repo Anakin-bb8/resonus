@@ -1369,7 +1369,7 @@ export default function PlayerScreen() {
             </Pressable>
           </View>
 
-          {/* Spread across the width, each one where it always is: one that
+          {/* Grouped in the middle, each one where it always is: one that
               cannot do anything for this song is dimmed rather than taken out,
               so the others do not move from song to song. */}
           <View
@@ -1618,10 +1618,12 @@ const styles = themed((colors) => ({
   // Same footprint as the CircleButton it replaces when swapped, so the
   // centered title doesn't shift.
   topFavorite: { width: 40, alignItems: 'center', justifyContent: 'center' },
+  // A group in the middle rather than spread to the edges.
   bottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    gap: spacing.xxl,
     paddingHorizontal: spacing.sm,
     marginTop: spacing.xs,
   },
