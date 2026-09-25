@@ -39,6 +39,7 @@ you are actually typing into, which is easier than reading it here.
 | `Android may stop playback in the background, interrupt downloads or delay the sleep timer. Allowing unrestricted battery use fixes it.` |  |
 | `Artist` | In search results, the little word under a result saying what kind of thing it is |
 | `Artists` | A heading over a list of them, never a count |
+| `Back online` | The toast shown when the server answers again and the app comes out of offline mode |
 | `Battery optimization is on` | Title of the card warning that Android may cut playback off |
 | `BPM` | A property of the audio: beats per minute |
 | `Channels` | A property of the audio: mono, stereo |
@@ -306,6 +307,7 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `another device` |  |
+| `Back online` | The toast shown when the server answers again and the app comes out of offline mode |
 | `Couldn't reach the server. Check your connection.` | Error on Home when the server does not answer at all |
 | `Discover` | Home section: discovery suggestions |
 | `Good afternoon` | Home's greeting. The hours it changes at are part of the language too, see TRANSLATING.md |
@@ -813,6 +815,7 @@ you are actually typing into, which is easier than reading it here.
 | `Address added` | Toast |
 | `Address updated` | Toast |
 | `Automatic URL switching` | Try the addresses and use whichever answers, so leaving the house needs nothing done by hand |
+| `Back online` | The toast shown when the server answers again and the app comes out of offline mode |
 | `Couldn't reach this address with your account.` | Validation message: nothing answered there, or the account was refused |
 | `Current server address` | The one being used right now, of those |
 | `Edit server address` | Title of the same dialog when changing one |
@@ -1108,7 +1111,6 @@ you are actually typing into, which is easier than reading it here.
 | `Already added` | Title of the dialog that warns the song is in that playlist already |
 | `Ascending` | Sort option: the order of a list |
 | `Back` | Screen reader label for the back arrow. A direction, not a verb |
-| `Back online` | The toast shown when the server answers again and the app comes out of offline mode |
 | `Cancel` | The button that closes a dialog without doing anything, and the one beside a search box |
 | `Clear` | Read out by the screen reader for the small x that empties a search box. A verb |
 | `Clear all` | Throw away the whole list: the history, the queue, or what you searched for |

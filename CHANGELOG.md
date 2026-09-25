@@ -35,6 +35,7 @@ Releases before 0.2.1 are only listed on the
 - The mini player floats as a card, with rounder corners, a soft shadow and a little air above the navigation bar.
 - The quick access tiles at the top of Home have rounder corners, with the cover flush against them.
 - Settings cards have rounder corners, and the lines between their rows are finer and start where the text does.
+- The account at the top of Settings is a card, with offline mode as a switch and signing out as a row in it, instead of the two black buttons at the bottom, and the category names are lighter.
 - Search boxes are fully rounded throughout the app, like the one for adding songs to a playlist.
 - Home shows its name at the top next to the buttons, like Explore and Your library, or the greeting when it is on; Random songs is on, and the search, history and settings buttons are all there.
 - Search opens on your recent searches instead of the genres, which stay in Explore, and says what it searches when there are none yet.
