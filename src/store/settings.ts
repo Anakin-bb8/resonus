@@ -482,15 +482,14 @@ const HOME_CHIP_KEYS: HomeChipKey[] = [
 
 /** Default order and state: the usual ones, all visible. */
 export const DEFAULT_HOME_CHIPS: HomeChip[] = [
-  // Only what Explore does not already have.
   { key: 'shuffle', enabled: true },
   { key: 'favorites', enabled: true },
   { key: 'history', enabled: true },
-  { key: 'albums', enabled: false },
-  { key: 'artists', enabled: false },
-  { key: 'songs', enabled: false },
-  { key: 'genres', enabled: false },
-  { key: 'radio', enabled: false },
+  { key: 'albums', enabled: true },
+  { key: 'artists', enabled: true },
+  { key: 'songs', enabled: true },
+  { key: 'genres', enabled: true },
+  { key: 'radio', enabled: true },
 ];
 
 /** One of the pills at the top of Explore. `genres`, `radio` and `folders`
