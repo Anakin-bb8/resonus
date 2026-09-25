@@ -1185,7 +1185,7 @@ const DEFAULTS = {
   marqueeTitles: true,
   showQueueButton: true,
   showDevicesButton: true,
-  showSpeedButton: false,
+  showSpeedButton: true,
   seekButtonsSec: 0,
   previousButtonMode: 'restart' as PreviousButtonMode,
   keepPausedOnSkip: false,

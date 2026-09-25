@@ -127,6 +127,7 @@ export function SongMenuSheet() {
   const song = useSongMenu((s) => s.song);
   const context = useSongMenu((s) => s.context);
   const showLyrics = useSongMenu((s) => s.showLyrics);
+  const startInSleep = useSongMenu((s) => s.sleep);
   const closeNow = useSongMenu((s) => s.close);
   const { dismiss, pan, makePan, backdropStyle, sheetStyle, onSheetLayout } = useBottomSheetAnim(
     !!song,
@@ -174,10 +175,11 @@ export function SongMenuSheet() {
   // Removing a download asks first, like albums and playlists do.
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  // When opening the menu for a song, always go back to the actions view.
+  // When opening the menu for a song, always go back to the actions view,
+  // unless it was opened for the sleep timer.
   useEffect(() => {
-    if (song) setMode('actions');
-  }, [song]);
+    if (song) setMode(startInSleep ? 'sleep' : 'actions');
+  }, [song, startInSleep]);
 
   // Every new song or view starts the list scrolled to the top; the sheet
   // stays mounted between openings, so the flag would otherwise survive.

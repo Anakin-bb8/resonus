@@ -425,6 +425,7 @@ you are actually typing into, which is easier than reading it here.
 | `Back {n} seconds` | Read out by the screen reader for the seek button. `{n}` is how many seconds it is set to |
 | `Currently playing on` | Heading above the output the music is coming out of right now, at the top of the output sheet |
 | `Devices` | The audio output devices to cast to |
+| `Equalizer` |  |
 | `Explicit` | A value of `Content`: the recording carries a parental advisory (strong language). Also read out for the E badge next to a title |
 | `Forward {n} seconds` | Read out by the screen reader for the seek button. `{n}` is how many seconds it is set to |
 | `History` | The listening history: what was played and when |
@@ -444,7 +445,9 @@ you are actually typing into, which is easier than reading it here.
 | `Search again` |  |
 | `Searching for devices…` | In the output sheet: looking for speakers and TVs to cast to |
 | `Server speakers (Jukebox)` | Playing out of the speakers attached to the server itself, rather than the phone. Subsonic calls this jukebox mode |
+| `Share` | Make a link on the server that others can open. Getting the file itself out is `Export` |
 | `Show cover` | Lyrics screen: the button that goes back to the cover art |
+| `Sleep timer` | Stop playing after a while, for falling asleep to |
 | `This phone` | The on-device profile, with no server account |
 | `View queue` | Read out by the screen reader for the button that opens the queue |
 

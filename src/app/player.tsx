@@ -4,7 +4,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useIsFocused, useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   AppState,
@@ -42,6 +42,7 @@ import { OutputSheet } from '@/components/OutputSheet';
 import { SpeedSheet } from '@/components/SpeedSheet';
 import { StarRating } from '@/components/StarRating';
 import { useAnimatedCover } from '@/hooks/useAnimatedCover';
+import { useCanShare } from '@/hooks/useCanShare';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { useLocalProfile } from '@/hooks/useLocalProfile';
@@ -68,6 +69,7 @@ import {
   usePlayerStore,
 } from '@/store/player';
 import { useSettings, type CoverTapAction } from '@/store/settings';
+import { useSharePicker } from '@/store/sharePicker';
 import { useSongMenu } from '@/store/songMenu';
 import { useToast } from '@/store/toast';
 import { useUpnp } from '@/store/upnp';
@@ -145,6 +147,41 @@ function CircleButton({
  * so committing a swipe doesn't move any visible panel: the one that was the
  * neighbor stays centered and only the hidden panel's content changes.
  */
+/**
+ * The sleep timer's way in, which says when it is on: in the accent, with the
+ * minutes left beside it, or with nothing beside it when it waits for the song
+ * to end. Its own component so the minute tick repaints this and not the
+ * player.
+ */
+function SleepButton({ onPress }: { onPress: () => void }) {
+  const t = useT();
+  const endsAt = usePlayerStore((s) => s.sleepEndsAt);
+  const atSongEnd = usePlayerStore((s) => s.sleepAtSongEnd);
+  const [, tick] = useReducer((n: number) => n + 1, 0);
+  useEffect(() => {
+    if (!endsAt) return;
+    const id = setInterval(tick, 15_000);
+    return () => clearInterval(id);
+  }, [endsAt]);
+  const on = !!endsAt || atSongEnd;
+  return (
+    <Pressable
+      hitSlop={10}
+      accessibilityRole="button"
+      accessibilityLabel={t('Sleep timer')}
+      onPress={onPress}
+      style={styles.bottomButton}
+    >
+      <MaterialIcons name="bedtime" size={22} color={on ? colors.accent : colors.text} />
+      {endsAt ? (
+        <Text style={styles.speedText}>
+          {`${Math.max(1, Math.ceil((endsAt - Date.now()) / 60_000))}′`}
+        </Text>
+      ) : null}
+    </Pressable>
+  );
+}
+
 function usePaneStyle(offset: SharedValue<number>, k: number, step: SharedValue<number>) {
   return useAnimatedStyle(() => {
     // A screen's width, and it is a shared value rather than a constant
@@ -214,6 +251,7 @@ export default function PlayerScreen() {
   const showDevicesButton =
     useSettings((s) => s.showDevicesButton) && (!local || localHttpAvailable);
   const showSpeedButton = useSettings((s) => s.showSpeedButton);
+  const canShare = useCanShare();
   const seekButtonsSec = useSettings((s) => s.seekButtonsSec);
   const serverType = useAuthStore((s) => s.auth?.serverType);
   const hasAccount = useAuthStore((s) => !!s.auth);
@@ -847,7 +885,9 @@ export default function PlayerScreen() {
    * arrives in real time and a renderer plays at its own pace, so there is
    * nothing to offer while either is what is playing.
    */
-  const showSpeed = (showSpeedButton || speed !== 1) && !song.url && !remoteDevice;
+  const showSpeed = showSpeedButton || speed !== 1;
+  const canSpeed = !song.url && !remoteDevice;
+  const canShareSong = canShare && !song.url;
 
   return (
     <GestureDetector gesture={dismissPan}>
@@ -1328,78 +1368,99 @@ export default function PlayerScreen() {
             </Pressable>
           </View>
 
-          {showDevicesButton || showQueueButton || remoteDevice || showSpeed ? (
-            <View style={styles.bottomRow}>
-              <View style={styles.bottomSlot}>
-                {/* Connected to a remote device it's always shown: it's the
-                    only way to disconnect the cast.
-                    Never disabled any more. It was, without a connection, back
-                    when a renderer could only be given a URL on the server:
-                    downloads cast from the phone now, so offline there is
-                    something to send. And it left the way out drawn and barred
-                    — going offline mid-cast used to leave the cast on with
-                    nothing that could end it. */}
-                {showDevicesButton || remoteDevice ? (
-                  <Pressable
-                    hitSlop={10}
-                    accessibilityRole="button"
-                    accessibilityLabel={t('Devices')}
-                    onPress={() => setOutputOpen(true)}
-                    style={styles.deviceRow}
-                  >
-                    <MaterialIcons
-                      name="devices"
-                      size={22}
-                      color={remoteDevice ? colors.accent : colors.text}
-                    />
-                    {remoteDevice ? (
-                      <Text style={[styles.deviceName, { color: colors.accent }]} numberOfLines={1}>
-                        {remoteDevice}
-                      </Text>
-                    ) : null}
-                  </Pressable>
+          {/* Spread across the width, each one where it always is: one that
+              cannot do anything for this song is dimmed rather than taken out,
+              so the others do not move from song to song. */}
+          <View style={styles.bottomRow}>
+            {/* Connected to a remote device it's always shown: it's the only
+                way to disconnect the cast. Never disabled any more: downloads
+                cast from the phone, so offline there is something to send, and
+                going offline mid-cast used to leave the way out barred. */}
+            {showDevicesButton || remoteDevice ? (
+              <Pressable
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel={t('Devices')}
+                onPress={() => setOutputOpen(true)}
+                style={styles.deviceRow}
+              >
+                <MaterialIcons
+                  name="devices"
+                  size={22}
+                  color={remoteDevice ? colors.accent : colors.text}
+                />
+                {remoteDevice ? (
+                  <Text style={[styles.deviceName, { color: colors.accent }]} numberOfLines={1}>
+                    {remoteDevice}
+                  </Text>
                 ) : null}
-              </View>
-              {/* Dead centre of the row, between the devices and the queue: it
-                  is about the music itself rather than about where it goes or
-                  what comes next, and it is the one of the three you reach for
-                  while the song plays. */}
-              {showSpeed ? (
-                <Pressable
-                  hitSlop={10}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('Playback speed')}
-                  onPress={() => openSpeedSheet.current()}
-                  style={styles.speedButton}
-                >
-                  <MaterialIcons
-                    name="speed"
-                    size={24}
-                    color={speed === 1 ? colors.text : colors.accent}
-                  />
-                  {/* The number only once it says something. Beside the icon in
-                      the accent, like the device name next to its own. */}
-                  {speed === 1 ? null : (
-                    <Text style={styles.speedText}>{`${speed}×`}</Text>
-                  )}
-                </Pressable>
-              ) : null}
-              {/* Same width as the slot on the left, so what sits between them
-                  is centred on the screen and not on what is left over. */}
-              <View style={styles.bottomSlotEnd}>
-                {showQueueButton ? (
-                  <Pressable
-                    hitSlop={10}
-                    accessibilityRole="button"
-                    accessibilityLabel={t('View queue')}
-                    onPress={() => pushOnce('/queue')}
-                  >
-                    <MaterialIcons name="queue-music" size={24} color={colors.text} />
-                  </Pressable>
-                ) : null}
-              </View>
-            </View>
-          ) : null}
+              </Pressable>
+            ) : null}
+            <Pressable
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={t('Lyrics')}
+              disabled={!hasLyrics}
+              onPress={() => pushOnce('/lyrics')}
+              style={[styles.bottomButton, !hasLyrics && styles.bottomButtonOff]}
+            >
+              <MaterialIcons name="lyrics" size={22} color={colors.text} />
+            </Pressable>
+            {showSpeed ? (
+              <Pressable
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel={t('Playback speed')}
+                disabled={!canSpeed}
+                onPress={() => openSpeedSheet.current()}
+                style={[styles.bottomButton, !canSpeed && styles.bottomButtonOff]}
+              >
+                <MaterialIcons
+                  name="speed"
+                  size={22}
+                  color={speed === 1 ? colors.text : colors.accent}
+                />
+                {/* The number only once it says something, in the accent like
+                    the device name beside its own icon. */}
+                {speed === 1 ? null : <Text style={styles.speedText}>{`${speed}×`}</Text>}
+              </Pressable>
+            ) : null}
+            <SleepButton
+              onPress={() => openMenu(song, undefined, { showLyrics: hasLyrics, sleep: true })}
+            />
+            {/* Nothing behind it yet. */}
+            <Pressable
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={t('Equalizer')}
+              style={styles.bottomButton}
+            >
+              <MaterialIcons name="equalizer" size={22} color={colors.text} />
+            </Pressable>
+            {/* Only with a server that mints share links, and never for a
+                station: its `url` is not the server's to share. */}
+            <Pressable
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={t('Share')}
+              disabled={!canShareSong}
+              onPress={() => useSharePicker.getState().open({ id: song.id, name: song.title })}
+              style={[styles.bottomButton, !canShareSong && styles.bottomButtonOff]}
+            >
+              <MaterialIcons name="share" size={20} color={colors.text} />
+            </Pressable>
+            {showQueueButton ? (
+              <Pressable
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel={t('View queue')}
+                onPress={() => pushOnce('/queue')}
+                style={styles.bottomButton}
+              >
+                <MaterialIcons name="queue-music" size={24} color={colors.text} />
+              </Pressable>
+            ) : null}
+          </View>
         </View>
         </View>
         </View>
@@ -1568,14 +1629,6 @@ const styles = themed((colors) => ({
     paddingHorizontal: spacing.sm,
     marginTop: spacing.xs,
   },
-  // Flexible slot for the devices button: keeps the queue in place even if
-  // the button is hidden, and lets the device name expand.
-  bottomSlot: {
-    flex: 1,
-    height: 40,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-  },
   // Like Spotify Connect: icon + device name in accent when casting.
   deviceRow: {
     flexDirection: 'row',
@@ -1590,21 +1643,13 @@ const styles = themed((colors) => ({
     fontWeight: '600',
     flexShrink: 1,
   },
-  // Mirrors `bottomSlot` on the other side, so the speed button between the two
-  // sits in the middle of the screen. The queue icon ends up exactly where it
-  // was before, at the right edge.
-  bottomSlotEnd: {
-    flex: 1,
-    height: 40,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-  },
-  speedButton: {
+  bottomButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
     height: 40,
   },
+  bottomButtonOff: { opacity: 0.35 },
   // In the accent like the device name beside its own icon: it is a mode that
   // is on, which is what the accent means everywhere else on this screen.
   speedText: {
