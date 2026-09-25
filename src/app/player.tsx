@@ -1697,12 +1697,14 @@ const styles = themed((colors) => ({
     marginTop: spacing.xs,
   },
   // Like Spotify Connect: icon + device name in accent when casting.
+  // The same box as the other buttons in the row; only the device name, while
+  // casting, makes it wider, and it is capped so the row stays centred.
   deviceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    maxWidth: '100%',
-    paddingRight: spacing.lg,
+    gap: spacing.xs,
+    height: 40,
+    maxWidth: 160,
   },
   deviceName: {
     color: colors.accent,
