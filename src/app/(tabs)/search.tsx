@@ -590,7 +590,7 @@ const styles = themed((colors) => ({
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceHighlight,
   },
-  filterText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '600' },
+  filterText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '500' },
   filterTextActive: { color: colors.onAccent },
   section: {
     marginBottom: spacing.xl,
@@ -607,7 +607,7 @@ const styles = themed((colors) => ({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  clearAll: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '600' },
+  clearAll: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '500' },
   recentRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -615,7 +615,7 @@ const styles = themed((colors) => ({
     paddingVertical: spacing.sm,
   },
   recentInfo: { flex: 1 },
-  recentTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '600' },
+  recentTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
   recentSub: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2 },
   albumRow: {
     gap: spacing.md,
@@ -628,7 +628,7 @@ const styles = themed((colors) => ({
   artistName: {
     color: colors.text,
     fontSize: fontSize.sm,
-    fontWeight: '600',
+    fontWeight: '500',
     textAlign: 'center',
   },
 }));

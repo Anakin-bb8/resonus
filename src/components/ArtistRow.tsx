@@ -44,6 +44,6 @@ export function ArtistRow({ artist }: { artist: Artist }) {
 const styles = themed((colors) => ({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   info: { flex: 1 },
-  name: { color: colors.text, fontSize: fontSize.md, fontWeight: '600' },
+  name: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
   sub: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2 },
 }));

@@ -161,7 +161,7 @@ const styles = themed((colors) => ({
   },
   pressed: { opacity: 0.6 },
   dirInfo: { flex: 1 },
-  dirName: { color: colors.text, fontSize: fontSize.md, fontWeight: '600' },
+  dirName: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
   // The year of an album folder, under its name: the folder view sorts by it,
   // and until now there was no way to see it (#97).
   dirYear: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2 },

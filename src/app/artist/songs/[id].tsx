@@ -493,7 +493,7 @@ const styles = themed((colors) => ({
   downloadProgress: {
     color: colors.accent,
     fontSize: fontSize.xs,
-    fontWeight: '600',
+    fontWeight: '500',
     minWidth: 32,
   },
   playRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },

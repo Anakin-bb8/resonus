@@ -61,7 +61,7 @@ const styles = themed((colors) => ({
     // Smaller than anything in the scale, because the box is smaller than
     // anything the scale was written for.
     fontSize: 9,
-    fontWeight: '700',
+    fontWeight: '600',
     lineHeight: 14,
   },
 }));

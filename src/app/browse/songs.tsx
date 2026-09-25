@@ -580,7 +580,7 @@ const styles = themed((colors) => ({
   searchCancel: {
     color: colors.text,
     fontSize: fontSize.sm,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   // `TrackRow` brings no horizontal padding of its own, so without this the
   // covers sit against the left edge and the ⋯ against the right one.

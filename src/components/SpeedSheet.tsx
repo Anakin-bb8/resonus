@@ -68,7 +68,7 @@ const styles = themed((colors) => ({
   title: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,
-    fontWeight: '700',
+    fontWeight: '500',
     marginBottom: spacing.md,
   },
   // Wraps: seven chips do not fit across a phone, and the second line is where
@@ -80,5 +80,5 @@ const styles = themed((colors) => ({
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceHighlight,
   },
-  chipText: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
+  chipText: { color: colors.text, fontSize: fontSize.sm, fontWeight: '500' },
 }));

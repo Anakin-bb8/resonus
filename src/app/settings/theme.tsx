@@ -183,7 +183,7 @@ const styles = themed((colors) => ({
   label: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,
-    fontWeight: '700',
+    fontWeight: '500',
     marginBottom: spacing.md,
   },
   secondLabel: { marginTop: spacing.xl },

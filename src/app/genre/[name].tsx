@@ -748,7 +748,7 @@ const styles = themed((colors) => ({
   chipText: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,
-    fontWeight: '600',
+    fontWeight: '500',
     includeFontPadding: false,
     textAlignVertical: 'center',
   },
@@ -769,7 +769,7 @@ const styles = themed((colors) => ({
   downloadProgress: {
     color: colors.accent,
     fontSize: fontSize.xs,
-    fontWeight: '600',
+    fontWeight: '500',
     minWidth: 32,
   },
   // Same measurements as `TrackListView`, which is what an album and a playlist

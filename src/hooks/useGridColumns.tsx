@@ -166,7 +166,7 @@ const styles = themed((colors) => ({
   sheetTitle: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,
-    fontWeight: '700',
+    fontWeight: '500',
     marginBottom: spacing.sm,
   },
   action: {

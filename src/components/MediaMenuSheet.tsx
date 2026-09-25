@@ -509,7 +509,7 @@ const styles = themed((colors) => ({
     marginBottom: spacing.md,
   },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  title: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
+  title: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
   subtitle: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2 },
   divider: {
     height: 1,

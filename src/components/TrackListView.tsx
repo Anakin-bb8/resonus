@@ -982,7 +982,7 @@ const styles = themed((colors) => ({
   searchCancel: {
     color: colors.text,
     fontSize: fontSize.sm,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   noResults: {
     color: colors.textSecondary,
@@ -1003,7 +1003,7 @@ const styles = themed((colors) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  addLabel: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
+  addLabel: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
   discHeader: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
@@ -1014,7 +1014,7 @@ const styles = themed((colors) => ({
   discHeaderText: {
     color: colors.textSecondary,
     fontSize: fontSize.xs,
-    fontWeight: '700',
+    fontWeight: '500',
     letterSpacing: 0.5,
   },
   list: {
@@ -1041,7 +1041,7 @@ const styles = themed((colors) => ({
   },
   subtitleLink: {
     color: colors.text,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   subtitleRow: {
     flexDirection: 'row',
@@ -1083,7 +1083,7 @@ const styles = themed((colors) => ({
   descriptionMoreText: {
     color: colors.text,
     fontSize: fontSize.sm,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   // The row keeps the gap the line used to keep for itself, so a header with
   // no badge sits exactly where it always did.
@@ -1127,7 +1127,7 @@ const styles = themed((colors) => ({
   downloadProgress: {
     color: colors.accent,
     fontSize: fontSize.xs,
-    fontWeight: '600',
+    fontWeight: '500',
     minWidth: 32,
   },
   actionsRight: {
@@ -1157,7 +1157,7 @@ const styles = themed((colors) => ({
     flex: 1,
     color: colors.text,
     fontSize: fontSize.md,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   barTitleCentered: {
     position: 'absolute',
@@ -1172,6 +1172,6 @@ const styles = themed((colors) => ({
     includeFontPadding: false,
     color: colors.text,
     fontSize: fontSize.md,
-    fontWeight: '700',
+    fontWeight: '500',
   },
 }));

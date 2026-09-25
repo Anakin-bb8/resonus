@@ -295,7 +295,7 @@ const styles = themed((colors) => ({
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceHighlight,
   },
-  segmentText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '600' },
+  segmentText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '500' },
   segmentTextActive: { color: colors.onAccent },
   body: { flex: 1 },
 }));

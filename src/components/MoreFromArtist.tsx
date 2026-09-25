@@ -77,6 +77,6 @@ const styles = themed((colors) => ({
     flex: 1,
     marginRight: spacing.md,
   },
-  showAll: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '600' },
+  showAll: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '500' },
   row: { gap: spacing.md, paddingHorizontal: spacing.lg },
 }));

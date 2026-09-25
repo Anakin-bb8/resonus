@@ -1079,7 +1079,7 @@ const styles = themed((colors) => ({
     marginTop: spacing.xs,
   },
   scanBarFill: { height: '100%', borderRadius: radius.pill, backgroundColor: colors.accent },
-  scanTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
+  scanTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
   scanSub: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'] },
 }));
 

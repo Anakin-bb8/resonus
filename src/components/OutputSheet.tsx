@@ -436,7 +436,7 @@ const styles = themed((colors) => ({
   sheetTitle: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   currentLine: {
     color: colors.textMuted,

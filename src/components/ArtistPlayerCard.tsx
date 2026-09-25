@@ -113,7 +113,7 @@ const styles = themed((colors) => ({
     // shadow for the pictures that are pale up there.
     color: '#fff',
     fontSize: fontSize.sm,
-    fontWeight: '700',
+    fontWeight: '500',
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
@@ -136,7 +136,7 @@ const styles = themed((colors) => ({
   more: {
     color: colors.text,
     fontSize: fontSize.sm,
-    fontWeight: '700',
+    fontWeight: '500',
     marginTop: spacing.sm,
   },
 }));

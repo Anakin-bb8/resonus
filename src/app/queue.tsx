@@ -461,7 +461,7 @@ const styles = themed((colors) => ({
   sectionHeader: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,
-    fontWeight: '700',
+    fontWeight: '500',
     marginBottom: spacing.sm,
   },
   sectionGap: { marginTop: spacing.lg },

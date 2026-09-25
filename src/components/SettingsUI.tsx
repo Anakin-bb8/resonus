@@ -759,7 +759,7 @@ export const settingsStyles = themed((colors) => ({
   groupTitle: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,
-    fontWeight: '600',
+    fontWeight: '500',
     marginTop: spacing.md,
     marginBottom: spacing.xs,
   },
@@ -847,13 +847,13 @@ export const settingsStyles = themed((colors) => ({
   padValue: {
     color: colors.text,
     fontSize: fontSize.xl,
-    fontWeight: '600',
+    fontWeight: '500',
     minWidth: 120,
     textAlign: 'center',
   },
   padArrow: { paddingVertical: spacing.xs, paddingHorizontal: spacing.xl },
   padDone: { alignSelf: 'flex-end', marginTop: spacing.sm },
-  padDoneLabel: { fontSize: fontSize.md, fontWeight: '700' },
+  padDoneLabel: { fontSize: fontSize.md, fontWeight: '600' },
   // Floating menu anchored to the right (Android-style dropdown).
   menu: {
     position: 'absolute',
@@ -896,5 +896,5 @@ export const settingsStyles = themed((colors) => ({
     paddingVertical: spacing.md,
     marginTop: spacing.lg,
   },
-  pillButtonText: { color: colors.onInverse, fontSize: fontSize.md, fontWeight: '700' },
+  pillButtonText: { color: colors.onInverse, fontSize: fontSize.md, fontWeight: '600' },
 }));

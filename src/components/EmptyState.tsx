@@ -66,5 +66,5 @@ const styles = themed((colors) => ({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xl,
   },
-  buttonText: { color: colors.onAccent, fontSize: fontSize.sm, fontWeight: '700' },
+  buttonText: { color: colors.onAccent, fontSize: fontSize.sm, fontWeight: '600' },
 }));

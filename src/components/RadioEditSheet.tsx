@@ -263,7 +263,7 @@ const styles = themed((colors) => ({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  title: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
+  title: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
   headerAction: { color: colors.accent, fontSize: fontSize.md, fontWeight: '600' },
   disabled: { color: colors.textMuted },
   content: { padding: spacing.lg, gap: spacing.sm },
@@ -298,7 +298,7 @@ const styles = themed((colors) => ({
   label: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,
-    fontWeight: '600',
+    fontWeight: '500',
     marginTop: spacing.md,
   },
   input: {

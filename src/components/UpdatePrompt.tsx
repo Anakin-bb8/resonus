@@ -223,7 +223,7 @@ const styles = themed((colors) => ({
     padding: spacing.lg,
     gap: spacing.md,
   },
-  title: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
+  title: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
   track: {
     height: 4,
     borderRadius: radius.pill,
@@ -234,5 +234,5 @@ const styles = themed((colors) => ({
   status: { minHeight: 20, justifyContent: 'center' },
   percent: { color: colors.textSecondary, fontSize: fontSize.sm },
   cancel: { alignSelf: 'flex-end', paddingVertical: spacing.xs, paddingHorizontal: spacing.sm },
-  cancelLabel: { color: colors.textSecondary, fontSize: fontSize.md, fontWeight: '600' },
+  cancelLabel: { color: colors.textSecondary, fontSize: fontSize.md, fontWeight: '500' },
 }));

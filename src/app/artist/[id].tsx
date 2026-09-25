@@ -880,7 +880,7 @@ const styles = themed((colors) => ({
   },
   downloadProgress: {
     fontSize: fontSize.xs,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   playButton: {
     backgroundColor: colors.accent,
@@ -900,7 +900,7 @@ const styles = themed((colors) => ({
     marginBottom: spacing.md,
   },
   sectionHeaderTitle: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '500' },
-  showAll: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '600' },
+  showAll: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '500' },
   sectionTitle: {
     color: colors.text,
     fontSize: fontSize.lg,
@@ -918,7 +918,7 @@ const styles = themed((colors) => ({
   bioToggle: {
     color: colors.text,
     fontSize: fontSize.sm,
-    fontWeight: '700',
+    fontWeight: '500',
     paddingHorizontal: spacing.lg,
     marginTop: spacing.sm,
   },
@@ -927,7 +927,7 @@ const styles = themed((colors) => ({
   similarName: {
     color: colors.text,
     fontSize: fontSize.sm,
-    fontWeight: '600',
+    fontWeight: '500',
     textAlign: 'center',
   },
   back: {
@@ -952,6 +952,6 @@ const styles = themed((colors) => ({
     flex: 1,
     color: colors.text,
     fontSize: fontSize.md,
-    fontWeight: '700',
+    fontWeight: '500',
   },
 }));

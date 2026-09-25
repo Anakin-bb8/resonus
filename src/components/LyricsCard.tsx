@@ -438,7 +438,7 @@ export const lyricsStyles = themed((colors) => ({
     color: colors.text,
     fontSize: 20,
     lineHeight: 30,
-    fontWeight: '700',
+    fontWeight: '500',
     paddingVertical: spacing.xs,
   },
   lineLarge: { fontSize: 28, lineHeight: 40, paddingVertical: spacing.sm },
@@ -455,7 +455,7 @@ const styles = themed((colors) => ({
     marginHorizontal: spacing.lg,
     padding: spacing.lg,
   },
-  title: { color: colors.text, fontSize: fontSize.md, fontWeight: '700', marginBottom: spacing.sm },
+  title: { color: colors.text, fontSize: fontSize.md, fontWeight: '500', marginBottom: spacing.sm },
   body: { height: CARD_BODY_H, overflow: 'hidden' },
   // Lyrics in place of the cover: box exactly the size of the cover.
   coverBox: { borderRadius: radius.lg, overflow: 'hidden', padding: spacing.lg },

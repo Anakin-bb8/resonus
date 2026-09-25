@@ -1509,19 +1509,19 @@ const styles = themed((colors) => ({
   topTitle: {
     color: colors.text,
     fontSize: fontSize.sm,
-    fontWeight: '700',
+    fontWeight: '500',
     letterSpacing: 1.5,
   },
   topLabel: {
     color: colors.textSecondary,
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '500',
     letterSpacing: 1.2,
   },
   topSource: {
     color: colors.text,
     fontSize: fontSize.sm,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   // The elastic slot: takes whatever the rest leaves over, and `coverSize` is
   // measured from here. `minHeight: 0` so it can actually shrink.
@@ -1583,7 +1583,7 @@ const styles = themed((colors) => ({
   // when tapping the empty space on the right.
   // Hugs the text: the tappable area is just the title/artist, not the row.
   tapText: { alignSelf: 'flex-start', maxWidth: '100%' },
-  title: { color: colors.text, fontSize: fontSize.xl, letterSpacing: tracking.title, fontWeight: '600' },
+  title: { color: colors.text, fontSize: fontSize.xl, letterSpacing: tracking.title, fontWeight: '500' },
   // The gap the artist line used to keep for itself now belongs to the row it
   // shares with the badge, so the two line up on their middles.
   artistRow: {
@@ -1648,7 +1648,7 @@ const styles = themed((colors) => ({
   deviceName: {
     color: colors.accent,
     fontSize: fontSize.xs,
-    fontWeight: '600',
+    fontWeight: '500',
     flexShrink: 1,
   },
   bottomButton: {
@@ -1663,6 +1663,6 @@ const styles = themed((colors) => ({
   speedText: {
     color: colors.accent,
     fontSize: fontSize.xs,
-    fontWeight: '700',
+    fontWeight: '600',
   },
 }));

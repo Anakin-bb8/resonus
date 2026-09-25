@@ -1173,7 +1173,7 @@ const styles = themed((colors) => ({
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceHighlight,
   },
-  segmentText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '600' },
+  segmentText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '500' },
   // A circle, the height of the chips beside it (`chipHeight`): with padding of
   // its own it would be an oval, and an aspect ratio squares it the wrong way
   // round, taking the width it got from the icon and making the row that tall.
@@ -1232,13 +1232,13 @@ const styles = themed((colors) => ({
   },
   card: { gap: spacing.xs },
   cardCentered: { alignItems: 'center' },
-  cardTitle: { color: colors.text, fontSize: fontSize.xs, fontWeight: '600', marginTop: spacing.xs },
+  cardTitle: { color: colors.text, fontSize: fontSize.xs, fontWeight: '500', marginTop: spacing.xs },
   centerText: { textAlign: 'center' },
   cardSub: { color: colors.textSecondary, fontSize: fontSize.xs },
   cardSubLine: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   rowInfo: { flex: 1 },
-  rowTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '600' },
+  rowTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
   rowSub: { color: colors.textSecondary, fontSize: fontSize.xs },
   rowSubGap: { marginTop: 2 },
   // Subtitle with room for the pinned icon.
@@ -1258,7 +1258,7 @@ const styles = themed((colors) => ({
     alignItems: 'center',
     gap: spacing.xs,
   },
-  sortBarText: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: '600' },
+  sortBarText: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: '500' },
   backdrop: { ...StyleSheet.absoluteFill, backgroundColor: colors.backdrop },
   sheet: {
     position: 'absolute',
@@ -1289,7 +1289,7 @@ const styles = themed((colors) => ({
   sheetTitle: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,
-    fontWeight: '700',
+    fontWeight: '500',
     marginBottom: spacing.sm,
   },
   sheetRow: {

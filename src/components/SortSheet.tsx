@@ -116,7 +116,7 @@ const styles = themed((colors) => ({
   sheetTitle: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,
-    fontWeight: '700',
+    fontWeight: '500',
     marginBottom: spacing.sm,
   },
   action: {
@@ -141,5 +141,5 @@ const styles = themed((colors) => ({
     borderRadius: radius.pill,
     backgroundColor: colors.surfaceHighlight,
   },
-  dirChipText: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
+  dirChipText: { color: colors.text, fontSize: fontSize.sm, fontWeight: '500' },
 }));

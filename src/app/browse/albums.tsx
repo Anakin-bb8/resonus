@@ -367,7 +367,7 @@ const styles = themed((colors) => ({
     borderRadius: radius.pill,
   },
   input: { flex: 1, color: colors.text, fontSize: fontSize.md, paddingVertical: 0 },
-  searchCancel: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
+  searchCancel: { color: colors.text, fontSize: fontSize.sm, fontWeight: '500' },
   list: {
     paddingHorizontal: spacing.lg,
     paddingBottom: SCREEN_BOTTOM_PADDING,

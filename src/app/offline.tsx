@@ -100,6 +100,6 @@ const styles = themed((colors) => ({
     borderRadius: radius.md,
     padding: spacing.lg,
   },
-  optionTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
+  optionTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
   optionSub: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: 2 },
 }));

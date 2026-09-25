@@ -325,7 +325,7 @@ const suggestedStyles = themed((colors) => ({
     height: 48,
   },
   info: { flex: 1 },
-  songTitle: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
+  songTitle: { color: colors.text, fontSize: fontSize.sm, fontWeight: '500' },
   artist: { color: colors.textSecondary, fontSize: fontSize.xs },
   addButton: { padding: spacing.xs },
   refreshButton: {
@@ -336,7 +336,7 @@ const suggestedStyles = themed((colors) => ({
     borderRadius: 999,
     backgroundColor: colors.surfaceHighlight,
   },
-  refreshText: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
+  refreshText: { color: colors.text, fontSize: fontSize.sm, fontWeight: '500' },
 }));
 
 export default function PlaylistScreen() {
@@ -1007,6 +1007,6 @@ const styles = themed((colors) => ({
     marginVertical: spacing.xs,
   },
   // On the cover viewer, which is near-black in both appearances.
-  changeCover: { color: colors.onArtwork, fontSize: fontSize.md, fontWeight: '700' },
+  changeCover: { color: colors.onArtwork, fontSize: fontSize.md, fontWeight: '500' },
   coverError: { color: colors.danger, fontSize: fontSize.sm, textAlign: 'center' },
 }));

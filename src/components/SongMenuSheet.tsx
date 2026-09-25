@@ -788,7 +788,7 @@ const styles = themed((colors) => ({
     gap: spacing.md,
     paddingBottom: spacing.md,
   },
-  title: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
+  title: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
   subRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   artist: { color: colors.textSecondary, fontSize: fontSize.sm, flexShrink: 1 },
   divider: { height: 1, backgroundColor: colors.border, marginBottom: spacing.sm },

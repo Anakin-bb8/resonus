@@ -177,7 +177,7 @@ const styles = themed((colors) => ({
     backgroundColor: colors.surface,
   },
   profileText: { flex: 1, minWidth: 0 },
-  profileName: { color: colors.text, fontSize: fontSize.md, fontWeight: '600' },
+  profileName: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
   profileHost: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: 2 },
   closeButton: {
     alignSelf: 'center',
@@ -185,5 +185,5 @@ const styles = themed((colors) => ({
     paddingVertical: spacing.md,
     marginTop: spacing.md,
   },
-  closeText: { color: colors.textSecondary, fontSize: fontSize.md, fontWeight: '600' },
+  closeText: { color: colors.textSecondary, fontSize: fontSize.md, fontWeight: '500' },
 }));

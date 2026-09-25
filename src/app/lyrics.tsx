@@ -156,7 +156,7 @@ const styles = themed((colors) => ({
     gap: spacing.md,
   },
   titleBox: { flex: 1, alignItems: 'center' },
-  title: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
+  title: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
   artist: { color: colors.textSecondary, fontSize: fontSize.xs },
   body: { flex: 1 },
   plainContent: { paddingVertical: spacing.lg, paddingBottom: spacing.xxl },
