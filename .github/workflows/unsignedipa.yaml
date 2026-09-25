@@ -31,6 +31,26 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      # The lock screen's animated cover lives behind `#if compiler(>=6.2)`
+      # (Swift 6.2 ships with Xcode 26), and this image defaults to Xcode 16.4:
+      # with it the whole feature compiles away without a single warning, the
+      # build succeeds, and the cover stays static. Xcode 26 is installed, it
+      # just has to be the one xcodebuild runs.
+      - name: Select Xcode 26
+        run: |
+          CURRENT=$(xcode-select -p | sed 's|/Contents/Developer||')
+          echo "Default Xcode: $CURRENT"
+          PICK=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -n1 || true)
+          if [ -n "$PICK" ]; then
+            if [ "$PICK" != "$CURRENT" ]; then
+              echo "Selecting $PICK"
+              sudo xcode-select -s "$PICK"
+            fi
+          else
+            echo "::warning::No Xcode 26 on this runner: the lock screen's animated cover compiles out"
+          fi
+          xcodebuild -version
+
       - name: Install JS dependencies
         run: pnpm install --frozen-lockfile
 
@@ -66,6 +86,18 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             DEVELOPMENT_TEAM="" \
             SKIP_INSTALL=NO
+
+      # Proves the compiled binary really carries the animated artwork code:
+      # "animated-artwork" is the cache folder its Swift writes, so it is only
+      # in the executable when the `#if compiler(>=6.2)` branch was compiled.
+      - name: Check animated artwork is compiled in
+        run: |
+          APP_PATH=$(find ios/build/Resonus.xcarchive/Products -name "*.app" -type d 2>/dev/null | head -n1)
+          if [ -n "$APP_PATH" ] && grep -Raq "animated-artwork" "$APP_PATH"; then
+            echo "Animated artwork code is in the binary."
+          else
+            echo "::warning::Animated artwork code is NOT in the binary (Xcode older than 26?)"
+          fi
 
       - name: Package IPA
         run: |

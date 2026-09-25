@@ -1899,6 +1899,55 @@ index 0000000..bcc6994
 +}
 +
 +#endif
+diff --git a/ios/AudioPlayer.swift b/ios/AudioPlayer.swift
+index 0742943..09c0e2a 100644
+--- a/ios/AudioPlayer.swift
++++ b/ios/AudioPlayer.swift
+@@ -56,7 +56,21 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+ 
+   var duration: Double {
+     let seconds = ref.currentItem?.duration.seconds ?? 0.0
+-    return seconds.isNaN ? 0.0 : seconds
++    if seconds.isFinite && seconds > 0 { return seconds }
++    // AVPlayer plays a stream it cannot time (nothing in the container or the
++    // response to compute a length from) and then reports 0. The app reads 0
++    // as "this stream has no random access" and seeks it by re-requesting with
++    // `timeOffset` — a parameter the server IGNORES on a file it serves
++    // directly (it is only ever given to ffmpeg), so playback restarts at zero
++    // while the position keeps counting from the seek: the time then runs
++    // ahead of the sound by every seek, and reaches the end while the audio
++    // still has that much left. The caller's length stands in, the same way it
++    // already does on the lock screen (`MediaController.applyPlaybackInfo`),
++    // so a playable stream always reports the length it has.
++    if let ms = metadata?.durationMs, ms > 0 {
++      return ms / 1000.0
++    }
++    return 0.0
+   }
+ 
+   var currentTime: Double {
+@@ -176,14 +190,19 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+     }
+   }
+ 
++  // Exact landing by default: AVPlayer's fast seek (±infinity) may stop
++  // anywhere, and on a container with no sample index — mp3, ogg/opus, ADTS —
++  // "anywhere" is seconds away from what was asked, so the audio plays from a
++  // different place than the position reported for it. Skip and the lock
++  // screen's own command already seek with `.zero`.
+   func seekTo(seconds: Double, toleranceMillisBefore: Double? = nil, toleranceMillisAfter: Double? = nil) async {
+     let time = CMTime(seconds: seconds, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+     let toleranceBefore = toleranceMillisBefore.map {
+       CMTime(seconds: $0 / 1000.0, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+-    } ?? CMTime.positiveInfinity
++    } ?? CMTime.zero
+     let toleranceAfter = toleranceMillisAfter.map {
+       CMTime(seconds: $0 / 1000.0, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+-    } ?? CMTime.positiveInfinity
++    } ?? CMTime.zero
+ 
+     await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+       ref.seek(to: time, toleranceBefore: toleranceBefore, toleranceAfter: toleranceAfter) { [weak self] _ in
 diff --git a/ios/AudioRecords.swift b/ios/AudioRecords.swift
 index 33db27c..a5c4135 100644
 --- a/ios/AudioRecords.swift
