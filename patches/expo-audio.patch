@@ -1551,10 +1551,10 @@ index f3ae4ee..99f02c0 100644
      /**
 diff --git a/ios/AnimatedArtwork.swift b/ios/AnimatedArtwork.swift
 new file mode 100644
-index 0000000..bdc5944
+index 0000000..c5a1206
 --- /dev/null
 +++ b/ios/AnimatedArtwork.swift
-@@ -0,0 +1,449 @@
+@@ -0,0 +1,536 @@
 +import AVFoundation
 +import CoreGraphics
 +import CoreImage
@@ -1700,7 +1700,15 @@ index 0000000..bdc5944
 +    format.opaque = true
 +    let backdrop = ratio == .tall ? Self.blurred(frame) : nil
 +    return UIGraphicsImageRenderer(size: size, format: format).image { renderer in
-+      draw(frame, in: renderer.cgContext, canvas: size, backdrop: backdrop)
++      let context = renderer.cgContext
++      // UIKit contexts are flipped, so a CGImage drawn straight comes out
++      // upside down — that is what the lock screen showed while the video
++      // was still encoding.
++      context.saveGState()
++      context.translateBy(x: 0, y: size.height)
++      context.scaleBy(x: 1, y: -1)
++      draw(frame, in: context, canvas: size, backdrop: backdrop)
++      context.restoreGState()
 +    }
 +  }
 +
@@ -1717,23 +1725,98 @@ index 0000000..bdc5944
 +    // tall canvas is filled without stretching the artwork.
 +    context.draw(backdrop, in: Self.aspectFill(CGSize(width: backdrop.width, height: backdrop.height), in: bounds))
 +    let side = min(canvas.width, canvas.height)
-+    context.draw(
-+      frame,
-+      in: CGRect(x: 0, y: (canvas.height - side) / 2, width: side, height: side)
-+    )
++    let art = CGRect(x: 0, y: (canvas.height - side) / 2, width: side, height: side)
++    Self.drawFeathered(frame, in: context, rect: art)
++  }
++
++  /// Draws the cover with its top and bottom edges faded out, so it melts
++  /// into the blurred backdrop instead of ending in a hard rectangle.
++  private static func drawFeathered(_ frame: CGImage, in context: CGContext, rect: CGRect) {
++    let width = Int(rect.width)
++    let height = Int(rect.height)
++    guard width > 4, height > 4,
++          let offscreen = CGContext(
++            data: nil,
++            width: width,
++            height: height,
++            bitsPerComponent: 8,
++            bytesPerRow: 0,
++            space: CGColorSpaceCreateDeviceRGB(),
++            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
++          )
++    else {
++      context.draw(frame, in: rect)
++      return
++    }
++    offscreen.interpolationQuality = .high
++    offscreen.draw(frame, in: CGRect(x: 0, y: 0, width: rect.width, height: rect.height))
++    let colors = [
++      UIColor.white.withAlphaComponent(0).cgColor,
++      UIColor.white.cgColor,
++      UIColor.white.cgColor,
++      UIColor.white.withAlphaComponent(0).cgColor,
++    ] as CFArray
++    if let gradient = CGGradient(
++      colorsSpace: CGColorSpaceCreateDeviceRGB(),
++      colors: colors,
++      locations: [0, 0.16, 0.84, 1]
++    ) {
++      offscreen.setBlendMode(.destinationIn)
++      offscreen.drawLinearGradient(
++        gradient,
++        start: CGPoint(x: 0, y: 0),
++        end: CGPoint(x: 0, y: rect.height),
++        options: []
++      )
++      offscreen.setBlendMode(.normal)
++    }
++    guard let feathered = offscreen.makeImage() else {
++      context.draw(frame, in: rect)
++      return
++    }
++    context.draw(feathered, in: rect)
 +  }
 +
 +  private static func blurred(_ frame: CGImage) -> CGImage? {
 +    let input = CIImage(cgImage: frame)
++    let extent = input.extent
++    guard extent.width > 1, extent.height > 1, !extent.isInfinite, !extent.isNull else {
++      return downscaleBlur(frame)
++    }
 +    guard let filter = CIFilter(name: "CIGaussianBlur") else {
-+      return nil
++      return downscaleBlur(frame)
 +    }
 +    filter.setValue(input, forKey: kCIInputImageKey)
 +    filter.setValue(64.0, forKey: kCIInputRadiusKey)
-+    guard let output = filter.outputImage?.cropped(to: input.extent) else {
++    guard let output = filter.outputImage?.cropped(to: extent),
++          let image = blurContext.createCGImage(output, from: extent)
++    else {
++      return downscaleBlur(frame)
++    }
++    return image
++  }
++
++  /// Blur without CoreImage: shrink the frame to a few pixels and scale it
++  /// back up, so the bands around the cover always come out soft even when
++  /// the gaussian filter refuses the image.
++  private static func downscaleBlur(_ frame: CGImage) -> CGImage? {
++    let width = 24
++    let ratio = frame.height / max(1, frame.width)
++    let height = max(1, Int((CGFloat(width) * ratio).rounded()))
++    guard let context = CGContext(
++      data: nil,
++      width: width,
++      height: height,
++      bitsPerComponent: 8,
++      bytesPerRow: 0,
++      space: CGColorSpaceCreateDeviceRGB(),
++      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
++    ) else {
 +      return nil
 +    }
-+    return blurContext.createCGImage(output, from: output.extent)
++    context.interpolationQuality = .high
++    context.draw(frame, in: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height)))
++    return context.makeImage()
 +  }
 +
 +  private static func aspectFill(_ size: CGSize, in bounds: CGRect) -> CGRect {
@@ -1967,17 +2050,21 @@ index 0000000..bdc5944
 +    guard let properties = CGImageSourceCopyPropertiesAtIndex(source, index, nil) as? [String: Any] else {
 +      return fallbackDelay
 +    }
-+    for name in ["GIF", "PNG", "WebP"] {
-+      guard let dictionary = properties[name] as? [String: Any] else {
++    // The per-frame delays live in a format sub-dictionary whose key is
++    // "{WebP}"/"{GIF}"/"{PNG}", not "WebP": looking for the unbraced name
++    // never matched, so every frame fell back to 100ms and the cover crawled
++    // at ten frames per second. Any sub-dictionary carrying a delay wins.
++    for value in properties.values {
++      guard let dictionary = value as? [String: Any] else {
 +        continue
 +      }
 +      let unclamped = (dictionary["UnclampedDelayTime"] as? NSNumber)?.doubleValue ?? 0
 +      let clamped = (dictionary["DelayTime"] as? NSNumber)?.doubleValue ?? 0
-+      let value = unclamped > 0 ? unclamped : clamped
-+      guard value > 0 else {
++      let delay = unclamped > 0 ? unclamped : clamped
++      guard delay > 0 else {
 +        continue
 +      }
-+      return value < browserDelayFloor ? fallbackDelay : max(value, minFrameDelay)
++      return delay < browserDelayFloor ? fallbackDelay : max(delay, minFrameDelay)
 +    }
 +    return fallbackDelay
 +  }
@@ -2005,7 +2092,7 @@ index 0000000..bdc5944
 +
 +#endif
 diff --git a/ios/AudioPlayer.swift b/ios/AudioPlayer.swift
-index 0742943..09c0e2a 100644
+index 0742943..d2ef6a5 100644
 --- a/ios/AudioPlayer.swift
 +++ b/ios/AudioPlayer.swift
 @@ -56,7 +56,21 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
@@ -2053,6 +2140,15 @@ index 0742943..09c0e2a 100644
  
      await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
        ref.seek(to: time, toleranceBefore: toleranceBefore, toleranceAfter: toleranceAfter) { [weak self] _ in
+@@ -346,7 +365,7 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+ 
+   private func restorePlaybackState(time: Double, shouldResume: Bool, rate: Float) {
+     let cmTime = CMTime(seconds: time, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+-    ref.seek(to: cmTime) { [weak self] _ in
++    ref.seek(to: cmTime, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
+       guard let self, shouldResume else { return }
+       self.play(at: rate)
+     }
 diff --git a/ios/AudioRecords.swift b/ios/AudioRecords.swift
 index 33db27c..a5c4135 100644
 --- a/ios/AudioRecords.swift
@@ -2075,8 +2171,32 @@ index 33db27c..a5c4135 100644
  }
  
  enum BitRateStrategy: String, Enumerable {
+diff --git a/ios/AudioUtils.swift b/ios/AudioUtils.swift
+index 79c7c0b..7c4800e 100644
+--- a/ios/AudioUtils.swift
++++ b/ios/AudioUtils.swift
+@@ -84,9 +84,17 @@ struct AudioUtils {
+       url
+     }
+ 
+-    var options: [String: Any]?
++    // AVPlayer without this flag seeks by "approximate random access by time":
++    // on a container with no sample index (mp3, ogg, adts — everything that is
++    // not mp4/m4a) it lands NEAR the requested position while the clock keeps
++    // counting from the requested one, so a dragged position leaves the bar and
++    // the sound a whole seek apart until the track is restarted. The flag makes
++    // AVFoundation resolve the exact frame instead, and a container that
++    // already carries an index (m4a/mp4) reports the same precise timing
++    // anyway, so it costs nothing there.
++    var options: [String: Any] = [AVURLAssetPreferPreciseDurationAndTimingKey: true]
+     if let headers = source.headers {
+-      options = ["AVURLAssetHTTPHeaderFieldsKey": headers]
++      options["AVURLAssetHTTPHeaderFieldsKey"] = headers
+     }
+ 
+     let asset = AVURLAsset(url: finalUrl, options: options)
 diff --git a/ios/MediaController.swift b/ios/MediaController.swift
-index e977f57..8599115 100644
+index e977f57..8d8068b 100644
 --- a/ios/MediaController.swift
 +++ b/ios/MediaController.swift
 @@ -11,9 +11,12 @@ class MediaController {
@@ -2258,6 +2378,15 @@ index e977f57..8599115 100644
      remoteCommandCenter.playCommand.addTarget { [weak self] _ in
        guard let player = self?.activePlayer else {
          return .commandFailed
+@@ -270,7 +347,7 @@ class MediaController {
+       }
+ 
+       let seekTime = CMTime(seconds: event.positionTime, preferredTimescale: 1)
+-      player.ref.seek(to: seekTime)
++      player.ref.seek(to: seekTime, toleranceBefore: .zero, toleranceAfter: .zero)
+ 
+       return .success
+     }
 @@ -303,12 +380,34 @@ class MediaController {
        return .success
      }
