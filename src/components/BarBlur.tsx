@@ -12,7 +12,7 @@
  * what is behind it without hiding it.
  */
 import { BlurTargetView, BlurView } from 'expo-blur';
-import { createRef, useRef, type ReactNode, type RefObject } from 'react';
+import { createRef, type ReactNode } from 'react';
 import { Animated, Platform, StyleSheet, View } from 'react-native';
 
 import { useSettings } from '@/store/settings';
@@ -28,23 +28,14 @@ export function useBarBlur(): boolean {
   return useSettings((s) => s.blurBars) && canBlurBars;
 }
 
-type Target = RefObject<View | null>;
 
-/**
- * What a bar blurs. Without `target`, everything the Stack draws (the root
- * layout's). A screen's own top bar lives inside that one, so it needs a
- * target of its own around the list it floats over (`useBlurTarget`).
- */
-export function BarBlurTarget({ children, target: own }: { children: ReactNode; target?: Target }) {
+/** What the bars blur: everything the Stack draws (the root layout's). */
+export function BarBlurTarget({ children }: { children: ReactNode }) {
   return (
-    <BlurTargetView ref={own ?? target} style={{ flex: 1 }}>
+    <BlurTargetView ref={target} style={{ flex: 1 }}>
       {children}
     </BlurTargetView>
   );
-}
-
-export function useBlurTarget(): Target {
-  return useRef<View | null>(null);
 }
 
 /**
@@ -52,7 +43,7 @@ export function useBlurTarget(): Target {
  * labels stay legible over a bright cover: the page colour for the navigation
  * bar, the cover's for the mini player.
  */
-export function BarBlur({ tint, alpha, target: own }: { tint?: string; alpha?: number; target?: Target }) {
+export function BarBlur({ tint, alpha }: { tint?: string; alpha?: number }) {
   const colors = useTheme();
   const mode = useThemeMode();
   const a = alpha ?? (mode === 'light' ? 0.7 : 0.6);
@@ -60,7 +51,7 @@ export function BarBlur({ tint, alpha, target: own }: { tint?: string; alpha?: n
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <BlurView
         style={StyleSheet.absoluteFill}
-        blurTarget={own ?? target}
+        blurTarget={target}
         blurMethod="dimezisBlurViewSdk31Plus"
         intensity={60}
         tint={mode === 'light' ? 'light' : 'dark'}
@@ -72,27 +63,25 @@ export function BarBlur({ tint, alpha, target: own }: { tint?: string; alpha?: n
 
 /**
  * The background of a screen's top bar, which fades in as the header scrolls
- * away: the header's colour, solid, or over a blur of the list when the bars
- * are blurred.
+ * away: the header's colour, solid.
+ *
+ * Not blurred. A bar inside a screen can only blur a target of its own around
+ * that screen's list, and a screen wrapped in a `BlurTargetView` stops being
+ * drawn the moment it starts to leave: going back showed an empty page for a
+ * few frames before the fade.
  */
 export function TopBarBackground({
   color,
   opacity,
-  target: own,
 }: {
   color: string;
   opacity: Animated.AnimatedInterpolation<number> | number;
-  target: Target;
 }) {
-  const blur = useBarBlur();
   return (
-    <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity }]}>
-      {blur ? (
-        <BarBlur target={own} tint={color} alpha={0.7} />
-      ) : (
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: color }]} />
-      )}
-    </Animated.View>
+    <Animated.View
+      pointerEvents="none"
+      style={[StyleSheet.absoluteFill, { opacity, backgroundColor: color }]}
+    />
   );
 }
 
