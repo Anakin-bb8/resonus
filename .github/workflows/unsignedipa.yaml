@@ -1,9 +1,5 @@
 name: Build unsigned iOS IPA
 
-# Runs on demand, and alongside the APK when a v* tag is pushed. The IPA is
-# unsigned (there is no Apple account behind it), so it is not App Store
-# material: it goes into the same draft Release as the APK, for sideloading.
-
 on:
   workflow_dispatch:
   push:
@@ -31,11 +27,6 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      # The lock screen's animated cover lives behind `#if compiler(>=6.2)`
-      # (Swift 6.2 ships with Xcode 26), and this image defaults to Xcode 16.4:
-      # with it the whole feature compiles away without a single warning, the
-      # build succeeds, and the cover stays static. Xcode 26 is installed, it
-      # just has to be the one xcodebuild runs.
       - name: Select Xcode 26
         run: |
           CURRENT=$(xcode-select -p | sed 's|/Contents/Developer||')
@@ -57,9 +48,20 @@ jobs:
       - name: Expo prebuild (iOS)
         run: pnpm expo prebuild --platform ios --clean --no-install
 
+      - name: Cache CocoaPods & Xcode DerivedData
+        uses: actions/cache@v4
+        with:
+          path: |
+            ios/Pods
+            ~/Library/Caches/CocoaPods
+            ~/Library/Developer/Xcode/DerivedData
+          key: ${{ runner.os }}-pods-xcode-${{ hashFiles('ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-xcode-
+
       - name: Install CocoaPods
         working-directory: ios
-        run: pod install --repo-update
+        run: pod install
 
       - name: Find workspace
         id: xcode
@@ -71,8 +73,6 @@ jobs:
       - name: Build unsigned archive
         working-directory: ios
         env:
-          # Same stamp the APK carries, so a report from a sideloaded build says
-          # which commit it came from (see the diagnostics screen).
           EXPO_PUBLIC_COMMIT: ${{ github.sha }}
         run: |
           xcodebuild archive \
@@ -81,15 +81,15 @@ jobs:
             -configuration Release \
             -destination "generic/platform=iOS" \
             -archivePath build/Resonus.xcarchive \
+            -jobs $(sysctl -n hw.ncpu) \
+            ONLY_ACTIVE_ARCH=YES \
+            COMPILER_INDEX_STORE_ENABLE=NO \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             DEVELOPMENT_TEAM="" \
             SKIP_INSTALL=NO
 
-      # Proves the compiled binary really carries the animated artwork code:
-      # "animated-artwork" is the cache folder its Swift writes, so it is only
-      # in the executable when the `#if compiler(>=6.2)` branch was compiled.
       - name: Check animated artwork is compiled in
         run: |
           APP_PATH=$(find ios/build/Resonus.xcarchive/Products -name "*.app" -type d 2>/dev/null | head -n1)
@@ -101,7 +101,6 @@ jobs:
 
       - name: Package IPA
         run: |
-          # Search for the .app file inside the Products directory of the archive
           APP_PATH=$(find ios/build/Resonus.xcarchive/Products -name "*.app" -type d 2>/dev/null | head -n 1)
 
           if [ -z "$APP_PATH" ]; then
@@ -113,7 +112,6 @@ jobs:
 
           echo "App found in: $APP_PATH"
 
-          # Prepare the Payload directory and create the unsigned IPA
           mkdir -p Payload
           cp -R "$APP_PATH" Payload/
           zip -qr "resonus-${GITHUB_REF_NAME}.ipa" Payload
@@ -126,9 +124,6 @@ jobs:
           path: resonus-*.ipa
           retention-days: 14
 
-      # The draft belongs to the APK workflow, which takes longer than this one.
-      # Waiting for it is what keeps this from opening a second Release for the
-      # same tag.
       - name: Attach the IPA to the draft Release
         if: startsWith(github.ref, 'refs/tags/')
         env:

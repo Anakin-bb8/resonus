@@ -1464,7 +1464,7 @@ index cfd92ad..78fa084 100644
  //# sourceMappingURL=AudioConstants.d.ts.map
 \ No newline at end of file
 diff --git a/build/AudioModule.types.d.ts b/build/AudioModule.types.d.ts
-index f3ae4ee..99f02c0 100644
+index f3ae4ee..5bc46da 100644
 --- a/build/AudioModule.types.d.ts
 +++ b/build/AudioModule.types.d.ts
 @@ -31,6 +31,11 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
@@ -1486,10 +1486,10 @@ index f3ae4ee..99f02c0 100644
 +    /**
 +     * Queues a source behind the one playing so the player joins them with no
 +     * gap, and emits `trackTransition` when it moves on to it. Replaces a
-+     * previously queued one. Android only.
++     * previously queued one.
 +     */
 +    setNextSource(source: AudioSource): void;
-+    /** Drops the source queued by `setNextSource`, if any. Android only. */
++    /** Drops the source queued by `setNextSource`, if any. */
 +    clearNextSource(): void;
      /**
       * Seeks the playback by the given number of seconds.
@@ -2124,11 +2124,85 @@ index 0000000..818b832
 +}
 +
 +#endif
+diff --git a/ios/AudioModule.swift b/ios/AudioModule.swift
+index d265606..7cf6446 100644
+--- a/ios/AudioModule.swift
++++ b/ios/AudioModule.swift
+@@ -241,6 +241,18 @@ public class AudioModule: Module {
+         }
+       }
+ 
++      // Gapless: same source resolution as `replace`, but the track is queued
++      // behind the one playing instead of taking its place, so AVQueuePlayer
++      // buffers it in advance and joins them with no gap. The move arrives as
++      // `trackTransition`.
++      Function("setNextSource") { (player: AudioPlayer, source: AudioSource) in
++        player.setNextSource(source)
++      }
++
++      Function("clearNextSource") { (player: AudioPlayer) in
++        player.clearNextSource()
++      }
++
+       Function("pause") { player in
+         player.ref.pause()
+         if !player.keepAudioSessionActive {
 diff --git a/ios/AudioPlayer.swift b/ios/AudioPlayer.swift
-index 0742943..d2ef6a5 100644
+index 0742943..8645502 100644
 --- a/ios/AudioPlayer.swift
 +++ b/ios/AudioPlayer.swift
-@@ -56,7 +56,21 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+@@ -4,6 +4,7 @@ import Combine
+ private enum AudioConstants {
+   static let playbackStatus = "playbackStatusUpdate"
+   static let audioSample = "audioSampleUpdate"
++  static let trackTransition = "trackTransition"
+ }
+ 
+ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+@@ -25,17 +26,40 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+   var samplingEnabled = false
+   var keepAudioSessionActive = false
+ 
++  /**
++   * Gapless: the track queued behind the current one by `setNextSource`, if
++   * any. It is in the player's queue already, this is only the handle needed
++   * to tell an advance to it apart from a source JS installed itself.
++   */
++  private var gaplessItem: AVPlayerItem?
++  /** The same track as the source it was queued from, so a reset of the media
++   *  services can rebuild what is playing after the player moved to it. */
++  private var gaplessSource: AudioSource?
++
++  /**
++   * What the player does when the current item runs out: move on to the next
++   * one in its queue when there is one waiting (a loop, or the track gapless
++   * queued behind), and pause when there is not — which is what makes the end
++   * of a track reach JS as `didJustFinish`.
++   */
++  private var endAction: AVPlayerActionAtItemEnd {
++    isLooping || gaplessItem != nil ? .advance : .pause
++  }
++
+   var isLooping = false {
+     didSet {
+       guard isLooping != oldValue else {
+         return
+       }
+       if isLooping {
+-        ref.actionAtItemEnd = .advance
++        // The loop is the repeat of the song playing, so what gapless had
++        // queued behind it is not what comes next any more — and the loop's
++        // own copy cannot be added while another item waits behind.
++        clearNextSource()
+         enqueueNextLoopItem()
+       } else {
+         removeQueuedLoopItems()
+-        ref.actionAtItemEnd = .pause
++        ref.actionAtItemEnd = endAction
+       }
+       updateStatus(with: [:])
+     }
+@@ -56,7 +80,21 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
  
    var duration: Double {
      let seconds = ref.currentItem?.duration.seconds ?? 0.0
@@ -2151,7 +2225,18 @@ index 0742943..d2ef6a5 100644
    }
  
    var currentTime: Double {
-@@ -176,14 +190,19 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+@@ -100,7 +138,9 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+   }
+ 
+   func play(at rate: Float) {
+-    ref.actionAtItemEnd = isLooping ? .advance : .pause
++    // Whatever was queued behind the current item stays queued: a pause and
++    // resume in the middle of a song must not take the advance away from it.
++    ref.actionAtItemEnd = endAction
+     if isLooping {
+       enqueueNextLoopItem()
+     }
+@@ -176,14 +216,19 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
      }
    }
  
@@ -2173,7 +2258,43 @@ index 0742943..d2ef6a5 100644
  
      await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
        ref.seek(to: time, toleranceBefore: toleranceBefore, toleranceAfter: toleranceAfter) { [weak self] _ in
-@@ -346,7 +365,7 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+@@ -224,10 +269,26 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+       .store(in: &cancellables)
+ 
+     ref.publisher(for: \.currentItem)
+-      .sink { [weak self] _ in
++      .sink { [weak self] item in
+         guard let self else {
+           return
+         }
++        // Gapless: the player moved on its own to the track queued by
++        // `setNextSource`, and it is already playing it. Nothing is loaded
++        // here — there is nothing to load — this is the announcement JS needs
++        // to follow the queue, tell the lock screen what is on now and queue
++        // the track after this one. A source JS installed itself never reads
++        // as a move of this kind: the handle is dropped before the item is
++        // swapped (`replacePlayerItem`).
++        if let queued = self.gaplessItem, item === queued {
++          // What is loaded from here on: a reset of the media services has to
++          // rebuild this track, not the one it left.
++          self.source = self.gaplessSource
++          self.gaplessItem = nil
++          self.gaplessSource = nil
++          self.ref.actionAtItemEnd = self.endAction
++          self.emit(event: AudioConstants.trackTransition)
++        }
+         if self.isLooping {
+           self.enqueueNextLoopItem()
+           self.addPlaybackEndNotification()
+@@ -319,6 +380,7 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+   }
+ 
+   private func teardownPlayer() {
++    clearNextSource()
+     removeQueuedLoopItems()
+     if samplingEnabled {
+       uninstallTap()
+@@ -346,7 +408,7 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
  
    private func restorePlaybackState(time: Double, shouldResume: Bool, rate: Float) {
      let cmTime = CMTime(seconds: time, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
@@ -2182,6 +2303,102 @@ index 0742943..d2ef6a5 100644
        guard let self, shouldResume else { return }
        self.play(at: rate)
      }
+@@ -405,6 +467,11 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+   }
+ 
+   private func replacePlayerItem(with item: AVPlayerItem?) {
++    // Whatever was queued behind the old item goes with it: this one is the
++    // track now, and JS knows it (it called `replace`, and forgets its own
++    // memo beside that call).
++    gaplessItem = nil
++    gaplessSource = nil
+     if let queuePlayer = ref as? AVQueuePlayer {
+       queuePlayer.removeAllItems()
+       if let item {
+@@ -429,12 +496,60 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+     queuePlayer.insert(nextItem, after: currentItem)
+   }
+ 
++  /**
++   * Gapless: queues the track that comes after the current one, so the player
++   * buffers it and joins the two by itself instead of the queue (which lives
++   * in JS) asking for it only once the previous one has ended.
++   *
++   * One track waits behind the current one at most: what was queued before is
++   * dropped first, so a queue reordered while a song plays ends up with the
++   * right track waiting. The loop is not touched by any of this — it is the
++   * repeat of the current song, not a track of its own (see `clearNextSource`).
++   */
++  func setNextSource(_ source: AudioSource) {
++    // Nothing playing: there is nothing to queue BEHIND, and the track would
++    // become the current one without anyone having asked for it.
++    guard let queue = ref as? AVQueuePlayer, let current = queue.currentItem else {
++      return
++    }
++    // Whatever is behind the current item goes first, loop copies included:
++    // what comes next is this, and only this.
++    clearNextSource()
++    removeQueuedLoopItems()
++    guard let item = AudioUtils.createAVPlayerItem(from: source) else {
++      return
++    }
++    // What the item under it says: the rate is applied to the item the player
++    // knows about, and this one is about to become it.
++    item.audioTimePitchAlgorithm = current.audioTimePitchAlgorithm
++    queue.insert(item, after: current)
++    gaplessItem = item
++    gaplessSource = source
++    ref.actionAtItemEnd = endAction
++  }
++
++  /** Drops the track queued behind the current one, if any. */
++  func clearNextSource() {
++    if let item = gaplessItem {
++      gaplessItem = nil
++      gaplessSource = nil
++      (ref as? AVQueuePlayer)?.remove(item)
++    }
++    ref.actionAtItemEnd = endAction
++  }
++
++  /**
++   * Drops what is queued behind the current item, except the track gapless
++   * put there: those are the copies a loop makes of the song playing, which
++   * exist only while it is on.
++   */
+   private func removeQueuedLoopItems() {
+     guard let queuePlayer = ref as? AVQueuePlayer else {
+       return
+     }
+ 
+-    for item in queuePlayer.items() where item != queuePlayer.currentItem {
++    let queued = queuePlayer.items()
++    for item in queued where item != queuePlayer.currentItem && item !== gaplessItem {
+       queuePlayer.remove(item)
+     }
+   }
+@@ -459,7 +574,21 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+         return
+       }
+ 
++      // Already moved on: what finished is not what is playing any more, and
++      // the player never stopped over it — a lap of a loop, or the track
++      // gapless queued behind, which announces the move itself.
++      if finishedItem !== queuePlayer.currentItem {
++        return
++      }
++
+       if !self.isLooping {
++        // Gapless: a track is waiting behind this one and the player is
++        // advancing to it by itself. Nothing ended as far as JS is concerned,
++        // the next song is already starting — so the end is not reported
++        // here, the move is (see `setupPublisher`).
++        if self.gaplessItem != nil, self.ref.actionAtItemEnd == .advance {
++          return
++        }
+         let currentTime = finishedItem.duration.seconds
+         self.updateStatus(with: [
+           "playing": false,
 diff --git a/ios/AudioRecords.swift b/ios/AudioRecords.swift
 index 33db27c..a5c4135 100644
 --- a/ios/AudioRecords.swift
