@@ -126,7 +126,6 @@ export default function LyricsScreen() {
               name={isPlaying ? 'pause' : 'play'}
               size={30}
               color={colors.onInverse}
-              style={!isPlaying && { marginLeft: 3 }}
             />
           </Pressable>
           <Pressable

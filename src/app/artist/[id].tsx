@@ -517,7 +517,6 @@ export default function ArtistScreen() {
                 size={28}
                 color={colors.onAccent}
                 // Optical centring only for the play triangle; pause is symmetric.
-                style={showPause ? undefined : { marginLeft: 2 }}
               />
             )}
           </Pressable>
