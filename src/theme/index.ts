@@ -20,7 +20,7 @@
  *    the language.
  */
 import { useSyncExternalStore } from 'react';
-import { Appearance } from 'react-native';
+import { Appearance, Platform } from 'react-native';
 import type { ImageStyle, TextStyle, ViewStyle } from 'react-native';
 
 /** Default accent (Spotify green). */
@@ -638,6 +638,16 @@ export function applyThemePreference(pref: ThemePreference): void {
       const next = systemMode();
       if (next !== currentMode) applyThemeMode(next);
     });
+  }
+  // The keyboard, the alerts and every other native surface take their style
+  // from the *window*, which on iOS follows the device rather than the palette
+  // this file paints with: a dark app on a phone left in the light kept
+  // getting a light keyboard over dark screens. Pinning it here makes them
+  // follow the app's choice, and `unspecified` hands the window back to the
+  // device when the app follows it. Registered above first, so the trait change
+  // this causes lands on the listener rather than being missed by it.
+  if (Platform.OS === 'ios') {
+    Appearance.setColorScheme(pref === 'system' ? 'unspecified' : pref);
   }
   applyThemeMode(pref === 'system' ? systemMode() : pref);
 }
