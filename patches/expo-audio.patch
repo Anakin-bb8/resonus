@@ -1551,10 +1551,10 @@ index f3ae4ee..99f02c0 100644
      /**
 diff --git a/ios/AnimatedArtwork.swift b/ios/AnimatedArtwork.swift
 new file mode 100644
-index 0000000..f496a69
+index 0000000..818b832
 --- /dev/null
 +++ b/ios/AnimatedArtwork.swift
-@@ -0,0 +1,545 @@
+@@ -0,0 +1,569 @@
 +import AVFoundation
 +import CoreGraphics
 +import CoreImage
@@ -1571,7 +1571,12 @@ index 0000000..f496a69
 +@available(iOS 26.0, tvOS 26.0, *)
 +final class AnimatedArtwork {
 +  private static let maxSide = 720
-+  private static let maxFrames = 300
++  // 900 frames is 30 fps across the whole 29 seconds, so this cap only bites
++  // on content that could not have been carried at full rate anyway.
++  private static let maxFrames = 900
++  // The system may not display artwork above 60 fps (Apple, "Providing
++  // animated artwork for media items"), so anything faster is sampled down.
++  private static let maxPlaybackRate = 60.0
 +  // The system prefers a clip that is *less than* 30 seconds, so stop at 29.
 +  private static let maxDuration = 29.0
 +  private static let minFrameDelay = 1.0 / 60.0
@@ -1896,6 +1901,11 @@ index 0000000..f496a69
 +    let canvas = self.canvas
 +    let width = Int(canvas.width)
 +    let height = Int(canvas.height)
++    // What the rate controller is told to expect: without it the encoder
++    // budgets for a frame rate that has nothing to do with the samples being
++    // appended, and spends the bits it has on the wrong thing.
++    let outputRate = Double(schedule.samples.count) / max(schedule.total, 0.001)
++    let expectedFrameRate = Int(min(maxPlaybackRate, max(1, outputRate.rounded())))
 +    let settings: [String: Any] = [
 +      AVVideoCodecKey: AVVideoCodecType.h264,
 +      AVVideoWidthKey: width,
@@ -1903,6 +1913,7 @@ index 0000000..f496a69
 +      AVVideoCompressionPropertiesKey: [
 +        AVVideoAverageBitRateKey: width * height * 2,
 +        AVVideoMaxKeyFrameIntervalKey: 30,
++        AVVideoExpectedSourceFrameRateKey: expectedFrameRate,
 +        AVVideoAllowFrameReorderingKey: false,
 +      ] as [String: Any],
 +    ]
@@ -2024,7 +2035,20 @@ index 0000000..f496a69
 +  }
 +
 +  private static func schedule(source: CGImageSource, count: Int) -> Schedule? {
-+    let step = max(1, Int((Double(count) / Double(maxFrames)).rounded(.up)))
++    let delays = (0..<count).map { frameDelay(at: $0, source: source) }
++    let span = delays.reduce(0, +)
++    // Frames are dropped for one of two reasons and no other: the clip runs
++    // faster than the system will show it, or there are more frames than the
++    // encoder should carry. Counting alone was a third reason, and it was the
++    // one that showed: a cover long enough to fill the 29 seconds at 30 fps is
++    // 870 frames, which came out as every third one, so the lock screen showed
++    // 10 fps of a clip the app beside it was playing at 30. Length is not a
++    // reason to drop frames, only to cut the tail, which the clamp below does.
++    var step = 1
++    if span > 0 {
++      step = max(step, Int(((Double(count) / span) / maxPlaybackRate).rounded(.up)))
++    }
++    step = max(step, Int((Double(count) / Double(maxFrames)).rounded(.up)))
 +    var samples: [Sample] = []
 +    var time = 0.0
 +    var index = 0
@@ -2033,7 +2057,7 @@ index 0000000..f496a69
 +      var cursor = index
 +      let end = min(index + step, count)
 +      while cursor < end {
-+        delay += frameDelay(at: cursor, source: source)
++        delay += delays[cursor]
 +        cursor += 1
 +      }
 +      if time + delay > maxDuration {
