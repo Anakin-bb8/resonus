@@ -643,6 +643,9 @@ export const DEFAULT_PLAYER_BUTTONS: PlayerButton[] = [
   { key: 'queue', enabled: true },
 ];
 
+/** Grouped in the middle, or spread across the width with equal gaps. */
+export type PlayerButtonsLayout = 'centered' | 'spread';
+
 /** Saved order kept, unknown keys dropped, new ones added at the end. */
 function normalizePlayerButtons(raw: unknown): PlayerButton[] {
   if (!Array.isArray(raw)) return DEFAULT_PLAYER_BUTTONS.map((b) => ({ ...b }));
@@ -974,6 +977,7 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   marqueeTitles: boolean;
   /** The row under the player's controls: which buttons, in what order. */
   playerButtons: PlayerButton[];
+  playerButtonsLayout: PlayerButtonsLayout;
   /** Seek ±N seconds buttons next to play (0 = hidden). Only 5/10/30: these are the numbered icons that exist in MaterialIcons. */
   seekButtonsSec: number;
   /** "Previous" button behavior (restart track or always go to previous). */
@@ -1223,6 +1227,7 @@ const DEFAULTS = {
   coverDoubleTapAction: 'none' as CoverDoubleTapAction,
   marqueeTitles: true,
   playerButtons: DEFAULT_PLAYER_BUTTONS.map((b) => ({ ...b })),
+  playerButtonsLayout: 'centered' as PlayerButtonsLayout,
   seekButtonsSec: 0,
   previousButtonMode: 'restart' as PreviousButtonMode,
   keepPausedOnSkip: false,
@@ -1705,6 +1710,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
               b.key === 'history' ? { ...b, enabled: false } : { ...b },
             ),
           });
+        }
+        if (parsed.playerButtonsLayout === 'centered' || parsed.playerButtonsLayout === 'spread') {
+          set({ playerButtonsLayout: parsed.playerButtonsLayout });
         }
         if (Array.isArray(parsed.playerButtons)) {
           set({ playerButtons: normalizePlayerButtons(parsed.playerButtons) });

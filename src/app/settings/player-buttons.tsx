@@ -10,7 +10,7 @@ import ReorderableList, {
   type ReorderableListReorderEvent,
 } from 'react-native-reorderable-list';
 
-import { ScreenHeader, SettingsSafeArea } from '@/components/SettingsUI';
+import { ScreenHeader, SelectList, SettingsSafeArea } from '@/components/SettingsUI';
 import { useAccent } from '@/hooks/useAccent';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { centredPadding, useScreenSize } from '@/hooks/useScreenSize';
@@ -86,9 +86,22 @@ export default function PlayerButtonsSettings() {
   const t = useT();
   const playerButtons = useSettings((s) => s.playerButtons);
   const setPlayerButtons = useSettings((s) => s.setPlayerButtons);
+  const layout = useSettings((s) => s.playerButtonsLayout);
+  const setLayout = useSettings((s) => s.setPlayerButtonsLayout);
   return (
     <SettingsSafeArea>
       <ScreenHeader title={t('Bottom row')} />
+      <View style={[styles.layout, { paddingHorizontal: centredPadding(width, spacing.lg) }]}>
+        <SelectList
+          label={t('Arrangement')}
+          value={layout}
+          onChange={setLayout}
+          options={[
+            { value: 'centered', label: t('Grouped in the middle') },
+            { value: 'spread', label: t('Spread across the width') },
+          ]}
+        />
+      </View>
       <Text style={styles.hint}>{t('Drag to reorder, toggle to show or hide.')}</Text>
       <ReorderableList
         data={playerButtons}
@@ -110,6 +123,7 @@ export default function PlayerButtonsSettings() {
 }
 
 const styles = themed((colors) => ({
+  layout: { marginBottom: spacing.md },
   hint: {
     color: colors.textMuted,
     fontSize: fontSize.xs,

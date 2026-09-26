@@ -34,7 +34,7 @@ import { Cover } from '@/components/Cover';
 import { CoverViewer } from '@/components/CoverViewer';
 import { Dialog } from '@/components/Dialog';
 import { FavoriteButton } from '@/components/FavoriteButton';
-import { BarBlurTarget, TopBarBackground, useBlurTarget } from '@/components/BarBlur';
+import { TopBarBackground } from '@/components/BarBlur';
 import { BackButton } from '@/components/BackButton';
 import { Message } from '@/components/Message';
 import { SheetModal } from '@/components/SheetModal';
@@ -165,7 +165,6 @@ export default function ArtistScreen() {
     outputRange: [0, 1],
     extrapolate: 'clamp',
   });
-  const blurTarget = useBlurTarget();
   const barBgOpacity = scrollY.interpolate({
     inputRange: [0, headerH * 0.75],
     outputRange: [0, 1],
@@ -387,7 +386,7 @@ export default function ArtistScreen() {
 
   return (
     <View style={styles.root}>
-      <BarBlurTarget target={blurTarget}>
+      <View style={{ flex: 1 }}>
       <AnimatedPage
         contentContainerStyle={{ paddingBottom: bottomPad }}
         scrollEventThrottle={16}
@@ -632,11 +631,11 @@ export default function ArtistScreen() {
           </View>
         ) : null}
       </AnimatedPage>
-      </BarBlurTarget>
+      </View>
 
       {/* Fixed bar: the back button always; background + title + play on collapse. */}
       <View style={[styles.bar, { height: insets.top + 48, paddingTop: insets.top }]}>
-        <TopBarBackground color={dominant} opacity={barBgOpacity} target={blurTarget} />
+        <TopBarBackground color={dominant} opacity={barBgOpacity} />
         {/* The same chevron, at the same size, as the album and playlist bars.
             What it keeps of its own is the disc behind it: those screens open
             on a cover of the app's own making, and this one on a photo from
