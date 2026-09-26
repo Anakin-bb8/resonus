@@ -23,9 +23,17 @@ export const canBlurBars =
 
 const target = createRef<View | null>();
 
-/** Whether the bars are see-through, blurring what scrolls under them. */
+/**
+ * Whether the bars are see-through, blurring what scrolls under them.
+ *
+ * A gradient bar never is: the two fill the same pixels, so the style wins and
+ * the blur setting stops having any effect at all (it still switches, it just
+ * does not show while the gradient is on).
+ */
 export function useBarBlur(): boolean {
-  return useSettings((s) => s.blurBars) && canBlurBars;
+  const blur = useSettings((s) => s.blurBars);
+  const style = useSettings((s) => s.navBarStyle);
+  return blur && style !== 'gradient' && canBlurBars;
 }
 
 

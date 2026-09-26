@@ -399,8 +399,13 @@ export default function RootLayout() {
             </Stack>
             </BarBlurTarget>
             {auth || offline ? <AppStartupTab /> : null}
-            {auth || offline ? <GlobalMiniPlayer /> : null}
+            {/* Bar first, mini player second: the bar's gradient fill reaches
+                up past its own edge to the middle of that card, and drawing
+                the card after it keeps the card on top of the fill instead of
+                under it. Neither overlaps the other's hit area, so the order
+                only decides who paints over whom. */}
             {auth || offline ? <GlobalTabBar /> : null}
+            {auth || offline ? <GlobalMiniPlayer /> : null}
             {auth || offline ? <SongMenuSheet /> : null}
             {auth || offline ? <SongInfoSheet /> : null}
             {auth || offline ? <ArtistPickerSheet /> : null}

@@ -16,6 +16,7 @@
  * Icons of 25 in a 31×28 box, 5 of padding around each tab, labels of 10.
  */
 import Icon from '@/components/Icon';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -34,7 +35,7 @@ import { motion } from '@/theme/motion';
 import { useT } from '@/i18n';
 import { rememberTab, reselectTab, tabOrigin, TABS } from '@/lib/tabOrigin';
 import { useSettings } from '@/store/settings';
-import { colors, TAB_BAR_HEIGHT, themed } from '@/theme';
+import { colors, MINI_PLAYER_GAP, MINI_PLAYER_HEIGHT, TAB_BAR_HEIGHT, themed, useThemeMode } from '@/theme';
 
 const ICONS: Record<string, 'home' | 'search' | 'library' | 'albums' | 'settings'> = {
   index: 'home',
@@ -43,6 +44,42 @@ const ICONS: Record<string, 'home' | 'search' | 'library' | 'albums' | 'settings
   explore: 'albums',
   options: 'settings',
 };
+
+/**
+ * The gradient fill (Settings › Appearance › Navigation bar style).
+ *
+ * The shape the first draft was after, taken off a Figma ramp: clear at the
+ * bar's top edge, a scrim by 19%, most of the ink in by the middle, solid a
+ * hair before the bottom. Stops are wherever they were laid out rather than
+ * evenly spaced, so each one lands where the last colour was left and the
+ * ramp never changes rate enough to be seen as a line.
+ *
+ * Same ramp twice over, only the ink differs: black under the dark theme,
+ * white under the light one, where a black fade would be the one dark thing
+ * on a pale screen. The alpha on each stop is the same in both.
+ */
+const GRADIENT_DARK = [
+  'rgba(0,0,0,0)',
+  'rgba(0,0,0,0.45)',
+  'rgba(0,0,0,0.82)',
+  'rgba(0,0,0,0.97)',
+  'rgba(0,0,0,1)',
+] as const;
+const GRADIENT_LIGHT = [
+  'rgba(255,255,255,0)',
+  'rgba(255,255,255,0.45)',
+  'rgba(255,255,255,0.82)',
+  'rgba(255,255,255,0.97)',
+  'rgba(255,255,255,1)',
+] as const;
+const GRADIENT_AT = [0, 0.19, 0.46, 0.69, 0.97] as const;
+/**
+ * How far above the bar's own edge the fill reaches: the gap under the mini
+ * player plus half of it, so the ramp starts in the middle of that card
+ * instead of on the bar's line. The mini player is drawn after this bar, so
+ * it stays on top of the fill and only the room around it is darkened.
+ */
+const GRADIENT_REACH = MINI_PLAYER_GAP + MINI_PLAYER_HEIGHT / 2;
 
 export function GlobalTabBar() {
   const insets = useSafeAreaInsets();
@@ -54,6 +91,13 @@ export function GlobalTabBar() {
   // the blur only works from out here (`BarBlur`). The setting only decides
   // where else it shows.
   const blur = useBarBlur();
+  // The style that is on wins over the blur, and over the solid colour too:
+  // they fill the same pixels and only one of them is ever drawn.
+  const navStyle = useSettings((s) => s.navBarStyle);
+  // Which ink the gradient fill is drawn in: black on the dark theme, white
+  // on the light one. Also what makes this bar repaint when the appearance
+  // changes underneath it.
+  const mode = useThemeMode();
   const bottomTabs = useSettings((s) => s.bottomTabs);
   const root = segments[0];
   const inTabs = root === '(tabs)' || root === undefined;
@@ -112,11 +156,20 @@ export function GlobalTabBar() {
       style={[
         styles.bar,
         { height: TAB_BAR_HEIGHT + insets.bottom, paddingBottom: insets.bottom },
-        blur ? null : styles.solid,
+        navStyle === 'gradient' ? null : blur ? null : styles.solid,
         fadeStyle,
       ]}
     >
       {blur && blurOn ? <BarBlur /> : null}
+      {/* The fill, under everything else in here. */}
+      {navStyle === 'gradient' ? (
+        <LinearGradient
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, { top: -GRADIENT_REACH }]}
+          colors={mode === 'light' ? GRADIENT_LIGHT : GRADIENT_DARK}
+          locations={GRADIENT_AT}
+        />
+      ) : null}
       {/* Where the glass starts, when something bright passes under it. */}
       {blur ? <View pointerEvents="none" style={styles.edge} /> : null}
       {/* The user's order, and only the ones they kept (Settings › Appearance

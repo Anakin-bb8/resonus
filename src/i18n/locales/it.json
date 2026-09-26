@@ -696,5 +696,9 @@
   "Loaded": "Caricato",
   "Load a .ttf or .otf file": "Carica un file .ttf o .otf",
   "Active": "Attivo",
-  "Remove custom font": "Rimuovi carattere personalizzato"
+  "Remove custom font": "Rimuovi carattere personalizzato",
+  "Navigation bar style": "Stile della barra di navigazione",
+  "Flat, or black fading out at the top edge. Gradient ignores the blur.": "Piatta, o nero che sfuma verso l'alto. Il gradiente ignora la sfocatura.",
+  "Solid": "Solido",
+  "Gradient": "Gradiente"
 }

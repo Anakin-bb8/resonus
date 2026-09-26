@@ -271,6 +271,14 @@ export type ScreenBackground = 'none' | 'color' | 'cover';
 export type CardBackground = 'none' | 'color';
 
 /**
+ * What fills the navigation bar: the page colour it has always had, or black
+ * fading out at the top edge, so the bar has no edge to show against whatever
+ * scrolls under it. Gradient wins over the blur, and the blur setting does
+ * nothing while it is on.
+ */
+export type NavBarStyle = 'solid' | 'gradient';
+
+/**
  * What tapping the cover in the player does.
  *
  * One tap and two draw from the same list. Which action belongs on which is
@@ -842,6 +850,8 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   alwaysShowTabs: boolean;
   /** Blur what scrolls under the navigation bar and the mini player. */
   blurBars: boolean;
+  /** What the navigation bar is filled with: flat, or fading out at the top. */
+  navBarStyle: NavBarStyle;
   /** Song duration in lists (Spotify doesn't show it). */
   showSongDuration: boolean;
   /** Rating stars per song in lists. */
@@ -1181,6 +1191,7 @@ const DEFAULTS = {
   showPlaylistDescription: true,
   alwaysShowTabs: true,
   blurBars: true,
+  navBarStyle: 'solid' as NavBarStyle,
   showSongDuration: false,
   showListRating: false,
   // On: it only ever draws where a file says so, which in most libraries is
@@ -1640,6 +1651,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
         }
         if (parsed.previousButtonMode === 'restart' || parsed.previousButtonMode === 'always') {
           set({ previousButtonMode: parsed.previousButtonMode });
+        }
+        if (parsed.navBarStyle === 'solid' || parsed.navBarStyle === 'gradient') {
+          set({ navBarStyle: parsed.navBarStyle });
         }
         if (
           parsed.swipeAction === 'off' ||

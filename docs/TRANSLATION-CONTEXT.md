@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 763 of them.
+Every string the app can show, under the screen it shows up on. 767 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -843,8 +843,10 @@ you are actually typing into, which is easier than reading it here.
 | `Dark or light, and the accent color` | The line under “Theme”, explaining it |
 | `Explore` | The tab holding everything the server has: all albums, artists, songs, genres, stations and folders |
 | `Explore sections` |  |
+| `Flat, or black fading out at the top edge. Gradient ignores the blur.` | The line under “Navigation bar style”, explaining it |
 | `Folder browsing` | Browsing the server's folders as folders, instead of by album and artist |
 | `Font` |  |
+| `Gradient` | One of the values of “Navigation bar style” |
 | `Greeting` | Home's "Good morning" line |
 | `Haptic feedback` | The small vibration when something is tapped |
 | `Home` | The first tab, and a folder in the car |
@@ -860,6 +862,7 @@ you are actually typing into, which is easier than reading it here.
 | `Lists carry on under the navigation bar and the mini player, blurred.` |  |
 | `Navigation` | Section header: how you move around the app |
 | `Navigation bar` | Settings screen: which tabs are on the bar at the bottom, and in what order |
+| `Navigation bar style` |  |
 | `Off` | A setting value meaning disabled (crossfade, normalization…) |
 | `Open the app on` | Which tab the app opens on, and comes back to after a while away |
 | `Playing on other devices` |  |
@@ -867,6 +870,7 @@ you are actually typing into, which is easier than reading it here.
 | `Show, hide and reorder the album rows on Home.` | The line under “Home sections”, explaining it |
 | `Show, hide and reorder the chips at the top of Home.` | The line under “Home chips”, explaining it |
 | `Show, personalize and size the shortcut cards on Home.` | The line under “Quick grid”, explaining it |
+| `Solid` | One of the values of “Navigation bar style” |
 | `Song lists` | The setting for how song lists look |
 | `Start on your playlists` | A switch: with it on, Your library with no chip pressed shows the Favorites entry and the playlists, the way it used to, instead of albums, artists and playlists mixed together |
 | `Subtle vibration on key actions.` | The line under “Haptic feedback”, explaining it |
