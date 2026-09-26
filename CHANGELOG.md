@@ -9,6 +9,8 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.7.10] - 2026-09-26
+
 ### Added
 
 - Settings > Player > Bottom row can spread the buttons under the player controls across the width with equal gaps, instead of grouping them in the middle.
