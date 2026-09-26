@@ -1377,7 +1377,6 @@ export default function PlayerScreen() {
                   name={isPlaying ? 'pause' : 'play'}
                   size={34}
                   color={playInk}
-                  style={!isPlaying && { marginLeft: 3 }}
                 />
               )}
             </Pressable>

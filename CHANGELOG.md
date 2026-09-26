@@ -18,6 +18,8 @@ Releases before 0.2.1 are only listed on the
 
 - Going back from an album, a playlist, Favorites or an artist fades straight into the screen before instead of flashing an empty page first; the bar at the top of those screens is a solid colour again rather than blurred.
 - The player opens in one piece, with its cover already in place, instead of the cover and the stars arriving a moment after the rest, and the controls no longer shift when the next song has no album or no audio details (#155).
+- Pulling down for the search box in a playlist, an album or Favorites no longer leaves a grey strip at the top of the screen.
+- The play icon sits in the middle of its button instead of a little to the right.
 
 ## [0.7.9] - 2026-09-25
 
