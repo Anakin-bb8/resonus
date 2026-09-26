@@ -1551,7 +1551,7 @@ index f3ae4ee..5bc46da 100644
      /**
 diff --git a/ios/AnimatedArtwork.swift b/ios/AnimatedArtwork.swift
 new file mode 100644
-index 0000000..818b832
+index 0000000..fbc89d8
 --- /dev/null
 +++ b/ios/AnimatedArtwork.swift
 @@ -0,0 +1,569 @@
@@ -1799,7 +1799,7 @@ index 0000000..818b832
 +    // decides how soft it reads.
 +    let clamped = input.applyingFilter(
 +      "CIAffineClamp",
-+      parameters: [kCIInputAffineTransformKey: NSValue(cgAffineTransform: .identity)]
++      parameters: ["inputTransform": NSValue(cgAffineTransform: .identity)]
 +    )
 +    filter.setValue(clamped, forKey: kCIInputImageKey)
 +    filter.setValue(96.0, forKey: kCIInputRadiusKey)
@@ -1905,7 +1905,7 @@ index 0000000..818b832
 +    // budgets for a frame rate that has nothing to do with the samples being
 +    // appended, and spends the bits it has on the wrong thing.
 +    let outputRate = Double(schedule.samples.count) / max(schedule.total, 0.001)
-+    let expectedFrameRate = Int(min(maxPlaybackRate, max(1, outputRate.rounded())))
++    let expectedFrameRate = Int(min(Self.maxPlaybackRate, max(1, outputRate.rounded())))
 +    let settings: [String: Any] = [
 +      AVVideoCodecKey: AVVideoCodecType.h264,
 +      AVVideoWidthKey: width,
@@ -2148,7 +2148,7 @@ index d265606..7cf6446 100644
          player.ref.pause()
          if !player.keepAudioSessionActive {
 diff --git a/ios/AudioPlayer.swift b/ios/AudioPlayer.swift
-index 0742943..8645502 100644
+index 0742943..818eb0e 100644
 --- a/ios/AudioPlayer.swift
 +++ b/ios/AudioPlayer.swift
 @@ -4,6 +4,7 @@ import Combine
@@ -2179,7 +2179,7 @@ index 0742943..8645502 100644
 +   * queued behind), and pause when there is not — which is what makes the end
 +   * of a track reach JS as `didJustFinish`.
 +   */
-+  private var endAction: AVPlayerActionAtItemEnd {
++  private var endAction: AVPlayer.ActionAtItemEnd {
 +    isLooping || gaplessItem != nil ? .advance : .pause
 +  }
 +
