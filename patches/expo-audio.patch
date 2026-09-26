@@ -1551,10 +1551,10 @@ index f3ae4ee..99f02c0 100644
      /**
 diff --git a/ios/AnimatedArtwork.swift b/ios/AnimatedArtwork.swift
 new file mode 100644
-index 0000000..080efcf
+index 0000000..f496a69
 --- /dev/null
 +++ b/ios/AnimatedArtwork.swift
-@@ -0,0 +1,536 @@
+@@ -0,0 +1,545 @@
 +import AVFoundation
 +import CoreGraphics
 +import CoreImage
@@ -1787,8 +1787,17 @@ index 0000000..080efcf
 +    guard let filter = CIFilter(name: "CIGaussianBlur") else {
 +      return downscaleBlur(frame)
 +    }
-+    filter.setValue(input, forKey: kCIInputImageKey)
-+    filter.setValue(64.0, forKey: kCIInputRadiusKey)
++    // A gaussian blur samples outside the picture, and into nothing: the outer
++    // band of the backdrop comes out see-through, which is exactly where the
++    // cover's own edge was still readable. The clamp repeats the border pixel
++    // instead, so the backdrop stays solid all the way out and the radius alone
++    // decides how soft it reads.
++    let clamped = input.applyingFilter(
++      "CIAffineClamp",
++      parameters: [kCIInputAffineTransformKey: NSValue(cgAffineTransform: .identity)]
++    )
++    filter.setValue(clamped, forKey: kCIInputImageKey)
++    filter.setValue(96.0, forKey: kCIInputRadiusKey)
 +    guard let output = filter.outputImage?.cropped(to: extent),
 +          let image = blurContext.createCGImage(output, from: extent)
 +    else {
@@ -1801,7 +1810,7 @@ index 0000000..080efcf
 +  /// back up, so the bands around the cover always come out soft even when
 +  /// the gaussian filter refuses the image.
 +  private static func downscaleBlur(_ frame: CGImage) -> CGImage? {
-+    let width = 24
++    let width = 16
 +    let height = max(1, Int((CGFloat(width) * CGFloat(frame.height) / CGFloat(max(1, frame.width))).rounded()))
 +    guard let context = CGContext(
 +      data: nil,
