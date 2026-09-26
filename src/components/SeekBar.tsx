@@ -24,13 +24,10 @@ import { colors, fontSize, themed, useTheme } from '@/theme';
 export function SeekBar({
   duration,
   style,
-  timeColor,
   tint,
 }: {
   duration: number;
   style?: StyleProp<ViewStyle>;
-  /** The times are quieter over the player's controls than over the lyrics. */
-  timeColor?: string;
   /** The played part and the thumb, the text colour if not given. */
   tint?: string;
 }) {
@@ -42,7 +39,6 @@ export function SeekBar({
   // Null while nobody is touching it, which is when the song is in charge.
   const [held, setHeld] = useState<number | null>(null);
   const shown = held ?? positionSec;
-  const timeStyle = [styles.time, timeColor ? { color: timeColor } : null];
 
   return (
     <View style={style}>
@@ -67,8 +63,8 @@ export function SeekBar({
         thumbTintColor={tint ?? colors.text}
       />
       <View style={styles.times}>
-        <Text style={timeStyle}>{formatDuration(shown)}</Text>
-        <Text style={timeStyle}>{formatDuration(duration)}</Text>
+        <Text style={styles.time}>{formatDuration(shown)}</Text>
+        <Text style={styles.time}>{formatDuration(duration)}</Text>
       </View>
     </View>
   );
@@ -87,5 +83,5 @@ const styles = themed((colors) => ({
     justifyContent: 'space-between',
     marginTop: -2,
   },
-  time: { color: colors.textSecondary, fontSize: fontSize.xs },
+  time: { color: colors.textTime, fontSize: fontSize.xs },
 }));

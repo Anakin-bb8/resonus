@@ -1304,12 +1304,7 @@ export default function PlayerScreen() {
               which is large: cover, gradient, quality badge, controls, queue
               sheet (#50). The seek buttons read the position when they are
               pressed instead of subscribing to it. */}
-          <SeekBar
-            duration={duration}
-            style={styles.progress}
-            timeColor={colors.textMuted}
-            tint={playFill}
-          />
+          <SeekBar duration={duration} style={styles.progress} tint={playFill} />
 
           <View style={styles.controls}>
             <Pressable

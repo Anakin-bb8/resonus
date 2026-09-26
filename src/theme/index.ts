@@ -64,6 +64,13 @@ export interface Palette {
   textSecondary: string;
   /** Muted text: descriptions, disabled icons, placeholders. */
   textMuted: string;
+  /**
+   * The two times under the progress bar, on the player and on the lyrics
+   * screen. A step from the greys towards white and short of it: over artwork
+   * the muted greys sit too far back to be read at a glance, and full white
+   * glares out of the screen beside the cover.
+   */
+  textTime: string;
   /** The accent, for fills (play button, active dot, switch track). */
   accent: string;
   /** The accent while pressed. */
@@ -165,6 +172,7 @@ const DARK: BasePalette = {
   text: '#FFFFFF',
   textSecondary: '#A0A3AB',
   textMuted: '#72757D',
+  textTime: '#DDE0E6',
   onInverse: '#000000',
   snackbar: '#30323A',
   onSnackbar: '#FFFFFF',
@@ -413,6 +421,7 @@ const BLACK: BasePalette = {
   ...DARK,
   textSecondary: '#B3B3B3',
   textMuted: '#727272',
+  textTime: '#E2E4E8',
   background: '#000000',
   surface: '#0C0C0C',
   surfaceHighlight: '#1C1C1C',
@@ -440,6 +449,7 @@ const LIGHT: BasePalette = {
   text: '#111113',
   textSecondary: '#5C5C66',
   textMuted: '#84848F',
+  textTime: '#6E6E78',
   onInverse: '#FFFFFF',
   snackbar: '#303036',
   onSnackbar: '#FFFFFF',
