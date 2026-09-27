@@ -42,13 +42,12 @@ Also available on [Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtai
 
 ### iOS (experimental)
 
-Every release since 0.7.5 also carries an `.ipa`, on the same
-[Releases](https://github.com/juananzzz/resonus/releases/latest) page. It is
-**unsigned**: no App Store, no TestFlight, so it has to be sideloaded with
-AltStore, Sideloadly or similar, and renewed as that tool asks.
+Download the `.ipa` from the [Releases](https://github.com/juananzzz/resonus/releases/latest)
+page and sideload it with AltStore, Sideloadly or similar, or
+[add Resonus as an AltSource](https://altdirect.app/?url=https://raw.githubusercontent.com/juananzzz/resonus/main/Source.json)
+to get updates. The build is unsigned, so it is not on the App Store or TestFlight.
 
-Not implemented yet on iOS: CarPlay, casting, the equalizer and gapless
-playback.
+Not available on iOS yet: CarPlay, casting, the equalizer and gapless playback.
 
 ## Features
 
@@ -80,8 +79,6 @@ Android Auto. The app links to it too, from Settings › About.
 More languages are welcome via pull request. See
 [TRANSLATING.md](./TRANSLATING.md) for how to add one, plus context for the
 trickier strings.
-
-The people who have translated the app are credited there too.
 
 ## Community
 
