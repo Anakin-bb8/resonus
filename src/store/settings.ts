@@ -254,7 +254,7 @@ export function clampReplayGainPreamp(db: number): number {
  * default font (Roboto / San Francisco). `custom` loads a user-picked font
  * file at runtime.
  */
-export type AppFont = 'system' | 'condensed' | 'serif' | 'monospace' | 'casual' | 'typewriter' | 'custom';
+export type AppFont = 'system' | 'condensed' | 'serif' | 'monospace' | 'casual' | 'custom';
 
 /**
  * Backdrop for the player and the lyrics screen: flat dark, tinted with the
@@ -726,7 +726,6 @@ export const APP_FONT_LABELS: Record<AppFont, string> = {
   serif: 'Serif',
   monospace: 'Monospace',
   casual: 'Casual',
-  typewriter: 'Typewriter',
   custom: 'Custom',
 };
 
@@ -744,7 +743,6 @@ export const APP_FONT_FAMILY: Record<Exclude<AppFont, 'custom'>, string | undefi
     serif: 'Georgia',
     monospace: 'Menlo',
     casual: 'Futura',
-    typewriter: 'American Typewriter',
   },
   default: {
     system: undefined,
@@ -752,8 +750,6 @@ export const APP_FONT_FAMILY: Record<Exclude<AppFont, 'custom'>, string | undefi
     serif: 'serif',
     monospace: 'monospace',
     casual: 'casual',
-    // Cutive Mono (AOSP serif-monospace family): typewriter style.
-    typewriter: 'serif-monospace',
   },
 });
 

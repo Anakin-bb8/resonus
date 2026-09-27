@@ -32,6 +32,7 @@ Releases before 0.2.1 are only listed on the
 
 ### Removed
 
+- The Typewriter font. A profile that had it goes back to the default one.
 - Resonus links, for now: sharing them from the ⋯ of an album, artist or playlist, and opening them.
 
 ### Fixed
