@@ -25,6 +25,8 @@ Releases before 0.2.1 are only listed on the
 - The light theme is no longer experimental.
 - The player buttons no longer take the hue of the background shade.
 - The dark theme is called just Dark, without (default).
+- The rows of each settings section sit in one card, under smaller headings.
+- The colour at the top of an album or playlist fades into the page more smoothly.
 - The blur behind the navigation bar and the one behind the mini player are now two separate switches, the second in Settings > Player next to Colored mini player.
 - Settings > Appearance groups Explore sections and Folder browsing under Explore, and Quality & playback puts Keep screen on and the battery warning under System.
 

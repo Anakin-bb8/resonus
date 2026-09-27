@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { ScrollView, Text } from 'react-native';
 
 import { canBlurBars } from '@/components/BarBlur';
-import { SelectList, SettingRow, SettingsPage, settingsStyles, SwitchList } from '@/components/SettingsUI';
+import { SelectList, SettingRow, SettingsGroup, SettingsPage, settingsStyles, SwitchList } from '@/components/SettingsUI';
 import { useLocalProfile } from '@/hooks/useLocalProfile';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
@@ -122,80 +122,84 @@ export default function PlayerSettings() {
         />
 
         <Text style={settingsStyles.sectionTitle}>{t('Mini player')}</Text>
-        <SwitchList
-          options={[
-            {
-              label: t('Colored mini player'),
-              value: miniPlayerColorBackground,
-              onChange: setMiniPlayerColorBackground,
-            },
-            // Android draws the blur from Android 12 on (see `BarBlur`).
-            ...(canBlurBars
-              ? [
-                  {
-                    label: t('Mini player blur'),
-                    value: blurMiniPlayer,
-                    onChange: setBlurMiniPlayer,
-                  },
-                ]
-              : []),
-            {
-              label: t('Show progress bar'),
-              value: miniPlayerProgress,
-              onChange: setMiniPlayerProgress,
-            },
-          ]}
-        />
-        <SelectList<MiniPlayerButtons>
-          label={t('Buttons next to play')}
-          options={[
-            { value: 'favorite', label: t('Favorite') },
-            { value: 'next', label: t('Next') },
-            { value: 'previousNext', label: t('Previous and next') },
-            { value: 'none', label: t('None') },
-          ]}
-          value={miniPlayerButtons}
-          onChange={setMiniPlayerButtons}
-        />
+        <SettingsGroup>
+          <SwitchList
+            options={[
+              {
+                label: t('Colored mini player'),
+                value: miniPlayerColorBackground,
+                onChange: setMiniPlayerColorBackground,
+              },
+              // Android draws the blur from Android 12 on (see `BarBlur`).
+              ...(canBlurBars
+                ? [
+                    {
+                      label: t('Mini player blur'),
+                      value: blurMiniPlayer,
+                      onChange: setBlurMiniPlayer,
+                    },
+                  ]
+                : []),
+              {
+                label: t('Show progress bar'),
+                value: miniPlayerProgress,
+                onChange: setMiniPlayerProgress,
+              },
+            ]}
+          />
+          <SelectList<MiniPlayerButtons>
+            label={t('Buttons next to play')}
+            options={[
+              { value: 'favorite', label: t('Favorite') },
+              { value: 'next', label: t('Next') },
+              { value: 'previousNext', label: t('Previous and next') },
+              { value: 'none', label: t('None') },
+            ]}
+            value={miniPlayerButtons}
+            onChange={setMiniPlayerButtons}
+          />
+        </SettingsGroup>
 
         <Text style={settingsStyles.sectionTitle}>{t('Cover art')}</Text>
-        <SelectList<CoverCorners>
-          label={t('Corners')}
-          options={[
-            { value: 'square', label: t('Square') },
-            { value: 'rounded', label: t('Rounded') },
-            { value: 'round', label: t('More rounded') },
-          ]}
-          value={coverCorners}
-          onChange={setCoverCorners}
-        />
-        <SwitchList
-          options={[
-            {
-              label: t('Fit cover art'),
-              description: t('Show the whole artwork instead of cropping it to a square.'),
-              value: fitCoverArt,
-              onChange: setFitCoverArt,
-            },
-            {
-              label: t('Animated cover background'),
-              value: animatedCoverBackground,
-              onChange: setAnimatedCoverBackground,
-            },
-          ]}
-        />
-        <SelectList<CoverTapAction>
-          label={t('On cover tap')}
-          options={coverTapOptions(t)}
-          value={coverTapAction}
-          onChange={setCoverTapAction}
-        />
-        <SelectList<CoverDoubleTapAction>
-          label={t('On cover double tap')}
-          options={coverTapOptions(t)}
-          value={coverDoubleTapAction}
-          onChange={setCoverDoubleTapAction}
-        />
+        <SettingsGroup>
+          <SelectList<CoverCorners>
+            label={t('Corners')}
+            options={[
+              { value: 'square', label: t('Square') },
+              { value: 'rounded', label: t('Rounded') },
+              { value: 'round', label: t('More rounded') },
+            ]}
+            value={coverCorners}
+            onChange={setCoverCorners}
+          />
+          <SwitchList
+            options={[
+              {
+                label: t('Fit cover art'),
+                description: t('Show the whole artwork instead of cropping it to a square.'),
+                value: fitCoverArt,
+                onChange: setFitCoverArt,
+              },
+              {
+                label: t('Animated cover background'),
+                value: animatedCoverBackground,
+                onChange: setAnimatedCoverBackground,
+              },
+            ]}
+          />
+          <SelectList<CoverTapAction>
+            label={t('On cover tap')}
+            options={coverTapOptions(t)}
+            value={coverTapAction}
+            onChange={setCoverTapAction}
+          />
+          <SelectList<CoverDoubleTapAction>
+            label={t('On cover double tap')}
+            options={coverTapOptions(t)}
+            value={coverDoubleTapAction}
+            onChange={setCoverDoubleTapAction}
+          />
+        </SettingsGroup>
 
         <Text style={settingsStyles.sectionTitle}>{t('Elements')}</Text>
         <SwitchList
@@ -250,114 +254,118 @@ export default function PlayerSettings() {
         />
 
         <Text style={settingsStyles.sectionTitle}>{t('Buttons')}</Text>
-        <SettingRow
-          label={t('Bottom row')}
-          chevron
-          onPress={() => router.push('/settings/player-buttons')}
-        />
-        <SwitchList
-          options={[
-            {
-              label: t('Swap favorite and menu'),
-              value: swapPlayerButtons,
-              onChange: setSwapPlayerButtons,
-            },
-          ]}
-        />
-        <SelectList
-          label={t('Skip buttons')}
-          options={[
-            { value: 0, label: t('No') },
-            { value: 5, label: '5 s' },
-            { value: 10, label: '10 s' },
-            { value: 30, label: '30 s' },
-          ]}
-          value={seekButtonsSec}
-          onChange={setSeekButtonsSec}
-        />
-        {/* With the skip buttons rather than with the queue: it is about what
-            ⏭ and ⏮ do, and about the swipe across the cover, which is the same
-            thing with a finger. */}
-        <SwitchList
-          options={[
-            {
-              label: t('Keep paused when skipping'),
-              value: keepPausedOnSkip,
-              onChange: setKeepPausedOnSkip,
-            },
-          ]}
-        />
-        <SelectList<PreviousButtonMode>
-          label={t('Previous button')}
-          options={[
-            { value: 'restart', label: t('Restart, then previous track') },
-            { value: 'always', label: t('Always previous track') },
-          ]}
-          value={previousButtonMode}
-          onChange={setPreviousButtonMode}
-        />
+        <SettingsGroup>
+          <SettingRow
+            label={t('Bottom row')}
+            chevron
+            onPress={() => router.push('/settings/player-buttons')}
+          />
+          <SwitchList
+            options={[
+              {
+                label: t('Swap favorite and menu'),
+                value: swapPlayerButtons,
+                onChange: setSwapPlayerButtons,
+              },
+            ]}
+          />
+          <SelectList
+            label={t('Skip buttons')}
+            options={[
+              { value: 0, label: t('No') },
+              { value: 5, label: '5 s' },
+              { value: 10, label: '10 s' },
+              { value: 30, label: '30 s' },
+            ]}
+            value={seekButtonsSec}
+            onChange={setSeekButtonsSec}
+          />
+          {/* With the skip buttons rather than with the queue: it is about what
+              ⏭ and ⏮ do, and about the swipe across the cover, which is the same
+              thing with a finger. */}
+          <SwitchList
+            options={[
+              {
+                label: t('Keep paused when skipping'),
+                value: keepPausedOnSkip,
+                onChange: setKeepPausedOnSkip,
+              },
+            ]}
+          />
+          <SelectList<PreviousButtonMode>
+            label={t('Previous button')}
+            options={[
+              { value: 'restart', label: t('Restart, then previous track') },
+              { value: 'always', label: t('Always previous track') },
+            ]}
+            value={previousButtonMode}
+            onChange={setPreviousButtonMode}
+          />
+        </SettingsGroup>
 
         <Text style={settingsStyles.sectionTitle}>{t('Lyrics')}</Text>
-        <SelectList<LyricsSource>
-          label={t('Lyrics source')}
-          description={t(
-            'Where to get lyrics from. Online search uses LRCLIB (sends the artist and title).',
-          )}
-          options={[
-            { value: 'local', label: t('Prefer local lyrics') },
-            { value: 'online', label: t('Prefer online search') },
-            { value: 'off', label: t('Disable online search') },
-          ]}
-          value={lyricsSource}
-          onChange={setLyricsSource}
-        />
-        <SelectList<LyricsSize>
-          label={t('Lyrics size')}
-          options={[
-            { value: 'small', label: t('Small') },
-            { value: 'normal', label: t('Normal') },
-            { value: 'large', label: t('Large') },
-          ]}
-          value={lyricsSize}
-          onChange={setLyricsSize}
-        />
-        <SelectList<LyricsAlign>
-          label={t('Lyrics alignment')}
-          options={[
-            { value: 'left', label: t('Left') },
-            { value: 'center', label: t('Centered') },
-          ]}
-          value={lyricsAlign}
-          onChange={setLyricsAlign}
-        />
-        <SwitchList
-          options={[
-            {
-              label: t('Show lyrics card'),
-              value: showLyricsCard,
-              onChange: setShowLyricsCard,
-            },
-          ]}
-        />
-        <SelectList<ScreenBackground>
-          label={t('Lyrics background')}
-          options={[
-            { value: 'none', label: t('Plain') },
-            { value: 'color', label: t('Cover color') },
-            { value: 'cover', label: t('Blurred cover') },
-          ]}
-          value={lyricsBackground}
-          onChange={setLyricsBackground}
-        />
-        <SelectList<CardBackground>
-          label={t('Lyrics card background')}
-          options={[
-            { value: 'none', label: t('Plain') },
-            { value: 'color', label: t('Cover color') },
-          ]}
-          value={lyricsCardBackground}
-          onChange={setLyricsCardBackground}
-        />
+        <SettingsGroup>
+          <SelectList<LyricsSource>
+            label={t('Lyrics source')}
+            description={t(
+              'Where to get lyrics from. Online search uses LRCLIB (sends the artist and title).',
+            )}
+            options={[
+              { value: 'local', label: t('Prefer local lyrics') },
+              { value: 'online', label: t('Prefer online search') },
+              { value: 'off', label: t('Disable online search') },
+            ]}
+            value={lyricsSource}
+            onChange={setLyricsSource}
+          />
+          <SelectList<LyricsSize>
+            label={t('Lyrics size')}
+            options={[
+              { value: 'small', label: t('Small') },
+              { value: 'normal', label: t('Normal') },
+              { value: 'large', label: t('Large') },
+            ]}
+            value={lyricsSize}
+            onChange={setLyricsSize}
+          />
+          <SelectList<LyricsAlign>
+            label={t('Lyrics alignment')}
+            options={[
+              { value: 'left', label: t('Left') },
+              { value: 'center', label: t('Centered') },
+            ]}
+            value={lyricsAlign}
+            onChange={setLyricsAlign}
+          />
+          <SwitchList
+            options={[
+              {
+                label: t('Show lyrics card'),
+                value: showLyricsCard,
+                onChange: setShowLyricsCard,
+              },
+            ]}
+          />
+          <SelectList<ScreenBackground>
+            label={t('Lyrics background')}
+            options={[
+              { value: 'none', label: t('Plain') },
+              { value: 'color', label: t('Cover color') },
+              { value: 'cover', label: t('Blurred cover') },
+            ]}
+            value={lyricsBackground}
+            onChange={setLyricsBackground}
+          />
+          <SelectList<CardBackground>
+            label={t('Lyrics card background')}
+            options={[
+              { value: 'none', label: t('Plain') },
+              { value: 'color', label: t('Cover color') },
+            ]}
+            value={lyricsCardBackground}
+            onChange={setLyricsCardBackground}
+          />
+        </SettingsGroup>
       </ScrollView>
     </SettingsPage>
   );

@@ -5,6 +5,7 @@ import { ScrollView, Text } from 'react-native';
 import {
   SelectList,
   SettingRow,
+  SettingsGroup,
   SettingsPage,
   settingsStyles,
   SwitchList,
@@ -70,23 +71,25 @@ export default function AppearanceSettings() {
   return (
     <SettingsPage title={t('Appearance')}>
       <ScrollView contentContainerStyle={settingsStyles.content}>
-        <SettingRow
-          label={t('Language')}
-          description={LANGUAGE_NAMES[language]}
-          chevron
-          onPress={() => router.push('/settings/language')}
-        />
-        <SettingRow
-          label={t('Theme')}
-          chevron
-          onPress={() => router.push('/settings/theme')}
-        />
-        <SettingRow
-          label={t('Font')}
-          description={APP_FONT_LABELS[appFont]}
-          chevron
-          onPress={() => router.push('/settings/font')}
-        />
+        <SettingsGroup>
+          <SettingRow
+            label={t('Language')}
+            description={LANGUAGE_NAMES[language]}
+            chevron
+            onPress={() => router.push('/settings/language')}
+          />
+          <SettingRow
+            label={t('Theme')}
+            chevron
+            onPress={() => router.push('/settings/theme')}
+          />
+          <SettingRow
+            label={t('Font')}
+            description={APP_FONT_LABELS[appFont]}
+            chevron
+            onPress={() => router.push('/settings/font')}
+          />
+        </SettingsGroup>
 
         {/* Under its own heading, where the seven switches used to be, and not
             up with the language and the theme: it is its own thing and reads
@@ -99,177 +102,187 @@ export default function AppearanceSettings() {
         />
 
         <Text style={settingsStyles.sectionTitle}>{t('Navigation')}</Text>
-        <SwitchList
-          options={[
-            {
-              label: t('Always show the navigation bar'),
-              value: alwaysShowTabs,
-              onChange: setAlwaysShowTabs,
-            },
-            {
-              label: t('Show tab names'),
-              value: showTabLabels,
-              onChange: setShowTabLabels,
-            },
-          ]}
-        />
-        <SettingRow
-          label={t('Navigation bar')}
-          chevron
-          onPress={() => router.push('/settings/navigation-bar')}
-        />
-        {/* Android draws the blur from Android 12 on; before that there is
-            only a tint, which is what was tried and dropped (b8bb8b1). */}
-        {canBlurBars ? (
+        <SettingsGroup>
           <SwitchList
             options={[
               {
-                label: t('Navigation bar blur'),
-                value: blurBars,
-                onChange: setBlurBars,
+                label: t('Always show the navigation bar'),
+                value: alwaysShowTabs,
+                onChange: setAlwaysShowTabs,
+              },
+              {
+                label: t('Show tab names'),
+                value: showTabLabels,
+                onChange: setShowTabLabels,
               },
             ]}
           />
-        ) : null}
+          <SettingRow
+            label={t('Navigation bar')}
+            chevron
+            onPress={() => router.push('/settings/navigation-bar')}
+          />
+          {/* Android draws the blur from Android 12 on; before that there is
+              only a tint, which is what was tried and dropped (b8bb8b1). */}
+          {canBlurBars ? (
+            <SwitchList
+              options={[
+                {
+                  label: t('Navigation bar blur'),
+                  value: blurBars,
+                  onChange: setBlurBars,
+                },
+              ]}
+            />
+          ) : null}
+        </SettingsGroup>
 
         <Text style={settingsStyles.sectionTitle}>{t('Explore')}</Text>
-        <SettingRow
-          label={t('Explore sections')}
-          chevron
-          onPress={() => router.push('/settings/explore-sections')}
-        />
-        {/* Guarded as a whole, not with a spread inside the list: SwitchList
-            always draws its card, so an empty array left a blank box. */}
-        {canBrowseFolders ? (
+        <SettingsGroup>
+          <SettingRow
+            label={t('Explore sections')}
+            chevron
+            onPress={() => router.push('/settings/explore-sections')}
+          />
+          {/* Guarded as a whole, not with a spread inside the list: SwitchList
+              always draws its card, so an empty array left a blank box. */}
+          {canBrowseFolders ? (
+            <SwitchList
+              options={[
+                {
+                  label: t('Folder browsing'),
+                  description: t(
+                    'Browse your library by folders (Subsonic servers).',
+                  ),
+                  value: showFolderBrowser,
+                  onChange: setShowFolderBrowser,
+                  disabled: offline,
+                },
+              ]}
+            />
+          ) : null}
+        </SettingsGroup>
+
+        <Text style={settingsStyles.sectionTitle}>{t('Home')}</Text>
+        <SettingsGroup>
           <SwitchList
             options={[
               {
-                label: t('Folder browsing'),
+                label: t('Playing on other devices'),
                 description: t(
-                  'Browse your library by folders (Subsonic servers).',
+                  'At the top of Home, what is playing in your other apps and devices, ready to carry on here.',
                 ),
-                value: showFolderBrowser,
-                onChange: setShowFolderBrowser,
-                disabled: offline,
+                value: showPlayingElsewhere,
+                onChange: setShowPlayingElsewhere,
               },
             ]}
           />
-        ) : null}
+          <SettingRow
+            label={t('Home buttons')}
+            chevron
+            onPress={() => router.push('/settings/home-buttons')}
+          />
 
-        <Text style={settingsStyles.sectionTitle}>{t('Home')}</Text>
-        <SwitchList
-          options={[
-            {
-              label: t('Playing on other devices'),
-              description: t(
-                'At the top of Home, what is playing in your other apps and devices, ready to carry on here.',
-              ),
-              value: showPlayingElsewhere,
-              onChange: setShowPlayingElsewhere,
-            },
-          ]}
-        />
-        <SettingRow
-          label={t('Home buttons')}
-          chevron
-          onPress={() => router.push('/settings/home-buttons')}
-        />
+          <SettingRow
+            label={t('Quick grid')}
+            chevron
+            onPress={() => router.push('/settings/quick-grid')}
+          />
 
-        <SettingRow
-          label={t('Quick grid')}
-          chevron
-          onPress={() => router.push('/settings/quick-grid')}
-        />
+          <SettingRow
+            label={t('Home chips')}
+            chevron
+            onPress={() => router.push('/settings/home-chips')}
+          />
 
-        <SettingRow
-          label={t('Home chips')}
-          chevron
-          onPress={() => router.push('/settings/home-chips')}
-        />
+          <SettingRow
+            label={t('Home sections')}
+            chevron
+            onPress={() => router.push('/settings/home-sections')}
+          />
 
-        <SettingRow
-          label={t('Home sections')}
-          chevron
-          onPress={() => router.push('/settings/home-sections')}
-        />
-
-        <SettingRow
-          label={t('Greeting')}
-          chevron
-          onPress={() => router.push('/settings/greeting')}
-        />
+          <SettingRow
+            label={t('Greeting')}
+            chevron
+            onPress={() => router.push('/settings/greeting')}
+          />
+        </SettingsGroup>
 
         <Text style={settingsStyles.sectionTitle}>{t('Interface')}</Text>
-        <SelectList<DefaultTab>
-          label={t('Open the app on')}
-          options={[
-            { value: 'index', label: t('Home') },
-            { value: 'search', label: t('Search') },
-            { value: 'explore', label: t('Explore') },
-            { value: 'library', label: t('Your library') },
-          ]}
-          value={defaultTab}
-          onChange={setDefaultTab}
-        />
-        <SwitchList
-          options={[
-            {
-              label: t('Keep where you were'),
-              description: t(
-                'Coming back after a few minutes leaves the app on the screen you left, instead of on the tab above.',
-              ),
-              value: keepScreenOnReturn,
-              onChange: setKeepScreenOnReturn,
-            },
-            {
-              label: t('Start on your playlists'),
-              description: t(
-                'With no chip pressed, Your library shows Favorites and your playlists instead of everything mixed together.',
-              ),
-              value: libraryShowsPlaylists,
-              onChange: setLibraryShowsPlaylists,
-            },
-          ]}
-        />
+        <SettingsGroup>
+          <SelectList<DefaultTab>
+            label={t('Open the app on')}
+            options={[
+              { value: 'index', label: t('Home') },
+              { value: 'search', label: t('Search') },
+              { value: 'explore', label: t('Explore') },
+              { value: 'library', label: t('Your library') },
+            ]}
+            value={defaultTab}
+            onChange={setDefaultTab}
+          />
+          <SwitchList
+            options={[
+              {
+                label: t('Keep where you were'),
+                description: t(
+                  'Coming back after a few minutes leaves the app on the screen you left, instead of on the tab above.',
+                ),
+                value: keepScreenOnReturn,
+                onChange: setKeepScreenOnReturn,
+              },
+              {
+                label: t('Start on your playlists'),
+                description: t(
+                  'With no chip pressed, Your library shows Favorites and your playlists instead of everything mixed together.',
+                ),
+                value: libraryShowsPlaylists,
+                onChange: setLibraryShowsPlaylists,
+              },
+            ]}
+          />
+        </SettingsGroup>
 
         <Text style={settingsStyles.sectionTitle}>{t('Interaction')}</Text>
-        <SelectList<SwipeAction>
-          label={t('Swipe right')}
-          options={[
-            { value: 'off', label: t('Off') },
-            { value: 'queue', label: t('Add to queue') },
-            { value: 'next', label: t('Play next') },
-            { value: 'favorite', label: t('Add to favorites') },
-            { value: 'menu', label: t('More options') },
-          ]}
-          value={swipeAction}
-          onChange={setSwipeAction}
-        />
-        <SelectList<SwipeAction>
-          label={t('Swipe left')}
-          options={[
-            { value: 'off', label: t('Off') },
-            { value: 'queue', label: t('Add to queue') },
-            { value: 'next', label: t('Play next') },
-            { value: 'favorite', label: t('Add to favorites') },
-            { value: 'menu', label: t('More options') },
-          ]}
-          value={swipeLeftAction}
-          onChange={setSwipeLeftAction}
-        />
-        <SwitchList
-          options={[
-            {
-              label: t('Haptic feedback'),
-              value: hapticsEnabled,
-              onChange: (v: boolean) => {
-                setHapticsEnabled(v);
-                // Vibrates on enable: immediate confirmation that it works.
-                if (v) haptic('medium');
+        <SettingsGroup>
+          <SelectList<SwipeAction>
+            label={t('Swipe right')}
+            options={[
+              { value: 'off', label: t('Off') },
+              { value: 'queue', label: t('Add to queue') },
+              { value: 'next', label: t('Play next') },
+              { value: 'favorite', label: t('Add to favorites') },
+              { value: 'menu', label: t('More options') },
+            ]}
+            value={swipeAction}
+            onChange={setSwipeAction}
+          />
+          <SelectList<SwipeAction>
+            label={t('Swipe left')}
+            options={[
+              { value: 'off', label: t('Off') },
+              { value: 'queue', label: t('Add to queue') },
+              { value: 'next', label: t('Play next') },
+              { value: 'favorite', label: t('Add to favorites') },
+              { value: 'menu', label: t('More options') },
+            ]}
+            value={swipeLeftAction}
+            onChange={setSwipeLeftAction}
+          />
+          <SwitchList
+            options={[
+              {
+                label: t('Haptic feedback'),
+                value: hapticsEnabled,
+                onChange: (v: boolean) => {
+                  setHapticsEnabled(v);
+                  // Vibrates on enable: immediate confirmation that it works.
+                  if (v) haptic('medium');
+                },
               },
-            },
-          ]}
-        />
+            ]}
+          />
+        </SettingsGroup>
       </ScrollView>
     </SettingsPage>
   );

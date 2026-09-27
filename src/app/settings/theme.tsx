@@ -8,7 +8,7 @@ import Icon from '@/components/Icon';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { SelectList, SettingsPage, settingsStyles, SwitchList } from '@/components/SettingsUI';
+import { SelectList, SettingsGroup, SettingsPage, settingsStyles, SwitchList } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
 import { ACCENT_OPTIONS, useSettings } from '@/store/settings';
 import {
@@ -201,18 +201,20 @@ export default function ThemeSettings() {
         {themeMode === 'schedule' ? (
           <>
             <View style={styles.gap} />
-            <SelectList<number>
-              label={t('Light from')}
-              options={HOURS}
-              value={themeLightFrom}
-              onChange={setThemeLightFrom}
-            />
-            <SelectList<number>
-              label={t('Dark from')}
-              options={HOURS}
-              value={themeDarkFrom}
-              onChange={setThemeDarkFrom}
-            />
+            <SettingsGroup>
+              <SelectList<number>
+                label={t('Light from')}
+                options={HOURS}
+                value={themeLightFrom}
+                onChange={setThemeLightFrom}
+              />
+              <SelectList<number>
+                label={t('Dark from')}
+                options={HOURS}
+                value={themeDarkFrom}
+                onChange={setThemeDarkFrom}
+              />
+            </SettingsGroup>
           </>
         ) : null}
         {/* A variant of dark rather than a fourth mode, so following the

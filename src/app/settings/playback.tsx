@@ -18,6 +18,7 @@ import { ScrollView, Text } from 'react-native';
 import {
   SelectList,
   SettingRow,
+  SettingsGroup,
   SettingsPage,
   settingsStyles,
   SliderRow,
@@ -105,42 +106,44 @@ export default function PlaybackSettings() {
                 settings below apply to a song at all. It used to sit under them,
                 which read fine while they were four plain rows; under a heading it
                 would have looked like one more mobile data setting. */}
-            <SelectList
-              label={t('Play downloaded songs from the phone')}
-              description={t(
-                'Playing the file costs no data. Choose otherwise if your downloads are smaller copies. Offline, the file is always used.',
-              )}
-              options={[
-                { value: 'always', label: t('Always') },
-                { value: 'cellular', label: t('On mobile data only') },
-                { value: 'original', label: t('Only if it is the original file') },
-                { value: 'never', label: t('Never') },
-              ]}
-              value={preferDownloads}
-              onChange={setPreferDownloads}
-              disabled={offline}
-            />
-            <SwitchList
-              options={[
-                {
-                  label: t('Preload upcoming tracks'),
-                  description: t('Fetch the next tracks ahead so they start instantly. Helps with slow servers and proxies.'),
-                  value: preloadUpcoming,
-                  onChange: setPreloadUpcoming,
-                  disabled: offline,
-                },
-                {
-                  label: t('Transcode lossless files only'),
-                  description: t(
-                    'MP3, AAC, Opus and other lossy files stream as they are. Only files like FLAC are transcoded.',
-                  ),
-                  value: streamLosslessOnly,
-                  onChange: setStreamLosslessOnly,
-                  // Nothing to skip when neither network transcodes.
-                  disabled: offline || (maxBitRate === 0 && maxBitRateCellular === 0),
-                },
-              ]}
-            />
+            <SettingsGroup>
+              <SelectList
+                label={t('Play downloaded songs from the phone')}
+                description={t(
+                  'Playing the file costs no data. Choose otherwise if your downloads are smaller copies. Offline, the file is always used.',
+                )}
+                options={[
+                  { value: 'always', label: t('Always') },
+                  { value: 'cellular', label: t('On mobile data only') },
+                  { value: 'original', label: t('Only if it is the original file') },
+                  { value: 'never', label: t('Never') },
+                ]}
+                value={preferDownloads}
+                onChange={setPreferDownloads}
+                disabled={offline}
+              />
+              <SwitchList
+                options={[
+                  {
+                    label: t('Preload upcoming tracks'),
+                    description: t('Fetch the next tracks ahead so they start instantly. Helps with slow servers and proxies.'),
+                    value: preloadUpcoming,
+                    onChange: setPreloadUpcoming,
+                    disabled: offline,
+                  },
+                  {
+                    label: t('Transcode lossless files only'),
+                    description: t(
+                      'MP3, AAC, Opus and other lossy files stream as they are. Only files like FLAC are transcoded.',
+                    ),
+                    value: streamLosslessOnly,
+                    onChange: setStreamLosslessOnly,
+                    // Nothing to skip when neither network transcodes.
+                    disabled: offline || (maxBitRate === 0 && maxBitRateCellular === 0),
+                  },
+                ]}
+              />
+            </SettingsGroup>
             {/* One set per network, each under a heading of its own, instead of
                 four rows in a row telling them apart by what is in brackets. The
                 brackets stay: read on its own, out of the group it is under, a row
@@ -148,134 +151,142 @@ export default function PlaybackSettings() {
                 nothing after them falls under a heading it has nothing to do
                 with. */}
             <Text style={settingsStyles.groupTitle}>Wi-Fi</Text>
-            <SelectList
-              label={t('Streaming quality (Wi-Fi)')}
-              options={bitrateOptions}
-              value={maxBitRate}
-              onChange={setMaxBitRate}
-              disabled={offline}
-            />
-            {/* Each codec right under its own quality: the codec only applies
-                where a bitrate is set. At "Original" nothing is transcoded, so the
-                codec of that network has nothing to do and is greyed out rather
-                than silently ignored (#72). */}
-            <SelectList
-              label={t('Streaming codec (Wi-Fi)')}
-              description={
-                maxBitRate > 0
-                  ? t('Your server must support it.')
-                  : t('At “Original” quality nothing is transcoded.')
-              }
-              options={codecOptions}
-              value={streamFormat}
-              onChange={setStreamFormat}
-              disabled={offline || maxBitRate === 0}
-              // "Not used" is about the quality above being "Original", which is
-              // still worth saying offline; being offline is not, or every row in
-              // the section would repeat the line already above it.
-              disabledLabel={maxBitRate === 0 ? t('Not used') : undefined}
-            />
+            <SettingsGroup>
+              <SelectList
+                label={t('Streaming quality (Wi-Fi)')}
+                options={bitrateOptions}
+                value={maxBitRate}
+                onChange={setMaxBitRate}
+                disabled={offline}
+              />
+              {/* Each codec right under its own quality: the codec only applies
+                  where a bitrate is set. At "Original" nothing is transcoded, so the
+                  codec of that network has nothing to do and is greyed out rather
+                  than silently ignored (#72). */}
+              <SelectList
+                label={t('Streaming codec (Wi-Fi)')}
+                description={
+                  maxBitRate > 0
+                    ? t('Your server must support it.')
+                    : t('At “Original” quality nothing is transcoded.')
+                }
+                options={codecOptions}
+                value={streamFormat}
+                onChange={setStreamFormat}
+                disabled={offline || maxBitRate === 0}
+                // "Not used" is about the quality above being "Original", which is
+                // still worth saying offline; being offline is not, or every row in
+                // the section would repeat the line already above it.
+                disabledLabel={maxBitRate === 0 ? t('Not used') : undefined}
+              />
+            </SettingsGroup>
             <Text style={settingsStyles.groupTitle}>{t('Mobile data')}</Text>
             {/* No descriptions in this group on purpose: they would be the same two
                 paragraphs as above, in the same section. The Wi-Fi pair explains
                 both. */}
-            <SelectList
-              label={t('Streaming quality (mobile data)')}
-              options={bitrateOptions}
-              value={maxBitRateCellular}
-              onChange={setMaxBitRateCellular}
-              disabled={offline}
-            />
-            <SelectList
-              label={t('Streaming codec (mobile data)')}
-              options={codecOptions}
-              value={streamFormatCellular}
-              onChange={setStreamFormatCellular}
-              disabled={offline || maxBitRateCellular === 0}
-              disabledLabel={maxBitRateCellular === 0 ? t('Not used') : undefined}
-            />
+            <SettingsGroup>
+              <SelectList
+                label={t('Streaming quality (mobile data)')}
+                options={bitrateOptions}
+                value={maxBitRateCellular}
+                onChange={setMaxBitRateCellular}
+                disabled={offline}
+              />
+              <SelectList
+                label={t('Streaming codec (mobile data)')}
+                options={codecOptions}
+                value={streamFormatCellular}
+                onChange={setStreamFormatCellular}
+                disabled={offline || maxBitRateCellular === 0}
+                disabledLabel={maxBitRateCellular === 0 ? t('Not used') : undefined}
+              />
+            </SettingsGroup>
           </>
         )}
 
         {/* First on the screen when the streaming section is gone, and a
             heading that sticks to the header wants no margin above it. */}
         <Text style={[settingsStyles.sectionTitle, local && { marginTop: 0 }]}>{t('Sound')}</Text>
-        <SliderRow
-          label={t('Crossfade')}
-          value={crossfadeSec}
-          max={12}
-          formatValue={(v) => (v === 0 ? t('No') : `${v} s`)}
-          onChange={setCrossfadeSec}
-        />
-        <SelectList
-          label={t('Normalize volume')}
-          description={t("Uses your files' ReplayGain tags.")}
-          options={[
-            { value: 'off', label: t('Off') },
-            { value: 'auto', label: t('Automatic') },
-            { value: 'track', label: t('By track') },
-            { value: 'album', label: t('By album') },
-          ]}
-          value={replayGain}
-          onChange={setReplayGain}
-        />
-        {/* Only with normalization on: with nothing normalizing, there is no
-            level to move and the slider would do nothing at all. No description
-            either: it sits right under the one that explains normalizing, and a
-            paragraph that tall makes the row jump while the slider moves. */}
-        {replayGain === 'off' ? null : (
+        <SettingsGroup>
           <SliderRow
-            label={t('Pre-amp')}
-            value={replayGainPreampDb}
-            min={-REPLAY_GAIN_PREAMP_LIMIT}
-            max={REPLAY_GAIN_PREAMP_LIMIT}
-            step={0.5}
-            formatValue={(v) => `${v > 0 ? '+' : ''}${clampReplayGainPreamp(v).toFixed(1)} dB`}
-            // The slider covers the whole range in half dB steps; the tenths
-            // that a finger can't land on are what the pad is for.
-            fineTune={{ step: 0.1, doneLabel: t('Done') }}
-            onChange={setReplayGainPreampDb}
+            label={t('Crossfade')}
+            value={crossfadeSec}
+            max={12}
+            formatValue={(v) => (v === 0 ? t('No') : `${v} s`)}
+            onChange={setCrossfadeSec}
           />
-        )}
-        <SettingRow
-          label={t('Equalizer')}
-          chevron
-          onPress={() => router.push('/settings/equalizer')}
-        />
+          <SelectList
+            label={t('Normalize volume')}
+            description={t("Uses your files' ReplayGain tags.")}
+            options={[
+              { value: 'off', label: t('Off') },
+              { value: 'auto', label: t('Automatic') },
+              { value: 'track', label: t('By track') },
+              { value: 'album', label: t('By album') },
+            ]}
+            value={replayGain}
+            onChange={setReplayGain}
+          />
+          {/* Only with normalization on: with nothing normalizing, there is no
+              level to move and the slider would do nothing at all. No description
+              either: it sits right under the one that explains normalizing, and a
+              paragraph that tall makes the row jump while the slider moves. */}
+          {replayGain === 'off' ? null : (
+            <SliderRow
+              label={t('Pre-amp')}
+              value={replayGainPreampDb}
+              min={-REPLAY_GAIN_PREAMP_LIMIT}
+              max={REPLAY_GAIN_PREAMP_LIMIT}
+              step={0.5}
+              formatValue={(v) => `${v > 0 ? '+' : ''}${clampReplayGainPreamp(v).toFixed(1)} dB`}
+              // The slider covers the whole range in half dB steps; the tenths
+              // that a finger can't land on are what the pad is for.
+              fineTune={{ step: 0.1, doneLabel: t('Done') }}
+              onChange={setReplayGainPreampDb}
+            />
+          )}
+          <SettingRow
+            label={t('Equalizer')}
+            chevron
+            onPress={() => router.push('/settings/equalizer')}
+          />
+        </SettingsGroup>
 
         <Text style={settingsStyles.sectionTitle}>{t('Playback')}</Text>
         {/* Both server only: what comes next is the server's idea of similar,
             and the queue on the server is the server's. In the local profile
             there is nobody to ask, and an empty SwitchList still draws its card. */}
-        {local ? null : (
-          <SwitchList
-            options={[
-              {
-                label: t('Autoplay'),
-                description: t('Play similar songs when the queue ends. Mixes always do.'),
-                value: autoplaySimilar,
-                onChange: setAutoplaySimilar,
-                disabled: offline,
-              },
-              {
-                label: t('Pick up the queue from other players'),
-                description: t(
-                  'On opening with nothing playing, take the newer queue another player left on the server.',
-                ),
-                value: syncQueueFromServer,
-                onChange: setSyncQueueFromServer,
-                disabled: offline,
-              },
-            ]}
+        <SettingsGroup>
+          {local ? null : (
+            <SwitchList
+              options={[
+                {
+                  label: t('Autoplay'),
+                  description: t('Play similar songs when the queue ends. Mixes always do.'),
+                  value: autoplaySimilar,
+                  onChange: setAutoplaySimilar,
+                  disabled: offline,
+                },
+                {
+                  label: t('Pick up the queue from other players'),
+                  description: t(
+                    'On opening with nothing playing, take the newer queue another player left on the server.',
+                  ),
+                  value: syncQueueFromServer,
+                  onChange: setSyncQueueFromServer,
+                  disabled: offline,
+                },
+              ]}
+            />
+          )}
+          {/* Its own screen: two sliders and a line of explanation is more than
+              fits under a heading here, and it is a thing somebody sets once. */}
+          <SettingRow
+            label={t('Scrobbling')}
+            chevron
+            onPress={() => router.push('/settings/scrobbling')}
           />
-        )}
-        {/* Its own screen: two sliders and a line of explanation is more than
-            fits under a heading here, and it is a thing somebody sets once. */}
-        <SettingRow
-          label={t('Scrobbling')}
-          chevron
-          onPress={() => router.push('/settings/scrobbling')}
-        />
+        </SettingsGroup>
 
         <Text style={settingsStyles.sectionTitle}>{t('System::section')}</Text>
         <SwitchList

@@ -7,7 +7,7 @@
  */
 import { ScrollView } from 'react-native';
 
-import { SettingsPage, settingsStyles, SwitchList, TextRow } from '@/components/SettingsUI';
+import { SettingsGroup, SettingsPage, settingsStyles, SwitchList, TextRow } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
 import { GREETING_MAX, useSettings } from '@/store/settings';
 import { useTheme } from '@/theme';
@@ -27,28 +27,30 @@ export default function GreetingSettings() {
       {/* `SettingsPage` renders its children as-is: the margin and spacing
           between cards are set by this ScrollView, like the rest of Settings. */}
       <ScrollView contentContainerStyle={settingsStyles.content}>
-        <SwitchList
-          options={[
-            {
-              label: t('Show greeting'),
-              value: showGreeting,
-              onChange: setShowGreeting,
-            },
-          ]}
-        />
-
-        {/* Only with the greeting visible: a field for text that wouldn't render
-            anywhere would be a false promise. */}
-        {showGreeting ? (
-          <TextRow
-            label={t('Custom greeting')}
-            description={t('Leave it empty to greet you by the time of day.')}
-            value={customGreeting}
-            placeholder={t('Good evening')}
-            maxLength={GREETING_MAX}
-            onChange={setCustomGreeting}
+        <SettingsGroup>
+          <SwitchList
+            options={[
+              {
+                label: t('Show greeting'),
+                value: showGreeting,
+                onChange: setShowGreeting,
+              },
+            ]}
           />
-        ) : null}
+
+          {/* Only with the greeting visible: a field for text that wouldn't render
+              anywhere would be a false promise. */}
+          {showGreeting ? (
+            <TextRow
+              label={t('Custom greeting')}
+              description={t('Leave it empty to greet you by the time of day.')}
+              value={customGreeting}
+              placeholder={t('Good evening')}
+              maxLength={GREETING_MAX}
+              onChange={setCustomGreeting}
+            />
+          ) : null}
+        </SettingsGroup>
       </ScrollView>
     </SettingsPage>
   );
