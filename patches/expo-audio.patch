@@ -1,5 +1,5 @@
 diff --git a/android/src/main/AndroidManifest.xml b/android/src/main/AndroidManifest.xml
-index 36a19f2d9c4a979a940ab681a1fb844ce45f7c75..3509de4747f3ebdda1a014f05fb02f0710563498 100644
+index 36a19f2..3509de4 100644
 --- a/android/src/main/AndroidManifest.xml
 +++ b/android/src/main/AndroidManifest.xml
 @@ -1,3 +1,8 @@
@@ -12,7 +12,7 @@ index 36a19f2d9c4a979a940ab681a1fb844ce45f7c75..3509de4747f3ebdda1a014f05fb02f07
 +  <uses-permission android:name="android.permission.WAKE_LOCK" />
  </manifest>
 diff --git a/android/src/main/java/expo/modules/audio/AudioModule.kt b/android/src/main/java/expo/modules/audio/AudioModule.kt
-index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..7ecb7e02f69d99e7bf1cfdd420dce47559520911 100644
+index 992239b..7ecb7e0 100644
 --- a/android/src/main/java/expo/modules/audio/AudioModule.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioModule.kt
 @@ -18,6 +18,7 @@ import androidx.media3.common.C.CONTENT_TYPE_HLS
@@ -306,7 +306,7 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..7ecb7e02f69d99e7bf1cfdd420dce475
      runBlocking(appContext.mainQueue.coroutineContext) { block() }
  
 diff --git a/android/src/main/java/expo/modules/audio/AudioPlayer.kt b/android/src/main/java/expo/modules/audio/AudioPlayer.kt
-index c76a9fd2a53743a691782e0f67d0d71401df58f6..7c9025af6a1645f79f9964b67e040764d8eceb71 100644
+index c76a9fd..7c9025a 100644
 --- a/android/src/main/java/expo/modules/audio/AudioPlayer.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioPlayer.kt
 @@ -8,15 +8,19 @@ import android.util.Log
@@ -541,7 +541,7 @@ index c76a9fd2a53743a691782e0f67d0d71401df58f6..7c9025af6a1645f79f9964b67e040764
  
    private fun sendAudioSampleUpdate(sample: List<Float>) {
 diff --git a/android/src/main/java/expo/modules/audio/AudioRecords.kt b/android/src/main/java/expo/modules/audio/AudioRecords.kt
-index 86880d92fd5b6413e8596e1b2b8ae28f2981addd..34044354b228072c1020dfbde62fee049d1521fe 100644
+index 86880d9..3404435 100644
 --- a/android/src/main/java/expo/modules/audio/AudioRecords.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioRecords.kt
 @@ -12,7 +12,27 @@ import expo.modules.kotlin.types.OptimizedRecord
@@ -602,7 +602,7 @@ index 86880d92fd5b6413e8596e1b2b8ae28f2981addd..34044354b228072c1020dfbde62fee04
  
  enum class InterruptionMode(val value: String) : Enumerable {
 diff --git a/android/src/main/java/expo/modules/audio/AudioUtils.kt b/android/src/main/java/expo/modules/audio/AudioUtils.kt
-index dca91c32a2787a7bc3ecba26f0f3f2ad9cc40d3d..089dcee0b9fe6a369f0809ecdf99a1fa42ea9ef3 100644
+index dca91c3..089dcee 100644
 --- a/android/src/main/java/expo/modules/audio/AudioUtils.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioUtils.kt
 @@ -3,6 +3,8 @@ package expo.modules.audio
@@ -742,7 +742,7 @@ index dca91c32a2787a7bc3ecba26f0f3f2ad9cc40d3d..089dcee0b9fe6a369f0809ecdf99a1fa
      .build()
  }
 diff --git a/android/src/main/java/expo/modules/audio/BaseAudioPlayer.kt b/android/src/main/java/expo/modules/audio/BaseAudioPlayer.kt
-index 149e9075c8630b14a69318aa6c37d9ff82b23f05..422d2d18677223f48b0106e44f573659b90160dd 100644
+index 149e907..422d2d1 100644
 --- a/android/src/main/java/expo/modules/audio/BaseAudioPlayer.kt
 +++ b/android/src/main/java/expo/modules/audio/BaseAudioPlayer.kt
 @@ -78,7 +78,6 @@ abstract class BaseAudioPlayer(
@@ -777,7 +777,7 @@ index 149e9075c8630b14a69318aa6c37d9ff82b23f05..422d2d18677223f48b0106e44f573659
        }
  
 diff --git a/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt b/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
-index 196a5d57f887c2667a88543bd2f6a80044a044f2..4e093dc6d2dea7acb919a41f694db6bf04772752 100644
+index 196a5d5..4e093dc 100644
 --- a/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
 +++ b/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
 @@ -27,6 +27,7 @@ import expo.modules.audio.AudioLockScreenOptions
@@ -1029,7 +1029,7 @@ index 196a5d57f887c2667a88543bd2f6a80044a044f2..4e093dc6d2dea7acb919a41f694db6bf
      const val SEEK_INTERVAL_MS = 10000L
    }
 diff --git a/android/src/main/java/expo/modules/audio/service/AudioMediaSessionCallback.kt b/android/src/main/java/expo/modules/audio/service/AudioMediaSessionCallback.kt
-index 839aaef12d7699ea1a89037b31849775daa079f4..1aff5091d68c19523e2374c0231f4c1da1a69163 100644
+index 839aaef..1aff509 100644
 --- a/android/src/main/java/expo/modules/audio/service/AudioMediaSessionCallback.kt
 +++ b/android/src/main/java/expo/modules/audio/service/AudioMediaSessionCallback.kt
 @@ -1,6 +1,9 @@
@@ -1118,7 +1118,7 @@ index 839aaef12d7699ea1a89037b31849775daa079f4..1aff5091d68c19523e2374c0231f4c1d
      return super.onCustomCommand(session, controller, command, args)
    }
 diff --git a/android/src/main/java/expo/modules/audio/service/MetadataInjectingPlayer.kt b/android/src/main/java/expo/modules/audio/service/MetadataInjectingPlayer.kt
-index 18203a364d17dcf3de95d22a20175308e3363889..77155f4f348246f218c0736725b0f690f1f31d61 100644
+index 18203a3..77155f4 100644
 --- a/android/src/main/java/expo/modules/audio/service/MetadataInjectingPlayer.kt
 +++ b/android/src/main/java/expo/modules/audio/service/MetadataInjectingPlayer.kt
 @@ -3,10 +3,20 @@ package expo.modules.audio.service
@@ -1326,7 +1326,7 @@ index 18203a364d17dcf3de95d22a20175308e3363889..77155f4f348246f218c0736725b0f690
  }
 diff --git a/android/src/main/java/expo/modules/audio/service/PreloadingBitmapLoader.kt b/android/src/main/java/expo/modules/audio/service/PreloadingBitmapLoader.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..6ee23d594c66abe46d7991de793d6de992febdf9
+index 0000000..6ee23d5
 --- /dev/null
 +++ b/android/src/main/java/expo/modules/audio/service/PreloadingBitmapLoader.kt
 @@ -0,0 +1,77 @@
@@ -1408,7 +1408,7 @@ index 0000000000000000000000000000000000000000..6ee23d594c66abe46d7991de793d6de9
 +  }
 +}
 diff --git a/build/Audio.types.d.ts b/build/Audio.types.d.ts
-index 25604783649fe9b64f6655172f08471a5efcbf45..b80696e3b5d647c53f6e144d830171c6800a9c32 100644
+index 2560478..b80696e 100644
 --- a/build/Audio.types.d.ts
 +++ b/build/Audio.types.d.ts
 @@ -34,6 +34,20 @@ export type AudioSource = string | number | null | {
@@ -1449,7 +1449,7 @@ index 25604783649fe9b64f6655172f08471a5efcbf45..b80696e3b5d647c53f6e144d830171c6
  /**
   * Loop mode for audio playlist playback.
 diff --git a/build/AudioConstants.d.ts b/build/AudioConstants.d.ts
-index cfd92ad0ff5765254c4e6db974fe44bce34aad06..78fa084cf34a5f56743d636b6501f90971d7898b 100644
+index cfd92ad..78fa084 100644
 --- a/build/AudioConstants.d.ts
 +++ b/build/AudioConstants.d.ts
 @@ -15,5 +15,9 @@ export type AudioLockScreenOptions = {
@@ -1464,7 +1464,7 @@ index cfd92ad0ff5765254c4e6db974fe44bce34aad06..78fa084cf34a5f56743d636b6501f909
  //# sourceMappingURL=AudioConstants.d.ts.map
 \ No newline at end of file
 diff --git a/build/AudioModule.types.d.ts b/build/AudioModule.types.d.ts
-index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..99f02c0d2f36b738c1993cd5b08e3c8c17882d07 100644
+index f3ae4ee..5bc46da 100644
 --- a/build/AudioModule.types.d.ts
 +++ b/build/AudioModule.types.d.ts
 @@ -31,6 +31,11 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
@@ -1486,10 +1486,10 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..99f02c0d2f36b738c1993cd5b08e3c8c
 +    /**
 +     * Queues a source behind the one playing so the player joins them with no
 +     * gap, and emits `trackTransition` when it moves on to it. Replaces a
-+     * previously queued one. Android only.
++     * previously queued one.
 +     */
 +    setNextSource(source: AudioSource): void;
-+    /** Drops the source queued by `setNextSource`, if any. Android only. */
++    /** Drops the source queued by `setNextSource`, if any. */
 +    clearNextSource(): void;
      /**
       * Seeks the playback by the given number of seconds.
@@ -1549,8 +1549,858 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..99f02c0d2f36b738c1993cd5b08e3c8c
  };
  export declare class AudioRecorder extends SharedObject<RecordingEvents> {
      /**
+diff --git a/ios/AnimatedArtwork.swift b/ios/AnimatedArtwork.swift
+new file mode 100644
+index 0000000..fbc89d8
+--- /dev/null
++++ b/ios/AnimatedArtwork.swift
+@@ -0,0 +1,569 @@
++import AVFoundation
++import CoreGraphics
++import CoreImage
++import CoreMedia
++import CoreVideo
++import CryptoKit
++import Foundation
++import ImageIO
++import MediaPlayer
++import UIKit
++
++#if compiler(>=6.2)
++
++@available(iOS 26.0, tvOS 26.0, *)
++final class AnimatedArtwork {
++  private static let maxSide = 720
++  // 900 frames is 30 fps across the whole 29 seconds, so this cap only bites
++  // on content that could not have been carried at full rate anyway.
++  private static let maxFrames = 900
++  // The system may not display artwork above 60 fps (Apple, "Providing
++  // animated artwork for media items"), so anything faster is sampled down.
++  private static let maxPlaybackRate = 60.0
++  // The system prefers a clip that is *less than* 30 seconds, so stop at 29.
++  private static let maxDuration = 29.0
++  private static let minFrameDelay = 1.0 / 60.0
++  private static let fallbackDelay = 0.1
++  private static let browserDelayFloor = 0.011
++  private static let frameOptions = [kCGImageSourceShouldCache: false] as CFDictionary
++  private static let blurContext = CIContext()
++
++  private enum Ratio {
++    case square
++    case tall
++
++    var suffix: String {
++      switch self {
++      case .square:
++        return "1x1"
++      case .tall:
++        return "3x4"
++      }
++    }
++  }
++
++  private struct Sample {
++    let index: Int
++    let time: Double
++  }
++
++  private struct Schedule {
++    let samples: [Sample]
++    let total: Double
++  }
++
++  private let artworkID: String
++  private let ratio: Ratio
++  private let sourceSize: CGSize
++  private let destination: URL
++  private var data: Data?
++  private let lock = NSLock()
++  private var encodeTask: Task<URL?, Never>?
++
++  /// Both variants the system can ask for. The square one needs a square
++  /// source, the tall one takes any cover: it is the key the iPhone lock
++  /// screen draws full screen, and providing only `1x1` left that screen with
++  /// the static artwork.
++  static func make(url: URL, data: Data) -> (square: MPMediaItemAnimatedArtwork?, tall: MPMediaItemAnimatedArtwork?) {
++    guard let source = CGImageSourceCreateWithData(data as CFData, nil),
++          CGImageSourceGetCount(source) > 1,
++          let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any]
++    else {
++      return (nil, nil)
++    }
++    let width = (properties[kCGImagePropertyPixelWidth as String] as? NSNumber)?.intValue ?? 0
++    let height = (properties[kCGImagePropertyPixelHeight as String] as? NSNumber)?.intValue ?? 0
++    guard width > 0, height > 0,
++          let frame = CGImageSourceCreateImageAtIndex(source, 0, frameOptions)
++    else {
++      return (nil, nil)
++    }
++    let sourceSize = CGSize(width: width, height: height)
++    let id = identifier(for: url)
++    let square: MPMediaItemAnimatedArtwork?
++    if abs(width - height) * 100 <= max(width, height) {
++      square = variant(id: id, ratio: .square, sourceSize: sourceSize, frame: frame, url: url, data: data)
++    } else {
++      square = nil
++    }
++    let tall = variant(id: id, ratio: .tall, sourceSize: sourceSize, frame: frame, url: url, data: data)
++    return (square: square, tall: tall)
++  }
++
++  private static func variant(
++    id: String,
++    ratio: Ratio,
++    sourceSize: CGSize,
++    frame: CGImage,
++    url: URL,
++    data: Data
++  ) -> MPMediaItemAnimatedArtwork? {
++    guard let destination = cacheFile(id: id, ratio: ratio) else {
++      return nil
++    }
++    let artwork = AnimatedArtwork(
++      artworkID: id + "-" + ratio.suffix,
++      ratio: ratio,
++      sourceSize: sourceSize,
++      destination: destination,
++      data: data
++    )
++    let preview = artwork.previewFrame(frame)
++    return MPMediaItemAnimatedArtwork(
++      artworkID: artwork.artworkID,
++      previewImageRequestHandler: { _ in preview },
++      videoAssetFileURLRequestHandler: { _ in await artwork.videoURL() }
++    )
++  }
++
++  private init(artworkID: String, ratio: Ratio, sourceSize: CGSize, destination: URL, data: Data) {
++    self.artworkID = artworkID
++    self.ratio = ratio
++    self.sourceSize = sourceSize
++    self.destination = destination
++    self.data = data
++  }
++
++  private var canvas: CGSize {
++    let longest = max(Int(sourceSize.width), Int(sourceSize.height))
++    let side = Self.evenSide(longest: longest)
++    switch ratio {
++    case .square:
++      return CGSize(width: side, height: side)
++    case .tall:
++      // A multiple of 6 keeps both edges even and makes 3:4 exact, which the
++      // system checks the same way it checks the preview.
++      let width = max(6, side - (side % 6))
++      return CGSize(width: width, height: width * 4 / 3)
++    }
++  }
++
++  /// The preview is built with the variant's aspect ratio from the first
++  /// frame: a preview that does not match the key makes the system drop the
++  /// animated artwork and fall back to the static one.
++  private func previewFrame(_ frame: CGImage) -> UIImage {
++    let size = canvas
++    let format = UIGraphicsImageRendererFormat()
++    format.scale = 1
++    format.opaque = true
++    let backdrop = ratio == .tall ? Self.blurred(frame) : nil
++    return UIGraphicsImageRenderer(size: size, format: format).image { renderer in
++      let context = renderer.cgContext
++      // UIKit contexts are flipped, so a CGImage drawn straight comes out
++      // upside down — that is what the lock screen showed while the video
++      // was still encoding.
++      context.saveGState()
++      context.translateBy(x: 0, y: size.height)
++      context.scaleBy(x: 1, y: -1)
++      draw(frame, in: context, canvas: size, backdrop: backdrop)
++      context.restoreGState()
++    }
++  }
++
++  private func draw(_ frame: CGImage, in context: CGContext, canvas: CGSize, backdrop: CGImage?) {
++    let bounds = CGRect(origin: .zero, size: canvas)
++    context.setFillColor(red: 0, green: 0, blue: 0, alpha: 1)
++    context.fill(bounds)
++    context.interpolationQuality = .high
++    guard ratio == .tall, let backdrop else {
++      context.draw(frame, in: bounds)
++      return
++    }
++    // The cover keeps its square shape over a blurred copy of itself, so the
++    // tall canvas is filled without stretching the artwork.
++    context.draw(backdrop, in: Self.aspectFill(CGSize(width: backdrop.width, height: backdrop.height), in: bounds))
++    let side = min(canvas.width, canvas.height)
++    let art = CGRect(x: 0, y: (canvas.height - side) / 2, width: side, height: side)
++    Self.drawFeathered(frame, in: context, rect: art)
++  }
++
++  /// Draws the cover with its top and bottom edges faded out, so it melts
++  /// into the blurred backdrop instead of ending in a hard rectangle.
++  private static func drawFeathered(_ frame: CGImage, in context: CGContext, rect: CGRect) {
++    let width = Int(rect.width)
++    let height = Int(rect.height)
++    guard width > 4, height > 4,
++          let offscreen = CGContext(
++            data: nil,
++            width: width,
++            height: height,
++            bitsPerComponent: 8,
++            bytesPerRow: 0,
++            space: CGColorSpaceCreateDeviceRGB(),
++            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
++          )
++    else {
++      context.draw(frame, in: rect)
++      return
++    }
++    offscreen.interpolationQuality = .high
++    offscreen.draw(frame, in: CGRect(x: 0, y: 0, width: rect.width, height: rect.height))
++    let colors = [
++      UIColor.white.withAlphaComponent(0).cgColor,
++      UIColor.white.cgColor,
++      UIColor.white.cgColor,
++      UIColor.white.withAlphaComponent(0).cgColor,
++    ] as CFArray
++    let featherLocations: [CGFloat] = [0, 0.16, 0.84, 1]
++    if let gradient = CGGradient(
++      colorsSpace: CGColorSpaceCreateDeviceRGB(),
++      colors: colors,
++      locations: featherLocations
++    ) {
++      offscreen.setBlendMode(.destinationIn)
++      offscreen.drawLinearGradient(
++        gradient,
++        start: CGPoint(x: 0, y: 0),
++        end: CGPoint(x: 0, y: rect.height),
++        options: []
++      )
++      offscreen.setBlendMode(.normal)
++    }
++    guard let feathered = offscreen.makeImage() else {
++      context.draw(frame, in: rect)
++      return
++    }
++    context.draw(feathered, in: rect)
++  }
++
++  private static func blurred(_ frame: CGImage) -> CGImage? {
++    let input = CIImage(cgImage: frame)
++    let extent = input.extent
++    guard extent.width > 1, extent.height > 1, !extent.isInfinite, !extent.isNull else {
++      return downscaleBlur(frame)
++    }
++    guard let filter = CIFilter(name: "CIGaussianBlur") else {
++      return downscaleBlur(frame)
++    }
++    // A gaussian blur samples outside the picture, and into nothing: the outer
++    // band of the backdrop comes out see-through, which is exactly where the
++    // cover's own edge was still readable. The clamp repeats the border pixel
++    // instead, so the backdrop stays solid all the way out and the radius alone
++    // decides how soft it reads.
++    let clamped = input.applyingFilter(
++      "CIAffineClamp",
++      parameters: ["inputTransform": NSValue(cgAffineTransform: .identity)]
++    )
++    filter.setValue(clamped, forKey: kCIInputImageKey)
++    filter.setValue(96.0, forKey: kCIInputRadiusKey)
++    guard let output = filter.outputImage?.cropped(to: extent),
++          let image = blurContext.createCGImage(output, from: extent)
++    else {
++      return downscaleBlur(frame)
++    }
++    return image
++  }
++
++  /// Blur without CoreImage: shrink the frame to a few pixels and scale it
++  /// back up, so the bands around the cover always come out soft even when
++  /// the gaussian filter refuses the image.
++  private static func downscaleBlur(_ frame: CGImage) -> CGImage? {
++    let width = 16
++    let height = max(1, Int((CGFloat(width) * CGFloat(frame.height) / CGFloat(max(1, frame.width))).rounded()))
++    guard let context = CGContext(
++      data: nil,
++      width: width,
++      height: height,
++      bitsPerComponent: 8,
++      bytesPerRow: 0,
++      space: CGColorSpaceCreateDeviceRGB(),
++      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
++    ) else {
++      return nil
++    }
++    context.interpolationQuality = .high
++    context.draw(frame, in: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height)))
++    return context.makeImage()
++  }
++
++  private static func aspectFill(_ size: CGSize, in bounds: CGRect) -> CGRect {
++    guard size.width > 0, size.height > 0 else {
++      return bounds
++    }
++    let scale = max(bounds.width / size.width, bounds.height / size.height)
++    let width = size.width * scale
++    let height = size.height * scale
++    return CGRect(x: bounds.midX - width / 2, y: bounds.midY - height / 2, width: width, height: height)
++  }
++
++  private func videoURL() async -> URL? {
++    if FileManager.default.fileExists(atPath: destination.path) {
++      return destination
++    }
++    return await encodeTaskValue().value
++  }
++
++  private func encodeTaskValue() -> Task<URL?, Never> {
++    lock.lock()
++    defer { lock.unlock() }
++    if let encodeTask {
++      return encodeTask
++    }
++    let created = Task.detached(priority: .utility) {
++      await self.encode()
++    }
++    encodeTask = created
++    return created
++  }
++
++  private func encode() async -> URL? {
++    defer {
++      lock.lock()
++      data = nil
++      lock.unlock()
++    }
++    if FileManager.default.fileExists(atPath: destination.path) {
++      return destination
++    }
++    lock.lock()
++    let data = self.data
++    lock.unlock()
++    guard let data, let source = CGImageSourceCreateWithData(data as CFData, nil) else {
++      return nil
++    }
++    guard let schedule = Self.schedule(source: source, count: CGImageSourceGetCount(source)) else {
++      return nil
++    }
++    return await write(source: source, schedule: schedule)
++  }
++
++  private func write(source: CGImageSource, schedule: Schedule) async -> URL? {
++    let fileManager = FileManager.default
++    guard !fileManager.fileExists(atPath: destination.path) else {
++      return destination
++    }
++    let directory = destination.deletingLastPathComponent()
++    try? fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
++    let temporary = directory.appendingPathComponent("tmp-" + UUID().uuidString + ".mp4")
++    defer {
++      if fileManager.fileExists(atPath: temporary.path) {
++        try? fileManager.removeItem(at: temporary)
++      }
++    }
++
++    let canvas = self.canvas
++    let width = Int(canvas.width)
++    let height = Int(canvas.height)
++    // What the rate controller is told to expect: without it the encoder
++    // budgets for a frame rate that has nothing to do with the samples being
++    // appended, and spends the bits it has on the wrong thing.
++    let outputRate = Double(schedule.samples.count) / max(schedule.total, 0.001)
++    let expectedFrameRate = Int(min(Self.maxPlaybackRate, max(1, outputRate.rounded())))
++    let settings: [String: Any] = [
++      AVVideoCodecKey: AVVideoCodecType.h264,
++      AVVideoWidthKey: width,
++      AVVideoHeightKey: height,
++      AVVideoCompressionPropertiesKey: [
++        AVVideoAverageBitRateKey: width * height * 2,
++        AVVideoMaxKeyFrameIntervalKey: 30,
++        AVVideoExpectedSourceFrameRateKey: expectedFrameRate,
++        AVVideoAllowFrameReorderingKey: false,
++      ] as [String: Any],
++    ]
++    guard let writer = try? AVAssetWriter(outputURL: temporary, fileType: .mp4) else {
++      return nil
++    }
++    let input = AVAssetWriterInput(mediaType: .video, outputSettings: settings)
++    input.expectsMediaDataInRealTime = false
++    guard writer.canAdd(input) else {
++      return nil
++    }
++    writer.add(input)
++    let adaptor = AVAssetWriterInputPixelBufferAdaptor(
++      assetWriterInput: input,
++      sourcePixelBufferAttributes: [
++        kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
++        kCVPixelBufferWidthKey as String: width,
++        kCVPixelBufferHeightKey as String: height,
++        kCVPixelBufferCGImageCompatibilityKey as String: true,
++        kCVPixelBufferCGBitmapContextCompatibilityKey as String: true,
++      ]
++    )
++    guard writer.startWriting() else {
++      return nil
++    }
++    writer.startSession(atSourceTime: .zero)
++    defer {
++      if writer.status == .writing {
++        writer.cancelWriting()
++      }
++    }
++
++    let backdrop: CGImage?
++    if ratio == .tall, let first = CGImageSourceCreateImageAtIndex(source, 0, Self.frameOptions) {
++      backdrop = Self.blurred(first)
++    } else {
++      backdrop = nil
++    }
++
++    for sample in schedule.samples {
++      guard let frame = CGImageSourceCreateImageAtIndex(source, sample.index, Self.frameOptions),
++            let buffer = pixelBuffer(adaptor: adaptor, frame: frame, canvas: canvas, backdrop: backdrop),
++            await isReady(input, writer: writer),
++            adaptor.append(buffer, withPresentationTime: CMTime(seconds: sample.time, preferredTimescale: 600))
++      else {
++        return nil
++      }
++    }
++
++    guard let lastIndex = schedule.samples.last?.index,
++          let lastFrame = CGImageSourceCreateImageAtIndex(source, lastIndex, Self.frameOptions),
++          let lastBuffer = pixelBuffer(adaptor: adaptor, frame: lastFrame, canvas: canvas, backdrop: backdrop),
++          await isReady(input, writer: writer)
++    else {
++      return nil
++    }
++    guard adaptor.append(lastBuffer, withPresentationTime: CMTime(seconds: schedule.total, preferredTimescale: 600)) else {
++      return nil
++    }
++
++    input.markAsFinished()
++    await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
++      writer.finishWriting {
++        continuation.resume()
++      }
++    }
++    guard writer.status == .completed else {
++      return nil
++    }
++
++    do {
++      try fileManager.moveItem(at: temporary, to: destination)
++    } catch {
++      return fileManager.fileExists(atPath: destination.path) ? destination : nil
++    }
++    return destination
++  }
++
++  private func isReady(_ input: AVAssetWriterInput, writer: AVAssetWriter) async -> Bool {
++    while !input.isReadyForMoreMediaData {
++      if writer.status != .writing {
++        return false
++      }
++      try? await Task.sleep(nanoseconds: 4_000_000)
++    }
++    return true
++  }
++
++  private func pixelBuffer(
++    adaptor: AVAssetWriterInputPixelBufferAdaptor,
++    frame: CGImage,
++    canvas: CGSize,
++    backdrop: CGImage?
++  ) -> CVPixelBuffer? {
++    guard let pool = adaptor.pixelBufferPool else {
++      return nil
++    }
++    var created: CVPixelBuffer?
++    guard CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pool, &created) == kCVReturnSuccess,
++          let buffer = created
++    else {
++      return nil
++    }
++    CVPixelBufferLockBaseAddress(buffer, [])
++    defer { CVPixelBufferUnlockBaseAddress(buffer, []) }
++    guard let context = CGContext(
++      data: CVPixelBufferGetBaseAddress(buffer),
++      width: Int(canvas.width),
++      height: Int(canvas.height),
++      bitsPerComponent: 8,
++      bytesPerRow: CVPixelBufferGetBytesPerRow(buffer),
++      space: CGColorSpaceCreateDeviceRGB(),
++      bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
++    ) else {
++      return nil
++    }
++    draw(frame, in: context, canvas: canvas, backdrop: backdrop)
++    return buffer
++  }
++
++  private static func schedule(source: CGImageSource, count: Int) -> Schedule? {
++    let delays = (0..<count).map { frameDelay(at: $0, source: source) }
++    let span = delays.reduce(0, +)
++    // Frames are dropped for one of two reasons and no other: the clip runs
++    // faster than the system will show it, or there are more frames than the
++    // encoder should carry. Counting alone was a third reason, and it was the
++    // one that showed: a cover long enough to fill the 29 seconds at 30 fps is
++    // 870 frames, which came out as every third one, so the lock screen showed
++    // 10 fps of a clip the app beside it was playing at 30. Length is not a
++    // reason to drop frames, only to cut the tail, which the clamp below does.
++    var step = 1
++    if span > 0 {
++      step = max(step, Int(((Double(count) / span) / maxPlaybackRate).rounded(.up)))
++    }
++    step = max(step, Int((Double(count) / Double(maxFrames)).rounded(.up)))
++    var samples: [Sample] = []
++    var time = 0.0
++    var index = 0
++    while index < count {
++      var delay = 0.0
++      var cursor = index
++      let end = min(index + step, count)
++      while cursor < end {
++        delay += delays[cursor]
++        cursor += 1
++      }
++      if time + delay > maxDuration {
++        delay = maxDuration - time
++      }
++      guard delay > 0 else {
++        break
++      }
++      samples.append(Sample(index: index, time: time))
++      time += delay
++      if time >= maxDuration {
++        break
++      }
++      index += step
++    }
++    guard !samples.isEmpty else {
++      return nil
++    }
++    return Schedule(samples: samples, total: time)
++  }
++
++  private static func frameDelay(at index: Int, source: CGImageSource) -> Double {
++    guard let properties = CGImageSourceCopyPropertiesAtIndex(source, index, nil) as? [String: Any] else {
++      return fallbackDelay
++    }
++    // The per-frame delays live in a format sub-dictionary whose key is
++    // "{WebP}"/"{GIF}"/"{PNG}", not "WebP": looking for the unbraced name
++    // never matched, so every frame fell back to 100ms and the cover crawled
++    // at ten frames per second. Any sub-dictionary carrying a delay wins.
++    for value in properties.values {
++      guard let dictionary = value as? [String: Any] else {
++        continue
++      }
++      let unclamped = (dictionary["UnclampedDelayTime"] as? NSNumber)?.doubleValue ?? 0
++      let clamped = (dictionary["DelayTime"] as? NSNumber)?.doubleValue ?? 0
++      let delay = unclamped > 0 ? unclamped : clamped
++      guard delay > 0 else {
++        continue
++      }
++      return delay < browserDelayFloor ? fallbackDelay : max(delay, minFrameDelay)
++    }
++    return fallbackDelay
++  }
++
++  private static func evenSide(longest: Int) -> Int {
++    let capped = min(maxSide, longest)
++    return max(2, capped - (capped % 2))
++  }
++
++  private static func identifier(for url: URL) -> String {
++    SHA256.hash(data: Data(url.absoluteString.utf8))
++      .map { String(format: "%02x", $0) }
++      .joined()
++  }
++
++  private static func cacheFile(id: String, ratio: Ratio) -> URL? {
++    guard let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else {
++      return nil
++    }
++    return base
++      .appendingPathComponent("animated-artwork", isDirectory: true)
++      .appendingPathComponent(id + "-" + ratio.suffix + ".mp4")
++  }
++}
++
++#endif
+diff --git a/ios/AudioModule.swift b/ios/AudioModule.swift
+index d265606..7cf6446 100644
+--- a/ios/AudioModule.swift
++++ b/ios/AudioModule.swift
+@@ -241,6 +241,18 @@ public class AudioModule: Module {
+         }
+       }
+ 
++      // Gapless: same source resolution as `replace`, but the track is queued
++      // behind the one playing instead of taking its place, so AVQueuePlayer
++      // buffers it in advance and joins them with no gap. The move arrives as
++      // `trackTransition`.
++      Function("setNextSource") { (player: AudioPlayer, source: AudioSource) in
++        player.setNextSource(source)
++      }
++
++      Function("clearNextSource") { (player: AudioPlayer) in
++        player.clearNextSource()
++      }
++
+       Function("pause") { player in
+         player.ref.pause()
+         if !player.keepAudioSessionActive {
+diff --git a/ios/AudioPlayer.swift b/ios/AudioPlayer.swift
+index 0742943..818eb0e 100644
+--- a/ios/AudioPlayer.swift
++++ b/ios/AudioPlayer.swift
+@@ -4,6 +4,7 @@ import Combine
+ private enum AudioConstants {
+   static let playbackStatus = "playbackStatusUpdate"
+   static let audioSample = "audioSampleUpdate"
++  static let trackTransition = "trackTransition"
+ }
+ 
+ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+@@ -25,17 +26,40 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+   var samplingEnabled = false
+   var keepAudioSessionActive = false
+ 
++  /**
++   * Gapless: the track queued behind the current one by `setNextSource`, if
++   * any. It is in the player's queue already, this is only the handle needed
++   * to tell an advance to it apart from a source JS installed itself.
++   */
++  private var gaplessItem: AVPlayerItem?
++  /** The same track as the source it was queued from, so a reset of the media
++   *  services can rebuild what is playing after the player moved to it. */
++  private var gaplessSource: AudioSource?
++
++  /**
++   * What the player does when the current item runs out: move on to the next
++   * one in its queue when there is one waiting (a loop, or the track gapless
++   * queued behind), and pause when there is not — which is what makes the end
++   * of a track reach JS as `didJustFinish`.
++   */
++  private var endAction: AVPlayer.ActionAtItemEnd {
++    isLooping || gaplessItem != nil ? .advance : .pause
++  }
++
+   var isLooping = false {
+     didSet {
+       guard isLooping != oldValue else {
+         return
+       }
+       if isLooping {
+-        ref.actionAtItemEnd = .advance
++        // The loop is the repeat of the song playing, so what gapless had
++        // queued behind it is not what comes next any more — and the loop's
++        // own copy cannot be added while another item waits behind.
++        clearNextSource()
+         enqueueNextLoopItem()
+       } else {
+         removeQueuedLoopItems()
+-        ref.actionAtItemEnd = .pause
++        ref.actionAtItemEnd = endAction
+       }
+       updateStatus(with: [:])
+     }
+@@ -56,7 +80,21 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+ 
+   var duration: Double {
+     let seconds = ref.currentItem?.duration.seconds ?? 0.0
+-    return seconds.isNaN ? 0.0 : seconds
++    if seconds.isFinite && seconds > 0 { return seconds }
++    // AVPlayer plays a stream it cannot time (nothing in the container or the
++    // response to compute a length from) and then reports 0. The app reads 0
++    // as "this stream has no random access" and seeks it by re-requesting with
++    // `timeOffset` — a parameter the server IGNORES on a file it serves
++    // directly (it is only ever given to ffmpeg), so playback restarts at zero
++    // while the position keeps counting from the seek: the time then runs
++    // ahead of the sound by every seek, and reaches the end while the audio
++    // still has that much left. The caller's length stands in, the same way it
++    // already does on the lock screen (`MediaController.applyPlaybackInfo`),
++    // so a playable stream always reports the length it has.
++    if let ms = metadata?.durationMs, ms > 0 {
++      return ms / 1000.0
++    }
++    return 0.0
+   }
+ 
+   var currentTime: Double {
+@@ -100,7 +138,9 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+   }
+ 
+   func play(at rate: Float) {
+-    ref.actionAtItemEnd = isLooping ? .advance : .pause
++    // Whatever was queued behind the current item stays queued: a pause and
++    // resume in the middle of a song must not take the advance away from it.
++    ref.actionAtItemEnd = endAction
+     if isLooping {
+       enqueueNextLoopItem()
+     }
+@@ -176,14 +216,19 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+     }
+   }
+ 
++  // Exact landing by default: AVPlayer's fast seek (±infinity) may stop
++  // anywhere, and on a container with no sample index — mp3, ogg/opus, ADTS —
++  // "anywhere" is seconds away from what was asked, so the audio plays from a
++  // different place than the position reported for it. Skip and the lock
++  // screen's own command already seek with `.zero`.
+   func seekTo(seconds: Double, toleranceMillisBefore: Double? = nil, toleranceMillisAfter: Double? = nil) async {
+     let time = CMTime(seconds: seconds, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+     let toleranceBefore = toleranceMillisBefore.map {
+       CMTime(seconds: $0 / 1000.0, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+-    } ?? CMTime.positiveInfinity
++    } ?? CMTime.zero
+     let toleranceAfter = toleranceMillisAfter.map {
+       CMTime(seconds: $0 / 1000.0, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+-    } ?? CMTime.positiveInfinity
++    } ?? CMTime.zero
+ 
+     await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+       ref.seek(to: time, toleranceBefore: toleranceBefore, toleranceAfter: toleranceAfter) { [weak self] _ in
+@@ -224,10 +269,26 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+       .store(in: &cancellables)
+ 
+     ref.publisher(for: \.currentItem)
+-      .sink { [weak self] _ in
++      .sink { [weak self] item in
+         guard let self else {
+           return
+         }
++        // Gapless: the player moved on its own to the track queued by
++        // `setNextSource`, and it is already playing it. Nothing is loaded
++        // here — there is nothing to load — this is the announcement JS needs
++        // to follow the queue, tell the lock screen what is on now and queue
++        // the track after this one. A source JS installed itself never reads
++        // as a move of this kind: the handle is dropped before the item is
++        // swapped (`replacePlayerItem`).
++        if let queued = self.gaplessItem, item === queued {
++          // What is loaded from here on: a reset of the media services has to
++          // rebuild this track, not the one it left.
++          self.source = self.gaplessSource
++          self.gaplessItem = nil
++          self.gaplessSource = nil
++          self.ref.actionAtItemEnd = self.endAction
++          self.emit(event: AudioConstants.trackTransition)
++        }
+         if self.isLooping {
+           self.enqueueNextLoopItem()
+           self.addPlaybackEndNotification()
+@@ -319,6 +380,7 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+   }
+ 
+   private func teardownPlayer() {
++    clearNextSource()
+     removeQueuedLoopItems()
+     if samplingEnabled {
+       uninstallTap()
+@@ -346,7 +408,7 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+ 
+   private func restorePlaybackState(time: Double, shouldResume: Bool, rate: Float) {
+     let cmTime = CMTime(seconds: time, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+-    ref.seek(to: cmTime) { [weak self] _ in
++    ref.seek(to: cmTime, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
+       guard let self, shouldResume else { return }
+       self.play(at: rate)
+     }
+@@ -405,6 +467,11 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+   }
+ 
+   private func replacePlayerItem(with item: AVPlayerItem?) {
++    // Whatever was queued behind the old item goes with it: this one is the
++    // track now, and JS knows it (it called `replace`, and forgets its own
++    // memo beside that call).
++    gaplessItem = nil
++    gaplessSource = nil
+     if let queuePlayer = ref as? AVQueuePlayer {
+       queuePlayer.removeAllItems()
+       if let item {
+@@ -429,12 +496,60 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+     queuePlayer.insert(nextItem, after: currentItem)
+   }
+ 
++  /**
++   * Gapless: queues the track that comes after the current one, so the player
++   * buffers it and joins the two by itself instead of the queue (which lives
++   * in JS) asking for it only once the previous one has ended.
++   *
++   * One track waits behind the current one at most: what was queued before is
++   * dropped first, so a queue reordered while a song plays ends up with the
++   * right track waiting. The loop is not touched by any of this — it is the
++   * repeat of the current song, not a track of its own (see `clearNextSource`).
++   */
++  func setNextSource(_ source: AudioSource) {
++    // Nothing playing: there is nothing to queue BEHIND, and the track would
++    // become the current one without anyone having asked for it.
++    guard let queue = ref as? AVQueuePlayer, let current = queue.currentItem else {
++      return
++    }
++    // Whatever is behind the current item goes first, loop copies included:
++    // what comes next is this, and only this.
++    clearNextSource()
++    removeQueuedLoopItems()
++    guard let item = AudioUtils.createAVPlayerItem(from: source) else {
++      return
++    }
++    // What the item under it says: the rate is applied to the item the player
++    // knows about, and this one is about to become it.
++    item.audioTimePitchAlgorithm = current.audioTimePitchAlgorithm
++    queue.insert(item, after: current)
++    gaplessItem = item
++    gaplessSource = source
++    ref.actionAtItemEnd = endAction
++  }
++
++  /** Drops the track queued behind the current one, if any. */
++  func clearNextSource() {
++    if let item = gaplessItem {
++      gaplessItem = nil
++      gaplessSource = nil
++      (ref as? AVQueuePlayer)?.remove(item)
++    }
++    ref.actionAtItemEnd = endAction
++  }
++
++  /**
++   * Drops what is queued behind the current item, except the track gapless
++   * put there: those are the copies a loop makes of the song playing, which
++   * exist only while it is on.
++   */
+   private func removeQueuedLoopItems() {
+     guard let queuePlayer = ref as? AVQueuePlayer else {
+       return
+     }
+ 
+-    for item in queuePlayer.items() where item != queuePlayer.currentItem {
++    let queued = queuePlayer.items()
++    for item in queued where item != queuePlayer.currentItem && item !== gaplessItem {
+       queuePlayer.remove(item)
+     }
+   }
+@@ -459,7 +574,21 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+         return
+       }
+ 
++      // Already moved on: what finished is not what is playing any more, and
++      // the player never stopped over it — a lap of a loop, or the track
++      // gapless queued behind, which announces the move itself.
++      if finishedItem !== queuePlayer.currentItem {
++        return
++      }
++
+       if !self.isLooping {
++        // Gapless: a track is waiting behind this one and the player is
++        // advancing to it by itself. Nothing ended as far as JS is concerned,
++        // the next song is already starting — so the end is not reported
++        // here, the move is (see `setupPublisher`).
++        if self.gaplessItem != nil, self.ref.actionAtItemEnd == .advance {
++          return
++        }
+         let currentTime = finishedItem.duration.seconds
+         self.updateStatus(with: [
+           "playing": false,
 diff --git a/ios/AudioRecords.swift b/ios/AudioRecords.swift
-index 33db27c3b8fb40fa9db6659a0787c6b2b503d1ab..a5c41356f93d3d4a45bf14020af1cb1943731751 100644
+index 33db27c..a5c4135 100644
 --- a/ios/AudioRecords.swift
 +++ b/ios/AudioRecords.swift
 @@ -64,12 +64,17 @@ struct Metadata: Record {
@@ -1571,11 +2421,40 @@ index 33db27c3b8fb40fa9db6659a0787c6b2b503d1ab..a5c41356f93d3d4a45bf14020af1cb19
  }
  
  enum BitRateStrategy: String, Enumerable {
+diff --git a/ios/AudioUtils.swift b/ios/AudioUtils.swift
+index 79c7c0b..7c4800e 100644
+--- a/ios/AudioUtils.swift
++++ b/ios/AudioUtils.swift
+@@ -84,9 +84,17 @@ struct AudioUtils {
+       url
+     }
+ 
+-    var options: [String: Any]?
++    // AVPlayer without this flag seeks by "approximate random access by time":
++    // on a container with no sample index (mp3, ogg, adts — everything that is
++    // not mp4/m4a) it lands NEAR the requested position while the clock keeps
++    // counting from the requested one, so a dragged position leaves the bar and
++    // the sound a whole seek apart until the track is restarted. The flag makes
++    // AVFoundation resolve the exact frame instead, and a container that
++    // already carries an index (m4a/mp4) reports the same precise timing
++    // anyway, so it costs nothing there.
++    var options: [String: Any] = [AVURLAssetPreferPreciseDurationAndTimingKey: true]
+     if let headers = source.headers {
+-      options = ["AVURLAssetHTTPHeaderFieldsKey": headers]
++      options["AVURLAssetHTTPHeaderFieldsKey"] = headers
+     }
+ 
+     let asset = AVURLAsset(url: finalUrl, options: options)
 diff --git a/ios/MediaController.swift b/ios/MediaController.swift
-index e977f577cd2e16b194b56537ad76b423f40d2496..1f65c7e7cccf4efcf7a71180c93c493b384f682f 100644
+index e977f57..8d8068b 100644
 --- a/ios/MediaController.swift
 +++ b/ios/MediaController.swift
-@@ -14,6 +14,7 @@ class MediaController {
+@@ -11,9 +11,12 @@ class MediaController {
+ 
+   private var currentArtworkUrl: URL?
+   private var cachedArtwork: MPMediaItemArtwork?
++  private var cachedAnimatedSquareArtwork: AnyObject?
++  private var cachedAnimatedTallArtwork: AnyObject?
    private var artworkLoadToken: UUID?
    private var currentArtworkItemIdentifier: ObjectIdentifier?
    private var isLiveStream = false
@@ -1583,7 +2462,15 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..1f65c7e7cccf4efcf7a71180c93c493b
  
    func setActivePlayer(_ player: AudioPlayer?, options: LockScreenOptions? = nil) {
      performOnMain {
-@@ -80,7 +81,11 @@ class MediaController {
+@@ -68,6 +71,7 @@ class MediaController {
+     } else {
+       resetArtworkState()
+       nowPlayingInfo.removeValue(forKey: MPMediaItemPropertyArtwork)
++      removeAnimatedArtwork(&nowPlayingInfo)
+       applyAssetMetadata(&nowPlayingInfo, for: player)
+     }
+ 
+@@ -80,7 +84,11 @@ class MediaController {
        info.removeValue(forKey: MPMediaItemPropertyPlaybackDuration)
        info.removeValue(forKey: MPNowPlayingInfoPropertyElapsedPlaybackTime)
      } else {
@@ -1596,9 +2483,138 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..1f65c7e7cccf4efcf7a71180c93c493b
        info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = player.currentTime
      }
      info[MPNowPlayingInfoPropertyPlaybackRate] = player.isPlaying ? player.ref.rate : 0.0
-@@ -232,6 +237,15 @@ class MediaController {
+@@ -139,17 +147,21 @@ class MediaController {
+     guard let artworkUrl = metadata.artworkUrl else {
+       resetArtworkState()
+       info.removeValue(forKey: MPMediaItemPropertyArtwork)
++      removeAnimatedArtwork(&info)
+       return
+     }
+ 
+     if currentArtworkUrl != artworkUrl {
+       currentArtworkUrl = artworkUrl
+       cachedArtwork = nil
++      cachedAnimatedSquareArtwork = nil
++      cachedAnimatedTallArtwork = nil
+       artworkLoadToken = nil
+     }
+ 
+     if let cachedArtwork {
+       info[MPMediaItemPropertyArtwork] = cachedArtwork
++      applyAnimatedArtwork(&info)
+       return
+     }
+ 
+@@ -173,14 +185,17 @@ class MediaController {
+         return
+       }
+ 
+-      guard let artwork else {
++      guard let still = artwork.still else {
+         return
+       }
+ 
+-      self.cachedArtwork = artwork
++      self.cachedArtwork = still
++      self.cachedAnimatedSquareArtwork = artwork.square
++      self.cachedAnimatedTallArtwork = artwork.tall
+ 
+       var latestNowPlayingInfo = self.nowPlayingInfoCenter.nowPlayingInfo ?? [String: Any]()
+-      latestNowPlayingInfo[MPMediaItemPropertyArtwork] = artwork
++      latestNowPlayingInfo[MPMediaItemPropertyArtwork] = still
++      self.applyAnimatedArtwork(&latestNowPlayingInfo)
+       self.nowPlayingInfoCenter.nowPlayingInfo = latestNowPlayingInfo
+     }
+   }
+@@ -204,34 +219,96 @@ class MediaController {
+   private func resetArtworkState() {
+     currentArtworkUrl = nil
+     cachedArtwork = nil
++    cachedAnimatedSquareArtwork = nil
++    cachedAnimatedTallArtwork = nil
+     artworkLoadToken = nil
    }
  
+-  private func loadArtworkFromURL(url: URL, completion: @escaping (MPMediaItemArtwork?) -> Void) {
++  private struct LoadedArtwork {
++    let still: MPMediaItemArtwork?
++    let square: AnyObject?
++    let tall: AnyObject?
++  }
++
++  private func loadArtworkFromURL(url: URL, completion: @escaping (LoadedArtwork) -> Void) {
+     URLSession.shared.dataTask(with: url) { data, _, error in
+       if error != nil {
+         self.performOnMain {
+-          completion(nil)
++          completion(LoadedArtwork(still: nil, square: nil, tall: nil))
+         }
+         return
+       }
+ 
+       guard let data, let image = UIImage(data: data) else {
+         self.performOnMain {
+-          completion(nil)
++          completion(LoadedArtwork(still: nil, square: nil, tall: nil))
+         }
+         return
+       }
+ 
+-      let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
++      let still = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
++      let square: AnyObject?
++      let tall: AnyObject?
++#if compiler(>=6.2)
++      if #available(iOS 26.0, tvOS 26.0, *) {
++        let artwork = AnimatedArtwork.make(url: url, data: data)
++        square = artwork.square
++        tall = artwork.tall
++      } else {
++        square = nil
++        tall = nil
++      }
++#else
++      square = nil
++      tall = nil
++#endif
+       self.performOnMain {
+-        completion(artwork)
++        completion(LoadedArtwork(still: still, square: square, tall: tall))
+       }
+     }
+     .resume()
+   }
+ 
++  // Both variants are published: the system drops the key it does not support
++  // on its own, and gating on `supportedAnimatedArtworkKeys` is what kept the
++  // lock screen on the static artwork — the tall 3:4 variant is the one the
++  // iPhone lock screen draws full screen.
++  private func applyAnimatedArtwork(_ info: inout [String: Any]) {
++#if compiler(>=6.2)
++    if #available(iOS 26.0, tvOS 26.0, *) {
++      if let artwork = cachedAnimatedSquareArtwork as? MPMediaItemAnimatedArtwork {
++        info[MPNowPlayingInfoProperty1x1AnimatedArtwork] = artwork
++      } else {
++        info.removeValue(forKey: MPNowPlayingInfoProperty1x1AnimatedArtwork)
++      }
++      if let artwork = cachedAnimatedTallArtwork as? MPMediaItemAnimatedArtwork {
++        info[MPNowPlayingInfoProperty3x4AnimatedArtwork] = artwork
++      } else {
++        info.removeValue(forKey: MPNowPlayingInfoProperty3x4AnimatedArtwork)
++      }
++    }
++#endif
++  }
++
++  private func removeAnimatedArtwork(_ info: inout [String: Any]) {
++#if compiler(>=6.2)
++    if #available(iOS 26.0, tvOS 26.0, *) {
++      info.removeValue(forKey: MPNowPlayingInfoProperty1x1AnimatedArtwork)
++      info.removeValue(forKey: MPNowPlayingInfoProperty3x4AnimatedArtwork)
++    }
++#endif
++  }
++
    private func enableRemoteCommands(options: LockScreenOptions?) {
 +    updateRemoteCommandAvailability(options: options)
 +
@@ -1612,7 +2628,16 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..1f65c7e7cccf4efcf7a71180c93c493b
      remoteCommandCenter.playCommand.addTarget { [weak self] _ in
        guard let player = self?.activePlayer else {
          return .commandFailed
-@@ -303,12 +317,34 @@ class MediaController {
+@@ -270,7 +347,7 @@ class MediaController {
+       }
+ 
+       let seekTime = CMTime(seconds: event.positionTime, preferredTimescale: 1)
+-      player.ref.seek(to: seekTime)
++      player.ref.seek(to: seekTime, toleranceBefore: .zero, toleranceAfter: .zero)
+ 
+       return .success
+     }
+@@ -303,12 +380,34 @@ class MediaController {
        return .success
      }
  
@@ -1647,7 +2672,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..1f65c7e7cccf4efcf7a71180c93c493b
    }
  
    private func disableRemoteCommands() {
-@@ -318,6 +354,8 @@ class MediaController {
+@@ -318,6 +417,8 @@ class MediaController {
      remoteCommandCenter.changePlaybackPositionCommand.isEnabled = false
      remoteCommandCenter.skipForwardCommand.isEnabled = false
      remoteCommandCenter.skipBackwardCommand.isEnabled = false

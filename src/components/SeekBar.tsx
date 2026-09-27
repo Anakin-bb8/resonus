@@ -26,13 +26,10 @@ import { colors, fontSize, themed, useTheme } from '@/theme';
 export function SeekBar({
   duration,
   style,
-  timeColor,
   tint,
 }: {
   duration: number;
   style?: StyleProp<ViewStyle>;
-  /** The times are quieter over the player's controls than over the lyrics. */
-  timeColor?: string;
   /** The played part and the thumb, the text colour if not given. */
   tint?: string;
 }) {
@@ -45,7 +42,6 @@ export function SeekBar({
   // Null while nobody is touching it, which is when the song is in charge.
   const [held, setHeld] = useState<number | null>(null);
   const shown = held ?? positionSec;
-  const timeStyle = [styles.time, timeColor ? { color: timeColor } : null];
   // Tapping the right-hand time switches it between the length and what is
   // left, and the choice is kept.
   const remaining = useSettings((s) => s.showRemainingTime);
@@ -74,7 +70,7 @@ export function SeekBar({
         thumbTintColor={tint ?? colors.text}
       />
       <View style={styles.times}>
-        <Text style={timeStyle}>{formatDuration(shown)}</Text>
+        <Text style={styles.time}>{formatDuration(shown)}</Text>
         <Pressable
           // Not upward: that is the end of the bar, which has to seek.
           hitSlop={{ top: 0, bottom: 12, left: 12, right: 12 }}
@@ -82,7 +78,7 @@ export function SeekBar({
           accessibilityLabel={remaining ? t('Show total time') : t('Show remaining time')}
           onPress={() => setRemaining(!remaining)}
         >
-          <Text style={timeStyle}>
+          <Text style={styles.time}>
             {remaining ? `-${formatDuration(Math.max(0, duration - shown))}` : formatDuration(duration)}
           </Text>
         </Pressable>
@@ -104,5 +100,5 @@ const styles = themed((colors) => ({
     justifyContent: 'space-between',
     marginTop: -2,
   },
-  time: { color: colors.textSecondary, fontSize: fontSize.xs },
+  time: { color: colors.textTime, fontSize: fontSize.xs },
 }));

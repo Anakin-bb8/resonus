@@ -20,7 +20,7 @@
  *    the language.
  */
 import { useSyncExternalStore } from 'react';
-import { Appearance, AppState } from 'react-native';
+import { Appearance, AppState, Platform } from 'react-native';
 import type { ImageStyle, TextStyle, ViewStyle } from 'react-native';
 
 /** Default accent (Spotify green). */
@@ -64,6 +64,8 @@ export interface Palette {
   textSecondary: string;
   /** Muted text: descriptions, disabled icons, placeholders. */
   textMuted: string;
+  /** The times under the progress bar: lighter than the greys, short of white. */
+  textTime: string;
   /** The accent, for fills (play button, active dot, switch track). */
   accent: string;
   /** The accent while pressed. */
@@ -165,6 +167,7 @@ const DARK: BasePalette = {
   text: '#FFFFFF',
   textSecondary: '#A0A3AB',
   textMuted: '#72757D',
+  textTime: '#DDE0E6',
   onInverse: '#000000',
   snackbar: '#30323A',
   onSnackbar: '#FFFFFF',
@@ -413,6 +416,7 @@ const BLACK: BasePalette = {
   ...DARK,
   textSecondary: '#B3B3B3',
   textMuted: '#727272',
+  textTime: '#E2E4E8',
   background: '#000000',
   surface: '#0C0C0C',
   surfaceHighlight: '#1C1C1C',
@@ -440,6 +444,7 @@ const LIGHT: BasePalette = {
   text: '#111113',
   textSecondary: '#5C5C66',
   textMuted: '#84848F',
+  textTime: '#6E6E78',
   onInverse: '#FFFFFF',
   snackbar: '#303036',
   onSnackbar: '#FFFFFF',
@@ -630,6 +635,9 @@ export function applyBackgroundTint(next: BackgroundTint): void {
 /** Hot-swaps the whole appearance. */
 function applyThemeMode(mode: ThemeMode): void {
   currentMode = mode;
+  // iOS styles the keyboard, alerts and sheets from the window, which follows
+  // the device unless pinned to the app's appearance.
+  if (Platform.OS === 'ios' && currentPref !== 'system') Appearance.setColorScheme(mode);
   rebuild();
 }
 
@@ -703,6 +711,8 @@ export function applyThemePreference(pref: ThemePreference): void {
   currentPref = pref;
   stopWatching();
   if (pref === 'system') {
+    // Unpinned first, or `systemMode()` would read back the pinned value.
+    if (Platform.OS === 'ios') Appearance.setColorScheme('unspecified');
     systemWatch = Appearance.addChangeListener(() => {
       // Only on a real change: every rebuild hands out new style objects, and
       // Android repeats this event for things that are not the appearance.

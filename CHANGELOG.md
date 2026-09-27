@@ -19,6 +19,7 @@ Releases before 0.2.1 are only listed on the
 - Tapping the time at the right of the seek bar switches between the song's length and the time left.
 - The corners of the cover art in the player can be square, rounded or more rounded.
 - Podcasts: search for a show or paste its feed, and its episodes play from Explore, a Home chip and a Recent episodes row on Home, with no server needed (#239).
+- Gapless playback on iOS (#237).
 
 ### Changed
 
@@ -30,6 +31,9 @@ Releases before 0.2.1 are only listed on the
 - The colour at the top of an album or playlist fades into the page more smoothly.
 - The blur behind the navigation bar and the one behind the mini player are now two separate switches, the second in Settings > Player next to Colored mini player.
 - Settings > Appearance groups Explore sections and Folder browsing under Explore, and Quality & playback puts Keep screen on and the battery warning under System.
+- The times under the progress bar are lighter and easier to read over the cover (#237).
+- On iOS the keyboard, alerts and system sheets follow the app's theme instead of the phone's (#237).
+- More of the app is translated to Italian (#237).
 
 ### Removed
 
@@ -38,6 +42,7 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- On iOS, seeking in FLAC, MP3 and other non-M4A files lands where you asked, and the animated cover's blurred backdrop no longer smears at the edges nor stutters on the lock screen (#237).
 - In the light theme, the Android navigation bar buttons are dark instead of white on white.
 - In the light theme, the fade under an artist photo and under the animated cover no longer passes through a grey band.
 
