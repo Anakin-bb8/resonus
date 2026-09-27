@@ -826,7 +826,7 @@ you are actually typing into, which is easier than reading it here.
 | `Always show the navigation bar` |  |
 | `Appearance` |  |
 | `At the top of Home, what is playing in your other apps and devices, ready to carry on here.` |  |
-| `Browse your library by folders, in the Explore tab (Subsonic servers).` |  |
+| `Browse your library by folders (Subsonic servers).` |  |
 | `Coming back after a few minutes leaves the app on the screen you left, instead of on the tab above.` | The line under that switch. “The tab above” is the “Open the app on” setting sitting right above it |
 | `Explore` | The tab holding everything the server has: all albums, artists, songs, genres, stations and folders |
 | `Explore sections` |  |
@@ -1016,7 +1016,7 @@ you are actually typing into, which is easier than reading it here.
 | `Dark (default)` | The appearance the app has always had, and what it uses unless the other is chosen. The word in brackets is the same one as `Default` |
 | `Edit custom color` |  |
 | `Hex code` |  |
-| `Light (experimental)` | The light appearance. The word in brackets is a warning that it is new and may still have rough edges |
+| `Light` | The light appearance, in Settings › Theme |
 | `Mode` | Heading over the two appearances on the Theme screen. Not a playback mode and not a profile: dark or light. It is called this and not "Appearance" because Appearance is the settings screen one level up |
 | `Palette` |  |
 | `Pure black` |  |

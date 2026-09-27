@@ -615,7 +615,6 @@
   "Show icons": "Mostra les icones",
   "Mode": "Mode",
   "Dark (default)": "Fosc (predeterminat)",
-  "Light (experimental)": "Clar (experimental)",
   "About the artist": "Sobre l'artista",
   "Show artist card": "Mostra la targeta de l'artista",
   "Nothing to change": "Res a canviar",
@@ -634,7 +633,6 @@
   "Play or pause": "Reprodueix o pausa",
   "At the end of the queue": "Al final de la cua",
   "Explore": "Explorar",
-  "Browse your library by folders, in the Explore tab (Subsonic servers).": "Explora la biblioteca per carpetes, a la pestanya Explorar (servidors Subsonic).",
   "Navigation bar": "Barra de navegació",
   "Always shown": "Sempre visible",
   "Explore sections": "Seccions d'Explorar",
@@ -706,5 +704,7 @@
   "Custom color": "Color personalitzat",
   "Edit custom color": "Editar el color personalitzat",
   "Create custom color": "Crear un color personalitzat",
-  "Hex code": "Codi hex"
+  "Hex code": "Codi hex",
+  "Browse your library by folders (Subsonic servers).": "Explora la teva biblioteca per carpetes (servidors Subsonic).",
+  "Light": "Clar"
 }

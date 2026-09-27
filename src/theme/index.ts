@@ -479,6 +479,15 @@ function darken(hex: string, amount = 0.14): string {
   return toHex(ch[0] * (1 - amount), ch[1] * (1 - amount), ch[2] * (1 - amount));
 }
 
+/**
+ * `hex` at zero opacity, for the clear end of a gradient. Not 'transparent':
+ * that is transparent black, and Android blends through it, so a fade to
+ * white passes through a grey band on the way.
+ */
+export function transparentOf(hex: string): string {
+  return /^#[0-9a-f]{6}$/i.test(hex) ? `${hex}00` : 'transparent';
+}
+
 /** Mixes a hex color toward white. */
 function lighten(hex: string, amount: number): string {
   const ch = channels(hex);

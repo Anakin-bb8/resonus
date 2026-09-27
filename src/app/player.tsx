@@ -80,6 +80,7 @@ import {
   spacing,
   themed,
   tracking,
+  transparentOf,
   useTheme,
   useThemeMode,
 } from '@/theme';
@@ -949,7 +950,7 @@ export default function PlayerScreen() {
                 picture ends somewhere instead of being cut off. Inside the
                 same wrapper: it has to travel with it. */}
             <LinearGradient
-              colors={['transparent', dominant]}
+              colors={[transparentOf(dominant), dominant]}
               style={StyleSheet.absoluteFill}
               locations={[0.7, 1]}
             />

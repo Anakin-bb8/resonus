@@ -16,8 +16,14 @@ Releases before 0.2.1 are only listed on the
 ### Changed
 
 - Settings drop the descriptions under options whose name already says what they do.
+- The light theme is no longer experimental.
 - The blur behind the navigation bar and the one behind the mini player are now two separate switches, the second in Settings > Player next to Colored mini player.
 - Settings > Appearance groups Explore sections and Folder browsing under Explore, and Quality & playback puts Keep screen on and the battery warning under System.
+
+### Fixed
+
+- In the light theme, the Android navigation bar buttons are dark instead of white on white.
+- In the light theme, the fade under an artist photo and under the animated cover no longer passes through a grey band.
 
 ## [0.7.10] - 2026-09-26
 

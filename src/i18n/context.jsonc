@@ -542,7 +542,7 @@
     "Theme": "The screen where the appearance and the accent colour are chosen, and the name of the row that opens it",
     "Mode": "Heading over the two appearances on the Theme screen. Not a playback mode and not a profile: dark or light. It is called this and not \"Appearance\" because Appearance is the settings screen one level up",
     "Dark (default)": "The appearance the app has always had, and what it uses unless the other is chosen. The word in brackets is the same one as `Default`",
-    "Light (experimental)": "The light appearance. The word in brackets is a warning that it is new and may still have rough edges",
+    "Light": "The light appearance, in Settings › Theme",
     "Navigation": "Section header: how you move around the app",
     "Navigation bar": "Settings screen: which tabs are on the bar at the bottom, and in what order",
     "Always shown": "Said where a switch would be, on the Home tab, which cannot be taken off the bar",

@@ -2,12 +2,6 @@
  * Settings › Theme: the appearance (dark, light, or the phone's own) and the
  * accent colour of whichever one is on screen — each keeps its own. All of it
  * applies the moment it is chosen.
- *
- * The light one carries "(experimental)" in its own label rather than a warning
- * off to one side. It is a whole second palette across every screen in the app,
- * and the odds are that somewhere a corner of it still wants adjusting: the word
- * belongs where the choice is made, so nobody picks it and then wonders whether
- * what they are looking at is on purpose.
  */
 import { ColorPickerDialog } from '@/components/ColorPickerDialog';
 import Icon from '@/components/Icon';
@@ -190,7 +184,7 @@ export default function ThemeSettings() {
           options={[
             { value: 'system', label: t('System') },
             { value: 'dark', label: t('Dark (default)') },
-            { value: 'light', label: t('Light (experimental)') },
+            { value: 'light', label: t('Light') },
           ]}
         />
         {/* A variant of dark rather than a fourth mode, so following the

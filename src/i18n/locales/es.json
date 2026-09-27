@@ -619,7 +619,6 @@
   "Show icons": "Mostrar los iconos",
   "Mode": "Modo",
   "Dark (default)": "Oscuro (predeterminado)",
-  "Light (experimental)": "Claro (experimental)",
   "About the artist": "Sobre el artista",
   "Show artist card": "Mostrar la tarjeta del artista",
   "Nothing to change": "Nada que cambiar",
@@ -638,7 +637,6 @@
   "Play or pause": "Reproducir o pausar",
   "At the end of the queue": "Al final de la cola",
   "Explore": "Explorar",
-  "Browse your library by folders, in the Explore tab (Subsonic servers).": "Explora tu biblioteca por carpetas, en la pestaña Explorar (servidores Subsonic).",
   "Navigation bar": "Barra de navegación",
   "Always shown": "Siempre visible",
   "Explore sections": "Secciones de Explorar",
@@ -719,5 +717,7 @@
   "Custom color": "Color personalizado",
   "Edit custom color": "Editar color personalizado",
   "Create custom color": "Crear color personalizado",
-  "Hex code": "Código hex"
+  "Hex code": "Código hex",
+  "Browse your library by folders (Subsonic servers).": "Explora tu biblioteca por carpetas (servidores Subsonic).",
+  "Light": "Claro"
 }

@@ -54,7 +54,7 @@ import { currentSong, usePlayerStore } from '@/store/player';
 import { usePlaylistPicker } from '@/store/playlistPicker';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, radius, spacing, themed, useTheme, tracking } from '@/theme';
+import { colors, fontSize, radius, spacing, themed, useTheme, tracking, transparentOf } from '@/theme';
 import { BackChevron } from '@/components/BackChevron';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { useScreenSize } from '@/hooks/useScreenSize';
@@ -417,7 +417,7 @@ export default function ArtistScreen() {
               without this they take the tap and it never reaches the image. */}
           <LinearGradient
             pointerEvents="none"
-            colors={['transparent', 'transparent', colors.background] as const}
+            colors={[transparentOf(colors.background), transparentOf(colors.background), colors.background] as const}
             style={StyleSheet.absoluteFill}
           />
           <Animated.Text
