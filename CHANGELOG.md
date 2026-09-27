@@ -42,6 +42,7 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- Pulling the player up from the mini player no longer shows its title, controls and cover jumping into place.
 - On iOS, seeking in FLAC, MP3 and other non-M4A files lands where you asked, and the animated cover's blurred backdrop no longer smears at the edges nor stutters on the lock screen (#237).
 - In the light theme, the Android navigation bar buttons are dark instead of white on white.
 - In the light theme, the fade under an artist photo and under the animated cover no longer passes through a grey band.

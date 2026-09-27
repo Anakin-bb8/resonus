@@ -26,7 +26,7 @@ import Animated, {
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { CACHED_COVER, COVER, songCoverUrl, star, unstar, type Song } from '@/api/data';
@@ -989,7 +989,15 @@ export default function PlayerScreen() {
           locations={[0.45, 1]}
           style={StyleSheet.absoluteFill}
         />
-        <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+        {/* Insets from JS, not a native `SafeAreaView`: that one pads a frame
+            late, and the page measured in that frame overwrote the remembered
+            layout, so a pulled-up player was seen settling in three steps. */}
+        <View
+          style={[
+            styles.safe,
+            { paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right },
+          ]}
+        >
         <Animated.ScrollView
           style={{ flex: 1 }}
           // Keeps the lyrics card clear of the navigation bar, and only then:
@@ -1181,7 +1189,7 @@ export default function PlayerScreen() {
           ) : null}
         </View>
 
-        {/* The safe area is kept here rather than on the SafeAreaView: the
+        {/* The bottom inset is kept here rather than on the page: the
             scroll has to reach the bottom edge for the lyrics card, and it is
             this block, the last thing on the first page, that must not end up
             under the navigation bar. */}
@@ -1528,7 +1536,7 @@ export default function PlayerScreen() {
         {showsLyricsCard ? <LyricsCard /> : null}
         {wantsArtistCard ? <ArtistPlayerCard /> : null}
         </Animated.ScrollView>
-        </SafeAreaView>
+        </View>
         <OutputSheet visible={outputOpen} onClose={() => setOutputOpen(false)} />
         <SpeedSheet openRef={openSpeedSheet} />
       </Animated.View>
