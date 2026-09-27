@@ -49,8 +49,6 @@ export default function AppearanceSettings() {
   const setShowPlayingElsewhere = useSettings((s) => s.setShowPlayingElsewhere);
   const blurBars = useSettings((s) => s.blurBars);
   const setBlurBars = useSettings((s) => s.setBlurBars);
-  const blurMiniPlayer = useSettings((s) => s.blurMiniPlayer);
-  const setBlurMiniPlayer = useSettings((s) => s.setBlurMiniPlayer);
   const defaultTab = useSettings((s) => s.defaultTab);
   const setDefaultTab = useSettings((s) => s.setDefaultTab);
   const keepScreenOnReturn = useSettings((s) => s.keepScreenOnReturn);
@@ -106,22 +104,6 @@ export default function AppearanceSettings() {
               value: alwaysShowTabs,
               onChange: setAlwaysShowTabs,
             },
-            // Android draws the blur from Android 12 on; before that there is
-            // only a tint, which is what was tried and dropped (b8bb8b1).
-            ...(canBlurBars
-              ? [
-                  {
-                    label: t('Navigation bar blur'),
-                    value: blurBars,
-                    onChange: setBlurBars,
-                  },
-                  {
-                    label: t('Mini player blur'),
-                    value: blurMiniPlayer,
-                    onChange: setBlurMiniPlayer,
-                  },
-                ]
-              : []),
           ]}
         />
         <SettingRow
@@ -129,11 +111,43 @@ export default function AppearanceSettings() {
           chevron
           onPress={() => router.push('/settings/navigation-bar')}
         />
+        {/* Android draws the blur from Android 12 on; before that there is
+            only a tint, which is what was tried and dropped (b8bb8b1). */}
+        {canBlurBars ? (
+          <SwitchList
+            options={[
+              {
+                label: t('Navigation bar blur'),
+                value: blurBars,
+                onChange: setBlurBars,
+              },
+            ]}
+          />
+        ) : null}
+
+        <Text style={settingsStyles.sectionTitle}>{t('Explore')}</Text>
         <SettingRow
           label={t('Explore sections')}
           chevron
           onPress={() => router.push('/settings/explore-sections')}
         />
+        {/* Guarded as a whole, not with a spread inside the list: SwitchList
+            always draws its card, so an empty array left a blank box. */}
+        {canBrowseFolders ? (
+          <SwitchList
+            options={[
+              {
+                label: t('Folder browsing'),
+                description: t(
+                  'Browse your library by folders, in the Explore tab (Subsonic servers).',
+                ),
+                value: showFolderBrowser,
+                onChange: setShowFolderBrowser,
+                disabled: offline,
+              },
+            ]}
+          />
+        ) : null}
 
         <Text style={settingsStyles.sectionTitle}>{t('Home')}</Text>
         <SwitchList
@@ -210,23 +224,6 @@ export default function AppearanceSettings() {
             },
           ]}
         />
-        {/* Guarded as a whole, not with a spread inside the list: SwitchList
-            always draws its card, so an empty array left a blank box. */}
-        {canBrowseFolders ? (
-          <SwitchList
-            options={[
-              {
-                label: t('Folder browsing'),
-                description: t(
-                  'Browse your library by folders, in the Explore tab (Subsonic servers).',
-                ),
-                value: showFolderBrowser,
-                onChange: setShowFolderBrowser,
-                disabled: offline,
-              },
-            ]}
-          />
-        ) : null}
 
         <Text style={settingsStyles.sectionTitle}>{t('Interaction')}</Text>
         <SelectList<SwipeAction>

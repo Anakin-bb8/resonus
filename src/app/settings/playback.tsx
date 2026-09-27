@@ -244,36 +244,42 @@ export default function PlaybackSettings() {
         />
 
         <Text style={settingsStyles.sectionTitle}>{t('Playback')}</Text>
+        {/* Both server only: what comes next is the server's idea of similar,
+            and the queue on the server is the server's. In the local profile
+            there is nobody to ask, and an empty SwitchList still draws its card. */}
+        {local ? null : (
+          <SwitchList
+            options={[
+              {
+                label: t('Autoplay'),
+                description: t('Play similar songs when the queue ends. Mixes always do.'),
+                value: autoplaySimilar,
+                onChange: setAutoplaySimilar,
+                disabled: offline,
+              },
+              {
+                label: t('Pick up the queue from other players'),
+                description: t(
+                  'On opening with nothing playing, take the newer queue another player left on the server.',
+                ),
+                value: syncQueueFromServer,
+                onChange: setSyncQueueFromServer,
+                disabled: offline,
+              },
+            ]}
+          />
+        )}
+        {/* Its own screen: two sliders and a line of explanation is more than
+            fits under a heading here, and it is a thing somebody sets once. */}
+        <SettingRow
+          label={t('Scrobbling')}
+          chevron
+          onPress={() => router.push('/settings/scrobbling')}
+        />
+
+        <Text style={settingsStyles.sectionTitle}>{t('System::section')}</Text>
         <SwitchList
           options={[
-            // What comes next is the server's idea of similar: offline there is
-            // nothing to ask, and in the local profile there is nobody to ask.
-            ...(local
-              ? []
-              : [
-                  {
-                    label: t('Autoplay'),
-                    description: t('Play similar songs when the queue ends. Mixes always do.'),
-                    value: autoplaySimilar,
-                    onChange: setAutoplaySimilar,
-                    disabled: offline,
-                  },
-                ]),
-            // Server only: the queue on the server is the server's, and a
-            // local profile does not have one.
-            ...(local
-              ? []
-              : [
-                  {
-                    label: t('Pick up the queue from other players'),
-                    description: t(
-                      'On opening with nothing playing, take the newer queue another player left on the server.',
-                    ),
-                    value: syncQueueFromServer,
-                    onChange: setSyncQueueFromServer,
-                    disabled: offline,
-                  },
-                ]),
             {
               label: t('Keep screen on'),
               value: keepScreenAwake,
@@ -287,18 +293,6 @@ export default function PlaybackSettings() {
             },
           ]}
         />
-
-        {/* Its own screen: two sliders and a line of explanation is more than
-            fits under a heading here, and it is a thing somebody sets once
-            rather than one of the switches they come to this screen for. Last
-            thing under Playback, where it belongs: a row after a heading it
-            has nothing to do with reads as one of that heading's settings. */}
-        <SettingRow
-          label={t('Scrobbling')}
-          chevron
-          onPress={() => router.push('/settings/scrobbling')}
-        />
-
       </ScrollView>
     </SettingsPage>
   );

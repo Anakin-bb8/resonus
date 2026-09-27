@@ -12,7 +12,8 @@ Releases before 0.2.1 are only listed on the
 ### Changed
 
 - Settings drop the descriptions under options whose name already says what they do.
-- The blur behind the navigation bar and the one behind the mini player are now two separate switches in Settings > Appearance.
+- The blur behind the navigation bar and the one behind the mini player are now two separate switches, the second in Settings > Player next to Colored mini player.
+- Settings > Appearance groups Explore sections and Folder browsing under Explore, and Quality & playback puts Keep screen on and the battery warning under System.
 
 ## [0.7.10] - 2026-09-26
 

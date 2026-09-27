@@ -713,5 +713,6 @@
   "Uses your files' ReplayGain tags.": "Usa las etiquetas ReplayGain de tus ficheros.",
   "Play similar songs when the queue ends. Mixes always do.": "Sigue con música parecida cuando se acaba la cola. Los mixes siempre lo hacen.",
   "On opening with nothing playing, take the newer queue another player left on the server.": "Al abrir sin nada sonando, toma la cola más reciente que otro reproductor dejó en el servidor.",
-  "Check on startup whether Android is limiting the app in the background.": "Comprueba al arrancar si Android limita la app en segundo plano."
+  "Check on startup whether Android is limiting the app in the background.": "Comprueba al arrancar si Android limita la app en segundo plano.",
+  "Mini player": "Mini reproductor"
 }

@@ -2,6 +2,7 @@
 import { useRouter } from 'expo-router';
 import { ScrollView, Text } from 'react-native';
 
+import { canBlurBars } from '@/components/BarBlur';
 import { SelectList, SettingRow, SettingsPage, settingsStyles, SwitchList } from '@/components/SettingsUI';
 import { useLocalProfile } from '@/hooks/useLocalProfile';
 import { useT } from '@/i18n';
@@ -64,6 +65,8 @@ export default function PlayerSettings() {
   const animatedCoverBackground = useSettings((s) => s.animatedCoverBackground);
   const setAnimatedCoverBackground = useSettings((s) => s.setAnimatedCoverBackground);
   const miniPlayerColorBackground = useSettings((s) => s.miniPlayerColorBackground);
+  const blurMiniPlayer = useSettings((s) => s.blurMiniPlayer);
+  const setBlurMiniPlayer = useSettings((s) => s.setBlurMiniPlayer);
   const setMiniPlayerColorBackground = useSettings((s) => s.setMiniPlayerColorBackground);
   const lyricsBackground = useSettings((s) => s.lyricsBackground);
   const setLyricsBackground = useSettings((s) => s.setLyricsBackground);
@@ -103,6 +106,8 @@ export default function PlayerSettings() {
           value={playerBackground}
           onChange={setPlayerBackground}
         />
+
+        <Text style={settingsStyles.sectionTitle}>{t('Mini player')}</Text>
         <SwitchList
           options={[
             {
@@ -110,6 +115,16 @@ export default function PlayerSettings() {
               value: miniPlayerColorBackground,
               onChange: setMiniPlayerColorBackground,
             },
+            // Android draws the blur from Android 12 on (see `BarBlur`).
+            ...(canBlurBars
+              ? [
+                  {
+                    label: t('Mini player blur'),
+                    value: blurMiniPlayer,
+                    onChange: setBlurMiniPlayer,
+                  },
+                ]
+              : []),
           ]}
         />
 

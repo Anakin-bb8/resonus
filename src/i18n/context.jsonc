@@ -130,7 +130,7 @@
     "Keep at least one folder": "Refusing to remove the last folder of a local profile, which would leave it with no music",
     "That folder is already there": "The folder just picked is already in the local profile's list",
     "New releases": "Home shelf and album sort: albums by the year they came out, newest first. Not \"Recently added\", which is when the server got hold of them",
-    "System": "Theme setting: use whichever appearance the phone itself is set to, light or dark",
+    "System": "Two places: a theme setting (use whichever appearance the phone itself is set to, light or dark), and `System::section`, the heading in Settings › Quality & playback over Keep screen on and the battery warning. Add `System::section` to your file if one word cannot do both",
     "Pin favorites": "Pin favourites to the quick grid",
 
     // ── Actions & verbs (easy to translate as the wrong part of speech) ──────
