@@ -62,8 +62,8 @@ playback.
 - **Playback**: gapless, crossfade, built-in equalizer, ReplayGain normalization, playback speed, sleep timer, queue with undo, shuffle, repeat, background & lock-screen controls
 - **Autoplay & mixes**: keep the music going with similar songs, or start a mix from any track
 - **Organize**: multi-select (queue, playlist or download in batch), star ratings, pinned items, play history
-- **Themes**: dark, light (experimental) or whichever one the phone is on, each with its own accent color
-- **Make it yours**: reorder and show/hide Home sections and explore chips, app fonts, configurable swipe and ⋯ menu actions
+- **Themes**: dark, light, the phone's own or on a schedule, with a palette of accent colors or one of your own
+- **Make it yours**: reorder and show/hide Home sections, chips and tabs, app fonts, lyrics size, mini player buttons, swipe actions and more
 - **Android Auto** (experimental)
 - **Landscape and tablet layouts**
 - **Queue sync across devices**
@@ -81,20 +81,7 @@ More languages are welcome via pull request. See
 [TRANSLATING.md](./TRANSLATING.md) for how to add one, plus context for the
 trickier strings.
 
-Thanks to the people who have translated the app:
-
-| Language | Contributor(s) |
-| --- | --- |
-| English | [juananzzz](https://github.com/juananzzz) |
-| Español | [juananzzz](https://github.com/juananzzz) |
-| Deutsch | [Psychotoxical](https://github.com/Psychotoxical), [CraftoHohenvels](https://github.com/CraftoHohenvels) |
-| Català | [juananzzz](https://github.com/juananzzz) |
-| Русский | [ztx-lyghters](https://github.com/ztx-lyghters) |
-| Italiano | [Anakin-bb8](https://github.com/Anakin-bb8) |
-| 简体中文 | [xcdmrCHP](https://github.com/xcdmrCHP) |
-| Українська | [albedych](https://github.com/albedych) |
-| Polski | [pegaz19803-spec](https://github.com/pegaz19803-spec) |
-| Svenska | [Jonatan Nyberg](https://github.com/NickWick13) |
+The people who have translated the app are credited there too.
 
 ## Community
 
