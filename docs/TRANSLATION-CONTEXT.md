@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 714 of them.
+Every string the app can show, under the screen it shows up on. 719 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -487,7 +487,6 @@ you are actually typing into, which is easier than reading it here.
 | `Refresh` | Ask the server for this playlist again, in case it changed elsewhere. Also the button under suggested tracks to regenerate them |
 | `Remove cover` | Screen reader label for the small x on a chosen picture |
 | `Removed from playlist` | Toast, with an undo button next to it |
-| `Save` | The confirm button of an edit sheet. A verb |
 | `Share` | Make a link on the server that others can open. Getting the file itself out is `Export` |
 | `Share Resonus link` | A link that opens this album, artist or playlist in another person's Resonus, for someone with an account on the same server. Not the public web link that Share makes |
 | `Suggested tracks` | Section heading at the bottom of a playlist: songs the server recommends based on what is already in the playlist |
@@ -547,7 +546,6 @@ you are actually typing into, which is easier than reading it here.
 | `Radio` | Internet radio stations. Most languages keep the word |
 | `Remove “{name}” from your server?` | Dialog title: stations live on the server, so this deletes it for everybody |
 | `Remove cover` | Screen reader label for the small x on a chosen picture |
-| `Save` | The confirm button of an edit sheet. A verb |
 | `Station name` | The name field when adding an internet radio station |
 | `Stream URL` | Field when adding a radio station |
 | `Tap + to add an internet radio station.` | The line under an empty state, pointing at the + button |
@@ -687,7 +685,7 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `Bands` | The equalizer's frequency sliders |
-| `Custom` | Settings › Equalizer, the first option of the preset list: none of the presets below it, the bands left wherever you dragged them. The only place this word is used |
+| `Custom` | Settings › Equalizer, the first option of the preset list: none of the presets below it, the bands left wherever you dragged them. Also `Custom::color`, the heading over your own accent colour in Settings › Theme (add it to your file if the word needs another form for a colour) |
 | `Equalizer` |  |
 | `Preset` | An equalizer preset. Not a bitrate |
 | `Reset bands` | Put the equalizer's frequency sliders back to flat |
@@ -817,7 +815,6 @@ you are actually typing into, which is easier than reading it here.
 | `Local` | An address on the same network (LAN). Nothing to do with the local profile |
 | `Network` |  |
 | `Remote` | An address reachable from outside the home network |
-| `Save` | The confirm button of an edit sheet. A verb |
 | `Server addresses` | Section header: a profile can have several addresses for the same account, one at home and one from outside |
 | `Switches to your remote address automatically when you leave home.` | The line under “Automatic URL switching”, explaining it |
 | `This address is already in the list.` | Validation message: that one is already there |
@@ -1014,9 +1011,14 @@ you are actually typing into, which is easier than reading it here.
 | --- | --- |
 | `Accent color` | The colour the app uses for buttons, links and anything it wants you to notice |
 | `Background` | Section header over what is drawn behind the player. Its two values are `Plain` and `Blurred cover` |
+| `Create custom color` |  |
+| `Custom color` |  |
 | `Dark (default)` | The appearance the app has always had, and what it uses unless the other is chosen. The word in brackets is the same one as `Default` |
+| `Edit custom color` |  |
+| `Hex code` |  |
 | `Light (experimental)` | The light appearance. The word in brackets is a warning that it is new and may still have rough edges |
 | `Mode` | Heading over the two appearances on the Theme screen. Not a playback mode and not a profile: dark or light. It is called this and not "Appearance" because Appearance is the settings screen one level up |
+| `Palette` |  |
 | `Pure black` |  |
 | `System` | Two places: a theme setting (use whichever appearance the phone itself is set to, light or dark), and `System::section`, the heading in Settings › Quality & playback over Keep screen on and the battery warning. Add `System::section` to your file if one word cannot do both |
 | `Theme` | The screen where the appearance and the accent colour are chosen, and the name of the row that opens it |
@@ -1116,6 +1118,7 @@ you are actually typing into, which is easier than reading it here.
 | `Removed from favorites` | Toast |
 | `Reorder` | Enter drag-to-reorder mode |
 | `Retry` | The button on an error message: try again. A verb |
+| `Save` | The confirm button of an edit sheet. A verb |
 | `Search` | The search tab, and the action of searching |
 | `Select all` | Tick every song in the list at once |
 | `Server default` | Codec option meaning "let the server decide" what to transcode to |

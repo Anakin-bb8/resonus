@@ -9,7 +9,9 @@
  * belongs where the choice is made, so nobody picks it and then wonders whether
  * what they are looking at is on purpose.
  */
+import { ColorPickerDialog } from '@/components/ColorPickerDialog';
 import Icon from '@/components/Icon';
+import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { SelectList, SettingsPage, settingsStyles, SwitchList } from '@/components/SettingsUI';
@@ -23,6 +25,7 @@ import {
   themed,
   type BackgroundTint,
   type ThemePreference,
+  useTheme,
   useThemeMode,
 } from '@/theme';
 
@@ -107,6 +110,52 @@ function Swatches({ value, onPick }: { value: string; onPick: (hex: string) => v
   );
 }
 
+/** Black or white, whichever reads on `hex`. */
+function tickOn(hex: string): string {
+  const n = parseInt(hex.slice(1), 16);
+  const y = 0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255);
+  return y > 140 ? '#000' : '#FFF';
+}
+
+/** The user's own colour, and the way into making or changing it. */
+function CustomSwatch({
+  color,
+  active,
+  onPick,
+  onEdit,
+}: {
+  color: string;
+  active: boolean;
+  onPick: () => void;
+  onEdit: () => void;
+}) {
+  const t = useT();
+  const colors = useTheme();
+  return (
+    <View style={styles.swatches}>
+      {color ? (
+        <Pressable
+          onPress={onPick}
+          accessibilityRole="button"
+          accessibilityLabel={t('Custom color')}
+          accessibilityState={{ selected: active }}
+          style={[styles.swatch, { backgroundColor: color }, active && styles.swatchActive]}
+        >
+          {active ? <Icon name="checkmark" size={24} color={tickOn(color)} /> : null}
+        </Pressable>
+      ) : null}
+      <Pressable
+        onPress={onEdit}
+        accessibilityRole="button"
+        accessibilityLabel={color ? t('Edit custom color') : t('Create custom color')}
+        style={[styles.swatch, styles.tintSwatch, { backgroundColor: colors.surfaceHighlight }]}
+      >
+        <Icon name={color ? 'create-outline' : 'add'} size={24} color={colors.text} />
+      </Pressable>
+    </View>
+  );
+}
+
 export default function ThemeSettings() {
   // Repaints on a change of appearance or accent: a stack keeps this screen
   // mounted while you are on another one, out of reach of anything else. The
@@ -122,6 +171,10 @@ export default function ThemeSettings() {
   const setPureBlack = useSettings((s) => s.setPureBlack);
   const backgroundTint = useSettings((s) => s.backgroundTint);
   const setBackgroundTint = useSettings((s) => s.setBackgroundTint);
+  const customAccentColor = useSettings((s) => s.customAccentColor);
+  const setCustomAccentColor = useSettings((s) => s.setCustomAccentColor);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const accent = mode === 'light' ? accentColorLight : accentColor;
 
   return (
     <SettingsPage title={t('Theme')}>
@@ -168,10 +221,26 @@ export default function ThemeSettings() {
             there rather than repainting it with the other's. Nothing has to say
             so on screen — the ticked swatch is already the answer. */}
         <Text style={[styles.label, styles.secondLabel]}>{t('Accent color')}</Text>
-        <Swatches
-          value={mode === 'light' ? accentColorLight : accentColor}
-          onPick={(hex) => setAccentColor(hex, mode)}
+        <Text style={styles.subLabel}>{t('Palette')}</Text>
+        <Swatches value={accent} onPick={(hex) => setAccentColor(hex, mode)} />
+        <Text style={[styles.subLabel, styles.secondSubLabel]}>{t('Custom::color')}</Text>
+        <CustomSwatch
+          color={customAccentColor}
+          active={!!customAccentColor && customAccentColor.toLowerCase() === accent.toLowerCase()}
+          onPick={() => setAccentColor(customAccentColor, mode)}
+          onEdit={() => setPickerOpen(true)}
         />
+        {pickerOpen ? (
+          <ColorPickerDialog
+            initialColor={customAccentColor || accent}
+            onCancel={() => setPickerOpen(false)}
+            onSave={(hex) => {
+              setPickerOpen(false);
+              setCustomAccentColor(hex);
+              setAccentColor(hex, mode);
+            }}
+          />
+        ) : null}
       </ScrollView>
     </SettingsPage>
   );
@@ -185,6 +254,8 @@ const styles = themed((colors) => ({
     marginBottom: spacing.md,
   },
   secondLabel: { marginTop: spacing.xl },
+  subLabel: { color: colors.textMuted, fontSize: fontSize.xs, marginBottom: spacing.sm },
+  secondSubLabel: { marginTop: spacing.lg },
   gap: { height: spacing.md },
   swatches: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg },
   swatch: {

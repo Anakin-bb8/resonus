@@ -1095,6 +1095,9 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   /** The same under the light one, which is a separate choice: a colour picked
    *  for near-black is not always the one wanted on white. */
   accentColorLight: string;
+  /** The user's own colour (hex), kept apart so picking one from the palette
+   *  does not lose it; '' until one is made. */
+  customAccentColor: string;
   /** Dark (the app's own look), light, or whichever one the device is in. */
   themeMode: ThemePreference;
   /** True black instead of dark grey in the dark appearance (OLED). */
@@ -1297,6 +1300,7 @@ const DEFAULTS = {
   syncQueueFromServer: true,
   accentColor: DEFAULT_ACCENT,
   accentColorLight: DEFAULT_ACCENT,
+  customAccentColor: '',
   // Dark: the appearance the app was designed in. Light is opt-in.
   themeMode: 'dark' as ThemePreference,
   pureBlack: false,
@@ -1800,6 +1804,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
           const light = isHexColor(parsed.accentColorLight) ? parsed.accentColorLight : dark;
           set({ accentColor: dark, accentColorLight: light });
           applyAccents(dark, light);
+        }
+        if (isHexColor(parsed.customAccentColor)) {
+          set({ customAccentColor: parsed.customAccentColor });
         }
         if (isThemePreference(parsed.themeMode)) {
           set({ themeMode: parsed.themeMode });

@@ -9,6 +9,10 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Added
+
+- Settings > Theme lets you make an accent color of your own, next to the palette, with a color picker and a hex code.
+
 ### Changed
 
 - Settings drop the descriptions under options whose name already says what they do.

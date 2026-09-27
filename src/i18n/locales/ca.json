@@ -701,5 +701,10 @@
   "Play similar songs when the queue ends. Mixes always do.": "Continua amb cançons semblants quan s'acaba la cua. Els mixos sempre ho fan.",
   "On opening with nothing playing, take the newer queue another player left on the server.": "En obrir sense res sonant, agafa la cua més recent que un altre reproductor va deixar al servidor.",
   "Check on startup whether Android is limiting the app in the background.": "Comprova en iniciar si Android limita l'app en segon pla.",
-  "Mini player": "Mini reproductor"
+  "Mini player": "Mini reproductor",
+  "Palette": "Paleta",
+  "Custom color": "Color personalitzat",
+  "Edit custom color": "Editar el color personalitzat",
+  "Create custom color": "Crear un color personalitzat",
+  "Hex code": "Codi hex"
 }

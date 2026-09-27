@@ -712,5 +712,10 @@
   "At the top of Home, what is playing in your other apps and devices, ready to carry on here.": "At the top of Home, what is playing in your other apps and devices, ready to carry on here.",
   "Left on {player}": "Left on {player}",
   "Mini player blur": "Mini player blur",
-  "Mini player": "Mini player"
+  "Mini player": "Mini player",
+  "Palette": "Palette",
+  "Custom color": "Custom color",
+  "Edit custom color": "Edit custom color",
+  "Create custom color": "Create custom color",
+  "Hex code": "Hex code"
 }

@@ -83,7 +83,7 @@
     "Bands": "The equalizer's frequency sliders",
     "Reset bands": "Put the equalizer's frequency sliders back to flat",
     "Preset": "An equalizer preset. Not a bitrate",
-    "Custom": "Settings › Equalizer, the first option of the preset list: none of the presets below it, the bands left wherever you dragged them. The only place this word is used",
+    "Custom": "Settings › Equalizer, the first option of the preset list: none of the presets below it, the bands left wherever you dragged them. Also `Custom::color`, the heading over your own accent colour in Settings › Theme (add it to your file if the word needs another form for a colour)",
     "Off": "A setting value meaning disabled (crossfade, normalization…)",
 
     // ── Player, output & queue ───────────────────────────────────────────────

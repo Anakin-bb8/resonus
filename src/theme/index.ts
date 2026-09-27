@@ -479,6 +479,13 @@ function darken(hex: string, amount = 0.14): string {
   return toHex(ch[0] * (1 - amount), ch[1] * (1 - amount), ch[2] * (1 - amount));
 }
 
+/** Mixes a hex color toward white. */
+function lighten(hex: string, amount: number): string {
+  const ch = channels(hex);
+  if (!ch) return hex;
+  return toHex(...(ch.map((c) => c + (255 - c) * amount) as [number, number, number]));
+}
+
 /** WCAG relative luminance. */
 function luminance(hex: string): number {
   const ch = channels(hex);
@@ -498,17 +505,22 @@ function contrast(a: string, b: string): number {
 }
 
 /**
- * Darkens `hex` in small steps until it reads against `bg`, or gives up.
+ * Darkens `hex` in small steps until it reads against `bg`, or gives up; on a
+ * dark `bg`, lightens it instead.
  *
  * Every accent in the picker is a vivid colour chosen to sit on near-black; on
  * white the same green is 2.6:1, which is a colour you can see but not a colour
  * you can read. Rather than keeping a second hand-picked palette for the light
  * theme (twelve more values to maintain, and nothing to stop them drifting),
- * the light accent is derived from the one the user chose.
+ * the light accent is derived from the one the user chose. The palette already
+ * clears 4.5:1 on every dark background, so on dark only a custom colour moves.
  */
 function readableOn(hex: string, bg: string, ratio = 4.5): string {
+  const onDark = luminance(bg) < 0.2;
   let out = hex;
-  for (let i = 0; i < 12 && contrast(out, bg) < ratio; i++) out = darken(out, 0.1);
+  for (let i = 0; i < 12 && contrast(out, bg) < ratio; i++) {
+    out = onDark ? lighten(out, 0.1) : darken(out, 0.1);
+  }
   return out;
 }
 
@@ -568,9 +580,10 @@ function rebuild(): void {
       : { ...DARK, ...BACKGROUND_TINTS[tint].dark };
   const picked = light ? lightAccent : darkAccent;
   // On white the accent has to be dark enough to read as text; on near-black
-  // it is already fine as picked. `onAccent` follows from that: black on the
-  // vivid accent, white on the darkened one.
-  const accent = light ? readableOn(picked, LIGHT.background) : picked;
+  // a palette colour is already fine as picked, and a dark custom one is
+  // lifted. `onAccent` follows from that: black on the vivid accent, white on
+  // the darkened one.
+  const accent = readableOn(picked, light ? LIGHT.background : base.background);
   Object.assign(colors, base, {
     accent,
     accentPressed: darken(accent),
