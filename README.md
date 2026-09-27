@@ -13,12 +13,12 @@
 ---
 
 <p align="center">
-  <a href="https://github.com/juananzzz/resonus/releases/latest"><img src="https://img.shields.io/badge/⬇_Download_APK-1CD667?style=for-the-badge" alt="Download APK" /></a>
+  <a href="https://github.com/juananzzz/resonus/releases/latest"><img src="./assets/images/badges/download.svg" height="28" alt="Download APK" /></a>
   <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/juananzzz/resonus"><img src="./assets/images/obtainium.svg" height="28" alt="Get via Obtainium" /></a>
-  <a href="#ios-experimental"><img src="https://img.shields.io/badge/iOS_experimental-1CD667?style=for-the-badge&logo=apple&logoColor=white" alt="iOS (experimental)" /></a>
-  <a href="https://altdirect.app/?url=https://raw.githubusercontent.com/juananzzz/resonus/main/Source.json"><img src="https://img.shields.io/badge/Add_as_an_AltSource-1CD667?style=for-the-badge&logo=apple&logoColor=white" alt="Add as an AltSource" /></a>
-  <a href="https://discord.gg/pecE8MTPVr"><img src="https://img.shields.io/badge/Discord-1CD667?style=for-the-badge&logo=discord&logoColor=white" alt="Discord" /></a>
-  <a href="https://ko-fi.com/juananzzz"><img src="https://img.shields.io/badge/Support_on_Ko--fi-1CD667?style=for-the-badge&logo=kofi&logoColor=white" alt="Support on Ko-fi" /></a>
+  <a href="#ios-experimental"><img src="./assets/images/badges/ios.svg" height="28" alt="iOS (experimental)" /></a>
+  <a href="https://altdirect.app/?url=https://raw.githubusercontent.com/juananzzz/resonus/main/Source.json"><img src="./assets/images/badges/altsource.svg" height="28" alt="Add as an AltSource" /></a>
+  <a href="https://discord.gg/pecE8MTPVr"><img src="./assets/images/badges/discord.svg" height="28" alt="Discord" /></a>
+  <a href="https://ko-fi.com/juananzzz"><img src="./assets/images/badges/kofi.svg" height="28" alt="Support on Ko-fi" /></a>
 </p>
 
 ## Screenshots
