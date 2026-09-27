@@ -924,9 +924,10 @@ export default function PlayerScreen() {
    *
    * Both cases still need the speed to be able to do anything: a station
    * arrives in real time and a renderer plays at its own pace, so there is
-   * nothing to offer while either is what is playing.
+   * nothing to offer while either is what is playing. A podcast episode is a
+   * file behind a URL, not a station (`vod`).
    */
-  const canSpeed = !song.url && !remoteDevice;
+  const canSpeed = (!song.url || song.vod) && !remoteDevice;
 
   return (
     <GestureDetector gesture={dismissPan}>

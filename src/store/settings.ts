@@ -370,6 +370,7 @@ export type HomeSectionKey =
   | 'randomSongs'
   | 'discover'
   | 'playlists'
+  | 'podcasts'
   | 'randomAlbums'
   | 'randomArtists';
 
@@ -388,6 +389,7 @@ const HOME_SECTION_KEYS: HomeSectionKey[] = [
   'randomSongs',
   'discover',
   'playlists',
+  'podcasts',
   'randomAlbums',
   'randomArtists',
 ];
@@ -409,6 +411,8 @@ const HOME_SECTION_KEYS: HomeSectionKey[] = [
 export const DEFAULT_HOME_SECTIONS: HomeSection[] = [
   { key: 'discover', enabled: true },
   { key: 'playlists', enabled: true },
+  // Draws nothing without a subscription, so it costs nobody a row.
+  { key: 'podcasts', enabled: true },
   { key: 'recentlyAdded', enabled: true },
   { key: 'newReleases', enabled: true },
   { key: 'recentlyPlayed', enabled: true },
@@ -467,7 +471,7 @@ function normalizeHomeSections(raw: unknown): HomeSection[] {
 }
 
 /** One of the chips in the row at the top of Home. `genres` and `radio`
- *  are server-only. */
+ *  are server-only; `podcasts` is the phone's own. */
 export type HomeChipKey =
   | 'shuffle'
   | 'favorites'
@@ -475,6 +479,7 @@ export type HomeChipKey =
   | 'artists'
   | 'songs'
   | 'genres'
+  | 'podcasts'
   | 'radio'
   | 'history';
 
@@ -491,6 +496,7 @@ const HOME_CHIP_KEYS: HomeChipKey[] = [
   'artists',
   'songs',
   'genres',
+  'podcasts',
   'radio',
   'history',
 ];
@@ -504,6 +510,7 @@ export const DEFAULT_HOME_CHIPS: HomeChip[] = [
   { key: 'artists', enabled: true },
   { key: 'songs', enabled: true },
   { key: 'genres', enabled: true },
+  { key: 'podcasts', enabled: true },
   { key: 'radio', enabled: true },
 ];
 
@@ -516,6 +523,7 @@ export type ExploreSectionKey =
   | 'songs'
   | 'genres'
   | 'radio'
+  | 'podcasts'
   | 'folders';
 
 /** A section with its state, the shape the Home chips already have (order is
@@ -532,6 +540,7 @@ const EXPLORE_SECTION_KEYS: ExploreSectionKey[] = [
   'songs',
   'genres',
   'radio',
+  'podcasts',
   'folders',
 ];
 

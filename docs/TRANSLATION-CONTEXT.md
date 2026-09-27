@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 733 of them.
+Every string the app can show, under the screen it shows up on. 763 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -232,6 +232,7 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
+| `Add podcast` |  |
 | `Add station` | Title of the sheet for adding an internet radio station |
 | `Couldn't load folders.` | Error on the screen, with a Retry button |
 | `Couldn't load playlists.` | Error on the screen, with a Retry button |
@@ -324,6 +325,7 @@ you are actually typing into, which is easier than reading it here.
 | `Random albums` | A section of Home: albums picked at random, to happen upon something |
 | `Random artists` | A section of Home: artists picked at random |
 | `Random songs` |  |
+| `Recent episodes` |  |
 | `Scanning your music…` | Going through the phone's own files |
 
 ## Library
@@ -485,6 +487,47 @@ you are actually typing into, which is easier than reading it here.
 | `Your password is needed to upload images and will be stored securely.` | The line explaining why the password is asked for again |
 | `Your server doesn't support playlist covers` | The server is too old, or is not Navidrome |
 | `Your server doesn't support radio covers` | The server is too old, or is not Navidrome |
+
+## Podcast
+
+| String | What it is |
+| --- | --- |
+| `Couldn't load this podcast.` |  |
+| `Couldn't read this feed` |  |
+| `Episodes` |  |
+| `No audio available` |  |
+| `No episodes` |  |
+| `Play latest` |  |
+| `Pull down to read the feed again.` |  |
+| `This podcast's feed could not be read, so these episodes may be out of date.` |  |
+| `Untitled episode` |  |
+| `Website` |  |
+
+## Podcasts
+
+| String | What it is |
+| --- | --- |
+| `{n} podcast feeds could not be read.` |  |
+| `Add podcast` |  |
+| `Couldn't load your podcasts.` |  |
+| `Couldn't reach any of your podcast feeds.` |  |
+| `Couldn't read that feed.` |  |
+| `Couldn't read this feed` |  |
+| `Couldn't search for podcasts.` |  |
+| `Find a podcast` |  |
+| `No episodes yet` |  |
+| `No podcast found for “{term}”. Try pasting the feed address below.` |  |
+| `No podcasts` |  |
+| `Open website` |  |
+| `Podcasts` |  |
+| `Refresh` | Ask the server for this playlist again, in case it changed elsewhere. Also the button under suggested tracks to regenerate them |
+| `Remove “{name}” and its episodes from this device?` |  |
+| `Search for a podcast` |  |
+| `Search for a show, or paste the address of a feed below.` |  |
+| `Subscribe` |  |
+| `Tap + to subscribe to a show.` |  |
+| `Unsubscribe` |  |
+| `Unsubscribed from “{name}”` |  |
 
 ## Queue
 
