@@ -53,7 +53,7 @@ export function GlobalTabBar() {
   // It is also the bar of the tab screens (the tabs navigator draws none):
   // the blur only works from out here (`BarBlur`). The setting only decides
   // where else it shows.
-  const blur = useBarBlur();
+  const blur = useBarBlur('tabs');
   const bottomTabs = useSettings((s) => s.bottomTabs);
   const root = segments[0];
   const inTabs = root === '(tabs)' || root === undefined;

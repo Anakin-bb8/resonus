@@ -95,7 +95,6 @@ export default function PlayerSettings() {
         <Text style={[settingsStyles.sectionTitle, { marginTop: 0 }]}>{t('Background')}</Text>
         <SelectList<ScreenBackground>
           label={t('Player background')}
-          description={t('What fills the space behind the player.')}
           options={[
             { value: 'none', label: t('Plain') },
             { value: 'color', label: t('Cover color') },
@@ -108,7 +107,6 @@ export default function PlayerSettings() {
           options={[
             {
               label: t('Colored mini player'),
-              description: t('Tint the mini player with the cover color.'),
               value: miniPlayerColorBackground,
               onChange: setMiniPlayerColorBackground,
             },
@@ -126,9 +124,6 @@ export default function PlayerSettings() {
             },
             {
               label: t('Animated cover background'),
-              description: t(
-                'An animated cover fills the player behind the controls, with a still copy of it beside the title.',
-              ),
               value: animatedCoverBackground,
               onChange: setAnimatedCoverBackground,
             },
@@ -136,16 +131,12 @@ export default function PlayerSettings() {
         />
         <SelectList<CoverTapAction>
           label={t('On cover tap')}
-          description={t('What tapping the cover art in the player does.')}
           options={coverTapOptions(t)}
           value={coverTapAction}
           onChange={setCoverTapAction}
         />
         <SelectList<CoverDoubleTapAction>
           label={t('On cover double tap')}
-          description={t(
-            'A second action for the same artwork, for a hand that is not looking. With this on, a single tap waits a moment to see whether a second one is coming.',
-          )}
           options={coverTapOptions(t)}
           value={coverDoubleTapAction}
           onChange={setCoverDoubleTapAction}
@@ -156,13 +147,11 @@ export default function PlayerSettings() {
           options={[
             {
               label: t('Show album & year'),
-              description: t('Show the album name and release year next to the artist.'),
               value: showAlbumInfo,
               onChange: setShowAlbumInfo,
             },
             {
               label: t('Show quality label'),
-              description: t('Show format and bitrate in the player.'),
               value: showAudioQuality,
               onChange: setShowAudioQuality,
             },
@@ -170,7 +159,6 @@ export default function PlayerSettings() {
               ? [
                   {
                     label: t('Show rating'),
-                    description: t('Show a star rating bar to rate the current song.'),
                     value: showRating,
                     onChange: setShowRating,
                   },
@@ -178,7 +166,6 @@ export default function PlayerSettings() {
               : []),
             {
               label: t('Scroll long titles'),
-              description: t("Song and artist names that don't fit scroll across."),
               value: marqueeTitles,
               onChange: setMarqueeTitles,
             },
@@ -189,7 +176,6 @@ export default function PlayerSettings() {
               : [
                   {
                     label: t('Show artist card'),
-                    description: t("The artist's photo and biography, below the player controls."),
                     value: showArtistCard,
                     onChange: setShowArtistCard,
                   },
@@ -202,9 +188,6 @@ export default function PlayerSettings() {
           options={[
             {
               label: t('Show previous tracks'),
-              description: t(
-                'Keep the tracks before the current one in the queue, dimmed. Tap one to go back.',
-              ),
               value: showPlayedInQueue,
               onChange: setShowPlayedInQueue,
             },
@@ -214,7 +197,6 @@ export default function PlayerSettings() {
         <Text style={settingsStyles.sectionTitle}>{t('Buttons')}</Text>
         <SettingRow
           label={t('Bottom row')}
-          description={t('Which buttons are under the controls, and in what order.')}
           chevron
           onPress={() => router.push('/settings/player-buttons')}
         />
@@ -222,9 +204,6 @@ export default function PlayerSettings() {
           options={[
             {
               label: t('Swap favorite and menu'),
-              description: t(
-                'Put the ⋯ menu next to the title and the heart in the top bar, easier to reach one-handed.',
-              ),
               value: swapPlayerButtons,
               onChange: setSwapPlayerButtons,
             },
@@ -232,7 +211,6 @@ export default function PlayerSettings() {
         />
         <SelectList
           label={t('Skip buttons')}
-          description={t('Jump back or forward next to the play button.')}
           options={[
             { value: 0, label: t('No') },
             { value: 5, label: '5 s' },
@@ -249,9 +227,6 @@ export default function PlayerSettings() {
           options={[
             {
               label: t('Keep paused when skipping'),
-              description: t(
-                'Skipping while paused shows the next song without playing it. Tapping a song in the queue still plays it.',
-              ),
               value: keepPausedOnSkip,
               onChange: setKeepPausedOnSkip,
             },
@@ -259,7 +234,6 @@ export default function PlayerSettings() {
         />
         <SelectList<PreviousButtonMode>
           label={t('Previous button')}
-          description={t('What the previous button does partway through a song.')}
           options={[
             { value: 'restart', label: t('Restart, then previous track') },
             { value: 'always', label: t('Always previous track') },
@@ -286,7 +260,6 @@ export default function PlayerSettings() {
           options={[
             {
               label: t('Show lyrics card'),
-              description: t('The lyrics card below the player controls.'),
               value: showLyricsCard,
               onChange: setShowLyricsCard,
             },
@@ -294,7 +267,6 @@ export default function PlayerSettings() {
         />
         <SelectList<ScreenBackground>
           label={t('Lyrics background')}
-          description={t('What fills the space behind the lyrics screen.')}
           options={[
             { value: 'none', label: t('Plain') },
             { value: 'color', label: t('Cover color') },
@@ -305,7 +277,6 @@ export default function PlayerSettings() {
         />
         <SelectList<CardBackground>
           label={t('Lyrics card background')}
-          description={t('The card that peeks below the player controls.')}
           options={[
             { value: 'none', label: t('Plain') },
             { value: 'color', label: t('Cover color') },

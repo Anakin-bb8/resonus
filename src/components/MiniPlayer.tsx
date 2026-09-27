@@ -188,7 +188,7 @@ export function MiniPlayer() {
     : undefined;
   const dominant = useDominantColor(miniColor ? colorSource : undefined);
   const bg = miniColor ? dominant : colors.surfaceHighlight;
-  const blur = useBarBlur();
+  const blur = useBarBlur('miniPlayer');
   // Not "unless the file is on the phone": see the player screen, which had the
   // same test in the same two places and the same hole under it.
   const favIds = useFavoriteIds(!!song);

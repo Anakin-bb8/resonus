@@ -176,8 +176,8 @@ export default function DownloadsSettings() {
           label={t('Download codec')}
           description={
             downloadBitRate > 0
-              ? t('Codec to transcode to. Your server must support it.')
-              : t('Codec to transcode to. At “Original” quality nothing is transcoded.')
+              ? t('Your server must support it.')
+              : t('At “Original” quality nothing is transcoded.')
           }
           options={TRANSCODE_FORMATS.map((v) => ({
             value: v,
@@ -203,7 +203,6 @@ export default function DownloadsSettings() {
         />
         <SelectList
           label={t('Simultaneous downloads')}
-          description={t('Songs fetched at the same time. Fewer is gentler on the server, network and your phone.')}
           options={DOWNLOAD_CONCURRENCY_OPTIONS.map((n) => ({ value: n, label: String(n) }))}
           value={downloadConcurrency}
           onChange={setDownloadConcurrency}
@@ -213,7 +212,6 @@ export default function DownloadsSettings() {
           options={[
             {
               label: t('Download over Wi-Fi only'),
-              description: t('Block downloads on mobile data.'),
               value: downloadWifiOnly,
               onChange: setDownloadWifiOnly,
               disabled: offline,

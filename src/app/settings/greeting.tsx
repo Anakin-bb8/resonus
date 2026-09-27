@@ -31,7 +31,6 @@ export default function GreetingSettings() {
           options={[
             {
               label: t('Show greeting'),
-              description: t('“Good morning”, “Good evening”… at the top of Home.'),
               value: showGreeting,
               onChange: setShowGreeting,
             },

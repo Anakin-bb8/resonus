@@ -9,6 +9,11 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Changed
+
+- Settings drop the descriptions under options whose name already says what they do.
+- The blur behind the navigation bar and the one behind the mini player are now two separate switches in Settings > Appearance.
+
 ## [0.7.10] - 2026-09-26
 
 ### Added

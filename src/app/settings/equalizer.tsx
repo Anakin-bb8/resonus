@@ -70,7 +70,6 @@ export default function EqualizerSettings() {
           options={[
             {
               label: t('Equalizer'),
-              description: t('Apply the equalizer to the app audio.'),
               value: enabled,
               onChange: setEnabled,
             },

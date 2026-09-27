@@ -840,8 +840,10 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   showPlaylistDescription: boolean;
   /** Keep the navigation bar on every screen, not only on the tabs. */
   alwaysShowTabs: boolean;
-  /** Blur what scrolls under the navigation bar and the mini player. */
+  /** Blur what scrolls under the navigation bar. */
   blurBars: boolean;
+  /** Blur what scrolls under the mini player. */
+  blurMiniPlayer: boolean;
   /** Song duration in lists (Spotify doesn't show it). */
   showSongDuration: boolean;
   /** Rating stars per song in lists. */
@@ -1181,6 +1183,7 @@ const DEFAULTS = {
   showPlaylistDescription: true,
   alwaysShowTabs: true,
   blurBars: true,
+  blurMiniPlayer: true,
   showSongDuration: false,
   showListRating: false,
   // On: it only ever draws where a file says so, which in most libraries is
@@ -1520,6 +1523,10 @@ export const useSettings = create<SettingsState>((set, get) => ({
           if (typeof DEFAULTS[key] === 'boolean' && typeof value === 'boolean') flags[key] = value;
         }
         set(flags as Partial<SettingsState>);
+        // One switch used to blur both bars.
+        if (typeof parsed.blurMiniPlayer !== 'boolean' && typeof parsed.blurBars === 'boolean') {
+          set({ blurMiniPlayer: parsed.blurBars });
+        }
         if (typeof parsed.maxBitRate === 'number') {
           set({ maxBitRate: parsed.maxBitRate });
         }

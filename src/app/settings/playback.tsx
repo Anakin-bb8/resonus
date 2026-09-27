@@ -108,7 +108,7 @@ export default function PlaybackSettings() {
             <SelectList
               label={t('Play downloaded songs from the phone')}
               description={t(
-                'A downloaded song normally plays from the file, which costs no data. Choose otherwise if your downloads are smaller copies and you would rather stream the good one when you can. Without a connection the file is always used.',
+                'Playing the file costs no data. Choose otherwise if your downloads are smaller copies. Offline, the file is always used.',
               )}
               options={[
                 { value: 'always', label: t('Always') },
@@ -124,7 +124,7 @@ export default function PlaybackSettings() {
               options={[
                 {
                   label: t('Preload upcoming tracks'),
-                  description: t('Request the next few tracks ahead of time so they start instantly. Helps with proxy servers and slow sources that fetch each track on demand.'),
+                  description: t('Fetch the next tracks ahead so they start instantly. Helps with slow servers and proxies.'),
                   value: preloadUpcoming,
                   onChange: setPreloadUpcoming,
                   disabled: offline,
@@ -132,7 +132,7 @@ export default function PlaybackSettings() {
                 {
                   label: t('Transcode lossless files only'),
                   description: t(
-                    'MP3, AAC, Opus and other lossy files are streamed as they are, so they are never encoded twice. Only files like FLAC follow the quality below.',
+                    'MP3, AAC, Opus and other lossy files stream as they are. Only files like FLAC are transcoded.',
                   ),
                   value: streamLosslessOnly,
                   onChange: setStreamLosslessOnly,
@@ -150,9 +150,6 @@ export default function PlaybackSettings() {
             <Text style={settingsStyles.groupTitle}>Wi-Fi</Text>
             <SelectList
               label={t('Streaming quality (Wi-Fi)')}
-              description={t(
-                '“Original” is the file exactly as it is on the server, with nothing transcoded. A lower bitrate saves data and may cost audible quality.',
-              )}
               options={bitrateOptions}
               value={maxBitRate}
               onChange={setMaxBitRate}
@@ -166,8 +163,8 @@ export default function PlaybackSettings() {
               label={t('Streaming codec (Wi-Fi)')}
               description={
                 maxBitRate > 0
-                  ? t('Codec to transcode to. Your server must support it.')
-                  : t('Codec to transcode to. At “Original” quality nothing is transcoded.')
+                  ? t('Your server must support it.')
+                  : t('At “Original” quality nothing is transcoded.')
               }
               options={codecOptions}
               value={streamFormat}
@@ -205,7 +202,6 @@ export default function PlaybackSettings() {
         <Text style={[settingsStyles.sectionTitle, local && { marginTop: 0 }]}>{t('Sound')}</Text>
         <SliderRow
           label={t('Crossfade')}
-          description={t('Songs blend into each other when one ends.')}
           value={crossfadeSec}
           max={12}
           formatValue={(v) => (v === 0 ? t('No') : `${v} s`)}
@@ -213,7 +209,7 @@ export default function PlaybackSettings() {
         />
         <SelectList
           label={t('Normalize volume')}
-          description={t("Evens out loudness between songs using your files' ReplayGain tags.")}
+          description={t("Uses your files' ReplayGain tags.")}
           options={[
             { value: 'off', label: t('Off') },
             { value: 'auto', label: t('Automatic') },
@@ -243,7 +239,6 @@ export default function PlaybackSettings() {
         )}
         <SettingRow
           label={t('Equalizer')}
-          description={t('Tune the sound band by band.')}
           chevron
           onPress={() => router.push('/settings/equalizer')}
         />
@@ -258,7 +253,7 @@ export default function PlaybackSettings() {
               : [
                   {
                     label: t('Autoplay'),
-                    description: t('Keep playing similar songs when your queue ends. A mix you start yourself always does, even with this off.'),
+                    description: t('Play similar songs when the queue ends. Mixes always do.'),
                     value: autoplaySimilar,
                     onChange: setAutoplaySimilar,
                     disabled: offline,
@@ -272,7 +267,7 @@ export default function PlaybackSettings() {
                   {
                     label: t('Pick up the queue from other players'),
                     description: t(
-                      'When you open the app with nothing playing, take the queue another player left on the server if it is newer than this one. The ⋯ of the queue screen asks for it at any time.',
+                      'On opening with nothing playing, take the newer queue another player left on the server.',
                     ),
                     value: syncQueueFromServer,
                     onChange: setSyncQueueFromServer,
@@ -281,13 +276,12 @@ export default function PlaybackSettings() {
                 ]),
             {
               label: t('Keep screen on'),
-              description: t('The screen never turns off while the app is visible.'),
               value: keepScreenAwake,
               onChange: setKeepScreenAwake,
             },
             {
               label: t('Warn about battery optimization'),
-              description: t('Check on startup whether Android is restricting the app, which is what usually stops playback in the background.'),
+              description: t('Check on startup whether Android is limiting the app in the background.'),
               value: batteryWarning,
               onChange: setBatteryWarning,
             },
@@ -301,7 +295,6 @@ export default function PlaybackSettings() {
             has nothing to do with reads as one of that heading's settings. */}
         <SettingRow
           label={t('Scrobbling')}
-          description={t('When a song counts as played.')}
           chevron
           onPress={() => router.push('/settings/scrobbling')}
         />

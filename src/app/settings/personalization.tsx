@@ -49,6 +49,8 @@ export default function AppearanceSettings() {
   const setShowPlayingElsewhere = useSettings((s) => s.setShowPlayingElsewhere);
   const blurBars = useSettings((s) => s.blurBars);
   const setBlurBars = useSettings((s) => s.setBlurBars);
+  const blurMiniPlayer = useSettings((s) => s.blurMiniPlayer);
+  const setBlurMiniPlayer = useSettings((s) => s.setBlurMiniPlayer);
   const defaultTab = useSettings((s) => s.defaultTab);
   const setDefaultTab = useSettings((s) => s.setDefaultTab);
   const keepScreenOnReturn = useSettings((s) => s.keepScreenOnReturn);
@@ -76,7 +78,6 @@ export default function AppearanceSettings() {
         />
         <SettingRow
           label={t('Theme')}
-          description={t('Dark or light, and the accent color')}
           chevron
           onPress={() => router.push('/settings/theme')}
         />
@@ -93,7 +94,6 @@ export default function AppearanceSettings() {
         <Text style={settingsStyles.sectionTitle}>{t('Song lists')}</Text>
         <SettingRow
           label={t('Song lists')}
-          description={t('Artwork, duration, rating and the rest of what a song shows in a list.')}
           chevron
           onPress={() => router.push('/settings/song-lists')}
         />
@@ -103,9 +103,6 @@ export default function AppearanceSettings() {
           options={[
             {
               label: t('Always show the navigation bar'),
-              description: t(
-                'Keep the tabs at the bottom of every screen. Holding the back arrow goes back to the one you came from either way.',
-              ),
               value: alwaysShowTabs,
               onChange: setAlwaysShowTabs,
             },
@@ -114,12 +111,14 @@ export default function AppearanceSettings() {
             ...(canBlurBars
               ? [
                   {
-                    label: t('Blur behind the bars'),
-                    description: t(
-                      'Lists carry on under the navigation bar and the mini player, blurred.',
-                    ),
+                    label: t('Navigation bar blur'),
                     value: blurBars,
                     onChange: setBlurBars,
+                  },
+                  {
+                    label: t('Mini player blur'),
+                    value: blurMiniPlayer,
+                    onChange: setBlurMiniPlayer,
                   },
                 ]
               : []),
@@ -127,13 +126,11 @@ export default function AppearanceSettings() {
         />
         <SettingRow
           label={t('Navigation bar')}
-          description={t('Which tabs are at the bottom, and in what order.')}
           chevron
           onPress={() => router.push('/settings/navigation-bar')}
         />
         <SettingRow
           label={t('Explore sections')}
-          description={t('In what order the sections of Explore are.')}
           chevron
           onPress={() => router.push('/settings/explore-sections')}
         />
@@ -153,35 +150,30 @@ export default function AppearanceSettings() {
         />
         <SettingRow
           label={t('Home buttons')}
-          description={t('Which icons are at the top of Home, and in what order.')}
           chevron
           onPress={() => router.push('/settings/home-buttons')}
         />
 
         <SettingRow
           label={t('Quick grid')}
-          description={t('Show, personalize and size the shortcut cards on Home.')}
           chevron
           onPress={() => router.push('/settings/quick-grid')}
         />
 
         <SettingRow
           label={t('Home chips')}
-          description={t('Show, hide and reorder the chips at the top of Home.')}
           chevron
           onPress={() => router.push('/settings/home-chips')}
         />
 
         <SettingRow
           label={t('Home sections')}
-          description={t('Show, hide and reorder the album rows on Home.')}
           chevron
           onPress={() => router.push('/settings/home-sections')}
         />
 
         <SettingRow
           label={t('Greeting')}
-          description={t('“Good morning”, “Good evening”… at the top of Home.')}
           chevron
           onPress={() => router.push('/settings/greeting')}
         />
@@ -189,7 +181,6 @@ export default function AppearanceSettings() {
         <Text style={settingsStyles.sectionTitle}>{t('Interface')}</Text>
         <SelectList<DefaultTab>
           label={t('Open the app on')}
-          description={t('Which tab opens on launch, and after a while in the background.')}
           options={[
             { value: 'index', label: t('Home') },
             { value: 'search', label: t('Search') },
@@ -240,7 +231,6 @@ export default function AppearanceSettings() {
         <Text style={settingsStyles.sectionTitle}>{t('Interaction')}</Text>
         <SelectList<SwipeAction>
           label={t('Swipe right')}
-          description={t('Action when you swipe a song to the right in lists.')}
           options={[
             { value: 'off', label: t('Off') },
             { value: 'queue', label: t('Add to queue') },
@@ -253,7 +243,6 @@ export default function AppearanceSettings() {
         />
         <SelectList<SwipeAction>
           label={t('Swipe left')}
-          description={t('Action when you swipe a song to the left in lists.')}
           options={[
             { value: 'off', label: t('Off') },
             { value: 'queue', label: t('Add to queue') },
@@ -268,7 +257,6 @@ export default function AppearanceSettings() {
           options={[
             {
               label: t('Haptic feedback'),
-              description: t('Subtle vibration on key actions.'),
               value: hapticsEnabled,
               onChange: (v: boolean) => {
                 setHapticsEnabled(v);

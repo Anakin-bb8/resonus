@@ -147,7 +147,6 @@ export default function ThemeSettings() {
           options={[
             {
               label: t('Pure black'),
-              description: t('A black background instead of dark grey whenever the app is dark. Made for OLED screens.'),
               value: pureBlack,
               onChange: setPureBlack,
             },
@@ -157,7 +156,6 @@ export default function ThemeSettings() {
         {/* Still pickable with pure black, for when it is turned off; dimmed
             so it is clear it is not what is on screen. */}
         <Text style={[styles.label, styles.secondLabel]}>{t('Background')}</Text>
-        <Text style={styles.hint}>{t('The shade of the greys, dark or light. Pure black keeps its own.')}</Text>
         <TintSwatches
           value={backgroundTint}
           onPick={setBackgroundTint}
@@ -199,5 +197,4 @@ const styles = themed((colors) => ({
   swatchActive: { borderWidth: 3, borderColor: colors.text },
   tintSwatch: { borderWidth: 1, borderColor: colors.textMuted },
   dimmed: { opacity: 0.4 },
-  hint: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: -spacing.sm, marginBottom: spacing.md },
 }));
