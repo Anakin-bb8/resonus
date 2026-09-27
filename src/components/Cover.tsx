@@ -6,14 +6,33 @@ import { AppState, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { CACHED_COVER, COVER } from '@/api/data';
 import { bump } from '@/lib/perfLog';
+import { useSettings, type CoverCorners } from '@/store/settings';
 import { colors, radius } from '@/theme';
+
+/**
+ * The corner of a cover of this size (Settings › Appearance › Cover corners).
+ *
+ * Rounded is one corner for every card-sized cover: letting it climb with the
+ * picture was tried and reverted, since at the top of the scale it eats into
+ * the artwork. Thumbnails (≤56 px) get the smaller one, which nests inside the
+ * mini player's own corner. More rounded is opted into, so there it climbs.
+ */
+export function coverRadius(corners: CoverCorners, size: number): number {
+  if (corners === 'square') return 0;
+  if (size <= 56) return corners === 'round' ? radius.md : radius.sm;
+  if (corners === 'rounded') return radius.md;
+  return size >= 240 ? radius.xl : radius.lg;
+}
+
+export function useCoverRadius(size: number): number {
+  return coverRadius(useSettings((s) => s.coverCorners), size);
+}
 
 interface Props {
   uri?: string;
   size: number;
+  /** A circle (artists). */
   rounded?: boolean;
-  /** A corner of its own instead of the usual one (the player's setting). */
-  corner?: number;
   /** Fade when loading/switching the image (ms). 0 for instant changes. */
   transition?: number;
   /** Placeholder icon when no image (e.g. radio). */
@@ -297,7 +316,6 @@ export function Cover({
   uri,
   size,
   rounded,
-  corner,
   transition = 200,
   placeholderIcon = 'musical-notes',
   contentFit = 'cover',
@@ -344,19 +362,8 @@ export function Cover({
   const shown = cacheOnly ? (cached && cached.uri === uri ? cached.path : undefined) : uri;
   const imageRef = useRef<Image>(null);
   const redraw = useRedrawOnReturn(imageRef, shown);
-  // One corner for every cover, whatever its size. Letting it climb with the
-  // picture was tried and reverted: at the top of the scale the corner eats
-  // into the artwork, and a sleeve is somebody else's rectangle to crop.
-  // Small covers (≤56 px) sit inside the mini-player container whose own
-  // radius is radius.md with spacing.sm padding; radius.sm (6) nests
-  // visually without looking square or eating into the art.
-  const borderRadius = corner !== undefined
-    ? corner
-    : rounded
-    ? radius.pill
-    : size <= 56
-      ? radius.sm
-      : radius.md;
+  const corner = useCoverRadius(size);
+  const borderRadius = rounded ? radius.pill : corner;
   if (!shown || failed) {
     return (
       <View

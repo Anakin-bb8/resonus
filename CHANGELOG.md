@@ -17,7 +17,7 @@ Releases before 0.2.1 are only listed on the
 - The names under the navigation bar icons can be hidden.
 - The mini player can show next, previous and next, or no button beside play instead of the heart, and its progress bar can be hidden.
 - Tapping the time at the right of the seek bar switches between the song's length and the time left.
-- The corners of the cover art in the player can be square, rounded or more rounded.
+- Settings > Appearance lets you make the corners of every cover in the app square, rounded or more rounded.
 - Podcasts: search for a show or paste its feed, and its episodes play from Explore, a Home chip and a Recent episodes row on Home, with no server needed (#239).
 - Gapless playback on iOS (#237).
 

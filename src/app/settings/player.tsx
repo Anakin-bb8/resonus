@@ -11,7 +11,6 @@ import { useTheme } from '@/theme';
 import {
   type CardBackground,
   type CoverDoubleTapAction,
-  type CoverCorners,
   type CoverTapAction,
   type LyricsAlign,
   type LyricsSize,
@@ -74,8 +73,6 @@ export default function PlayerSettings() {
   const setMiniPlayerProgress = useSettings((s) => s.setMiniPlayerProgress);
   const miniPlayerButtons = useSettings((s) => s.miniPlayerButtons);
   const setMiniPlayerButtons = useSettings((s) => s.setMiniPlayerButtons);
-  const coverCorners = useSettings((s) => s.coverCorners);
-  const setCoverCorners = useSettings((s) => s.setCoverCorners);
   const lyricsSize = useSettings((s) => s.lyricsSize);
   const setLyricsSize = useSettings((s) => s.setLyricsSize);
   const lyricsAlign = useSettings((s) => s.lyricsAlign);
@@ -162,16 +159,6 @@ export default function PlayerSettings() {
 
         <Text style={settingsStyles.sectionTitle}>{t('Cover art')}</Text>
         <SettingsGroup>
-          <SelectList<CoverCorners>
-            label={t('Corners')}
-            options={[
-              { value: 'square', label: t('Square') },
-              { value: 'rounded', label: t('Rounded') },
-              { value: 'round', label: t('More rounded') },
-            ]}
-            value={coverCorners}
-            onChange={setCoverCorners}
-          />
           <SwitchList
             options={[
               {

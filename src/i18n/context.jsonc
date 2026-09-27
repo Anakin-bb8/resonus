@@ -737,7 +737,7 @@
   // ── Personalization (Settings › Player, Song lists, Theme) ──────────────
   "Favorite": "One of the choices for the button next to play on the mini player: the heart. Not a verb",
   "None": "One of the choices for the buttons next to play on the mini player: no button at all",
-  "Corners": "The corners of the cover art in the player, whose choices are Square, Rounded and More rounded",
+  "Cover corners": "The corners of every cover art picture in the app, whose choices are Square, Rounded and More rounded",
   "Square": "Corners of the cover art: sharp, not rounded at all",
   "Rounded": "Corners of the cover art: slightly rounded, the usual look",
   "More rounded": "Corners of the cover art: rounder than the usual",

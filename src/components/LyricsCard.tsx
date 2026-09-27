@@ -25,6 +25,7 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { COVER, songCoverUrl } from '@/api/data';
+import { useCoverRadius } from '@/components/Cover';
 import { type LyricLine, type LyricWord } from '@/api/subsonic';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useLyrics } from '@/hooks/useLyrics';
@@ -91,6 +92,7 @@ export function LyricsCard() {
  */
 export function CoverLyrics({ size, onClose }: { size: number; onClose: () => void }) {
   const t = useT();
+  const corner = useCoverRadius(size);
   const song = usePlayerStore(currentSong);
   const { data } = useLyrics(song ?? undefined);
   const lineStyle = useLyricsLineStyle();
@@ -101,7 +103,7 @@ export function CoverLyrics({ size, onClose }: { size: number; onClose: () => vo
   return (
     // Transparent background: the lyrics go directly over the player background
     // (the cover is hidden while showing).
-    <View style={[styles.coverBox, { width: size, height: size }]}>
+    <View style={[styles.coverBox, { width: size, height: size, borderRadius: corner }]}>
       <View style={styles.coverBody}>
         {data.synced ? (
           <SyncedLyricsView lines={data.lines} nested />
@@ -497,7 +499,7 @@ const styles = themed((colors) => ({
   title: { color: colors.text, fontSize: fontSize.md, fontWeight: '500', marginBottom: spacing.sm },
   body: { height: CARD_BODY_H, overflow: 'hidden' },
   // Lyrics in place of the cover: box exactly the size of the cover.
-  coverBox: { borderRadius: radius.lg, overflow: 'hidden', padding: spacing.lg },
+  coverBox: { overflow: 'hidden', padding: spacing.lg },
   coverBody: { flex: 1, overflow: 'hidden' },
   wrap: { flex: 1 },
   // Right margin so the active line (which grows 8% from the left) doesn't get

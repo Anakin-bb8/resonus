@@ -856,6 +856,7 @@ you are actually typing into, which is easier than reading it here.
 | `At the top of Home, what is playing in your other apps and devices, ready to carry on here.` |  |
 | `Browse your library by folders (Subsonic servers).` |  |
 | `Coming back after a few minutes leaves the app on the screen you left, instead of on the tab above.` | The line under that switch. “The tab above” is the “Open the app on” setting sitting right above it |
+| `Cover corners` |  |
 | `Explore` | The tab holding everything the server has: all albums, artists, songs, genres, stations and folders |
 | `Explore sections` |  |
 | `Folder browsing` | Browsing the server's folders as folders, instead of by album and artist |
@@ -870,6 +871,7 @@ you are actually typing into, which is easier than reading it here.
 | `Interface` | Section header grouping toggles |
 | `Keep where you were` | A switch in Settings › Appearance, right under “Open the app on”: with it on, reopening the app after a while leaves it where it was instead of going back to that tab |
 | `Language` |  |
+| `More rounded` | One of the values of “Cover corners” |
 | `Navigation` | Section header: how you move around the app |
 | `Navigation bar` | Settings screen: which tabs are on the bar at the bottom, and in what order |
 | `Navigation bar blur` |  |
@@ -877,8 +879,10 @@ you are actually typing into, which is easier than reading it here.
 | `Open the app on` | Which tab the app opens on, and comes back to after a while away |
 | `Playing on other devices` |  |
 | `Quick grid` | The grid of shortcut tiles on Home |
+| `Rounded` | One of the values of “Cover corners” |
 | `Show tab names` |  |
 | `Song lists` | The setting for how song lists look |
+| `Square` | One of the values of “Cover corners” |
 | `Start on your playlists` | A switch: with it on, Your library with no chip pressed shows the Favorites entry and the playlists, the way it used to, instead of albums, artists and playlists mixed together |
 | `Swipe left` | What dragging a song to the left in a list does |
 | `Swipe right` | What dragging a song to the right in a list does. Its values are the actions listed under it |
@@ -946,7 +950,6 @@ you are actually typing into, which is easier than reading it here.
 | `Buttons next to play` |  |
 | `Centered` | One of the values of “Lyrics alignment” |
 | `Colored mini player` | Tint the mini player with the colour of the cover art |
-| `Corners` |  |
 | `Cover art` | Three places, one word: a section header in Settings › Player, a line of the storage bar in Settings › Downloads, and what the screen reader calls the picture in the song information sheet |
 | `Cover color` | The colour taken from the cover art |
 | `Disable online search` | A value of `Lyrics source`: only ever use the ones that came with the file |
@@ -964,7 +967,6 @@ you are actually typing into, which is easier than reading it here.
 | `Lyrics source` | Where lyrics are looked for. Its values are the three `Prefer…`/`Disable…` lines |
 | `Mini player` |  |
 | `Mini player blur` |  |
-| `More rounded` | One of the values of “Corners” |
 | `No` | A setting value meaning none or zero, not the answer to a question: no crossfade, no seek buttons |
 | `None` | One of the values of “Buttons next to play” |
 | `Normal` | One of the values of “Lyrics size” |
@@ -982,7 +984,6 @@ you are actually typing into, which is easier than reading it here.
 | `Previous button` | What the previous button does when a song is already playing. Its values are the two lines below it |
 | `Queue` | The list of songs waiting to play. Not a playlist |
 | `Restart, then previous track` | A value of `Previous button`: the first press goes back to the start of this song, the second to the one before |
-| `Rounded` | One of the values of “Corners” |
 | `Scroll long titles` | A title too long to fit slides sideways, over and over, instead of being cut off |
 | `Show album & year` |  |
 | `Show artist card` |  |
@@ -995,7 +996,6 @@ you are actually typing into, which is easier than reading it here.
 | `Show the whole artwork instead of cropping it to a square.` | The line under “Fit cover art”, explaining it |
 | `Skip buttons` | The seek forward / back buttons setting |
 | `Small` | One of the values of “Lyrics size” |
-| `Square` | One of the values of “Corners” |
 | `Swap favorite and menu` | Exchange the places of those two buttons in the player, for whichever hand you hold the phone in |
 | `Where to get lyrics from. Online search uses LRCLIB (sends the artist and title).` |  |
 

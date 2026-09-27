@@ -22,8 +22,8 @@ import { useSettings, type SwipeAction } from '@/store/settings';
 import { haptic } from '@/lib/haptics';
 import { useToast } from '@/store/toast';
 import { useT } from '@/i18n';
-import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
-import { Cover } from './Cover';
+import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
+import { Cover, useCoverRadius } from './Cover';
 import { usePressFeedback } from '@/hooks/usePressFeedback';
 import { PlayingBars } from './PlayingBars';
 import { ExplicitBadge, useExplicitBadge } from './ExplicitBadge';
@@ -284,9 +284,7 @@ function TrackRowBase({
           {/* Over the picture where there is no number to give up, behind a
               scrim so the bars read on artwork of any colour. */}
           {isCurrent && position === undefined ? (
-            <View style={styles.artworkPlaying}>
-              <PlayingBars />
-            </View>
+            <ArtworkPlaying />
           ) : null}
         </View>
       ) : null}
@@ -378,6 +376,16 @@ function propsEqual(a: Props, b: Props): boolean {
 
 export const TrackRow = memo(TrackRowBase, propsEqual);
 
+/** Its own component so only the playing row reads the cover corner. */
+function ArtworkPlaying() {
+  const corner = useCoverRadius(48);
+  return (
+    <View style={[styles.artworkPlaying, { borderRadius: corner }]}>
+      <PlayingBars />
+    </View>
+  );
+}
+
 const styles = themed((colors) => ({
   row: {
     flexDirection: 'row',
@@ -429,7 +437,6 @@ const styles = themed((colors) => ({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.scrim,
-    borderRadius: radius.sm,
   },
   info: {
     flex: 1,

@@ -20,6 +20,7 @@ import {
   APP_FONT_LABELS,
   LANGUAGE_NAMES,
   useSettings,
+  type CoverCorners,
   type DefaultTab,
   type SwipeAction,
 } from '@/store/settings';
@@ -67,6 +68,8 @@ export default function AppearanceSettings() {
   const hapticsEnabled = useSettings((s) => s.hapticsEnabled);
   const setHapticsEnabled = useSettings((s) => s.setHapticsEnabled);
   const appFont = useSettings((s) => s.appFont);
+  const coverCorners = useSettings((s) => s.coverCorners);
+  const setCoverCorners = useSettings((s) => s.setCoverCorners);
 
   return (
     <SettingsPage title={t('Appearance')}>
@@ -88,6 +91,16 @@ export default function AppearanceSettings() {
             description={APP_FONT_LABELS[appFont]}
             chevron
             onPress={() => router.push('/settings/font')}
+          />
+          <SelectList<CoverCorners>
+            label={t('Cover corners')}
+            options={[
+              { value: 'square', label: t('Square') },
+              { value: 'rounded', label: t('Rounded') },
+              { value: 'round', label: t('More rounded') },
+            ]}
+            value={coverCorners}
+            onChange={setCoverCorners}
           />
         </SettingsGroup>
 

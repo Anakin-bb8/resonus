@@ -14,7 +14,7 @@ import { COVER, songCoverUrl, type Song } from '@/api/data';
 import { useAuthStore } from '@/store/auth';
 import { useDownloads } from '@/store/downloads';
 import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
-import { Cover } from './Cover';
+import { Cover, useCoverRadius } from './Cover';
 import { ExplicitBadge, useExplicitBadge } from './ExplicitBadge';
 
 interface Props {
@@ -52,6 +52,7 @@ export const SongCard = memo(function SongCard({
     ? !song.url && !song.localUri && !downloaded
     : !!song.unavailable;
   const explicit = useExplicitBadge(song.explicitStatus);
+  const corner = useCoverRadius(width);
   return (
     <Pressable
       style={[styles.container, { width }]}
@@ -72,7 +73,9 @@ export const SongCard = memo(function SongCard({
         ) : null}
         {/* Dimmed rather than hidden: it is in the library, it just isn't on
             this device, same as the rows show it. */}
-        {unavailable ? <View style={[styles.veil, { width, height: width }]} /> : null}
+        {unavailable ? (
+          <View style={[styles.veil, { width, height: width, borderRadius: corner }]} />
+        ) : null}
       </View>
       <Text style={[styles.title, isCurrent && { color: accent }]} numberOfLines={1}>
         {song.title}
@@ -121,7 +124,6 @@ const styles = themed((colors) => ({
     position: 'absolute',
     top: 0,
     left: 0,
-    borderRadius: radius.md,
     backgroundColor: colors.veil,
   },
 }));

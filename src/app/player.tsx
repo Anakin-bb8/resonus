@@ -377,8 +377,6 @@ export default function PlayerScreen() {
   // background setting says: the gradient under it fades into that colour.
   const dominant = useDominantColor(colorBackground || isAnimatedCover ? cover : undefined);
   const lightMode = useThemeMode() === 'light';
-  const corners = useSettings((s) => s.coverCorners);
-  const coverCorner = corners === 'square' ? 0 : corners === 'round' ? radius.xl : radius.md;
   // Play, the played part of the bar and, on light, the controls: pale with a
   // deep icon on dark, deep with a pale icon on light. Neutral whatever
   // background shade is picked, so they never pick up its hue.
@@ -1147,7 +1145,6 @@ export default function PlayerScreen() {
                         <Cover
                           uri={paneCover}
                           size={coverSize}
-                          corner={coverCorner}
                           contentFit={fitCoverArt ? 'contain' : 'cover'}
                           transition={0}
                           autoplay={rel === 0}
