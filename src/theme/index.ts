@@ -20,7 +20,7 @@
  *    the language.
  */
 import { useSyncExternalStore } from 'react';
-import { Appearance } from 'react-native';
+import { Appearance, AppState } from 'react-native';
 import type { ImageStyle, TextStyle, ViewStyle } from 'react-native';
 
 /** Default accent (Spotify green). */
@@ -35,13 +35,13 @@ export function isThemeMode(value: unknown): value is ThemeMode {
 
 /**
  * What the setting holds, which is not the same question as which appearance is
- * on screen: `system` is a standing instruction to keep asking Android, and the
- * other two are answers.
+ * on screen: `system` is a standing instruction to keep asking Android,
+ * `schedule` one to keep looking at the clock, and the other two are answers.
  */
-export type ThemePreference = ThemeMode | 'system';
+export type ThemePreference = ThemeMode | 'system' | 'schedule';
 
 export function isThemePreference(value: unknown): value is ThemePreference {
-  return value === 'system' || isThemeMode(value);
+  return value === 'system' || value === 'schedule' || isThemeMode(value);
 }
 
 /**
@@ -640,19 +640,68 @@ function systemMode(): ThemeMode {
   return Appearance.getColorScheme() === 'light' ? 'light' : 'dark';
 }
 
+// The `schedule` preference: light from one hour, dark from another.
+let lightFrom = 7;
+let darkFrom = 21;
+let scheduleTimer: ReturnType<typeof setTimeout> | null = null;
+let scheduleWatch: { remove: () => void } | null = null;
+
+function scheduledMode(now: Date): ThemeMode {
+  if (lightFrom === darkFrom) return 'dark';
+  const h = now.getHours() + now.getMinutes() / 60;
+  const light = lightFrom < darkFrom ? h >= lightFrom && h < darkFrom : h >= lightFrom || h < darkFrom;
+  return light ? 'light' : 'dark';
+}
+
+/** Milliseconds from `now` to the next of the two hours. */
+function untilNextSwitch(now: Date): number {
+  let best = Infinity;
+  for (const hour of [lightFrom, darkFrom]) {
+    const at = new Date(now);
+    at.setHours(hour, 0, 0, 0);
+    if (at.getTime() <= now.getTime()) at.setDate(at.getDate() + 1);
+    best = Math.min(best, at.getTime() - now.getTime());
+  }
+  return best;
+}
+
+/** Puts the scheduled appearance on screen and waits for the next change. A
+ *  timer does not run while the app is in the background, so coming back to
+ *  the foreground checks the clock again as well. */
+function followSchedule(): void {
+  if (scheduleTimer) clearTimeout(scheduleTimer);
+  const now = new Date();
+  const next = scheduledMode(now);
+  if (next !== currentMode) applyThemeMode(next);
+  // A second late, so the timer never lands just before the hour.
+  scheduleTimer = setTimeout(followSchedule, untilNextSwitch(now) + 1000);
+}
+
+function stopWatching(): void {
+  systemWatch?.remove();
+  systemWatch = null;
+  scheduleWatch?.remove();
+  scheduleWatch = null;
+  if (scheduleTimer) clearTimeout(scheduleTimer);
+  scheduleTimer = null;
+}
+
+let currentPref: ThemePreference = 'dark';
+
 /**
- * Picks the appearance and, on `system`, keeps picking it: the listener is what
- * makes the app follow a device switching to night without being reopened.
+ * Picks the appearance and, on `system` or `schedule`, keeps picking it: the
+ * listener is what makes the app follow a device switching to night without
+ * being reopened, and the timer what makes it follow the clock.
  *
  * Android only tells anyone what it is set to when the app declares
  * `userInterfaceStyle: "automatic"` (app.json). Pinned to `dark`, the launcher
  * calls `setDefaultNightMode(MODE_NIGHT_YES)` and from then on the system
- * answers dark forever, so on a build older than that one this setting is a
- * third way of choosing dark.
+ * answers dark forever, so on a build older than that one `system` is a third
+ * way of choosing dark.
  */
 export function applyThemePreference(pref: ThemePreference): void {
-  systemWatch?.remove();
-  systemWatch = null;
+  currentPref = pref;
+  stopWatching();
   if (pref === 'system') {
     systemWatch = Appearance.addChangeListener(() => {
       // Only on a real change: every rebuild hands out new style objects, and
@@ -660,8 +709,22 @@ export function applyThemePreference(pref: ThemePreference): void {
       const next = systemMode();
       if (next !== currentMode) applyThemeMode(next);
     });
+    applyThemeMode(systemMode());
+  } else if (pref === 'schedule') {
+    scheduleWatch = AppState.addEventListener('change', (state) => {
+      if (state === 'active') followSchedule();
+    });
+    followSchedule();
+  } else {
+    applyThemeMode(pref);
   }
-  applyThemeMode(pref === 'system' ? systemMode() : pref);
+}
+
+/** The two hours of the `schedule` preference (0–23). */
+export function applyThemeSchedule(light: number, dark: number): void {
+  lightFrom = light;
+  darkFrom = dark;
+  if (currentPref === 'schedule') followSchedule();
 }
 
 // ---------------------------------------------------------------------------

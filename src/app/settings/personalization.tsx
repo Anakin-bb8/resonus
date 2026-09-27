@@ -45,6 +45,8 @@ export default function AppearanceSettings() {
   const language = useSettings((s) => s.language);
   const alwaysShowTabs = useSettings((s) => s.alwaysShowTabs);
   const setAlwaysShowTabs = useSettings((s) => s.setAlwaysShowTabs);
+  const showTabLabels = useSettings((s) => s.showTabLabels);
+  const setShowTabLabels = useSettings((s) => s.setShowTabLabels);
   const showPlayingElsewhere = useSettings((s) => s.showPlayingElsewhere);
   const setShowPlayingElsewhere = useSettings((s) => s.setShowPlayingElsewhere);
   const blurBars = useSettings((s) => s.blurBars);
@@ -103,6 +105,11 @@ export default function AppearanceSettings() {
               label: t('Always show the navigation bar'),
               value: alwaysShowTabs,
               onChange: setAlwaysShowTabs,
+            },
+            {
+              label: t('Show tab names'),
+              value: showTabLabels,
+              onChange: setShowTabLabels,
             },
           ]}
         />

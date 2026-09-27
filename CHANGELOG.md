@@ -12,13 +12,25 @@ Releases before 0.2.1 are only listed on the
 ### Added
 
 - Settings > Theme lets you make an accent color of your own, next to the palette, with a color picker and a hex code.
+- A scheduled theme in Settings > Theme, light from one hour and dark from another.
+- Settings > Player lets you choose the size and alignment of the lyrics.
+- The names under the navigation bar icons can be hidden.
+- The mini player can show next, previous and next, or no button beside play instead of the heart, and its progress bar can be hidden.
+- Tapping the time at the right of the seek bar switches between the song's length and the time left.
+- The corners of the cover art in the player can be square, rounded or more rounded.
 
 ### Changed
 
 - Settings drop the descriptions under options whose name already says what they do.
 - The light theme is no longer experimental.
+- The player buttons no longer take the hue of the background shade.
+- The dark theme is called just Dark, without (default).
 - The blur behind the navigation bar and the one behind the mini player are now two separate switches, the second in Settings > Player next to Colored mini player.
 - Settings > Appearance groups Explore sections and Folder browsing under Explore, and Quality & playback puts Keep screen on and the battery warning under System.
+
+### Removed
+
+- Resonus links, for now: sharing them from the ⋯ of an album, artist or playlist, and opening them.
 
 ### Fixed
 

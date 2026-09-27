@@ -15,6 +15,7 @@ import {
   applyPureBlack,
   BACKGROUND_TINTS,
   applyThemePreference,
+  applyThemeSchedule,
   DEFAULT_ACCENT,
   isThemePreference,
   type BackgroundTint,
@@ -325,6 +326,14 @@ export type CoverDoubleTapAction = CoverTapAction;
  * 'local' and 'online' send the artist and title to an external service (LRCLIB).
  */
 export type LyricsSource = 'local' | 'online' | 'off';
+
+/** Type size on the full-screen lyrics. */
+export type LyricsSize = 'small' | 'normal' | 'large';
+export type LyricsAlign = 'left' | 'center';
+/** What sits next to play on the mini player. */
+export type MiniPlayerButtons = 'favorite' | 'next' | 'previousNext' | 'none';
+/** The corners of the cover art in the player. */
+export type CoverCorners = 'square' | 'rounded' | 'round';
 
 /**
  * When a song that is downloaded plays from the file instead of the server.
@@ -781,6 +790,8 @@ type CustomSetter =
   | 'setGridColumns'
   | 'setAccentColor'
   | 'setThemeMode'
+  | 'setThemeLightFrom'
+  | 'setThemeDarkFrom'
   | 'setPureBlack'
   | 'setBackgroundTint';
 
@@ -927,6 +938,15 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
    * disabled. Defaults to 'local' (local first, LRCLIB as fallback).
    */
   lyricsSource: LyricsSource;
+  lyricsSize: LyricsSize;
+  lyricsAlign: LyricsAlign;
+  /** The names under the icons of the navigation bar. */
+  showTabLabels: boolean;
+  miniPlayerButtons: MiniPlayerButtons;
+  miniPlayerProgress: boolean;
+  /** The time right of the seek bar counts down what is left, not the length. */
+  showRemainingTime: boolean;
+  coverCorners: CoverCorners;
   /** When a downloaded song plays from disk instead of being streamed. */
   preferDownloads: PreferDownloads;
   /** Circular artist photo next to the name on the album screen. */
@@ -1100,6 +1120,9 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   customAccentColor: string;
   /** Dark (the app's own look), light, or whichever one the device is in. */
   themeMode: ThemePreference;
+  /** With `themeMode` 'schedule': the hour (0–23) light starts, and dark. */
+  themeLightFrom: number;
+  themeDarkFrom: number;
   /** True black instead of dark grey in the dark appearance (OLED). */
   pureBlack: boolean;
   /** The hue in the dark appearance's greys. */
@@ -1127,6 +1150,8 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   setGridColumns: (key: GridSizeKey, value: number) => void;
   setAccentColor: (value: string, appearance: ThemeMode) => void;
   setThemeMode: (value: ThemePreference) => void;
+  setThemeLightFrom: (hour: number) => void;
+  setThemeDarkFrom: (hour: number) => void;
   setPureBlack: (value: boolean) => void;
   setBackgroundTint: (value: BackgroundTint) => void;
   setCustomFont: (fontFamily: string | null, uri: string | null) => void;
@@ -1213,6 +1238,13 @@ const DEFAULTS = {
   lyricsBackground: 'cover' as ScreenBackground,
   lyricsCardBackground: 'color' as CardBackground,
   lyricsSource: 'local' as LyricsSource,
+  lyricsSize: 'normal' as LyricsSize,
+  lyricsAlign: 'left' as LyricsAlign,
+  showTabLabels: true,
+  miniPlayerButtons: 'favorite' as MiniPlayerButtons,
+  miniPlayerProgress: true,
+  showRemainingTime: false,
+  coverCorners: 'rounded' as CoverCorners,
   preferDownloads: 'always' as PreferDownloads,
   showArtistPhoto: true,
   showDiscHeaders: true,
@@ -1303,6 +1335,8 @@ const DEFAULTS = {
   customAccentColor: '',
   // Dark: the appearance the app was designed in. Light is opt-in.
   themeMode: 'dark' as ThemePreference,
+  themeLightFrom: 7,
+  themeDarkFrom: 21,
   pureBlack: false,
   backgroundTint: 'blue' as BackgroundTint,
   appFont: 'system' as AppFont,
@@ -1438,6 +1472,18 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setThemeLightFrom: (themeLightFrom) => {
+    set({ themeLightFrom });
+    applyThemeSchedule(themeLightFrom, get().themeDarkFrom);
+    persist(snapshot(get));
+  },
+
+  setThemeDarkFrom: (themeDarkFrom) => {
+    set({ themeDarkFrom });
+    applyThemeSchedule(get().themeLightFrom, themeDarkFrom);
+    persist(snapshot(get));
+  },
+
   setPureBlack: (pureBlack) => {
     applyPureBlack(pureBlack);
     set({ pureBlack });
@@ -1459,6 +1505,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
     // Language is preserved: resetting shouldn't change your language.
     set({ ...DEFAULTS, language: get().language });
     applyAccents(DEFAULT_ACCENT, DEFAULT_ACCENT);
+    applyThemeSchedule(DEFAULTS.themeLightFrom, DEFAULTS.themeDarkFrom);
     applyThemePreference(DEFAULTS.themeMode);
     applyPureBlack(DEFAULTS.pureBlack);
     applyBackgroundTint(DEFAULTS.backgroundTint);
@@ -1491,6 +1538,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
       // re-applies them if present); the font is reactive and doesn't need it.
       set({ ...DEFAULTS, language: get().language });
       applyAccents(DEFAULT_ACCENT, DEFAULT_ACCENT);
+      applyThemeSchedule(DEFAULTS.themeLightFrom, DEFAULTS.themeDarkFrom);
       applyThemePreference(DEFAULTS.themeMode);
       applyPureBlack(DEFAULTS.pureBlack);
     applyBackgroundTint(DEFAULTS.backgroundTint);
@@ -1623,6 +1671,20 @@ export const useSettings = create<SettingsState>((set, get) => ({
         } else if (typeof parsed.lyricsOnlineFallback === 'boolean') {
           // Migrate the old boolean: on = local first with online fallback, off = no online.
           set({ lyricsSource: parsed.lyricsOnlineFallback ? 'local' : 'off' });
+        }
+        const oneOf = <T extends string>(v: unknown, all: readonly T[]): v is T =>
+          all.includes(v as T);
+        if (oneOf(parsed.lyricsSize, ['small', 'normal', 'large'] as const)) {
+          set({ lyricsSize: parsed.lyricsSize });
+        }
+        if (oneOf(parsed.lyricsAlign, ['left', 'center'] as const)) {
+          set({ lyricsAlign: parsed.lyricsAlign });
+        }
+        if (oneOf(parsed.miniPlayerButtons, ['favorite', 'next', 'previousNext', 'none'] as const)) {
+          set({ miniPlayerButtons: parsed.miniPlayerButtons });
+        }
+        if (oneOf(parsed.coverCorners, ['square', 'rounded', 'round'] as const)) {
+          set({ coverCorners: parsed.coverCorners });
         }
         if (
           parsed.preferDownloads === 'always' ||
@@ -1808,6 +1870,13 @@ export const useSettings = create<SettingsState>((set, get) => ({
         if (isHexColor(parsed.customAccentColor)) {
           set({ customAccentColor: parsed.customAccentColor });
         }
+        {
+          const hour = (v: unknown) => (Number.isInteger(v) && (v as number) >= 0 && (v as number) <= 23 ? (v as number) : null);
+          const light = hour(parsed.themeLightFrom) ?? DEFAULTS.themeLightFrom;
+          const dark = hour(parsed.themeDarkFrom) ?? DEFAULTS.themeDarkFrom;
+          set({ themeLightFrom: light, themeDarkFrom: dark });
+          applyThemeSchedule(light, dark);
+        }
         if (isThemePreference(parsed.themeMode)) {
           set({ themeMode: parsed.themeMode });
           applyThemePreference(parsed.themeMode);
@@ -1860,6 +1929,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
       if (!applied && scope.accept(token, key)) {
         set({ ...DEFAULTS, language: get().language });
         applyAccents(DEFAULT_ACCENT, DEFAULT_ACCENT);
+        applyThemeSchedule(DEFAULTS.themeLightFrom, DEFAULTS.themeDarkFrom);
         applyThemePreference(DEFAULTS.themeMode);
       }
     } finally {

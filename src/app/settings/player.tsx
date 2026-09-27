@@ -11,7 +11,11 @@ import { useTheme } from '@/theme';
 import {
   type CardBackground,
   type CoverDoubleTapAction,
+  type CoverCorners,
   type CoverTapAction,
+  type LyricsAlign,
+  type LyricsSize,
+  type MiniPlayerButtons,
   type LyricsSource,
   type ScreenBackground,
   type PreviousButtonMode,
@@ -66,6 +70,16 @@ export default function PlayerSettings() {
   const setAnimatedCoverBackground = useSettings((s) => s.setAnimatedCoverBackground);
   const miniPlayerColorBackground = useSettings((s) => s.miniPlayerColorBackground);
   const blurMiniPlayer = useSettings((s) => s.blurMiniPlayer);
+  const miniPlayerProgress = useSettings((s) => s.miniPlayerProgress);
+  const setMiniPlayerProgress = useSettings((s) => s.setMiniPlayerProgress);
+  const miniPlayerButtons = useSettings((s) => s.miniPlayerButtons);
+  const setMiniPlayerButtons = useSettings((s) => s.setMiniPlayerButtons);
+  const coverCorners = useSettings((s) => s.coverCorners);
+  const setCoverCorners = useSettings((s) => s.setCoverCorners);
+  const lyricsSize = useSettings((s) => s.lyricsSize);
+  const setLyricsSize = useSettings((s) => s.setLyricsSize);
+  const lyricsAlign = useSettings((s) => s.lyricsAlign);
+  const setLyricsAlign = useSettings((s) => s.setLyricsAlign);
   const setBlurMiniPlayer = useSettings((s) => s.setBlurMiniPlayer);
   const setMiniPlayerColorBackground = useSettings((s) => s.setMiniPlayerColorBackground);
   const lyricsBackground = useSettings((s) => s.lyricsBackground);
@@ -125,10 +139,36 @@ export default function PlayerSettings() {
                   },
                 ]
               : []),
+            {
+              label: t('Show progress bar'),
+              value: miniPlayerProgress,
+              onChange: setMiniPlayerProgress,
+            },
           ]}
+        />
+        <SelectList<MiniPlayerButtons>
+          label={t('Buttons next to play')}
+          options={[
+            { value: 'favorite', label: t('Favorite') },
+            { value: 'next', label: t('Next') },
+            { value: 'previousNext', label: t('Previous and next') },
+            { value: 'none', label: t('None') },
+          ]}
+          value={miniPlayerButtons}
+          onChange={setMiniPlayerButtons}
         />
 
         <Text style={settingsStyles.sectionTitle}>{t('Cover art')}</Text>
+        <SelectList<CoverCorners>
+          label={t('Corners')}
+          options={[
+            { value: 'square', label: t('Square') },
+            { value: 'rounded', label: t('Rounded') },
+            { value: 'round', label: t('More rounded') },
+          ]}
+          value={coverCorners}
+          onChange={setCoverCorners}
+        />
         <SwitchList
           options={[
             {
@@ -270,6 +310,25 @@ export default function PlayerSettings() {
           ]}
           value={lyricsSource}
           onChange={setLyricsSource}
+        />
+        <SelectList<LyricsSize>
+          label={t('Lyrics size')}
+          options={[
+            { value: 'small', label: t('Small') },
+            { value: 'normal', label: t('Normal') },
+            { value: 'large', label: t('Large') },
+          ]}
+          value={lyricsSize}
+          onChange={setLyricsSize}
+        />
+        <SelectList<LyricsAlign>
+          label={t('Lyrics alignment')}
+          options={[
+            { value: 'left', label: t('Left') },
+            { value: 'center', label: t('Centered') },
+          ]}
+          value={lyricsAlign}
+          onChange={setLyricsAlign}
         />
         <SwitchList
           options={[

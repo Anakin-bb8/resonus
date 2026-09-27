@@ -31,7 +31,7 @@ import { useLyrics } from '@/hooks/useLyrics';
 import { useT } from '@/i18n';
 import { pushOnce } from '@/lib/pushOnce';
 import { currentSong, usePlayerStore } from '@/store/player';
-import { useSettings } from '@/store/settings';
+import { type LyricsSize, useSettings } from '@/store/settings';
 import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 import { motion } from '@/theme/motion';
 
@@ -49,6 +49,8 @@ export function LyricsCard() {
     tinted ? song ? songCoverUrl(song, COVER.card) : undefined : undefined,
   );
   const bg = tinted ? dominant : colors.surface;
+  const lineStyle = useLyricsLineStyle();
+  const centered = useSettings((s) => s.lyricsAlign) === 'center';
 
   if (!data) return null;
 
@@ -62,9 +64,9 @@ export function LyricsCard() {
           <ScrollView
             nestedScrollEnabled
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.content}
+            contentContainerStyle={[styles.content, centered && styles.contentCentered]}
           >
-            <Text style={lyricsStyles.line}>{data.lines.map((l) => l.value).join('\n')}</Text>
+            <Text style={lineStyle}>{data.lines.map((l) => l.value).join('\n')}</Text>
           </ScrollView>
         )}
       </View>
@@ -91,6 +93,8 @@ export function CoverLyrics({ size, onClose }: { size: number; onClose: () => vo
   const t = useT();
   const song = usePlayerStore(currentSong);
   const { data } = useLyrics(song ?? undefined);
+  const lineStyle = useLyricsLineStyle();
+  const centered = useSettings((s) => s.lyricsAlign) === 'center';
 
   if (!data) return null;
 
@@ -105,9 +109,9 @@ export function CoverLyrics({ size, onClose }: { size: number; onClose: () => vo
           <ScrollView
             nestedScrollEnabled
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.content}
+            contentContainerStyle={[styles.content, centered && styles.contentCentered]}
           >
-            <Text style={lyricsStyles.line}>{data.lines.map((l) => l.value).join('\n')}</Text>
+            <Text style={lineStyle}>{data.lines.map((l) => l.value).join('\n')}</Text>
           </ScrollView>
         )}
       </View>
@@ -184,6 +188,8 @@ export function SyncedLyricsView({
   // top/bottom) so that when the song starts, the lyrics begin centered and
   // readable, not stuck to the top edge. On the small card, higher up.
   const anchor = large ? 0.42 : 0.3;
+  const size = useSettings((s) => s.lyricsSize);
+  const centered = useSettings((s) => s.lyricsAlign) === 'center';
 
   const onMeasure = useCallback((index: number, y: number, h: number) => {
     offsets.current[index] = { y, h };
@@ -283,6 +289,7 @@ export function SyncedLyricsView({
         }}
         contentContainerStyle={[
           styles.content,
+          centered && styles.contentCentered,
           // Padding so the first/last line can rest at the anchor (center)
           // instead of being stuck at the top/bottom. Full screen only.
           large && viewH > 0 ? { paddingTop: viewH * anchor, paddingBottom: viewH * (1 - anchor) } : null,
@@ -299,6 +306,8 @@ export function SyncedLyricsView({
             past={current >= 0 && i < current}
             next={i === current + 1}
             large={large}
+            size={size}
+            centered={centered}
             onMeasure={onMeasure}
           />
         ))}
@@ -331,6 +340,8 @@ const LyricRow = memo(({
   past,
   next,
   large,
+  size,
+  centered,
   onMeasure,
 }: {
   index: number;
@@ -341,6 +352,8 @@ const LyricRow = memo(({
   past: boolean;
   next: boolean;
   large?: boolean;
+  size: LyricsSize;
+  centered: boolean;
   onMeasure: (index: number, y: number, h: number) => void;
 }) => {
   // Memoized, so the screen repainting is not enough to bring this one along.
@@ -375,7 +388,7 @@ const LyricRow = memo(({
     <View
       onLayout={(e) => onMeasure(index, e.nativeEvent.layout.y, e.nativeEvent.layout.height)}
     >
-      <Animated.Text style={[lyricsStyles.line, large && lyricsStyles.lineLarge, styles.leftOrigin, anim]}>
+      <Animated.Text style={[lyricsLineStyle(large, size, centered), centered ? styles.centerOrigin : styles.leftOrigin, anim]}>
         {active && words ? <SungWords words={words} /> : text}
       </Animated.Text>
     </View>
@@ -442,7 +455,33 @@ export const lyricsStyles = themed((colors) => ({
     paddingVertical: spacing.xs,
   },
   lineLarge: { fontSize: 28, lineHeight: 40, paddingVertical: spacing.sm },
+  lineLargeSmall: { fontSize: 22, lineHeight: 32, paddingVertical: spacing.sm },
+  lineLargeLarge: { fontSize: 34, lineHeight: 48, paddingVertical: spacing.sm },
+  centered: { textAlign: 'center' },
 }));
+
+/**
+ * The line style with the reader's settings on it: the size only on the full
+ * screen (`large`), the alignment everywhere lyrics are shown.
+ */
+export function useLyricsLineStyle(large?: boolean) {
+  const size = useSettings((s) => s.lyricsSize);
+  const centered = useSettings((s) => s.lyricsAlign) === 'center';
+  return lyricsLineStyle(large, size, centered);
+}
+
+function lyricsLineStyle(large: boolean | undefined, size: LyricsSize, centered: boolean) {
+  return [
+    lyricsStyles.line,
+    large &&
+      (size === 'small'
+        ? lyricsStyles.lineLargeSmall
+        : size === 'large'
+          ? lyricsStyles.lineLargeLarge
+          : lyricsStyles.lineLarge),
+    centered && lyricsStyles.centered,
+  ];
+}
 
 const CARD_BODY_H = 280;
 
@@ -465,6 +504,9 @@ const styles = themed((colors) => ({
   // clipped against the edge.
   content: { paddingBottom: spacing.xl, paddingRight: '10%' },
   leftOrigin: { transformOrigin: 'left center' },
+  centerOrigin: { transformOrigin: 'center center' },
+  // Centred, the 8% growth spills to both sides, so the margin is split.
+  contentCentered: { paddingRight: '5%', paddingLeft: '5%' },
   fade: { position: 'absolute', left: 0, right: 0 },
   expand: {
     position: 'absolute',

@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 719 of them.
+Every string the app can show, under the screen it shows up on. 733 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -73,6 +73,7 @@ you are actually typing into, which is easier than reading it here.
 | `Pin to top` | Keep this at the top of its list, above everything else. `Unpin` undoes it |
 | `Playback stopped` | The mini player when there is nothing playing any more |
 | `Plays` | How many times the song has been played |
+| `Previous` | Player control: the previous track (accessibility label) |
 | `Rate` | Verb: give it stars. Used for a song and for an artist. Not "bitrate" |
 | `Rating` | The stars given to the song. Not a bitrate, not a review |
 | `Recents` | Library section and its sort order: recently opened items |
@@ -88,7 +89,6 @@ you are actually typing into, which is easier than reading it here.
 | `Server didn't allow downloads` | Warning after sharing: the link was made and works, but the call that turns downloading on did not go through |
 | `Share` | Make a link on the server that others can open. Getting the file itself out is `Export` |
 | `Share “{name}”` | The sheet's title, with what is being shared |
-| `Share Resonus link` | A link that opens this album, artist or playlist in another person's Resonus, for someone with an account on the same server. Not the public web link that Share makes |
 | `Shuffle favorites` | Shortcut on the app's launcher icon (long press). Short: launchers cut long labels |
 | `Size` | The size of the quick grid tiles |
 | `Sleep timer` | Stop playing after a while, for falling asleep to |
@@ -124,8 +124,6 @@ you are actually typing into, which is easier than reading it here.
 | `Audio dramas` | Shelf heading: a play performed for the ear, with several voices rather than one narrator. Radio drama is the same thing where that name is the familiar one |
 | `Audiobooks` | Shelf heading: a book read aloud by one narrator, no music |
 | `Broadcasts` | Shelf heading: records of something first put out on radio, television or as a podcast |
-| `Check out {name} by {artist} on {server}` | The line sent above a Resonus link. {server} is the server's address, like music.example.com |
-| `Check out {name} on {server}` |  |
 | `Compilations` | Shelf heading: records collecting older recordings, a “best of” or a various-artists collection |
 | `Couldn't load the artist.` | Error on the screen, with a Retry button |
 | `Demos` | Shelf heading: rough recordings made to be passed around rather than released. Kept as-is in Spanish and Catalan, though a language with its own word for these should use it |
@@ -141,7 +139,6 @@ you are actually typing into, which is easier than reading it here.
 | `Popular` | The artist's popular / top tracks |
 | `Rate` | Verb: give it stars. Used for a song and for an artist. Not "bitrate" |
 | `Remixes` | Shelf heading: records that are mostly remixed material. `Remixes` is widely used as-is in several languages; keep it if that is true of yours |
-| `Share Resonus link` | A link that opens this album, artist or playlist in another person's Resonus, for someone with an account on the same server. Not the public web link that Share makes |
 | `Similar artists` | Related artists |
 | `Singles` | Shelf heading: records built around one song |
 | `Soundtracks` | Shelf heading: the music of a film, a series, a play or a game |
@@ -389,10 +386,11 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `Next` | Player control: the next track (accessibility label) |
 | `No lyrics available for this song.` | Empty state on the lyrics screen |
 | `Previous` | Player control: the previous track (accessibility label) |
 | `Show cover` | Lyrics screen: the button that goes back to the cover art |
+| `Show remaining time` |  |
+| `Show total time` |  |
 
 ## Offline
 
@@ -407,17 +405,6 @@ you are actually typing into, which is easier than reading it here.
 | `We need permission to read your device music.` | Android has not granted access to the phone's files yet |
 | `Where should we get your music?` | Heading when choosing where the phone's own music is read from |
 
-## Open
-
-| String | What it is |
-| --- | --- |
-| `Couldn't sign in; check the account` | Error when the server answered and refused the credentials |
-| `None of your profiles is on {server}. Add an account on that server to open it.` |  |
-| `Open link` |  |
-| `Switching profile stops what is playing.` |  |
-| `This link is for {server}. Open it with:` |  |
-| `This link isn't one Resonus can open.` |  |
-
 ## Player
 
 | String | What it is |
@@ -431,7 +418,6 @@ you are actually typing into, which is easier than reading it here.
 | `Forward {n} seconds` | Read out by the screen reader for the seek button. `{n}` is how many seconds it is set to |
 | `History` | The listening history: what was played and when |
 | `Mix of “{name}”` | What the player calls the queue once it has grown past its album into songs the app picked itself. `{name}` is the song it was grown from |
-| `Next` | Player control: the next track (accessibility label) |
 | `No devices found` |  |
 | `NOW PLAYING` | Small label above the cover, in the same place and style as `PLAYING FROM`, when there is nothing to name |
 | `Output` |  |
@@ -447,6 +433,8 @@ you are actually typing into, which is easier than reading it here.
 | `Searching for devices…` | In the output sheet: looking for speakers and TVs to cast to |
 | `Server speakers (Jukebox)` | Playing out of the speakers attached to the server itself, rather than the phone. Subsonic calls this jukebox mode |
 | `Show cover` | Lyrics screen: the button that goes back to the cover art |
+| `Show remaining time` |  |
+| `Show total time` |  |
 | `Sleep timer` | Stop playing after a while, for falling asleep to |
 | `This phone` | The on-device profile, with no server account |
 | `View queue` | Read out by the screen reader for the button that opens the queue |
@@ -465,8 +453,6 @@ you are actually typing into, which is easier than reading it here.
 | `Auto-download on` | The toast that says it was turned on |
 | `Based on the tracks in this playlist` | Subtitle under the suggested tracks heading |
 | `Change cover` | Replace the cover image of a playlist or station |
-| `Check out {name} by {artist} on {server}` | The line sent above a Resonus link. {server} is the server's address, like music.example.com |
-| `Check out {name} on {server}` |  |
 | `Confirm your password` | Changing a cover on the server needs the password again. It is not a new password being set |
 | `Couldn't load the playlist.` | Error on the screen, with a Retry button |
 | `Couldn't update the cover` | Toast: the upload failed |
@@ -488,7 +474,6 @@ you are actually typing into, which is easier than reading it here.
 | `Remove cover` | Screen reader label for the small x on a chosen picture |
 | `Removed from playlist` | Toast, with an undo button next to it |
 | `Share` | Make a link on the server that others can open. Getting the file itself out is `Export` |
-| `Share Resonus link` | A link that opens this album, artist or playlist in another person's Resonus, for someone with an account on the same server. Not the public web link that Share makes |
 | `Suggested tracks` | Section heading at the bottom of a playlist: songs the server recommends based on what is already in the playlist |
 | `This playlist is empty` | Empty state heading |
 | `Turn on` | The confirm button of that question |
@@ -849,6 +834,7 @@ you are actually typing into, which is easier than reading it here.
 | `Open the app on` | Which tab the app opens on, and comes back to after a while away |
 | `Playing on other devices` |  |
 | `Quick grid` | The grid of shortcut tiles on Home |
+| `Show tab names` |  |
 | `Song lists` | The setting for how song lists look |
 | `Start on your playlists` | A switch: with it on, Your library with no chip pressed shows the Favorites entry and the playlists, the way it used to, instead of albums, artists and playlists mixed together |
 | `Swipe left` | What dragging a song to the left in a list does |
@@ -914,20 +900,31 @@ you are actually typing into, which is easier than reading it here.
 | `Blurred cover` | A value of `Background`: the album art, blurred, behind the player |
 | `Bottom row` |  |
 | `Buttons` | Which player buttons to show |
+| `Buttons next to play` |  |
+| `Centered` | One of the values of “Lyrics alignment” |
 | `Colored mini player` | Tint the mini player with the colour of the cover art |
+| `Corners` |  |
 | `Cover art` | Three places, one word: a section header in Settings › Player, a line of the storage bar in Settings › Downloads, and what the screen reader calls the picture in the song information sheet |
 | `Cover color` | The colour taken from the cover art |
 | `Disable online search` | A value of `Lyrics source`: only ever use the ones that came with the file |
 | `Elements` | Which player elements to show |
+| `Favorite` | One of the values of “Buttons next to play” |
 | `Fit cover art` | Show the whole cover even if it is not square, instead of cropping it to fill |
 | `Go to album` | Leave this sheet and open the album the song is on |
 | `Keep paused when skipping` |  |
+| `Large` | One of the values of “Lyrics size” |
+| `Left` | One of the values of “Lyrics alignment” |
+| `Lyrics alignment` |  |
 | `Lyrics background` | What is drawn behind the lyrics screen, the full screen one |
 | `Lyrics card background` | What is drawn behind the small lyrics card that peeks under the player. Not the same thing as `Lyrics background` |
+| `Lyrics size` |  |
 | `Lyrics source` | Where lyrics are looked for. Its values are the three `Prefer…`/`Disable…` lines |
 | `Mini player` |  |
 | `Mini player blur` |  |
+| `More rounded` | One of the values of “Corners” |
 | `No` | A setting value meaning none or zero, not the answer to a question: no crossfade, no seek buttons |
+| `None` | One of the values of “Buttons next to play” |
+| `Normal` | One of the values of “Lyrics size” |
 | `Nothing` | A value of `On cover tap`: tapping the cover does nothing |
 | `On cover double tap` | Settings > Player: what tapping the album artwork twice does |
 | `On cover tap` | What tapping the cover art in the player does. One tap and two share the same values, listed below |
@@ -938,19 +935,24 @@ you are actually typing into, which is easier than reading it here.
 | `Player background` | What is drawn behind the player: the blurred artwork, or a flat tint |
 | `Prefer local lyrics` | A value of `Lyrics source`: use the ones that came with the file first |
 | `Prefer online search` | A value of `Lyrics source`: look them up on the internet first |
+| `Previous and next` | One of the values of “Buttons next to play” |
 | `Previous button` | What the previous button does when a song is already playing. Its values are the two lines below it |
 | `Queue` | The list of songs waiting to play. Not a playlist |
 | `Restart, then previous track` | A value of `Previous button`: the first press goes back to the start of this song, the second to the one before |
+| `Rounded` | One of the values of “Corners” |
 | `Scroll long titles` | A title too long to fit slides sideways, over and over, instead of being cut off |
 | `Show album & year` |  |
 | `Show artist card` |  |
 | `Show lyrics card` |  |
 | `Show lyrics on the cover` | A value of `On cover tap`: the lyrics take the cover's place, without leaving the player |
 | `Show previous tracks` | Whether the queue keeps the songs already played, dimmed, above the current one |
+| `Show progress bar` |  |
 | `Show quality label` |  |
 | `Show rating` |  |
 | `Show the whole artwork instead of cropping it to a square.` | The line under “Fit cover art”, explaining it |
 | `Skip buttons` | The seek forward / back buttons setting |
+| `Small` | One of the values of “Lyrics size” |
+| `Square` | One of the values of “Corners” |
 | `Swap favorite and menu` | Exchange the places of those two buttons in the player, for whichever hand you hold the phone in |
 | `Where to get lyrics from. Online search uses LRCLIB (sends the artist and title).` |  |
 
@@ -1013,13 +1015,16 @@ you are actually typing into, which is easier than reading it here.
 | `Background` | Section header over what is drawn behind the player. Its two values are `Plain` and `Blurred cover` |
 | `Create custom color` |  |
 | `Custom color` |  |
-| `Dark (default)` | The appearance the app has always had, and what it uses unless the other is chosen. The word in brackets is the same one as `Default` |
+| `Dark` | The appearance the app has always had, and what it uses unless the other is chosen. |
+| `Dark from` |  |
 | `Edit custom color` |  |
 | `Hex code` |  |
 | `Light` | The light appearance, in Settings › Theme |
+| `Light from` |  |
 | `Mode` | Heading over the two appearances on the Theme screen. Not a playback mode and not a profile: dark or light. It is called this and not "Appearance" because Appearance is the settings screen one level up |
 | `Palette` |  |
 | `Pure black` |  |
+| `Scheduled` |  |
 | `System` | Two places: a theme setting (use whichever appearance the phone itself is set to, light or dark), and `System::section`, the heading in Settings › Quality & playback over Keep screen on and the battery warning. Add `System::section` to your file if one word cannot do both |
 | `Theme` | The screen where the appearance and the accent colour are chosen, and the name of the row that opens it |
 
@@ -1097,6 +1102,7 @@ you are actually typing into, which is easier than reading it here.
 | `More` | A "see more" action, and the third button of the selection bar, the one that opens the rest of what it can do |
 | `More options` | Read out by the screen reader for the three-dot button, which is ⋮ on a song row and in the player and ⋯ in a screen's header |
 | `New playlist` | Row at the top of the playlist picker, and the button on an empty library: make one |
+| `Next` | Player control: the next track (accessibility label) |
 | `No results` | Nothing matched what was typed |
 | `No results for “{q}”` | Empty state. `{q}` is what was typed |
 | `Not available offline` | This one is not downloaded, so it cannot play without a connection |

@@ -346,8 +346,6 @@ export default function PlayerScreen() {
   // change: a flat color is animated and the gradient toward the background is
   // a fixed overlay (same look as animating the gradient, which can't be done).
   const background = useSettings((s) => s.playerBackground);
-  const backgroundTint = useSettings((s) => s.backgroundTint);
-  const pureBlack = useSettings((s) => s.pureBlack);
   const colorBackground = background === 'color';
   const animatedCoverBg = useSettings((s) => s.animatedCoverBackground);
   // An animated cover (GIF, animated WebP, APNG) can take the whole screen
@@ -379,12 +377,12 @@ export default function PlayerScreen() {
   // background setting says: the gradient under it fades into that colour.
   const dominant = useDominantColor(colorBackground || isAnimatedCover ? cover : undefined);
   const lightMode = useThemeMode() === 'light';
-  // Play, the played part of the bar and, on light, the controls take the hue
-  // of the background shade the user picked, rather than pure black or white:
-  // pale with a deep icon on dark, deep with a pale icon on light. Pure black
-  // is neutral, like its greys.
-  const tintBase =
-    BACKGROUND_TINTS[pureBlack && !lightMode ? 'neutral' : backgroundTint].dark.surfaceHighlight;
+  const corners = useSettings((s) => s.coverCorners);
+  const coverCorner = corners === 'square' ? 0 : corners === 'round' ? radius.xl : radius.md;
+  // Play, the played part of the bar and, on light, the controls: pale with a
+  // deep icon on dark, deep with a pale icon on light. Neutral whatever
+  // background shade is picked, so they never pick up its hue.
+  const tintBase = BACKGROUND_TINTS.neutral.dark.surfaceHighlight;
   const playFill = lightMode ? toneOf(tintBase, 0.22, 0.2) : toneOf(tintBase, 0.9, 0.3);
   const playInk = lightMode ? toneOf(tintBase, 0.97, 0.2) : toneOf(tintBase, 0.14, 0.3);
   const ink = lightMode ? toneOf(tintBase, 0.2, 0.2) : colors.text;
@@ -1140,6 +1138,7 @@ export default function PlayerScreen() {
                         <Cover
                           uri={paneCover}
                           size={coverSize}
+                          corner={coverCorner}
                           contentFit={fitCoverArt ? 'contain' : 'cover'}
                           transition={0}
                           autoplay={rel === 0}

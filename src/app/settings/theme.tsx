@@ -23,6 +23,12 @@ import {
   useThemeMode,
 } from '@/theme';
 
+/** The hours a scheduled theme can change at. */
+const HOURS = Array.from({ length: 24 }, (_, h) => ({
+  value: h,
+  label: `${String(h).padStart(2, '0')}:00`,
+}));
+
 /** In the order they are offered, the default first. */
 const TINTS: { key: BackgroundTint; name: string }[] = [
   { key: 'blue', name: 'Blue' },
@@ -161,6 +167,10 @@ export default function ThemeSettings() {
   const setAccentColor = useSettings((s) => s.setAccentColor);
   const themeMode = useSettings((s) => s.themeMode);
   const setThemeMode = useSettings((s) => s.setThemeMode);
+  const themeLightFrom = useSettings((s) => s.themeLightFrom);
+  const setThemeLightFrom = useSettings((s) => s.setThemeLightFrom);
+  const themeDarkFrom = useSettings((s) => s.themeDarkFrom);
+  const setThemeDarkFrom = useSettings((s) => s.setThemeDarkFrom);
   const pureBlack = useSettings((s) => s.pureBlack);
   const setPureBlack = useSettings((s) => s.setPureBlack);
   const backgroundTint = useSettings((s) => s.backgroundTint);
@@ -183,10 +193,28 @@ export default function ThemeSettings() {
           onChange={setThemeMode}
           options={[
             { value: 'system', label: t('System') },
-            { value: 'dark', label: t('Dark (default)') },
+            { value: 'dark', label: t('Dark') },
             { value: 'light', label: t('Light') },
+            { value: 'schedule', label: t('Scheduled') },
           ]}
         />
+        {themeMode === 'schedule' ? (
+          <>
+            <View style={styles.gap} />
+            <SelectList<number>
+              label={t('Light from')}
+              options={HOURS}
+              value={themeLightFrom}
+              onChange={setThemeLightFrom}
+            />
+            <SelectList<number>
+              label={t('Dark from')}
+              options={HOURS}
+              value={themeDarkFrom}
+              onChange={setThemeDarkFrom}
+            />
+          </>
+        ) : null}
         {/* A variant of dark rather than a fourth mode, so following the
             system still works with it. */}
         <View style={styles.gap} />
