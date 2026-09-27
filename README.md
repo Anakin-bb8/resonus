@@ -17,6 +17,7 @@
   <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/juananzzz/resonus"><img src="./assets/images/obtainium.svg" height="28" alt="Get via Obtainium" /></a>
   <a href="#ios-experimental"><img src="./assets/images/badges/ios.svg" height="28" alt="iOS (experimental)" /></a>
   <a href="https://altdirect.app/?url=https://raw.githubusercontent.com/juananzzz/resonus/main/Source.json"><img src="./assets/images/badges/altsource.svg" height="28" alt="Add as an AltSource" /></a>
+  <br />
   <a href="https://discord.gg/pecE8MTPVr"><img src="./assets/images/badges/discord.svg" height="28" alt="Discord" /></a>
   <a href="https://ko-fi.com/juananzzz"><img src="./assets/images/badges/kofi.svg" height="28" alt="Support on Ko-fi" /></a>
 </p>
