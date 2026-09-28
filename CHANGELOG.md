@@ -9,6 +9,10 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Added
+
+- Brazilian Portuguese, thanks to @vicsantus (#240).
+
 ### Fixed
 
 - Home no longer offers the song paused on this same phone as playing on Resonus.
