@@ -1938,6 +1938,10 @@ export const useSettings = create<SettingsState>((set, get) => ({
         applyThemePreference(DEFAULTS.themeMode);
       }
     } finally {
+      // A read overtaken by a newer one has nothing to hand over: saying
+      // hydrated here showed the factory values as the saved ones, and the
+      // battery warning asked again after «Don't remind me» (#238).
+      if (!scope.current(token)) return;
       // Read or failed, what's in memory is now what this profile gets.
       set({ hydrated: true });
       // Here rather than where the value is read, so it is also settled for a

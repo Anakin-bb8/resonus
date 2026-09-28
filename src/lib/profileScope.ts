@@ -34,6 +34,10 @@ export function profileScopeGuard() {
       loadedKey = key;
       return true;
     },
+    /** Has no newer read started since this one? */
+    current(startToken: number): boolean {
+      return startToken === token;
+    },
     /** Did the state in memory come from `key` (so it can be written back)? */
     owns(key: string): boolean {
       return loadedKey === key;

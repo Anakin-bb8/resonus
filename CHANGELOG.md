@@ -16,6 +16,7 @@ Releases before 0.2.1 are only listed on the
 ### Fixed
 
 - Home no longer offers the song paused on this same phone as playing on Resonus.
+- "Don't remind me" on the battery optimization warning now keeps it from coming back on the next launch (#238).
 
 ## [0.7.11] - 2026-09-27
 
