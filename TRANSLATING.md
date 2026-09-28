@@ -223,3 +223,4 @@ missing, so it is much better said early than translated around.
 | Українська | [albedych](https://github.com/albedych) |
 | Polski | [pegaz19803-spec](https://github.com/pegaz19803-spec) |
 | Svenska | [Jonatan Nyberg](https://github.com/NickWick13) |
+| Português (Brasil) | [Victor Santos](https://github.com/vicsantus) |
