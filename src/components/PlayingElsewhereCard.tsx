@@ -27,6 +27,7 @@ import Icon from '@/components/Icon';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
+import { ownReports } from '@/lib/ownReports';
 import { queryClient } from '@/lib/query';
 import { useAuthStore } from '@/store/auth';
 import { usePlayerStore } from '@/store/player';
@@ -146,7 +147,11 @@ export function PlayingElsewhereCard() {
   );
   const { data, dataUpdatedAt, isError } = useQuery({
     queryKey: ['nowPlaying'],
-    queryFn: () => getNowPlaying(auth!),
+    queryFn: async () => {
+      const [entries, own] = await Promise.all([getNowPlaying(auth!), ownReports()]);
+      // This phone's entry about a song it is no longer on (see `ownReports`).
+      return entries.filter((e) => e.playerName !== CLIENT_NAME || !own.has(e.song.id));
+    },
     enabled: !!auth && !offline && auth.serverType !== 'jellyfin',
     staleTime: POLL_MS,
     // The card is what shows this, so none of the retries a list gets.

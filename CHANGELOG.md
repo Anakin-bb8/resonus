@@ -9,6 +9,10 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Fixed
+
+- Home no longer offers the song paused on this same phone as playing on Resonus.
+
 ## [0.7.11] - 2026-09-27
 
 ### Added

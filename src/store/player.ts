@@ -56,6 +56,7 @@ import { transcodeTarget } from '@/lib/audioQuality';
 import { favoriteLabel, favoriteState, onFavoritesChange, toggleFavorite } from '@/lib/remoteFavorite';
 import type { Remap } from '@/lib/navidromeRemap';
 import { remapSong } from '@/lib/navidromeRemap';
+import { noteOwnReport } from '@/lib/ownReports';
 import { beat, bump, timed } from '@/lib/perfLog';
 import { queryClient } from '@/lib/query';
 import { primaryUrl } from '@/lib/serverUrls';
@@ -1117,6 +1118,7 @@ function reportState(state: PlaybackState, song: Song | undefined, positionSec: 
     // The account may have gone, or gone offline, while it was being asked.
     const now = useAuthStore.getState();
     if (now.auth !== auth || now.offline) return;
+    noteOwnReport(song.id);
     if (!supported) {
       // The classic API only knows how to say "this started", so the rest is
       // nothing it could carry.
