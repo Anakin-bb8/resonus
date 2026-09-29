@@ -1,5 +1,5 @@
 diff --git a/android/src/main/AndroidManifest.xml b/android/src/main/AndroidManifest.xml
-index 36a19f2..3509de4 100644
+index 36a19f2d9c4a979a940ab681a1fb844ce45f7c75..3509de4747f3ebdda1a014f05fb02f0710563498 100644
 --- a/android/src/main/AndroidManifest.xml
 +++ b/android/src/main/AndroidManifest.xml
 @@ -1,3 +1,8 @@
@@ -12,7 +12,7 @@ index 36a19f2..3509de4 100644
 +  <uses-permission android:name="android.permission.WAKE_LOCK" />
  </manifest>
 diff --git a/android/src/main/java/expo/modules/audio/AudioModule.kt b/android/src/main/java/expo/modules/audio/AudioModule.kt
-index 992239b..7ecb7e0 100644
+index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..6b3e075e7610ab3496cbeb1abf6322bbcbe3e74b 100644
 --- a/android/src/main/java/expo/modules/audio/AudioModule.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioModule.kt
 @@ -18,6 +18,7 @@ import androidx.media3.common.C.CONTENT_TYPE_HLS
@@ -266,7 +266,7 @@ index 992239b..7ecb7e0 100644
    }
  
    private fun retrieveStreamType(uri: Uri): Int = Util.inferContentType(uri)
-@@ -931,11 +1056,37 @@ class AudioModule : Module() {
+@@ -931,11 +1056,40 @@ class AudioModule : Module() {
        CONTENT_TYPE_SS -> SsMediaSource.Factory(factory)
        CONTENT_TYPE_DASH -> DashMediaSource.Factory(factory)
        CONTENT_TYPE_HLS -> HlsMediaSource.Factory(factory)
@@ -298,15 +298,18 @@ index 992239b..7ecb7e0 100644
 +   * transcode arriving over HTTP has no length and takes no range requests
 +   * either, so guessing a byte offset in it would get us nothing to play. That
 +   * one is re-requested from the server at the second we want instead.
++   *
++   * A fragmented M4A without an index is the other file media3 will not seek,
++   * and `FragmentSeekingExtractorsFactory` covers that one (#242).
 +   */
 +  private fun seekableExtractors(): ExtractorsFactory =
-+    DefaultExtractorsFactory().setConstantBitrateSeekingEnabled(true)
++    FragmentSeekingExtractorsFactory(DefaultExtractorsFactory().setConstantBitrateSeekingEnabled(true))
 +
    private fun <T> runOnMain(block: () -> T): T =
      runBlocking(appContext.mainQueue.coroutineContext) { block() }
  
 diff --git a/android/src/main/java/expo/modules/audio/AudioPlayer.kt b/android/src/main/java/expo/modules/audio/AudioPlayer.kt
-index c76a9fd..7c9025a 100644
+index c76a9fd2a53743a691782e0f67d0d71401df58f6..7c9025af6a1645f79f9964b67e040764d8eceb71 100644
 --- a/android/src/main/java/expo/modules/audio/AudioPlayer.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioPlayer.kt
 @@ -8,15 +8,19 @@ import android.util.Log
@@ -541,7 +544,7 @@ index c76a9fd..7c9025a 100644
  
    private fun sendAudioSampleUpdate(sample: List<Float>) {
 diff --git a/android/src/main/java/expo/modules/audio/AudioRecords.kt b/android/src/main/java/expo/modules/audio/AudioRecords.kt
-index 86880d9..3404435 100644
+index 86880d92fd5b6413e8596e1b2b8ae28f2981addd..34044354b228072c1020dfbde62fee049d1521fe 100644
 --- a/android/src/main/java/expo/modules/audio/AudioRecords.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioRecords.kt
 @@ -12,7 +12,27 @@ import expo.modules.kotlin.types.OptimizedRecord
@@ -602,7 +605,7 @@ index 86880d9..3404435 100644
  
  enum class InterruptionMode(val value: String) : Enumerable {
 diff --git a/android/src/main/java/expo/modules/audio/AudioUtils.kt b/android/src/main/java/expo/modules/audio/AudioUtils.kt
-index dca91c3..089dcee 100644
+index dca91c32a2787a7bc3ecba26f0f3f2ad9cc40d3d..089dcee0b9fe6a369f0809ecdf99a1fa42ea9ef3 100644
 --- a/android/src/main/java/expo/modules/audio/AudioUtils.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioUtils.kt
 @@ -3,6 +3,8 @@ package expo.modules.audio
@@ -742,7 +745,7 @@ index dca91c3..089dcee 100644
      .build()
  }
 diff --git a/android/src/main/java/expo/modules/audio/BaseAudioPlayer.kt b/android/src/main/java/expo/modules/audio/BaseAudioPlayer.kt
-index 149e907..422d2d1 100644
+index 149e9075c8630b14a69318aa6c37d9ff82b23f05..422d2d18677223f48b0106e44f573659b90160dd 100644
 --- a/android/src/main/java/expo/modules/audio/BaseAudioPlayer.kt
 +++ b/android/src/main/java/expo/modules/audio/BaseAudioPlayer.kt
 @@ -78,7 +78,6 @@ abstract class BaseAudioPlayer(
@@ -776,8 +779,395 @@ index 149e907..422d2d1 100644
          sendStatusUpdate(mapOf("playing" to isPlaying))
        }
  
+diff --git a/android/src/main/java/expo/modules/audio/FragmentSeekingExtractor.kt b/android/src/main/java/expo/modules/audio/FragmentSeekingExtractor.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..c2c840b99e8dadf7f4c2c19c9ecad321ffc2cded
+--- /dev/null
++++ b/android/src/main/java/expo/modules/audio/FragmentSeekingExtractor.kt
+@@ -0,0 +1,381 @@
++package expo.modules.audio
++
++import android.net.Uri
++import androidx.media3.common.C
++import androidx.media3.common.DataReader
++import androidx.media3.common.Format
++import androidx.media3.common.util.ParsableByteArray
++import androidx.media3.extractor.Extractor
++import androidx.media3.extractor.ExtractorInput
++import androidx.media3.extractor.ExtractorOutput
++import androidx.media3.extractor.ExtractorsFactory
++import androidx.media3.extractor.PositionHolder
++import androidx.media3.extractor.SeekMap
++import androidx.media3.extractor.SeekPoint
++import androidx.media3.extractor.SniffFailure
++import androidx.media3.extractor.TrackOutput
++import androidx.media3.extractor.mp4.FragmentedMp4Extractor
++import androidx.media3.extractor.text.SubtitleParser
++
++/**
++ * Seeking in a fragmented MP4 that carries no index (#242).
++ *
++ * A fragmented M4A is a run of small `moof` + `mdat` pairs, and the only index
++ * media3 seeks one with is a `sidx` box up front. Plenty of files have none
++ * (anything saved straight from a DASH stream, which is what most rippers do),
++ * and media3 treats every seek into those as a seek to zero: drag the slider
++ * and the song starts over.
++ *
++ * Every fragment opens with the time it starts at (`tfdt`), though, so the
++ * file can be searched. When the fragmented extractor gives up, this reads the
++ * last fragment once to learn how long the song is, hands ExoPlayer a map from
++ * the first fragment to the last, and on each seek homes in on the fragment
++ * holding the second asked for, a few reads at most, before letting the real
++ * extractor carry on from there.
++ */
++internal class FragmentSeekingExtractorsFactory(
++  private val base: ExtractorsFactory
++) : ExtractorsFactory {
++  override fun createExtractors(): Array<Extractor> = wrap(base.createExtractors())
++
++  override fun createExtractors(uri: Uri, responseHeaders: Map<String, List<String>>): Array<Extractor> =
++    wrap(base.createExtractors(uri, responseHeaders))
++
++  override fun setSubtitleParserFactory(factory: SubtitleParser.Factory): ExtractorsFactory {
++    base.setSubtitleParserFactory(factory)
++    return this
++  }
++
++  @Deprecated("Deprecated in media3")
++  override fun experimentalSetTextTrackTranscodingEnabled(enabled: Boolean): ExtractorsFactory {
++    @Suppress("DEPRECATION")
++    base.experimentalSetTextTrackTranscodingEnabled(enabled)
++    return this
++  }
++
++  override fun experimentalSetCodecsToParseWithinGopSampleDependencies(codecs: Int): ExtractorsFactory {
++    base.experimentalSetCodecsToParseWithinGopSampleDependencies(codecs)
++    return this
++  }
++
++  private fun wrap(extractors: Array<Extractor>): Array<Extractor> =
++    Array(extractors.size) { i ->
++      val e = extractors[i]
++      if (e is FragmentedMp4Extractor) FragmentSeekingExtractor(e) else e
++    }
++}
++
++internal class FragmentSeekingExtractor(private val inner: Extractor) : Extractor {
++  private var input: ExtractorInput? = null
++  private lateinit var output: ExtractorOutput
++
++  /** Of the audio track, from its `mdhd`; 0 when it could not be read. */
++  private var timescale = 0L
++  private var declaredDurationUs = C.TIME_UNSET
++  private var firstFragment = C.INDEX_UNSET.toLong()
++
++  /** Where the extractor was when the last fragment was read, to go back to. */
++  private var resumeAt = C.INDEX_UNSET.toLong()
++  private var readingTail = false
++
++  /** Fragments whose start is known, by position. Our map is live when set. */
++  private var known: MutableList<Fragment>? = null
++
++  private var seekTargetUs = C.TIME_UNSET
++  private var seekHops = 0
++
++  /** No fragment starting before `timeUs` lies at or past `position`: where
++   *  the last scan began that only found one starting too late. */
++  private var ceiling: Fragment? = null
++
++  override fun sniff(input: ExtractorInput): Boolean = inner.sniff(input)
++
++  override fun getSniffFailureDetails(): List<SniffFailure> = inner.sniffFailureDetails
++
++  override fun init(output: ExtractorOutput) {
++    this.output = output
++    inner.init(Output(output))
++  }
++
++  override fun read(input: ExtractorInput, seekPosition: PositionHolder): Int {
++    this.input = input
++    if (timescale == 0L && input.position == 0L) timescale = readTimescale(input)
++    if (resumeAt != C.INDEX_UNSET.toLong()) return readTail(input, seekPosition)
++    if (seekTargetUs != C.TIME_UNSET) {
++      val result = homeIn(input, seekPosition)
++      if (result != null) return result
++    }
++    return inner.read(input, seekPosition)
++  }
++
++  override fun seek(position: Long, timeUs: Long) {
++    inner.seek(position, timeUs)
++    // Zero is the start of the file, not the middle of a fragment: the
++    // extractor reads the header again and needs no help.
++    seekTargetUs = if (known != null && position > 0) timeUs else C.TIME_UNSET
++    seekHops = 0
++    ceiling = null
++  }
++
++  override fun release() = inner.release()
++
++  /**
++   * Out to the last fragment and back. Its start, and the one before it, say
++   * how long the song is; the extractor never sees the trip, since it picks up
++   * again at the very byte it left.
++   */
++  private fun readTail(input: ExtractorInput, seekPosition: PositionHolder): Int {
++    val length = input.length
++    if (!readingTail) {
++      readingTail = true
++      seekPosition.position = maxOf(resumeAt, length - TAIL_BYTES)
++      return Extractor.RESULT_SEEK
++    }
++    val bytes = peekUpTo(input, (length - input.position).coerceAtMost(TAIL_BYTES.toLong()).toInt())
++    val fragments = mutableListOf<Fragment>()
++    var k = 0
++    while (k <= bytes.size - BOX_HEAD) {
++      if (isFragmentAt(bytes, k)) {
++        val t = fragmentTimeUs(bytes, k)
++        if (t != C.TIME_UNSET) fragments.add(Fragment(input.position + k, t))
++      }
++      k++
++    }
++    val last = fragments.lastOrNull()
++    if (last == null || last.timeUs <= 0) {
++      output.seekMap(SeekMap.Unseekable(declaredDurationUs))
++    } else {
++      // The last fragment lasts about as long as the one before it did.
++      val span = if (fragments.size > 1) last.timeUs - fragments[fragments.size - 2].timeUs else 0L
++      val guessUs = last.timeUs + span
++      val declared = declaredDurationUs
++      val durationUs = if (declared != C.TIME_UNSET && declared >= last.timeUs && declared <= guessUs + span) declared else guessUs
++      known = (listOf(Fragment(firstFragment, 0)) + fragments).toMutableList()
++      output.seekMap(FragmentSeekMap(durationUs, firstFragment, last))
++    }
++    seekPosition.position = resumeAt
++    resumeAt = C.INDEX_UNSET.toLong()
++    return Extractor.RESULT_SEEK
++  }
++
++  /**
++   * One step towards the fragment that holds the second asked for: finds the
++   * next fragment from here and either settles on it or jumps again, in
++   * proportion between the closest fragments known on either side. Null once
++   * settled with the input at a fragment the extractor can read.
++   */
++  private fun homeIn(input: ExtractorInput, seekPosition: PositionHolder): Int? {
++    val known = known ?: return null
++    val target = seekTargetUs
++    val scanFrom = input.position
++    val nearby = nextFragments(input)
++    val found = nearby.firstOrNull()
++    for (f in nearby) if (known.none { it.position == f.position }) known.add(f)
++    known.sortBy { it.position }
++    val before = known.lastOrNull { it.timeUs <= target }
++    val after = known.firstOrNull { it.timeUs > target }
++    val settle = when {
++      // Past the last fragment: the last one that starts in time.
++      found == null -> before
++      // The read may have gone past the second asked for: the last fragment of
++      // it that starts in time, if it is close enough.
++      before != null && before.position >= found.position && target - before.timeUs <= CLOSE_ENOUGH_US -> before
++      // Nothing lies between `before` and one that starts too late, so the
++      // second asked for is inside `before`: straight from it to the next, or
++      // both side by side in this read.
++      before != null && after != null &&
++        ((found == after && scanFrom <= before.position + 1) ||
++          (before in nearby && nearby.getOrNull(nearby.indexOf(before) + 1) == after)) -> before
++      seekHops >= MAX_HOPS -> before ?: found
++      else -> null
++    }
++    if (settle != null || found == null) {
++      seekTargetUs = C.TIME_UNSET
++      if (settle == null) return Extractor.RESULT_END_OF_INPUT
++      if (settle.position == input.position) return null
++      seekPosition.position = settle.position
++      return Extractor.RESULT_SEEK
++    }
++    seekHops++
++    if (found.timeUs > target && scanFrom < (ceiling?.position ?: Long.MAX_VALUE)) {
++      ceiling = Fragment(scanFrom, found.timeUs)
++    }
++    val lo = before ?: known.first()
++    val hi = listOfNotNull(after, ceiling).minByOrNull { it.position } ?: known.last()
++    val aimUs = (target - LEAD_US).coerceAtLeast(lo.timeUs)
++    // Bytes are only roughly in proportion to time (a quiet intro takes next to
++    // nothing), so every other jump halves the gap instead: that bounds the
++    // search however wrong the proportion is.
++    val share = when {
++      // A gap one read covers is read whole, from its start.
++      hi.position - lo.position <= SCAN_BYTES -> 0.0
++      seekHops % 2 == 0 -> 0.5
++      hi.timeUs > lo.timeUs -> (aimUs - lo.timeUs).toDouble() / (hi.timeUs - lo.timeUs)
++      else -> 0.0
++    }
++    val next = lo.position + ((hi.position - lo.position) * share).toLong()
++    // Always past `lo`, so the scan finds the fragment after it at worst.
++    seekPosition.position = next.coerceIn(lo.position + 1, maxOf(lo.position + 1, hi.position - 1))
++    return Extractor.RESULT_SEEK
++  }
++
++  /**
++   * The fragments from the input's position on, as many as sit in one read,
++   * the nearest first; empty when there are none. Skips what comes before the
++   * first, so the input may be left further on than it was.
++   */
++  private fun nextFragments(input: ExtractorInput): List<Fragment> {
++    var scanned = 0L
++    while (scanned < MAX_SCAN_BYTES) {
++      input.resetPeekPosition()
++      val bytes = peekUpTo(input, SCAN_BYTES)
++      input.resetPeekPosition()
++      if (bytes.size < BOX_HEAD) return emptyList()
++      val found = mutableListOf<Fragment>()
++      for (k in 0..bytes.size - BOX_HEAD) {
++        if (!isFragmentAt(bytes, k)) continue
++        val t = if (k + int(bytes, k) <= bytes.size) {
++          fragmentTimeUs(bytes, k)
++        } else if (found.isEmpty()) {
++          // The nearest one's `tfdt` may sit past this read: look at all of it.
++          input.advancePeekPosition(k)
++          val moof = peekUpTo(input, int(bytes, k).coerceAtMost(MAX_MOOF_BYTES))
++          input.resetPeekPosition()
++          fragmentTimeUs(moof, 0)
++        } else {
++          C.TIME_UNSET
++        }
++        if (t != C.TIME_UNSET) found.add(Fragment(input.position + k, t))
++        else if (found.isEmpty()) return emptyList()
++      }
++      if (found.isNotEmpty()) return found
++      val step = bytes.size - BOX_HEAD + 1
++      input.skipFully(step)
++      scanned += step
++    }
++    return emptyList()
++  }
++
++  /** Reads what is there, up to `max` bytes, from the peek position on. */
++  private fun peekUpTo(input: ExtractorInput, max: Int): ByteArray {
++    val buf = ByteArray(max)
++    var n = 0
++    while (n < max) {
++      val read = input.peek(buf, n, max - n)
++      if (read == C.RESULT_END_OF_INPUT) break
++      n += read
++    }
++    return if (n == max) buf else buf.copyOf(n)
++  }
++
++  /** The track's timescale from the `mdhd` in the header, or 0. */
++  private fun readTimescale(input: ExtractorInput): Long {
++    input.resetPeekPosition()
++    val bytes = peekUpTo(input, HEADER_BYTES)
++    input.resetPeekPosition()
++    val i = find(bytes, MDHD, 0)
++    if (i < 0 || i + 8 > bytes.size) return 0
++    val v1 = bytes[i + 4].toInt() == 1
++    val at = i + 8 + if (v1) 16 else 8
++    return if (at + 4 <= bytes.size) int(bytes, at).toLong() and 0xffffffffL else 0
++  }
++
++  /** When the fragment at `k` starts, from its `tfdt`. */
++  private fun fragmentTimeUs(b: ByteArray, k: Int): Long {
++    if (timescale <= 0) return C.TIME_UNSET
++    val end = (k + int(b, k)).coerceAtMost(b.size)
++    val i = find(b, TFDT, k, end)
++    if (i < 0 || i + 8 > end) return C.TIME_UNSET
++    val v1 = b[i + 4].toInt() == 1
++    val at = i + 8
++    val units = if (v1) {
++      if (at + 8 > end) return C.TIME_UNSET
++      (int(b, at).toLong() shl 32) or (int(b, at + 4).toLong() and 0xffffffffL)
++    } else {
++      if (at + 4 > end) return C.TIME_UNSET
++      int(b, at).toLong() and 0xffffffffL
++    }
++    return units * 1_000_000L / timescale
++  }
++
++  private inner class Output(private val out: ExtractorOutput) : ExtractorOutput {
++    override fun track(id: Int, type: Int): TrackOutput = out.track(id, type)
++
++    override fun endTracks() = out.endTracks()
++
++    override fun seekMap(seekMap: SeekMap) {
++      val input = input
++      // A `sidx` beats anything worked out here, and without a length (a
++      // stream generated on the fly) there is no last fragment to go and read.
++      if (seekMap.isSeekable || input == null || input.length == C.LENGTH_UNSET.toLong() || timescale <= 0) {
++        out.seekMap(seekMap)
++        return
++      }
++      // Sent the moment the first `moof` header has been read.
++      declaredDurationUs = seekMap.durationUs
++      firstFragment = input.position - 8
++      resumeAt = input.position
++    }
++  }
++
++  private data class Fragment(val position: Long, val timeUs: Long)
++
++  /** Between the first fragment and the last, in proportion. Only a first
++   *  guess: `homeIn` takes it from there. */
++  private class FragmentSeekMap(
++    private val durationUs: Long,
++    private val first: Long,
++    private val last: Fragment
++  ) : SeekMap {
++    override fun isSeekable() = true
++
++    override fun getDurationUs() = durationUs
++
++    override fun getSeekPoints(timeUs: Long): SeekMap.SeekPoints {
++      if (timeUs <= 0) return SeekMap.SeekPoints(SeekPoint(timeUs, 0))
++      val share = ((timeUs - LEAD_US).toDouble() / last.timeUs).coerceIn(0.0, 1.0)
++      val position = first + ((last.position - first) * share).toLong()
++      return SeekMap.SeekPoints(SeekPoint(timeUs, position.coerceAtLeast(first + 1)))
++    }
++  }
++
++  private companion object {
++    const val HEADER_BYTES = 64 * 1024
++    const val TAIL_BYTES = 1024 * 1024
++    const val SCAN_BYTES = 64 * 1024
++    const val MAX_SCAN_BYTES = 16L * 1024 * 1024
++    const val MAX_MOOF_BYTES = 256 * 1024
++    const val MAX_HOPS = 12
++    /** A `moof` header and the `mfhd` that always opens it. */
++    const val BOX_HEAD = 16
++    /** Landing this far before the second asked for is as good as on it:
++     *  ExoPlayer skips the rest itself. */
++    const val CLOSE_ENOUGH_US = 10_000_000L
++    /** How far ahead of the second asked for each jump aims. */
++    const val LEAD_US = 2_000_000L
++
++    val MDHD = "mdhd".toByteArray()
++    val TFDT = "tfdt".toByteArray()
++
++    fun isFragmentAt(b: ByteArray, k: Int): Boolean =
++      b[k + 4] == 'm'.code.toByte() && b[k + 5] == 'o'.code.toByte() &&
++        b[k + 6] == 'o'.code.toByte() && b[k + 7] == 'f'.code.toByte() &&
++        b[k + 12] == 'm'.code.toByte() && b[k + 13] == 'f'.code.toByte() &&
++        b[k + 14] == 'h'.code.toByte() && b[k + 15] == 'd'.code.toByte() &&
++        int(b, k) >= BOX_HEAD + 8 && int(b, k + 8) == 16
++
++    /** Where the four letters of a box type are, from `from + 4`; -1 if absent. */
++    fun find(b: ByteArray, type: ByteArray, from: Int, to: Int = b.size): Int {
++      var i = from + 4
++      while (i + 4 <= to) {
++        if (b[i] == type[0] && b[i + 1] == type[1] && b[i + 2] == type[2] && b[i + 3] == type[3]) return i
++        i++
++      }
++      return -1
++    }
++
++    fun int(b: ByteArray, k: Int): Int =
++      (b[k].toInt() and 0xff shl 24) or (b[k + 1].toInt() and 0xff shl 16) or
++        (b[k + 2].toInt() and 0xff shl 8) or (b[k + 3].toInt() and 0xff)
++  }
++}
 diff --git a/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt b/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
-index 196a5d5..4e093dc 100644
+index 196a5d57f887c2667a88543bd2f6a80044a044f2..4e093dc6d2dea7acb919a41f694db6bf04772752 100644
 --- a/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
 +++ b/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
 @@ -27,6 +27,7 @@ import expo.modules.audio.AudioLockScreenOptions
@@ -1029,7 +1419,7 @@ index 196a5d5..4e093dc 100644
      const val SEEK_INTERVAL_MS = 10000L
    }
 diff --git a/android/src/main/java/expo/modules/audio/service/AudioMediaSessionCallback.kt b/android/src/main/java/expo/modules/audio/service/AudioMediaSessionCallback.kt
-index 839aaef..1aff509 100644
+index 839aaef12d7699ea1a89037b31849775daa079f4..1aff5091d68c19523e2374c0231f4c1da1a69163 100644
 --- a/android/src/main/java/expo/modules/audio/service/AudioMediaSessionCallback.kt
 +++ b/android/src/main/java/expo/modules/audio/service/AudioMediaSessionCallback.kt
 @@ -1,6 +1,9 @@
@@ -1118,7 +1508,7 @@ index 839aaef..1aff509 100644
      return super.onCustomCommand(session, controller, command, args)
    }
 diff --git a/android/src/main/java/expo/modules/audio/service/MetadataInjectingPlayer.kt b/android/src/main/java/expo/modules/audio/service/MetadataInjectingPlayer.kt
-index 18203a3..77155f4 100644
+index 18203a364d17dcf3de95d22a20175308e3363889..77155f4f348246f218c0736725b0f690f1f31d61 100644
 --- a/android/src/main/java/expo/modules/audio/service/MetadataInjectingPlayer.kt
 +++ b/android/src/main/java/expo/modules/audio/service/MetadataInjectingPlayer.kt
 @@ -3,10 +3,20 @@ package expo.modules.audio.service
@@ -1326,7 +1716,7 @@ index 18203a3..77155f4 100644
  }
 diff --git a/android/src/main/java/expo/modules/audio/service/PreloadingBitmapLoader.kt b/android/src/main/java/expo/modules/audio/service/PreloadingBitmapLoader.kt
 new file mode 100644
-index 0000000..6ee23d5
+index 0000000000000000000000000000000000000000..6ee23d594c66abe46d7991de793d6de992febdf9
 --- /dev/null
 +++ b/android/src/main/java/expo/modules/audio/service/PreloadingBitmapLoader.kt
 @@ -0,0 +1,77 @@
@@ -1408,7 +1798,7 @@ index 0000000..6ee23d5
 +  }
 +}
 diff --git a/build/Audio.types.d.ts b/build/Audio.types.d.ts
-index 2560478..b80696e 100644
+index 25604783649fe9b64f6655172f08471a5efcbf45..b80696e3b5d647c53f6e144d830171c6800a9c32 100644
 --- a/build/Audio.types.d.ts
 +++ b/build/Audio.types.d.ts
 @@ -34,6 +34,20 @@ export type AudioSource = string | number | null | {
@@ -1449,7 +1839,7 @@ index 2560478..b80696e 100644
  /**
   * Loop mode for audio playlist playback.
 diff --git a/build/AudioConstants.d.ts b/build/AudioConstants.d.ts
-index cfd92ad..78fa084 100644
+index cfd92ad0ff5765254c4e6db974fe44bce34aad06..78fa084cf34a5f56743d636b6501f90971d7898b 100644
 --- a/build/AudioConstants.d.ts
 +++ b/build/AudioConstants.d.ts
 @@ -15,5 +15,9 @@ export type AudioLockScreenOptions = {
@@ -1464,7 +1854,7 @@ index cfd92ad..78fa084 100644
  //# sourceMappingURL=AudioConstants.d.ts.map
 \ No newline at end of file
 diff --git a/build/AudioModule.types.d.ts b/build/AudioModule.types.d.ts
-index f3ae4ee..5bc46da 100644
+index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..5bc46da1b92548bd7fa8aa3d308179398a657f58 100644
 --- a/build/AudioModule.types.d.ts
 +++ b/build/AudioModule.types.d.ts
 @@ -31,6 +31,11 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
@@ -1551,7 +1941,7 @@ index f3ae4ee..5bc46da 100644
      /**
 diff --git a/ios/AnimatedArtwork.swift b/ios/AnimatedArtwork.swift
 new file mode 100644
-index 0000000..fbc89d8
+index 0000000000000000000000000000000000000000..fbc89d87bf732195bd9e74c2792a8843ae18c121
 --- /dev/null
 +++ b/ios/AnimatedArtwork.swift
 @@ -0,0 +1,569 @@
@@ -2125,7 +2515,7 @@ index 0000000..fbc89d8
 +
 +#endif
 diff --git a/ios/AudioModule.swift b/ios/AudioModule.swift
-index d265606..7cf6446 100644
+index d26560627c2dfa97370440ad28304617f3f9f0f7..7cf6446bc137c4ecf0a7aab720347dab852281d1 100644
 --- a/ios/AudioModule.swift
 +++ b/ios/AudioModule.swift
 @@ -241,6 +241,18 @@ public class AudioModule: Module {
@@ -2148,7 +2538,7 @@ index d265606..7cf6446 100644
          player.ref.pause()
          if !player.keepAudioSessionActive {
 diff --git a/ios/AudioPlayer.swift b/ios/AudioPlayer.swift
-index 0742943..818eb0e 100644
+index 074294321e872bb53c0b2d41044dac3c612f14f0..818eb0e434f11e1d82e38ec0c14ee65e8ab1d4a7 100644
 --- a/ios/AudioPlayer.swift
 +++ b/ios/AudioPlayer.swift
 @@ -4,6 +4,7 @@ import Combine
@@ -2400,7 +2790,7 @@ index 0742943..818eb0e 100644
          self.updateStatus(with: [
            "playing": false,
 diff --git a/ios/AudioRecords.swift b/ios/AudioRecords.swift
-index 33db27c..a5c4135 100644
+index 33db27c3b8fb40fa9db6659a0787c6b2b503d1ab..a5c41356f93d3d4a45bf14020af1cb1943731751 100644
 --- a/ios/AudioRecords.swift
 +++ b/ios/AudioRecords.swift
 @@ -64,12 +64,17 @@ struct Metadata: Record {
@@ -2422,7 +2812,7 @@ index 33db27c..a5c4135 100644
  
  enum BitRateStrategy: String, Enumerable {
 diff --git a/ios/AudioUtils.swift b/ios/AudioUtils.swift
-index 79c7c0b..7c4800e 100644
+index 79c7c0b256581a768c42a0291bf84bdff4c4b142..7c4800e32389f434b77f6c208f13578b963a4f17 100644
 --- a/ios/AudioUtils.swift
 +++ b/ios/AudioUtils.swift
 @@ -84,9 +84,17 @@ struct AudioUtils {
@@ -2446,7 +2836,7 @@ index 79c7c0b..7c4800e 100644
  
      let asset = AVURLAsset(url: finalUrl, options: options)
 diff --git a/ios/MediaController.swift b/ios/MediaController.swift
-index e977f57..8d8068b 100644
+index e977f577cd2e16b194b56537ad76b423f40d2496..8d8068b2edc68ca920bbdeb0c7d5c326f10e6e9e 100644
 --- a/ios/MediaController.swift
 +++ b/ios/MediaController.swift
 @@ -11,9 +11,12 @@ class MediaController {
