@@ -16,6 +16,7 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- A cover opened full screen is now shown with square corners, whatever the cover corners setting (#241).
 - Dragging the seek bar in a fragmented M4A, such as the ones many downloaders save from streaming services, no longer starts the song over (#242).
 - Home no longer offers the song paused on this same phone as playing on Resonus.
 - "Don't remind me" on the battery optimization warning now keeps it from coming back on the next launch (#238).

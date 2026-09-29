@@ -8,7 +8,7 @@ import { Image } from 'expo-image';
 import { type ReactNode } from 'react';
 import { Modal, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
 
-import { radius, spacing } from '@/theme';
+import { spacing } from '@/theme';
 
 export function CoverViewer({
   uri,
@@ -48,12 +48,9 @@ export function CoverViewer({
           source={uri ? { uri } : undefined}
           // Not square: the box is the whole area and `contain` fits the image
           // inside it, so nothing is cropped whatever its shape. No radius
-          // there — the corners would be the box's, not the image's.
-          style={
-            square
-              ? { width: size, height: size, borderRadius: radius.lg }
-              : { width: maxW, height: maxH }
-          }
+          // either way: this is the picture itself being looked at, corners
+          // included, whatever the cover corners setting does elsewhere (#241).
+          style={square ? { width: size, height: size } : { width: maxW, height: maxH }}
           contentFit="contain"
           transition={150}
         />
