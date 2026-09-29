@@ -761,5 +761,12 @@
   "Couldn't search for podcasts.": "Couldn't search for podcasts.",
   "No podcast found for “{term}”. Try pasting the feed address below.": "No podcast found for “{term}”. Try pasting the feed address below.",
   "Search for a show, or paste the address of a feed below.": "Search for a show, or paste the address of a feed below.",
-  "Subscribe": "Subscribe"
+  "Subscribe": "Subscribe",
+  "Export settings": "Export settings",
+  "Import settings": "Import settings",
+  "Couldn't export the settings": "Couldn't export the settings",
+  "Couldn't read this settings file": "Couldn't read this settings file",
+  "Your preferences will be replaced by the ones in the file. Your language and accounts stay.": "Your preferences will be replaced by the ones in the file. Your language and accounts stay.",
+  "Import": "Import",
+  "Settings imported": "Settings imported"
 }

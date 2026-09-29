@@ -8,6 +8,7 @@ import { Linking, Pressable, ScrollView } from 'react-native';
 import { Dialog } from '@/components/Dialog';
 import { Field, SettingRow, SettingsGroup, SettingsPage, SwitchList, settingsStyles } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
+import { pickSettingsFile, shareSettingsFile } from '@/lib/settingsFile';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
 import { useUpdate } from '@/store/update';
@@ -69,6 +70,9 @@ export default function AboutSettings() {
   const resetToDefaults = useSettings((s) => s.resetToDefaults);
   const toast = useToast((s) => s.show);
   const [confirmReset, setConfirmReset] = useState(false);
+  const importSettings = useSettings((s) => s.importSettings);
+  // What a picked file holds, waiting on the confirmation.
+  const [pending, setPending] = useState<Record<string, unknown> | null>(null);
 
   return (
     <SettingsPage title={t('About::app')}>
@@ -166,6 +170,32 @@ export default function AboutSettings() {
             switch. So it is marked the way the app marks those, in the same red
             as deleting a playlist or the downloads, and the confirmation it
             always had stays. */}
+        {/* Next to the reset: importing replaces every setting just the same,
+            and asks first for the same reason. */}
+        <SettingsGroup>
+          <SettingRow
+            icon="share-outline"
+            label={t('Export settings')}
+            onPress={() => {
+              shareSettingsFile()
+                .then((ok) => {
+                  if (!ok) toast(t("Couldn't export the settings"));
+                })
+                .catch(() => toast(t("Couldn't export the settings")));
+            }}
+          />
+          <SettingRow
+            icon="download-outline"
+            label={t('Import settings')}
+            onPress={() => {
+              pickSettingsFile()
+                .then((settings) => {
+                  if (settings) setPending(settings);
+                })
+                .catch(() => toast(t("Couldn't read this settings file")));
+            }}
+          />
+        </SettingsGroup>
         <SettingRow
           icon="arrow-undo-outline"
           label={t('Restore default settings')}
@@ -184,6 +214,18 @@ export default function AboutSettings() {
           setConfirmReset(false);
           resetToDefaults();
           toast(t('Settings restored'));
+        }}
+      />
+      <Dialog
+        visible={pending !== null}
+        title={t('Import settings')}
+        message={t('Your preferences will be replaced by the ones in the file. Your language and accounts stay.')}
+        confirmLabel={t('Import')}
+        onCancel={() => setPending(null)}
+        onConfirm={() => {
+          if (pending) importSettings(pending);
+          setPending(null);
+          toast(t('Settings imported'));
         }}
       />
     </SettingsPage>

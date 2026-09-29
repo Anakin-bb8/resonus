@@ -12,6 +12,7 @@ Releases before 0.2.1 are only listed on the
 ### Added
 
 - Brazilian Portuguese, thanks to @vicsantus (#240).
+- Settings > About can export your settings to a file and import them on another phone or someone else's, without accounts or passwords (#243).
 
 ### Fixed
 

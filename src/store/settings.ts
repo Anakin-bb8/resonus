@@ -1162,6 +1162,8 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   setCustomFont: (fontFamily: string | null, uri: string | null) => void;
   /** Resets to factory defaults (language is preserved). */
   resetToDefaults: () => void;
+  /** Replaces every setting with an exported file's (#243). */
+  importSettings: (saved: unknown) => void;
   /** The saved settings have been read from disk. Until then everything is at
    *  its default, so anything that acts ON a setting must wait for this. */
   hydrated: boolean;
@@ -1367,6 +1369,378 @@ function autoSetters(
   return out as AutoSetters;
 }
 
+/** The appearance side effects of the factory values: they live outside the
+ *  store, so putting the store back does not put them back. */
+function applyFactoryLook() {
+  applyAccents(DEFAULT_ACCENT, DEFAULT_ACCENT);
+  applyThemeSchedule(DEFAULTS.themeLightFrom, DEFAULTS.themeDarkFrom);
+  applyThemePreference(DEFAULTS.themeMode);
+  applyPureBlack(DEFAULTS.pureBlack);
+  applyBackgroundTint(DEFAULTS.backgroundTint);
+}
+
+/**
+ * A saved blob onto what is in the store, which the caller has already put at
+ * the factory values. Shared by the read at startup and an imported file (#243),
+ * so both go through the same checks and the same migrations.
+ */
+function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void) {
+  // Typed as what this version writes, plus the earlier shapes that are
+  // read only to migrate them. Nothing here is trusted: every value is
+  // checked before it is used.
+  const parsed = (raw && typeof raw === 'object' ? raw : {}) as Partial<Omit<Persisted, Reshaped>> & {
+    showAudioQuality?: string | boolean;
+    homeSections?: unknown;
+    homeChips?: unknown;
+    exploreSections?: unknown;
+    bottomTabs?: unknown;
+    homeButtons?: unknown;
+    playerButtons?: unknown;
+    showQueueButton?: boolean;
+    showDevicesButton?: boolean;
+    showSpeedButton?: boolean;
+    lyricsColorBackground?: boolean;
+    lyricsOnlineFallback?: boolean;
+    playerColorBackground?: boolean;
+    swipeToQueue?: boolean;
+    showExploreChips?: boolean;
+    exploreChips?: unknown;
+    exploreChipIcons?: boolean;
+    showHistoryButton?: boolean;
+  };
+  // Every on/off setting the same way: a saved boolean is taken as is.
+  // The few that also migrate an older value do that further down.
+  const flags: Record<string, boolean> = {};
+  for (const key of PERSISTED_KEYS) {
+    const value: unknown = parsed[key];
+    if (typeof DEFAULTS[key] === 'boolean' && typeof value === 'boolean') flags[key] = value;
+  }
+  set(flags as Partial<SettingsState>);
+  // One switch used to blur both bars.
+  if (typeof parsed.blurMiniPlayer !== 'boolean' && typeof parsed.blurBars === 'boolean') {
+    set({ blurMiniPlayer: parsed.blurBars });
+  }
+  if (typeof parsed.maxBitRate === 'number') {
+    set({ maxBitRate: parsed.maxBitRate });
+  }
+  if (typeof parsed.maxBitRateCellular === 'number') {
+    set({ maxBitRateCellular: parsed.maxBitRateCellular });
+  } else if (typeof parsed.maxBitRate === 'number') {
+    // Previously there was a single streaming quality: whoever had it set
+    // inherits the same value for cellular (identical behavior until they
+    // touch the new setting).
+    set({ maxBitRateCellular: parsed.maxBitRate });
+  }
+  if (typeof parsed.downloadBitRate === 'number') {
+    set({ downloadBitRate: parsed.downloadBitRate });
+  }
+  if (DOWNLOAD_CONCURRENCY_OPTIONS.includes(parsed.downloadConcurrency as number)) {
+    set({ downloadConcurrency: parsed.downloadConcurrency as number });
+  }
+  if (TRANSCODE_FORMATS.includes(parsed.streamFormat as TranscodeFormat)) {
+    set({ streamFormat: parsed.streamFormat as TranscodeFormat });
+  }
+  if (TRANSCODE_FORMATS.includes(parsed.streamFormatCellular as TranscodeFormat)) {
+    set({ streamFormatCellular: parsed.streamFormatCellular as TranscodeFormat });
+  } else if (TRANSCODE_FORMATS.includes(parsed.streamFormat as TranscodeFormat)) {
+    // Previously there was a single streaming codec: whoever had it set
+    // keeps it on both networks until they touch the new setting.
+    set({ streamFormatCellular: parsed.streamFormat as TranscodeFormat });
+  }
+  if (TRANSCODE_FORMATS.includes(parsed.downloadFormat as TranscodeFormat)) {
+    set({ downloadFormat: parsed.downloadFormat as TranscodeFormat });
+  }
+  if (SONG_CACHE_LIMITS_GB.includes(parsed.songCacheLimitGb as number)) {
+    set({ songCacheLimitGb: parsed.songCacheLimitGb as number });
+  }
+  // `language` is no longer applied here: it's global, loaded at the end.
+  // It used to be a mode ('off'/'player'/'everywhere'); now a simple
+  // on/off. Map old values: any mode that showed the label maps to on.
+  if (typeof parsed.showAudioQuality === 'boolean') {
+    set({ showAudioQuality: parsed.showAudioQuality });
+  } else if (parsed.showAudioQuality === 'player' || parsed.showAudioQuality === 'everywhere') {
+    set({ showAudioQuality: true });
+  } else if (parsed.showAudioQuality === 'off') {
+    set({ showAudioQuality: false });
+  }
+  if (typeof parsed.crossfadeSec === 'number' && parsed.crossfadeSec >= 0) {
+    set({ crossfadeSec: parsed.crossfadeSec });
+  }
+  // Clamped rather than only checked: these two decide whether a listen
+  // is reported at all, and a file with a percentage of 4000 in it would
+  // otherwise turn scrobbling off in a way nothing on screen explains.
+  if (typeof parsed.scrobblePercent === 'number' && parsed.scrobblePercent >= 0) {
+    set({ scrobblePercent: Math.min(100, Math.round(parsed.scrobblePercent)) });
+  }
+  if (typeof parsed.scrobbleSeconds === 'number' && parsed.scrobbleSeconds >= 0) {
+    set({
+      scrobbleSeconds: Math.min(SCROBBLE_SECONDS_MAX, Math.round(parsed.scrobbleSeconds)),
+    });
+  }
+  if (
+    parsed.replayGain === 'off' ||
+    parsed.replayGain === 'auto' ||
+    parsed.replayGain === 'track' ||
+    parsed.replayGain === 'album'
+  ) {
+    set({ replayGain: parsed.replayGain });
+  }
+  if (typeof parsed.replayGainPreampDb === 'number') {
+    set({ replayGainPreampDb: clampReplayGainPreamp(parsed.replayGainPreampDb) });
+  }
+  if (parsed.lyricsBackground === 'none' || parsed.lyricsBackground === 'color' || parsed.lyricsBackground === 'cover') {
+    set({ lyricsBackground: parsed.lyricsBackground });
+  } else if (typeof parsed.lyricsColorBackground === 'boolean') {
+    // Same migration as the player's: on → tinted, off → flat.
+    set({ lyricsBackground: parsed.lyricsColorBackground ? 'color' : 'none' });
+  }
+  // The card used to follow the lyrics screen's setting, so a profile
+  // without its own value inherits whatever the screen had.
+  if (parsed.lyricsCardBackground === 'none' || parsed.lyricsCardBackground === 'color') {
+    set({ lyricsCardBackground: parsed.lyricsCardBackground });
+  } else if (parsed.lyricsBackground === 'none') {
+    set({ lyricsCardBackground: 'none' });
+  } else if (typeof parsed.lyricsColorBackground === 'boolean') {
+    set({ lyricsCardBackground: parsed.lyricsColorBackground ? 'color' : 'none' });
+  }
+  if (
+    parsed.lyricsSource === 'local' ||
+    parsed.lyricsSource === 'online' ||
+    parsed.lyricsSource === 'off'
+  ) {
+    set({ lyricsSource: parsed.lyricsSource });
+  } else if (typeof parsed.lyricsOnlineFallback === 'boolean') {
+    // Migrate the old boolean: on = local first with online fallback, off = no online.
+    set({ lyricsSource: parsed.lyricsOnlineFallback ? 'local' : 'off' });
+  }
+  const oneOf = <T extends string>(v: unknown, all: readonly T[]): v is T =>
+    all.includes(v as T);
+  if (oneOf(parsed.lyricsSize, ['small', 'normal', 'large'] as const)) {
+    set({ lyricsSize: parsed.lyricsSize });
+  }
+  if (oneOf(parsed.lyricsAlign, ['left', 'center'] as const)) {
+    set({ lyricsAlign: parsed.lyricsAlign });
+  }
+  if (oneOf(parsed.miniPlayerButtons, ['favorite', 'next', 'previousNext', 'none'] as const)) {
+    set({ miniPlayerButtons: parsed.miniPlayerButtons });
+  }
+  if (oneOf(parsed.coverCorners, ['square', 'rounded', 'round'] as const)) {
+    set({ coverCorners: parsed.coverCorners });
+  }
+  if (
+    parsed.preferDownloads === 'always' ||
+    parsed.preferDownloads === 'cellular' ||
+    parsed.preferDownloads === 'original' ||
+    parsed.preferDownloads === 'never'
+  ) {
+    set({ preferDownloads: parsed.preferDownloads });
+  }
+  if (parsed.playerBackground === 'none' || parsed.playerBackground === 'color' || parsed.playerBackground === 'cover') {
+    set({ playerBackground: parsed.playerBackground });
+  } else if (typeof parsed.playerColorBackground === 'boolean') {
+    // Migration from the old boolean: on → the tinted background it
+    // already had, off → flat. Profiles saved before the blurred cover
+    // option existed keep looking exactly the same.
+    set({ playerBackground: parsed.playerColorBackground ? 'color' : 'none' });
+  }
+  if (isCoverTapAction(parsed.coverTapAction)) {
+    set({ coverTapAction: parsed.coverTapAction });
+  }
+  if (isCoverTapAction(parsed.coverDoubleTapAction)) {
+    set({ coverDoubleTapAction: parsed.coverDoubleTapAction });
+  }
+  if (parsed.seekButtonsSec === 0 || parsed.seekButtonsSec === 5 || parsed.seekButtonsSec === 10 || parsed.seekButtonsSec === 30) {
+    set({ seekButtonsSec: parsed.seekButtonsSec });
+  }
+  if (parsed.previousButtonMode === 'restart' || parsed.previousButtonMode === 'always') {
+    set({ previousButtonMode: parsed.previousButtonMode });
+  }
+  if (
+    parsed.swipeAction === 'off' ||
+    parsed.swipeAction === 'queue' ||
+    parsed.swipeAction === 'next' ||
+    parsed.swipeAction === 'favorite' ||
+    parsed.swipeAction === 'menu'
+  ) {
+    set({ swipeAction: parsed.swipeAction });
+  } else if (typeof parsed.swipeToQueue === 'boolean') {
+    // Migration from the old setting: on → queue, off → nothing.
+    set({ swipeAction: parsed.swipeToQueue ? 'queue' : 'off' });
+  }
+  if (
+    parsed.swipeLeftAction === 'off' ||
+    parsed.swipeLeftAction === 'queue' ||
+    parsed.swipeLeftAction === 'next' ||
+    parsed.swipeLeftAction === 'favorite' ||
+    parsed.swipeLeftAction === 'menu'
+  ) {
+    set({ swipeLeftAction: parsed.swipeLeftAction });
+  }
+  if (Array.isArray(parsed.homeSections)) {
+    set({ homeSections: normalizeHomeSections(parsed.homeSections) });
+  }
+  if (parsed.quickGridSize === 4 || parsed.quickGridSize === 6 || parsed.quickGridSize === 8) {
+    set({ quickGridSize: parsed.quickGridSize });
+  }
+  // Truncated on hydrate: a setting saved by a version with a different
+  // cap must not sneak in longer than what fits.
+  if (typeof parsed.customGreeting === 'string') {
+    set({ customGreeting: parsed.customGreeting.slice(0, GREETING_MAX) });
+  }
+  // Two older names are still read here, and this is the whole of the
+  // rename's cost. The row used to be called the Explore chips, one word
+  // away from the Explore tab and meaning something else entirely; a
+  // file written before the rename says `exploreChips`, and whoever had
+  // spent time putting those in order would have found them back at the
+  // defaults. Written under the new name from the first save on, so this
+  // only ever runs once per install.
+  const chipIcons = parsed.homeChipIcons ?? parsed.exploreChipIcons;
+  if (typeof chipIcons === 'boolean') {
+    set({ homeChipIcons: chipIcons });
+  }
+  const chips = parsed.homeChips ?? parsed.exploreChips;
+  if (Array.isArray(chips)) {
+    set({ homeChips: normalizeHomeChips(chips) });
+  } else if (parsed.showExploreChips === false) {
+    // Migration from the single toggle that came before either name:
+    // whoever had the row hidden should still not see it, not find the
+    // chips back. Turning them all off is exactly what hides it now.
+    set({ homeChips: DEFAULT_HOME_CHIPS.map((c) => ({ ...c, enabled: false })) });
+  }
+  if (Array.isArray(parsed.bottomTabs)) {
+    set({ bottomTabs: normalizeBottomTabs(parsed.bottomTabs) });
+  }
+  if (Array.isArray(parsed.exploreSections)) {
+    set({ exploreSections: normalizeExploreSections(parsed.exploreSections) });
+  }
+  if (Array.isArray(parsed.homeButtons)) {
+    set({ homeButtons: normalizeHomeButtons(parsed.homeButtons) });
+  } else if (parsed.showHistoryButton === false) {
+    // Migration from the previous single toggle: the clock was the only
+    // one of these with a switch, and whoever had it hidden should not
+    // find it back.
+    set({
+      homeButtons: DEFAULT_HOME_BUTTONS.map((b) =>
+        b.key === 'history' ? { ...b, enabled: false } : { ...b },
+      ),
+    });
+  }
+  if (parsed.playerButtonsLayout === 'centered' || parsed.playerButtonsLayout === 'spread') {
+    set({ playerButtonsLayout: parsed.playerButtonsLayout });
+  }
+  if (Array.isArray(parsed.playerButtons)) {
+    set({ playerButtons: normalizePlayerButtons(parsed.playerButtons) });
+  } else {
+    // From the three switches there were before: whoever had one of them
+    // off does not find it back. Speed was off unless turned on.
+    const off = new Set<PlayerButtonKey>();
+    if (parsed.showQueueButton === false) off.add('queue');
+    if (parsed.showDevicesButton === false) off.add('devices');
+    if (parsed.showSpeedButton !== true && 'showQueueButton' in parsed) off.add('speed');
+    set({
+      playerButtons: DEFAULT_PLAYER_BUTTONS.map((b) => ({ ...b, enabled: !off.has(b.key) })),
+    });
+  }
+  if (
+    parsed.defaultTab === 'index' ||
+    parsed.defaultTab === 'search' ||
+    parsed.defaultTab === 'library' ||
+    parsed.defaultTab === 'explore'
+  ) {
+    set({ defaultTab: parsed.defaultTab });
+  }
+  if (parsed.librarySort === 'recent' || parsed.librarySort === 'added' || parsed.librarySort === 'alpha') {
+    set({ librarySort: parsed.librarySort });
+  }
+  if (parsed.libraryLayout === 'list' || parsed.libraryLayout === 'grid') {
+    set({ libraryLayout: parsed.libraryLayout });
+  }
+  if (parsed.browseArtistsLayout === 'list' || parsed.browseArtistsLayout === 'grid') {
+    set({ browseArtistsLayout: parsed.browseArtistsLayout });
+  }
+  if (parsed.browseAlbumsLayout === 'list' || parsed.browseAlbumsLayout === 'grid') {
+    set({ browseAlbumsLayout: parsed.browseAlbumsLayout });
+  }
+  if (parsed.browsePlaylistsLayout === 'list' || parsed.browsePlaylistsLayout === 'grid') {
+    set({ browsePlaylistsLayout: parsed.browsePlaylistsLayout });
+  }
+  if (
+    parsed.browsePlaylistsSort === 'recent' ||
+    parsed.browsePlaylistsSort === 'added' ||
+    parsed.browsePlaylistsSort === 'alpha'
+  ) {
+    set({ browsePlaylistsSort: parsed.browsePlaylistsSort });
+  }
+  if (parsed.browseSongsLayout === 'list' || parsed.browseSongsLayout === 'grid') {
+    set({ browseSongsLayout: parsed.browseSongsLayout });
+  }
+  if (parsed.discographyLayout === 'list' || parsed.discographyLayout === 'grid') {
+    set({ discographyLayout: parsed.discographyLayout });
+  }
+  if (parsed.genreLayout === 'list' || parsed.genreLayout === 'grid') {
+    set({ genreLayout: parsed.genreLayout });
+  }
+  // Read key by key rather than taken whole: a number from a file is the
+  // one thing here that decides how a list is laid out, and a stray one
+  // would be a screen that renders with columns nobody can choose. Keys
+  // that are not grids any more simply do not survive the read.
+  if (parsed.gridColumns && typeof parsed.gridColumns === 'object') {
+    const cols: Partial<Record<GridSizeKey, number>> = {};
+    for (const [key, value] of Object.entries(parsed.gridColumns)) {
+      // A grid remembers a phone and a tablet apart, so the key can carry
+      // which one it is; the grid itself has to be one that still exists.
+      const wide = key.endsWith(':wide');
+      if (!(key.replace(/:wide$/, '') in GRID_DEFAULT_COLUMNS)) continue;
+      const choices = wide ? WIDE_COLUMN_CHOICES : GRID_COLUMN_CHOICES;
+      if (choices.includes(value as number)) cols[key as GridSizeKey] = value as number;
+    }
+    set({ gridColumns: cols });
+  }
+  if (SHARE_EXPIRIES.includes(parsed.shareExpiry as ShareExpiry)) {
+    set({ shareExpiry: parsed.shareExpiry as ShareExpiry });
+  }
+  // The light accent falls back to the dark one rather than to the
+  // default: every profile that picked a colour before there were two of
+  // them picked it for the app, not for one of its appearances.
+  if (isHexColor(parsed.accentColor) || isHexColor(parsed.accentColorLight)) {
+    const dark = isHexColor(parsed.accentColor) ? parsed.accentColor : DEFAULT_ACCENT;
+    const light = isHexColor(parsed.accentColorLight) ? parsed.accentColorLight : dark;
+    set({ accentColor: dark, accentColorLight: light });
+    applyAccents(dark, light);
+  }
+  if (isHexColor(parsed.customAccentColor)) {
+    set({ customAccentColor: parsed.customAccentColor });
+  }
+  {
+    const hour = (v: unknown) => (Number.isInteger(v) && (v as number) >= 0 && (v as number) <= 23 ? (v as number) : null);
+    const light = hour(parsed.themeLightFrom) ?? DEFAULTS.themeLightFrom;
+    const dark = hour(parsed.themeDarkFrom) ?? DEFAULTS.themeDarkFrom;
+    set({ themeLightFrom: light, themeDarkFrom: dark });
+    applyThemeSchedule(light, dark);
+  }
+  if (isThemePreference(parsed.themeMode)) {
+    set({ themeMode: parsed.themeMode });
+    applyThemePreference(parsed.themeMode);
+  }
+  if (typeof parsed.pureBlack === 'boolean') {
+    set({ pureBlack: parsed.pureBlack });
+    applyPureBlack(parsed.pureBlack);
+  }
+  if (typeof parsed.backgroundTint === 'string' && parsed.backgroundTint in BACKGROUND_TINTS) {
+    set({ backgroundTint: parsed.backgroundTint });
+    applyBackgroundTint(parsed.backgroundTint);
+  }
+  if (parsed.appFont && (parsed.appFont in APP_FONT_FAMILY || parsed.appFont === 'custom')) {
+    set({ appFont: parsed.appFont });
+  }
+  if (parsed.customFontFamily) {
+    set({ customFontFamily: parsed.customFontFamily });
+  }
+  if (parsed.customFontUri) {
+    set({ customFontUri: parsed.customFontUri });
+  }
+}
+
 export const useSettings = create<SettingsState>((set, get) => ({
   ...DEFAULTS,
   hydrated: false,
@@ -1509,12 +1883,21 @@ export const useSettings = create<SettingsState>((set, get) => ({
   resetToDefaults: () => {
     // Language is preserved: resetting shouldn't change your language.
     set({ ...DEFAULTS, language: get().language });
-    applyAccents(DEFAULT_ACCENT, DEFAULT_ACCENT);
-    applyThemeSchedule(DEFAULTS.themeLightFrom, DEFAULTS.themeDarkFrom);
-    applyThemePreference(DEFAULTS.themeMode);
-    applyPureBlack(DEFAULTS.pureBlack);
-    applyBackgroundTint(DEFAULTS.backgroundTint);
+    applyFactoryLook();
     persist(snapshot(get));
+  },
+
+  importSettings: (saved) => {
+    // The font file stays on the phone that picked it, so the one here is kept
+    // and a custom font this phone does not have falls back to the default.
+    const { language, customFontFamily, customFontUri } = get();
+    set({ ...DEFAULTS, language, customFontFamily, customFontUri });
+    applyFactoryLook();
+    applySaved({ ...(saved as object), customFontFamily: null, customFontUri: null }, set);
+    if (get().appFont === 'custom' && !customFontFamily) set({ appFont: 'system' });
+    setPerfEnabled(get().diagnostics);
+    persist(snapshot(get));
+    if (useAuthStore.getState().offline) queryClient.invalidateQueries();
   },
 
   hydrate: async () => {
@@ -1542,368 +1925,9 @@ export const useSettings = create<SettingsState>((set, get) => ({
       // appearance are applied manually because they're side effects (the blob
       // re-applies them if present); the font is reactive and doesn't need it.
       set({ ...DEFAULTS, language: get().language });
-      applyAccents(DEFAULT_ACCENT, DEFAULT_ACCENT);
-      applyThemeSchedule(DEFAULTS.themeLightFrom, DEFAULTS.themeDarkFrom);
-      applyThemePreference(DEFAULTS.themeMode);
-      applyPureBlack(DEFAULTS.pureBlack);
-    applyBackgroundTint(DEFAULTS.backgroundTint);
+      applyFactoryLook();
       applied = true;
-      if (raw) {
-        // Typed as what this version writes, plus the earlier shapes that are
-        // read only to migrate them. Nothing here is trusted: every value is
-        // checked before it is used.
-        const parsed = JSON.parse(raw) as Partial<Omit<Persisted, Reshaped>> & {
-          showAudioQuality?: string | boolean;
-          homeSections?: unknown;
-          homeChips?: unknown;
-          exploreSections?: unknown;
-          bottomTabs?: unknown;
-          homeButtons?: unknown;
-          playerButtons?: unknown;
-          showQueueButton?: boolean;
-          showDevicesButton?: boolean;
-          showSpeedButton?: boolean;
-          lyricsColorBackground?: boolean;
-          lyricsOnlineFallback?: boolean;
-          playerColorBackground?: boolean;
-          swipeToQueue?: boolean;
-          showExploreChips?: boolean;
-          exploreChips?: unknown;
-          exploreChipIcons?: boolean;
-          showHistoryButton?: boolean;
-        };
-        // Every on/off setting the same way: a saved boolean is taken as is.
-        // The few that also migrate an older value do that further down.
-        const flags: Record<string, boolean> = {};
-        for (const key of PERSISTED_KEYS) {
-          const value: unknown = parsed[key];
-          if (typeof DEFAULTS[key] === 'boolean' && typeof value === 'boolean') flags[key] = value;
-        }
-        set(flags as Partial<SettingsState>);
-        // One switch used to blur both bars.
-        if (typeof parsed.blurMiniPlayer !== 'boolean' && typeof parsed.blurBars === 'boolean') {
-          set({ blurMiniPlayer: parsed.blurBars });
-        }
-        if (typeof parsed.maxBitRate === 'number') {
-          set({ maxBitRate: parsed.maxBitRate });
-        }
-        if (typeof parsed.maxBitRateCellular === 'number') {
-          set({ maxBitRateCellular: parsed.maxBitRateCellular });
-        } else if (typeof parsed.maxBitRate === 'number') {
-          // Previously there was a single streaming quality: whoever had it set
-          // inherits the same value for cellular (identical behavior until they
-          // touch the new setting).
-          set({ maxBitRateCellular: parsed.maxBitRate });
-        }
-        if (typeof parsed.downloadBitRate === 'number') {
-          set({ downloadBitRate: parsed.downloadBitRate });
-        }
-        if (DOWNLOAD_CONCURRENCY_OPTIONS.includes(parsed.downloadConcurrency as number)) {
-          set({ downloadConcurrency: parsed.downloadConcurrency as number });
-        }
-        if (TRANSCODE_FORMATS.includes(parsed.streamFormat as TranscodeFormat)) {
-          set({ streamFormat: parsed.streamFormat as TranscodeFormat });
-        }
-        if (TRANSCODE_FORMATS.includes(parsed.streamFormatCellular as TranscodeFormat)) {
-          set({ streamFormatCellular: parsed.streamFormatCellular as TranscodeFormat });
-        } else if (TRANSCODE_FORMATS.includes(parsed.streamFormat as TranscodeFormat)) {
-          // Previously there was a single streaming codec: whoever had it set
-          // keeps it on both networks until they touch the new setting.
-          set({ streamFormatCellular: parsed.streamFormat as TranscodeFormat });
-        }
-        if (TRANSCODE_FORMATS.includes(parsed.downloadFormat as TranscodeFormat)) {
-          set({ downloadFormat: parsed.downloadFormat as TranscodeFormat });
-        }
-        if (SONG_CACHE_LIMITS_GB.includes(parsed.songCacheLimitGb as number)) {
-          set({ songCacheLimitGb: parsed.songCacheLimitGb as number });
-        }
-        // `language` is no longer applied here: it's global, loaded at the end.
-        // It used to be a mode ('off'/'player'/'everywhere'); now a simple
-        // on/off. Map old values: any mode that showed the label maps to on.
-        if (typeof parsed.showAudioQuality === 'boolean') {
-          set({ showAudioQuality: parsed.showAudioQuality });
-        } else if (parsed.showAudioQuality === 'player' || parsed.showAudioQuality === 'everywhere') {
-          set({ showAudioQuality: true });
-        } else if (parsed.showAudioQuality === 'off') {
-          set({ showAudioQuality: false });
-        }
-        if (typeof parsed.crossfadeSec === 'number' && parsed.crossfadeSec >= 0) {
-          set({ crossfadeSec: parsed.crossfadeSec });
-        }
-        // Clamped rather than only checked: these two decide whether a listen
-        // is reported at all, and a file with a percentage of 4000 in it would
-        // otherwise turn scrobbling off in a way nothing on screen explains.
-        if (typeof parsed.scrobblePercent === 'number' && parsed.scrobblePercent >= 0) {
-          set({ scrobblePercent: Math.min(100, Math.round(parsed.scrobblePercent)) });
-        }
-        if (typeof parsed.scrobbleSeconds === 'number' && parsed.scrobbleSeconds >= 0) {
-          set({
-            scrobbleSeconds: Math.min(SCROBBLE_SECONDS_MAX, Math.round(parsed.scrobbleSeconds)),
-          });
-        }
-        if (
-          parsed.replayGain === 'off' ||
-          parsed.replayGain === 'auto' ||
-          parsed.replayGain === 'track' ||
-          parsed.replayGain === 'album'
-        ) {
-          set({ replayGain: parsed.replayGain });
-        }
-        if (typeof parsed.replayGainPreampDb === 'number') {
-          set({ replayGainPreampDb: clampReplayGainPreamp(parsed.replayGainPreampDb) });
-        }
-        if (parsed.lyricsBackground === 'none' || parsed.lyricsBackground === 'color' || parsed.lyricsBackground === 'cover') {
-          set({ lyricsBackground: parsed.lyricsBackground });
-        } else if (typeof parsed.lyricsColorBackground === 'boolean') {
-          // Same migration as the player's: on → tinted, off → flat.
-          set({ lyricsBackground: parsed.lyricsColorBackground ? 'color' : 'none' });
-        }
-        // The card used to follow the lyrics screen's setting, so a profile
-        // without its own value inherits whatever the screen had.
-        if (parsed.lyricsCardBackground === 'none' || parsed.lyricsCardBackground === 'color') {
-          set({ lyricsCardBackground: parsed.lyricsCardBackground });
-        } else if (parsed.lyricsBackground === 'none') {
-          set({ lyricsCardBackground: 'none' });
-        } else if (typeof parsed.lyricsColorBackground === 'boolean') {
-          set({ lyricsCardBackground: parsed.lyricsColorBackground ? 'color' : 'none' });
-        }
-        if (
-          parsed.lyricsSource === 'local' ||
-          parsed.lyricsSource === 'online' ||
-          parsed.lyricsSource === 'off'
-        ) {
-          set({ lyricsSource: parsed.lyricsSource });
-        } else if (typeof parsed.lyricsOnlineFallback === 'boolean') {
-          // Migrate the old boolean: on = local first with online fallback, off = no online.
-          set({ lyricsSource: parsed.lyricsOnlineFallback ? 'local' : 'off' });
-        }
-        const oneOf = <T extends string>(v: unknown, all: readonly T[]): v is T =>
-          all.includes(v as T);
-        if (oneOf(parsed.lyricsSize, ['small', 'normal', 'large'] as const)) {
-          set({ lyricsSize: parsed.lyricsSize });
-        }
-        if (oneOf(parsed.lyricsAlign, ['left', 'center'] as const)) {
-          set({ lyricsAlign: parsed.lyricsAlign });
-        }
-        if (oneOf(parsed.miniPlayerButtons, ['favorite', 'next', 'previousNext', 'none'] as const)) {
-          set({ miniPlayerButtons: parsed.miniPlayerButtons });
-        }
-        if (oneOf(parsed.coverCorners, ['square', 'rounded', 'round'] as const)) {
-          set({ coverCorners: parsed.coverCorners });
-        }
-        if (
-          parsed.preferDownloads === 'always' ||
-          parsed.preferDownloads === 'cellular' ||
-          parsed.preferDownloads === 'original' ||
-          parsed.preferDownloads === 'never'
-        ) {
-          set({ preferDownloads: parsed.preferDownloads });
-        }
-        if (parsed.playerBackground === 'none' || parsed.playerBackground === 'color' || parsed.playerBackground === 'cover') {
-          set({ playerBackground: parsed.playerBackground });
-        } else if (typeof parsed.playerColorBackground === 'boolean') {
-          // Migration from the old boolean: on → the tinted background it
-          // already had, off → flat. Profiles saved before the blurred cover
-          // option existed keep looking exactly the same.
-          set({ playerBackground: parsed.playerColorBackground ? 'color' : 'none' });
-        }
-        if (isCoverTapAction(parsed.coverTapAction)) {
-          set({ coverTapAction: parsed.coverTapAction });
-        }
-        if (isCoverTapAction(parsed.coverDoubleTapAction)) {
-          set({ coverDoubleTapAction: parsed.coverDoubleTapAction });
-        }
-        if (parsed.seekButtonsSec === 0 || parsed.seekButtonsSec === 5 || parsed.seekButtonsSec === 10 || parsed.seekButtonsSec === 30) {
-          set({ seekButtonsSec: parsed.seekButtonsSec });
-        }
-        if (parsed.previousButtonMode === 'restart' || parsed.previousButtonMode === 'always') {
-          set({ previousButtonMode: parsed.previousButtonMode });
-        }
-        if (
-          parsed.swipeAction === 'off' ||
-          parsed.swipeAction === 'queue' ||
-          parsed.swipeAction === 'next' ||
-          parsed.swipeAction === 'favorite' ||
-          parsed.swipeAction === 'menu'
-        ) {
-          set({ swipeAction: parsed.swipeAction });
-        } else if (typeof parsed.swipeToQueue === 'boolean') {
-          // Migration from the old setting: on → queue, off → nothing.
-          set({ swipeAction: parsed.swipeToQueue ? 'queue' : 'off' });
-        }
-        if (
-          parsed.swipeLeftAction === 'off' ||
-          parsed.swipeLeftAction === 'queue' ||
-          parsed.swipeLeftAction === 'next' ||
-          parsed.swipeLeftAction === 'favorite' ||
-          parsed.swipeLeftAction === 'menu'
-        ) {
-          set({ swipeLeftAction: parsed.swipeLeftAction });
-        }
-        if (Array.isArray(parsed.homeSections)) {
-          set({ homeSections: normalizeHomeSections(parsed.homeSections) });
-        }
-        if (parsed.quickGridSize === 4 || parsed.quickGridSize === 6 || parsed.quickGridSize === 8) {
-          set({ quickGridSize: parsed.quickGridSize });
-        }
-        // Truncated on hydrate: a setting saved by a version with a different
-        // cap must not sneak in longer than what fits.
-        if (typeof parsed.customGreeting === 'string') {
-          set({ customGreeting: parsed.customGreeting.slice(0, GREETING_MAX) });
-        }
-        // Two older names are still read here, and this is the whole of the
-        // rename's cost. The row used to be called the Explore chips, one word
-        // away from the Explore tab and meaning something else entirely; a
-        // file written before the rename says `exploreChips`, and whoever had
-        // spent time putting those in order would have found them back at the
-        // defaults. Written under the new name from the first save on, so this
-        // only ever runs once per install.
-        const chipIcons = parsed.homeChipIcons ?? parsed.exploreChipIcons;
-        if (typeof chipIcons === 'boolean') {
-          set({ homeChipIcons: chipIcons });
-        }
-        const chips = parsed.homeChips ?? parsed.exploreChips;
-        if (Array.isArray(chips)) {
-          set({ homeChips: normalizeHomeChips(chips) });
-        } else if (parsed.showExploreChips === false) {
-          // Migration from the single toggle that came before either name:
-          // whoever had the row hidden should still not see it, not find the
-          // chips back. Turning them all off is exactly what hides it now.
-          set({ homeChips: DEFAULT_HOME_CHIPS.map((c) => ({ ...c, enabled: false })) });
-        }
-        if (Array.isArray(parsed.bottomTabs)) {
-          set({ bottomTabs: normalizeBottomTabs(parsed.bottomTabs) });
-        }
-        if (Array.isArray(parsed.exploreSections)) {
-          set({ exploreSections: normalizeExploreSections(parsed.exploreSections) });
-        }
-        if (Array.isArray(parsed.homeButtons)) {
-          set({ homeButtons: normalizeHomeButtons(parsed.homeButtons) });
-        } else if (parsed.showHistoryButton === false) {
-          // Migration from the previous single toggle: the clock was the only
-          // one of these with a switch, and whoever had it hidden should not
-          // find it back.
-          set({
-            homeButtons: DEFAULT_HOME_BUTTONS.map((b) =>
-              b.key === 'history' ? { ...b, enabled: false } : { ...b },
-            ),
-          });
-        }
-        if (parsed.playerButtonsLayout === 'centered' || parsed.playerButtonsLayout === 'spread') {
-          set({ playerButtonsLayout: parsed.playerButtonsLayout });
-        }
-        if (Array.isArray(parsed.playerButtons)) {
-          set({ playerButtons: normalizePlayerButtons(parsed.playerButtons) });
-        } else {
-          // From the three switches there were before: whoever had one of them
-          // off does not find it back. Speed was off unless turned on.
-          const off = new Set<PlayerButtonKey>();
-          if (parsed.showQueueButton === false) off.add('queue');
-          if (parsed.showDevicesButton === false) off.add('devices');
-          if (parsed.showSpeedButton !== true && 'showQueueButton' in parsed) off.add('speed');
-          set({
-            playerButtons: DEFAULT_PLAYER_BUTTONS.map((b) => ({ ...b, enabled: !off.has(b.key) })),
-          });
-        }
-        if (
-          parsed.defaultTab === 'index' ||
-          parsed.defaultTab === 'search' ||
-          parsed.defaultTab === 'library' ||
-          parsed.defaultTab === 'explore'
-        ) {
-          set({ defaultTab: parsed.defaultTab });
-        }
-        if (parsed.librarySort === 'recent' || parsed.librarySort === 'added' || parsed.librarySort === 'alpha') {
-          set({ librarySort: parsed.librarySort });
-        }
-        if (parsed.libraryLayout === 'list' || parsed.libraryLayout === 'grid') {
-          set({ libraryLayout: parsed.libraryLayout });
-        }
-        if (parsed.browseArtistsLayout === 'list' || parsed.browseArtistsLayout === 'grid') {
-          set({ browseArtistsLayout: parsed.browseArtistsLayout });
-        }
-        if (parsed.browseAlbumsLayout === 'list' || parsed.browseAlbumsLayout === 'grid') {
-          set({ browseAlbumsLayout: parsed.browseAlbumsLayout });
-        }
-        if (parsed.browsePlaylistsLayout === 'list' || parsed.browsePlaylistsLayout === 'grid') {
-          set({ browsePlaylistsLayout: parsed.browsePlaylistsLayout });
-        }
-        if (
-          parsed.browsePlaylistsSort === 'recent' ||
-          parsed.browsePlaylistsSort === 'added' ||
-          parsed.browsePlaylistsSort === 'alpha'
-        ) {
-          set({ browsePlaylistsSort: parsed.browsePlaylistsSort });
-        }
-        if (parsed.browseSongsLayout === 'list' || parsed.browseSongsLayout === 'grid') {
-          set({ browseSongsLayout: parsed.browseSongsLayout });
-        }
-        if (parsed.discographyLayout === 'list' || parsed.discographyLayout === 'grid') {
-          set({ discographyLayout: parsed.discographyLayout });
-        }
-        if (parsed.genreLayout === 'list' || parsed.genreLayout === 'grid') {
-          set({ genreLayout: parsed.genreLayout });
-        }
-        // Read key by key rather than taken whole: a number from a file is the
-        // one thing here that decides how a list is laid out, and a stray one
-        // would be a screen that renders with columns nobody can choose. Keys
-        // that are not grids any more simply do not survive the read.
-        if (parsed.gridColumns && typeof parsed.gridColumns === 'object') {
-          const cols: Partial<Record<GridSizeKey, number>> = {};
-          for (const [key, value] of Object.entries(parsed.gridColumns)) {
-            // A grid remembers a phone and a tablet apart, so the key can carry
-            // which one it is; the grid itself has to be one that still exists.
-            const wide = key.endsWith(':wide');
-            if (!(key.replace(/:wide$/, '') in GRID_DEFAULT_COLUMNS)) continue;
-            const choices = wide ? WIDE_COLUMN_CHOICES : GRID_COLUMN_CHOICES;
-            if (choices.includes(value as number)) cols[key as GridSizeKey] = value as number;
-          }
-          set({ gridColumns: cols });
-        }
-        if (SHARE_EXPIRIES.includes(parsed.shareExpiry as ShareExpiry)) {
-          set({ shareExpiry: parsed.shareExpiry as ShareExpiry });
-        }
-        // The light accent falls back to the dark one rather than to the
-        // default: every profile that picked a colour before there were two of
-        // them picked it for the app, not for one of its appearances.
-        if (isHexColor(parsed.accentColor) || isHexColor(parsed.accentColorLight)) {
-          const dark = isHexColor(parsed.accentColor) ? parsed.accentColor : DEFAULT_ACCENT;
-          const light = isHexColor(parsed.accentColorLight) ? parsed.accentColorLight : dark;
-          set({ accentColor: dark, accentColorLight: light });
-          applyAccents(dark, light);
-        }
-        if (isHexColor(parsed.customAccentColor)) {
-          set({ customAccentColor: parsed.customAccentColor });
-        }
-        {
-          const hour = (v: unknown) => (Number.isInteger(v) && (v as number) >= 0 && (v as number) <= 23 ? (v as number) : null);
-          const light = hour(parsed.themeLightFrom) ?? DEFAULTS.themeLightFrom;
-          const dark = hour(parsed.themeDarkFrom) ?? DEFAULTS.themeDarkFrom;
-          set({ themeLightFrom: light, themeDarkFrom: dark });
-          applyThemeSchedule(light, dark);
-        }
-        if (isThemePreference(parsed.themeMode)) {
-          set({ themeMode: parsed.themeMode });
-          applyThemePreference(parsed.themeMode);
-        }
-        if (typeof parsed.pureBlack === 'boolean') {
-          set({ pureBlack: parsed.pureBlack });
-          applyPureBlack(parsed.pureBlack);
-        }
-        if (typeof parsed.backgroundTint === 'string' && parsed.backgroundTint in BACKGROUND_TINTS) {
-          set({ backgroundTint: parsed.backgroundTint });
-          applyBackgroundTint(parsed.backgroundTint);
-        }
-        if (parsed.appFont && (parsed.appFont in APP_FONT_FAMILY || parsed.appFont === 'custom')) {
-          set({ appFont: parsed.appFont });
-        }
-        if (parsed.customFontFamily) {
-          set({ customFontFamily: parsed.customFontFamily });
-        }
-        if (parsed.customFontUri) {
-          set({ customFontUri: parsed.customFontUri });
-        }
-      }
+      if (raw) applySaved(JSON.parse(raw), set);
       // Language: global (not per profile). If not yet saved separately, it is
       // migrated from the old blob (which included it) on first run.
       let lang = await getItem(LANG_KEY);
@@ -1933,9 +1957,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
       // hydration has taken over.
       if (!applied && scope.accept(token, key)) {
         set({ ...DEFAULTS, language: get().language });
-        applyAccents(DEFAULT_ACCENT, DEFAULT_ACCENT);
-        applyThemeSchedule(DEFAULTS.themeLightFrom, DEFAULTS.themeDarkFrom);
-        applyThemePreference(DEFAULTS.themeMode);
+        applyFactoryLook();
       }
     } finally {
       // A read overtaken by a newer one has nothing to hand over: saying
@@ -1952,3 +1974,15 @@ export const useSettings = create<SettingsState>((set, get) => ({
     }
   },
 }));
+
+/**
+ * What an exported file carries (#243): every per-profile setting but where
+ * this phone keeps its custom font, which means nothing anywhere else. None of
+ * them is a credential; those live in the auth store.
+ */
+export function exportedSettings(): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...snapshot(useSettings.getState) };
+  delete out.customFontFamily;
+  delete out.customFontUri;
+  return out;
+}

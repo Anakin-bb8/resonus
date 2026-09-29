@@ -750,5 +750,12 @@
   "No podcast found for “{term}”. Try pasting the feed address below.": "No s'ha trobat cap pòdcast per a «{term}». Prova d'enganxar a sota l'adreça del feed.",
   "Search for a show, or paste the address of a feed below.": "Cerca un programa o enganxa a sota l'adreça d'un feed.",
   "Subscribe": "Subscriu-t'hi",
-  "Recent episodes": "Episodis recents"
+  "Recent episodes": "Episodis recents",
+  "Export settings": "Exporta la configuració",
+  "Import settings": "Importa la configuració",
+  "Couldn't export the settings": "No s'ha pogut exportar la configuració",
+  "Couldn't read this settings file": "No s'ha pogut llegir aquest fitxer de configuració",
+  "Your preferences will be replaced by the ones in the file. Your language and accounts stay.": "Les teves preferències se substituiran per les del fitxer. El teu idioma i els teus comptes es mantenen.",
+  "Import": "Importa",
+  "Settings imported": "Configuració importada"
 }
