@@ -34,7 +34,7 @@ export const motion = {
     move: 220,
     /** A line of lyrics walking up to its place, which is further than it
      *  looks and reads as a jump if it is hurried. */
-    scroll: 450,
+    scroll: 540,
     /** A colour settling in behind everything else, slow enough that nobody
      *  catches it changing. */
     tint: 600,
