@@ -10,6 +10,7 @@ import { ScrollView, Text } from 'react-native';
 import {
   SelectList,
   SettingRow,
+  SettingsGroup,
   SettingsPage,
   settingsStyles,
   SliderRow,
@@ -66,49 +67,52 @@ export default function EqualizerSettings() {
   return (
     <SettingsPage title={t('Equalizer')}>
       <ScrollView contentContainerStyle={settingsStyles.content}>
-        <SwitchList
-          options={[
-            {
-              label: t('Equalizer'),
-              description: t('Apply the equalizer to the app audio.'),
-              value: enabled,
-              onChange: setEnabled,
-            },
-          ]}
-        />
-
-        {presets.length > 0 ? (
-          <SelectList
-            label={t('Preset')}
+        <SettingsGroup>
+          <SwitchList
             options={[
-              { value: -1, label: t('Custom') },
-              ...presets.map((name, i) => ({ value: i, label: name })),
+              {
+                label: t('Equalizer'),
+                value: enabled,
+                onChange: setEnabled,
+              },
             ]}
-            value={preset}
-            onChange={(v) => {
-              setPreset(v);
-              if (v >= 0) applyPreset(v);
-            }}
           />
-        ) : null}
+
+          {presets.length > 0 ? (
+            <SelectList
+              label={t('Preset')}
+              options={[
+                { value: -1, label: t('Custom') },
+                ...presets.map((name, i) => ({ value: i, label: name })),
+              ]}
+              value={preset}
+              onChange={(v) => {
+                setPreset(v);
+                if (v >= 0) applyPreset(v);
+              }}
+            />
+          ) : null}
+        </SettingsGroup>
 
         <Text style={settingsStyles.sectionTitle}>{t('Bands')}</Text>
-        {bands.map((band) => (
-          <SliderRow
-            key={band.index}
-            label={formatFreq(band.centerFreq)}
-            value={levels[band.index] ?? 0}
-            min={minLevel}
-            max={maxLevel}
-            // 1 dB steps: the range comes in millibels.
-            step={100}
-            formatValue={formatGain}
-            onChange={(v) => {
-              setPreset(-1);
-              setBandLevel(band.index, v);
-            }}
-          />
-        ))}
+        <SettingsGroup>
+          {bands.map((band) => (
+            <SliderRow
+              key={band.index}
+              label={formatFreq(band.centerFreq)}
+              value={levels[band.index] ?? 0}
+              min={minLevel}
+              max={maxLevel}
+              // 1 dB steps: the range comes in millibels.
+              step={100}
+              formatValue={formatGain}
+              onChange={(v) => {
+                setPreset(-1);
+                setBandLevel(band.index, v);
+              }}
+            />
+          ))}
+        </SettingsGroup>
 
         <SettingRow
           icon="arrow-undo-outline"

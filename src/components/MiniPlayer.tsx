@@ -188,10 +188,12 @@ export function MiniPlayer() {
     : undefined;
   const dominant = useDominantColor(miniColor ? colorSource : undefined);
   const bg = miniColor ? dominant : colors.surfaceHighlight;
-  const blur = useBarBlur();
+  const blur = useBarBlur('miniPlayer');
+  const buttons = useSettings((s) => s.miniPlayerButtons);
+  const showProgress = useSettings((s) => s.miniPlayerProgress);
   // Not "unless the file is on the phone": see the player screen, which had the
   // same test in the same two places and the same hole under it.
-  const favIds = useFavoriteIds(!!song);
+  const favIds = useFavoriteIds(!!song && buttons === 'favorite');
 
   if (!song) return null;
 
@@ -228,7 +230,20 @@ export function MiniPlayer() {
           ) : null}
         </View>
       </Animated.View>
-      <FavoriteButton id={song.id} starred={favorited} size={24} />
+      {buttons === 'favorite' ? <FavoriteButton id={song.id} starred={favorited} size={24} /> : null}
+      {buttons === 'previousNext' ? (
+        <Pressable
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel={t('Previous')}
+          onPress={(e) => {
+            e.stopPropagation();
+            previous();
+          }}
+        >
+          <Icon name="play-skip-back" size={24} color={colors.text} />
+        </Pressable>
+      ) : null}
       <Pressable
         hitSlop={12}
         accessibilityRole="button"
@@ -260,8 +275,21 @@ export function MiniPlayer() {
           />
         )}
       </Pressable>
+      {buttons === 'next' || buttons === 'previousNext' ? (
+        <Pressable
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel={t('Next')}
+          onPress={(e) => {
+            e.stopPropagation();
+            next();
+          }}
+        >
+          <Icon name="play-skip-forward" size={24} color={colors.text} />
+        </Pressable>
+      ) : null}
 
-          <MiniProgress song={song} />
+          {showProgress ? <MiniProgress song={song} /> : null}
         </Pressable>
         </View>
       </Animated.View>

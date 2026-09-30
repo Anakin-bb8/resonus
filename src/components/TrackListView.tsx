@@ -501,8 +501,7 @@ export function TrackListView({
               <View style={[styles.gradientAbove, { height: band, backgroundColor: headerColor }]} />
             ) : null}
             <LinearGradient
-              colors={[headerColor, headerColor, colors.background]}
-              locations={[0, 0.35, 1]}
+              {...easedFade(headerColor, colors.background)}
               style={[StyleSheet.absoluteFill, { top: band }]}
             />
           </Animated.View>
@@ -1176,3 +1175,38 @@ const styles = themed((colors) => ({
     fontWeight: '500',
   },
 }));
+
+/**
+ * The header's fade from the cover colour into the page, eased rather than
+ * straight: a straight blend has a visible corner where it starts and a line
+ * where it lands. Smoothstep eases in and out of both, over several stops since
+ * the gradient itself only blends in straight lines between them.
+ */
+function easedFade(from: string, to: string): { colors: [string, string, ...string[]]; locations: [number, number, ...number[]] } {
+  const a = hexChannels(from);
+  const b = hexChannels(to);
+  if (!a || !b) return { colors: [from, from, to], locations: [0, 0.35, 1] };
+  const START = 0.25;
+  const STEPS = 8;
+  const colors: string[] = [from];
+  const locations: number[] = [0];
+  for (let i = 0; i <= STEPS; i++) {
+    const u = i / STEPS;
+    const k = u * u * (3 - 2 * u);
+    colors.push(
+      `rgb(${a.map((c, j) => Math.round(c + (b[j] - c) * k)).join(', ')})`,
+    );
+    locations.push(START + (1 - START) * u);
+  }
+  return {
+    colors: colors as [string, string, ...string[]],
+    locations: locations as [number, number, ...number[]],
+  };
+}
+
+function hexChannels(hex: string): [number, number, number] | null {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}

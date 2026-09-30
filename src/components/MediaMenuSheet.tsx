@@ -23,7 +23,6 @@ import { exportManyToFolder, totalBytes } from '@/lib/exportSong';
 import { formatBytes } from '@/lib/format';
 import { pickFolder } from '@/lib/localLibrary';
 import { queryClient } from '@/lib/query';
-import { canShareResonusLink, shareResonusLink } from '@/lib/shareLink';
 import { useArtistPicker } from '@/store/artistPicker';
 import { useAuthStore } from '@/store/auth';
 import { anyDownloads, useDownloads } from '@/store/downloads';
@@ -323,28 +322,6 @@ export function MediaMenuSheet() {
                     useSharePicker.getState().open({ id: album ? album.id : playlist!.id, name });
                   });
                 }}
-              />
-            ) : null}
-            {/* For another Resonus user on the same server (#176). A private
-                playlist would open for nobody else, and one made offline has
-                no id on the server yet. */}
-            {canShareResonusLink() &&
-            (album || (playlist!.public !== false && !playlist!.id.startsWith('tmp_'))) ? (
-              <Action
-                icon="link-outline"
-                label={t('Share Resonus link')}
-                onPress={() =>
-                  // The system sheet goes up over this one, which stays behind
-                  // it and closes only once the user is done with it: closing
-                  // first hands UIKit a controller that is on its way out, and
-                  // the share sheet comes down with it (the same order the
-                  // normal share has used since it was fixed).
-                  void shareResonusLink(
-                    album
-                      ? { kind: 'album', id: album.id, name, artist: album.artist }
-                      : { kind: 'playlist', id: playlist!.id, name },
-                  ).finally(() => close())
-                }
               />
             ) : null}
             {/* Albums only: a playlist is nobody's. The song menu has had this

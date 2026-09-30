@@ -26,7 +26,7 @@ import Animated, {
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { CACHED_COVER, COVER, songCoverUrl, star, unstar, type Song } from '@/api/data';
@@ -80,6 +80,7 @@ import {
   spacing,
   themed,
   tracking,
+  transparentOf,
   useTheme,
   useThemeMode,
 } from '@/theme';
@@ -345,8 +346,6 @@ export default function PlayerScreen() {
   // change: a flat color is animated and the gradient toward the background is
   // a fixed overlay (same look as animating the gradient, which can't be done).
   const background = useSettings((s) => s.playerBackground);
-  const backgroundTint = useSettings((s) => s.backgroundTint);
-  const pureBlack = useSettings((s) => s.pureBlack);
   const colorBackground = background === 'color';
   const animatedCoverBg = useSettings((s) => s.animatedCoverBackground);
   // An animated cover (GIF, animated WebP, APNG) can take the whole screen
@@ -378,12 +377,10 @@ export default function PlayerScreen() {
   // background setting says: the gradient under it fades into that colour.
   const dominant = useDominantColor(colorBackground || isAnimatedCover ? cover : undefined);
   const lightMode = useThemeMode() === 'light';
-  // Play, the played part of the bar and, on light, the controls take the hue
-  // of the background shade the user picked, rather than pure black or white:
-  // pale with a deep icon on dark, deep with a pale icon on light. Pure black
-  // is neutral, like its greys.
-  const tintBase =
-    BACKGROUND_TINTS[pureBlack && !lightMode ? 'neutral' : backgroundTint].dark.surfaceHighlight;
+  // Play, the played part of the bar and, on light, the controls: pale with a
+  // deep icon on dark, deep with a pale icon on light. Neutral whatever
+  // background shade is picked, so they never pick up its hue.
+  const tintBase = BACKGROUND_TINTS.neutral.dark.surfaceHighlight;
   const playFill = lightMode ? toneOf(tintBase, 0.22, 0.2) : toneOf(tintBase, 0.9, 0.3);
   const playInk = lightMode ? toneOf(tintBase, 0.97, 0.2) : toneOf(tintBase, 0.14, 0.3);
   const ink = lightMode ? toneOf(tintBase, 0.2, 0.2) : colors.text;
@@ -925,9 +922,10 @@ export default function PlayerScreen() {
    *
    * Both cases still need the speed to be able to do anything: a station
    * arrives in real time and a renderer plays at its own pace, so there is
-   * nothing to offer while either is what is playing.
+   * nothing to offer while either is what is playing. A podcast episode is a
+   * file behind a URL, not a station (`vod`).
    */
-  const canSpeed = !song.url && !remoteDevice;
+  const canSpeed = (!song.url || song.vod) && !remoteDevice;
 
   return (
     <GestureDetector gesture={dismissPan}>
@@ -949,7 +947,7 @@ export default function PlayerScreen() {
                 picture ends somewhere instead of being cut off. Inside the
                 same wrapper: it has to travel with it. */}
             <LinearGradient
-              colors={['transparent', dominant]}
+              colors={[transparentOf(dominant), dominant]}
               style={StyleSheet.absoluteFill}
               locations={[0.7, 1]}
             />
@@ -989,7 +987,15 @@ export default function PlayerScreen() {
           locations={[0.45, 1]}
           style={StyleSheet.absoluteFill}
         />
-        <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+        {/* Insets from JS, not a native `SafeAreaView`: that one pads a frame
+            late, and the page measured in that frame overwrote the remembered
+            layout, so a pulled-up player was seen settling in three steps. */}
+        <View
+          style={[
+            styles.safe,
+            { paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right },
+          ]}
+        >
         <Animated.ScrollView
           style={{ flex: 1 }}
           // Keeps the lyrics card clear of the navigation bar, and only then:
@@ -1180,7 +1186,7 @@ export default function PlayerScreen() {
           ) : null}
         </View>
 
-        {/* The safe area is kept here rather than on the SafeAreaView: the
+        {/* The bottom inset is kept here rather than on the page: the
             scroll has to reach the bottom edge for the lyrics card, and it is
             this block, the last thing on the first page, that must not end up
             under the navigation bar. */}
@@ -1534,7 +1540,7 @@ export default function PlayerScreen() {
         {showsLyricsCard ? <LyricsCard /> : null}
         {wantsArtistCard ? <ArtistPlayerCard /> : null}
         </Animated.ScrollView>
-        </SafeAreaView>
+        </View>
         <OutputSheet visible={outputOpen} onClose={() => setOutputOpen(false)} />
         <SpeedSheet openRef={openSpeedSheet} />
       </Animated.View>

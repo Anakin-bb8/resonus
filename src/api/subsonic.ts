@@ -109,6 +109,8 @@ export interface Song {
   userRating?: number;
   /** Direct streaming URL (used for radio; avoids generating Subsonic URL). */
   url?: string;
+  /** `url` is a file (a podcast episode), not a live station: speed applies. */
+  vod?: boolean;
   /** Song genre (sent by Subsonic and Jellyfin). Used by radio so it doesn't
    *  die when similar artist tracks run out. */
   genre?: string;
@@ -1879,4 +1881,44 @@ export async function hasShareRole(auth: SubsonicAuth): Promise<boolean> {
     if ((e as { network?: boolean })?.network) throw e;
     return false;
   }
+}
+
+/** A podcast subscribed to on the phone (`api/podcasts.ts`). */
+export interface PodcastChannel {
+  /** `hashKey(feed url)`. */
+  id: string;
+  title: string;
+  description?: string;
+  author?: string;
+  imageUrl?: string;
+  /** The channel's own web page, not the feed file. */
+  siteUrl?: string;
+  /** The feed this was read from. Absent for a channel read another way. */
+  feedUrl?: string;
+  /** How many episodes are stored. */
+  episodeCount?: number;
+  /** When the newest stored episode was published. */
+  lastPublishedAt?: number;
+  /** When the feed was last read. */
+  refreshedAt?: number;
+  /** Why the last read failed, if it did. */
+  error?: string;
+}
+
+/** One episode of a podcast. */
+export interface PodcastEpisode {
+  /** Prefixed with its channel id: guids collide across feeds. */
+  id: string;
+  channelId: string;
+  title: string;
+  description?: string;
+  /** Publication date, in ms since the epoch. */
+  publishedAt?: number;
+  /** Seconds. */
+  duration?: number;
+  /** The enclosure, played as `Song.url`. */
+  url?: string;
+  mimeType?: string;
+  size?: number;
+  imageUrl?: string;
 }

@@ -19,6 +19,7 @@ import { closeCatalog } from './downloadsDb';
 import { hashKey } from './localLibrary';
 import { closeMirrorFor } from './mirrorDb';
 import { removeMirrorCovers } from './mirrorCovers';
+import { closePodcastDb, podcastDbDir } from './podcastDb';
 import { primaryUrl } from './serverUrls';
 import { closeCacheDb } from './songCacheDb';
 import { deleteItem } from './storage';
@@ -58,9 +59,13 @@ export async function deleteProfileData(auth: SubsonicAuth): Promise<void> {
   // that no longer exists.
   await closeCatalog(dir);
   await closeMirrorFor(scope);
+  await closePodcastDb(scope);
 
   // The downloads: the audio, the covers and the catalog that indexed them.
   await remove(dir);
+
+  // The podcast subscriptions.
+  await remove(podcastDbDir(scope));
 
   // The song cache, index and all (#180).
   const cacheDir = `${SONG_CACHE_DIR}${scope}/`;

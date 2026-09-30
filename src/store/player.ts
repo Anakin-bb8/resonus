@@ -56,6 +56,7 @@ import { transcodeTarget } from '@/lib/audioQuality';
 import { favoriteLabel, favoriteState, onFavoritesChange, toggleFavorite } from '@/lib/remoteFavorite';
 import type { Remap } from '@/lib/navidromeRemap';
 import { remapSong } from '@/lib/navidromeRemap';
+import { noteOwnReport } from '@/lib/ownReports';
 import { beat, bump, timed } from '@/lib/perfLog';
 import { queryClient } from '@/lib/query';
 import { primaryUrl } from '@/lib/serverUrls';
@@ -1117,6 +1118,7 @@ function reportState(state: PlaybackState, song: Song | undefined, positionSec: 
     // The account may have gone, or gone offline, while it was being asked.
     const now = useAuthStore.getState();
     if (now.auth !== auth || now.offline) return;
+    noteOwnReport(song.id);
     if (!supported) {
       // The classic API only knows how to say "this started", so the rest is
       // nothing it could carry.
@@ -1942,7 +1944,9 @@ export const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2] as const;
  * either way and comes back with the next track that has a file behind it.
  */
 function speedFor(song: Song | null | undefined): number {
-  if (!song || song.url) return 1;
+  if (!song) return 1;
+  // A station stalls if hurried; a podcast episode (`vod`) is a file and can.
+  if (song.url && !song.vod) return 1;
   return usePlayerStore.getState().speed;
 }
 

@@ -1,6 +1,6 @@
 /**
- * The blur behind the navigation bar and the mini player ("Blur behind the
- * bars", Settings › Appearance).
+ * The blur behind the navigation bar and the mini player (a switch each, in
+ * Settings › Appearance and Settings › Player).
  *
  * On Android a BlurView can only blur what sits inside a `BlurTargetView`, and
  * never itself: the root layout wraps the Stack in one (`BarBlurTarget`) and
@@ -24,16 +24,16 @@ export const canBlurBars =
 const target = createRef<View | null>();
 
 /**
- * Whether the bars are see-through, blurring what scrolls under them.
+ * Whether a bar is see-through, blurring what scrolls under it.
  *
- * A gradient bar never is: the two fill the same pixels, so the style wins and
- * the blur setting stops having any effect at all (it still switches, it just
- * does not show while the gradient is on).
+ * The navigation bar never is while the gradient style is on: the two fill the
+ * same pixels, so the style wins and the blur setting stops having any effect
+ * at all (it still switches, it just does not show while the gradient is on).
  */
-export function useBarBlur(): boolean {
-  const blur = useSettings((s) => s.blurBars);
+export function useBarBlur(bar: 'tabs' | 'miniPlayer'): boolean {
+  const blur = useSettings((s) => (bar === 'tabs' ? s.blurBars : s.blurMiniPlayer));
   const style = useSettings((s) => s.navBarStyle);
-  return blur && style !== 'gradient' && canBlurBars;
+  return blur && !(bar === 'tabs' && style === 'gradient') && canBlurBars;
 }
 
 

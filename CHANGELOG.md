@@ -9,6 +9,58 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Added
+
+- Brazilian Portuguese, thanks to @vicsantus (#240).
+- Settings > About can export your settings to a file and import them on another phone or someone else's, without accounts or passwords (#243).
+
+### Fixed
+
+- A cover opened full screen is now shown with square corners, whatever the cover corners setting (#241).
+- Dragging the seek bar in a fragmented M4A, such as the ones many downloaders save from streaming services, no longer starts the song over (#242).
+- Home no longer offers the song paused on this same phone as playing on Resonus.
+- "Don't remind me" on the battery optimization warning now keeps it from coming back on the next launch (#238).
+
+## [0.7.11] - 2026-09-27
+
+### Added
+
+- Settings > Theme lets you make an accent color of your own, next to the palette, with a color picker and a hex code.
+- A scheduled theme in Settings > Theme, light from one hour and dark from another.
+- Settings > Player lets you choose the size and alignment of the lyrics.
+- The names under the navigation bar icons can be hidden.
+- The mini player can show next, previous and next, or no button beside play instead of the heart, and its progress bar can be hidden.
+- Tapping the time at the right of the seek bar switches between the song's length and the time left.
+- Settings > Appearance lets you make the corners of every cover in the app square, rounded or more rounded.
+- Podcasts: search for a show or paste its feed, and its episodes play from Explore, a Home chip and a Recent episodes row on Home, with no server needed (#239).
+- Gapless playback on iOS (#237).
+
+### Changed
+
+- Settings drop the descriptions under options whose name already says what they do.
+- The light theme is no longer experimental.
+- The player buttons no longer take the hue of the background shade.
+- The dark theme is called just Dark, without (default).
+- The rows of each settings section sit in one card, under smaller headings.
+- The colour at the top of an album or playlist fades into the page more smoothly.
+- The blur behind the navigation bar and the one behind the mini player are now two separate switches, the second in Settings > Player next to Colored mini player.
+- Settings > Appearance groups Explore sections and Folder browsing under Explore, and Quality & playback puts Keep screen on and the battery warning under System.
+- The times under the progress bar are lighter and easier to read over the cover (#237).
+- On iOS the keyboard, alerts and system sheets follow the app's theme instead of the phone's (#237).
+- More of the app is translated to Italian (#237).
+
+### Removed
+
+- The Typewriter font. A profile that had it goes back to the default one.
+- Resonus links, for now: sharing them from the ⋯ of an album, artist or playlist, and opening them.
+
+### Fixed
+
+- Pulling the player up from the mini player no longer shows its title, controls and cover jumping into place.
+- On iOS, seeking in FLAC, MP3 and other non-M4A files lands where you asked, and the animated cover's blurred backdrop no longer smears at the edges nor stutters on the lock screen (#237).
+- In the light theme, the Android navigation bar buttons are dark instead of white on white.
+- In the light theme, the fade under an artist photo and under the animated cover no longer passes through a grey band.
+
 ## [0.7.10] - 2026-09-26
 
 ### Added

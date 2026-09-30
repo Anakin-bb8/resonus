@@ -40,7 +40,6 @@ import { useServerCover } from '@/hooks/useServerCover';
 import { useSongSort } from '@/hooks/useSongSort';
 import { songsLabel, useT } from '@/i18n';
 import { formatTotalDuration } from '@/lib/format';
-import { canShareResonusLink, shareResonusLink } from '@/lib/shareLink';
 import { useSharePicker } from '@/store/sharePicker';
 import { useAuthStore } from '@/store/auth';
 import { useAutoDownloads } from '@/store/autoDownloads';
@@ -843,28 +842,6 @@ export default function PlaylistScreen() {
               >
                 <Icon name="share-social-outline" size={24} color={colors.text} />
                 <Text style={styles.actionText}>{t('Share')}</Text>
-              </Pressable>
-            ) : null}
-            {canShareResonusLink() &&
-            data.playlist.public !== false &&
-            !id.startsWith('tmp_') ? (
-              <Pressable
-                style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
-                onPress={() =>
-                  // The system sheet goes up over this one, which stays behind
-                  // it and closes only once the user is done with it: closing
-                  // first hands UIKit a controller that is on its way out, and
-                  // the share sheet comes down with it (the order the normal
-                  // share has used since it was fixed).
-                  void shareResonusLink({
-                    kind: 'playlist',
-                    id,
-                    name: data.playlist.name,
-                  }).finally(() => close())
-                }
-              >
-                <Icon name="link-outline" size={24} color={colors.text} />
-                <Text style={styles.actionText}>{t('Share Resonus link')}</Text>
               </Pressable>
             ) : null}
             {/* The album's menu has had this since #47; this one is a screen of

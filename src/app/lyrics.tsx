@@ -10,7 +10,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { COVER, songCoverUrl } from '@/api/data';
-import { lyricsStyles, SyncedLyricsView } from '@/components/LyricsCard';
+import { SyncedLyricsView, useLyricsLineStyle } from '@/components/LyricsCard';
 import { SeekBar } from '@/components/SeekBar';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useLyrics } from '@/hooks/useLyrics';
@@ -34,6 +34,7 @@ export default function LyricsScreen() {
   const previous = usePlayerStore((s) => s.previous);
   const next = usePlayerStore((s) => s.next);
   const { data, isLoading } = useLyrics(song ?? undefined);
+  const plainLineStyle = useLyricsLineStyle(true);
   const background = useSettings((s) => s.lyricsBackground);
   const cover = song ? songCoverUrl(song, COVER.card) : undefined;
   // Only extract the palette when it's actually going to be used.
@@ -96,7 +97,7 @@ export default function LyricsScreen() {
           <SyncedLyricsView lines={data.lines} large fadeColor={fadeColor} />
         ) : data ? (
           <ScrollView contentContainerStyle={styles.plainContent} showsVerticalScrollIndicator={false}>
-            <Text style={[lyricsStyles.line, lyricsStyles.lineLarge]}>
+            <Text style={plainLineStyle}>
               {data.lines.map((l) => l.value).join('\n')}
             </Text>
           </ScrollView>

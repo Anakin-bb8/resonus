@@ -36,6 +36,9 @@ export function BatteryWarning() {
   // Only once the settings are read from disk: before that `batteryWarning` is
   // its default (on), and someone who had turned it off would see it anyway.
   useEffect(() => {
+    // Settings that arrive after it opened (a profile's own, read late) have
+    // the last word.
+    if (!enabled) setVisible(false);
     if (asked || !hydrated || !enabled || !isBatteryOptimized()) return;
     asked = true;
     setVisible(true);

@@ -90,7 +90,7 @@ export function GlobalTabBar() {
   // It is also the bar of the tab screens (the tabs navigator draws none):
   // the blur only works from out here (`BarBlur`). The setting only decides
   // where else it shows.
-  const blur = useBarBlur();
+  const blur = useBarBlur('tabs');
   // The style that is on wins over the blur, and over the solid colour too:
   // they fill the same pixels and only one of them is ever drawn.
   const navStyle = useSettings((s) => s.navBarStyle);
@@ -99,6 +99,7 @@ export function GlobalTabBar() {
   // changes underneath it.
   const mode = useThemeMode();
   const bottomTabs = useSettings((s) => s.bottomTabs);
+  const showLabels = useSettings((s) => s.showTabLabels);
   const root = segments[0];
   const inTabs = root === '(tabs)' || root === undefined;
   // Where a stack opened from here would belong; the back arrow reads the same
@@ -189,7 +190,9 @@ export function GlobalTabBar() {
         return (
           <Pressable
             key={tab.href}
-            style={styles.item}
+            // Same height without the names, so nothing else has to move: the
+            // icons just sit in the middle of it.
+            style={[styles.item, !showLabels && styles.itemIconOnly]}
             accessibilityRole="button"
             accessibilityState={{ selected: here }}
             accessibilityLabel={t(tab.label)}
@@ -208,9 +211,11 @@ export function GlobalTabBar() {
                 color={color}
               />
             </View>
-            <Text style={[styles.label, { color }]} numberOfLines={1}>
-              {t(tab.label)}
-            </Text>
+            {showLabels ? (
+              <Text style={[styles.label, { color }]} numberOfLines={1}>
+                {t(tab.label)}
+              </Text>
+            ) : null}
           </Pressable>
           );
         })}
@@ -238,6 +243,7 @@ const styles = themed((colors) => ({
     backgroundColor: colors.highlight,
   },
   item: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', padding: 5 },
+  itemIconOnly: { justifyContent: 'center', paddingBottom: 11 },
   iconBox: { width: 31, height: 28, alignItems: 'center', justifyContent: 'center' },
   label: { fontSize: 10 },
 }));
