@@ -579,6 +579,8 @@
     "Lyrics background": "What is drawn behind the lyrics screen, the full screen one",
     "Lyrics card background": "What is drawn behind the small lyrics card that peeks under the player. Not the same thing as `Lyrics background`",
     "Lyrics source": "Where lyrics are looked for. Its values are the three `Prefer…`/`Disable…` lines",
+    "Blur inactive lyrics": "A switch in the Lyrics section: progressively softens synchronized lyric rows away from the current line",
+    "Slightly blur synchronized lyrics other than the current line to emphasize what is playing.": "Help text under that switch. Only the current synchronized lyric line stays sharp",
     "Prefer local lyrics": "A value of `Lyrics source`: use the ones that came with the file first",
     "Prefer online search": "A value of `Lyrics source`: look them up on the internet first",
     "Disable online search": "A value of `Lyrics source`: only ever use the ones that came with the file",

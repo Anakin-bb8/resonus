@@ -945,6 +945,8 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   lyricsSource: LyricsSource;
   lyricsSize: LyricsSize;
   lyricsAlign: LyricsAlign;
+  /** Progressively blur synchronized lyric rows away from the current line. */
+  blurInactiveLyrics: boolean;
   /** The names under the icons of the navigation bar. */
   showTabLabels: boolean;
   miniPlayerButtons: MiniPlayerButtons;
@@ -1247,6 +1249,8 @@ const DEFAULTS = {
   lyricsSource: 'local' as LyricsSource,
   lyricsSize: 'normal' as LyricsSize,
   lyricsAlign: 'left' as LyricsAlign,
+  // Opt-in, matching Primuse: it changes the reading treatment substantially.
+  blurInactiveLyrics: false,
   showTabLabels: true,
   miniPlayerButtons: 'favorite' as MiniPlayerButtons,
   miniPlayerProgress: true,

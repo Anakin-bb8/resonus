@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  lyricBlurRadius,
   lyricBounceProgress,
   lyricSweepProgress,
   lyricWordDurationMs,
@@ -36,5 +37,25 @@ describe('word lyric motion', () => {
     assert.equal(lyricBounceProgress(999, 1_000, 400), 0);
     assert.equal(lyricBounceProgress(1_200, 1_000, 400), 0.5);
     assert.equal(lyricBounceProgress(1_400, 1_000, 400), 1);
+  });
+});
+
+describe('lyric depth effect', () => {
+  it('keeps the current row and disabled states sharp', () => {
+    assert.equal(lyricBlurRadius(3, 3, true), 0);
+    assert.equal(lyricBlurRadius(4, 3, false), 0);
+    assert.equal(lyricBlurRadius(4, -1, true), 0);
+  });
+
+  it('adds depth to upcoming rows and caps the radius', () => {
+    assert.deepEqual(
+      [1, 2, 3, 4, 5].map((distance) => lyricBlurRadius(10 + distance, 10, true)),
+      [1.25, 2.5, 3.75, 5, 5],
+    );
+  });
+
+  it('places passed rows one depth step behind upcoming rows', () => {
+    assert.equal(lyricBlurRadius(7, 8, true), 2.5);
+    assert.equal(lyricBlurRadius(9, 8, true), 1.25);
   });
 });

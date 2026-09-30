@@ -1,9 +1,10 @@
 # Third-party notices
 
-## Primuse lyric motion
+## Primuse lyric motion and depth effect
 
-The word-level lyric sweep and bounce in `src/components/KaraokeWords.tsx`
-are adapted from the Primuse project:
+The word-level lyric sweep and bounce in `src/components/KaraokeWords.tsx`,
+and the inactive-line blur policy in `src/lib/lyricMotion.ts`, are adapted
+from the Primuse project:
 
 Copyright (c) 2026 Welape
 

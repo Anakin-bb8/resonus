@@ -20,6 +20,26 @@ export const WORD_SWEEP_EDGE_FRACTION = 0.12;
 /** Peak scale of the syllable bounce: 1 -> 1.05 -> 1. */
 export const WORD_BOUNCE_SCALE = 0.05;
 
+/** Primuse's depth step and cap for lyrics away from the current row. */
+const LYRIC_BLUR_STEP = 1.25;
+const MAX_LYRIC_BLUR = 5;
+const PAST_LINE_DEPTH_OFFSET = 1;
+
+/**
+ * Progressive blur for synchronized lyric rows. Passed rows sit one depth
+ * step behind equally distant upcoming rows, while the active row stays sharp.
+ */
+export function lyricBlurRadius(
+  rowIndex: number,
+  activeRowIndex: number,
+  enabled: boolean,
+): number {
+  if (!enabled || rowIndex < 0 || activeRowIndex < 0 || rowIndex === activeRowIndex) return 0;
+  const distance = Math.abs(rowIndex - activeRowIndex);
+  const depth = distance + (rowIndex < activeRowIndex ? PAST_LINE_DEPTH_OFFSET : 0);
+  return Math.min(MAX_LYRIC_BLUR, depth * LYRIC_BLUR_STEP);
+}
+
 /**
  * Start-only formats use the next word as this word's end. A long silence
  * before that next marker must not turn into a multi-second slow fill.

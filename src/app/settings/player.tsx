@@ -1,6 +1,6 @@
 /** Settings › Player: looks and extras for the playback screen. */
 import { useRouter } from 'expo-router';
-import { ScrollView, Text } from 'react-native';
+import { Platform, ScrollView, Text } from 'react-native';
 
 import { canBlurBars } from '@/components/BarBlur';
 import { SelectList, SettingRow, SettingsGroup, SettingsPage, settingsStyles, SwitchList } from '@/components/SettingsUI';
@@ -77,6 +77,8 @@ export default function PlayerSettings() {
   const setLyricsSize = useSettings((s) => s.setLyricsSize);
   const lyricsAlign = useSettings((s) => s.lyricsAlign);
   const setLyricsAlign = useSettings((s) => s.setLyricsAlign);
+  const blurInactiveLyrics = useSettings((s) => s.blurInactiveLyrics);
+  const setBlurInactiveLyrics = useSettings((s) => s.setBlurInactiveLyrics);
   const setBlurMiniPlayer = useSettings((s) => s.setBlurMiniPlayer);
   const setMiniPlayerColorBackground = useSettings((s) => s.setMiniPlayerColorBackground);
   const lyricsBackground = useSettings((s) => s.lyricsBackground);
@@ -326,6 +328,18 @@ export default function PlayerSettings() {
           />
           <SwitchList
             options={[
+              ...(Platform.OS === 'android'
+                ? [
+                    {
+                      label: t('Blur inactive lyrics'),
+                      description: t(
+                        'Slightly blur synchronized lyrics other than the current line to emphasize what is playing.',
+                      ),
+                      value: blurInactiveLyrics,
+                      onChange: setBlurInactiveLyrics,
+                    },
+                  ]
+                : []),
               {
                 label: t('Show lyrics card'),
                 value: showLyricsCard,

@@ -8,7 +8,7 @@
 import Icon from '@/components/Icon';
 import { LinearGradient } from 'expo-linear-gradient';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View, type TextStyle } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View, type TextStyle } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   cancelAnimation,
@@ -29,7 +29,7 @@ import { type LyricLine, type LyricWord } from '@/api/subsonic';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useLyrics } from '@/hooks/useLyrics';
 import { useT } from '@/i18n';
-import { WORD_SWEEP_LEAD_MS } from '@/lib/lyricMotion';
+import { lyricBlurRadius, WORD_SWEEP_LEAD_MS } from '@/lib/lyricMotion';
 import { pushOnce } from '@/lib/pushOnce';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { type LyricsSize, useSettings } from '@/store/settings';
@@ -164,6 +164,7 @@ export function SyncedLyricsView({
   const userScroll = useRef(false);
   const resumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [viewH, setViewH] = useState(0);
+  const [browsing, setBrowsing] = useState(false);
   /**
    * Bumped when the line being aimed at finally reports where it is.
    *
@@ -194,6 +195,8 @@ export function SyncedLyricsView({
   const anchor = large ? 0.42 : 0.3;
   const size = useSettings((s) => s.lyricsSize);
   const centered = useSettings((s) => s.lyricsAlign) === 'center';
+  const blurInactiveLyrics = useSettings((s) => s.blurInactiveLyrics);
+  const blurEnabled = Platform.OS === 'android' && blurInactiveLyrics && !browsing;
 
   const onMeasure = useCallback((index: number, y: number, h: number) => {
     offsets.current[index] = { y, h };
@@ -217,6 +220,7 @@ export function SyncedLyricsView({
     (sec: number) => {
       if (resumeTimer.current) clearTimeout(resumeTimer.current);
       userScroll.current = false;
+      setBrowsing(false);
       seekTo(sec);
     },
     [seekTo],
@@ -283,12 +287,14 @@ export function SyncedLyricsView({
         onLayout={(e) => setViewH(e.nativeEvent.layout.height)}
         onScrollBeginDrag={() => {
           userScroll.current = true;
+          setBrowsing(true);
           cancelAnimation(targetY);
           if (resumeTimer.current) clearTimeout(resumeTimer.current);
         }}
         onScrollEndDrag={() => {
           resumeTimer.current = setTimeout(() => {
             userScroll.current = false;
+            setBrowsing(false);
           }, 3000);
         }}
         contentContainerStyle={[
@@ -308,6 +314,7 @@ export function SyncedLyricsView({
             words={line.words}
             active={i === current}
             past={current >= 0 && i < current}
+            blurRadius={lyricBlurRadius(i, current, blurEnabled)}
             large={large}
             size={size}
             centered={centered}
@@ -341,6 +348,7 @@ const LyricRow = memo(({
   words,
   active,
   past,
+  blurRadius,
   large,
   size,
   centered,
@@ -352,6 +360,8 @@ const LyricRow = memo(({
   active: boolean;
   /** Lines before the current one: same colour as active, slightly dimmer. */
   past: boolean;
+  /** Primuse-style depth blur; zero keeps the row's filter layer disabled. */
+  blurRadius: number;
   large?: boolean;
   size: LyricsSize;
   centered: boolean;
@@ -363,6 +373,7 @@ const LyricRow = memo(({
   // opacity settle on the same curve as the automatic scroll.
   const focus = useSharedValue(active ? 1 : 0);
   const dim = useSharedValue(active ? 1 : past ? 0.36 : 0.46);
+  const blur = useSharedValue(blurRadius);
   useEffect(() => {
     focus.value = withTiming(active ? 1 : 0, {
       duration: motion.duration.scroll,
@@ -377,12 +388,25 @@ const LyricRow = memo(({
       reduceMotion: motion.reduceMotion.essential,
     });
   }, [active, past, dim]);
+  useEffect(() => {
+    blur.value = withTiming(blurRadius, {
+      duration: motion.duration.scroll,
+      easing: motion.easing.move,
+      reduceMotion: motion.reduceMotion.essential,
+    });
+  }, [blur, blurRadius]);
   // The growth (8%) is compensated by the right margin of `content` so the
   // active line, scaling from the left, doesn't overflow the edge.
-  const anim = useAnimatedStyle(() => ({
-    opacity: dim.value,
-    transform: [{ scale: 1 + focus.value * 0.08 }],
-  }));
+  const anim = useAnimatedStyle(() => {
+    const radius = blur.value;
+    return {
+      opacity: dim.value,
+      transform: [{ scale: 1 + focus.value * 0.08 }],
+      // RN's Android filter clips descendants. Omitting it entirely at zero
+      // keeps the active word bounce free to rise outside its glyph box.
+      filter: radius > 0.01 ? [{ blur: radius }] : undefined,
+    };
+  });
   const lineStyle = lyricsLineStyle(large, size, centered);
   const flattened = StyleSheet.flatten(lineStyle) as TextStyle;
   const wordTextStyle: TextStyle = {

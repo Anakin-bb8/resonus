@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 770 of them.
+Every string the app can show, under the screen it shows up on. 772 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -951,6 +951,7 @@ you are actually typing into, which is easier than reading it here.
 | `Always previous track` | A value of `Previous button`: never restarts, always goes back a song |
 | `Animated cover background` | A setting: an animated cover (GIF, animated WebP) is shown full screen behind the player instead of inside the square |
 | `Background` | Section header over what is drawn behind the player. Its two values are `Plain` and `Blurred cover` |
+| `Blur inactive lyrics` | A switch in the Lyrics section: progressively softens synchronized lyric rows away from the current line |
 | `Blurred cover` | A value of `Background`: the album art, blurred, behind the player |
 | `Bottom row` |  |
 | `Buttons` | Which player buttons to show |
@@ -1002,6 +1003,7 @@ you are actually typing into, which is easier than reading it here.
 | `Show rating` |  |
 | `Show the whole artwork instead of cropping it to a square.` | The line under “Fit cover art”, explaining it |
 | `Skip buttons` | The seek forward / back buttons setting |
+| `Slightly blur synchronized lyrics other than the current line to emphasize what is playing.` | Help text under that switch. Only the current synchronized lyric line stays sharp |
 | `Small` | One of the values of “Lyrics size” |
 | `Swap favorite and menu` | Exchange the places of those two buttons in the player, for whichever hand you hold the phone in |
 | `Where to get lyrics from. Online search uses LRCLIB (sends the artist and title).` |  |
