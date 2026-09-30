@@ -369,8 +369,9 @@ const LyricRow = memo(({
 }) => {
   // Memoized, so the screen repainting is not enough to bring this one along.
   useTheme();
-  // Primuse's line takeover is one coordinated 540 ms gesture: scale and
-  // opacity settle on the same curve as the automatic scroll.
+  // Primuse's line takeover coordinates scale and opacity with auto-scroll.
+  // Blur takes a gentler path because Android's filter is visually stronger
+  // and a fast change reads as the completed line suddenly losing focus.
   const focus = useSharedValue(active ? 1 : 0);
   const dim = useSharedValue(active ? 1 : past ? 0.36 : 0.46);
   const blur = useSharedValue(blurRadius);
@@ -390,8 +391,8 @@ const LyricRow = memo(({
   }, [active, past, dim]);
   useEffect(() => {
     blur.value = withTiming(blurRadius, {
-      duration: motion.duration.scroll,
-      easing: motion.easing.move,
+      duration: motion.duration.depth,
+      easing: motion.easing.depth,
       reduceMotion: motion.reduceMotion.essential,
     });
   }, [blur, blurRadius]);

@@ -20,14 +20,18 @@ export const WORD_SWEEP_EDGE_FRACTION = 0.12;
 /** Peak scale of the syllable bounce: 1 -> 1.05 -> 1. */
 export const WORD_BOUNCE_SCALE = 0.05;
 
-/** Primuse's depth step and cap for lyrics away from the current row. */
-const LYRIC_BLUR_STEP = 1.25;
-const MAX_LYRIC_BLUR = 5;
-const PAST_LINE_DEPTH_OFFSET = 1;
+/**
+ * Primuse's depth model, calibrated for Android's stronger Gaussian filter.
+ * Keeping the first step subtle prevents a newly completed line from looking
+ * as though it snaps out of focus, while the cap still separates distant rows.
+ */
+const LYRIC_BLUR_STEP = 0.55;
+const MAX_LYRIC_BLUR = 2.2;
+const PAST_LINE_DEPTH_OFFSET = 0.25;
 
 /**
- * Progressive blur for synchronized lyric rows. Passed rows sit one depth
- * step behind equally distant upcoming rows, while the active row stays sharp.
+ * Progressive blur for synchronized lyric rows. Passed rows sit just behind
+ * equally distant upcoming rows, while the active row stays sharp.
  */
 export function lyricBlurRadius(
   rowIndex: number,

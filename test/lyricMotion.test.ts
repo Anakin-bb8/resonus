@@ -47,15 +47,17 @@ describe('lyric depth effect', () => {
     assert.equal(lyricBlurRadius(4, -1, true), 0);
   });
 
-  it('adds depth to upcoming rows and caps the radius', () => {
+  it('adds gentle depth to upcoming rows and caps the radius', () => {
     assert.deepEqual(
-      [1, 2, 3, 4, 5].map((distance) => lyricBlurRadius(10 + distance, 10, true)),
-      [1.25, 2.5, 3.75, 5, 5],
+      [1, 2, 3, 4, 5].map((distance) =>
+        Number(lyricBlurRadius(10 + distance, 10, true).toFixed(2)),
+      ),
+      [0.55, 1.1, 1.65, 2.2, 2.2],
     );
   });
 
-  it('places passed rows one depth step behind upcoming rows', () => {
-    assert.equal(lyricBlurRadius(7, 8, true), 2.5);
-    assert.equal(lyricBlurRadius(9, 8, true), 1.25);
+  it('places passed rows only slightly behind upcoming rows', () => {
+    assert.equal(lyricBlurRadius(7, 8, true), 0.6875);
+    assert.equal(lyricBlurRadius(9, 8, true), 0.55);
   });
 });
