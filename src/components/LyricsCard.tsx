@@ -32,7 +32,12 @@ import { useT } from '@/i18n';
 import { lyricBlurRadius, WORD_SWEEP_LEAD_MS } from '@/lib/lyricMotion';
 import { pushOnce } from '@/lib/pushOnce';
 import { currentSong, usePlayerStore } from '@/store/player';
-import { type LyricsSize, useSettings } from '@/store/settings';
+import {
+  LYRICS_SIZE_DEFAULT,
+  type LyricsSize,
+  type LyricsWeight,
+  useSettings,
+} from '@/store/settings';
 import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 import { motion } from '@/theme/motion';
 
@@ -194,15 +199,22 @@ export function SyncedLyricsView({
   // readable, not stuck to the top edge. On the small card, higher up.
   const anchor = large ? 0.42 : 0.3;
   const size = useSettings((s) => s.lyricsSize);
+  const weight = useSettings((s) => s.lyricsWeight);
   const centered = useSettings((s) => s.lyricsAlign) === 'center';
   const blurInactiveLyrics = useSettings((s) => s.blurInactiveLyrics);
   const blurEnabled = Platform.OS === 'android' && blurInactiveLyrics && !browsing;
 
   const onMeasure = useCallback((index: number, y: number, h: number) => {
+    const previous = offsets.current[index];
     offsets.current[index] = { y, h };
-    // Only the line being waited for, and only until it has been reached: one
-    // render, not one per line.
-    if (index === currentRef.current && placedFor.current !== index) setPlaced((n) => n + 1);
+    // The active row speaks once when it first appears, then again only if a
+    // typography change actually moved or resized it. That recentres a line
+    // immediately after the listener changes the font size without turning
+    // every ordinary layout pass into another render.
+    const changed = previous === undefined || previous.y !== y || previous.h !== h;
+    if (index === currentRef.current && (placedFor.current !== index || changed)) {
+      setPlaced((n) => n + 1);
+    }
   }, []);
 
   // Each targetY change pushes the scroll from the UI thread.
@@ -317,6 +329,7 @@ export function SyncedLyricsView({
             blurRadius={lyricBlurRadius(i, current, blurEnabled)}
             large={large}
             size={size}
+            weight={weight}
             centered={centered}
             onMeasure={onMeasure}
           />
@@ -351,6 +364,7 @@ const LyricRow = memo(({
   blurRadius,
   large,
   size,
+  weight,
   centered,
   onMeasure,
 }: {
@@ -364,6 +378,7 @@ const LyricRow = memo(({
   blurRadius: number;
   large?: boolean;
   size: LyricsSize;
+  weight: LyricsWeight;
   centered: boolean;
   onMeasure: (index: number, y: number, h: number) => void;
 }) => {
@@ -408,7 +423,7 @@ const LyricRow = memo(({
       filter: radius > 0.01 ? [{ blur: radius }] : undefined,
     };
   });
-  const lineStyle = lyricsLineStyle(large, size, centered);
+  const lineStyle = lyricsLineStyle(large, size, weight, centered);
   const flattened = StyleSheet.flatten(lineStyle) as TextStyle;
   const wordTextStyle: TextStyle = {
     fontFamily: flattened.fontFamily,
@@ -450,36 +465,40 @@ LyricRow.displayName = 'LyricRow';
 export const lyricsStyles = themed((colors) => ({
   line: {
     color: colors.text,
-    fontSize: 20,
-    lineHeight: 30,
-    fontWeight: '500',
     paddingVertical: spacing.xs,
   },
-  lineLarge: { fontSize: 28, lineHeight: 40, paddingVertical: spacing.sm },
-  lineLargeSmall: { fontSize: 22, lineHeight: 32, paddingVertical: spacing.sm },
-  lineLargeLarge: { fontSize: 34, lineHeight: 48, paddingVertical: spacing.sm },
+  lineLarge: { paddingVertical: spacing.sm },
   centered: { textAlign: 'center' },
 }));
 
 /**
- * The line style with the reader's settings on it: the size only on the full
- * screen (`large`), the alignment everywhere lyrics are shown.
+ * The line style with the reader's size, weight and alignment on every lyrics
+ * surface. Compact cards scale the chosen full-screen size proportionally.
  */
 export function useLyricsLineStyle(large?: boolean) {
   const size = useSettings((s) => s.lyricsSize);
+  const weight = useSettings((s) => s.lyricsWeight);
   const centered = useSettings((s) => s.lyricsAlign) === 'center';
-  return lyricsLineStyle(large, size, centered);
+  return lyricsLineStyle(large, size, weight, centered);
 }
 
-function lyricsLineStyle(large: boolean | undefined, size: LyricsSize, centered: boolean) {
+function lyricsLineStyle(
+  large: boolean | undefined,
+  size: LyricsSize,
+  weight: LyricsWeight,
+  centered: boolean,
+) {
+  // The setting is expressed in full-screen points. Compact surfaces retain
+  // the old 20:28 ratio, so the default is visually unchanged while every
+  // other size still follows the listener's choice.
+  const textSize = large
+    ? size
+    : Math.max(16, Math.round((size * 20) / LYRICS_SIZE_DEFAULT));
+  const lineHeight = Math.round(textSize * (large ? 10 / 7 : 1.5));
   return [
     lyricsStyles.line,
-    large &&
-      (size === 'small'
-        ? lyricsStyles.lineLargeSmall
-        : size === 'large'
-          ? lyricsStyles.lineLargeLarge
-          : lyricsStyles.lineLarge),
+    large && lyricsStyles.lineLarge,
+    { fontSize: textSize, lineHeight, fontWeight: weight },
     centered && lyricsStyles.centered,
   ];
 }
