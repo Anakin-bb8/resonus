@@ -1,6 +1,10 @@
 {
-  "platforms": ["android"],
+  "platforms": ["android", "ios"],
   "android": {
     "modules": ["expo.modules.homewidget.HomeWidgetModule"]
+  },
+  "ios": {
+    "modules": ["HomeWidgetModule"],
+    "swiftModuleName": "home_widget"
   }
 }

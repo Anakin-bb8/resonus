@@ -1,9 +1,11 @@
 /**
- * The app outside itself, on Android (native module `HomeWidget`): the "Now
- * playing" widget and the Quick Settings tile, fed from the player's store,
- * and the shortcuts on the launcher icon.
+ * The app outside itself (native module `HomeWidget`): the home screen widget
+ * and, on Android, the Quick Settings tile, fed from the player's store, and
+ * the shortcuts on the launcher icon.
  *
- * On a build without the module, or on iOS, all of this does nothing.
+ * On iOS the widget is the small "now playing" one: it shows the track the app
+ * last wrote, and opens the album for it. On Android this also drives the
+ * launcher shortcuts. On a build without the module, all of it does nothing.
  */
 import { requireOptionalNativeModule } from 'expo-modules-core';
 
@@ -11,37 +13,63 @@ import { CACHED_COVER } from '@/api/data';
 import { tg } from '@/i18n';
 import { artworkUrlFor, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
+import { colors } from '@/theme';
 
 interface NowPlayingState {
   title: string;
   artist: string;
+  /** The album the widget opens on tap; empty when the track has none. */
+  albumId: string;
   artworkUrl?: string;
   playing: boolean;
   active: boolean;
+  /** Seconds into the track, and its length: the widget walks on from here. */
+  position: number;
+  duration: number;
+  /** The widget's own background when there is no cover to take one from. */
+  fallback: string;
 }
 
 const native = requireOptionalNativeModule<{
   update: (state: NowPlayingState) => void;
-  setShortcuts: (items: { id: string; label: string; icon: string; url: string }[]) => boolean;
+  setShortcuts?: (items: { id: string; label: string; icon: string; url: string }[]) => boolean;
 }>('HomeWidget');
 
 /** The launcher shortcuts, as routed by `+native-intent` to `/shortcut`. */
-export type ShortcutAction = 'shuffle-favorites' | 'continue' | 'search';
+export type ShortcutAction = 'shuffle-favorites' | 'continue' | 'search' | 'playback-toggle';
+
+/** A jump this big is a seek, not the clock: worth telling the widget about. */
+const SEEK_JUMP_SEC = 4;
 
 function nowPlaying(): NowPlayingState {
   const st = usePlayerStore.getState();
   const song = st.queue[st.index];
-  if (!song) return { title: '', artist: '', playing: false, active: false };
+  if (!song) {
+    return {
+      title: '',
+      artist: '',
+      albumId: '',
+      playing: false,
+      active: false,
+      position: 0,
+      duration: 0,
+      fallback: colors.background,
+    };
+  }
   // A station says what is on, like the notification does.
   const live = song.url ? st.streamInfo : null;
   const artwork = artworkUrlFor(song);
   return {
     title: live?.title ?? song.title,
     artist: live?.artist ?? song.artist ?? '',
+    albumId: song.albumId ?? '',
     // Offline, a cover the app only has in its image cache is no address at all.
     artworkUrl: artwork && !artwork.startsWith(CACHED_COVER) ? artwork : undefined,
     playing: st.isPlaying,
     active: true,
+    position: st.positionSec,
+    duration: st.durationSec || song.duration || 0,
+    fallback: colors.background,
   };
 }
 
@@ -61,7 +89,8 @@ function push() {
 }
 
 function installShortcuts() {
-  if (!native) return;
+  // Android only: the iOS module is the widget, and has no shortcuts to set.
+  if (!native?.setShortcuts) return;
   try {
     native.setShortcuts([
       {
@@ -92,7 +121,8 @@ export function initHomeWidget() {
       st.queue !== prev.queue ||
       st.index !== prev.index ||
       st.isPlaying !== prev.isPlaying ||
-      st.streamInfo !== prev.streamInfo
+      st.streamInfo !== prev.streamInfo ||
+      Math.abs(st.positionSec - prev.positionSec) >= SEEK_JUMP_SEC
     ) {
       push();
     }

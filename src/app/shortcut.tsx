@@ -92,6 +92,17 @@ export default function ShortcutScreen() {
         return go('/(tabs)');
       }
 
+      if (action === 'playback-toggle') {
+        // The widget's own button. The tap is what brought the app up, so the
+        // queue gets its usual chance to come back before it is pressed.
+        const player = usePlayerStore.getState;
+        if (await waitFor(() => player().queue.length > 0, RESTORE_WAIT_MS)) {
+          player().toggle();
+          return go('/player');
+        }
+        return go('/(tabs)');
+      }
+
       go('/(tabs)');
     })();
   }, [action, router, t, toast]);

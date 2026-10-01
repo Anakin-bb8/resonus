@@ -41,6 +41,7 @@
       "./plugins/withoutFontWeightAdjustment",
       "./plugins/withTrimmedPermissions",
       "./plugins/withAppLocales",
+      "./plugins/withResonusWidget",
       "expo-router",
       [
         "expo-splash-screen",
