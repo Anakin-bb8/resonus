@@ -3,8 +3,8 @@
  * playlists) to show/hide and reorder the Home chips. Changes are applied and
  * saved immediately.
  *
- * With none active the entire row disappears from Home; that's why there's no
- * separate master toggle.
+ * With none active the entire row disappears from Home. The switch on top
+ * turns them all on or off at once; it is not a separate setting.
  */
 import Icon from '@/components/Icon';
 import { Pressable, Switch, Text, View } from 'react-native';
@@ -101,9 +101,21 @@ export default function HomeChipsSettings() {
   const chipIcons = useSettings((s) => s.homeChipIcons);
   const setChipIcons = useSettings((s) => s.setHomeChipIcons);
   const visible = local ? homeChips.filter((c) => !SERVER_ONLY.includes(c.key)) : homeChips;
+  const anyOn = visible.some((c) => c.enabled);
   return (
     <SettingsSafeArea>
       <ScreenHeader title={t('Home chips')} />
+      <View style={[styles.allBox, { paddingHorizontal: centredPadding(width, spacing.lg) }]}>
+        <SwitchList
+          options={[
+            {
+              label: t('Show chips'),
+              value: anyOn,
+              onChange: (v) => setHomeChips(homeChips.map((c) => ({ ...c, enabled: v }))),
+            },
+          ]}
+        />
+      </View>
       <Text style={styles.hint}>{t('Drag to reorder, toggle to show or hide.')}</Text>
       <ReorderableList
         data={visible}
@@ -150,6 +162,7 @@ export default function HomeChipsSettings() {
 const styles = themed((colors) => ({
   // Clear of the last chip, which is a card of the same width right above it.
   iconsBox: { marginTop: spacing.lg },
+  allBox: { marginBottom: spacing.md },
   hint: {
     color: colors.textMuted,
     fontSize: fontSize.xs,

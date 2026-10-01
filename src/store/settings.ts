@@ -501,17 +501,18 @@ const HOME_CHIP_KEYS: HomeChipKey[] = [
   'history',
 ];
 
-/** Default order and state: the usual ones, all visible. */
+/** Default order and state: the usual ones, all hidden until
+ *  someone turns them on. */
 export const DEFAULT_HOME_CHIPS: HomeChip[] = [
-  { key: 'shuffle', enabled: true },
-  { key: 'favorites', enabled: true },
-  { key: 'history', enabled: true },
-  { key: 'albums', enabled: true },
-  { key: 'artists', enabled: true },
-  { key: 'songs', enabled: true },
-  { key: 'genres', enabled: true },
-  { key: 'podcasts', enabled: true },
-  { key: 'radio', enabled: true },
+  { key: 'shuffle', enabled: false },
+  { key: 'favorites', enabled: false },
+  { key: 'history', enabled: false },
+  { key: 'albums', enabled: false },
+  { key: 'artists', enabled: false },
+  { key: 'songs', enabled: false },
+  { key: 'genres', enabled: false },
+  { key: 'podcasts', enabled: false },
+  { key: 'radio', enabled: false },
 ];
 
 /** One of the pills at the top of Explore. `genres`, `radio` and `folders`
@@ -1281,7 +1282,7 @@ const DEFAULTS = {
   swipeAction: 'queue' as SwipeAction,
   swipeLeftAction: 'off' as SwipeAction,
   homeSections: DEFAULT_HOME_SECTIONS.map((s) => ({ ...s })),
-  showQuickGrid: true,
+  showQuickGrid: false,
   showPlayingElsewhere: true,
   quickGridFavorites: true,
   quickGridAlbums: true,
