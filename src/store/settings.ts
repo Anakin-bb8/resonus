@@ -1273,7 +1273,7 @@ const DEFAULTS = {
   coverDoubleTapAction: 'none' as CoverDoubleTapAction,
   marqueeTitles: true,
   playerButtons: DEFAULT_PLAYER_BUTTONS.map((b) => ({ ...b })),
-  playerButtonsLayout: 'centered' as PlayerButtonsLayout,
+  playerButtonsLayout: 'spread' as PlayerButtonsLayout,
   seekButtonsSec: 0,
   previousButtonMode: 'restart' as PreviousButtonMode,
   keepPausedOnSkip: false,
