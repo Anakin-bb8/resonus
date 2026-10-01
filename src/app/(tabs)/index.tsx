@@ -1094,11 +1094,11 @@ const styles = themed((colors) => ({
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.md,
   },
-  sectionHeaderTitle: { color: colors.text, fontSize: 18, letterSpacing: tracking.heading, fontWeight: '500' },
+  sectionHeaderTitle: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '500' },
   showAll: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '500' },
   sectionTitle: {
     color: colors.text,
-    fontSize: 18,
+    fontSize: fontSize.lg,
     letterSpacing: tracking.heading,
     fontWeight: '500',
     paddingHorizontal: spacing.lg,
