@@ -15,7 +15,6 @@
 import {
   createAudioPlayer,
   setAudioModeAsync,
-  setIsAudioActiveAsync,
   type AudioMetadata,
   type AudioPlayer,
   type AudioSource,
@@ -274,7 +273,11 @@ async function ensureAudioMode() {
       shouldPlayInBackground: true,
       playsInSilentMode: true,
     });
-    await setIsAudioActiveAsync(true);
+    // Deliberately no `setIsAudioActiveAsync(true)` here. This runs once at
+    // open, and on iOS it is a real `AVAudioSession.setActive(true)`: it takes
+    // the session away from whatever is playing — a podcast, a radio stream —
+    // before the user has pressed anything. The session gets activated on the
+    // first `play()` instead, which is also the only moment we need it.
   } catch {
     // ignore
   }

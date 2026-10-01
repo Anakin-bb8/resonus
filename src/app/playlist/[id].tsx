@@ -222,7 +222,9 @@ function SuggestedTracks({
       if (!url) return;
       wasPlayingRef.current = usePlayerStore.getState().isPlaying;
       if (wasPlayingRef.current) usePlayerStore.getState().toggle();
-      const player = createAudioPlayer({ uri: url });
+      // No precise timing: the preview only has to land near second 38, and on
+      // iOS the exact seek scans the whole file first, which is the wait.
+      const player = createAudioPlayer({ uri: url, preferPreciseTiming: false });
       previewPlayer.current = player;
       activePreview = { player, stop: stopPreview };
       player.play();

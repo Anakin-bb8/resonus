@@ -1,5 +1,5 @@
 diff --git a/android/src/main/AndroidManifest.xml b/android/src/main/AndroidManifest.xml
-index 36a19f2d9c4a979a940ab681a1fb844ce45f7c75..3509de4747f3ebdda1a014f05fb02f0710563498 100644
+index 36a19f2d9c4a979a940ab681a1fb844ce45f7c75..5480b0a7f7f587c13cfb03292831766e130aa2b2 100644
 --- a/android/src/main/AndroidManifest.xml
 +++ b/android/src/main/AndroidManifest.xml
 @@ -1,3 +1,8 @@
@@ -12,7 +12,7 @@ index 36a19f2d9c4a979a940ab681a1fb844ce45f7c75..3509de4747f3ebdda1a014f05fb02f07
 +  <uses-permission android:name="android.permission.WAKE_LOCK" />
  </manifest>
 diff --git a/android/src/main/java/expo/modules/audio/AudioModule.kt b/android/src/main/java/expo/modules/audio/AudioModule.kt
-index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..6b3e075e7610ab3496cbeb1abf6322bbcbe3e74b 100644
+index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..fd342a3892c39c13226eeb99c5ed4097110ad4b0 100644
 --- a/android/src/main/java/expo/modules/audio/AudioModule.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioModule.kt
 @@ -18,6 +18,7 @@ import androidx.media3.common.C.CONTENT_TYPE_HLS
@@ -309,7 +309,7 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..6b3e075e7610ab3496cbeb1abf6322bb
      runBlocking(appContext.mainQueue.coroutineContext) { block() }
  
 diff --git a/android/src/main/java/expo/modules/audio/AudioPlayer.kt b/android/src/main/java/expo/modules/audio/AudioPlayer.kt
-index c76a9fd2a53743a691782e0f67d0d71401df58f6..7c9025af6a1645f79f9964b67e040764d8eceb71 100644
+index c76a9fd2a53743a691782e0f67d0d71401df58f6..d44d6822a4490c88f782e0cab14c318665590036 100644
 --- a/android/src/main/java/expo/modules/audio/AudioPlayer.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioPlayer.kt
 @@ -8,15 +8,19 @@ import android.util.Log
@@ -544,7 +544,7 @@ index c76a9fd2a53743a691782e0f67d0d71401df58f6..7c9025af6a1645f79f9964b67e040764
  
    private fun sendAudioSampleUpdate(sample: List<Float>) {
 diff --git a/android/src/main/java/expo/modules/audio/AudioRecords.kt b/android/src/main/java/expo/modules/audio/AudioRecords.kt
-index 86880d92fd5b6413e8596e1b2b8ae28f2981addd..34044354b228072c1020dfbde62fee049d1521fe 100644
+index 86880d92fd5b6413e8596e1b2b8ae28f2981addd..7f6248375cf03ffb5a1f9faa9e9b3d639ba70a76 100644
 --- a/android/src/main/java/expo/modules/audio/AudioRecords.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioRecords.kt
 @@ -12,7 +12,27 @@ import expo.modules.kotlin.types.OptimizedRecord
@@ -605,7 +605,7 @@ index 86880d92fd5b6413e8596e1b2b8ae28f2981addd..34044354b228072c1020dfbde62fee04
  
  enum class InterruptionMode(val value: String) : Enumerable {
 diff --git a/android/src/main/java/expo/modules/audio/AudioUtils.kt b/android/src/main/java/expo/modules/audio/AudioUtils.kt
-index dca91c32a2787a7bc3ecba26f0f3f2ad9cc40d3d..089dcee0b9fe6a369f0809ecdf99a1fa42ea9ef3 100644
+index dca91c32a2787a7bc3ecba26f0f3f2ad9cc40d3d..354120331123b4a86378cd05d4fcdbd6c865c5f7 100644
 --- a/android/src/main/java/expo/modules/audio/AudioUtils.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioUtils.kt
 @@ -3,6 +3,8 @@ package expo.modules.audio
@@ -745,7 +745,7 @@ index dca91c32a2787a7bc3ecba26f0f3f2ad9cc40d3d..089dcee0b9fe6a369f0809ecdf99a1fa
      .build()
  }
 diff --git a/android/src/main/java/expo/modules/audio/BaseAudioPlayer.kt b/android/src/main/java/expo/modules/audio/BaseAudioPlayer.kt
-index 149e9075c8630b14a69318aa6c37d9ff82b23f05..422d2d18677223f48b0106e44f573659b90160dd 100644
+index 149e9075c8630b14a69318aa6c37d9ff82b23f05..40f5d256923a603933c7c436367bac864d832b50 100644
 --- a/android/src/main/java/expo/modules/audio/BaseAudioPlayer.kt
 +++ b/android/src/main/java/expo/modules/audio/BaseAudioPlayer.kt
 @@ -78,7 +78,6 @@ abstract class BaseAudioPlayer(
@@ -781,7 +781,7 @@ index 149e9075c8630b14a69318aa6c37d9ff82b23f05..422d2d18677223f48b0106e44f573659
  
 diff --git a/android/src/main/java/expo/modules/audio/FragmentSeekingExtractor.kt b/android/src/main/java/expo/modules/audio/FragmentSeekingExtractor.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..c2c840b99e8dadf7f4c2c19c9ecad321ffc2cded
+index 0000000000000000000000000000000000000000..19f244ce7589fc228e63c99051dd36680e6ffedd
 --- /dev/null
 +++ b/android/src/main/java/expo/modules/audio/FragmentSeekingExtractor.kt
 @@ -0,0 +1,381 @@
@@ -1167,7 +1167,7 @@ index 0000000000000000000000000000000000000000..c2c840b99e8dadf7f4c2c19c9ecad321
 +  }
 +}
 diff --git a/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt b/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
-index 196a5d57f887c2667a88543bd2f6a80044a044f2..4e093dc6d2dea7acb919a41f694db6bf04772752 100644
+index 196a5d57f887c2667a88543bd2f6a80044a044f2..0ddb26beedd3ca3ac064bf3682564c120e60f780 100644
 --- a/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
 +++ b/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
 @@ -27,6 +27,7 @@ import expo.modules.audio.AudioLockScreenOptions
@@ -1419,7 +1419,7 @@ index 196a5d57f887c2667a88543bd2f6a80044a044f2..4e093dc6d2dea7acb919a41f694db6bf
      const val SEEK_INTERVAL_MS = 10000L
    }
 diff --git a/android/src/main/java/expo/modules/audio/service/AudioMediaSessionCallback.kt b/android/src/main/java/expo/modules/audio/service/AudioMediaSessionCallback.kt
-index 839aaef12d7699ea1a89037b31849775daa079f4..1aff5091d68c19523e2374c0231f4c1da1a69163 100644
+index 839aaef12d7699ea1a89037b31849775daa079f4..a7785cd6b1fc49c5b51fede555bd675590ebb96f 100644
 --- a/android/src/main/java/expo/modules/audio/service/AudioMediaSessionCallback.kt
 +++ b/android/src/main/java/expo/modules/audio/service/AudioMediaSessionCallback.kt
 @@ -1,6 +1,9 @@
@@ -1508,7 +1508,7 @@ index 839aaef12d7699ea1a89037b31849775daa079f4..1aff5091d68c19523e2374c0231f4c1d
      return super.onCustomCommand(session, controller, command, args)
    }
 diff --git a/android/src/main/java/expo/modules/audio/service/MetadataInjectingPlayer.kt b/android/src/main/java/expo/modules/audio/service/MetadataInjectingPlayer.kt
-index 18203a364d17dcf3de95d22a20175308e3363889..77155f4f348246f218c0736725b0f690f1f31d61 100644
+index 18203a364d17dcf3de95d22a20175308e3363889..1f246fe53678289de51c7b63adff3a271c1919b1 100644
 --- a/android/src/main/java/expo/modules/audio/service/MetadataInjectingPlayer.kt
 +++ b/android/src/main/java/expo/modules/audio/service/MetadataInjectingPlayer.kt
 @@ -3,10 +3,20 @@ package expo.modules.audio.service
@@ -1716,7 +1716,7 @@ index 18203a364d17dcf3de95d22a20175308e3363889..77155f4f348246f218c0736725b0f690
  }
 diff --git a/android/src/main/java/expo/modules/audio/service/PreloadingBitmapLoader.kt b/android/src/main/java/expo/modules/audio/service/PreloadingBitmapLoader.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..6ee23d594c66abe46d7991de793d6de992febdf9
+index 0000000000000000000000000000000000000000..e0bd757158c66f762766a76e6c486cbd26e0a827
 --- /dev/null
 +++ b/android/src/main/java/expo/modules/audio/service/PreloadingBitmapLoader.kt
 @@ -0,0 +1,77 @@
@@ -1798,10 +1798,10 @@ index 0000000000000000000000000000000000000000..6ee23d594c66abe46d7991de793d6de9
 +  }
 +}
 diff --git a/build/Audio.types.d.ts b/build/Audio.types.d.ts
-index 25604783649fe9b64f6655172f08471a5efcbf45..b80696e3b5d647c53f6e144d830171c6800a9c32 100644
+index 25604783649fe9b64f6655172f08471a5efcbf45..9433f680d8547608077385ae4c343f6a6993542f 100644
 --- a/build/Audio.types.d.ts
 +++ b/build/Audio.types.d.ts
-@@ -34,6 +34,20 @@ export type AudioSource = string | number | null | {
+@@ -34,6 +34,27 @@ export type AudioSource = string | number | null | {
       * Useful for showing track names in a queue or playlist UI.
       */
      name?: string;
@@ -1819,10 +1819,17 @@ index 25604783649fe9b64f6655172f08471a5efcbf45..b80696e3b5d647c53f6e144d830171c6
 +     * goes out to every connected controller. Android only.
 +     */
 +    mediaId?: string;
++    /**
++     * Whether the asset resolves seeks to the exact frame, which costs a scan of
++     * the file for an index first — on a streamed mp3, a wait before anything
++     * plays. Defaults to `true`. Set it to `false` for short previews that only
++     * need to land near a position. iOS only.
++     */
++    preferPreciseTiming?: boolean;
  };
  /**
   * Options for configuring audio player behavior.
-@@ -618,6 +632,15 @@ export type AudioMetadata = {
+@@ -618,6 +639,15 @@ export type AudioMetadata = {
      artist?: string;
      albumTitle?: string;
      artworkUrl?: string;
@@ -1839,7 +1846,7 @@ index 25604783649fe9b64f6655172f08471a5efcbf45..b80696e3b5d647c53f6e144d830171c6
  /**
   * Loop mode for audio playlist playback.
 diff --git a/build/AudioConstants.d.ts b/build/AudioConstants.d.ts
-index cfd92ad0ff5765254c4e6db974fe44bce34aad06..78fa084cf34a5f56743d636b6501f90971d7898b 100644
+index cfd92ad0ff5765254c4e6db974fe44bce34aad06..d16fb49bb630dd95f26abfb6260ade9cbf3bee23 100644
 --- a/build/AudioConstants.d.ts
 +++ b/build/AudioConstants.d.ts
 @@ -15,5 +15,9 @@ export type AudioLockScreenOptions = {
@@ -1854,7 +1861,7 @@ index cfd92ad0ff5765254c4e6db974fe44bce34aad06..78fa084cf34a5f56743d636b6501f909
  //# sourceMappingURL=AudioConstants.d.ts.map
 \ No newline at end of file
 diff --git a/build/AudioModule.types.d.ts b/build/AudioModule.types.d.ts
-index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..5bc46da1b92548bd7fa8aa3d308179398a657f58 100644
+index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..967554dbfde096c1ad211c078345c12ea73bffc1 100644
 --- a/build/AudioModule.types.d.ts
 +++ b/build/AudioModule.types.d.ts
 @@ -31,6 +31,11 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
@@ -1941,10 +1948,10 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..5bc46da1b92548bd7fa8aa3d30817939
      /**
 diff --git a/ios/AnimatedArtwork.swift b/ios/AnimatedArtwork.swift
 new file mode 100644
-index 0000000000000000000000000000000000000000..fbc89d87bf732195bd9e74c2792a8843ae18c121
+index 0000000000000000000000000000000000000000..b7329bcb0466efb330dd3afa01b0c4b55fa0f23a
 --- /dev/null
 +++ b/ios/AnimatedArtwork.swift
-@@ -0,0 +1,569 @@
+@@ -0,0 +1,594 @@
 +import AVFoundation
 +import CoreGraphics
 +import CoreImage
@@ -2007,11 +2014,35 @@ index 0000000000000000000000000000000000000000..fbc89d87bf732195bd9e74c2792a8843
 +  private let lock = NSLock()
 +  private var encodeTask: Task<URL?, Never>?
 +
-+  /// Both variants the system can ask for. The square one needs a square
-+  /// source, the tall one takes any cover: it is the key the iPhone lock
-+  /// screen draws full screen, and providing only `1x1` left that screen with
-+  /// the static artwork.
-+  static func make(url: URL, data: Data) -> (square: MPMediaItemAnimatedArtwork?, tall: MPMediaItemAnimatedArtwork?) {
++  /// The object the lock screen is handed, built out of this clip. What
++  /// carries it is the file behind it, so the caller publishes it only once
++  /// `isOnDisk` and never before.
++  private(set) var item: MPMediaItemAnimatedArtwork?
++
++  /// The clip is written out: the system opens it the moment it is asked for
++  /// it. Named for the file, not for the encoding, which has a method of its
++  /// own called `isReady`.
++  var isOnDisk: Bool {
++    FileManager.default.fileExists(atPath: destination.path)
++  }
++
++  /// Calls `onReady` from the task that wrote the clip, once it is on disk
++  /// (right away when it already was). Encoding starts here instead of on the
++  /// system's request: that request arrives with the artwork itself, and one
++  /// answered after the wait left the lock screen on the preview frame — the
++  /// clip was ready all along, nothing told the system to ask again.
++  func whenReady(_ onReady: @escaping () -> Void) {
++    Task.detached(priority: .utility) {
++      _ = await self.videoURL()
++      onReady()
++    }
++  }
++
++  /// Both variants the system can ask for, as the clips they are: the square
++  /// one needs a square source, the tall one takes any cover — it is the key
++  /// the iPhone lock screen draws full screen, and providing only `1x1` left
++  /// that screen with the static artwork.
++  static func make(url: URL, data: Data) -> (square: AnimatedArtwork?, tall: AnimatedArtwork?) {
 +    guard let source = CGImageSourceCreateWithData(data as CFData, nil),
 +          CGImageSourceGetCount(source) > 1,
 +          let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any]
@@ -2027,7 +2058,7 @@ index 0000000000000000000000000000000000000000..fbc89d87bf732195bd9e74c2792a8843
 +    }
 +    let sourceSize = CGSize(width: width, height: height)
 +    let id = identifier(for: url)
-+    let square: MPMediaItemAnimatedArtwork?
++    let square: AnimatedArtwork?
 +    if abs(width - height) * 100 <= max(width, height) {
 +      square = variant(id: id, ratio: .square, sourceSize: sourceSize, frame: frame, url: url, data: data)
 +    } else {
@@ -2044,7 +2075,7 @@ index 0000000000000000000000000000000000000000..fbc89d87bf732195bd9e74c2792a8843
 +    frame: CGImage,
 +    url: URL,
 +    data: Data
-+  ) -> MPMediaItemAnimatedArtwork? {
++  ) -> AnimatedArtwork? {
 +    guard let destination = cacheFile(id: id, ratio: ratio) else {
 +      return nil
 +    }
@@ -2056,11 +2087,12 @@ index 0000000000000000000000000000000000000000..fbc89d87bf732195bd9e74c2792a8843
 +      data: data
 +    )
 +    let preview = artwork.previewFrame(frame)
-+    return MPMediaItemAnimatedArtwork(
++    artwork.item = MPMediaItemAnimatedArtwork(
 +      artworkID: artwork.artworkID,
 +      previewImageRequestHandler: { _ in preview },
 +      videoAssetFileURLRequestHandler: { _ in await artwork.videoURL() }
 +    )
++    return artwork
 +  }
 +
 +  private init(artworkID: String, ratio: Ratio, sourceSize: CGSize, destination: URL, data: Data) {
@@ -2515,7 +2547,7 @@ index 0000000000000000000000000000000000000000..fbc89d87bf732195bd9e74c2792a8843
 +
 +#endif
 diff --git a/ios/AudioModule.swift b/ios/AudioModule.swift
-index d26560627c2dfa97370440ad28304617f3f9f0f7..7cf6446bc137c4ecf0a7aab720347dab852281d1 100644
+index d26560627c2dfa97370440ad28304617f3f9f0f7..5ba926fe07d5ca41bde8c56bd8e275b8f4ad8577 100644
 --- a/ios/AudioModule.swift
 +++ b/ios/AudioModule.swift
 @@ -241,6 +241,18 @@ public class AudioModule: Module {
@@ -2538,7 +2570,7 @@ index d26560627c2dfa97370440ad28304617f3f9f0f7..7cf6446bc137c4ecf0a7aab720347dab
          player.ref.pause()
          if !player.keepAudioSessionActive {
 diff --git a/ios/AudioPlayer.swift b/ios/AudioPlayer.swift
-index 074294321e872bb53c0b2d41044dac3c612f14f0..818eb0e434f11e1d82e38ec0c14ee65e8ab1d4a7 100644
+index 074294321e872bb53c0b2d41044dac3c612f14f0..04ff64285be8f38578f1a9f86b4c2e69f9e75d5d 100644
 --- a/ios/AudioPlayer.swift
 +++ b/ios/AudioPlayer.swift
 @@ -4,6 +4,7 @@ import Combine
@@ -2790,7 +2822,7 @@ index 074294321e872bb53c0b2d41044dac3c612f14f0..818eb0e434f11e1d82e38ec0c14ee65e
          self.updateStatus(with: [
            "playing": false,
 diff --git a/ios/AudioRecords.swift b/ios/AudioRecords.swift
-index 33db27c3b8fb40fa9db6659a0787c6b2b503d1ab..a5c41356f93d3d4a45bf14020af1cb1943731751 100644
+index 33db27c3b8fb40fa9db6659a0787c6b2b503d1ab..ae00508e44a1632dafe1bedc2d326c31acc2a45c 100644
 --- a/ios/AudioRecords.swift
 +++ b/ios/AudioRecords.swift
 @@ -64,12 +64,17 @@ struct Metadata: Record {
@@ -2811,11 +2843,23 @@ index 33db27c3b8fb40fa9db6659a0787c6b2b503d1ab..a5c41356f93d3d4a45bf14020af1cb19
  }
  
  enum BitRateStrategy: String, Enumerable {
+diff --git a/ios/AudioSource.swift b/ios/AudioSource.swift
+index 0c8c2fede4b079f6d71217bafe07b5de55438821..fc6b758c482b020b24ef8485dbf506e0ced8c10a 100644
+--- a/ios/AudioSource.swift
++++ b/ios/AudioSource.swift
+@@ -10,4 +10,7 @@ struct AudioSource: Record {
+ 
+   @Field
+   var name: String?
++
++  @Field
++  var preferPreciseTiming: Bool?
+ }
 diff --git a/ios/AudioUtils.swift b/ios/AudioUtils.swift
-index 79c7c0b256581a768c42a0291bf84bdff4c4b142..7c4800e32389f434b77f6c208f13578b963a4f17 100644
+index 79c7c0b256581a768c42a0291bf84bdff4c4b142..ca13e59c53a7f9a3a5fc49d94b266c621201983a 100644
 --- a/ios/AudioUtils.swift
 +++ b/ios/AudioUtils.swift
-@@ -84,9 +84,17 @@ struct AudioUtils {
+@@ -84,9 +84,23 @@ struct AudioUtils {
        url
      }
  
@@ -2828,7 +2872,13 @@ index 79c7c0b256581a768c42a0291bf84bdff4c4b142..7c4800e32389f434b77f6c208f13578b
 +    // AVFoundation resolve the exact frame instead, and a container that
 +    // already carries an index (m4a/mp4) reports the same precise timing
 +    // anyway, so it costs nothing there.
-+    var options: [String: Any] = [AVURLAssetPreferPreciseDurationAndTimingKey: true]
++    //
++    // `preferPreciseTiming: false` opts a source out of all that: a preview only
++    // has to land *near* where it jumped, and on a streamed mp3 the exact seek
++    // means scanning the file for an index before the first second plays.
++    var options: [String: Any] = [
++      AVURLAssetPreferPreciseDurationAndTimingKey: source.preferPreciseTiming ?? true
++    ]
      if let headers = source.headers {
 -      options = ["AVURLAssetHTTPHeaderFieldsKey": headers]
 +      options["AVURLAssetHTTPHeaderFieldsKey"] = headers
@@ -2836,7 +2886,7 @@ index 79c7c0b256581a768c42a0291bf84bdff4c4b142..7c4800e32389f434b77f6c208f13578b
  
      let asset = AVURLAsset(url: finalUrl, options: options)
 diff --git a/ios/MediaController.swift b/ios/MediaController.swift
-index e977f577cd2e16b194b56537ad76b423f40d2496..8d8068b2edc68ca920bbdeb0c7d5c326f10e6e9e 100644
+index e977f577cd2e16b194b56537ad76b423f40d2496..d5e4df5eaf76cd03e1a025a579d53db750eced34 100644
 --- a/ios/MediaController.swift
 +++ b/ios/MediaController.swift
 @@ -11,9 +11,12 @@ class MediaController {
@@ -2895,7 +2945,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..8d8068b2edc68ca920bbdeb0c7d5c326
        return
      }
  
-@@ -173,14 +185,17 @@ class MediaController {
+@@ -173,16 +185,67 @@ class MediaController {
          return
        }
  
@@ -2914,9 +2964,59 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..8d8068b2edc68ca920bbdeb0c7d5c326
 +      latestNowPlayingInfo[MPMediaItemPropertyArtwork] = still
 +      self.applyAnimatedArtwork(&latestNowPlayingInfo)
        self.nowPlayingInfoCenter.nowPlayingInfo = latestNowPlayingInfo
++
++      // A clip that was still encoding goes up as soon as it is on disk. The
++      // keys are only ever handed over with a file the system can open at
++      // once: its request comes with the artwork itself, and one answered
++      // after the wait left the lock screen on the preview frame for good —
++      // skipping on and back, which loads it all over again, was the only
++      // way out of it.
++      self.publishAnimatedWhenReady(artwork.square, url: artworkUrl, player: player, item: currentItemIdentifier)
++      self.publishAnimatedWhenReady(artwork.tall, url: artworkUrl, player: player, item: currentItemIdentifier)
++    }
++  }
++
++  /**
++   * Publishes the animated artwork keys once `clip` is on disk, and only if
++   * this is still the artwork on screen. Every variant is written each time
++   * (`applyAnimatedArtwork` skips the ones not ready), so the last clip to
++   * finish carries both keys up together.
++   */
++  private func publishAnimatedWhenReady(
++    _ clip: AnyObject?,
++    url: URL,
++    player: AudioPlayer,
++    item: ObjectIdentifier?
++  ) {
++#if compiler(>=6.2)
++    if #available(iOS 26.0, tvOS 26.0, *) {
++      guard let clip = clip as? AnimatedArtwork else {
++        return
++      }
++      clip.whenReady { [weak self] in
++        guard let self else {
++          return
++        }
++        self.performOnMain {
++          guard self.cachedAnimatedSquareArtwork === clip || self.cachedAnimatedTallArtwork === clip,
++                self.currentArtworkUrl == url,
++                self.currentArtworkItemIdentifier == item,
++                self.activePlayer?.id == player.id
++          else {
++            return
++          }
++
++          var latestNowPlayingInfo = self.nowPlayingInfoCenter.nowPlayingInfo ?? [String: Any]()
++          self.applyAnimatedArtwork(&latestNowPlayingInfo)
++          self.nowPlayingInfoCenter.nowPlayingInfo = latestNowPlayingInfo
++        }
++      }
      }
++#endif
    }
-@@ -204,34 +219,96 @@ class MediaController {
+ 
+   private func clearNowPlayingInfoOnMain() {
+@@ -204,34 +267,100 @@ class MediaController {
    private func resetArtworkState() {
      currentArtworkUrl = nil
      cachedArtwork = nil
@@ -2979,16 +3079,20 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..8d8068b2edc68ca920bbdeb0c7d5c326
 +  // on its own, and gating on `supportedAnimatedArtworkKeys` is what kept the
 +  // lock screen on the static artwork — the tall 3:4 variant is the one the
 +  // iPhone lock screen draws full screen.
++  //
++  // Only with the clip on disk (`isOnDisk`): the system's request arrives with
++  // the key, and one that then waits for the encoder leaves the lock screen
++  // on the preview frame while the cover stands ready behind it.
 +  private func applyAnimatedArtwork(_ info: inout [String: Any]) {
 +#if compiler(>=6.2)
 +    if #available(iOS 26.0, tvOS 26.0, *) {
-+      if let artwork = cachedAnimatedSquareArtwork as? MPMediaItemAnimatedArtwork {
-+        info[MPNowPlayingInfoProperty1x1AnimatedArtwork] = artwork
++      if let clip = cachedAnimatedSquareArtwork as? AnimatedArtwork, let item = clip.item, clip.isOnDisk {
++        info[MPNowPlayingInfoProperty1x1AnimatedArtwork] = item
 +      } else {
 +        info.removeValue(forKey: MPNowPlayingInfoProperty1x1AnimatedArtwork)
 +      }
-+      if let artwork = cachedAnimatedTallArtwork as? MPMediaItemAnimatedArtwork {
-+        info[MPNowPlayingInfoProperty3x4AnimatedArtwork] = artwork
++      if let clip = cachedAnimatedTallArtwork as? AnimatedArtwork, let item = clip.item, clip.isOnDisk {
++        info[MPNowPlayingInfoProperty3x4AnimatedArtwork] = item
 +      } else {
 +        info.removeValue(forKey: MPNowPlayingInfoProperty3x4AnimatedArtwork)
 +      }
@@ -3018,7 +3122,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..8d8068b2edc68ca920bbdeb0c7d5c326
      remoteCommandCenter.playCommand.addTarget { [weak self] _ in
        guard let player = self?.activePlayer else {
          return .commandFailed
-@@ -270,7 +347,7 @@ class MediaController {
+@@ -270,7 +399,7 @@ class MediaController {
        }
  
        let seekTime = CMTime(seconds: event.positionTime, preferredTimescale: 1)
@@ -3027,7 +3131,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..8d8068b2edc68ca920bbdeb0c7d5c326
  
        return .success
      }
-@@ -303,12 +380,34 @@ class MediaController {
+@@ -303,12 +432,34 @@ class MediaController {
        return .success
      }
  
@@ -3062,7 +3166,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..8d8068b2edc68ca920bbdeb0c7d5c326
    }
  
    private func disableRemoteCommands() {
-@@ -318,6 +417,8 @@ class MediaController {
+@@ -318,6 +469,8 @@ class MediaController {
      remoteCommandCenter.changePlaybackPositionCommand.isEnabled = false
      remoteCommandCenter.skipForwardCommand.isEnabled = false
      remoteCommandCenter.skipBackwardCommand.isEnabled = false
