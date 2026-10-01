@@ -59,18 +59,21 @@ function nowPlaying(): NowPlayingState {
   // A station says what is on, like the notification does.
   const live = song.url ? st.streamInfo : null;
   const artwork = artworkUrlFor(song);
-  return {
+  const state: NowPlayingState = {
     title: live?.title ?? song.title,
     artist: live?.artist ?? song.artist ?? '',
     albumId: song.albumId ?? '',
-    // Offline, a cover the app only has in its image cache is no address at all.
-    artworkUrl: artwork && !artwork.startsWith(CACHED_COVER) ? artwork : undefined,
     playing: st.isPlaying,
     active: true,
     position: st.positionSec,
     duration: st.durationSec || song.duration || 0,
     fallback: colors.background,
   };
+  // Offline, a cover the app only has in its image cache is no address at
+  // all. Left out of the object rather than put in as `undefined`: the key
+  // would still be there, with nothing for the native side to read.
+  if (artwork && !artwork.startsWith(CACHED_COVER)) state.artworkUrl = artwork;
+  return state;
 }
 
 let last = '';
@@ -80,11 +83,12 @@ function push() {
   const state = nowPlaying();
   const key = JSON.stringify(state);
   if (key === last) return;
-  last = key;
   try {
     native.update(state);
+    last = key;
   } catch {
-    // A widget that misses one update catches the next.
+    // A widget that misses one update catches the next — and this one is
+    // not marked as sent, so the next write sends it again.
   }
 }
 

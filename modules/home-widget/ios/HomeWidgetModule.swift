@@ -73,11 +73,16 @@ private enum HomeWidgetStore {
     WidgetCenter.shared.reloadAllTimelines()
   }
 
+  /// `0` for anything that is not a number: a `NaN` reaching the serializer
+  /// would take the whole write down with it, and the widget has no use for
+  /// one anyway.
   private static func seconds(_ value: Any?) -> Double {
-    if let number = value as? NSNumber { return number.doubleValue }
-    if let value = value as? Double { return value }
-    if let value = value as? Int { return Double(value) }
-    return 0
+    let n: Double
+    if let number = value as? NSNumber { n = number.doubleValue }
+    else if let value = value as? Double { n = value }
+    else if let value = value as? Int { n = Double(value) }
+    else { return 0 }
+    return n.isFinite ? n : 0
   }
 
   private static func storeArtwork(_ source: String) {
