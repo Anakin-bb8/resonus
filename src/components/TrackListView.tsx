@@ -37,6 +37,7 @@ import { centredPadding, useScreenSize } from '@/hooks/useScreenSize';
 import { useSelectionMenu } from '@/hooks/useSelectionMenu';
 import { useT } from '@/i18n';
 import { artistTargets } from '@/lib/artistNav';
+import { easedFade } from '@/lib/fade';
 import { haptic } from '@/lib/haptics';
 import { listPerf } from '@/lib/listPerf';
 import { useArtistPicker } from '@/store/artistPicker';
@@ -236,6 +237,12 @@ export function TrackListView({
   const t = useT();
   const insets = useInsets();
   const { width: screenW, height: screenH } = useScreenSize();
+  // The bar's two ends: the back chevron on the left, the play button on the
+  // right, and the button is the wider of the two. The title takes the larger
+  // of the clearances on *both* sides, so a long name stops short of the
+  // button instead of running under it, and the name itself still sits in the
+  // middle of the screen rather than a button's width to the left of it.
+  const titleInset = centredPadding(screenW, spacing.lg) + PLAY_SIZE + spacing.md;
   const bottomPad = useScreenBottomPadding();
   const dominant = useDominantColor(coverUri, true);
   const headerColor = accentColor ?? dominant;
@@ -1080,10 +1087,8 @@ export function TrackListView({
                 {
                   top: insets.top + 10,
                   opacity: barContentOpacity,
-                  // The play button holds the right end of the bar: a long
-                  // name stops short of it and is cut there, with an ellipsis
-                  // instead of running underneath.
-                  right: centredPadding(screenW, spacing.lg) + PLAY_SIZE + spacing.md,
+                  left: titleInset,
+                  right: titleInset,
                 },
               ]}
               numberOfLines={1}
@@ -1370,10 +1375,8 @@ const styles = themed((colors) => ({
     top: 0,
     bottom: 0,
     justifyContent: 'center',
-    // The clearance on the left is the width of the back chevron and its
-    // gap: a long name stops short of it. The right end belongs to the play
-    // button and comes with each render (it needs the screen's width).
-    left: spacing.lg + 28 + spacing.md,
+    // Both ends come with each render (they need the screen's width): the same
+    // clearance either side is what puts the name in the middle of the screen.
     textAlign: 'center',
     includeFontPadding: false,
     color: colors.text,
@@ -1382,37 +1385,3 @@ const styles = themed((colors) => ({
   },
 }));
 
-/**
- * The header's fade from the cover colour into the page, eased rather than
- * straight: a straight blend has a visible corner where it starts and a line
- * where it lands. Smoothstep eases in and out of both, over several stops since
- * the gradient itself only blends in straight lines between them.
- */
-function easedFade(from: string, to: string): { colors: [string, string, ...string[]]; locations: [number, number, ...number[]] } {
-  const a = hexChannels(from);
-  const b = hexChannels(to);
-  if (!a || !b) return { colors: [from, from, to], locations: [0, 0.35, 1] };
-  const START = 0.25;
-  const STEPS = 8;
-  const colors: string[] = [from];
-  const locations: number[] = [0];
-  for (let i = 0; i <= STEPS; i++) {
-    const u = i / STEPS;
-    const k = u * u * (3 - 2 * u);
-    colors.push(
-      `rgb(${a.map((c, j) => Math.round(c + (b[j] - c) * k)).join(', ')})`,
-    );
-    locations.push(START + (1 - START) * u);
-  }
-  return {
-    colors: colors as [string, string, ...string[]],
-    locations: locations as [number, number, ...number[]],
-  };
-}
-
-function hexChannels(hex: string): [number, number, number] | null {
-  const m = /^#([0-9a-f]{6})$/i.exec(hex);
-  if (!m) return null;
-  const n = parseInt(m[1], 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}

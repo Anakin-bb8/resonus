@@ -798,5 +798,7 @@
   "Couldn't read this settings file": "Impossibile leggere questo file di impostazioni",
   "Your preferences will be replaced by the ones in the file. Your language and accounts stay.": "Le tue preferenze verranno sostituite da quelle del file. Lingua e account restano invariati.",
   "Import": "Importa",
-  "Settings imported": "Impostazioni importate"
+  "Settings imported": "Impostazioni importate",
+  "Top bar gradient": "Gradiente della barra superiore",
+  "Playlists, artists and albums fade their top bar into the list below.": "Playlist, artisti e album sfumano la barra superiore nella lista qui sotto."
 }

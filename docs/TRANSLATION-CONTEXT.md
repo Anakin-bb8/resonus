@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 774 of them.
+Every string the app can show, under the screen it shows up on. 776 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -888,6 +888,7 @@ you are actually typing into, which is easier than reading it here.
 | `Off` | A setting value meaning disabled (crossfade, normalization…) |
 | `Open the app on` | Which tab the app opens on, and comes back to after a while away |
 | `Playing on other devices` |  |
+| `Playlists, artists and albums fade their top bar into the list below.` | The line under “Top bar gradient”, explaining it |
 | `Quick grid` | The grid of shortcut tiles on Home |
 | `Rounded` | One of the values of “Cover corners” |
 | `Show tab names` |  |
@@ -898,6 +899,7 @@ you are actually typing into, which is easier than reading it here.
 | `Swipe left` | What dragging a song to the left in a list does |
 | `Swipe right` | What dragging a song to the right in a list does. Its values are the actions listed under it |
 | `Theme` | The screen where the appearance and the accent colour are chosen, and the name of the row that opens it |
+| `Top bar gradient` |  |
 | `With no chip pressed, Your library shows Favorites and your playlists instead of everything mixed together.` |  |
 | `Your library` | The tab with your albums, artists and playlists |
 

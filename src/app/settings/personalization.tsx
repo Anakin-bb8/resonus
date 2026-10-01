@@ -56,6 +56,8 @@ export default function AppearanceSettings() {
   const setBlurBars = useSettings((s) => s.setBlurBars);
   const navBarStyle = useSettings((s) => s.navBarStyle);
   const setNavBarStyle = useSettings((s) => s.setNavBarStyle);
+  const barGradient = useSettings((s) => s.barGradient);
+  const setBarGradient = useSettings((s) => s.setBarGradient);
   const defaultTab = useSettings((s) => s.defaultTab);
   const setDefaultTab = useSettings((s) => s.setDefaultTab);
   const keepScreenOnReturn = useSettings((s) => s.keepScreenOnReturn);
@@ -160,6 +162,19 @@ export default function AppearanceSettings() {
             ]}
             value={navBarStyle}
             onChange={setNavBarStyle}
+          />
+          {/* The bar at the top of a list screen, not the navigation bar: what
+              this and the row above have in common is that both are the colour
+              of a bar running out into what scrolls under it. */}
+          <SwitchList
+            options={[
+              {
+                label: t('Top bar gradient'),
+                description: t('Playlists, artists and albums fade their top bar into the list below.'),
+                value: barGradient,
+                onChange: setBarGradient,
+              },
+            ]}
           />
         </SettingsGroup>
 

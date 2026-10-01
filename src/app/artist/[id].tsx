@@ -737,10 +737,19 @@ export default function ArtistScreen() {
             makes it visible over a photo, and it stays there once the bar has
             gone solid. */}
         <BackChevron size={28} color={colors.onArtwork} style={styles.back} label={t('Close')} />
-        {/* Stops short of where the docked play button holds on: the title
-            truncates into its own space instead of running under the circle. */}
+        {/* The play button is wider than the chevron, so the right end takes
+            more room than the left leaves: the same extra on the left puts the
+            name back in the middle of the screen, and it still stops short of
+            the circle rather than running under it. */}
         <Animated.Text
-          style={[styles.barTitle, { opacity: barContentOpacity, marginRight: PLAY_SIZE + spacing.md }]}
+          style={[
+            styles.barTitle,
+            {
+              opacity: barContentOpacity,
+              marginLeft: PLAY_SIZE - 28,
+              marginRight: PLAY_SIZE + spacing.md,
+            },
+          ]}
           numberOfLines={1}
           ellipsizeMode="tail"
         >
