@@ -19,6 +19,7 @@ Releases before 0.2.1 are only listed on the
 
 - The chips and the quick grid on Home start turned off on a new install; existing setups keep theirs.
 - The greeting and buttons at the top of Home scroll away with the rest instead of staying pinned.
+- Section titles on Home are a little smaller.
 
 ### Fixed
 
