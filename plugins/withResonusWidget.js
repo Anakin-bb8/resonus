@@ -131,7 +131,9 @@ module.exports = function withResonusWidget(config) {
       settings.SWIFT_VERSION = '5.0';
       settings.TARGETED_DEVICE_FAMILY = '"1,2"';
       settings.CURRENT_PROJECT_VERSION = '1';
-      settings.MARKETING_VERSION = '1.0';
+      // Xcode wants an extension to carry the app's own version: it warns on
+      // the mismatch, and the warning is worth not having.
+      settings.MARKETING_VERSION = String(config.version ?? '1.0');
       settings.CLANG_ENABLE_MODULES = 'YES';
     }
 
