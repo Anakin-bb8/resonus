@@ -18,6 +18,7 @@ Releases before 0.2.1 are only listed on the
 ### Changed
 
 - The chips and the quick grid on Home start turned off on a new install; existing setups keep theirs.
+- The greeting and buttons at the top of Home scroll away with the rest instead of staying pinned.
 
 ### Fixed
 

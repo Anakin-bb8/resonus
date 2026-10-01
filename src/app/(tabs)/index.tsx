@@ -927,41 +927,6 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.fixedHeader}>
-        <View style={styles.header}>
-          {/* `flexShrink` and `numberOfLines`: the greeting is customizable,
-              and although the setting caps it at GREETING_MAX, those characters
-              measure differently depending on the chosen font. Shrinking and
-              trimming, no text can push the buttons off-screen. */}
-          <View style={styles.headerLeft}>
-            {/* Nothing beside the greeting in the local profile. There used to
-                be a phone in the accent colour here, and it was the one thing
-                on the screen saying which profile you were in. That is the
-                trouble with it: the local profile is not a state you are
-                waiting to come out of, it is where somebody has chosen to be,
-                and a permanent badge for it is decoration. Offline is a
-                different matter and still says so, on the right. */}
-            {/* The screen's name when there is no greeting, where Explore and
-                Your library have theirs. */}
-            <Text style={styles.greeting} numberOfLines={1}>
-              {showGreeting ? greeting : t('Home')}
-            </Text>
-          </View>
-          <View style={styles.headerRight}>
-            {/* Before the buttons, and dimmer than them, so it reads as a state
-                and not as something to press. */}
-            <OfflineIndicator />
-            {/* In the order the user put them in, and only the ones left on
-                (Settings › Appearance › Home buttons). */}
-            {homeButtons.map(({ key, enabled }) =>
-              enabled ? <HomeHeaderButton key={key} which={key} /> : null,
-            )}
-          </View>
-        </View>
-
-        {offline && scanning ? <ScanningPanel /> : null}
-      </View>
-
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: bottomPad }]}
         refreshControl={
@@ -972,11 +937,44 @@ export default function HomeScreen() {
           />
         }
       >
+        {/* Scrolls away with the rest: pinned, it only took room. */}
+        <View style={styles.topHeader}>
+          <View style={styles.header}>
+            {/* `flexShrink` and `numberOfLines`: the greeting is customizable,
+                and although the setting caps it at GREETING_MAX, those characters
+                measure differently depending on the chosen font. Shrinking and
+                trimming, no text can push the buttons off-screen. */}
+            <View style={styles.headerLeft}>
+              {/* Nothing beside the greeting in the local profile. There used to
+                  be a phone in the accent colour here, and it was the one thing
+                  on the screen saying which profile you were in. That is the
+                  trouble with it: the local profile is not a state you are
+                  waiting to come out of, it is where somebody has chosen to be,
+                  and a permanent badge for it is decoration. Offline is a
+                  different matter and still says so, on the right. */}
+              {/* The screen's name when there is no greeting, where Explore and
+                  Your library have theirs. */}
+              <Text style={styles.greeting} numberOfLines={1}>
+                {showGreeting ? greeting : t('Home')}
+              </Text>
+            </View>
+            <View style={styles.headerRight}>
+              {/* Before the buttons, and dimmer than them, so it reads as a state
+                  and not as something to press. */}
+              <OfflineIndicator />
+              {/* In the order the user put them in, and only the ones left on
+                  (Settings › Appearance › Home buttons). */}
+              {homeButtons.map(({ key, enabled }) =>
+                enabled ? <HomeHeaderButton key={key} which={key} /> : null,
+              )}
+            </View>
+          </View>
+
+          {offline && scanning ? <ScanningPanel /> : null}
+        </View>
         {/* First, above the chips: what was playing on the computer is the
             thing to pick up on opening the app, when there is one. */}
         {showPlayingElsewhere ? <PlayingElsewhereCard /> : null}
-        {/* In the scroll, not the fixed header: they are a way in from the top
-            of Home, and scrolled past they were only taking room. */}
         <HomeChips offline={offline} />
         {!offline && serverUnreachable ? (
           <Message
@@ -1034,7 +1032,7 @@ export default function HomeScreen() {
 
 const styles = themed((colors) => ({
   safe: { flex: 1, backgroundColor: colors.background },
-  fixedHeader: { zIndex: 1, paddingTop: spacing.md },
+  topHeader: { paddingTop: spacing.md },
   content: { paddingBottom: spacing.md },
   header: {
     flexDirection: 'row',
