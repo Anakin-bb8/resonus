@@ -12,6 +12,8 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   cancelAnimation,
+  Easing,
+  interpolateColor,
   ReduceMotion,
   scrollTo,
   useAnimatedReaction,
@@ -19,6 +21,7 @@ import Animated, {
   useAnimatedStyle,
   useScrollViewOffset,
   useSharedValue,
+  type SharedValue,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
@@ -30,6 +33,7 @@ import { type LyricLine, type LyricWord } from '@/api/subsonic';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useLyrics } from '@/hooks/useLyrics';
 import { useT } from '@/i18n';
+import { wordEnds } from '@/lib/lyricWords';
 import { pushOnce } from '@/lib/pushOnce';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { type LyricsSize, useSettings } from '@/store/settings';
@@ -181,7 +185,7 @@ export function SyncedLyricsView({
   const currentRef = useRef(-1);
 
   // Small advance so the highlight doesn't lag behind the ear.
-  const posMs = positionSec * 1000 + 300;
+  const posMs = positionSec * 1000 + LINE_LEAD_MS;
   let current = -1;
   for (let i = 0; i < lines.length && (lines[i].start ?? 0) <= posMs; i++) current = i;
   currentRef.current = current;
@@ -307,6 +311,7 @@ export function SyncedLyricsView({
             active={i === current}
             past={current >= 0 && i < current}
             next={i === current + 1}
+            handover={handoverOf(lines, i)}
             large={large}
             size={size}
             centered={centered}
@@ -341,6 +346,7 @@ const LyricRow = memo(({
   active,
   past,
   next,
+  handover,
   large,
   size,
   centered,
@@ -353,6 +359,8 @@ const LyricRow = memo(({
   /** Lines before the current one: same colour as active, slightly dimmer. */
   past: boolean;
   next: boolean;
+  /** When the row stops being the active one, in the clock the words fill at. */
+  handover?: number;
   large?: boolean;
   size: LyricsSize;
   centered: boolean;
@@ -391,57 +399,208 @@ const LyricRow = memo(({
       onLayout={(e) => onMeasure(index, e.nativeEvent.layout.y, e.nativeEvent.layout.height)}
     >
       <Animated.Text style={[lyricsLineStyle(large, size, centered), centered ? styles.centerOrigin : styles.leftOrigin, anim]}>
-        {active && words ? <SungWords words={words} /> : text}
+        {active && words ? <SungWords words={words} handover={handover} /> : text}
       </Animated.Text>
     </View>
   );
 });
 LyricRow.displayName = 'LyricRow';
 
-/** Ahead of the ear, like the line's own 300 ms, but less: a word is short. */
+/** Ahead of the ear, like the line's own advance, but less: a word is short. */
 const WORD_LEAD_MS = 100;
 
+/** How far ahead of the ear a line is highlighted as the one being sung. */
+const LINE_LEAD_MS = 300;
+
 /**
- * The position in milliseconds, moving on between the player's own updates.
+ * When a line stops being the one on screen, in the clock the words fill at.
  *
- * Those come every half second, which is fine for a line and too coarse for a
- * word: a quick one lit up late or not at all. So between updates this runs
- * on by itself while playing, never more than a second past the last real one
- * in case they stop coming.
+ * The line is highlighted LINE_LEAD_MS before its own start and the words
+ * fill WORD_LEAD_MS ahead of the ear, so from where the fill reads, the row
+ * goes when the next line is LINE_LEAD_MS - WORD_LEAD_MS out. Ending words
+ * there rather than at whatever the source says is what keeps the last word
+ * of a phrase — the held one, the one this was all asked for — from jumping
+ * to full colour (and its shine from vanishing) the moment its row stops
+ * being the active one.
  */
-function useSungPositionMs(): number {
-  const [ms, setMs] = useState(() => usePlayerStore.getState().positionSec * 1000);
+function handoverOf(lines: LyricLine[], i: number): number | undefined {
+  const next = lines[i + 1]?.start;
+  return next === undefined ? undefined : next - LINE_LEAD_MS + WORD_LEAD_MS;
+}
+
+/**
+ * How often JS reads the position and aims the fill at where the song will
+ * be by the next read. Not how often the fill moves: that is every frame, on
+ * the UI thread, between one read and the next.
+ */
+const TICK_MS = 50;
+
+/**
+ * The position the words fill at, as a shared value rather than as state.
+ *
+ * The player moves `positionSec` twice a second, which is fine for a line and
+ * far too coarse for a word: a quick one used to light up late or not at all.
+ * So between those updates this runs on by itself while playing, never more
+ * than a second past the last real one in case they stop coming. Each read is
+ * handed over as a timing aimed at where the next read will land, so the
+ * value keeps moving at the song's own rate and arrives on every read: the
+ * fill neither steps (as a value set raw every 50 ms would) nor lags (as one
+ * aimed only at the present would, by a tick).
+ */
+function useSungPosition(): SharedValue<number> {
+  const pos = useSharedValue(usePlayerStore.getState().positionSec * 1000 + WORD_LEAD_MS);
   useEffect(() => {
     let anchor = { sec: usePlayerStore.getState().positionSec, at: Date.now() };
     const unsubscribe = usePlayerStore.subscribe((s, prev) => {
       if (s.positionSec !== prev.positionSec) anchor = { sec: s.positionSec, at: Date.now() };
     });
-    const timer = setInterval(() => {
+    const read = () => {
       const { isPlaying, speed } = usePlayerStore.getState();
       const ahead = isPlaying ? Math.min((Date.now() - anchor.at) * (speed || 1), 1000) : 0;
-      setMs(anchor.sec * 1000 + ahead + WORD_LEAD_MS);
-    }, 50);
+      return anchor.sec * 1000 + ahead + WORD_LEAD_MS;
+    };
+    let last = pos.value;
+    const timer = setInterval(() => {
+      const { isPlaying, speed } = usePlayerStore.getState();
+      const target = read() + TICK_MS * (isPlaying ? speed || 1 : 0);
+      // A seek is somewhere else entirely: it lands there rather than
+      // travelling, which would light up every word on the way through.
+      if (Math.abs(target - last) > 1000) pos.value = target;
+      else
+        pos.value = withTiming(target, {
+          duration: TICK_MS,
+          easing: Easing.linear,
+          // Same answer as the line's own transition: the fill is the
+          // karaoke, not something decorating it.
+          reduceMotion: motion.reduceMotion.essential,
+        });
+      last = target;
+    }, TICK_MS);
     return () => {
       unsubscribe();
       clearInterval(timer);
     };
-  }, []);
-  return ms;
+  }, [pos]);
+  return pos;
+}
+
+/** The word's own colour at the 40% it waits at, as it always has been. */
+function waitingColor(text: string): string {
+  const m = /^#([0-9a-f]{6})$/i.exec(text);
+  if (!m) return `${text}66`;
+  const n = parseInt(m[1], 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, 0.4)`;
+}
+
+/** Where a word is in its own span: before its start, past its end, between. */
+function clamp01(value: number): number {
+  // The fill calls this from a worklet, which runs on the UI thread: without
+  // the directive it arrives there as a remote function and throws — hard
+  // enough to take the whole app down with it.
+  'worklet';
+  if (!Number.isFinite(value)) return 0;
+  return value < 0 ? 0 : value > 1 ? 1 : value;
 }
 
 /**
- * The line being sung, word by word (#165): what has been sung is lit and the
- * rest waits, dimmer. Only the active line ticks.
+ * How long a word is sung before it counts as one sung slowly: nothing for a
+ * word got through under a quarter of a second, everything for a note held
+ * over a second. The case this was asked for — the last word of a phrase,
+ * held while the line waits for the next one — lands at the far end of it.
  */
-function SungWords({ words }: { words: LyricWord[] }) {
-  const posMs = useSungPositionMs();
-  const waiting = { color: `${colors.text}66` };
+const QUICK_WORD_MS = 250;
+const HELD_WORD_MS = 1200;
+
+/** The shine: how much even a quick word gets, how far it spreads, how bright. */
+const BLOOM_FLOOR = 0.2;
+const BLOOM_RADIUS = 9;
+const BLOOM_ALPHA = 0.6;
+
+/** How long the shine lingers after the word it belongs to is out. */
+const BLOOM_FADE_MS = 500;
+
+/**
+ * The least it is allowed to linger, for when the row hands over before the
+ * full fade would have run: a shine cut off at full strength shows, one
+ * dimmed over this is simply gone.
+ */
+const BLOOM_FADE_MIN_MS = 120;
+
+/**
+ * One word, filling with colour for as long as it is sung.
+ *
+ * Not a light switched on at its start: the fill is where the song is against
+ * this word's own span, read on the UI thread every frame, so it moves at the
+ * song's own rate and never steps. `slow` is how long the word is given, and
+ * it is what the shine answers to — a word pronounced slowly blooms as it
+ * fills, a quick one barely does. The shine is gone again shortly after the
+ * word is out, and always before the row does, so what shines is the word
+ * being sung and not the line it sits in.
+ */
+const SungWord = memo(function SungWord({
+  value,
+  start,
+  end,
+  handover,
+  pos,
+}: {
+  value: string;
+  start: number;
+  end: number;
+  /** When the row hands over, which the shine never outlives. */
+  handover?: number;
+  pos: SharedValue<number>;
+}) {
+  // Memoized, so the theme has to come in from here (like LyricRow's own).
+  const theme = useTheme();
+  const waiting = waitingColor(theme.text);
+  const lit = theme.text;
+  const dur = Math.max(end - start, 1);
+  /** How slowly this word is sung: 0 for a quick one, 1 for a held note. */
+  const slow = clamp01((dur - QUICK_WORD_MS) / (HELD_WORD_MS - QUICK_WORD_MS));
+  // When the shine is out: the full fade when there is room for it, and
+  // whatever room there is when there is not — but never past the handover,
+  // where the row leaves the screen and it would vanish instead of dimming.
+  const fadeEnd = Math.min(end + BLOOM_FADE_MS, handover ?? Infinity);
+  const fadeStart = Math.min(end, fadeEnd - BLOOM_FADE_MIN_MS);
+  const fadeDur = Math.max(fadeEnd - fadeStart, 1);
+  const style = useAnimatedStyle(() => {
+    const fill = clamp01((pos.value - start) / dur);
+    const after = clamp01((pos.value - fadeStart) / fadeDur);
+    const bloom = fill * (1 - after) * (BLOOM_FLOOR + (1 - BLOOM_FLOOR) * slow);
+    return {
+      color: interpolateColor(fill, [0, 1], [waiting, lit]),
+      textShadowColor: `rgba(255, 255, 255, ${Math.round(bloom * BLOOM_ALPHA * 100) / 100})`,
+      textShadowRadius: bloom * BLOOM_RADIUS,
+    };
+  }, [start, dur, fadeStart, fadeDur, waiting, lit, slow]);
+  return (
+    <Animated.Text style={[{ textShadowOffset: { width: 0, height: 0 } }, style]}>
+      {value}
+    </Animated.Text>
+  );
+});
+SungWord.displayName = 'SungWord';
+
+/**
+ * The line being sung, word by word (#165): what has been sung is filled and
+ * the rest waits, dimmer — each word taking as long to fill as it takes to
+ * sing. Only the active line runs.
+ */
+function SungWords({ words, handover }: { words: LyricWord[]; handover?: number }) {
+  const pos = useSungPosition();
+  const ends = wordEnds(words, handover);
   return (
     <>
       {words.map((w, i) => (
-        <Text key={i} style={w.start <= posMs ? null : waiting}>
-          {w.value}
-        </Text>
+        <SungWord
+          key={i}
+          value={w.value}
+          start={w.start}
+          end={ends[i]}
+          handover={handover}
+          pos={pos}
+        />
       ))}
     </>
   );

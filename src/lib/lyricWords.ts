@@ -63,6 +63,37 @@ export function trimmedWords(
 }
 
 /**
+ * When each word of a line is sung out, which is what the karaoke fills on.
+ *
+ * The source's own end when it sent one (TTML and Jellyfin do); the next
+ * word's start when it did not, since words follow one another; for the last
+ * word, the next line's start — how long the phrase is held — capped, because
+ * that gap is often silence rather than a note, and a word that takes four
+ * seconds to fill reads as one that never does. Nothing after the word at all:
+ * a guess, which is all it can be.
+ *
+ * `handover` is when the line stops being the one on screen, in the same
+ * clock these times are read in. Nothing fills past it: a word still filling
+ * when its row stops being the active one would jump to full colour (and its
+ * shine disappear) in front of whoever is watching. Nor past the next word,
+ * whatever the source said — fills follow one another, they do not overlap.
+ */
+export function wordEnds(words: LyricWord[], handover?: number): number[] {
+  const gone = handover ?? Infinity;
+  return words.map((w, i) => {
+    const next = words[i + 1]?.start;
+    const until =
+      next !== undefined
+        ? Math.min(w.end ?? next, next)
+        : (w.end ?? Math.min(gone, w.start + HELD_LIMIT_MS));
+    return Math.max(Math.min(until, gone), w.start);
+  });
+}
+
+/** The most the last word fills for when nothing says when it ends. */
+const HELD_LIMIT_MS = 2500;
+
+/**
  * The string index a UTF-8 byte offset lands on, which is what an
  * OpenSubsonic cue gives, or -1 when it falls inside a character.
  */
