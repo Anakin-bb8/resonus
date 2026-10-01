@@ -3,7 +3,7 @@ import Icon from '@/components/Icon';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import {
   ActivityIndicator,
@@ -13,11 +13,12 @@ import {
   StyleSheet,
   Text,
   View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from 'react-native';
 // gesture-handler ScrollView: needed so the "Popular" row swipe-to-queue
 // coexists with scrolling (see TrackRow).
 import { ScrollView } from 'react-native-gesture-handler';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   coverArtUrl,
@@ -43,6 +44,7 @@ import { TrackRow } from '@/components/TrackRow';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useDownloadMessage } from '@/hooks/useDownloadMessage';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
+import { useInsets } from '@/hooks/useInsets';
 import { useT } from '@/i18n';
 import { splitArtistAlbums } from '@/lib/artistAlbums';
 import { groupArtistAlbums, RELEASE_GROUP_TITLE } from '@/lib/releaseGroups';
@@ -94,6 +96,14 @@ const CARD_W = 140;
  */
 const ROW_LIMIT = 50;
 
+/**
+ * The play button, the same 56 the album and playlist headers use: the copy
+ * that docks under the bar has to land on the same circle the header lays out.
+ */
+const PLAY_SIZE = 56;
+/** The bar's height below the status bar (the same 48 as every other bar). */
+const BAR_H = 48;
+
 export default function ArtistScreen() {
   const bottomPad = useScreenBottomPadding();
   // Repaints on a change of appearance or accent: a stack keeps this screen
@@ -101,7 +111,7 @@ export default function ArtistScreen() {
   useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const insets = useInsets();
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
   const t = useT();
   const playing = usePlayerStore(currentSong);
@@ -159,6 +169,12 @@ export default function ArtistScreen() {
   const headerH = headerHeight(screenW, screenH);
 
   const scrollY = useRef(new Animated.Value(0)).current;
+  // The bar reaching the docked play button hands the taps (and the screen
+  // reader) over to the copy drawn above it (see `playOverlay`).
+  const [overBar, setOverBar] = useState(false);
+  const overBarRef = useRef(false);
+  const behindAtRef = useRef(Infinity);
+  const lastOffsetY = useRef(0);
   const barContentOpacity = scrollY.interpolate({
     inputRange: [headerH * 0.45, headerH * 0.75],
     outputRange: [0, 1],
@@ -179,6 +195,39 @@ export default function ArtistScreen() {
     outputRange: [headerH / 2, 0, -headerH / 3],
     extrapolate: 'clamp',
   });
+
+  // Where the play button rides. Its top in the scroll content: the header
+  // photo is the first thing in it and has the fixed `headerH` height, the
+  // actions row comes straight after and starts with its own `spacing.md` top
+  // padding — no measurement needed, the layout is all fixed sizes.
+  const playContentTop = headerH + spacing.md;
+  // The line it holds on: centred on the bar's lower edge, so half of it is in
+  // the bar and half of it is under it. Below it the button tracks the header
+  // 1:1 (the interpolation's slope is the scroll's own), from there on it does
+  // not move at all.
+  const dockTop = insets.top + BAR_H - PLAY_SIZE / 2;
+  // The scroll at which the button's top reaches the bar's lower edge: from
+  // there the bar is between it and the eye (and between it and the hand).
+  const behindAt = Math.max(playContentTop - (insets.top + BAR_H), 1);
+  const dockAt = Math.max(playContentTop - dockTop, 1);
+  const playDockY = scrollY.interpolate({
+    inputRange: [0, dockAt],
+    outputRange: [playContentTop, dockTop],
+    // Left extends, right clamps: once docked the button goes no further, but
+    // while the list is rubber-banded past the top the header keeps moving down
+    // and the button has to move with it instead of sitting still.
+    extrapolateLeft: 'extend',
+    extrapolateRight: 'clamp',
+  });
+  // The threshold the listener reads, kept with what it depends on.
+  useLayoutEffect(() => {
+    behindAtRef.current = behindAt;
+    const should = lastOffsetY.current >= behindAt;
+    if (should !== overBarRef.current) {
+      overBarRef.current = should;
+      setOverBar(should);
+    }
+  }, [behindAt]);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['artist', id],
@@ -253,6 +302,9 @@ export default function ArtistScreen() {
   // tracks. `sourceHref` identifies the context regardless of how it started
   // (the play button and shuffle both set it).
   const isCurrentArtistQueue = sourceHref === `/artist/${id}`;
+  // Read out here rather than inside `onPressPlay`: the queue takes a name, and
+  // `data` is only known to be there in this scope.
+  const artistName = data.artist.name;
   const showPause = isCurrentArtistQueue && isPlaying;
   // Shuffle icon lights up (accent) while this artist's queue is the one playing
   // and it's shuffled — same "reflects the live state" idea as the play button.
@@ -383,6 +435,53 @@ export default function ArtistScreen() {
     setConfirmDownload(true);
   }
 
+  // What the button does, wherever the button currently is: the place in the
+  // header and the copy docked under the bar both call this.
+  function onPressPlay() {
+    if (isCurrentArtistQueue) togglePlay();
+    else if (top.length > 0) playQueue(top, 0, artistName, `/artist/${id}`);
+    // Nothing popular to play: rather than the button doing nothing at all
+    // (#79), it falls back to what the ⋯ menu offers, the discography from the
+    // earliest album on. A server that tracks no plays has no popular tracks
+    // for anybody, so on those this is the button's normal behaviour and not a
+    // corner case.
+    else if (albums.length > 0 && !starting) {
+      setStarting(true);
+      void playDiscography().finally(() => setStarting(false));
+    }
+  }
+
+  const playGlyph = starting ? (
+    <ActivityIndicator size="small" color={colors.onAccent} />
+  ) : (
+    // Optical centring only for the play triangle; pause is symmetric.
+    <Icon name={showPause ? 'pause' : 'play'} size={28} color={colors.onAccent} />
+  );
+
+  // The play button: the one and only one, so nothing about it fades or is
+  // swapped for anything else. It follows the place laid out for it in the
+  // actions row until it reaches the bar's line, and holds there — half in the
+  // bar, half below its lower edge. Drawn after the bar (below), so it is
+  // always in front of it; while the bar has not reached it yet, it leaves the
+  // taps (and the screen reader) to the place in the header.
+  const playOverlay = (
+    <Animated.View
+      pointerEvents={overBar ? 'auto' : 'none'}
+      accessibilityElementsHidden={!overBar}
+      importantForAccessibility={overBar ? 'auto' : 'no-hide-descendants'}
+      style={[styles.playDock, { right: spacing.lg, transform: [{ translateY: playDockY }] }]}
+    >
+      <Pressable
+        style={styles.playButton}
+        accessibilityRole="button"
+        accessibilityLabel={showPause ? t('Pause') : t('Play')}
+        onPress={onPressPlay}
+      >
+        {playGlyph}
+      </Pressable>
+    </Animated.View>
+  );
+
   return (
     <View style={styles.root}>
       <View style={{ flex: 1 }}>
@@ -390,7 +489,18 @@ export default function ArtistScreen() {
         contentContainerStyle={{ paddingBottom: bottomPad }}
         scrollEventThrottle={16}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+          // The listener still runs on this side: a native event is delivered to
+          // JS as well, it just no longer has to be for the animation to move.
           useNativeDriver: true,
+          listener: (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+            const y = e.nativeEvent.contentOffset.y;
+            lastOffsetY.current = y;
+            const should = y >= behindAtRef.current;
+            if (should !== overBarRef.current) {
+              overBarRef.current = should;
+              setOverBar(should);
+            }
+          },
         })}
       >
         <View style={[styles.headerWrap, { width: screenW, height: headerH }]}>
@@ -490,35 +600,19 @@ export default function ArtistScreen() {
               <Icon name="shuffle" size={26} color={shuffleActive ? colors.accent : colors.text} />
             )}
           </Pressable>
+          {/* What the button does while it is still in the header: laid out
+              where it goes, transparent because the circle is drawn above the
+              bar (it is always above it now), and taking the taps from there
+              down — a dragger that starts on it is the scroll's, as it was. */}
           <Pressable
-            style={[styles.playButton, { backgroundColor: colors.accent }]}
+            style={styles.playSlot}
+            collapsable={false}
+            accessibilityElementsHidden={overBar}
+            importantForAccessibility={overBar ? 'no-hide-descendants' : 'auto'}
             accessibilityRole="button"
             accessibilityLabel={showPause ? t('Pause') : t('Play')}
-            onPress={() => {
-              if (isCurrentArtistQueue) togglePlay();
-              else if (top.length > 0) playQueue(top, 0, data.artist.name, `/artist/${id}`);
-              // Nothing popular to play: rather than the button doing nothing at
-              // all (#79), it falls back to what the ⋯ menu offers, the
-              // discography from the earliest album on. A server that tracks no
-              // plays has no popular tracks for anybody, so on those this is the
-              // button's normal behaviour and not a corner case.
-              else if (albums.length > 0 && !starting) {
-                setStarting(true);
-                void playDiscography().finally(() => setStarting(false));
-              }
-            }}
-          >
-            {starting ? (
-              <ActivityIndicator size="small" color={colors.onAccent} />
-            ) : (
-              <Icon
-                name={showPause ? 'pause' : 'play'}
-                size={28}
-                color={colors.onAccent}
-                // Optical centring only for the play triangle; pause is symmetric.
-              />
-            )}
-          </Pressable>
+            onPress={onPressPlay}
+          />
         </View>
 
         {top.length > 0 ? (
@@ -631,8 +725,8 @@ export default function ArtistScreen() {
       </AnimatedPage>
       </View>
 
-      {/* Fixed bar: the back button always; background + title + play on collapse. */}
-      <View style={[styles.bar, { height: insets.top + 48, paddingTop: insets.top }]}>
+      {/* Fixed bar: the back button always; background + title on collapse. */}
+      <View style={[styles.bar, { height: insets.top + BAR_H, paddingTop: insets.top }]}>
         <TopBarBackground color={dominant} opacity={barBgOpacity} />
         {/* The same chevron, at the same size, as the album and playlist bars.
             What it keeps of its own is the disc behind it: those screens open
@@ -643,10 +737,18 @@ export default function ArtistScreen() {
             makes it visible over a photo, and it stays there once the bar has
             gone solid. */}
         <BackChevron size={28} color={colors.onArtwork} style={styles.back} label={t('Close')} />
-        <Animated.Text style={[styles.barTitle, { opacity: barContentOpacity }]} numberOfLines={1}>
+        {/* Stops short of where the docked play button holds on: the title
+            truncates into its own space instead of running under the circle. */}
+        <Animated.Text
+          style={[styles.barTitle, { opacity: barContentOpacity, marginRight: PLAY_SIZE + spacing.md }]}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
           {data.artist.name}
         </Animated.Text>
       </View>
+
+      {playOverlay}
 
       {/* The same URL as the header, not a larger one: it is already on the
           device, so it opens at once instead of downloading the photo twice. */}
@@ -869,11 +971,23 @@ const styles = themed((colors) => ({
   },
   playButton: {
     backgroundColor: colors.accent,
-    width: 56,
-    height: 56,
+    width: PLAY_SIZE,
+    height: PLAY_SIZE,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // The place the button takes in the actions row: the size and nothing else,
+  // no colour — the circle itself is drawn above the bar, always over this.
+  playSlot: {
+    width: PLAY_SIZE,
+    height: PLAY_SIZE,
+  },
+  // The button over the bar: `right` and the scroll's line come with the
+  // render; the top is 0 and the scroll travels in the translateY.
+  playDock: {
+    position: 'absolute',
+    top: 0,
   },
   section: { marginBottom: spacing.xl },
   popularRows: { paddingHorizontal: spacing.lg },

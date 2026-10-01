@@ -6,7 +6,7 @@
 import Icon from '@/components/Icon';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
-import { useMemo, useRef, useState, type ReactNode } from 'react';
+import { useMemo, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -28,10 +28,10 @@ import {
   GestureDetector,
   type GestureType,
 } from 'react-native-gesture-handler';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { type Song, type StarType } from '@/api/subsonic';
 import { useDominantColor } from '@/hooks/useDominantColor';
+import { useInsets } from '@/hooks/useInsets';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { centredPadding, useScreenSize } from '@/hooks/useScreenSize';
 import { useSelectionMenu } from '@/hooks/useSelectionMenu';
@@ -64,6 +64,9 @@ function coverSize(width: number, height: number): number {
   return Math.round(Math.min(width * 0.58, height * 0.4, 250));
 }
 const TOPBAR_H = 48;
+/** The round play button in the header: its size, and the share of it the
+ *  bar holds once it reaches the bar (half inside it, half below its edge). */
+const PLAY_SIZE = 56;
 /** Height of the hidden search bar ("Find in playlist" Spotify style),
  * including the separation gap from the cover. */
 const SEARCH_H = 72;
@@ -231,7 +234,7 @@ export function TrackListView({
 }: Props) {
   const router = useRouter();
   const t = useT();
-  const insets = useSafeAreaInsets();
+  const insets = useInsets();
   const { width: screenW, height: screenH } = useScreenSize();
   const bottomPad = useScreenBottomPadding();
   const dominant = useDominantColor(coverUri, true);
@@ -281,6 +284,32 @@ export function TrackListView({
   const searchH = useRef(new Animated.Value(0)).current;
   const searchBar = !!searchable && songs.length > 0;
 
+  // ── The play button ──────────────────────────────────────────────────────
+  // The button is drawn outside the list, over the bar: it follows the place
+  // it has in the header and, on reaching the bar, holds there — half in the
+  // bar, half below it — so it never passes behind the bar and never fades
+  // out from under the eye. What the header keeps is the place itself, laid
+  // out (and measured) where the button would be.
+  const headerRootRef = useRef<View>(null);
+  const playBtnRef = useRef<View>(null);
+  /** The button's own place in the scroll content (see the effect below). */
+  const [playContentY, setPlayContentY] = useState(0);
+  /** Whether the bar has reached it: from there the copy drawn over the bar
+   *  takes the taps (the place itself is behind the bar by then) and is the
+   *  one the screen reader is offered; before that it is the other way round,
+   *  so the drags that start on the button still belong to the list. */
+  const [overBar, setOverBar] = useState(false);
+  const overBarRef = useRef(false);
+  /** The scroll it happens at; `Infinity` until the place is known. */
+  const behindAtRef = useRef(Infinity);
+  /** Bumped when something moved the button without a render being able to
+   *  see it (the search bar's height animation) or before it was laid out,
+   *  so the measurement below runs again. Only the write is used: the
+   *  effect reads no dependencies, any render will do, and this is what
+   *  makes one happen. */
+  const [, setMeasureTick] = useState(0);
+  const measureRetries = useRef(0);
+
   // `setRevealed` is async: the gesture fires `onChange` many times per drag,
   // and several would pass the `!revealed` guard before the re-render, each
   // triggering haptic. The ref updates instantly and stops the rest.
@@ -291,13 +320,23 @@ export function TrackListView({
     revealedRef.current = true;
     haptic('light');
     setRevealed(true);
-    Animated.timing(searchH, { toValue: SEARCH_H, duration: motion.duration.fade, useNativeDriver: false }).start();
+    Animated.timing(searchH, {
+      toValue: SEARCH_H,
+      duration: motion.duration.fade,
+      useNativeDriver: false,
+      // The header (and the play button in it) moves down as this runs, and
+      // nothing re-renders when it lands: the measure below is told here.
+    }).start(() => setMeasureTick((v) => v + 1));
   }
 
   function collapseSearchBar() {
     revealedRef.current = false;
     setRevealed(false);
-    Animated.timing(searchH, { toValue: 0, duration: motion.duration.fade, useNativeDriver: false }).start();
+    Animated.timing(searchH, {
+      toValue: 0,
+      duration: motion.duration.fade,
+      useNativeDriver: false,
+    }).start(() => setMeasureTick((v) => v + 1));
   }
 
   // Simultaneous pan with the list scroll: doesn't steal the gesture, just
@@ -431,6 +470,94 @@ export function TrackListView({
     extrapolate: 'clamp',
   });
 
+  // Where the play button sits in the scroll content: its distance from the
+  // top of the list header, plus the padding the list starts with — which is
+  // the same expression the list is padded by below, so the two cannot drift
+  // apart.
+  const listPadTop = insets.top + TOPBAR_H + spacing.md;
+
+  // The two ends of that distance are read in window coordinates in the same
+  // tick, so the scroll underneath them cancels out: the number is the same
+  // whether the list is at rest or mid-fling. Adding the scroll offset by
+  // hand instead would not be — the offset JS has is a frame behind whatever
+  // is on screen, and a fling travels a long way in a frame.
+  //
+  // Measured after every render (the header moves for reasons a render knows
+  // about: the description opening, the search bar's height landing) and
+  // again when the search bar's animation ends, which no render sees.
+  useLayoutEffect(() => {
+    if (searching) return;
+    const btn = playBtnRef.current;
+    const head = headerRootRef.current;
+    if (!btn || !head) return;
+    let btnY: number | null = null;
+    let headY: number | null = null;
+    const both = () => {
+      if (btnY === null || headY === null) return;
+      const rel = btnY - headY;
+      if (rel <= 0) {
+        // Nothing laid out yet: the first frame, before the header has a
+        // place to report. A few tries at most, then give up — a button that
+        // never turns up is one that is not on screen.
+        if (measureRetries.current < 5) {
+          measureRetries.current += 1;
+          requestAnimationFrame(() => setMeasureTick((v) => v + 1));
+        }
+        return;
+      }
+      measureRetries.current = 0;
+      const y = listPadTop + rel;
+      setPlayContentY((cur) => (Math.abs(cur - y) > 2 ? y : cur));
+    };
+    btn.measureInWindow((_bx, by) => {
+      if (typeof by === 'number') {
+        btnY = by;
+        both();
+      }
+    });
+    head.measureInWindow((_hx, hy) => {
+      if (typeof hy === 'number') {
+        headY = hy;
+        both();
+      }
+    });
+  });
+
+  // The line the button holds on: centred on the bar's lower edge, so half of
+  // it is in the bar and half of it is under it. Below it the button tracks
+  // the header 1:1 (the interpolation's slope is the scroll's own), from there
+  // on it does not move at all.
+  const dockTop = insets.top + TOPBAR_H - PLAY_SIZE / 2;
+  // The revealed search row is not scroll: it sits above the header and pushes
+  // it down without the offset moving, so the button starts that much lower and
+  // reaches the line that much later. Its height is animated from JS (a height
+  // is not something the scroll's native driver does), which is why it travels
+  // in a wrapper of its own below rather than in the interpolation.
+  const searchShift = revealed ? SEARCH_H : 0;
+  // The scroll at which the button's top reaches the bar's lower edge: from
+  // there the bar is between it and the eye (and between it and the hand).
+  const behindAt = Math.max(playContentY + searchShift - (insets.top + TOPBAR_H), 1);
+  const dockAt = Math.max(playContentY + searchShift - dockTop, 1);
+  const playDockY = scrollY.interpolate({
+    inputRange: [0, dockAt],
+    outputRange: [playContentY, dockTop - searchShift],
+    // Left extends, right clamps: once docked the button goes no further, but
+    // while the list is rubber-banded past the top the header keeps moving down
+    // and the button has to move with it instead of sitting still (#overscroll).
+    extrapolateLeft: 'extend',
+    extrapolateRight: 'clamp',
+  });
+
+  // The threshold the listener reads, kept with what it depends on.
+  useLayoutEffect(() => {
+    behindAtRef.current = playContentY > 0 ? behindAt : Infinity;
+    const should = playContentY > 0 && lastOffsetY.current >= behindAt;
+    if (should !== overBarRef.current) {
+      overBarRef.current = should;
+      setOverBar(should);
+    }
+  }, [behindAt, playContentY]);
+
   // Live filtering; preserves each song's original index so play/enqueue/remove
   // still point to the correct position.
   const filtered = useMemo(() => {
@@ -463,6 +590,36 @@ export function TrackListView({
     // sessions it stayed on for the next album someone pressed Play on.
     void onPlay(0, { shuffled: true });
   }
+
+  // The play button: the one and only one, so nothing about it fades or is
+  // swapped for anything else. It follows the place laid out for it in the
+  // header — the search row's height riding in the outer wrapper, the scroll
+  // in the one inside it — until it reaches the bar's line, and holds there:
+  // half in the bar, half below its lower edge. Drawn after the bar (below),
+  // so it is always in front of it; while the bar has not reached it yet, it
+  // leaves the taps (and the screen reader) to the place in the header.
+  const playOverlay =
+    searching || playContentY <= 0 ? null : (
+      <Animated.View
+        pointerEvents={overBar && !selecting ? 'auto' : 'none'}
+        accessibilityElementsHidden={!overBar || selecting}
+        importantForAccessibility={overBar && !selecting ? 'auto' : 'no-hide-descendants'}
+        style={[styles.playDock, { right: centredPadding(screenW, spacing.lg) }]}
+      >
+        <Animated.View style={{ transform: [{ translateY: searchH }] }}>
+          <Animated.View style={{ transform: [{ translateY: playDockY }] }}>
+            <Pressable
+              style={[styles.playButton, { backgroundColor: colors.accent }]}
+              accessibilityRole="button"
+              accessibilityLabel={t('Play')}
+              onPress={() => songs.length > 0 && onPlay(0)}
+            >
+              <Icon name="play" size={28} color={colors.onAccent} />
+            </Pressable>
+          </Animated.View>
+        </Animated.View>
+      </Animated.View>
+    );
 
   return (
     <View style={styles.root}>
@@ -527,7 +684,7 @@ export function TrackListView({
         contentContainerStyle={[
           styles.list,
           {
-            paddingTop: insets.top + TOPBAR_H + spacing.md,
+            paddingTop: listPadTop,
             paddingBottom: bottomPad,
             // Centred on a wide screen instead of stretched across it: a row
             // whose title is at one edge and whose duration is at the other,
@@ -545,6 +702,13 @@ export function TrackListView({
             lastOffsetY.current = y;
             // Scrolling down with the bar open collapses it.
             if (revealed && !searching && y > 30) collapseSearchBar();
+            // The bar reaching the button hands the taps (and the screen
+            // reader) over to what is drawn above the bar.
+            const should = y >= behindAtRef.current;
+            if (should !== overBarRef.current) {
+              overBarRef.current = should;
+              setOverBar(should);
+            }
           },
         })}
         ListHeaderComponent={
@@ -587,9 +751,12 @@ export function TrackListView({
               </Animated.View>
             ) : null}
             {/* While searching, the large header is hidden: results stay flush
-                with the bar, which is what Spotify does. */}
+                with the bar, which is what Spotify does. It is also what the
+                button's place is measured against, and not the wrapper: the
+                search row above it is not scroll, and its height travels with
+                the button on its own (see `searchShift`). */}
             {searching ? null : (
-          <View style={styles.header}>
+          <View ref={headerRootRef} style={styles.header}>
             {hideCover ? null : (
               <Animated.View style={[styles.coverCenter, { opacity: coverOpacity }]}>
                 {onCoverPress ? (
@@ -759,18 +926,23 @@ export function TrackListView({
                     color={shuffleActive ? colors.accent : colors.textSecondary}
                   />
                 </Pressable>
+                {/* What the button does while it is still in the header: laid
+                    out where it goes, transparent because the circle is drawn
+                    above the bar (it is always above it now), and taking the
+                    taps from there down — a dragger that starts on it is the
+                    list's, as it always was. */}
                 <Pressable
-                  style={[styles.playButton, { backgroundColor: colors.accent }]}
+                  ref={playBtnRef}
+                  style={styles.playSlot}
+                  collapsable={false}
+                  accessibilityElementsHidden={overBar && !selecting}
+                  importantForAccessibility={
+                    overBar && !selecting ? 'no-hide-descendants' : 'auto'
+                  }
                   accessibilityRole="button"
                   accessibilityLabel={t('Play')}
                   onPress={() => songs.length > 0 && onPlay(0)}
-                >
-                  <Icon
-                    name="play"
-                    size={28}
-                    color={colors.onAccent}
-                  />
-                </Pressable>
+                />
               </View>
             </View>
 
@@ -858,12 +1030,20 @@ export function TrackListView({
       </GestureDetector>
       </View>
 
+      {/* In selection mode the button is drawn under the bar: that bar belongs
+          to the selection, and the button would land on its own controls —
+          which is where the header's button always was, behind it. */}
+      {selecting ? playOverlay : null}
+
       {/* Fixed top bar: the background and title appear on collapse. In
           selection mode it's replaced by ✕ + counter + select all. */}
       <View style={[styles.bar, { height: insets.top + TOPBAR_H, paddingTop: insets.top }]}>
         {selecting ? (
           <>
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: headerColor }]} />
+            {/* The same bar, the same colour falling away: the two swap in
+                place, and a flat one behind the counter would read as the
+                bar changing rather than as what it says changing. */}
+            <TopBarBackground color={headerColor} opacity={1} />
             <Pressable
               hitSlop={12}
               accessibilityRole="button"
@@ -895,14 +1075,29 @@ export function TrackListView({
             <TopBarBackground color={headerColor} opacity={barBgOpacity} />
             <BackChevron size={28} label={t('Close')} />
             <Animated.Text
-              style={[styles.barTitleCentered, { top: insets.top + 10, opacity: barContentOpacity }]}
+              style={[
+                styles.barTitleCentered,
+                {
+                  top: insets.top + 10,
+                  opacity: barContentOpacity,
+                  // The play button holds the right end of the bar: a long
+                  // name stops short of it and is cut there, with an ellipsis
+                  // instead of running underneath.
+                  right: centredPadding(screenW, spacing.lg) + PLAY_SIZE + spacing.md,
+                },
+              ]}
               numberOfLines={1}
+              ellipsizeMode="tail"
             >
               {title}
             </Animated.Text>
           </>
         )}
       </View>
+
+      {/* Over the bar everywhere else: it is the only copy of the button
+          there is, so it has to be in front of it at all times. */}
+      {selecting ? null : playOverlay}
 
       {selecting ? (
         <SelectionBar
@@ -1137,11 +1332,22 @@ const styles = themed((colors) => ({
   },
   playButton: {
     backgroundColor: colors.accent,
-    width: 56,
-    height: 56,
+    width: PLAY_SIZE,
+    height: PLAY_SIZE,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // The place the button takes in the header: the size and nothing else, no
+  // colour — the circle itself is drawn above the bar, always over this.
+  playSlot: {
+    width: PLAY_SIZE,
+    height: PLAY_SIZE,
+  },
+  // The button over the bar: only the column's `right` comes with each
+  // render; the scroll and the search row's height travel in wrappers.
+  playDock: {
+    position: 'absolute',
   },
   bar: {
     position: 'absolute',
@@ -1164,10 +1370,10 @@ const styles = themed((colors) => ({
     top: 0,
     bottom: 0,
     justifyContent: 'center',
-    // The same clearance on both sides, the width of the back chevron and its
-    // gap: centered on the screen, and a long name stops short of the chevron.
+    // The clearance on the left is the width of the back chevron and its
+    // gap: a long name stops short of it. The right end belongs to the play
+    // button and comes with each render (it needs the screen's width).
     left: spacing.lg + 28 + spacing.md,
-    right: spacing.lg + 28 + spacing.md,
     textAlign: 'center',
     includeFontPadding: false,
     color: colors.text,
