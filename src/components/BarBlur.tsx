@@ -16,7 +16,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { createRef, type ReactNode } from 'react';
 import { Animated, Platform, StyleSheet, View } from 'react-native';
 
-import { easedFade } from '@/lib/fade';
 import { useSettings } from '@/store/settings';
 import { useTheme, useThemeMode } from '@/theme';
 
@@ -102,17 +101,7 @@ export function TopBarBackground({
   return (
     <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity }]}>
       {gradient ? (
-        // The blend finishes early and the page's own colour owns the rest:
-        // at an even blend over the whole bar the bar reads as one long
-        // smear, and it is the flat run at the lower edge that lets the bar
-        // land on the list with nothing left over. Eased rather than a
-        // straight ramp to sixty per cent, which left a line where the fade
-        // stopped: smoothstep arrives with zero slope, so the flat run starts
-        // without an edge to see.
-        <LinearGradient
-          {...easedFade(color, background, { start: 0, until: 0.6 })}
-          style={StyleSheet.absoluteFill}
-        />
+        <LinearGradient colors={[color, background]} style={StyleSheet.absoluteFill} />
       ) : (
         <View style={[StyleSheet.absoluteFill, { backgroundColor: color }]} />
       )}

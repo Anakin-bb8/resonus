@@ -5,47 +5,33 @@
  * eases in and out of both, over several stops, since the gradient itself
  * only blends in straight lines between them.
  *
- * `start` is how much of the run holds `from` (the header keeps its colour
- * under the title before letting go), `until` where `to` arrives. What
- * follows is `to` flat, and the slope arriving there is zero, so the flat run
- * begins without an edge to find.
+ * The first quarter of the run holds `from` flat — the header keeps its
+ * colour under the title before letting go — and the last stop is `to`,
+ * with the slope arriving there already zero, so the flat run begins
+ * without an edge to find.
  */
+
+/** How much of the run holds the first colour before starting to let go. */
+const HOLD = 0.25;
+const STEPS = 8;
 
 export interface Fade {
   colors: [string, string, ...string[]];
   locations: [number, number, ...number[]];
 }
 
-export function easedFade(
-  from: string,
-  to: string,
-  { start = 0.25, until = 1, steps = 8 }: { start?: number; until?: number; steps?: number } = {},
-): Fade {
+export function easedFade(from: string, to: string): Fade {
   const a = hexChannels(from);
   const b = hexChannels(to);
-  if (!a || !b) {
-    return start > 0
-      ? { colors: [from, from, to], locations: [0, start, until] }
-      : { colors: [from, to], locations: [0, until] };
-  }
+  if (!a || !b) return { colors: [from, from, to], locations: [0, HOLD, 1] };
 
-  const colors: string[] = [from];
-  const locations: number[] = [0];
-  if (start > 0) {
-    colors.push(from);
-    locations.push(start);
-  }
-  for (let i = 1; i <= steps; i++) {
-    const u = i / steps;
+  const colors: string[] = [from, from];
+  const locations: number[] = [0, HOLD];
+  for (let i = 1; i <= STEPS; i++) {
+    const u = i / STEPS;
     const k = u * u * (3 - 2 * u);
     colors.push(`rgb(${a.map((c, j) => Math.round(c + (b[j] - c) * k)).join(', ')})`);
-    locations.push(start + (until - start) * u);
-  }
-  // Said out loud rather than left to the last stop being clamped: the flat
-  // run is the point of landing early, and it should be in the data.
-  if (until < 1) {
-    colors.push(to);
-    locations.push(1);
+    locations.push(HOLD + (1 - HOLD) * u);
   }
 
   return { colors: colors as Fade['colors'], locations: locations as Fade['locations'] };
