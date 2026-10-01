@@ -14,7 +14,7 @@ import {
 // gesture-handler ScrollView: needed so the song row swipe-to-queue coexists
 // with scrolling (see TrackRow).
 import { ScrollView } from 'react-native-gesture-handler';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { COVER, coverArtUrl, getPlaylists, search } from '@/api/data';
 import { getRadioStations } from '@/api/backend';
@@ -229,8 +229,12 @@ export default function SearchScreen() {
     return item.artist ? `${type} · ${item.artist}` : type;
   };
 
+  // From JS, not a `SafeAreaView`: that one pads a frame late on a tab's first
+  // mount and the page jumped down (same as Explore).
+  const insets = useSafeAreaInsets();
+
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <View style={[styles.safe, { paddingTop: insets.top }]}>
       <View style={styles.searchBar}>
         <Icon name="search" size={20} color={colors.textMuted} />
         <TextInput
@@ -526,7 +530,7 @@ export default function SearchScreen() {
           </View>
         ) : null}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

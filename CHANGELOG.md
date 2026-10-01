@@ -22,6 +22,7 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- Opening Search no longer makes the page jump down a moment after it appears.
 - A cover opened full screen is now shown with square corners, whatever the cover corners setting (#241).
 - Dragging the seek bar in a fragmented M4A, such as the ones many downloaders save from streaming services, no longer starts the song over (#242).
 - Home no longer offers the song paused on this same phone as playing on Resonus.
