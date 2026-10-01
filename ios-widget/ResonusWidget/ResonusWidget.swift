@@ -142,7 +142,8 @@ struct TrackWidgetView: View {
                 .frame(width: 44, height: 44)
             }
             .padding(.trailing, 12)
-            .padding(.bottom, 22)
+            // Just above the bar, which now hugs the bottom edge itself.
+            .padding(.bottom, 13)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
 
             progressBar
@@ -159,8 +160,7 @@ struct TrackWidgetView: View {
             }
         }
         .frame(height: 5)
-        .padding(.horizontal, 10)
-        .padding(.bottom, 8)
+        // Full width, on the edge: the widget's own bottom, not a run inside it.
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
     }
 
