@@ -100,54 +100,56 @@ struct TrackWidgetView: View {
         .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
     }
 
-    /// Everything but the play button, so that a tap anywhere on it opens the
-    /// album: the button is its own link underneath this one.
+    /// The artwork and the title are the album's link, the button is its own
+    /// link beside the title, with the top of it on the top of the title's
+    /// first line. The two are siblings: a link inside a link would eat one
+    /// of them.
     private var track: some View {
-        ZStack(alignment: .bottomTrailing) {
-            Link(destination: albumURL) {
-                VStack(alignment: .leading, spacing: 0) {
+        ZStack(alignment: .bottom) {
+            VStack(alignment: .leading, spacing: 0) {
+                Link(destination: albumURL) {
                     HStack(alignment: .top, spacing: 10) {
                         artwork
                         Spacer(minLength: 8)
                         appIcon(size: 20).padding(.top, 2)
                     }
-                    Spacer(minLength: 8)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(state?.title ?? "")
-                            .font(.system(size: 15, weight: .bold))
-                            .foregroundColor(.white)
-                            .lineLimit(2)
-                            .minimumScaleFactor(0.75)
-                        Text(state?.artist ?? "")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.white.opacity(0.7))
-                            .lineLimit(1)
+                }
+                Spacer(minLength: 8)
+                HStack(alignment: .top, spacing: 8) {
+                    Link(destination: albumURL) {
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(state?.title ?? "")
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundColor(.white)
+                                .lineLimit(2)
+                                .minimumScaleFactor(0.75)
+                            Text(state?.artist ?? "")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.white.opacity(0.7))
+                                .lineLimit(1)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    // The play button holds this end of the line.
-                    .padding(.trailing, 46)
+                    Link(destination: toggleURL) { playButton }
                 }
-                .padding(.horizontal, 12)
-                .padding(.top, 12)
-                .padding(.bottom, 16)
             }
+            .padding(.horizontal, 12)
+            .padding(.top, 12)
+            .padding(.bottom, 14)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-
-            Link(destination: toggleURL) {
-                ZStack {
-                    Circle().fill(Color.white)
-                    Image(systemName: (state?.playing ?? false) ? "pause.fill" : "play.fill")
-                        .font(.system(size: 17, weight: .bold))
-                        .foregroundColor(.black)
-                }
-                .frame(width: 44, height: 44)
-            }
-            .padding(.trailing, 12)
-            // Just above the bar, which now hugs the bottom edge itself.
-            .padding(.bottom, 13)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
 
             progressBar
         }
+    }
+
+    private var playButton: some View {
+        ZStack {
+            Circle().fill(Color.white)
+            Image(systemName: (state?.playing ?? false) ? "pause.fill" : "play.fill")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundColor(.black)
+        }
+        .frame(width: 34, height: 34)
     }
 
     private var progressBar: some View {
@@ -160,8 +162,11 @@ struct TrackWidgetView: View {
             }
         }
         .frame(height: 5)
-        // Full width, on the edge: the widget's own bottom, not a run inside it.
+        // Full width, on the edge: the widget's own bottom, not a run inside
+        // it. The safe area is ignored because a preview draws one and the
+        // home screen does not, and the bar has to land the same way on both.
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+        .ignoresSafeArea(edges: .bottom)
     }
 
     private var artwork: some View {
@@ -190,14 +195,26 @@ struct TrackWidgetView: View {
         .frame(width: size, height: size)
     }
 
+    /// Just the mark when there is a track and nothing to say about it. When
+    /// there is no track at all, the reason is under it: a widget that shows
+    /// only its icon could be missing the shared container, missing the data,
+    /// or holding data it cannot read, and those three are fixed in three
+    /// different places.
     private var emptyState: some View {
-        ZStack {
-            Link(destination: homeURL) {
-                Color.clear
+        Link(destination: homeURL) {
+            VStack(spacing: 7) {
+                appIcon(size: 34)
+                    .opacity(0.75)
+                if state == nil, let why = WidgetStore.why() {
+                    Text(why)
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundColor(.white.opacity(0.55))
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .padding(.horizontal, 12)
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            appIcon(size: 34)
-                .opacity(0.75)
         }
     }
 }
