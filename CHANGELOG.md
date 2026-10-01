@@ -9,6 +9,8 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.7.12] - 2026-10-01
+
 ### Added
 
 - Brazilian Portuguese, thanks to @vicsantus (#240).
@@ -20,6 +22,7 @@ Releases before 0.2.1 are only listed on the
 - The chips and the quick grid on Home start turned off on a new install; existing setups keep theirs.
 - The greeting and buttons at the top of Home scroll away with the rest instead of staying pinned.
 - The buttons under the player controls are spread across the width by default on a new install.
+- The Ukrainian translation is complete again, thanks to @albedych (#245).
 
 ### Fixed
 
