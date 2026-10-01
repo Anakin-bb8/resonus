@@ -70,6 +70,13 @@ const FULL_MODAL = {
   animation: Platform.OS === 'ios' ? 'fade' : 'fade_from_bottom',
 } as const;
 
+/** The detail screens are whole screens too, and on iOS `modal` would put them
+ *  in a sheet — which is how they were coming up when opened out of a menu, the
+ *  same way the lyrics screen used to. Same treatment as queue and lyrics: full
+ *  screen, cross-dissolve (the global fade), and the chevron is the way back.
+ *  Android keeps the ordinary push: it has no sheet to become. */
+const DETAIL_FULL = Platform.OS === 'ios' ? ({ presentation: 'fullScreenModal' } as const) : {};
+
 /*
  * There is no `dangerouslySingular` on any route here, and there is not going
  * to be. It asks the router for one screen per name, and the router delivers by
@@ -322,10 +329,11 @@ export default function RootLayout() {
             >
               <Stack.Protected guard={ready}>
                 <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="album/[id]" />
-                <Stack.Screen name="playlist/[id]" />
-                <Stack.Screen name="artist/[id]" />
-                <Stack.Screen name="artist/discography/[id]" />
+                <Stack.Screen name="album/[id]" options={DETAIL_FULL} />
+                <Stack.Screen name="playlist/[id]" options={DETAIL_FULL} />
+                <Stack.Screen name="artist/[id]" options={DETAIL_FULL} />
+                <Stack.Screen name="artist/discography/[id]" options={DETAIL_FULL} />
+                <Stack.Screen name="artist/songs/[id]" options={DETAIL_FULL} />
                 <Stack.Screen name="browse/albums" />
                 <Stack.Screen name="browse/artists" />
                 <Stack.Screen name="browse/folder/[id]" />
