@@ -70,11 +70,6 @@ const FULL_MODAL = {
   animation: Platform.OS === 'ios' ? 'fade' : 'fade_from_bottom',
 } as const;
 
-/** Artist and album are detail screens: on iOS they rise as a sheet, which can
- *  be swiped away, instead of taking the whole screen over. Android keeps the
- *  ordinary push — there `modal` is not a sheet, and nothing was wrong with it. */
-const DETAIL_SHEET = Platform.OS === 'ios' ? ({ presentation: 'modal' } as const) : {};
-
 /*
  * There is no `dangerouslySingular` on any route here, and there is not going
  * to be. It asks the router for one screen per name, and the router delivers by
@@ -327,9 +322,9 @@ export default function RootLayout() {
             >
               <Stack.Protected guard={ready}>
                 <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="album/[id]" options={DETAIL_SHEET} />
+                <Stack.Screen name="album/[id]" />
                 <Stack.Screen name="playlist/[id]" />
-                <Stack.Screen name="artist/[id]" options={DETAIL_SHEET} />
+                <Stack.Screen name="artist/[id]" />
                 <Stack.Screen name="artist/discography/[id]" />
                 <Stack.Screen name="browse/albums" />
                 <Stack.Screen name="browse/artists" />
