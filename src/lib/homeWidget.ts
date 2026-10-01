@@ -32,6 +32,8 @@ interface NowPlayingState {
 
 const native = requireOptionalNativeModule<{
   update: (state: NowPlayingState) => void;
+  /** What the app can see of its own handover, for Settings › Diagnostics. */
+  status?: () => string;
   setShortcuts?: (items: { id: string; label: string; icon: string; url: string }[]) => boolean;
 }>('HomeWidget');
 
@@ -77,6 +79,20 @@ function nowPlaying(): NowPlayingState {
 }
 
 let last = '';
+
+/**
+ * The handover, read back from the shared group: whether the group is there
+ * to write into, and what was written and when. English in every language,
+ * like the diagnostics screen it is shown in.
+ */
+export function widgetStatus(): string {
+  if (!native) return 'module missing';
+  try {
+    return native.status?.() ?? 'no status';
+  } catch {
+    return 'status failed';
+  }
+}
 
 function push() {
   if (!native) return;

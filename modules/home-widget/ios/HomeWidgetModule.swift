@@ -14,6 +14,14 @@ public class HomeWidgetModule: Module {
     Function("update") { (state: [String: Any]) in
       HomeWidgetStore.write(state)
     }
+
+    /// What the app can see of its own handover, read back from the group it
+    /// writes into. For Settings › Diagnostics: a widget showing only its
+    /// icon looks the same whether the group was never granted, the write
+    /// never happened, or the data went down on the way out.
+    Function("status") { () -> String in
+      HomeWidgetStore.status()
+    }
   }
 }
 
@@ -83,6 +91,21 @@ private enum HomeWidgetStore {
     else if let value = value as? Int { n = Double(value) }
     else { return 0 }
     return n.isFinite ? n : 0
+  }
+
+  /// The handover looked at from this side. English, like the screen it is
+  /// read off: it ends up in a bug report.
+  static func status() -> String {
+    guard container != nil else { return "app group not granted" }
+    guard let data = defaults?.data(forKey: stateKey) else { return "group ok, nothing written" }
+    guard
+      let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+      let written = (object["updated"] as? NSNumber)?.doubleValue
+    else { return "group ok, data unreadable" }
+
+    let format = DateFormatter()
+    format.dateFormat = "HH:mm:ss"
+    return "group ok, written \(format.string(from: Date(timeIntervalSince1970: written)))"
   }
 
   private static func storeArtwork(_ source: String) {

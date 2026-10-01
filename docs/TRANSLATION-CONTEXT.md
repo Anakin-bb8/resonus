@@ -659,6 +659,7 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
+| `Continue listening` | Shortcut on the app's launcher icon (long press): resumes the last queue. Short: launchers cut long labels |
 | `Counted` | Section header on the Diagnostics screen: things that happened and how many times |
 | `Diagnostics` | The screen's title, and the row in About that opens it |
 | `Everything asked of the server, most often first. The music itself is not here: the player opens that connection and this never sees it.` | The line under that header, saying what the list covers and what it leaves out |
@@ -666,6 +667,7 @@ you are actually typing into, which is easier than reading it here.
 | `Profile` | Section header over what kind of server the profile is. Not a user profile |
 | `Requests` | Section header on the Diagnostics screen: how many times each server endpoint was asked, and how big the answers were |
 | `Share report` | Button: hands the numbers over as plain text, to paste into an issue |
+| `Shuffle favorites` | Shortcut on the app's launcher icon (long press). Short: launchers cut long labels |
 | `Start over` | Button: clears the measurements and starts counting again. Not "start playback" |
 | `State` | Section header on the Diagnostics screen: what the app is doing at this moment, as opposed to the timings above it |
 | `The player keeps beating twice a second while the app is away. Long silences here mean the app stopped following what it was playing.` | The line under `While minimized`. "The player" is the native audio engine, not the player screen, and "beating" is a heartbeat: it sends its state every 500 ms, and the position, the notification and the move to the next track all hang off that. Everything else on this screen stops measuring once the app is minimized, because the system takes its timers away, so this beat is the one clock still running out there. A long gap means the player itself went quiet, which is a different fault from the app coming back with a stale screen. Keep the medical sense of a pulse if your language has one |

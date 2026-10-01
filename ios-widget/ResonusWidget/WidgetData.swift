@@ -45,6 +45,17 @@ enum WidgetStore {
         return try? JSONDecoder().decode(NowPlaying.self, from: data)
     }
 
+    /// Why there is nothing to show, said the way a bug report needs it said:
+    /// which half of the handover is missing. English whatever the phone's
+    /// language, like everything else here that is meant to be read off a
+    /// screenshot. `nil` when there is nothing wrong.
+    static func why() -> String? {
+        guard let data = UserDefaults(suiteName: appGroup)?.data(forKey: stateKey) else {
+            return container == nil ? "app group not granted" : "no data from the app"
+        }
+        return (try? JSONDecoder().decode(NowPlaying.self, from: data)) == nil ? "data unreadable" : nil
+    }
+
     /// The cover the app left in the container, if it left one.
     static func artwork() -> UIImage? {
         guard let dir = container else { return nil }

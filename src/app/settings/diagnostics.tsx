@@ -14,6 +14,7 @@ import { ScrollView, Share, Text, View } from 'react-native';
 import { COVER, songCoverUrl, songListSorts } from '@/api/data';
 import { SettingRow, SettingsPage, settingsStyles } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
+import { widgetStatus } from '@/lib/homeWidget';
 import { coverSourceOf, mirrorCoverState } from '@/lib/mirrorCovers';
 import {
   formatMs,
@@ -149,6 +150,10 @@ export default function DiagnosticsSettings() {
       ]
     : [];
   const stateLines = [
+    // Whether the widget's half of the handover is there: the group it writes
+    // into, and what was last written to it. A widget showing only its icon
+    // says nothing about which side of that is missing, and this does.
+    `widget: ${widgetStatus()}`,
     // The denominator for every count below. A hundred of anything is one
     // story over ten minutes and another over a night, and the split says
     // which side of the screen going off it happened on.
