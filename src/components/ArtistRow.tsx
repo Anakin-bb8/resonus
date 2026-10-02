@@ -12,9 +12,11 @@ import { usePressFeedback } from '@/hooks/usePressFeedback';
 import { albumsLabel } from '@/i18n';
 import { useSettings } from '@/store/settings';
 import { fontSize, spacing, themed } from '@/theme';
+import { bump } from '@/lib/perfLog';
 import { Cover } from './Cover';
 
 export function ArtistRow({ artist }: { artist: Artist }) {
+  bump('render · ArtistRow');
   const lang = useSettings((s) => s.language);
   const press = usePressFeedback();
   // The fade sits outside the Link: its child is handed to a `Slot`, which

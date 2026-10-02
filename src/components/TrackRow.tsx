@@ -25,6 +25,7 @@ import { useT } from '@/i18n';
 import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
 import { Cover, useCoverRadius } from './Cover';
 import { usePressFeedback } from '@/hooks/usePressFeedback';
+import { bump } from '@/lib/perfLog';
 import { PlayingBars } from './PlayingBars';
 import { ExplicitBadge, useExplicitBadge } from './ExplicitBadge';
 import { FavoriteButton } from './FavoriteButton';
@@ -119,6 +120,7 @@ function TrackRowBase({
   onPress,
   onPressIn,
 }: Props) {
+  bump('render · TrackRow');
   const openMenu = useSongMenu((s) => s.open);
   const t = useT();
   const press = usePressFeedback();

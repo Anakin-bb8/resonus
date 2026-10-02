@@ -8,6 +8,7 @@ import { haptic } from '@/lib/haptics';
 import { useMediaMenu } from '@/store/mediaMenu';
 import { useSettings } from '@/store/settings';
 import { fontSize, spacing, themed } from '@/theme';
+import { bump } from '@/lib/perfLog';
 import { Cover } from './Cover';
 
 interface Props {
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export function PlaylistCard({ playlist, width = 150 }: Props) {
+  bump('render · PlaylistCard');
   const lang = useSettings((s) => s.language);
   const openMenu = useMediaMenu((s) => s.open);
   const cover = coverArtUrl(playlist.coverArt ?? playlist.id, COVER.card);

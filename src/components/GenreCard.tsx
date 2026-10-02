@@ -8,6 +8,7 @@ import { useGenreArt } from '@/hooks/useGenreArt';
 import { albumsLabel } from '@/i18n';
 import { useSettings } from '@/store/settings';
 import { fontSize, radius, spacing, themed, useTheme } from '@/theme';
+import { bump } from '@/lib/perfLog';
 
 /**
  * The card's height, and the size of the covers on it. Both fixed: the columns
@@ -107,6 +108,7 @@ export function GenreCard({
   albumCount?: number;
   width?: number;
 }) {
+  bump('render · GenreCard');
   // Not for the card's own colour, which no longer follows the appearance, but
   // for the grey behind a cover that has not arrived: on Search the grid is
   // memoised, so nothing above would repaint these.

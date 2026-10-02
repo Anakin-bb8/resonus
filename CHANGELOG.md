@@ -12,11 +12,13 @@ Releases before 0.2.1 are only listed on the
 ### Added
 
 - Settings > About > Share diagnostic report hands over your setup and the last playback problems as text, to paste into a bug report, without turning anything on first.
+- With Measure performance on, the diagnostics report counts late frames on each screen and how often the album, artist and song rows are drawn.
 - The remixer of a song is one more artist you can go to from the player and the song menu, and their page lists the remixes under Appears on (#215).
 
 ### Changed
 
 - Settings drop the descriptions that only repeated the name of the option.
+- Settings > Appearance shows the chosen theme mode under Theme, the way it shows the language under Language.
 - Coming back to the app always leaves it on the screen you left, however long it was away, so the Keep where you were switch is gone (#225).
 
 ### Fixed

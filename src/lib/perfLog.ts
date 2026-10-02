@@ -33,6 +33,7 @@ export function setPerfEnabled(on: boolean): void {
   }
   if (timer) clearInterval(timer);
   timer = null;
+  stopJsFrames();
   resetPerfLog();
 }
 
@@ -175,6 +176,7 @@ export function startPerfLog(): void {
   backgroundMs = 0;
   trips = 0;
   bgTicks = 0;
+  startJsFrames();
   timer = setInterval(() => {
     const now = Date.now();
     const late = now - lastTick - TICK_MS;
@@ -326,6 +328,93 @@ export function perfNet(): NetStat[] {
   return [...net.values()].sort((a, b) => b.calls - a.calls);
 }
 
+// ── Frames ──────────────────────────────────────────────────────────────────
+// The blocks above are the thread stopping for a tenth of a second or more,
+// which is what #50 was. A stutter while scrolling is one or two frames of
+// 16 ms arriving late, far under that, so frames are counted on their own:
+// the JS thread's from `requestAnimationFrame` here, the UI thread's from
+// `FrameMeter` (a Reanimated frame callback), each put down to the screen
+// that was open. Idle frames count too, so what to read is the late ones.
+
+/** Late enough to be a dropped frame at 60 Hz, and at 120 Hz three of them. */
+export const LATE_MS = 25;
+/** Late enough that anybody looking sees it. */
+export const VERY_LATE_MS = 50;
+/** A gap this long is the app having been away, not a frame. */
+export const AWAY_GAP_MS = 1000;
+
+export interface FrameCount {
+  frames: number;
+  late: number;
+  veryLate: number;
+  worstMs: number;
+}
+
+interface ScreenFrames {
+  screen: string;
+  js: FrameCount;
+  ui: FrameCount;
+}
+
+const emptyCount = (): FrameCount => ({ frames: 0, late: 0, veryLate: 0, worstMs: 0 });
+const frames = new Map<string, ScreenFrames>();
+let screen = '—';
+
+function screenFrames(): ScreenFrames {
+  let cur = frames.get(screen);
+  if (!cur) {
+    cur = { screen, js: emptyCount(), ui: emptyCount() };
+    frames.set(screen, cur);
+  }
+  return cur;
+}
+
+/** The route now on screen, as its pattern (`album/[id]`), not its address. */
+export function setPerfScreen(name: string): void {
+  screen = name || '—';
+}
+
+/** Adds what the UI thread counted since the last time, to the open screen. */
+export function addUiFrames(delta: FrameCount): void {
+  if (!enabled || delta.frames === 0) return;
+  const c = screenFrames().ui;
+  c.frames += delta.frames;
+  c.late += delta.late;
+  c.veryLate += delta.veryLate;
+  if (delta.worstMs > c.worstMs) c.worstMs = delta.worstMs;
+}
+
+let rafId: number | null = null;
+let lastFrame = 0;
+
+function onJsFrame(t: number): void {
+  rafId = requestAnimationFrame(onJsFrame);
+  const dt = lastFrame ? t - lastFrame : 0;
+  lastFrame = t;
+  if (dt <= 0 || dt > AWAY_GAP_MS || !awake) return;
+  const c = screenFrames().js;
+  c.frames++;
+  if (dt > LATE_MS) c.late++;
+  if (dt > VERY_LATE_MS) c.veryLate++;
+  if (dt > c.worstMs) c.worstMs = Math.round(dt);
+}
+
+function startJsFrames(): void {
+  if (rafId !== null) return;
+  lastFrame = 0;
+  rafId = requestAnimationFrame(onJsFrame);
+}
+
+function stopJsFrames(): void {
+  if (rafId !== null) cancelAnimationFrame(rafId);
+  rafId = null;
+}
+
+/** Most late frames first, either thread. */
+export function perfFrames(): ScreenFrames[] {
+  return [...frames.values()].sort((a, b) => b.js.late + b.ui.late - (a.js.late + a.ui.late));
+}
+
 /** Minutes, hours and seconds, short enough to sit in a line of key: value. */
 export function formatMs(ms: number): string {
   const s = Math.round(ms / 1000);
@@ -453,6 +542,7 @@ export function resetPerfLog(): void {
   ops.clear();
   counts.clear();
   net.clear();
+  frames.clear();
   startedAt = Date.now();
   lastTick = Date.now();
   stateSince = Date.now();
@@ -488,6 +578,12 @@ export function perfReport(): string {
   const bs = perfBlocks();
   if (bs.length === 0) lines.push('  none over 120 ms');
   for (const b of bs) lines.push(`  ${b.ms} ms · during ${b.during}`);
+  const fs = perfFrames();
+  if (fs.length > 0) {
+    lines.push('', `Frames by screen (late over ${LATE_MS} ms / over ${VERY_LATE_MS} ms, worst):`);
+    const fmt = (c: FrameCount) => `${c.frames} · ${c.late} / ${c.veryLate} late · ${c.worstMs} ms`;
+    for (const f of fs) lines.push(`  ${f.screen}: UI ${fmt(f.ui)} | JS ${fmt(f.js)}`);
+  }
   const aw = perfAway();
   if (aw.length > 0) {
     lines.push('', 'While the app was away (the player is the only clock there):');

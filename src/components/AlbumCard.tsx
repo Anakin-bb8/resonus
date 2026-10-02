@@ -6,6 +6,7 @@ import { COVER, coverArtUrl, type Album } from '@/api/data';
 import { useMediaMenu } from '@/store/mediaMenu';
 import { haptic } from '@/lib/haptics';
 import { fontSize, spacing, themed } from '@/theme';
+import { bump } from '@/lib/perfLog';
 import { Cover } from './Cover';
 import { ExplicitBadge, useExplicitBadge } from './ExplicitBadge';
 
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export function AlbumCard({ album, width = 150, onPress }: Props) {
+  bump('render · AlbumCard');
   const cover = coverArtUrl(album.coverArt ?? album.id, COVER.card);
   const openMenu = useMediaMenu((s) => s.open);
   const explicit = useExplicitBadge(album.explicitStatus);
