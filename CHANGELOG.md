@@ -13,25 +13,25 @@ Releases before 0.2.1 are only listed on the
 
 ### Added
 
-- Settings > About > Share diagnostic report hands over your setup and the last playback problems as text, to paste into a bug report, without turning anything on first.
-- With Measure performance on, the diagnostics report counts late frames on each screen and how often the album, artist and song rows are drawn.
-- The remixer of a song is one more artist you can go to from the player and the song menu, and their page lists the remixes under Appears on (#215).
+- Settings > About > Share diagnostic report, for bug reports.
+- The diagnostics report counts late frames per screen and row redraws.
+- Remixers show up as artists, with their remixes under Appears on (#215).
 
 ### Changed
 
-- Settings drop the descriptions that only repeated the name of the option.
-- Settings > Appearance shows the chosen theme mode under Theme, the way it shows the language under Language.
-- Coming back to the app always leaves it on the screen you left, however long it was away, so the Keep where you were switch is gone (#225).
+- Settings drop descriptions that only repeated the option.
+- Settings > Appearance shows the chosen theme mode.
+- The app always reopens where you left it; the Keep where you were switch is gone (#225).
 
 ### Fixed
 
-- A fragmented M4A plays from the start again instead of stopping after two seconds, which the seeking fix in 0.7.12 had broken (#242).
-- Offline, songs that are not on the phone show greyed out again in song lists, which they had stopped doing in 0.7.6.
-- Changes made offline on one profile are no longer sent to another profile's account when you switch between them.
-- Listens made offline are no longer scrobbled twice when the app goes back online twice at once.
-- Switching profile right after browsing no longer leaves the previous profile's albums and playlists in the new one's offline library.
-- Skipping or picking a song while casting no longer leaves the speaker on the previous song when it was still busy with the queue.
-- Changing track while casting retries after stopping the renderer, for TVs that refuse a new song while one is playing (#246).
+- Fragmented M4As no longer stop after two seconds (#242).
+- Offline, songs not on the phone are greyed out again.
+- Offline changes no longer go to another profile's account.
+- Offline listens are no longer scrobbled twice.
+- One profile's albums and playlists no longer leak into another's offline library.
+- Skipping while casting no longer leaves the speaker on the previous song.
+- Casting retries a track the TV refuses while another is playing (#246).
 
 ## [0.7.12] - 2026-10-01
 
