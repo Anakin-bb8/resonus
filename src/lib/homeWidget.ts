@@ -86,7 +86,12 @@ let last = '';
  * like the diagnostics screen it is shown in.
  */
 export function widgetStatus(): string {
-  if (!native) return 'module missing';
+  if (!native) {
+    // How many native modules the registry holds, to tell "nothing
+    // registered" from "this one missing" in a bug report's screenshot.
+    const loaded = Object.keys(globalThis.expo?.modules ?? {}).length;
+    return `module missing · ${loaded} loaded`;
+  }
   try {
     return native.status?.() ?? 'no status';
   } catch {

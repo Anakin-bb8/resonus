@@ -5,6 +5,7 @@
   },
   "ios": {
     "modules": ["HomeWidgetModule"],
-    "swiftModuleName": "home_widget"
+    "swiftModuleName": "home_widget",
+    "podspecPath": "home-widget.podspec"
   }
 }

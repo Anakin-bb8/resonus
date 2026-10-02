@@ -49,9 +49,10 @@ enum WidgetStore {
     }
 
     /// Why there is nothing to show, said the way a bug report needs it said:
-    /// which half of the handover is missing. English whatever the phone's
-    /// language, like everything else here that is meant to be read off a
-    /// screenshot. `nil` when there is nothing wrong.
+    /// which half of the handover is missing, and how many groups were
+    /// granted to find it in. English whatever the phone's language, like
+    /// everything else here that is meant to be read off a screenshot.
+    /// `nil` when there is nothing wrong.
     static func why() -> String? {
         guard !groups.isEmpty else { return "app group not granted" }
         var sawData = false
@@ -60,7 +61,8 @@ enum WidgetStore {
             sawData = true
             if (try? JSONDecoder().decode(NowPlaying.self, from: data)) != nil { return nil }
         }
-        return sawData ? "data unreadable" : "no data from the app"
+        let granted = "· granted \(groups.count)"
+        return sawData ? "data unreadable \(granted)" : "no data from the app \(granted)"
     }
 
     /// The cover the app left in a container, if it left one.
