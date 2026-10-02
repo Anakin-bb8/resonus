@@ -16,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { createRef, type ReactNode } from 'react';
 import { Animated, Platform, StyleSheet, View } from 'react-native';
 
+import { easedFade } from '@/lib/fade';
 import { useSettings } from '@/store/settings';
 import { useTheme, useThemeMode } from '@/theme';
 
@@ -72,9 +73,10 @@ export function BarBlur({ tint, alpha }: { tint?: string; alpha?: number }) {
 
 /**
  * The background of a screen's top bar, which fades in as the header scrolls
- * away: the header's colour, running out to the page's own at the bar's lower
- * edge — the same two colours the header's own gradient is made of, so the
- * bar lands on the list with nothing left over to line it up against.
+ * away: the header's colour, running out to the page's own a little before
+ * the bar's lower edge and holding there — the same two colours the header's
+ * own gradient is made of, so the bar lands on the list already the list's
+ * colour, with nothing left over to line it up against.
  *
  * Not flat. The lower edge is where the bar meets the list scrolling under it,
  * and a flat colour draws that edge as a cut line; the same colour arriving
@@ -101,7 +103,14 @@ export function TopBarBackground({
   return (
     <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity }]}>
       {gradient ? (
-        <LinearGradient colors={[color, background]} style={StyleSheet.absoluteFill} />
+        // The page's own colour comes in a little before the bar's lower edge
+        // and holds to it, so the bar lands on the list already the list's
+        // colour. Eased over stops rather than a straight run: the same
+        // corner and line, only gentler to look at.
+        <LinearGradient
+          {...easedFade(color, background, { until: 0.8 })}
+          style={StyleSheet.absoluteFill}
+        />
       ) : (
         <View style={[StyleSheet.absoluteFill, { backgroundColor: color }]} />
       )}

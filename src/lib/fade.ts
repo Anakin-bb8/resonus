@@ -6,9 +6,9 @@
  * only blends in straight lines between them.
  *
  * The first quarter of the run holds `from` flat — the header keeps its
- * colour under the title before letting go — and the last stop is `to`,
- * with the slope arriving there already zero, so the flat run begins
- * without an edge to find.
+ * colour under the title before letting go — and `to` arrives at `until`
+ * with the slope there already zero, so what follows is a flat run in the
+ * page's own colour that begins without an edge to find.
  */
 
 /** How much of the run holds the first colour before starting to let go. */
@@ -20,10 +20,13 @@ export interface Fade {
   locations: [number, number, ...number[]];
 }
 
-export function easedFade(from: string, to: string): Fade {
+/** `until` is where the second colour is fully arrived: before the end, the
+ *  rest of the run is the page's own colour, held flat. */
+export function easedFade(from: string, to: string, { until = 1 }: { until?: number } = {}): Fade {
+  const end = Math.min(Math.max(until, HOLD + 0.05), 1);
   const a = hexChannels(from);
   const b = hexChannels(to);
-  if (!a || !b) return { colors: [from, from, to], locations: [0, HOLD, 1] };
+  if (!a || !b) return { colors: [from, from, to], locations: [0, HOLD, end] };
 
   const colors: string[] = [from, from];
   const locations: number[] = [0, HOLD];
@@ -31,7 +34,7 @@ export function easedFade(from: string, to: string): Fade {
     const u = i / STEPS;
     const k = u * u * (3 - 2 * u);
     colors.push(`rgb(${a.map((c, j) => Math.round(c + (b[j] - c) * k)).join(', ')})`);
-    locations.push(HOLD + (1 - HOLD) * u);
+    locations.push(HOLD + (end - HOLD) * u);
   }
 
   return { colors: colors as Fade['colors'], locations: locations as Fade['locations'] };
