@@ -784,7 +784,7 @@ new file mode 100644
 index 0000000000000000000000000000000000000000..c2c840b99e8dadf7f4c2c19c9ecad321ffc2cded
 --- /dev/null
 +++ b/android/src/main/java/expo/modules/audio/FragmentSeekingExtractor.kt
-@@ -0,0 +1,381 @@
+@@ -0,0 +1,393 @@
 +package expo.modules.audio
 +
 +import android.net.Uri
@@ -861,6 +861,9 @@ index 0000000000000000000000000000000000000000..c2c840b99e8dadf7f4c2c19c9ecad321
 +  private var declaredDurationUs = C.TIME_UNSET
 +  private var firstFragment = C.INDEX_UNSET.toLong()
 +
++  /** Set when the map was held back, until the extractor stops for the first time. */
++  private var tailPending = false
++
 +  /** Where the extractor was when the last fragment was read, to go back to. */
 +  private var resumeAt = C.INDEX_UNSET.toLong()
 +  private var readingTail = false
@@ -892,7 +895,16 @@ index 0000000000000000000000000000000000000000..c2c840b99e8dadf7f4c2c19c9ecad321
 +      val result = homeIn(input, seekPosition)
 +      if (result != null) return result
 +    }
-+    return inner.read(input, seekPosition)
++    val result = inner.read(input, seekPosition)
++    // The map is sent from inside the read, which carries on to the end of the
++    // first sample: that is the byte to come back to, not the one the map was
++    // sent from, or the rest of the first fragment comes out as noise.
++    if (tailPending) {
++      tailPending = false
++      if (result == Extractor.RESULT_CONTINUE) resumeAt = input.position
++      else output.seekMap(SeekMap.Unseekable(declaredDurationUs))
++    }
++    return result
 +  }
 +
 +  override fun seek(position: Long, timeUs: Long) {
@@ -1101,7 +1113,7 @@ index 0000000000000000000000000000000000000000..c2c840b99e8dadf7f4c2c19c9ecad321
 +      // Sent the moment the first `moof` header has been read.
 +      declaredDurationUs = seekMap.durationUs
 +      firstFragment = input.position - 8
-+      resumeAt = input.position
++      tailPending = true
 +    }
 +  }
 +

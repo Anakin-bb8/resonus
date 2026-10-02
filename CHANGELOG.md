@@ -13,6 +13,10 @@ Releases before 0.2.1 are only listed on the
 
 - Coming back to the app always leaves it on the screen you left, however long it was away, so the Keep where you were switch is gone (#225).
 
+### Fixed
+
+- A fragmented M4A plays from the start again instead of stopping after two seconds, which the seeking fix in 0.7.12 had broken (#242).
+
 ## [0.7.12] - 2026-10-01
 
 ### Added
