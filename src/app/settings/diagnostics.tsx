@@ -6,40 +6,25 @@
  * thing as plain text, which is easier to paste into an issue than a
  * screenshot is to read.
  */
-import Constants from 'expo-constants';
 import { useRootNavigationState } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, Share, Text, View } from 'react-native';
 
-import { COVER, songCoverUrl, songListSorts } from '@/api/data';
 import { SettingRow, SettingsPage, settingsStyles } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
-import { widgetStatus } from '@/lib/homeWidget';
-import { coverSourceOf, mirrorCoverState } from '@/lib/mirrorCovers';
+import { eventLines, fullReport, profileLines, stateLines } from '@/lib/diagnosticsReport';
 import {
-  formatMs,
+  clearPerfEvents,
   perfAway,
   perfBlocks,
   perfCounts,
   perfNet,
   perfOps,
-  perfReport,
   perfSince,
-  perfTime,
   resetPerfLog,
 } from '@/lib/perfLog';
-import { repairStatus } from '@/lib/navidromeRepair';
-import { useAuthStore } from '@/store/auth';
-import { anyDownloads, useDownloads } from '@/store/downloads';
-import { useJukebox } from '@/store/jukebox';
-import { currentSong, usePlayerStore } from '@/store/player';
-import { useUpnp } from '@/store/upnp';
 import { useSettings } from '@/store/settings';
-import { enabledFolderIds } from '@/store/libraries';
 import { fontSize, spacing, themed, useTheme } from '@/theme';
-
-/** Stamped in by the workflow that builds the APK; empty when run locally. */
-const COMMIT = (process.env.EXPO_PUBLIC_COMMIT ?? '').slice(0, 7);
 
 export default function DiagnosticsSettings() {
   // Repaints on a change of appearance or accent: a stack keeps this screen
@@ -50,126 +35,18 @@ export default function DiagnosticsSettings() {
   // resetting, so reading it doesn't add work of its own.
   const [tick, setTick] = useState(0);
   const blocks = perfBlocks();
-  // What the profile is, in the terms the code asks about it. Half the reports
-  // that start with "this doesn't show up for me" end here.
-  const auth = useAuthStore((s) => s.auth);
-  const offline = useAuthStore((s) => s.offline);
-  const folderFilter = enabledFolderIds(auth);
   const nets = perfNet();
-  const time = perfTime();
   const netCalls = nets.reduce((n, x) => n + x.calls, 0);
   const netKb = Math.round(nets.reduce((n, x) => n + x.bytes, 0) / 1024);
-  const costly = useSettings((st) =>
-    [
-      st.preloadUpcoming && 'preload',
-      st.crossfadeSec > 0 && `crossfade ${st.crossfadeSec}s`,
-      st.autoplaySimilar && 'autoplay',
-      st.autoOfflineSwitch && 'auto offline',
-      st.syncQueueFromServer && 'queue sync',
-      st.animatedCoverBackground && 'animated cover',
-      st.updateCheck && 'update check',
-    ]
-      .filter(Boolean)
-      .join(', '),
-  );
-  // Read one at a time rather than as an object: a selector that builds one
-  // hands back a new reference on every store write, and this screen would
-  // then repaint on every beat of the player it is measuring.
-  const queueLen = usePlayerStore((st) => st.queue.length);
-  const queueIndex = usePlayerStore((st) => st.index);
-  const repeat = usePlayerStore((st) => st.repeat);
-  const shuffle = usePlayerStore((st) => st.shuffle);
-  const radioMode = usePlayerStore((st) => st.radioMode);
-  const upnpOn = useUpnp((st) => st.connected);
-  const jukeboxOn = useJukebox((st) => st.active);
-  const downloading = useDownloads((st) => Object.keys(st.active).length);
-  const profileLines = [
-    // Which build this is, since a test APK carries the same version as the
-    // release it was branched from and there is otherwise no telling them
-    // apart from inside the app.
-    `build: ${Constants.expoConfig?.version ?? '?'}${COMMIT ? ` (${COMMIT})` : ' (local)'}`,
-    `type: ${auth?.serverType ?? '—'}`,
-    `native password: ${auth?.ndPassword || auth?.password ? 'yes' : 'no'}`,
-    `plain auth: ${auth?.plainAuth ? 'yes' : 'no'}`,
-    `library filter: ${folderFilter ? folderFilter.join(', ') : 'none'}`,
-    `offline: ${offline ? 'yes' : 'no'}`,
-    // Navidrome 0.64 renumbers every id and this is what repaired it. Silent
-    // everywhere else, so this line is the only way to tell what it did.
-    `id repair: ${repairStatus()}`,
-    `song sorts: ${(auth || offline ? songListSorts() : []).join(', ') || '—'}`,
-    // The switches that cost something while nobody is looking. Half of what a
-    // battery report blames on a version turns out to be a setting somebody
-    // turned on, and asking about them one at a time is three round trips on
-    // an issue.
-    `costly settings: ${costly || 'none'}`,
-  ];
   const ops = perfOps();
   const away = perfAway();
   const counts = perfCounts();
   const enabled = useSettings((s) => s.diagnostics);
-  const covers = mirrorCoverState();
-  const downloads = useDownloads((s) => Object.keys(s.files).length);
-  const hydrated = useDownloads((s) => s.hydrated);
-  const anyDl = useDownloads(anyDownloads);
-  // How deep the stack is. Screens you left stay mounted, which is what makes
-  // going back instant and what made the app slow down the more you opened
-  // before they were frozen: a number here would have said so in a sentence.
   const navState = useRootNavigationState();
-  /**
-   * How the cover of what is playing was arrived at.
-   *
-   * A wrong cover over the right title is not the queue being wrong, it is the
-   * picture being looked up by an id that leads somewhere else. Three things
-   * can happen and the app kept no record of which: the file saved under this
-   * very id, a file saved under ANOTHER id that this one borrows, or nothing
-   * local and the server asked directly. Only the middle one can hand back a
-   * picture that belongs to something else, so the id it borrowed from is the
-   * answer.
-   *
-   * `coverId` is worked out the way `songCoverUrl` works it out, which is the
-   * whole point: reading a different id here would describe a lookup nobody
-   * made.
-   */
-  const playing = usePlayerStore(currentSong);
-  const coverId = playing
-    ? (playing.coverArt ?? (playing.url ? undefined : playing.albumId))
-    : undefined;
-  const coverUrl = playing ? songCoverUrl(playing, COVER.card) : undefined;
-  const coverLines = playing
-    ? [
-        `playing: ${playing.title}${playing.album ? ` · ${playing.album}` : ''}`,
-        `cover id: ${coverId ?? '—'} (${coverSourceOf(coverId)})`,
-        `cover from: ${
-          coverUrl
-            ? coverUrl.startsWith('file://')
-              ? `file ${coverUrl.split('/').pop()}`
-              : 'the server'
-            : 'nothing'
-        }`,
-        `song ids: coverArt ${playing.coverArt ?? '—'} · album ${playing.albumId ?? '—'}`,
-      ]
-    : [];
-  const stateLines = [
-    // Whether the widget's half of the handover is there: the group it writes
-    // into, and what was last written to it. A widget showing only its icon
-    // says nothing about which side of that is missing, and this does.
-    `widget: ${widgetStatus()}`,
-    // The denominator for every count below. A hundred of anything is one
-    // story over ten minutes and another over a night, and the split says
-    // which side of the screen going off it happened on.
-    `on screen: ${formatMs(time.foregroundMs)} · away: ${formatMs(time.backgroundMs)} · ${time.trips} trips`,
-    // Out there the JS thread should barely be run at all. If this is most of
-    // the time away, something is keeping it busy with nobody watching.
-    `js while away: ${formatMs(time.jsAwayMs)}`,
-    // A mix grows on its own and the whole queue is pushed to the server every
-    // twenty seconds, so its length is a cost rather than a curiosity.
-    `queue: ${queueLen} · at ${queueIndex}${radioMode ? ' · mix' : ''} · repeat ${repeat}${shuffle ? ' · shuffle' : ''}`,
-    `output: ${upnpOn ? 'upnp' : jukeboxOn ? 'jukebox' : 'phone'}`,
-    `downloads: ${hydrated ? downloads : 'loading'}${anyDl && !hydrated ? ' (some)' : ''}${downloading > 0 ? ` · ${downloading} running` : ''}`,
-    `mirror covers: ${covers.saved} saved, ${covers.aliases} other names`,
-    `screens open: ${navState?.routes?.length ?? '—'}`,
-    ...coverLines,
-  ];
+  const screensOpen = navState?.routes?.length;
+  const profile = profileLines();
+  const state = stateLines(screensOpen);
+  const events = eventLines();
   const minutes = Math.max(1, Math.round((Date.now() - perfSince()) / 60000));
 
   return (
@@ -191,18 +68,32 @@ export default function DiagnosticsSettings() {
         </Text>
 
         <Text style={settingsStyles.sectionTitle}>{t('Profile')}</Text>
-        {profileLines.map((line) => (
+        {profile.map((line) => (
           <Text key={line} style={styles.line}>
             {line}
           </Text>
         ))}
 
         <Text style={settingsStyles.sectionTitle}>{t('State')}</Text>
-        {stateLines.map((line) => (
+        {state.map((line) => (
           <Text key={line} style={styles.line}>
             {line}
           </Text>
         ))}
+
+        <Text style={settingsStyles.sectionTitle}>Recent problems</Text>
+        <Text style={settingsStyles.sectionDescription}>
+          Kept even with measuring off, the last 30.
+        </Text>
+        {events.length === 0 ? (
+          <Text style={styles.line}>None.</Text>
+        ) : (
+          events.map((line, i) => (
+            <Text key={i} style={styles.line}>
+              {line}
+            </Text>
+          ))
+        )}
 
         {nets.length > 0 ? (
           <>
@@ -299,7 +190,7 @@ export default function DiagnosticsSettings() {
           label={t('Share report')}
           onPress={() =>
             void Share.share({
-              message: `${profileLines.join('\n')}\n${stateLines.join('\n')}\n\n${perfReport()}`,
+              message: fullReport(screensOpen),
             })
           }
         />
@@ -308,6 +199,7 @@ export default function DiagnosticsSettings() {
           label={t('Start over')}
           onPress={() => {
             resetPerfLog();
+            clearPerfEvents();
             setTick(tick + 1);
           }}
         />

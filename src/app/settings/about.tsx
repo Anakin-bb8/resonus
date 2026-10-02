@@ -1,13 +1,14 @@
 /** Settings › About: version, repository, report bugs, community, and the one
  *  action that reaches every setting there is. */
 import Constants from 'expo-constants';
-import { useRouter } from 'expo-router';
+import { useRootNavigationState, useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Linking, Pressable, ScrollView } from 'react-native';
+import { Linking, Pressable, ScrollView, Share } from 'react-native';
 
 import { Dialog } from '@/components/Dialog';
 import { Field, SettingRow, SettingsGroup, SettingsPage, SwitchList, settingsStyles } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
+import { fullReport } from '@/lib/diagnosticsReport';
 import { pickSettingsFile, shareSettingsFile } from '@/lib/settingsFile';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
@@ -53,6 +54,7 @@ export default function AboutSettings() {
   // with someone, so it is not worth a row of its own that everybody else has
   // to scroll past.
   const taps = useRef(0);
+  const screensOpen = useRootNavigationState()?.routes?.length;
   const version = Constants.expoConfig?.version;
   const diagnostics = useSettings((s) => s.diagnostics);
   const setDiagnostics = useSettings((s) => s.setDiagnostics);
@@ -113,6 +115,15 @@ export default function AboutSettings() {
             icon="bug-outline"
             label={t('Report a bug')}
             onPress={() => Linking.openURL(bugReportUrl(version))}
+          />
+          {/* Next to the bug report, which is where it gets pasted. The full
+              Diagnostics screen stays behind the five taps; this is the part
+              of it anyone reporting a problem can hand over without being
+              walked there. */}
+          <SettingRow
+            icon="document-text-outline"
+            label={t('Share diagnostic report')}
+            onPress={() => void Share.share({ message: fullReport(screensOpen) })}
           />
           <SettingRow
             icon="logo-discord"

@@ -509,17 +509,18 @@ const HOME_CHIP_KEYS: HomeChipKey[] = [
   'history',
 ];
 
-/** Default order and state: the usual ones, all visible. */
+/** Default order and state: the usual ones, all hidden until
+ *  someone turns them on. */
 export const DEFAULT_HOME_CHIPS: HomeChip[] = [
-  { key: 'shuffle', enabled: true },
-  { key: 'favorites', enabled: true },
-  { key: 'history', enabled: true },
-  { key: 'albums', enabled: true },
-  { key: 'artists', enabled: true },
-  { key: 'songs', enabled: true },
-  { key: 'genres', enabled: true },
-  { key: 'podcasts', enabled: true },
-  { key: 'radio', enabled: true },
+  { key: 'shuffle', enabled: false },
+  { key: 'favorites', enabled: false },
+  { key: 'history', enabled: false },
+  { key: 'albums', enabled: false },
+  { key: 'artists', enabled: false },
+  { key: 'songs', enabled: false },
+  { key: 'genres', enabled: false },
+  { key: 'podcasts', enabled: false },
+  { key: 'radio', enabled: false },
 ];
 
 /** One of the pills at the top of Explore. `genres`, `radio` and `folders`
@@ -1068,18 +1069,6 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   homeButtons: HomeButton[];
   /** App startup tab (Home/Search/Library). */
   defaultTab: DefaultTab;
-  /**
-   * Whether coming back from the background leaves the app where it was.
-   *
-   * Off, which is what it has always done: a few minutes away and the app
-   * opens on the tab above, the way Spotify and YouTube do, on the grounds
-   * that a screen you left behind an hour ago is not one you meant to come
-   * back to. Some people mean it (#225), and for them the reset is the app
-   * throwing away what they were in the middle of. The setting only touches
-   * the return; a cold start has nothing to preserve and still opens on the
-   * chosen tab.
-   */
-  keepScreenOnReturn: boolean;
   /** Your library with no chip pressed shows Favorites and the playlists, as
    *  it did before the mixed view, instead of everything (#217). */
   libraryShowsPlaylists: boolean;
@@ -1287,7 +1276,7 @@ const DEFAULTS = {
   coverDoubleTapAction: 'none' as CoverDoubleTapAction,
   marqueeTitles: true,
   playerButtons: DEFAULT_PLAYER_BUTTONS.map((b) => ({ ...b })),
-  playerButtonsLayout: 'centered' as PlayerButtonsLayout,
+  playerButtonsLayout: 'spread' as PlayerButtonsLayout,
   seekButtonsSec: 0,
   previousButtonMode: 'restart' as PreviousButtonMode,
   keepPausedOnSkip: false,
@@ -1296,7 +1285,7 @@ const DEFAULTS = {
   swipeAction: 'queue' as SwipeAction,
   swipeLeftAction: 'off' as SwipeAction,
   homeSections: DEFAULT_HOME_SECTIONS.map((s) => ({ ...s })),
-  showQuickGrid: true,
+  showQuickGrid: false,
   showPlayingElsewhere: true,
   quickGridFavorites: true,
   quickGridAlbums: true,
@@ -1311,7 +1300,6 @@ const DEFAULTS = {
   showFolderBrowser: false,
   homeButtons: DEFAULT_HOME_BUTTONS.map((b) => ({ ...b })),
   defaultTab: 'index' as DefaultTab,
-  keepScreenOnReturn: false,
   libraryShowsPlaylists: false,
   librarySort: 'recent' as LibrarySort,
   libraryLayout: 'list' as ListLayout,

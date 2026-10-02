@@ -163,7 +163,6 @@ export default function PlayerSettings() {
             options={[
               {
                 label: t('Fit cover art'),
-                description: t('Show the whole artwork instead of cropping it to a square.'),
                 value: fitCoverArt,
                 onChange: setFitCoverArt,
               },

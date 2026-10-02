@@ -126,7 +126,6 @@ export default function PlaybackSettings() {
                 options={[
                   {
                     label: t('Preload upcoming tracks'),
-                    description: t('Fetch the next tracks ahead so they start instantly. Helps with slow servers and proxies.'),
                     value: preloadUpcoming,
                     onChange: setPreloadUpcoming,
                     disabled: offline,
@@ -298,7 +297,6 @@ export default function PlaybackSettings() {
             },
             {
               label: t('Warn about battery optimization'),
-              description: t('Check on startup whether Android is limiting the app in the background.'),
               value: batteryWarning,
               onChange: setBatteryWarning,
             },

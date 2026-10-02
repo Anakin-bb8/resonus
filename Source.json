@@ -29,6 +29,14 @@
             ],
             "versions": [
                 {
+                    "version": "0.7.12",
+                    "date": "2026-10-01T20:27:29+02:00",
+                    "size": 19970303,
+                    "downloadURL": "https://github.com/juananzzz/resonus/releases/download/v0.7.12/resonus-v0.7.12.ipa",
+                    "localizedDescription": "Added\nBrazilian Portuguese, thanks to @vicsantus (#240).\nSettings > Home chips has a switch on top that turns every chip on or off at once.\nSettings > About can export your settings to a file and import them on another phone or someone else's, without accounts or passwords (#243).\nChanged\nThe chips and the quick grid on Home start turned off on a new install; existing setups keep theirs.\nThe greeting and buttons at the top of Home scroll away with the rest instead of staying pinned.\nThe buttons under the player controls are spread across the width by default on a new install.\nThe Ukrainian translation is complete again, thanks to @albedych (#245).\nFixed\nOpening Search no longer makes the page jump down a moment after it appears.\nA cover opened full screen is now shown with square corners, whatever the cover corners setting (#241).\nDragging the seek bar in a fragmented M4A, such as the ones many downloaders save from streaming services, no longer starts the song over (#242).\nHome no longer offers the song paused on this same phone as playing on Resonus.\n\"Don't remind me\" on the battery optimization warning now keeps it from coming back on the next launch (#238).",
+                    "minOSVersion": "16.4"
+                },
+                {
                     "version": "0.7.11",
                     "date": "2026-09-27T17:55:10+02:00",
                     "size": 19951192,

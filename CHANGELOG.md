@@ -11,11 +11,35 @@ Releases before 0.2.1 are only listed on the
 
 ### Added
 
-- Brazilian Portuguese, thanks to @vicsantus (#240).
-- Settings > About can export your settings to a file and import them on another phone or someone else's, without accounts or passwords (#243).
+- Settings > About > Share diagnostic report hands over your setup and the last playback problems as text, to paste into a bug report, without turning anything on first.
+
+### Changed
+
+- Settings drop the descriptions that only repeated the name of the option.
+- Coming back to the app always leaves it on the screen you left, however long it was away, so the Keep where you were switch is gone (#225).
 
 ### Fixed
 
+- A fragmented M4A plays from the start again instead of stopping after two seconds, which the seeking fix in 0.7.12 had broken (#242).
+
+## [0.7.12] - 2026-10-01
+
+### Added
+
+- Brazilian Portuguese, thanks to @vicsantus (#240).
+- Settings > Home chips has a switch on top that turns every chip on or off at once.
+- Settings > About can export your settings to a file and import them on another phone or someone else's, without accounts or passwords (#243).
+
+### Changed
+
+- The chips and the quick grid on Home start turned off on a new install; existing setups keep theirs.
+- The greeting and buttons at the top of Home scroll away with the rest instead of staying pinned.
+- The buttons under the player controls are spread across the width by default on a new install.
+- The Ukrainian translation is complete again, thanks to @albedych (#245).
+
+### Fixed
+
+- Opening Search no longer makes the page jump down a moment after it appears.
 - A cover opened full screen is now shown with square corners, whatever the cover corners setting (#241).
 - Dragging the seek bar in a fragmented M4A, such as the ones many downloaders save from streaming services, no longer starts the song over (#242).
 - Home no longer offers the song paused on this same phone as playing on Resonus.

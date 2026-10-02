@@ -118,6 +118,7 @@
     "Custom greeting": "A greeting of your own, replacing Home's \"Good morning\" line",
     "Quick grid": "The grid of shortcut tiles on Home",
     "Home chips": "The row of tappable category chips",
+    "Show chips": "A switch over the Home chips list: turns every chip on or off at once",
     "Song lists": "The setting for how song lists look",
     "Show explicit tag": "A switch: whether to draw the E on anything carrying a parental advisory. \"Explicit\" here is the music-industry label for strong language, not \"clear\" or \"stated outright\"",
     "Home sections": "Reorder which sections appear on Home",
@@ -254,6 +255,7 @@
     "Settings restored": "Toast after putting the settings back to their defaults",
     "Your preferences will go back to their defaults. Your language stays.": "The line under that dialog",
     "Report a bug": "Opens a new issue on GitHub",
+    "Share diagnostic report": "Settings › About, under “Report a bug”: hands over a plain-text report (setup and recent playback errors) through the share sheet",
     "FAQ": "Opens the page of frequently asked questions on GitHub. Spell it out if that reads better in your language than the initials",
     "Cache cleared": "Toast: what was remembered from the server was thrown away. Downloads are untouched",
     "Couldn't rescan": "Toast: going through the phone's own files failed",
@@ -549,8 +551,6 @@
     "Haptic feedback": "The small vibration when something is tapped",
     "Open the app on": "Which tab the app opens on, and comes back to after a while away",
     "Start on your playlists": "A switch: with it on, Your library with no chip pressed shows the Favorites entry and the playlists, the way it used to, instead of albums, artists and playlists mixed together",
-    "Keep where you were": "A switch in Settings \u203a Appearance, right under \u201cOpen the app on\u201d: with it on, reopening the app after a while leaves it where it was instead of going back to that tab",
-    "Coming back after a few minutes leaves the app on the screen you left, instead of on the tab above.": "The line under that switch. \u201cThe tab above\u201d is the \u201cOpen the app on\u201d setting sitting right above it",
     "Home buttons": "The icons at the top right of Home (search, history, settings), which of them show and in what order",
 
     // ── Settings › Network ───────────────────────────────────────────────────
