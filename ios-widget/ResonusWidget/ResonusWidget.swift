@@ -117,13 +117,16 @@ struct TrackWidgetView: View {
     private var track: some View {
         ZStack(alignment: .bottom) {
             GeometryReader { geo in
-                // Three fifths of the width: the cover keeps its square, and
-                // the height follows from it rather than from the widget's.
-                let side = geo.size.width * 0.6
+                // Half the width, pushed in by a tenth of it: the cover ends
+                // where the bigger one did (three fifths across), but the
+                // borders around it have room, and its height still follows
+                // from the square rather than from the widget's.
+                let side = geo.size.width * 0.5
                 VStack(alignment: .leading, spacing: 0) {
                     Link(destination: albumURL) {
                         HStack(alignment: .top, spacing: 10) {
                             artwork(side: side)
+                                .padding(.leading, geo.size.width * 0.1)
                             Spacer(minLength: 4)
                             appIcon(size: 20)
                                 .padding(.trailing, 6)
@@ -154,7 +157,7 @@ struct TrackWidgetView: View {
                     Spacer(minLength: 4)
                 }
                 .padding(.horizontal, 12)
-                .padding(.top, 8)
+                .padding(.top, 12)
                 .padding(.bottom, 10)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
