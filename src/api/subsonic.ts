@@ -96,8 +96,7 @@ export interface Song {
   artists?: { id: string; name: string }[];
   /** Album artist list (OpenSubsonic extension; Navidrome sends it). */
   albumArtists?: { id: string; name: string }[];
-  /** Everyone else credited on the song, by role: composer, remixer…
-   *  (OpenSubsonic; Navidrome sends it). */
+  /** Other credits by role (OpenSubsonic). */
   contributors?: { role: string; subRole?: string; artist: { id: string; name: string } }[];
   coverArt?: string;
   duration?: number;
@@ -1055,8 +1054,7 @@ export async function getArtist(
  * matters: some servers list participation albums inside `getArtist` too, so
  * the screen can't just assume "already in the discography = own album".
  */
-/** Navidrome's `getArtist` leaves out an artist who only remixed, so this is
- *  the one place their remixes show up (#215). */
+/** Navidrome's `getArtist` omits remix-only artists (#215). */
 function isRemixer(s: Song, artistId: string): boolean {
   return !!s.contributors?.some((c) => c.role === 'remixer' && c.artist.id === artistId);
 }

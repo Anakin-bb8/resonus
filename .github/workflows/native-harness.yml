@@ -1,9 +1,7 @@
 name: Native harness
 
-# The extractors patched into expo-audio, played on the JVM over a corpus of
-# files ffmpeg makes (see scripts/native-harness/run.sh). Only when something
-# it covers changes: 0.7.12 shipped fMP4s that stopped two seconds in because
-# this ran on one machine and nobody ran it.
+# The patched expo-audio extractors over a corpus of formats, on the JVM
+# (scripts/native-harness/run.sh). Only when something it covers changes.
 
 on:
   pull_request:

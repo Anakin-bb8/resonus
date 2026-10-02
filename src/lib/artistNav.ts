@@ -9,8 +9,7 @@ export interface ArtistTarget {
   name: string;
 }
 
-/** Navigable artist list, no duplicates or empty ids. Remixers go last:
- *  the tag puts them nowhere else (#215). */
+/** Navigable artist list, no duplicates or empty ids, remixers last (#215). */
 export function artistTargets(
   item: Pick<Song | Album, 'artist' | 'artistId' | 'artists'> & Pick<Song, 'contributors'>,
 ): ArtistTarget[] {

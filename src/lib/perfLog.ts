@@ -329,18 +329,13 @@ export function perfNet(): NetStat[] {
 }
 
 // ── Frames ──────────────────────────────────────────────────────────────────
-// The blocks above are the thread stopping for a tenth of a second or more,
-// which is what #50 was. A stutter while scrolling is one or two frames of
-// 16 ms arriving late, far under that, so frames are counted on their own:
-// the JS thread's from `requestAnimationFrame` here, the UI thread's from
-// `FrameMeter` (a Reanimated frame callback), each put down to the screen
-// that was open. Idle frames count too, so what to read is the late ones.
+// Stutter is frames arriving late, far below a block. JS frames are counted
+// here, UI ones in `FrameMeter`, per screen. Idle frames count, so read the
+// late ones.
 
-/** Late enough to be a dropped frame at 60 Hz, and at 120 Hz three of them. */
 export const LATE_MS = 25;
-/** Late enough that anybody looking sees it. */
 export const VERY_LATE_MS = 50;
-/** A gap this long is the app having been away, not a frame. */
+/** Longer than this is the app having been away. */
 export const AWAY_GAP_MS = 1000;
 
 export interface FrameCount {
@@ -369,12 +364,11 @@ function screenFrames(): ScreenFrames {
   return cur;
 }
 
-/** The route now on screen, as its pattern (`album/[id]`), not its address. */
+/** As the route pattern, `album/[id]`. */
 export function setPerfScreen(name: string): void {
   screen = name || '—';
 }
 
-/** Adds what the UI thread counted since the last time, to the open screen. */
 export function addUiFrames(delta: FrameCount): void {
   if (!enabled || delta.frames === 0) return;
   const c = screenFrames().ui;
@@ -410,7 +404,6 @@ function stopJsFrames(): void {
   rafId = null;
 }
 
-/** Most late frames first, either thread. */
 export function perfFrames(): ScreenFrames[] {
   return [...frames.values()].sort((a, b) => b.js.late + b.ui.late - (a.js.late + a.ui.late));
 }

@@ -11,18 +11,11 @@ import java.nio.file.*;
 import java.util.*;
 
 /**
- * Plays each file through the extractors the app plays with (`seekableExtractors()`),
- * picked by sniffing the way BundledExtractorsAdapter does and driven the way
- * ProgressiveMediaPeriod.ExtractingLoadable does (a fresh input on every
- * RESULT_SEEK). Every file is 120 s long, and for each one it checks that:
- *
- * - it plays to the end from the top (0.7.12 stopped fMP4s two seconds in),
- * - it has a seek map with the right duration,
- * - a seek to 30 s and to 95 s lands within a second, at the right time, and
- *   carries on with exactly the samples a read from the top gets there.
- *
- * A fragmented MP4 is also compared sample by sample against media3's own
- * FragmentedMp4Extractor. Exits 1 on any failure.
+ * Plays each 120 s file through `seekableExtractors()`, sniffed like
+ * BundledExtractorsAdapter and read like ExtractingLoadable, and checks it
+ * plays to the end, has the right duration, and seeks to 30 and 95 s onto the
+ * same samples a read from the top gets. fMP4s are also compared against
+ * media3's own extractor. Exits 1 on any failure.
  */
 public class Harness {
   static final long LENGTH_US = 120_000_000L;
@@ -72,11 +65,8 @@ public class Harness {
   /** An extractor that recognised the file, and where its sniff left the input. */
   record Picked(Extractor ex, long pos) {}
 
-  /**
-   * The first of the app's extractors that recognises the file, as ExoPlayer
-   * picks it. A sniff that says yes may move the input on (Mp3Extractor skips
-   * the ID3 tag), and ExoPlayer reads on from there, so the harness does too.
-   */
+  /** A successful sniff may advance the input (Mp3Extractor skips ID3), and
+   *  ExoPlayer reads on from there. */
   static Picked pick(String path, byte[] file) throws IOException {
     for (Extractor e : FragmentSeekingExtractorKt.seekableExtractors().createExtractors(Uri.parse(path), Map.of())) {
       ExtractorInput in = input(file, 0);

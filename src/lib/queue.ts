@@ -1,12 +1,7 @@
 /**
- * The rules of the play queue, as plain functions over its state. The store in
- * `store/player.ts` owns the players, the sync and the timers; what the queue
- * looks like after each thing somebody does to it is decided here, where
- * `test/queue.test.ts` can check it without a phone.
- *
- * The "queued" block is the songs put in by hand with Play next: they sit
- * right after the current one, `queuedCount` long. Add to queue goes to the
- * very end instead, and does not touch it (#184).
+ * Queue rules as pure functions, so `test/queue.test.ts` can check them. The
+ * "queued" block is what Play next added: `queuedCount` songs right after the
+ * current one.
  */
 import type { Song } from '@/api/subsonic';
 
@@ -18,27 +13,20 @@ export interface QueueState {
   queuedCount: number;
 }
 
-/** The same song as it goes into the queue by hand: autoplay's mark comes off
- *  (it is here because you put it here, whatever it was doing before) and it
- *  takes one of its own, which is what the player announces while it plays. */
+/** A song added by hand: loses the mix mark, gets the queued one. */
 export function handAdded(song: Song): Song {
   const { fromMix: _fromMix, ...rest } = song;
   return { ...rest, queued: true };
 }
 
-/** The same song with neither mark on it, for when the queue stops having the
- *  blocks they name (see `shuffleOn`). */
+/** Without either mark, for when the blocks they name are gone. */
 export function unmarked(song: Song): Song {
   if (!song.fromMix && !song.queued) return song;
   const { fromMix: _fromMix, queued: _queued, ...rest } = song;
   return rest;
 }
 
-/**
- * A list in a new order, without touching the one handed in. Fisher-Yates,
- * shared by the shuffle button, by starting a list while shuffle is already
- * on and by the mixes, because they have to deal the same way.
- */
+/** Fisher-Yates on a copy. */
 export function dealt<T>(list: T[], random: () => number = Math.random): T[] {
   const out = [...list];
   for (let i = out.length - 1; i > 0; i--) {
@@ -48,14 +36,13 @@ export function dealt<T>(list: T[], random: () => number = Math.random): T[] {
   return out;
 }
 
-/** Add to queue: at the very end, behind the block and the rest of the list. */
+/** Add to queue: at the very end (#184). */
 export function appendEnd(queue: Song[], songs: Song[]): Song[] {
   return queue.concat(songs.map(handAdded));
 }
 
-/** Play next: right after the current song, at the front of the queued block,
- *  which grows with it (#184). Built by hand rather than spread into
- *  `splice`: a playlist of thousands would be that many arguments in one call. */
+/** Play next: right after the current song, growing the block (#184). Not
+ *  `splice(...songs)`: thousands of arguments in one call. */
 export function insertNext(st: QueueState, songs: Song[]): QueueState {
   const at = st.index + 1;
   return {
@@ -67,21 +54,18 @@ export function insertNext(st: QueueState, songs: Song[]): QueueState {
 
 export interface Removal {
   state: QueueState;
-  /** It was the one playing: the song now at its position has to be loaded. */
+  /** The caller has to load the song now at `state.index`. */
   wasCurrent: boolean;
-  /** It was in the queued block, which `restoreRemoved` has to know. */
   inQueuedBlock: boolean;
 }
 
-/** Takes one song out, or null if `at` is not in the queue. An empty queue
- *  comes back as such: the caller resets the player. */
+/** Null if `at` is out of range. An empty result means reset the player. */
 export function removeFrom(st: QueueState, at: number): Removal | null {
   const { queue, index, queuedCount } = st;
   if (at < 0 || at >= queue.length) return null;
   const next = queue.filter((_, i) => i !== at);
   if (at === index) {
-    // The song after it now plays; if it was the first of the block, that one
-    // is consumed by playing.
+    // The next one plays, which consumes one of the block.
     return {
       state: { queue: next, index: Math.min(index, next.length - 1), queuedCount: Math.max(0, queuedCount - 1) },
       wasCurrent: true,
@@ -96,8 +80,7 @@ export function removeFrom(st: QueueState, at: number): Removal | null {
   };
 }
 
-/** Puts back a song `removeFrom` took out of somewhere other than the current
- *  position, into a queue that may have moved on since. */
+/** Undo for a `removeFrom` that was not the current song. */
 export function restoreRemoved(st: QueueState, at: number, song: Song, inQueuedBlock: boolean): QueueState {
   const queue = [...st.queue];
   queue.splice(at, 0, song);
@@ -109,12 +92,9 @@ export function restoreRemoved(st: QueueState, at: number, song: Song, inQueuedB
 }
 
 /**
- * Drags one song to another place, or null for a move that is not one.
- *
- * The current index follows the song it pointed to. The queued block survives
- * reordering within what is coming: a song dragged into it joins it and one
- * dragged out leaves it (Spotify-style). Any move that touches the current
- * song or what already played dissolves the block.
+ * Null for a move that is not one. Within what is coming, dragging into the
+ * block joins it and out of it leaves it; touching the current song or what
+ * played dissolves it.
  */
 export function moveIn(st: QueueState, from: number, to: number): QueueState | null {
   const { queue, index, queuedCount } = st;
@@ -135,19 +115,14 @@ export function moveIn(st: QueueState, from: number, to: number): QueueState | n
   return { queue: next, index: newIndex, queuedCount: newQueuedCount };
 }
 
-/** The block once playback moves to `next`: advancing by one consumes one
- *  of it, landing anywhere else dissolves it into an ordinary queue. */
+/** Advancing by one consumes one of the block; any other jump dissolves it. */
 export function queuedAfterMove(st: Pick<QueueState, 'index' | 'queuedCount'>, next: number): number {
   if (next === st.index || st.queuedCount === 0) return st.queuedCount;
   return next === st.index + 1 ? st.queuedCount - 1 : 0;
 }
 
-/**
- * The next index to play, or null at the end. `ok` says whether an index can
- * be played (offline, a song with no file on the phone cannot). With repeat
- * all it wraps round, the current one included, so a queue with a single
- * playable song repeats it.
- */
+/** Null at the end. Repeat all wraps to the current one too, so a lone
+ *  playable song repeats. */
 export function nextPlayable(
   queue: Song[],
   index: number,
@@ -159,13 +134,8 @@ export function nextPlayable(
   return null;
 }
 
-/**
- * Shuffle turned on. The current song keeps playing, first in the new order,
- * unless `keepHead` (a UPnP renderer has the queue too, and its indices must
- * not move), in which case what already played stays put and only what is
- * coming gets dealt. Both marks come off: they name blocks, the mix at the end
- * and the songs added after the current one, and dealt there are none.
- */
+/** The current song goes first, or with `keepHead` (UPnP, whose indices must
+ *  not move) only what is coming is dealt. */
 export function shuffleOn(
   queue: Song[],
   index: number,
@@ -180,7 +150,6 @@ export function shuffleOn(
   return { queue: (current ? [current, ...rest] : rest).map(unmarked), index: 0 };
 }
 
-/** Shuffle turned off: where the playing song sits in the order it came in. */
 export function indexInOriginal(original: Song[], current: Song): number {
   return Math.max(0, original.findIndex((s) => s.id === current.id));
 }

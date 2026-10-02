@@ -3964,10 +3964,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     if (key) forgetHistoryOf(key);
 
     if (!shuffle) {
-      // Both marks come off with the shuffle, the same as the "queued" block
-      // does, and `originalQueue` keeps the marked copies so turning shuffle
-      // off brings them back (see `shuffleOn`). While UPnP is active the
-      // current index stays put, so Sonos and the app agree on positions.
+      // `originalQueue` keeps the marks that shuffling takes off.
       set({
         shuffle: true,
         queueDealt: true,

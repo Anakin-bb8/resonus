@@ -3,11 +3,9 @@
 #
 #   pnpm harness:extractor
 #
-# Compiles FragmentSeekingExtractor.kt as installed in node_modules (so with
-# the patch applied, i.e. what ships) against media3, and runs Harness.java
-# over a corpus of files made with ffmpeg: one per kind of file that has broken
-# playback or seeking before. Needs a JDK 17, ffmpeg and the Android SDK
-# (android.jar only). Jars come from Maven once and stay in the work cache.
+# Compiles the patched FragmentSeekingExtractor.kt from node_modules and runs
+# Harness.java over an ffmpeg corpus, one file per kind that has broken
+# before. Needs JDK 17, ffmpeg and android.jar; jars come from Maven once.
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
@@ -16,7 +14,6 @@ WORK="$ROOT/node_modules/.cache/native-harness"
 SDK=${ANDROID_HOME:-$HOME/Android/Sdk}
 AUDIO="$ROOT/node_modules/expo-audio/android"
 KT_SRC="${KT_SRC:-$AUDIO/src/main/java/expo/modules/audio/FragmentSeekingExtractor.kt}"
-# The media3 expo-audio builds with; Kotlin as in the Gradle build of the app.
 MEDIA3=${MEDIA3:-$(sed -n 's/.*androidxMedia3Version = "\(.*\)".*/\1/p' "$AUDIO/build.gradle")}
 KOTLIN=${KOTLIN:-2.1.20}
 
@@ -66,9 +63,8 @@ java -cp "${KCP#:}" org.jetbrains.kotlin.cli.jvm.K2JVMCompiler -no-stdlib -no-re
 [ -f out/expo/modules/audio/FragmentSeekingExtractor.class ] || { echo "the extractor did not compile" >&2; exit 1; }
 javac -nowarn -d out -cp "out:$CP" "$HERE/Harness.java"
 
-# The corpus. Every file is 120 s of noise, so the harness knows how long each
-# one should play. `pipe` writes through a pipe like a server transcoding on
-# the fly, so the file gets no index and no header filled in afterwards.
+# 120 s each, which the harness relies on. `pipe` writes like a server
+# transcoding on the fly: no index, no header filled in afterwards.
 cd corpus
 src=(-f lavfi -i "anoisesrc=d=120:a=0.1:seed=1")
 make() { [ -f "$1" ] || ffmpeg -v error -y "${src[@]}" "${@:2}" "$1"; }
@@ -80,7 +76,7 @@ make frag-aac-2s.m4a -c:a aac -b:a 192k "${frag[@]}" -frag_duration 2000000
 make frag-alac-2s.m4a -c:a alac "${frag[@]}" -frag_duration 2000000
 make frag-aac-10s.m4a -c:a aac -b:a 64k "${frag[@]}" -frag_duration 10000000
 make frag-aac-small.m4a -c:a aac -b:a 32k "${frag[@]}" -frag_duration 500000
-# The ordinary ones, which must keep working whatever the patch does.
+# Must keep working whatever the patch does.
 make plain-aac.m4a -c:a aac -b:a 192k -movflags +faststart
 make flac-24bit.flac -c:a flac -sample_fmt s32 -ar 96000
 make mp3-vbr-xing.mp3 -c:a libmp3lame -q:a 2
