@@ -73,14 +73,14 @@ export function BarBlur({ tint, alpha }: { tint?: string; alpha?: number }) {
 
 /**
  * The background of a screen's top bar, which fades in as the header scrolls
- * away: the header's colour, running out to the page's own a little before
- * the bar's lower edge and holding there — the same two colours the header's
- * own gradient is made of, so the bar lands on the list already the list's
- * colour, with nothing left over to line it up against.
+ * away: the header's colour running out to the page's own, arriving there
+ * translucent rather than flat — the header's colour is still under the bar
+ * while the header is still up, and reading through the tail it makes a soft
+ * shadow of it instead of the cut line a flat edge draws.
  *
  * Not flat. The lower edge is where the bar meets the list scrolling under it,
  * and a flat colour draws that edge as a cut line; the same colour arriving
- * there already gone leaves no line to see.
+ * there already thin leaves no line to see.
  *
  * Not blurred. A bar inside a screen can only blur a target of its own around
  * that screen's list, and a screen wrapped in a `BlurTargetView` stops being
@@ -103,12 +103,12 @@ export function TopBarBackground({
   return (
     <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity }]}>
       {gradient ? (
-        // The page's own colour comes in a little before the bar's lower edge
-        // and holds to it, so the bar lands on the list already the list's
-        // colour. Eased over stops rather than a straight run: the same
-        // corner and line, only gentler to look at.
+        // The page's own colour comes in all the way to the bar's lower edge,
+        // and comes in thin: what is behind the bar shows through the tail.
+        // Eased over stops rather than a straight run — and now more of
+        // them — so the run itself has no banding to look at.
         <LinearGradient
-          {...easedFade(color, background, { until: 0.8 })}
+          {...easedFade(color, background, { until: 1, alpha: 0.85 })}
           style={StyleSheet.absoluteFill}
         />
       ) : (
