@@ -224,6 +224,9 @@ export function keepMirrorCovers(
   // deduplicated and filtered, dozens of times a minute, on the thread drawing
   // the screen. Measured at thirty five refreshes of the favourites in three
   // minutes. It is catch-up work, so it is gathered and run on a slow clock.
+  // A batch belongs to one profile; another profile's wants start a new one.
+  if (pendingFor?.profile !== profile) pending = [];
+  pendingFor = { profile, auth };
   for (const want of ids) if (want) pending.push(want);
   if (runScheduled) return;
   runScheduled = true;
@@ -232,14 +235,17 @@ export function keepMirrorCovers(
     runScheduled = false;
     lastRun = Date.now();
     const batch = pending;
+    const owner = pendingFor;
     pending = [];
-    runCovers(profile, auth, batch);
+    pendingFor = null;
+    if (owner) runCovers(owner.profile, owner.auth, batch);
   }, wait);
 }
 
 /** How long between runs, however often they are asked for. */
 const MIN_GAP_MS = 30_000;
 let pending: (string | CoverWant)[] = [];
+let pendingFor: { profile: string; auth: SubsonicAuth } | null = null;
 let runScheduled = false;
 let lastRun = 0;
 
