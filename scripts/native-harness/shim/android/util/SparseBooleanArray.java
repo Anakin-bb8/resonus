@@ -1,0 +1,2 @@
+package android.util;
+public class SparseBooleanArray { private final java.util.HashMap<Integer, Boolean> m = new java.util.HashMap<>(); public boolean get(int k) { return m.getOrDefault(k, false); } public boolean get(int k, boolean d) { return m.getOrDefault(k, d); } public void put(int k, boolean v) { m.put(k, v); } public void delete(int k) { m.remove(k); } public void clear() { m.clear(); } public int size() { return m.size(); } }
