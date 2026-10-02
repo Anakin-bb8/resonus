@@ -162,9 +162,6 @@ export default function AppearanceSettings() {
               options={[
                 {
                   label: t('Folder browsing'),
-                  description: t(
-                    'Browse your library by folders (Subsonic servers).',
-                  ),
                   value: showFolderBrowser,
                   onChange: setShowFolderBrowser,
                   disabled: offline,

@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 771 of them.
+Every string the app can show, under the screen it shows up on. 760 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -639,7 +639,6 @@ you are actually typing into, which is easier than reading it here.
 | `You're on the latest version` | Answer when that check finds nothing newer |
 | `Your preferences will be replaced by the ones in the file. Your language and accounts stay.` |  |
 | `Your preferences will go back to their defaults. Your language stays.` | The line under that dialog |
-| `Your setup and the last problems the app ran into, to paste into a bug report.` | The line under “Share diagnostic report” |
 
 ## Settings › Cache
 
@@ -698,7 +697,6 @@ you are actually typing into, which is easier than reading it here.
 | `Downloads deleted` |  |
 | `Free` | Free disk space in the storage bar (Other / Downloads / Free). Not "free of charge" |
 | `Hide unavailable songs` |  |
-| `In offline mode, hide songs that aren't downloaded instead of showing them greyed out.` |  |
 | `Library metadata copy` | The offline copy of the library: the album, artist and playlist lists kept so the app works with no connection. Not the songs themselves, which are the downloads |
 | `Local library index` | A line of the storage breakdown: what the app remembers about the phone's own music files. A size, not a setting |
 | `MP3, AAC, Opus and other lossy files are downloaded as they are. Only files like FLAC are transcoded.` |  |
@@ -713,7 +711,6 @@ you are actually typing into, which is easier than reading it here.
 | `Song cache` | Copies of streamed songs the app keeps by itself and deletes to make room. Not the same as Downloads, which the person chose |
 | `Songs you stream are kept on this phone and play from it next time, with or without a connection. The next song in the queue is fetched ahead, so it is not streamed at all. When the cache is full, the songs played longest ago make room.` |  |
 | `Storage used` | Section header over the bar showing what is taking up room on the phone |
-| `Switch to your downloads when the server is unreachable, and back when it returns.` |  |
 | `Transcode lossless files only` |  |
 | `Your server must support it.` |  |
 
@@ -854,7 +851,6 @@ you are actually typing into, which is easier than reading it here.
 | `Network` |  |
 | `Remote` | An address reachable from outside the home network |
 | `Server addresses` | Section header: a profile can have several addresses for the same account, one at home and one from outside |
-| `Switches to your remote address automatically when you leave home.` | The line under “Automatic URL switching”, explaining it |
 | `This address is already in the list.` | Validation message: that one is already there |
 
 ## Settings › Personalization
@@ -864,7 +860,6 @@ you are actually typing into, which is easier than reading it here.
 | `Always show the navigation bar` |  |
 | `Appearance` |  |
 | `At the top of Home, what is playing in your other apps and devices, ready to carry on here.` |  |
-| `Browse your library by folders (Subsonic servers).` |  |
 | `Cover corners` |  |
 | `Explore` | The tab holding everything the server has: all albums, artists, songs, genres, stations and folders |
 | `Explore sections` |  |
@@ -908,11 +903,9 @@ you are actually typing into, which is easier than reading it here.
 | `Autoplay` | When the queue runs out, keep playing with similar songs instead of stopping |
 | `By album` | Volume normalization (ReplayGain) mode: even out loudness album by album |
 | `By track` | Volume normalization (ReplayGain) mode: even out loudness track by track |
-| `Check on startup whether Android is limiting the app in the background.` | The line under “Warn about battery optimization”, explaining it |
 | `Crossfade` | One song fading into the next |
 | `Done` | The button that leaves drag-to-reorder, or accepts a fine-tuned number |
 | `Equalizer` |  |
-| `Fetch the next tracks ahead so they start instantly. Helps with slow servers and proxies.` | The line under “Preload upcoming tracks”, explaining it |
 | `Keep screen on` |  |
 | `Mobile data` | Group header under `Streaming`: the settings that apply on mobile data, as opposed to Wi-Fi |
 | `MP3, AAC, Opus and other lossy files stream as they are. Only files like FLAC are transcoded.` |  |
@@ -1001,7 +994,6 @@ you are actually typing into, which is easier than reading it here.
 | `Show progress bar` |  |
 | `Show quality label` |  |
 | `Show rating` |  |
-| `Show the whole artwork instead of cropping it to a square.` | The line under “Fit cover art”, explaining it |
 | `Skip buttons` | The seek forward / back buttons setting |
 | `Small` | One of the values of “Lyrics size” |
 | `Swap favorite and menu` | Exchange the places of those two buttons in the player, for whichever hand you hold the phone in |
@@ -1014,7 +1006,6 @@ you are actually typing into, which is easier than reading it here.
 | `Arrangement` |  |
 | `Bottom row` |  |
 | `Grouped in the middle` | One of the values of “Arrangement” |
-| `Play the music slower or faster, keeping its pitch.` |  |
 | `Spread across the width` | One of the values of “Arrangement” |
 
 ## Settings › Quick grid
@@ -1022,7 +1013,6 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `{n} cards` | How many tiles fit across the quick grid. `{n}` is a number of columns |
-| `Keep the Favorites tile first.` | The line under “Pin favorites”, explaining it |
 | `Pin favorites` | Pin favourites to the quick grid |
 | `Quick grid` | The grid of shortcut tiles on Home |
 | `Recent albums` | A source the quick grid can draw its tiles from |
@@ -1047,7 +1037,6 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `Mark songs and albums tagged as explicit with an E, in lists, on the player and in album headers.` |  |
 | `Show artist photo` | Whether the artist's photo shows at the top of their screen |
 | `Show artwork` | Whether song rows carry the album's little picture |
 | `Show description` | A setting: whether playlist and album descriptions are drawn under their names on their screens |

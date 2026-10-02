@@ -123,7 +123,6 @@ export default function AboutSettings() {
           <SettingRow
             icon="document-text-outline"
             label={t('Share diagnostic report')}
-            description={t('Your setup and the last problems the app ran into, to paste into a bug report.')}
             onPress={() => void Share.share({ message: fullReport(screensOpen) })}
           />
           <SettingRow

@@ -15,6 +15,7 @@ Releases before 0.2.1 are only listed on the
 
 ### Changed
 
+- Settings drop the descriptions that only repeated the name of the option.
 - Coming back to the app always leaves it on the screen you left, however long it was away, so the Keep where you were switch is gone (#225).
 
 ### Fixed

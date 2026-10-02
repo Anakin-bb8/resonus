@@ -109,7 +109,6 @@ export default function NetworkSettings() {
           options={[
             {
               label: t('Automatic URL switching'),
-              description: t('Switches to your remote address automatically when you leave home.'),
               value: !!auth.autoUrl,
               onChange: (v) => {
                 void setAutoUrl(v);
