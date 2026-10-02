@@ -861,6 +861,7 @@ you are actually typing into, which is easier than reading it here.
 | `Appearance` |  |
 | `At the top of Home, what is playing in your other apps and devices, ready to carry on here.` |  |
 | `Cover corners` |  |
+| `Dark` | The appearance the app has always had, and what it uses unless the other is chosen. |
 | `Explore` | The tab holding everything the server has: all albums, artists, songs, genres, stations and folders |
 | `Explore sections` |  |
 | `Folder browsing` | Browsing the server's folders as folders, instead of by album and artist |
@@ -874,6 +875,7 @@ you are actually typing into, which is easier than reading it here.
 | `Interaction` | Section header grouping toggles |
 | `Interface` | Section header grouping toggles |
 | `Language` |  |
+| `Light` | The light appearance, in Settings › Theme |
 | `More rounded` | One of the values of “Cover corners” |
 | `Navigation` | Section header: how you move around the app |
 | `Navigation bar` | Settings screen: which tabs are on the bar at the bottom, and in what order |
@@ -883,12 +885,14 @@ you are actually typing into, which is easier than reading it here.
 | `Playing on other devices` |  |
 | `Quick grid` | The grid of shortcut tiles on Home |
 | `Rounded` | One of the values of “Cover corners” |
+| `Scheduled` |  |
 | `Show tab names` |  |
 | `Song lists` | The setting for how song lists look |
 | `Square` | One of the values of “Cover corners” |
 | `Start on your playlists` | A switch: with it on, Your library with no chip pressed shows the Favorites entry and the playlists, the way it used to, instead of albums, artists and playlists mixed together |
 | `Swipe left` | What dragging a song to the left in a list does |
 | `Swipe right` | What dragging a song to the right in a list does. Its values are the actions listed under it |
+| `System` | Two places: a theme setting (use whichever appearance the phone itself is set to, light or dark), and `System::section`, the heading in Settings › Quality & playback over Keep screen on and the battery warning. Add `System::section` to your file if one word cannot do both |
 | `Theme` | The screen where the appearance and the accent colour are chosen, and the name of the row that opens it |
 | `With no chip pressed, Your library shows Favorites and your playlists instead of everything mixed together.` |  |
 | `Your library` | The tab with your albums, artists and playlists |

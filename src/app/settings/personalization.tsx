@@ -45,6 +45,13 @@ export default function AppearanceSettings() {
   // switch to un-grey: `getMusicDirectory` has no local side.)
   const canBrowseFolders = !local && (offline || serverType !== 'jellyfin');
   const language = useSettings((s) => s.language);
+  const themeMode = useSettings((s) => s.themeMode);
+  const themeModeLabel = {
+    system: t('System'),
+    dark: t('Dark'),
+    light: t('Light'),
+    schedule: t('Scheduled'),
+  }[themeMode];
   const alwaysShowTabs = useSettings((s) => s.alwaysShowTabs);
   const setAlwaysShowTabs = useSettings((s) => s.setAlwaysShowTabs);
   const showTabLabels = useSettings((s) => s.showTabLabels);
@@ -81,6 +88,7 @@ export default function AppearanceSettings() {
           />
           <SettingRow
             label={t('Theme')}
+            description={themeModeLabel}
             chevron
             onPress={() => router.push('/settings/theme')}
           />
