@@ -27,6 +27,8 @@ Releases before 0.2.1 are only listed on the
 - Changes made offline on one profile are no longer sent to another profile's account when you switch between them.
 - Listens made offline are no longer scrobbled twice when the app goes back online twice at once.
 - Switching profile right after browsing no longer leaves the previous profile's albums and playlists in the new one's offline library.
+- Skipping or picking a song while casting no longer leaves the speaker on the previous song when it was still busy with the queue.
+- Changing track while casting retries after stopping the renderer, for TVs that refuse a new song while one is playing (#246).
 
 ## [0.7.12] - 2026-10-01
 

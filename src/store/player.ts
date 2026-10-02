@@ -107,6 +107,7 @@ import {
   upnpSetCrossfade,
   upnpSetSleepTimer,
   upnpSetVolume,
+  useUpnp,
   type RemoteEvents,
 } from './upnp';
 import {
@@ -845,6 +846,9 @@ async function remoteLoadIndex(index: number, autoplay: boolean, startSec = 0) {
         autoplay,
       );
   if (!ok) {
+    const { devices, deviceId } = useUpnp.getState();
+    const device = isJukeboxActive() ? 'jukebox' : devices.find((d) => d.id === deviceId)?.name ?? '?';
+    note(`cast refused: ${song.suffix ?? '?'} on ${device}`);
     useToast.getState().show(tg("This song can't be cast"));
     usePlayerStore.setState({ index, isPlaying: false, isBuffering: false });
     return;

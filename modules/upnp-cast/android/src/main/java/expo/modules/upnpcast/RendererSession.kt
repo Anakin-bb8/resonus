@@ -270,7 +270,12 @@ class RendererSession(
 
     // AVTransport has no portable queue service. The module retains the list
     // and progresses it; the renderer is given only the selected URI.
-    if (!setUri(control, tracks[selectedIndex])) return false
+    if (!setUri(control, tracks[selectedIndex])) {
+      // Many renderers refuse a new URI while one is playing (701/705) and
+      // take it once stopped (#246).
+      Soap.call(control, Services.AV_TRANSPORT, "Stop", INSTANCE)
+      if (!setUri(control, tracks[selectedIndex])) return false
+    }
 
     if (positionMs > 0) {
       if (!seek(positionMs)) return false
