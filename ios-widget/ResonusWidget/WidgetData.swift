@@ -32,17 +32,20 @@ struct NowPlaying: Codable {
 }
 
 enum WidgetStore {
-    static let appGroup = "group.com.juananzzz.resonus"
     static let stateKey = "nowPlaying"
     static let artworkName = "cover.jpg"
 
-    static var container: URL? {
-        FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup)
-    }
+    /// The groups this build was granted (see `SharedAppGroup`): the app
+    /// writes into all of them, and this reads whichever has something in
+    /// it. There may be none, and that is the first thing `why()` says.
+    private static let groups = SharedAppGroup.granted()
 
     static func load() -> NowPlaying? {
-        guard let data = UserDefaults(suiteName: appGroup)?.data(forKey: stateKey) else { return nil }
-        return try? JSONDecoder().decode(NowPlaying.self, from: data)
+        for group in groups {
+            guard let data = UserDefaults(suiteName: group)?.data(forKey: stateKey) else { continue }
+            if let state = try? JSONDecoder().decode(NowPlaying.self, from: data) { return state }
+        }
+        return nil
     }
 
     /// Why there is nothing to show, said the way a bug report needs it said:
@@ -50,16 +53,23 @@ enum WidgetStore {
     /// language, like everything else here that is meant to be read off a
     /// screenshot. `nil` when there is nothing wrong.
     static func why() -> String? {
-        guard let data = UserDefaults(suiteName: appGroup)?.data(forKey: stateKey) else {
-            return container == nil ? "app group not granted" : "no data from the app"
+        guard !groups.isEmpty else { return "app group not granted" }
+        var sawData = false
+        for group in groups {
+            guard let data = UserDefaults(suiteName: group)?.data(forKey: stateKey) else { continue }
+            sawData = true
+            if (try? JSONDecoder().decode(NowPlaying.self, from: data)) != nil { return nil }
         }
-        return (try? JSONDecoder().decode(NowPlaying.self, from: data)) == nil ? "data unreadable" : nil
+        return sawData ? "data unreadable" : "no data from the app"
     }
 
-    /// The cover the app left in the container, if it left one.
+    /// The cover the app left in a container, if it left one.
     static func artwork() -> UIImage? {
-        guard let dir = container else { return nil }
-        return UIImage(contentsOfFile: dir.appendingPathComponent(artworkName).path)
+        for group in groups {
+            guard let dir = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group) else { continue }
+            if let image = UIImage(contentsOfFile: dir.appendingPathComponent(artworkName).path) { return image }
+        }
+        return nil
     }
 
     /// How much of the track has played as of `date`: what the app recorded,

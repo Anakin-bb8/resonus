@@ -2,11 +2,6 @@ import ExpoModulesCore
 import Foundation
 import WidgetKit
 
-/// The App Group the app writes into and the widget reads from. Both sides
-/// name it themselves: the extension is a separate binary and never links this
-/// module, it only shares the container.
-let homeWidgetAppGroup = "group.com.juananzzz.resonus"
-
 public class HomeWidgetModule: Module {
   public func definition() -> ModuleDefinition {
     Name("HomeWidget")
@@ -18,7 +13,8 @@ public class HomeWidgetModule: Module {
     /// What the app can see of its own handover, read back from the group it
     /// writes into. For Settings › Diagnostics: a widget showing only its
     /// icon looks the same whether the group was never granted, the write
-    /// never happened, or the data went down on the way out.
+    /// never happened, or the data went down on the way out — and on a
+    /// sideloaded build, which group the profile even granted.
     Function("status") { () -> String in
       HomeWidgetStore.status()
     }
@@ -29,18 +25,20 @@ private enum HomeWidgetStore {
   private static let stateKey = "nowPlaying"
   private static let artworkName = "cover.jpg"
 
+  /// The groups this build was granted, of which there may be none. Fixed for
+  /// the life of the process, because the entitlements are.
+  private static let groups = SharedAppGroup.granted()
+
   /// The cover currently on file, so a slow download for the previous track
   /// cannot land on top of this one's.
   private static var artworkSource: String?
 
-  private static var defaults: UserDefaults? { UserDefaults(suiteName: homeWidgetAppGroup) }
-
-  private static var container: URL? {
-    FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: homeWidgetAppGroup)
+  private static func containers() -> [URL] {
+    groups.compactMap { FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: $0) }
   }
 
   static func write(_ state: [String: Any]) {
-    guard let defaults else { return }
+    guard !groups.isEmpty else { return }
     let now = Date().timeIntervalSince1970
 
     if ((state["active"] as? Bool) ?? false) {
@@ -55,7 +53,9 @@ private enum HomeWidgetStore {
         "fallback": (state["fallback"] as? String) ?? "#141619",
       ]
       if let data = try? JSONSerialization.data(withJSONObject: payload) {
-        defaults.set(data, forKey: stateKey)
+        for group in groups {
+          UserDefaults(suiteName: group)?.set(data, forKey: stateKey)
+        }
       }
       if let artwork = (state["artworkUrl"] as? String), !artwork.isEmpty {
         storeArtwork(artwork)
@@ -63,8 +63,7 @@ private enum HomeWidgetStore {
         artworkSource = nil
         removeArtwork()
       }
-    } else if let data = defaults.data(forKey: stateKey),
-              var kept = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] {
+    } else if var kept = existing() {
       // Nothing is playing: the widget holds on to the track that was, stopped
       // where it stopped. Clearing instead would empty it for the seconds a
       // cold start takes to bring the queue back, and for good whenever the
@@ -72,13 +71,26 @@ private enum HomeWidgetStore {
       kept["playing"] = false
       kept["updated"] = now
       if let patched = try? JSONSerialization.data(withJSONObject: kept) {
-        defaults.set(patched, forKey: stateKey)
+        for group in groups {
+          UserDefaults(suiteName: group)?.set(patched, forKey: stateKey)
+        }
       }
     } else {
       return
     }
 
     WidgetCenter.shared.reloadAllTimelines()
+  }
+
+  /// The last write, in whichever of the groups has one.
+  private static func existing() -> [String: Any]? {
+    for group in groups {
+      guard let data = UserDefaults(suiteName: group)?.data(forKey: stateKey) else { continue }
+      if let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] {
+        return object
+      }
+    }
+    return nil
   }
 
   /// `0` for anything that is not a number: a `NaN` reaching the serializer
@@ -94,18 +106,46 @@ private enum HomeWidgetStore {
   }
 
   /// The handover looked at from this side. English, like the screen it is
-  /// read off: it ends up in a bug report.
+  /// read off: it ends up in a bug report. The profile and the granted groups
+  /// come first because a sideload takes both from the signer's profile, not
+  /// from this repo, and which of the two is missing decides where the fault
+  /// is — nobody here can fix a certificate that registered no app group.
   static func status() -> String {
-    guard container != nil else { return "app group not granted" }
-    guard let data = defaults?.data(forKey: stateKey) else { return "group ok, nothing written" }
-    guard
-      let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
-      let written = (object["updated"] as? NSNumber)?.doubleValue
-    else { return "group ok, data unreadable" }
+    var parts: [String] = []
+    if let id = Bundle.main.bundleIdentifier { parts.append("id \(id)") }
 
-    let format = DateFormatter()
-    format.dateFormat = "HH:mm:ss"
-    return "group ok, written \(format.string(from: Date(timeIntervalSince1970: written)))"
+    let profile = SharedAppGroup.profile()
+    if !profile.found {
+      parts.append("no embedded.mobileprovision")
+    } else if profile.groups.isEmpty {
+      parts.append("profile has no groups")
+    } else {
+      parts.append("profile: \(profile.groups.joined(separator: ", "))")
+    }
+
+    if groups.isEmpty {
+      parts.append("granted: none")
+      return parts.joined(separator: " · ")
+    }
+    parts.append("granted: \(groups.joined(separator: ", "))")
+
+    var unreadable = false
+    for group in groups {
+      guard let data = UserDefaults(suiteName: group)?.data(forKey: stateKey) else { continue }
+      guard
+        let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+        let written = (object["updated"] as? NSNumber)?.doubleValue
+      else {
+        unreadable = true
+        continue
+      }
+      let format = DateFormatter()
+      format.dateFormat = "HH:mm:ss"
+      parts.append("written \(format.string(from: Date(timeIntervalSince1970: written)))")
+      return parts.joined(separator: " · ")
+    }
+    parts.append(unreadable ? "data unreadable" : "nothing written")
+    return parts.joined(separator: " · ")
   }
 
   private static func storeArtwork(_ source: String) {
@@ -139,12 +179,14 @@ private enum HomeWidgetStore {
   }
 
   private static func saveArtwork(_ data: Data) {
-    guard let dir = container else { return }
-    try? data.write(to: dir.appendingPathComponent(artworkName), options: .atomic)
+    for dir in containers() {
+      try? data.write(to: dir.appendingPathComponent(artworkName), options: .atomic)
+    }
   }
 
   private static func removeArtwork() {
-    guard let dir = container else { return }
-    try? FileManager.default.removeItem(at: dir.appendingPathComponent(artworkName))
+    for dir in containers() {
+      try? FileManager.default.removeItem(at: dir.appendingPathComponent(artworkName))
+    }
   }
 }

@@ -39,6 +39,8 @@ const BUNDLE_ID = 'com.juananzzz.resonus.ResonusWidget';
 const FILES = [
   'ResonusWidget.swift',
   'WidgetData.swift',
+  // The runtime's own reading of the app group, compiled into both targets.
+  'SharedAppGroup.swift',
   'widget-icon.png',
   'ResonusWidget-Info.plist',
   'ResonusWidget.entitlements',
