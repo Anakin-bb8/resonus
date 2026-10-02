@@ -51,6 +51,7 @@ private enum HomeWidgetStore {
         "duration": seconds(state["duration"]),
         "updated": now,
         "fallback": (state["fallback"] as? String) ?? "#141619",
+        "accent": (state["accent"] as? String) ?? "",
       ]
       if let data = try? JSONSerialization.data(withJSONObject: payload) {
         for group in groups {

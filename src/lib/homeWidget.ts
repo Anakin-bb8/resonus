@@ -10,6 +10,7 @@
 import { requireOptionalNativeModule } from 'expo-modules-core';
 
 import { CACHED_COVER } from '@/api/data';
+import { dominantColorOf } from '@/hooks/useDominantColor';
 import { tg } from '@/i18n';
 import { artworkUrlFor, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
@@ -26,6 +27,8 @@ interface NowPlayingState {
   /** Seconds into the track, and its length: the widget walks on from here. */
   position: number;
   duration: number;
+  /** The cover's colour as the app reads it, for the widget's background. */
+  accent?: string;
   /** The widget's own background when there is no cover to take one from. */
   fallback: string;
 }
@@ -42,6 +45,31 @@ export type ShortcutAction = 'shuffle-favorites' | 'continue' | 'search' | 'play
 
 /** A jump this big is a seek, not the clock: worth telling the widget about. */
 const SEEK_JUMP_SEC = 4;
+
+/**
+ * The cover's colour for the widget's background, resolved out here because
+ * the handover runs from the store, outside React. The dark band, whichever
+ * theme the app is in: the widget's text is always white, and the band is
+ * what keeps white readable on a cover's colour. Empty while a new cover is
+ * being read — the widget falls back to the page's own colour for that one
+ * write, and the colour's own write follows.
+ */
+let accent = '';
+let accentOf = '';
+
+async function refreshAccent(uri?: string) {
+  const want = uri ?? '';
+  if (want === accentOf) return;
+  accentOf = want;
+  accent = '';
+  if (!want) return;
+  // A failed read comes back as the plain tint: no colour to send, and the
+  // fallback the widget already holds is the better of the two.
+  const c = await dominantColorOf(want, 'dark');
+  if (accentOf !== want || c === colors.surfaceHighlight) return;
+  accent = c;
+  push();
+}
 
 function nowPlaying(): NowPlayingState {
   const st = usePlayerStore.getState();
@@ -75,6 +103,9 @@ function nowPlaying(): NowPlayingState {
   // all. Left out of the object rather than put in as `undefined`: the key
   // would still be there, with nothing for the native side to read.
   if (artwork && !artwork.startsWith(CACHED_COVER)) state.artworkUrl = artwork;
+  // Only the colour of *this* cover: between covers, or while the read is
+  // still out, the key stays away rather than carrying the last one over.
+  if (state.artworkUrl && accent && accentOf === state.artworkUrl) state.accent = accent;
   return state;
 }
 
@@ -102,6 +133,9 @@ export function widgetStatus(): string {
 function push() {
   if (!native) return;
   const state = nowPlaying();
+  // Kicks the read for a new cover; when it lands, this runs again with the
+  // colour in the state.
+  refreshAccent(state.artworkUrl);
   const key = JSON.stringify(state);
   if (key === last) return;
   try {

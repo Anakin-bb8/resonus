@@ -86,7 +86,7 @@ struct TrackWidgetView: View {
     }
 
     var body: some View {
-        let tint = WidgetStore.background(state, artwork: cover)
+        let tint = WidgetStore.background(state)
         if #available(iOS 17.0, *) {
             canvas
                 .containerBackground(for: .widget) { tint }
@@ -109,42 +109,55 @@ struct TrackWidgetView: View {
     }
 
     /// The artwork and the title are the album's link, the button is its own
-    /// link beside the title, with the top of it on the top of the title's
+    /// link beside the title, centred on the text block rather than on its
     /// first line. The two are siblings: a link inside a link would eat one
-    /// of them.
+    /// of them. The icon and the button share one inset, so their right edges
+    /// line up down the widget, and the icon sits level with the top of the
+    /// cover beside it.
     private var track: some View {
         ZStack(alignment: .bottom) {
-            VStack(alignment: .leading, spacing: 0) {
-                Link(destination: albumURL) {
-                    HStack(alignment: .top, spacing: 10) {
-                        artwork
-                        Spacer(minLength: 8)
-                        appIcon(size: 20).padding(.top, 2)
-                    }
-                }
-                Spacer(minLength: 8)
-                HStack(alignment: .top, spacing: 8) {
+            GeometryReader { geo in
+                // Three fifths of the width: the cover keeps its square, and
+                // the height follows from it rather than from the widget's.
+                let side = geo.size.width * 0.6
+                VStack(alignment: .leading, spacing: 0) {
                     Link(destination: albumURL) {
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(state?.title ?? "")
-                                .font(.system(size: 15, weight: .bold))
-                                .foregroundColor(.white)
-                                .lineLimit(2)
-                                .minimumScaleFactor(0.75)
-                            Text(state?.artist ?? "")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(.white.opacity(0.7))
-                                .lineLimit(1)
+                        HStack(alignment: .top, spacing: 10) {
+                            artwork(side: side)
+                            Spacer(minLength: 4)
+                            appIcon(size: 20)
+                                .padding(.trailing, 6)
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    Link(destination: toggleURL) { playButton }
+                    // One flexible run above the text and one below it: the
+                    // text centres itself in the gap between the cover and
+                    // the progress bar whatever the widget's height is.
+                    Spacer(minLength: 4)
+                    HStack(alignment: .center, spacing: 8) {
+                        Link(destination: albumURL) {
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(state?.title ?? "")
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .lineLimit(2)
+                                    .minimumScaleFactor(0.75)
+                                Text(state?.artist ?? "")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundColor(.white.opacity(0.7))
+                                    .lineLimit(1)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        Link(destination: toggleURL) { playButton }
+                            .padding(.trailing, 6)
+                    }
+                    Spacer(minLength: 4)
                 }
+                .padding(.horizontal, 12)
+                .padding(.top, 8)
+                .padding(.bottom, 10)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
-            .padding(.horizontal, 12)
-            .padding(.top, 12)
-            .padding(.bottom, 14)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
             progressBar
         }
@@ -154,10 +167,10 @@ struct TrackWidgetView: View {
         ZStack {
             Circle().fill(Color.white)
             Image(systemName: (state?.playing ?? false) ? "pause.fill" : "play.fill")
-                .font(.system(size: 14, weight: .bold))
+                .font(.system(size: 16, weight: .bold))
                 .foregroundColor(.black)
         }
-        .frame(width: 34, height: 34)
+        .frame(width: 40, height: 40)
     }
 
     private var progressBar: some View {
@@ -177,7 +190,7 @@ struct TrackWidgetView: View {
         .ignoresSafeArea(edges: .bottom)
     }
 
-    private var artwork: some View {
+    private func artwork(side: CGFloat) -> some View {
         ZStack {
             if let cover {
                 Image(uiImage: cover).resizable().scaledToFill()
@@ -185,7 +198,7 @@ struct TrackWidgetView: View {
                 Color.white.opacity(0.15)
             }
         }
-        .frame(width: 74, height: 74)
+        .frame(width: side, height: side)
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 

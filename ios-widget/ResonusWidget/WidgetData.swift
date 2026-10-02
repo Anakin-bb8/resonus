@@ -1,4 +1,3 @@
-import CoreImage
 import Foundation
 import SwiftUI
 import UIKit
@@ -16,6 +15,9 @@ struct NowPlaying: Codable {
     var duration: Double
     var updated: TimeInterval
     var fallback: String
+    /// The cover's colour, read off it by the app the way the screens do.
+    /// Absent in a handover from a build that did not send one.
+    var accent: String?
 
     var isEmpty: Bool { title.isEmpty && artist.isEmpty }
 
@@ -27,7 +29,8 @@ struct NowPlaying: Codable {
         position: 0,
         duration: 0,
         updated: 0,
-        fallback: "#141619"
+        fallback: "#141619",
+        accent: nil
     )
 }
 
@@ -85,14 +88,14 @@ enum WidgetStore {
         return max(0, min(1, seconds / state.duration))
     }
 
-    /// The sleeve's own colour, taken down far enough that white text reads on
-    /// whatever the cover happens to be. The app's own background stands in
-    /// when there is no cover, or the colour cannot be read off it.
-    static func background(_ state: NowPlaying?, artwork: UIImage?) -> Color {
-        guard let artwork, let color = average(of: artwork) else {
-            return WidgetStore.color(state?.fallback ?? "#141619")
-        }
-        return color
+    /// The colour the app read off the cover, in the band the app read it in:
+    /// white text has to read on it, so the dark band, whichever theme the
+    /// app is in — the widget's text does not follow the theme. The app's own
+    /// background stands in when there is no cover, or the handover is from a
+    /// build that sent no colour of its own.
+    static func background(_ state: NowPlaying?) -> Color {
+        if let hex = state?.accent, !hex.isEmpty { return color(hex) }
+        return color(state?.fallback ?? "#141619")
     }
 
     static func color(_ hex: String) -> Color {
@@ -104,38 +107,6 @@ enum WidgetStore {
             red: Double((value >> 16) & 0xFF) / 255,
             green: Double((value >> 8) & 0xFF) / 255,
             blue: Double(value & 0xFF) / 255
-        )
-    }
-
-    private static func average(of image: UIImage) -> Color? {
-        guard let cgImage = image.cgImage else { return nil }
-        let input = CIImage(cgImage: cgImage)
-        guard
-            let filter = CIFilter(name: "CIAreaAverage", parameters: [
-                kCIInputImageKey: input,
-                kCIInputExtentKey: CIVector(cgRect: input.extent),
-            ]),
-            let output = filter.outputImage
-        else { return nil }
-
-        let context = CIContext()
-        var pixel = [UInt8](repeating: 0, count: 4)
-        context.render(
-            output,
-            toBitmap: &pixel,
-            rowBytes: 4,
-            bounds: CGRect(x: 0, y: 0, width: 1, height: 1),
-            format: .RGBA8,
-            colorSpace: CGColorSpaceCreateDeviceRGB()
-        )
-        // Down by two fifths: a pale sleeve otherwise leaves the white title
-        // with nothing to sit against, and the bar would go lighter than the
-        // page it is standing in for.
-        let level = 0.6
-        return Color(
-            red: Double(pixel[0]) / 255 * level,
-            green: Double(pixel[1]) / 255 * level,
-            blue: Double(pixel[2]) / 255 * level
         )
     }
 }
