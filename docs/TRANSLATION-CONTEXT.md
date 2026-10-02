@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 771 of them.
+Every string the app can show, under the screen it shows up on. 769 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -863,7 +863,6 @@ you are actually typing into, which is easier than reading it here.
 | `Appearance` |  |
 | `At the top of Home, what is playing in your other apps and devices, ready to carry on here.` |  |
 | `Browse your library by folders (Subsonic servers).` |  |
-| `Coming back after a few minutes leaves the app on the screen you left, instead of on the tab above.` | The line under that switch. “The tab above” is the “Open the app on” setting sitting right above it |
 | `Cover corners` |  |
 | `Explore` | The tab holding everything the server has: all albums, artists, songs, genres, stations and folders |
 | `Explore sections` |  |
@@ -877,7 +876,6 @@ you are actually typing into, which is easier than reading it here.
 | `Home sections` | Reorder which sections appear on Home |
 | `Interaction` | Section header grouping toggles |
 | `Interface` | Section header grouping toggles |
-| `Keep where you were` | A switch in Settings › Appearance, right under “Open the app on”: with it on, reopening the app after a while leaves it where it was instead of going back to that tab |
 | `Language` |  |
 | `More rounded` | One of the values of “Cover corners” |
 | `Navigation` | Section header: how you move around the app |

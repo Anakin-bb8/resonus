@@ -1056,18 +1056,6 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   homeButtons: HomeButton[];
   /** App startup tab (Home/Search/Library). */
   defaultTab: DefaultTab;
-  /**
-   * Whether coming back from the background leaves the app where it was.
-   *
-   * Off, which is what it has always done: a few minutes away and the app
-   * opens on the tab above, the way Spotify and YouTube do, on the grounds
-   * that a screen you left behind an hour ago is not one you meant to come
-   * back to. Some people mean it (#225), and for them the reset is the app
-   * throwing away what they were in the middle of. The setting only touches
-   * the return; a cold start has nothing to preserve and still opens on the
-   * chosen tab.
-   */
-  keepScreenOnReturn: boolean;
   /** Your library with no chip pressed shows Favorites and the playlists, as
    *  it did before the mixed view, instead of everything (#217). */
   libraryShowsPlaylists: boolean;
@@ -1297,7 +1285,6 @@ const DEFAULTS = {
   showFolderBrowser: false,
   homeButtons: DEFAULT_HOME_BUTTONS.map((b) => ({ ...b })),
   defaultTab: 'index' as DefaultTab,
-  keepScreenOnReturn: false,
   libraryShowsPlaylists: false,
   librarySort: 'recent' as LibrarySort,
   libraryLayout: 'list' as ListLayout,
