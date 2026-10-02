@@ -24,6 +24,7 @@ Releases before 0.2.1 are only listed on the
 ### Fixed
 
 - A fragmented M4A plays from the start again instead of stopping after two seconds, which the seeking fix in 0.7.12 had broken (#242).
+- Offline, songs that are not on the phone show greyed out again in song lists, which they had stopped doing in 0.7.6.
 - Changes made offline on one profile are no longer sent to another profile's account when you switch between them.
 - Listens made offline are no longer scrobbled twice when the app goes back online twice at once.
 - Switching profile right after browsing no longer leaves the previous profile's albums and playlists in the new one's offline library.
