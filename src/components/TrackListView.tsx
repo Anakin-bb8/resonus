@@ -653,8 +653,22 @@ export function TrackListView({
           <Animated.View
             style={[
               StyleSheet.absoluteFill,
-              // And follows the scroll 1:1, natively.
-              { transform: [{ translateY: Animated.multiply(scrollY, -1) }] },
+              // And follows the scroll 1:1, natively — but never below zero:
+              // an over-scroll drags `scrollY` negative, and the gradient
+              // moving down with it would uncover the page's own colour where
+              // the accent's band sits. Held at the top, the bounce reveals
+              // the accent instead of the background.
+              {
+                transform: [
+                  {
+                    translateY: scrollY.interpolate({
+                      inputRange: [-1e7, 0, 1e7],
+                      outputRange: [0, 0, -1e7],
+                      extrapolate: 'clamp',
+                    }),
+                  },
+                ],
+              },
             ]}
           >
             {/* Color band above the gradient: when the search bar is revealed,
@@ -1227,6 +1241,15 @@ const styles = themed((colors) => ({
   coverCenter: {
     alignItems: 'center',
     marginBottom: spacing.lg,
+    // The big cover sits on the page rather than being printed on it: a soft
+    // shadow under it and to the sides, less over the top. The offset is what
+    // puts the weight at the bottom, and the radius what softens it — one
+    // shadow, both edges handled. It fades out with the cover it belongs to.
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.45,
+    shadowRadius: 16,
+    elevation: 8,
   },
   title: {
     color: colors.text,
