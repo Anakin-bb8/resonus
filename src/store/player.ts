@@ -57,7 +57,7 @@ import { favoriteLabel, favoriteState, onFavoritesChange, toggleFavorite } from 
 import type { Remap } from '@/lib/navidromeRemap';
 import { remapSong } from '@/lib/navidromeRemap';
 import { noteOwnReport } from '@/lib/ownReports';
-import { beat, bump, timed } from '@/lib/perfLog';
+import { beat, bump, note, timed } from '@/lib/perfLog';
 import { queryClient } from '@/lib/query';
 import { primaryUrl } from '@/lib/serverUrls';
 import { getItem, setItem } from '@/lib/storage';
@@ -489,6 +489,16 @@ let transcodeOffsetSupported: boolean | null = null;
  * serves the cached transcode, with length.
  */
 let sourceHasLength: boolean | null = null;
+
+/** Where a queue with no list behind it came from, for the diagnostics report. */
+let queueOrigin: 'server queue' | 'saved queue' | null = null;
+
+/** Where the queue came from, as far as the state says, for the report. */
+function originOf(st: { radioMode: boolean; sourceHref: string | null; source: string | null }): string {
+  if (st.radioMode) return 'mix';
+  if (st.sourceHref) return st.sourceHref.split('/')[1] || 'home';
+  return queueOrigin ?? (st.source ? 'list' : 'no list');
+}
 
 /** Is this song being transcoded (the server generates it on the fly)? */
 function isTranscoded(song: Song): boolean {
@@ -927,6 +937,14 @@ async function loadIndex(index: number, autoplay: boolean): Promise<boolean> {
   if (token !== loadToken) return true;
   const song = usePlayerStore.getState().queue[index];
   if (!song) return false;
+  // A song with no duration draws 0:00 and every seek on the bar lands on zero.
+  // The keys say which code built the song object, which is the open question.
+  if (!song.duration && !song.url) {
+    bump('player · song with no duration');
+    note(
+      `song with no duration: ${song.id} · from ${originOf(usePlayerStore.getState())} · keys ${Object.keys(song).sort().join(',')}`,
+    );
+  }
   const p = ensurePlayer(activeIdx);
   // The player may have just been created, so the reset above had nothing to
   // reach: this source starts at the beginning either way.
@@ -943,6 +961,7 @@ async function loadIndex(index: number, autoplay: boolean): Promise<boolean> {
     // outside: the same toast over a song that does not start. A report of one
     // is unanswerable without knowing which it was (see `onPlaybackError`).
     bump(`player · could not install the source (${errorTag(String(e))})`);
+    note(`could not install the source: ${errorTag(String(e))} · ${song.id}`);
     useToast.getState().show(tg("Couldn't play the song"));
     return false;
   }
@@ -2456,6 +2475,9 @@ function onPlaybackError(message: string, wasPlaying: boolean): void {
     errorTrackId = song.id;
     errorAttempts = 0;
   }
+  note(
+    `playback error: ${errorTag(message)} · ${song.id} · ${localSourceFor(song) ? 'file' : 'stream'} · attempt ${errorAttempts + 1}`,
+  );
   if (errorAttempts >= MAX_ERROR_ATTEMPTS) {
     bump('player · gave up on the track');
     usePlayerStore.setState({ isPlaying: false, isBuffering: false });
@@ -2551,7 +2573,15 @@ function onStatus(status: AudioStatus) {
     intendPlay && !status.didJustFinish && (status.isBuffering || !status.isLoaded);
   // Only once loaded: while buffering the duration is still unknown and would
   // pass for a stream generated on the fly (see `sourceHasLength`).
-  if (status.isLoaded) sourceHasLength = (status.duration ?? 0) > 0;
+  if (status.isLoaded) {
+    const hasLength = (status.duration ?? 0) > 0;
+    const song = currentSong(usePlayerStore.getState());
+    if (sourceHasLength === null && !hasLength && song && !song.url && !localSourceFor(song)) {
+      bump('player · stream with no length');
+      note(`stream with no length: ${song.id}${isTranscoded(song) ? ' · transcoding asked' : ''}`);
+    }
+    sourceHasLength = hasLength;
+  }
   // With a stream re-requested with timeOffset, the native player counts from 0:
   // the real position is the offset plus its time.
   let positionSec = streamOffsetSec + (status.currentTime ?? 0);
@@ -3524,6 +3554,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       radioMode: get().radioMode,
       radioSeed: get().radioSeed,
     };
+    queueOrigin = null;
     set({
       queue: queued,
       index: at,
@@ -4142,6 +4173,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     // `playedHere`). Otherwise adopting a queue and putting the phone away
     // wrote it straight back, stamped with our name.
     clearPlayedHere();
+    queueOrigin = 'server queue';
     set({
       queue: songs,
       index,
@@ -4204,6 +4236,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         ? Math.max(0, saved.positionSec)
         : 0;
     attachAppState();
+    queueOrigin = 'saved queue';
     set({
       queue: saved.queue,
       index,

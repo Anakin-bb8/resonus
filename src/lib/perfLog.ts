@@ -264,6 +264,30 @@ export function bump(tag: string, by = 1): void {
   counts.set(tag, (counts.get(tag) ?? 0) + by);
 }
 
+/**
+ * The last few things that went wrong, each with its own line.
+ *
+ * Kept whatever the switch says, unlike everything else here: they are rare,
+ * so keeping them costs nothing, and they are what a bug report needs and what
+ * nobody had turned measuring on for before it happened. In memory only.
+ */
+const MAX_EVENTS = 30;
+const events: { at: number; text: string }[] = [];
+
+export function note(text: string): void {
+  events.push({ at: Date.now(), text });
+  if (events.length > MAX_EVENTS) events.shift();
+}
+
+/** Oldest first, as they happened. */
+export function perfEvents(): { at: number; text: string }[] {
+  return [...events];
+}
+
+export function clearPerfEvents(): void {
+  events.length = 0;
+}
+
 // ── What went out over the network ──────────────────────────────────────────
 // `ops` already times every request, but it ranks by total time and keeps the
 // top twenty, which is the wrong end of the telescope for a phone whose

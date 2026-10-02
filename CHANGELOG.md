@@ -9,6 +9,10 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Added
+
+- Settings > About > Share diagnostic report hands over your setup and the last playback problems as text, to paste into a bug report, without turning anything on first.
+
 ### Changed
 
 - Coming back to the app always leaves it on the screen you left, however long it was away, so the Keep where you were switch is gone (#225).
