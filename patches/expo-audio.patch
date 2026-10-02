@@ -1813,7 +1813,7 @@ diff --git a/build/Audio.types.d.ts b/build/Audio.types.d.ts
 index 25604783649fe9b64f6655172f08471a5efcbf45..9433f680d8547608077385ae4c343f6a6993542f 100644
 --- a/build/Audio.types.d.ts
 +++ b/build/Audio.types.d.ts
-@@ -34,6 +34,27 @@ export type AudioSource = string | number | null | {
+@@ -34,6 +34,28 @@ export type AudioSource = string | number | null | {
       * Useful for showing track names in a queue or playlist UI.
       */
      name?: string;
@@ -1821,7 +1821,8 @@ index 25604783649fe9b64f6655172f08471a5efcbf45..9433f680d8547608077385ae4c343f6a
 +     * What this track is, for the media session (Bluetooth, Android Auto, the
 +     * system's own controls). Their metadata comes from the item, not from
 +     * `setActiveForLockScreen`, and the fields given here win over the tags
-+     * carried by the stream — which a transcode arrives without. Android only.
++     * carried by the stream — which a transcode arrives without. Android reads
++     * it for the session; iOS takes the cover from it, fetched ahead of time.
 +     */
 +    metadata?: AudioMetadata;
 +    /**
@@ -1841,7 +1842,7 @@ index 25604783649fe9b64f6655172f08471a5efcbf45..9433f680d8547608077385ae4c343f6a
  };
  /**
   * Options for configuring audio player behavior.
-@@ -618,6 +639,15 @@ export type AudioMetadata = {
+@@ -618,6 +640,15 @@ export type AudioMetadata = {
      artist?: string;
      albumTitle?: string;
      artworkUrl?: string;
@@ -2558,6 +2559,115 @@ index 0000000000000000000000000000000000000000..b7329bcb0466efb330dd3afa01b0c4b5
 +}
 +
 +#endif
+diff --git a/ios/ArtworkPreloader.swift b/ios/ArtworkPreloader.swift
+new file mode 100644
+index 0000000000000000000000000000000000000000..e10b28deb11a023d1956b93b89e22f29057c1003
+--- /dev/null
++++ b/ios/ArtworkPreloader.swift
+@@ -0,0 +1,103 @@
++import Foundation
++
++/// The lock screen's cover, fetched ahead of the track it belongs to: a
++/// download, and an encode behind it when the cover is animated, both better
++/// spent while the previous track still plays. `AudioPlayer.setNextSource`
++/// warms the track queued behind the current one — the same idea as Android's
++/// `PreloadingBitmapLoader` — and `MediaController.loadArtworkFromURL` asks
++/// here first, so a cover is fetched once for every caller that wants it, and
++/// the second ask of one has nothing left to wait for.
++final class ArtworkPreloader {
++  static let shared = ArtworkPreloader()
++
++  /// A cover, fetched: its bytes, and the clips cut from them for the lock
++  /// screen (nil when the cover does not animate, or the system is too old
++  /// to play an animated one).
++  struct Ready {
++    let data: Data
++    let square: AnyObject?
++    let tall: AnyObject?
++  }
++
++  private let lock = NSLock()
++  /// What was fetched, last write last, bounded by `limit`: a cover's bytes
++  /// run to a few megabytes when it animates, so only the handful that a skip
++  /// or a media reset asks for again is worth keeping.
++  private var stored: [URL: Ready] = [:]
++  private var order: [URL] = []
++  private var waiters: [URL: [(Ready?) -> Void]] = [:]
++  private var inflight: Set<URL> = []
++  private let delivery = DispatchQueue(label: "expo.modules.audio.artwork-preloader")
++  private let limit = 6
++
++  /// Nothing wants an answer: the point is only to have the cover later.
++  func warm(_ url: URL?) {
++    guard let url else { return }
++    fetch(url) { _ in }
++  }
++
++  /// The cover for `url`: here already, or on its way, or the fetch this call
++  /// starts. `completion` runs off the main thread, as the URL session's queue
++  /// did before it — the caller hops after it.
++  func fetch(_ url: URL, completion: @escaping (Ready?) -> Void) {
++    lock.lock()
++    if let ready = stored[url] {
++      lock.unlock()
++      delivery.async { completion(ready) }
++      return
++    }
++    waiters[url, default: []].append(completion)
++    if inflight.contains(url) {
++      lock.unlock()
++      return
++    }
++    inflight.insert(url)
++    lock.unlock()
++    start(url)
++  }
++
++  private func start(_ url: URL) {
++    URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
++      guard let self else { return }
++      guard let data, error == nil else {
++        self.done(url, nil)
++        return
++      }
++      var square: AnyObject?
++      var tall: AnyObject?
++#if compiler(>=6.2)
++      if #available(iOS 26.0, tvOS 26.0, *) {
++        let clips = AnimatedArtwork.make(url: url, data: data)
++        square = clips.square
++        tall = clips.tall
++        // The encode starts now, while the track these clips belong to is
++        // still the next one: the file it writes is the lock screen's own
++        // cache, so a clip that lands before the move is there the moment
++        // the system asks for it.
++        (square as? AnimatedArtwork)?.whenReady {}
++        (tall as? AnimatedArtwork)?.whenReady {}
++      }
++#endif
++      self.done(url, Ready(data: data, square: square, tall: tall))
++    }.resume()
++  }
++
++  private func done(_ url: URL, _ ready: Ready?) {
++    lock.lock()
++    inflight.remove(url)
++    let pending = waiters.removeValue(forKey: url) ?? []
++    if let ready {
++      stored[url] = ready
++      order.removeAll { $0 == url }
++      order.append(url)
++      while order.count > limit, let oldest = order.first {
++        order.removeFirst()
++        stored.removeValue(forKey: oldest)
++      }
++    }
++    lock.unlock()
++    delivery.async {
++      pending.forEach { $0(ready) }
++    }
++  }
++}
 diff --git a/ios/AudioModule.swift b/ios/AudioModule.swift
 index d26560627c2dfa97370440ad28304617f3f9f0f7..5ba926fe07d5ca41bde8c56bd8e275b8f4ad8577 100644
 --- a/ios/AudioModule.swift
@@ -2749,7 +2859,7 @@ index 074294321e872bb53c0b2d41044dac3c612f14f0..04ff64285be8f38578f1a9f86b4c2e69
      if let queuePlayer = ref as? AVQueuePlayer {
        queuePlayer.removeAllItems()
        if let item {
-@@ -429,12 +496,60 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+@@ -429,12 +496,67 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
      queuePlayer.insert(nextItem, after: currentItem)
    }
  
@@ -2783,6 +2893,13 @@ index 074294321e872bb53c0b2d41044dac3c612f14f0..04ff64285be8f38578f1a9f86b4c2e69
 +    gaplessItem = item
 +    gaplessSource = source
 +    ref.actionAtItemEnd = endAction
++    // Its cover too, so the lock screen has it the moment the track starts:
++    // a download, and an encode behind it when the cover animates, both
++    // better spent now — while the track it belongs to is still the NEXT
++    // one — than in the first seconds of the track itself. `MediaController`
++    // reads what was fetched from the preloader, the same idea as Android's
++    // `PreloadingBitmapLoader` (#139).
++    ArtworkPreloader.shared.warm(source.metadata?.artworkUrl)
 +  }
 +
 +  /** Drops the track queued behind the current one, if any. */
@@ -2811,7 +2928,7 @@ index 074294321e872bb53c0b2d41044dac3c612f14f0..04ff64285be8f38578f1a9f86b4c2e69
        queuePlayer.remove(item)
      }
    }
-@@ -459,7 +574,21 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+@@ -459,7 +581,21 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
          return
        }
  
@@ -2859,13 +2976,19 @@ diff --git a/ios/AudioSource.swift b/ios/AudioSource.swift
 index 0c8c2fede4b079f6d71217bafe07b5de55438821..fc6b758c482b020b24ef8485dbf506e0ced8c10a 100644
 --- a/ios/AudioSource.swift
 +++ b/ios/AudioSource.swift
-@@ -10,4 +10,7 @@ struct AudioSource: Record {
+@@ -10,4 +10,13 @@ struct AudioSource: Record {
  
    @Field
    var name: String?
 +
 +  @Field
 +  var preferPreciseTiming: Bool?
++
++  @Field
++  // The cover travels with the track so it can be fetched while the previous
++  // one is still playing (`setNextSource` warms it, `ArtworkPreloader` keeps
++  // it) — the lock screen then has it the moment this track starts.
++  var metadata: Metadata?
  }
 diff --git a/ios/AudioUtils.swift b/ios/AudioUtils.swift
 index 79c7c0b256581a768c42a0291bf84bdff4c4b142..ca13e59c53a7f9a3a5fc49d94b266c621201983a 100644
@@ -3028,7 +3151,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..d5e4df5eaf76cd03e1a025a579d53db7
    }
  
    private func clearNowPlayingInfoOnMain() {
-@@ -204,34 +267,100 @@ class MediaController {
+@@ -204,34 +267,82 @@ class MediaController {
    private func resetArtworkState() {
      currentArtworkUrl = nil
      cachedArtwork = nil
@@ -3038,6 +3161,28 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..d5e4df5eaf76cd03e1a025a579d53db7
    }
  
 -  private func loadArtworkFromURL(url: URL, completion: @escaping (MPMediaItemArtwork?) -> Void) {
+-    URLSession.shared.dataTask(with: url) { data, _, error in
+-      if error != nil {
+-        self.performOnMain {
+-          completion(nil)
+-        }
+-        return
+-      }
+-
+-      guard let data, let image = UIImage(data: data) else {
+-        self.performOnMain {
+-          completion(nil)
+-        }
+-        return
+-      }
+-
+-      let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+-      self.performOnMain {
+-        completion(artwork)
+-      }
+-    }
+-    .resume()
+-  }
 +  private struct LoadedArtwork {
 +    let still: MPMediaItemArtwork?
 +    let square: AnyObject?
@@ -3045,47 +3190,25 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..d5e4df5eaf76cd03e1a025a579d53db7
 +  }
 +
 +  private func loadArtworkFromURL(url: URL, completion: @escaping (LoadedArtwork) -> Void) {
-     URLSession.shared.dataTask(with: url) { data, _, error in
-       if error != nil {
-         self.performOnMain {
--          completion(nil)
++    // Through the preloader, which `setNextSource` warms while the track it
++    // belongs to is still the NEXT one: the bytes, and the clip's encode
++    // behind them, are usually done before the lock screen asks, and a cover
++    // it has never seen is fetched once for every caller that wants it,
++    // instead of once each.
++    ArtworkPreloader.shared.fetch(url) { ready in
++      guard let ready, let image = UIImage(data: ready.data) else {
++        self.performOnMain {
 +          completion(LoadedArtwork(still: nil, square: nil, tall: nil))
-         }
-         return
-       }
- 
-       guard let data, let image = UIImage(data: data) else {
-         self.performOnMain {
--          completion(nil)
-+          completion(LoadedArtwork(still: nil, square: nil, tall: nil))
-         }
-         return
-       }
- 
--      let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
-+      let still = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
-+      let square: AnyObject?
-+      let tall: AnyObject?
-+#if compiler(>=6.2)
-+      if #available(iOS 26.0, tvOS 26.0, *) {
-+        let artwork = AnimatedArtwork.make(url: url, data: data)
-+        square = artwork.square
-+        tall = artwork.tall
-+      } else {
-+        square = nil
-+        tall = nil
++        }
++        return
 +      }
-+#else
-+      square = nil
-+      tall = nil
-+#endif
-       self.performOnMain {
--        completion(artwork)
-+        completion(LoadedArtwork(still: still, square: square, tall: tall))
-       }
-     }
-     .resume()
-   }
++
++      let still = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
++      self.performOnMain {
++        completion(LoadedArtwork(still: still, square: ready.square, tall: ready.tall))
++      }
++    }
++  }
  
 +  // Both variants are published: the system drops the key it does not support
 +  // on its own, and gating on `supportedAnimatedArtworkKeys` is what kept the
@@ -3134,7 +3257,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..d5e4df5eaf76cd03e1a025a579d53db7
      remoteCommandCenter.playCommand.addTarget { [weak self] _ in
        guard let player = self?.activePlayer else {
          return .commandFailed
-@@ -270,7 +399,7 @@ class MediaController {
+@@ -270,7 +381,7 @@ class MediaController {
        }
  
        let seekTime = CMTime(seconds: event.positionTime, preferredTimescale: 1)
@@ -3143,7 +3266,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..d5e4df5eaf76cd03e1a025a579d53db7
  
        return .success
      }
-@@ -303,12 +432,34 @@ class MediaController {
+@@ -303,12 +414,34 @@ class MediaController {
        return .success
      }
  
@@ -3178,7 +3301,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..d5e4df5eaf76cd03e1a025a579d53db7
    }
  
    private func disableRemoteCommands() {
-@@ -318,6 +469,8 @@ class MediaController {
+@@ -318,6 +451,8 @@ class MediaController {
      remoteCommandCenter.changePlaybackPositionCommand.isEnabled = false
      remoteCommandCenter.skipForwardCommand.isEnabled = false
      remoteCommandCenter.skipBackwardCommand.isEnabled = false
