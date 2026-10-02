@@ -48,6 +48,14 @@ struct TrackWidget: Widget {
         StaticConfiguration(kind: "ResonusNowPlaying", provider: TrackProvider()) { entry in
             TrackWidgetView(entry: entry)
         }
+        // iOS 17 puts a margin around widget content, and the progress bar
+        // landed inside it: floating above the bottom edge and short of both
+        // sides, however it was pinned from in here, because ignoresSafeArea
+        // cannot cross a margin the system applies around the whole content.
+        // Off, the content runs to the widget's own bounds and the bar sits
+        // on the bottom, all the way across, the way the mini player's does.
+        // The modifier does nothing before iOS 17, so no version check.
+        .contentMarginsDisabled()
         .configurationDisplayName("Now playing")
         .description("The track you played last, and how far into it you are.")
         .supportedFamilies([.systemSmall])
@@ -81,13 +89,6 @@ struct TrackWidgetView: View {
         let tint = WidgetStore.background(state, artwork: cover)
         if #available(iOS 17.0, *) {
             canvas
-                // iOS 17 puts a margin around widget content, and the progress
-                // bar landed inside it: floating above the bottom edge and
-                // short of both sides, however it was pinned from in here.
-                // Off, the content runs to the widget's own bounds and the bar
-                // sits on the bottom, all the way across, the way the mini
-                // player's does. The padding the layout asks for is its own.
-                .contentMarginsDisabled()
                 .containerBackground(for: .widget) { tint }
         } else {
             canvas
