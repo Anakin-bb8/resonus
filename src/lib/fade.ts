@@ -21,34 +21,24 @@ export interface Fade {
 }
 
 /** `until` is where the second colour is fully arrived: before the end, the
- *  rest of the run is the page's own colour, held flat.
- *
- *  `alpha` is what the second colour arrives at: 1 (the default) is the
- *  colour itself, opaque. Under 1 the run fades its opacity along the same
- *  curve, so the tail of the gradient lets what is underneath it through —
- *  the top bar's tail, with the header's colour still behind it, reads as a
- *  shadow of it rather than as a cut line. */
+ *  rest of the run is the page's own colour, held flat. */
 export function easedFade(
   from: string,
   to: string,
-  { until = 1, alpha = 1 }: { until?: number; alpha?: number } = {},
+  { until = 1 }: { until?: number } = {},
 ): Fade {
   const end = Math.min(Math.max(until, HOLD + 0.05), 1);
   const a = hexChannels(from);
   const b = hexChannels(to);
   if (!a || !b) return { colors: [from, from, to], locations: [0, HOLD, end] };
 
-  const tail = Math.min(Math.max(alpha, 0), 1);
   const colors: string[] = [from, from];
   const locations: number[] = [0, HOLD];
   for (let i = 1; i <= STEPS; i++) {
     const u = i / STEPS;
     const k = u * u * (3 - 2 * u);
     const mix = a.map((c, j) => Math.round(c + (b[j] - c) * k));
-    const opacity = Math.round((1 + (tail - 1) * k) * 1000) / 1000;
-    colors.push(
-      tail === 1 ? `rgb(${mix.join(', ')})` : `rgba(${mix.join(', ')}, ${opacity})`,
-    );
+    colors.push(`rgb(${mix.join(', ')})`);
     locations.push(HOLD + (end - HOLD) * u);
   }
 

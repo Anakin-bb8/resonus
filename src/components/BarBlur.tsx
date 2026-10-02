@@ -73,14 +73,11 @@ export function BarBlur({ tint, alpha }: { tint?: string; alpha?: number }) {
 
 /**
  * The background of a screen's top bar, which fades in as the header scrolls
- * away: the header's colour running out to the page's own, arriving there
- * translucent rather than flat — the header's colour is still under the bar
- * while the header is still up, and reading through the tail it makes a soft
- * shadow of it instead of the cut line a flat edge draws.
- *
- * Not flat. The lower edge is where the bar meets the list scrolling under it,
- * and a flat colour draws that edge as a cut line; the same colour arriving
- * there already thin leaves no line to see.
+ * away: the header's colour running out to the page's own, opaque and arrived
+ * high — two thirds of the way down — so the bar never thins over the list
+ * scrolling under it. The blend is eased: smoothstep meets the flat run with
+ * no slope left, and the run itself is many stops rather than a straight one,
+ * so neither end of it draws a line to see.
  *
  * Not blurred. A bar inside a screen can only blur a target of its own around
  * that screen's list, and a screen wrapped in a `BlurTargetView` stops being
@@ -103,12 +100,12 @@ export function TopBarBackground({
   return (
     <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity }]}>
       {gradient ? (
-        // The page's own colour comes in all the way to the bar's lower edge,
-        // and comes in thin: what is behind the bar shows through the tail.
-        // Eased over stops rather than a straight run — and now more of
-        // them — so the run itself has no banding to look at.
+        // The page's own colour arrives opaque, two thirds of the way down:
+        // high enough that the tail of the run is flat long before the bar's
+        // lower edge, eased over stops rather than a straight run so the run
+        // itself has no banding to look at.
         <LinearGradient
-          {...easedFade(color, background, { until: 1, alpha: 0.85 })}
+          {...easedFade(color, background, { until: 0.65 })}
           style={StyleSheet.absoluteFill}
         />
       ) : (
