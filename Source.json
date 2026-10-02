@@ -29,6 +29,14 @@
             ],
             "versions": [
                 {
+                    "version": "0.7.13",
+                    "date": "2026-10-02T21:48:16+02:00",
+                    "size": 19970474,
+                    "downloadURL": "https://github.com/juananzzz/resonus/releases/download/v0.7.13/resonus-v0.7.13.ipa",
+                    "localizedDescription": "Added\nSettings > About > Share diagnostic report hands over your setup and the last playback problems as text, to paste into a bug report, without turning anything on first.\nWith Measure performance on, the diagnostics report counts late frames on each screen and how often the album, artist and song rows are drawn.\nThe remixer of a song is one more artist you can go to from the player and the song menu, and their page lists the remixes under Appears on (#215).\nChanged\nSettings drop the descriptions that only repeated the name of the option.\nSettings > Appearance shows the chosen theme mode under Theme, the way it shows the language under Language.\nComing back to the app always leaves it on the screen you left, however long it was away, so the Keep where you were switch is gone (#225).\nFixed\nA fragmented M4A plays from the start again instead of stopping after two seconds, which the seeking fix in 0.7.12 had broken (#242).\nOffline, songs that are not on the phone show greyed out again in song lists, which they had stopped doing in 0.7.6.\nChanges made offline on one profile are no longer sent to another profile's account when you switch between them.\nListens made offline are no longer scrobbled twice when the app goes back online twice at once.\nSwitching profile right after browsing no longer leaves the previous profile's albums and playlists in the new one's offline library.\nSkipping or picking a song while casting no longer leaves the speaker on the previous song when it was still busy with the queue.\nChanging track while casting retries after stopping the renderer, for TVs that refuse a new song while one is playing (#246).",
+                    "minOSVersion": "16.4"
+                },
+                {
                     "version": "0.7.12",
                     "date": "2026-10-01T20:27:29+02:00",
                     "size": 19970303,
