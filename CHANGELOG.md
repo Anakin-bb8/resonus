@@ -12,6 +12,7 @@ Releases before 0.2.1 are only listed on the
 ### Added
 
 - Settings > About > Share diagnostic report hands over your setup and the last playback problems as text, to paste into a bug report, without turning anything on first.
+- The remixer of a song is one more artist you can go to from the player and the song menu, and their page lists the remixes under Appears on (#215).
 
 ### Changed
 

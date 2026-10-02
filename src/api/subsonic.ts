@@ -96,6 +96,9 @@ export interface Song {
   artists?: { id: string; name: string }[];
   /** Album artist list (OpenSubsonic extension; Navidrome sends it). */
   albumArtists?: { id: string; name: string }[];
+  /** Everyone else credited on the song, by role: composer, remixer…
+   *  (OpenSubsonic; Navidrome sends it). */
+  contributors?: { role: string; subRole?: string; artist: { id: string; name: string } }[];
   coverArt?: string;
   duration?: number;
   track?: number;
@@ -1052,6 +1055,12 @@ export async function getArtist(
  * matters: some servers list participation albums inside `getArtist` too, so
  * the screen can't just assume "already in the discography = own album".
  */
+/** Navidrome's `getArtist` leaves out an artist who only remixed, so this is
+ *  the one place their remixes show up (#215). */
+function isRemixer(s: Song, artistId: string): boolean {
+  return !!s.contributors?.some((c) => c.role === 'remixer' && c.artist.id === artistId);
+}
+
 export async function getAppearsOn(
   auth: SubsonicAuth,
   artistId: string,
@@ -1068,9 +1077,9 @@ export async function getAppearsOn(
   const byAlbum = new Map<string, GuestAlbum>();
   for (const s of res.searchResult3?.song ?? []) {
     if (!s.albumId || byAlbum.has(s.albumId)) continue;
-    const participates = s.artists
-      ? s.artists.some((a) => a.id === artistId)
-      : s.artistId === artistId;
+    const participates =
+      (s.artists ? s.artists.some((a) => a.id === artistId) : s.artistId === artistId) ||
+      isRemixer(s, artistId);
     if (!participates) continue;
     if (s.albumArtists?.some((a) => a.id === artistId)) continue;
     byAlbum.set(s.albumId, {

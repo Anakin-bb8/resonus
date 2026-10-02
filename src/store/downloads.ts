@@ -565,6 +565,8 @@ function toLocalSong(
     artistId: normKey(song.artist || UNKNOWN_ARTIST),
     // Server ids don't work offline: we re-peg each artist by name.
     artists: song.artists?.map((a) => ({ id: normKey(a.name), name: a.name })),
+    // A remixer has no page offline: nothing downloaded is theirs.
+    contributors: undefined,
     // Its own picture when this phone has it, the album's otherwise, which is
     // what every track used to get and what the ones with no cover of their
     // own still get (#214).
