@@ -1874,10 +1874,10 @@ index cfd92ad0ff5765254c4e6db974fe44bce34aad06..d16fb49bb630dd95f26abfb6260ade9c
  //# sourceMappingURL=AudioConstants.d.ts.map
 \ No newline at end of file
 diff --git a/build/AudioModule.types.d.ts b/build/AudioModule.types.d.ts
-index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..04cbb9d83deeadfc145d8c329b6d39ed0cfddfdc 100644
+index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..f0ef7c9b823ce5c7154f9f1af88fe1f11ff21763 100644
 --- a/build/AudioModule.types.d.ts
 +++ b/build/AudioModule.types.d.ts
-@@ -16,6 +16,13 @@ export declare class NativeAudioModule extends NativeModule {
+@@ -16,6 +16,18 @@ export declare class NativeAudioModule extends NativeModule {
      clearPreloadedSource(source: AudioSource): Promise<void>;
      clearAllPreloadedSources(): Promise<void>;
      getPreloadedSources(): Promise<string[]>;
@@ -1888,10 +1888,15 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..04cbb9d83deeadfc145d8c329b6d39ed
 +     * @param url The cover's URL, as metadata carries it.
 +     */
 +    warmArtwork(url: string): void;
++    /**
++     * Sets the fps animated covers encode at from here on (30 by default).
++     * @param fps The frame rate, 30 or 60.
++     */
++    setArtworkFps(fps: number): void;
      readonly AudioPlayer: typeof AudioPlayer;
      readonly AudioRecorder: typeof AudioRecorder;
      readonly AudioPlaylist: typeof AudioPlaylist;
-@@ -31,6 +38,11 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
+@@ -31,6 +43,11 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
       * Unique identifier for the player object.
       */
      id: string;
@@ -1903,7 +1908,7 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..04cbb9d83deeadfc145d8c329b6d39ed
      /**
       * Boolean value indicating whether the player is currently playing.
       */
-@@ -141,6 +153,14 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
+@@ -141,6 +158,14 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
       * Replaces the current audio source with a new one.
       */
      replace(source: AudioSource): void;
@@ -1918,7 +1923,7 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..04cbb9d83deeadfc145d8c329b6d39ed
      /**
       * Seeks the playback by the given number of seconds.
       * @param seconds The number of seconds to seek by.
-@@ -183,6 +203,24 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
+@@ -183,6 +208,24 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
       * This will clear the lock screen's now playing info.
       */
      clearLockScreenControls(): void;
@@ -1943,7 +1948,7 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..04cbb9d83deeadfc145d8c329b6d39ed
      /**
       * Remove the player from memory to free up resources.
       */
-@@ -222,6 +260,29 @@ export type AudioEvents = {
+@@ -222,6 +265,29 @@ export type AudioEvents = {
      playbackStatusUpdate(status: AudioStatus): void;
      /** Fired when audio sampling is enabled and new sample data is available. */
      audioSampleUpdate(data: AudioSample): void;
@@ -1975,10 +1980,10 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..04cbb9d83deeadfc145d8c329b6d39ed
      /**
 diff --git a/ios/AnimatedArtwork.swift b/ios/AnimatedArtwork.swift
 new file mode 100644
-index 0000000000000000000000000000000000000000..b7329bcb0466efb330dd3afa01b0c4b55fa0f23a
+index 0000000000000000000000000000000000000000..7e949bf2fb325d00f0ae39ce158d5365de15228a
 --- /dev/null
 +++ b/ios/AnimatedArtwork.swift
-@@ -0,0 +1,594 @@
+@@ -0,0 +1,702 @@
 +import AVFoundation
 +import CoreGraphics
 +import CoreImage
@@ -1998,9 +2003,25 @@ index 0000000000000000000000000000000000000000..b7329bcb0466efb330dd3afa01b0c4b5
 +  // 900 frames is 30 fps across the whole 29 seconds, so this cap only bites
 +  // on content that could not have been carried at full rate anyway.
 +  private static let maxFrames = 900
-+  // The system may not display artwork above 60 fps (Apple, "Providing
-+  // animated artwork for media items"), so anything faster is sampled down.
-+  private static let maxPlaybackRate = 60.0
++  // The frame-rate ceiling, and the system's own limit above it (Apple,
++  // "Providing animated artwork for media items": not above 60 fps). The cap
++  // is 30 by default — half the frames to decode and to encode, for a cover
++  // that reads the same — and Settings rewrites it through
++  // `AudioModule.setArtworkFps`.
++  private static let rateLock = NSLock()
++  private static var rateCap = 30.0
++  static var maxPlaybackRate: Double {
++    get {
++      rateLock.lock()
++      defer { rateLock.unlock() }
++      return rateCap
++    }
++    set {
++      rateLock.lock()
++      defer { rateLock.unlock() }
++      rateCap = newValue
++    }
++  }
 +  // The system prefers a clip that is *less than* 30 seconds, so stop at 29.
 +  private static let maxDuration = 29.0
 +  private static let minFrameDelay = 1.0 / 60.0
@@ -2008,6 +2029,13 @@ index 0000000000000000000000000000000000000000..b7329bcb0466efb330dd3afa01b0c4b5
 +  private static let browserDelayFloor = 0.011
 +  private static let frameOptions = [kCGImageSourceShouldCache: false] as CFDictionary
 +  private static let blurContext = CIContext()
++  private static let deviceRGB = CGColorSpaceCreateDeviceRGB()
++
++  /// One encode per destination, shared by every instance holding the same
++  /// clip: an evicted and refetched cover joins the task already writing its
++  /// file instead of racing a second encoder at the same path.
++  private static let sharedTaskLock = NSLock()
++  private static var sharedTasks: [String: Task<URL?, Never>] = [:]
 +
 +  private enum Ratio {
 +    case square
@@ -2059,16 +2087,20 @@ index 0000000000000000000000000000000000000000..b7329bcb0466efb330dd3afa01b0c4b5
 +  /// answered after the wait left the lock screen on the preview frame — the
 +  /// clip was ready all along, nothing told the system to ask again.
 +  func whenReady(_ onReady: @escaping () -> Void) {
-+    Task.detached(priority: .utility) {
++    // `.userInitiated`, not `.utility`: this runs when the lock screen is
++    // waiting for the clip, often with the phone locked — the one moment
++    // `.utility` gets almost no CPU.
++    Task.detached(priority: .userInitiated) {
 +      _ = await self.videoURL()
 +      onReady()
 +    }
 +  }
 +
-+  /// Both variants the system can ask for, as the clips they are: the square
-+  /// one needs a square source, the tall one takes any cover — it is the key
-+  /// the iPhone lock screen draws full screen, and providing only `1x1` left
-+  /// that screen with the static artwork.
++  /// The clips the system can ask for: the tall one only. It is the key the
++  /// iPhone lock screen draws full screen, and providing only `1x1` left that
++  /// screen with the static artwork — the square variant that used to be
++  /// built beside it is gone now, which halves the encode and leaves the
++  /// system to show its static cover wherever it would have asked for `1x1`.
 +  static func make(url: URL, data: Data) -> (square: AnimatedArtwork?, tall: AnimatedArtwork?) {
 +    guard let source = CGImageSourceCreateWithData(data as CFData, nil),
 +          CGImageSourceGetCount(source) > 1,
@@ -2085,14 +2117,8 @@ index 0000000000000000000000000000000000000000..b7329bcb0466efb330dd3afa01b0c4b5
 +    }
 +    let sourceSize = CGSize(width: width, height: height)
 +    let id = identifier(for: url)
-+    let square: AnimatedArtwork?
-+    if abs(width - height) * 100 <= max(width, height) {
-+      square = variant(id: id, ratio: .square, sourceSize: sourceSize, frame: frame, url: url, data: data)
-+    } else {
-+      square = nil
-+    }
 +    let tall = variant(id: id, ratio: .tall, sourceSize: sourceSize, frame: frame, url: url, data: data)
-+    return (square: square, tall: tall)
++    return (square: nil, tall: tall)
 +  }
 +
 +  private static func variant(
@@ -2146,13 +2172,22 @@ index 0000000000000000000000000000000000000000..b7329bcb0466efb330dd3afa01b0c4b5
 +
 +  /// The preview is built with the variant's aspect ratio from the first
 +  /// frame: a preview that does not match the key makes the system drop the
-+  /// animated artwork and fall back to the static one.
++  /// animated artwork and fall back to the static one. It is composed the
++  /// same way the clip's frames are — same sized backdrop, same feather
++  /// mask — so the two cannot drift apart.
 +  private func previewFrame(_ frame: CGImage) -> UIImage {
 +    let size = canvas
 +    let format = UIGraphicsImageRendererFormat()
 +    format.scale = 1
-+    format.opaque = true
-+    let backdrop = ratio == .tall ? Self.blurred(frame) : nil
++    // Not opaque: the composition leans on alpha while it builds, and the
++    // backdrop underneath makes the result opaque anyway.
++    format.opaque = false
++    var backdrop: CGImage? = nil
++    var mask: CGImage? = nil
++    if ratio == .tall {
++      backdrop = Self.blurred(frame).flatMap { Self.sized($0, to: size) }
++      mask = Self.featherMask(size: Self.artRect(in: size).size)
++    }
 +    return UIGraphicsImageRenderer(size: size, format: format).image { renderer in
 +      let context = renderer.cgContext
 +      // UIKit contexts are flipped, so a CGImage drawn straight comes out
@@ -2161,75 +2196,118 @@ index 0000000000000000000000000000000000000000..b7329bcb0466efb330dd3afa01b0c4b5
 +      context.saveGState()
 +      context.translateBy(x: 0, y: size.height)
 +      context.scaleBy(x: 1, y: -1)
-+      draw(frame, in: context, canvas: size, backdrop: backdrop)
++      draw(frame, in: context, canvas: size, backdrop: backdrop, mask: mask)
 +      context.restoreGState()
 +    }
 +  }
 +
-+  private func draw(_ frame: CGImage, in context: CGContext, canvas: CGSize, backdrop: CGImage?) {
++  /// The square the cover sits in on the tall canvas, centred on it.
++  private static func artRect(in canvas: CGSize) -> CGRect {
++    let side = min(canvas.width, canvas.height)
++    return CGRect(x: 0, y: (canvas.height - side) / 2, width: side, height: side)
++  }
++
++  private func draw(
++    _ frame: CGImage,
++    in context: CGContext,
++    canvas: CGSize,
++    backdrop: CGImage?,
++    mask: CGImage?
++  ) {
 +    let bounds = CGRect(origin: .zero, size: canvas)
-+    context.setFillColor(red: 0, green: 0, blue: 0, alpha: 1)
-+    context.fill(bounds)
 +    context.interpolationQuality = .high
 +    guard ratio == .tall, let backdrop else {
++      context.setFillColor(red: 0, green: 0, blue: 0, alpha: 1)
++      context.fill(bounds)
 +      context.draw(frame, in: bounds)
 +      return
 +    }
-+    // The cover keeps its square shape over a blurred copy of itself, so the
-+    // tall canvas is filled without stretching the artwork.
-+    context.draw(backdrop, in: Self.aspectFill(CGSize(width: backdrop.width, height: backdrop.height), in: bounds))
-+    let side = min(canvas.width, canvas.height)
-+    let art = CGRect(x: 0, y: (canvas.height - side) / 2, width: side, height: side)
-+    Self.drawFeathered(frame, in: context, rect: art)
++    let art = Self.artRect(in: canvas)
++    guard let mask else {
++      // Only when the mask could not be built: the feather is the point of
++      // the composition, but a cover without it still reads.
++      context.setFillColor(red: 0, green: 0, blue: 0, alpha: 1)
++      context.fill(bounds)
++      context.draw(backdrop, in: bounds)
++      context.draw(frame, in: art)
++      return
++    }
++    // Composed in this one context with nothing allocated per frame: the
++    // cover in the art square, its alpha trimmed by the mask, the backdrop
++    // slipped underneath — which lands on backdrop * (1 - mask) + cover *
++    // mask, the feathered edges melting into the blur. The backdrop is
++    // already sized to the canvas, so every draw here is a blit.
++    context.clear(bounds)
++    context.draw(frame, in: art)
++    context.setBlendMode(.destinationIn)
++    context.draw(mask, in: art)
++    context.setBlendMode(.destinationOver)
++    context.draw(backdrop, in: bounds)
++    context.setBlendMode(.normal)
 +  }
 +
-+  /// Draws the cover with its top and bottom edges faded out, so it melts
-+  /// into the blurred backdrop instead of ending in a hard rectangle.
-+  private static func drawFeathered(_ frame: CGImage, in context: CGContext, rect: CGRect) {
-+    let width = Int(rect.width)
-+    let height = Int(rect.height)
-+    guard width > 4, height > 4,
-+          let offscreen = CGContext(
++  /// The backdrop at canvas size, aspect-filled: scaled once per clip here,
++  /// rather than a high-quality scale per frame of the encode.
++  private static func sized(_ image: CGImage, to canvas: CGSize) -> CGImage? {
++    let width = Int(canvas.width)
++    let height = Int(canvas.height)
++    guard width > 0, height > 0,
++          let context = CGContext(
 +            data: nil,
 +            width: width,
 +            height: height,
 +            bitsPerComponent: 8,
 +            bytesPerRow: 0,
-+            space: CGColorSpaceCreateDeviceRGB(),
++            space: deviceRGB,
 +            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
 +          )
 +    else {
-+      context.draw(frame, in: rect)
-+      return
++      return nil
 +    }
-+    offscreen.interpolationQuality = .high
-+    offscreen.draw(frame, in: CGRect(x: 0, y: 0, width: rect.width, height: rect.height))
++    context.interpolationQuality = .high
++    context.setFillColor(red: 0, green: 0, blue: 0, alpha: 1)
++    context.fill(CGRect(x: 0, y: 0, width: canvas.width, height: canvas.height))
++    let source = CGSize(width: image.width, height: image.height)
++    context.draw(image, in: aspectFill(source, in: CGRect(origin: .zero, size: canvas)))
++    return context.makeImage()
++  }
++
++  /// The feather itself: white, transparent at both edges and solid through
++  /// the middle — the same gradient `drawFeathered` used to build on every
++  /// single frame, now built once per clip.
++  private static func featherMask(size: CGSize) -> CGImage? {
++    let width = Int(size.width)
++    let height = Int(size.height)
++    guard width > 4, height > 4,
++          let context = CGContext(
++            data: nil,
++            width: width,
++            height: height,
++            bitsPerComponent: 8,
++            bytesPerRow: 0,
++            space: deviceRGB,
++            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
++          )
++    else {
++      return nil
++    }
 +    let colors = [
 +      UIColor.white.withAlphaComponent(0).cgColor,
 +      UIColor.white.cgColor,
 +      UIColor.white.cgColor,
 +      UIColor.white.withAlphaComponent(0).cgColor,
 +    ] as CFArray
-+    let featherLocations: [CGFloat] = [0, 0.16, 0.84, 1]
-+    if let gradient = CGGradient(
-+      colorsSpace: CGColorSpaceCreateDeviceRGB(),
-+      colors: colors,
-+      locations: featherLocations
-+    ) {
-+      offscreen.setBlendMode(.destinationIn)
-+      offscreen.drawLinearGradient(
-+        gradient,
-+        start: CGPoint(x: 0, y: 0),
-+        end: CGPoint(x: 0, y: rect.height),
-+        options: []
-+      )
-+      offscreen.setBlendMode(.normal)
++    let locations: [CGFloat] = [0, 0.16, 0.84, 1]
++    guard let gradient = CGGradient(colorsSpace: deviceRGB, colors: colors, locations: locations) else {
++      return nil
 +    }
-+    guard let feathered = offscreen.makeImage() else {
-+      context.draw(frame, in: rect)
-+      return
-+    }
-+    context.draw(feathered, in: rect)
++    context.drawLinearGradient(
++      gradient,
++      start: CGPoint(x: 0, y: 0),
++      end: CGPoint(x: 0, y: size.height),
++      options: []
++    )
++    return context.makeImage()
 +  }
 +
 +  private static func blurred(_ frame: CGImage) -> CGImage? {
@@ -2301,14 +2379,39 @@ index 0000000000000000000000000000000000000000..b7329bcb0466efb330dd3afa01b0c4b5
 +
 +  private func encodeTaskValue() -> Task<URL?, Never> {
 +    lock.lock()
-+    defer { lock.unlock() }
 +    if let encodeTask {
++      lock.unlock()
 +      return encodeTask
 +    }
-+    let created = Task.detached(priority: .utility) {
++    lock.unlock()
++    // One task per destination across instances: a second instance holding
++    // the same clip joins the encode already running rather than starting a
++    // rival writer at the same path.
++    Self.sharedTaskLock.lock()
++    if let shared = Self.sharedTasks[destination.path] {
++      Self.sharedTaskLock.unlock()
++      lock.lock()
++      encodeTask = shared
++      lock.unlock()
++      return shared
++    }
++    // `.userInitiated`: the lock screen is waiting on this file, often with
++    // the phone locked, where `.utility` would crawl.
++    let created = Task.detached(priority: .userInitiated) {
 +      await self.encode()
 +    }
++    Self.sharedTasks[destination.path] = created
++    Self.sharedTaskLock.unlock()
++    lock.lock()
 +    encodeTask = created
++    lock.unlock()
++    let path = destination.path
++    Task {
++      _ = await created.value
++      Self.sharedTaskLock.lock()
++      Self.sharedTasks.removeValue(forKey: path)
++      Self.sharedTaskLock.unlock()
++    }
 +    return created
 +  }
 +
@@ -2395,16 +2498,25 @@ index 0000000000000000000000000000000000000000..b7329bcb0466efb330dd3afa01b0c4b5
 +      }
 +    }
 +
++    // Both composed once per clip: the blurred backdrop scaled to the canvas
++    // (every frame then draws it as a blit, with no aspect-fill math and no
++    // high-quality scale per frame), and the feather mask that trims the
++    // cover's top and bottom edges.
 +    let backdrop: CGImage?
-+    if ratio == .tall, let first = CGImageSourceCreateImageAtIndex(source, 0, Self.frameOptions) {
-+      backdrop = Self.blurred(first)
++    let mask: CGImage?
++    if ratio == .tall,
++       let first = CGImageSourceCreateImageAtIndex(source, 0, Self.frameOptions),
++       let blurred = Self.blurred(first) {
++      backdrop = Self.sized(blurred, to: canvas)
++      mask = Self.featherMask(size: Self.artRect(in: canvas).size)
 +    } else {
 +      backdrop = nil
++      mask = nil
 +    }
 +
 +    for sample in schedule.samples {
 +      guard let frame = CGImageSourceCreateImageAtIndex(source, sample.index, Self.frameOptions),
-+            let buffer = pixelBuffer(adaptor: adaptor, frame: frame, canvas: canvas, backdrop: backdrop),
++            let buffer = pixelBuffer(adaptor: adaptor, frame: frame, canvas: canvas, backdrop: backdrop, mask: mask),
 +            await isReady(input, writer: writer),
 +            adaptor.append(buffer, withPresentationTime: CMTime(seconds: sample.time, preferredTimescale: 600))
 +      else {
@@ -2414,7 +2526,7 @@ index 0000000000000000000000000000000000000000..b7329bcb0466efb330dd3afa01b0c4b5
 +
 +    guard let lastIndex = schedule.samples.last?.index,
 +          let lastFrame = CGImageSourceCreateImageAtIndex(source, lastIndex, Self.frameOptions),
-+          let lastBuffer = pixelBuffer(adaptor: adaptor, frame: lastFrame, canvas: canvas, backdrop: backdrop),
++          let lastBuffer = pixelBuffer(adaptor: adaptor, frame: lastFrame, canvas: canvas, backdrop: backdrop, mask: mask),
 +          await isReady(input, writer: writer)
 +    else {
 +      return nil
@@ -2455,7 +2567,8 @@ index 0000000000000000000000000000000000000000..b7329bcb0466efb330dd3afa01b0c4b5
 +    adaptor: AVAssetWriterInputPixelBufferAdaptor,
 +    frame: CGImage,
 +    canvas: CGSize,
-+    backdrop: CGImage?
++    backdrop: CGImage?,
++    mask: CGImage?
 +  ) -> CVPixelBuffer? {
 +    guard let pool = adaptor.pixelBufferPool else {
 +      return nil
@@ -2474,12 +2587,12 @@ index 0000000000000000000000000000000000000000..b7329bcb0466efb330dd3afa01b0c4b5
 +      height: Int(canvas.height),
 +      bitsPerComponent: 8,
 +      bytesPerRow: CVPixelBufferGetBytesPerRow(buffer),
-+      space: CGColorSpaceCreateDeviceRGB(),
++      space: Self.deviceRGB,
 +      bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
 +    ) else {
 +      return nil
 +    }
-+    draw(frame, in: context, canvas: canvas, backdrop: backdrop)
++    draw(frame, in: context, canvas: canvas, backdrop: backdrop, mask: mask)
 +    return buffer
 +  }
 +
@@ -2683,10 +2796,10 @@ index 0000000000000000000000000000000000000000..3f23f0177668f354b005580174b2a30b
 +  }
 +}
 diff --git a/ios/AudioModule.swift b/ios/AudioModule.swift
-index d26560627c2dfa97370440ad28304617f3f9f0f7..9fc06a2bad585b3c978ad8055c8da4c0c165a9f9 100644
+index d26560627c2dfa97370440ad28304617f3f9f0f7..59dd6edd368dddec03162acca38a474371c28ca6 100644
 --- a/ios/AudioModule.swift
 +++ b/ios/AudioModule.swift
-@@ -32,6 +32,17 @@ public class AudioModule: Module {
+@@ -32,6 +32,25 @@ public class AudioModule: Module {
        try setAudioMode(mode: mode)
      }
  
@@ -2701,10 +2814,18 @@ index d26560627c2dfa97370440ad28304617f3f9f0f7..9fc06a2bad585b3c978ad8055c8da4c0
 +      ArtworkPreloader.shared.warm(url)
 +    }
 +
++    /// The fps the covers encode at from here on - the app's Settings menu
++    /// writes it (30 by default, 60 on request).
++    Function("setArtworkFps") { (fps: Double) in
++      if #available(iOS 26.0, tvOS 26.0, *) {
++        AnimatedArtwork.maxPlaybackRate = fps
++      }
++    }
++
      AsyncFunction("setIsAudioActiveAsync") { (isActive: Bool)  in
        try setIsAudioActive(isActive)
      }
-@@ -241,6 +252,18 @@ public class AudioModule: Module {
+@@ -241,6 +260,18 @@ public class AudioModule: Module {
          }
        }
  

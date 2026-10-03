@@ -634,7 +634,7 @@ export function artworkUrlFor(song: Song): string | undefined {
 }
 
 /** How many tracks behind the current one get their covers warmed this way. */
-const ARTWORK_LOOKAHEAD = 3;
+const ARTWORK_LOOKAHEAD = 6;
 
 /** Covers already handed to the native preloader, once each per session. */
 const warmedArtwork = new Set<string>();
@@ -658,9 +658,12 @@ function warmArtwork(song: Song) {
   // A cover the app only holds in its own image cache is no address the
   // native fetcher can use, and anything already asked for is under way.
   if (!url || url.startsWith(CACHED_COVER) || warmedArtwork.has(url)) return;
-  warmedArtwork.add(url);
   try {
     audioModule.warmArtwork(url);
+    // Only after the call went through: on a build without the patched
+    // module nothing was warmed, and marking it warmed would keep this
+    // session from ever asking again if a later build could.
+    warmedArtwork.add(url);
   } catch {
     // A build without the patched module: covers load the old way.
   }
@@ -1820,18 +1823,24 @@ function gaplessReady(): boolean {
  * (its URL changed: bitrate, format).
  */
 function scheduleNextSource(force = false) {
-  const p = activePlayer();
-  if (!p) return;
   const st = usePlayerStore.getState();
   // The covers of the tracks walking in behind this one: fetched and encoded
-  // while the current one still plays. Gapless queues the next track natively
-  // (and warms its cover); this is the three behind it, and the whole walk
-  // under crossfade, which queues no track at all. Every path through this
-  // function reaches the loop — the set inside makes it once per URL.
-  for (let k = 1; k <= ARTWORK_LOOKAHEAD; k += 1) {
-    const ahead = st.queue[st.index + k];
+  // while the current one still plays. The current track's own is in the
+  // window too (k = 0) — it is the one the lock screen shows first. Before
+  // the `activePlayer()` gate below on purpose: warming needs no player, and
+  // waiting for one left the covers of a cold start unwarmed until the first
+  // play. Gapless queues the next track natively (and warms its cover); this
+  // is the window behind it, and the whole walk under crossfade, which queues
+  // no track at all. With 'all' the window wraps to the queue's start.
+  for (let k = 0; k <= ARTWORK_LOOKAHEAD; k += 1) {
+    const ahead =
+      st.repeat === 'all' && st.queue.length > 0
+        ? st.queue[(st.index + k) % st.queue.length]
+        : st.queue[st.index + k];
     if (ahead && !ahead.url) warmArtwork(ahead);
   }
+  const p = activePlayer();
+  if (!p) return;
   // Repeating one song is the native `loop`, which a source holding only part
   // of the song cannot do (see `applyLoop`). What comes after that source is
   // the same song from the beginning: queued here, the player joins them by
@@ -4438,6 +4447,11 @@ usePlayerStore.subscribe((st, prev) => {
     st.repeat !== prev.repeat ||
     st.sleepAtSongEnd !== prev.sleepAtSongEnd
   ) {
+    // A replaced queue is a new walk, and the covers the last one had under
+    // way are not this one's: asking again is cheap (the native side
+    // remembers its own), and it is what re-warms a cover the native cache
+    // has since dropped.
+    if (st.queue !== prev.queue) warmedArtwork.clear();
     scheduleNextSource();
     // What is coming has moved, so the warming window has too. Queueing the
     // next source is not this: that hands the track to the player, which

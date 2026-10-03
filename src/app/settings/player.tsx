@@ -67,6 +67,8 @@ export default function PlayerSettings() {
   const setFitCoverArt = useSettings((s) => s.setFitCoverArt);
   const animatedCoverBackground = useSettings((s) => s.animatedCoverBackground);
   const setAnimatedCoverBackground = useSettings((s) => s.setAnimatedCoverBackground);
+  const animatedArtworkFps = useSettings((s) => s.animatedArtworkFps);
+  const setAnimatedArtworkFps = useSettings((s) => s.setAnimatedArtworkFps);
   const miniPlayerColorBackground = useSettings((s) => s.miniPlayerColorBackground);
   const blurMiniPlayer = useSettings((s) => s.blurMiniPlayer);
   const miniPlayerProgress = useSettings((s) => s.miniPlayerProgress);
@@ -184,6 +186,15 @@ export default function PlayerSettings() {
             options={coverTapOptions(t)}
             value={coverDoubleTapAction}
             onChange={setCoverDoubleTapAction}
+          />
+          <SelectList<number>
+            label={t('Animated cover frame rate')}
+            options={[
+              { value: 30, label: t('30 fps') },
+              { value: 60, label: t('60 fps') },
+            ]}
+            value={animatedArtworkFps}
+            onChange={setAnimatedArtworkFps}
           />
         </SettingsGroup>
 

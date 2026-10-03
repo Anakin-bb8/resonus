@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import { create } from 'zustand';
 
 import { isLanguage, LANGUAGE_NAMES, type Language } from '@/i18n/languages';
+import { pushArtworkEncodeFps } from '@/lib/artworkEncode';
 import { type TabSegment } from '@/lib/tabOrigin';
 import { hashKey } from '@/lib/localLibrary';
 import { setPerfEnabled } from '@/lib/perfLog';
@@ -87,6 +88,14 @@ export const BITRATE_OPTIONS = [
  * much; two still overlaps one transfer with the next.
  */
 export const DOWNLOAD_CONCURRENCY_OPTIONS = [1, 2, 3];
+
+/**
+ * The fps animated covers encode at for the lock screen. 30 is the default:
+ * half the frames of 60 for a cover that reads the same, and half the work
+ * for a phone that is already doing plenty. 60 is there for whoever wants
+ * the smoother clip. The native side refuses anything above Apple's own 60.
+ */
+export const ANIMATED_ARTWORK_FPS_OPTIONS = [30, 60] as const;
 
 /**
  * Codec to request for transcoding (Subsonic `format` parameter).
@@ -807,6 +816,7 @@ type CustomSetter =
   | 'setThemeLightFrom'
   | 'setThemeDarkFrom'
   | 'setPureBlack'
+  | 'setAnimatedArtworkFps'
   | 'setBackgroundTint';
 
 interface SettingsState extends Omit<AutoSetters, CustomSetter> {
@@ -995,6 +1005,12 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
    */
   animatedCoverBackground: boolean;
   /**
+   * The fps animated covers encode at for the lock screen (30 or 60). A clip
+   * already on disk keeps the rate it was written at; the next one picks up
+   * whatever this says.
+   */
+  animatedArtworkFps: number;
+  /**
    * Show non-square artwork whole in the player instead of cropping it to a
    * square. Off by default: cropping is what it has always done, and every
    * other place in the app (lists, cards, grids) keeps cropping regardless.
@@ -1139,6 +1155,7 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   customFontUri: string | null;
   setLanguage: (language: Language) => void;
   setDiagnostics: (value: boolean) => void;
+  setAnimatedArtworkFps: (value: number) => void;
   resetScrobbleRules: () => void;
   setHideUnavailableOffline: (value: boolean) => void;
   setReplayGainPreampDb: (value: number) => void;
@@ -1259,6 +1276,9 @@ const DEFAULTS = {
   batteryWarning: true,
   playerBackground: 'cover' as ScreenBackground,
   animatedCoverBackground: false,
+  // 30: half the frames of 60 for a cover that reads the same; see
+  // `ANIMATED_ARTWORK_FPS_OPTIONS`.
+  animatedArtworkFps: 30,
   fitCoverArt: false,
   miniPlayerColorBackground: true,
   // Off by default: the card pushes the controls up on shorter screens, and
@@ -1435,6 +1455,9 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
   }
   if (DOWNLOAD_CONCURRENCY_OPTIONS.includes(parsed.downloadConcurrency as number)) {
     set({ downloadConcurrency: parsed.downloadConcurrency as number });
+  }
+  if ((ANIMATED_ARTWORK_FPS_OPTIONS as readonly number[]).includes(parsed.animatedArtworkFps as number)) {
+    set({ animatedArtworkFps: parsed.animatedArtworkFps as number });
   }
   if (TRANSCODE_FORMATS.includes(parsed.streamFormat as TranscodeFormat)) {
     set({ streamFormat: parsed.streamFormat as TranscodeFormat });
@@ -1759,6 +1782,14 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setAnimatedArtworkFps: (animatedArtworkFps) => {
+    set({ animatedArtworkFps });
+    persist(snapshot(get));
+    // The encoder reads this the next time a clip is built; one already on
+    // disk keeps the rate it was written at, which is the rate it holds.
+    pushArtworkEncodeFps(animatedArtworkFps);
+  },
+
   // Both at once, and one write: put back separately, the first of the two
   // spends a moment as a rule nobody chose next to the other one's old value.
   resetScrobbleRules: () => {
@@ -1886,6 +1917,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
     // Language is preserved: resetting shouldn't change your language.
     set({ ...DEFAULTS, language: get().language });
     applyFactoryLook();
+    pushArtworkEncodeFps(get().animatedArtworkFps);
     persist(snapshot(get));
   },
 
@@ -1898,6 +1930,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
     applySaved({ ...(saved as object), customFontFamily: null, customFontUri: null }, set);
     if (get().appFont === 'custom' && !customFontFamily) set({ appFont: 'system' });
     setPerfEnabled(get().diagnostics);
+    pushArtworkEncodeFps(get().animatedArtworkFps);
     persist(snapshot(get));
     if (useAuthStore.getState().offline) queryClient.invalidateQueries();
   },
@@ -1973,6 +2006,10 @@ export const useSettings = create<SettingsState>((set, get) => ({
       // the startup it would otherwise miss, and this is where it is told
       // whether anybody asked for it.
       setPerfEnabled(get().diagnostics);
+      // The encoder's rate is native state with no way to read it back, so it
+      // is pushed here for the same reason: every profile's saved value takes
+      // effect on the first clip it builds, not on the next launch.
+      pushArtworkEncodeFps(get().animatedArtworkFps);
     }
   },
 }));
