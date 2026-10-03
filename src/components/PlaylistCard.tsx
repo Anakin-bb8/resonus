@@ -1,5 +1,6 @@
 /** Playlist card for the carousels on Home (the «Playlists» row). */
 import { Link } from 'expo-router';
+import { memo } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { COVER, coverArtUrl, type Playlist } from '@/api/data';
@@ -7,7 +8,7 @@ import { songsLabel } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { useMediaMenu } from '@/store/mediaMenu';
 import { useSettings } from '@/store/settings';
-import { fontSize, spacing, themed } from '@/theme';
+import { fontSize, spacing, themed, useTheme } from '@/theme';
 import { bump } from '@/lib/perfLog';
 import { Cover } from './Cover';
 
@@ -16,8 +17,10 @@ interface Props {
   width?: number;
 }
 
-export function PlaylistCard({ playlist, width = 150 }: Props) {
+export const PlaylistCard = memo(function PlaylistCard({ playlist, width = 150 }: Props) {
   bump('render · PlaylistCard');
+  // Memoised, so it has to ask for a repaint on a theme change itself.
+  useTheme();
   const lang = useSettings((s) => s.language);
   const openMenu = useMediaMenu((s) => s.open);
   const cover = coverArtUrl(playlist.coverArt ?? playlist.id, COVER.card);
@@ -45,7 +48,7 @@ export function PlaylistCard({ playlist, width = 150 }: Props) {
       </Pressable>
     </Link>
   );
-}
+});
 
 const styles = themed((colors) => ({
   container: { gap: spacing.xs },

@@ -99,6 +99,8 @@ const QueueRow = memo(function QueueRow({
   const toast = useToast((s) => s.show);
   const t = useT();
   const drag = useReorderableDrag();
+  // Memoised, so it has to ask for a repaint on a theme change itself.
+  useTheme();
   const current = state === 'current';
 
   const remove = async () => {

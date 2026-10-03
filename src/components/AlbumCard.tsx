@@ -6,7 +6,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { COVER, coverArtUrl, type Album } from '@/api/data';
 import { useMediaMenu } from '@/store/mediaMenu';
 import { haptic } from '@/lib/haptics';
-import { fontSize, spacing, themed } from '@/theme';
+import { fontSize, spacing, themed, useTheme } from '@/theme';
 import { bump } from '@/lib/perfLog';
 import { Cover } from './Cover';
 import { ExplicitBadge, useExplicitBadge } from './ExplicitBadge';
@@ -22,6 +22,8 @@ interface Props {
 // card renders per Home render).
 export const AlbumCard = memo(function AlbumCard({ album, width = 150, onPress }: Props) {
   bump('render · AlbumCard');
+  // Memoised, so it has to ask for a repaint on a theme change itself.
+  useTheme();
   const cover = coverArtUrl(album.coverArt ?? album.id, COVER.card);
   const openMenu = useMediaMenu((s) => s.open);
   const explicit = useExplicitBadge(album.explicitStatus);

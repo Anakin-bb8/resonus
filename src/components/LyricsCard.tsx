@@ -150,7 +150,15 @@ export function SyncedLyricsView({
   /** Color to which the top/bottom edges fade (the background). */
   fadeColor?: string;
 }) {
-  const positionSec = usePlayerStore((s) => s.positionSec);
+  // The line, not the position: the position moves twice a second and the
+  // line every few, and only a new line has anything to redraw.
+  const current = usePlayerStore((s) => {
+    // Small advance so the highlight doesn't lag behind the ear.
+    const posMs = s.positionSec * 1000 + 300;
+    let at = -1;
+    for (let i = 0; i < lines.length && (lines[i].start ?? 0) <= posMs; i++) at = i;
+    return at;
+  });
   const seekTo = usePlayerStore((s) => s.seekTo);
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   // Real scroll position (regardless of who moved it: user or auto-scroll).
@@ -180,10 +188,6 @@ export function SyncedLyricsView({
   /** What `onMeasure` needs to know without being rebuilt on every line. */
   const currentRef = useRef(-1);
 
-  // Small advance so the highlight doesn't lag behind the ear.
-  const posMs = positionSec * 1000 + 300;
-  let current = -1;
-  for (let i = 0; i < lines.length && (lines[i].start ?? 0) <= posMs; i++) current = i;
   currentRef.current = current;
 
   // In full screen we anchor the active line near the center (and pad
@@ -402,15 +406,25 @@ LyricRow.displayName = 'LyricRow';
 const WORD_LEAD_MS = 100;
 
 /**
- * The position in milliseconds, moving on between the player's own updates.
+ * The start of the latest word already sung (so a word is lit when its own
+ * start is at or before it), from a position that moves on between
+ * the player's own updates.
  *
  * Those come every half second, which is fine for a line and too coarse for a
  * word: a quick one lit up late or not at all. So between updates this runs
  * on by itself while playing, never more than a second past the last real one
- * in case they stop coming.
+ * in case they stop coming. It ticks every 50 ms but only re-renders when a
+ * word lights up, not twenty times a second.
  */
-function useSungPositionMs(): number {
-  const [ms, setMs] = useState(() => usePlayerStore.getState().positionSec * 1000);
+function useSungUpTo(words: LyricWord[]): number {
+  const upToAt = (ms: number) => {
+    let upTo = -Infinity;
+    for (const w of words) if (w.start <= ms && w.start > upTo) upTo = w.start;
+    return upTo;
+  };
+  const [upTo, setUpTo] = useState(() =>
+    upToAt(usePlayerStore.getState().positionSec * 1000 + WORD_LEAD_MS),
+  );
   useEffect(() => {
     let anchor = { sec: usePlayerStore.getState().positionSec, at: Date.now() };
     const unsubscribe = usePlayerStore.subscribe((s, prev) => {
@@ -419,14 +433,15 @@ function useSungPositionMs(): number {
     const timer = setInterval(() => {
       const { isPlaying, speed } = usePlayerStore.getState();
       const ahead = isPlaying ? Math.min((Date.now() - anchor.at) * (speed || 1), 1000) : 0;
-      setMs(anchor.sec * 1000 + ahead + WORD_LEAD_MS);
+      setUpTo(upToAt(anchor.sec * 1000 + ahead + WORD_LEAD_MS));
     }, 50);
     return () => {
       unsubscribe();
       clearInterval(timer);
     };
-  }, []);
-  return ms;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [words]);
+  return upTo;
 }
 
 /**
@@ -434,12 +449,12 @@ function useSungPositionMs(): number {
  * rest waits, dimmer. Only the active line ticks.
  */
 function SungWords({ words }: { words: LyricWord[] }) {
-  const posMs = useSungPositionMs();
+  const sungUpTo = useSungUpTo(words);
   const waiting = { color: `${colors.text}66` };
   return (
     <>
       {words.map((w, i) => (
-        <Text key={i} style={w.start <= posMs ? null : waiting}>
+        <Text key={i} style={w.start <= sungUpTo ? null : waiting}>
           {w.value}
         </Text>
       ))}

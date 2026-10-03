@@ -268,10 +268,29 @@ function onlyPlayed(albums: Subsonic.Album[]): Subsonic.Album[] {
   return albums.some((al) => al.played) ? albums.filter((al) => al.played) : albums;
 }
 
+/**
+ * The album lists Navidrome's own API gives in the same order as Subsonic's,
+ * across several libraries in one request. Left out on purpose: `recent` and
+ * `frequent` (Subsonic drops what was never played, the REST list keeps it),
+ * `byYear` (sorted here by release date, which that list does not carry) and
+ * `starred`.
+ */
+const ND_ALBUM_LIST: Partial<Record<Subsonic.AlbumListType, Navidrome.NdAlbumSort>> = {
+  newest: 'recently_added',
+  random: 'random',
+  alphabeticalByName: 'name',
+  alphabeticalByArtist: 'artist',
+};
+
 export function getAlbumList(type: Subsonic.AlbumListType = 'newest', size?: number, offset?: number): Promise<Subsonic.Album[]> {
   if (isOffline()) return Local.getAlbumList(type, size, offset);
   const a = auth();
   const ids = enabledFolderIds(a);
+  const merged = (folders: string[]) =>
+    mergedAlbumPage(a, `albums|${type}`, type, folders, size ?? 20, offset ?? 0, (id, s, o) =>
+      Subsonic.getAlbumList(a, type, s, o, id),
+    );
+  const native = ND_ALBUM_LIST[type];
   const page =
     type === 'byYear' && (!ids || ids.length === 1)
       ? byYearPage(a, size ?? 20, offset ?? 0, ids?.[0])
@@ -279,9 +298,14 @@ export function getAlbumList(type: Subsonic.AlbumListType = 'newest', size?: num
         ? Subsonic.getAlbumList(a, type, size, offset)
         : ids.length === 1
           ? Subsonic.getAlbumList(a, type, size, offset, ids[0])
-          : mergedAlbumPage(a, `albums|${type}`, type, ids, size ?? 20, offset ?? 0, (id, s, o) =>
-              Subsonic.getAlbumList(a, type, s, o, id),
-            );
+          : // Several libraries: one request instead of one per library, each
+            // parsed on the JS thread and merged here.
+            native && canListNative(a)
+            ? Navidrome.listAlbums(a, native, size ?? 20, offset ?? 0, ids).catch(() => {
+                bump('album list · native failed');
+                return merged(ids);
+              })
+            : merged(ids);
   return type === 'recent' ? page.then(onlyPlayed) : page;
 }
 

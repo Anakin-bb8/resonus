@@ -16,6 +16,8 @@ Releases before 0.2.1 are only listed on the
 - Home redraws its album cards less often.
 - Genre cards load their covers with one request each, even with several libraries.
 - Long queues redraw fewer rows when the song changes.
+- With several libraries on Navidrome, album lists load in one request instead of one per library.
+- Lyrics redraw only when the line or the word changes.
 
 ## [0.7.13] - 2026-10-02
 
