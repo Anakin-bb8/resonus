@@ -83,10 +83,11 @@ private enum HomeWidgetStore {
   static let toggleNoteName = "ResonusPlaybackToggle"
   private static let toggleWindowSec: Double = 300
 
-  /// The Darwin notification, spelled the same in `PlaybackToggleRelay`.
-  /// Built the way the extension builds its copy (from the CFString): the
-  /// shortcut of naming the type directly does not type-check here.
-  static let darwinNote = CFNotificationName("com.juananzzz.resonus.playbackToggle" as CFString)
+  /// The Darwin notification, spelled the same in `PlaybackToggleRelay`. A
+  /// plain CFString: `CFNotificationCenterAddObserver` takes the name as one
+  /// here, while the Post in the extension wants it wrapped as a
+  /// `CFNotificationName` — two signatures, one spelling.
+  static let darwinNote = "com.juananzzz.resonus.playbackToggle" as CFString
 
   /// What the app writes when it takes a press: for `status()`, to tell
   /// "the press never arrived" from "it arrived and something else failed".
