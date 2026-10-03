@@ -5,9 +5,33 @@ import WidgetKit
 public class HomeWidgetModule: Module {
   public func definition() -> ModuleDefinition {
     Name("HomeWidget")
+    Events("playbackToggle")
+
+    /// The widget's press, when the intent ran in this process: the
+    /// notification crosses nothing, but it is instant. Everywhere else the
+    /// flag below is what the press rides in on, and the poll on the
+    /// JavaScript side reads it back either way — one press, one toggle.
+    OnCreate {
+      NotificationCenter.default.addObserver(
+        forName: Notification.Name(HomeWidgetStore.toggleNoteName),
+        object: nil,
+        queue: .main
+      ) { [weak self] _ in
+        self?.sendEvent("playbackToggle", [:])
+      }
+    }
 
     Function("update") { (state: [String: Any]) in
       HomeWidgetStore.write(state)
+    }
+
+    /// The widget's play button, taken back. The press waits in the shared
+    /// group as the time it happened (the extension wrote it, this reads it,
+    /// and they are different processes); reading clears it, so one press
+    /// toggles once, and one read after the window toggles not at all —
+    /// music that old is not what the finger meant.
+    Function("takePendingPlaybackToggle") { () -> Bool in
+      HomeWidgetStore.takePendingToggle()
     }
 
     /// What the app can see of its own handover, read back from the group it
@@ -25,6 +49,14 @@ private enum HomeWidgetStore {
   private static let stateKey = "nowPlaying"
   private static let artworkName = "cover.jpg"
 
+  /// The widget's press, and the window it counts down in. Spelled the same
+  /// in `PlaybackToggleIntent`, which compiles into the extension and cannot
+  /// import this pod — the same way `nowPlaying` is shared with the widget's
+  /// own `WidgetStore`.
+  static let toggleKey = "pendingPlaybackToggle"
+  static let toggleNoteName = "ResonusPlaybackToggle"
+  private static let toggleWindowSec: Double = 300
+
   /// The groups this build was granted, of which there may be none. Fixed for
   /// the life of the process, because the entitlements are.
   private static let groups = SharedAppGroup.granted()
@@ -35,6 +67,26 @@ private enum HomeWidgetStore {
 
   private static func containers() -> [URL] {
     groups.compactMap { FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: $0) }
+  }
+
+  /// One press out of the group: read from whichever of the groups holds
+  /// one, and cleared from all of them — the widget writes every group it
+  /// was granted, and a press left behind in any other would toggle twice.
+  static func takePendingToggle() -> Bool {
+    var since: Double = 0
+    var found = false
+    for group in groups {
+      guard
+        let defaults = UserDefaults(suiteName: group),
+        let stored = defaults.object(forKey: toggleKey)
+      else { continue }
+      defaults.removeObject(forKey: toggleKey)
+      if !found {
+        since = (stored as? NSNumber)?.doubleValue ?? 0
+        found = true
+      }
+    }
+    return found && since > 0 && Date().timeIntervalSince1970 - since <= toggleWindowSec
   }
 
   static func write(_ state: [String: Any]) {

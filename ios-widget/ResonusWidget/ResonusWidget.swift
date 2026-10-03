@@ -1,3 +1,4 @@
+import AppIntents
 import SwiftUI
 import UIKit
 import WidgetKit
@@ -109,7 +110,7 @@ struct TrackWidgetView: View {
     }
 
     /// The artwork and the title are the album's link, the button is its own
-    /// link beside the title, centred on the text block rather than on its
+    /// thing beside the title, centred on the text block rather than on its
     /// first line. The two are siblings: a link inside a link would eat one
     /// of them. Everything sits inside the container's own inset, so the
     /// cover, the text and the icon line up down the widget at the same
@@ -150,7 +151,7 @@ struct TrackWidgetView: View {
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                         }
-                        Link(destination: toggleURL) { playButton }
+                        playToggle
                     }
                     Spacer(minLength: 4)
                 }
@@ -172,6 +173,20 @@ struct TrackWidgetView: View {
                 .foregroundColor(.black)
         }
         .frame(width: 40, height: 40)
+    }
+
+    /// The press itself: an intent from iOS 17 on, which toggles the player
+    /// where it stands and leaves the app where it was — not opened, not on
+    /// the now playing screen. Before that the deep link, which is the only
+    /// road an older system leaves, app and all.
+    @ViewBuilder
+    private var playToggle: some View {
+        if #available(iOS 17.0, *) {
+            Button(intent: PlaybackToggleIntent()) { playButton }
+                .buttonStyle(.plain)
+        } else {
+            Link(destination: toggleURL) { playButton }
+        }
     }
 
     private var progressBar: some View {

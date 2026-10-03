@@ -41,6 +41,10 @@ const FILES = [
   'WidgetData.swift',
   // The runtime's own reading of the app group, compiled into both targets.
   'SharedAppGroup.swift',
+  // The play button's press: an intent, so it toggles without opening the
+  // app. It reads the group above, hence it goes where the group's reader
+  // goes.
+  'PlaybackToggleIntent.swift',
   'widget-icon.png',
   'ResonusWidget-Info.plist',
   'ResonusWidget.entitlements',
