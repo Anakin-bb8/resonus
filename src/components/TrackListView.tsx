@@ -628,22 +628,6 @@ export function TrackListView({
       </Animated.View>
     );
 
-  // The band above the gradient: when the search bar is revealed, content
-  // shifts down SEARCH_H px and this fills the gap at the top. Inside the
-  // layer's own bounds: hanging above them, Android left the gap grey. Drawn
-  // once moving with the scroll and once held behind it (see below).
-  const gradientLayer = (
-    <>
-      {band > 0 ? (
-        <View style={[styles.gradientAbove, { height: band, backgroundColor: headerColor }]} />
-      ) : null}
-      <LinearGradient
-        {...easedFade(headerColor, colors.background)}
-        style={[StyleSheet.absoluteFill, { top: band }]}
-      />
-    </>
-  );
-
   return (
     <View style={styles.root}>
       <View style={{ flex: 1 }}>
@@ -666,24 +650,38 @@ export function TrackListView({
             },
           ]}
         >
-          {/* The same layer, held still behind the moving one: whatever the
-              scroll uncovers, it uncovers this. A bounce at the top pulls the
-              moving layer down and shows the accent's own head in the gap
-              (grey page instead, before); a normal scroll pulls it up and
-              shows the run's tail there, which is the page's own colour and
-              reads as no gap at all. */}
-          <View style={StyleSheet.absoluteFill}>{gradientLayer}</View>
           <Animated.View
             style={[
               StyleSheet.absoluteFill,
-              // And follows the scroll 1:1, natively — the bounce included:
-              // the header's colour has to come down with the content that
-              // drags it, or the top of the screen would be left with the
-              // page's own colour showing through (see the layer above).
-              { transform: [{ translateY: Animated.multiply(scrollY, -1) }] },
+              // And follows the scroll 1:1, natively — but never below zero:
+              // an over-scroll drags `scrollY` negative, and the gradient
+              // moving down with it would uncover the page's own colour where
+              // the accent's band sits. Held at the top, the bounce reveals
+              // the accent instead of the background.
+              {
+                transform: [
+                  {
+                    translateY: scrollY.interpolate({
+                      inputRange: [-1e7, 0, 1e7],
+                      outputRange: [0, 0, -1e7],
+                      extrapolate: 'clamp',
+                    }),
+                  },
+                ],
+              },
             ]}
           >
-            {gradientLayer}
+            {/* Color band above the gradient: when the search bar is revealed,
+                content shifts down SEARCH_H px and this fills the gap at the top.
+                Inside the view's own bounds: hanging above them, Android left
+                the gap grey. */}
+            {band > 0 ? (
+              <View style={[styles.gradientAbove, { height: band, backgroundColor: headerColor }]} />
+            ) : null}
+            <LinearGradient
+              {...easedFade(headerColor, colors.background)}
+              style={[StyleSheet.absoluteFill, { top: band }]}
+            />
           </Animated.View>
         </Animated.View>
       )}
