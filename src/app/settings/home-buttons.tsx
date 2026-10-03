@@ -33,6 +33,7 @@ import {
 
 /** What each row says and wears, so the list reads like the header does. */
 const BUTTONS: Record<HomeButtonKey, { label: string; icon: keyof typeof Icon.glyphMap }> = {
+  queue: { label: 'Queue', icon: 'layers-outline' },
   search: { label: 'Search', icon: 'search-outline' },
   history: { label: 'History', icon: 'time-outline' },
   settings: { label: 'Settings', icon: 'settings-outline' },

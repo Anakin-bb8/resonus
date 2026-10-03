@@ -9,6 +9,11 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Added
+
+- The player's ⋯ menu opens the queue, devices and speed when their buttons are hidden (#248).
+- An optional Queue button at the top of Home, off by default.
+
 ### Fixed
 
 - Local M4A and FLAC files show their titles, artists, albums and covers (#249).

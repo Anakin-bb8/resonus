@@ -824,7 +824,9 @@ function HomeHeaderButton({ which }: { which: HomeButtonKey }) {
   const [href, icon, label] =
     which === 'history'
       ? (['/history', 'time-outline', 'History'] as const)
-      : (['/settings', 'settings-outline', 'Settings'] as const);
+      : which === 'queue'
+        ? (['/queue', 'layers-outline', 'Queue'] as const)
+        : (['/settings', 'settings-outline', 'Settings'] as const);
   return (
     <Link href={href} asChild>
       <Pressable hitSlop={10} accessibilityLabel={t(label)}>

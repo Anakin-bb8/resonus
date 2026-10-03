@@ -54,6 +54,7 @@ you are actually typing into, which is easier than reading it here.
 | `Couldn't save the file` | Toast: writing to the chosen folder failed |
 | `Couldn't send the file` | Toast: handing it to another app failed |
 | `Cover art` | Three places, one word: a section header in Settings › Player, a line of the storage bar in Settings › Downloads, and what the screen reader calls the picture in the song information sheet |
+| `Devices` | The audio output devices to cast to |
 | `Disc {n}` | Heading over the songs of one disc of a multi-disc album. `{n}` is its number |
 | `Don't remind me` | Its other button: never show this again |
 | `Download removed` | Toast: the file was deleted, the song stays in the library |
@@ -75,6 +76,7 @@ you are actually typing into, which is easier than reading it here.
 | `Open settings` | Its confirm button: goes to Android's own settings, not the app's |
 | `Pick a date…` | Opens the calendar to choose the day the link stops working |
 | `Pin to top` | Keep this at the top of its list, above everything else. `Unpin` undoes it |
+| `Playback speed` |  |
 | `Playback stopped` | The mini player when there is nothing playing any more |
 | `Plays` | How many times the song has been played |
 | `Previous` | Player control: the previous track (accessibility label) |
@@ -110,6 +112,7 @@ you are actually typing into, which is easier than reading it here.
 | `Unpin` | Stop keeping it at the top of its list |
 | `Update` | The button that installs a newer version of Resonus. A verb, not a noun: `Update it`, not `An update` |
 | `Update available` |  |
+| `View queue` | Read out by the screen reader for the button that opens the queue |
 | `What's new` | Opens what changed in this version |
 | `When the song ends` | A value of the sleep timer: stop when this song finishes, however long that is |
 | `Will pause in {n} min` | Toast when it is set |
