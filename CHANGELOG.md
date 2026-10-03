@@ -9,6 +9,10 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Fixed
+
+- Casting to a TV moves on to the next song on time with the screen off (#246).
+
 ## [0.7.14] - 2026-10-03
 
 ### Added

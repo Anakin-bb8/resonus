@@ -5,6 +5,8 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.kotlin.records.Field
 import expo.modules.kotlin.records.Record
+import android.content.Context
+import android.os.PowerManager
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -38,6 +40,12 @@ class TrackInfo(
  * so state and progress are polled once a second for as long as there is a
  * session and sent to JS as a "state" event.
  */
+/** Long enough for a missed poll or two; every poll renews it. */
+private const val AWAKE_TIMEOUT_MS = 60_000L
+
+/** How long a stop that may be a track end keeps the phone awake: a minute. */
+private const val AWAKE_STOPPED_POLLS = 60
+
 class UpnpCastModule : Module() {
   private enum class NextUriCapability { UNKNOWN, SUPPORTED, UNSUPPORTED }
 
@@ -73,6 +81,13 @@ class UpnpCastModule : Module() {
   private var stagedNextUrl: String? = null
   private var nextUriCapability = NextUriCapability.UNKNOWN
 
+  // The poll below is what notices a track ending and loads the next one, and
+  // a coroutine `delay` does not keep the CPU up: with the screen off the phone
+  // dozed between polls and the next track started 15-20 s late (#246). Held
+  // only while the renderer plays or is between tracks, with a timeout that
+  // every poll renews, so a stalled loop cannot keep the phone awake.
+  private var wakeLock: PowerManager.WakeLock? = null
+
   private fun parseQueueRequest(payloadJson: String): QueueRequest {
     val payload = JSONObject(payloadJson)
     val tracksJson = payload.getJSONArray("tracks")
@@ -107,6 +122,7 @@ class UpnpCastModule : Module() {
     Events("state")
 
     OnDestroy {
+      keepAwake(false)
       pollJob?.cancel()
       scope.cancel()
     }
@@ -344,6 +360,8 @@ class UpnpCastModule : Module() {
       pollJob?.cancel()
       pollJob = null
       session = null
+      // After `session` is gone, so a poll still in flight cannot take it again.
+      keepAwake(false)
       scope.launch {
         transportMutex.withLock {
           stoppedByUs = true
@@ -381,6 +399,10 @@ class UpnpCastModule : Module() {
             state.playbackState.equals("STOPPED", ignoreCase = true) -> "STOPPED"
             else -> state.playbackState
           }
+          keepAwake(
+            playbackState == "PLAYING" || playbackState == "BUFFERING" || transitionInProgress ||
+              (playbackState == "STOPPED" && nativeQueueManaged && !stoppedByUs && stoppedPolls < AWAKE_STOPPED_POLLS)
+          )
           sendEvent(
             "state",
             mapOf(
@@ -604,6 +626,25 @@ class UpnpCastModule : Module() {
     Log.d(Soap.TAG, "Native current index changed to $nativeQueueIndex title=${track.title}")
     stageNextLocked(current)
     return true
+  }
+
+  @Synchronized
+  private fun keepAwake(on: Boolean) {
+    if (!on || session == null) {
+      wakeLock?.takeIf { it.isHeld }?.release()
+      return
+    }
+    val context = appContext.reactContext?.applicationContext ?: return
+    try {
+      val wake = wakeLock ?: (context.getSystemService(Context.POWER_SERVICE) as PowerManager)
+        .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "resonus:upnp-cast")
+        .apply { setReferenceCounted(false) }
+        .also { wakeLock = it }
+      // Re-acquiring a non-counted lock only moves its timeout forward.
+      wake.acquire(AWAKE_TIMEOUT_MS)
+    } catch (e: Exception) {
+      Log.w(Soap.TAG, "Could not keep the phone awake for casting", e)
+    }
   }
 
   private fun trackLabel(index: Int): String = nativeQueue.getOrNull(index)?.title.orEmpty()

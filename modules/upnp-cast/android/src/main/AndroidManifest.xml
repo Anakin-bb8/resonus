@@ -1,0 +1,4 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- Keeping the phone awake between polls while a renderer plays (#246). -->
+  <uses-permission android:name="android.permission.WAKE_LOCK" />
+</manifest>
