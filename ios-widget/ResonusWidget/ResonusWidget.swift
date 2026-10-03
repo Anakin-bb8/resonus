@@ -111,25 +111,24 @@ struct TrackWidgetView: View {
     /// The artwork and the title are the album's link, the button is its own
     /// link beside the title, centred on the text block rather than on its
     /// first line. The two are siblings: a link inside a link would eat one
-    /// of them. The icon and the button share one inset, so their right edges
-    /// line up down the widget, and the icon sits level with the top of the
-    /// cover beside it.
+    /// of them. Everything sits inside the container's own inset, so the
+    /// cover, the text and the icon line up down the widget at the same
+    /// distance from the edge, the icon level with the top of the cover
+    /// beside it and the button the same way in from the right.
     private var track: some View {
         ZStack(alignment: .bottom) {
             GeometryReader { geo in
-                // Half the width, pushed in by a tenth of it: the cover ends
-                // where the bigger one did (three fifths across), but the
-                // borders around it have room, and its height still follows
-                // from the square rather than from the widget's.
+                // Half the width: the cover keeps its square and its height
+                // follows from it rather than from the widget's. It sits as
+                // far in from the left as it is down from the top, a few
+                // points past where the corner's curve starts.
                 let side = geo.size.width * 0.5
                 VStack(alignment: .leading, spacing: 0) {
                     Link(destination: albumURL) {
                         HStack(alignment: .top, spacing: 10) {
                             artwork(side: side)
-                                .padding(.leading, geo.size.width * 0.1)
                             Spacer(minLength: 4)
                             appIcon(size: 20)
-                                .padding(.trailing, 6)
                         }
                     }
                     // One flexible run above the text and one below it: the
@@ -152,12 +151,11 @@ struct TrackWidgetView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         Link(destination: toggleURL) { playButton }
-                            .padding(.trailing, 6)
                     }
                     Spacer(minLength: 4)
                 }
-                .padding(.horizontal, 12)
-                .padding(.top, 12)
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
                 .padding(.bottom, 10)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
