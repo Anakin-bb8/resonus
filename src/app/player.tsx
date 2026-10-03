@@ -926,13 +926,13 @@ export default function PlayerScreen() {
    * file behind a URL, not a station (`vod`).
    */
   const canSpeed = (!song.url || song.vod) && !remoteDevice;
-  // What the bottom row leaves out goes in the ⋯ menu instead (#248). Each one
-  // only when its button is hidden: the devices button also shows while
-  // casting, and the speed button while not at 1×, and then it is there.
+  // The ⋯ menu always leads to the queue, and to devices and speed when their
+  // buttons are hidden (#248): the devices button also shows while casting,
+  // and the speed button while not at 1×, and then it is there.
   const buttonOn = (key: string) => playerButtons.some((b) => b.key === key && b.enabled);
   const menuOptions = () => ({
     showLyrics: hasLyrics,
-    queue: !buttonOn('queue'),
+    queue: true,
     devices: !buttonOn('devices') && canDevices && !remoteDevice ? () => setOutputOpen(true) : undefined,
     speed: !buttonOn('speed') && canSpeed && speed === 1 ? () => openSpeedSheet.current() : undefined,
   });
