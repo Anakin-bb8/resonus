@@ -19,6 +19,7 @@ import { BarBlurTarget } from '@/components/BarBlur';
 import { BatteryWarning } from '@/components/BatteryWarning';
 import { CarAutoSync } from '@/components/CarAutoSync';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { FrameMeter } from '@/components/FrameMeter';
 import { GlobalMiniPlayer } from '@/components/GlobalMiniPlayer';
 import { GlobalTabBar } from '@/components/GlobalTabBar';
 import { MediaMenuSheet } from '@/components/MediaMenuSheet';
@@ -404,6 +405,7 @@ export default function RootLayout() {
             </Stack>
             </BarBlurTarget>
             {auth || offline ? <AppStartupTab /> : null}
+            <FrameMeter />
             {/* Bar first, mini player second: the bar's gradient fill reaches
                 up past its own edge to the middle of that card, and drawing
                 the card after it keeps the card on top of the fill instead of

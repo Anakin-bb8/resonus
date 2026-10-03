@@ -369,16 +369,7 @@ export async function buildBrowseTree(deep = true): Promise<CarTree> {
       .slice(0, MAX_PREFETCH_PLAYLISTS)
       .map((p) => p.id),
     CONCURRENCY,
-    async (id) => {
-      const parent = `playlist:${id}`;
-      try {
-        const { songs } = await playlistDetail(id);
-        tree[parent] = songs.map((s) => songNode(s, parent));
-        parentTracks.set(parent, tree[parent].map((n) => n.id));
-      } catch {
-        tree[parent] = [];
-      }
-    },
+    (id) => fillPlaylist(tree, id),
   );
 
   // Prefetch songs for each album (to browse them in the car), up to a point.
@@ -386,46 +377,79 @@ export async function buildBrowseTree(deep = true): Promise<CarTree> {
   // hundred and forty four album requests in a single minute, plus their top
   // songs, every time the app opened. What a car needs at hand is the top of
   // each list; the rest can be empty until someone asks for it (#50).
-  await mapConcurrent(Array.from(albumIds).slice(0, MAX_PREFETCH_ALBUMS), CONCURRENCY, async (id) => {
-    try {
-      const { songs } = await albumDetail(id);
-      const parent = `album:${id}`;
-      tree[parent] = songs.map((s) => songNode(s, parent));
-      parentTracks.set(parent, tree[parent].map((n) => n.id));
-    } catch {
-      tree[`album:${id}`] = [];
-    }
-  });
+  await mapConcurrent(Array.from(albumIds).slice(0, MAX_PREFETCH_ALBUMS), CONCURRENCY, (id) =>
+    fillAlbum(tree, id),
+  );
 
   // Prefetch for starred artists: top songs + albums (and their tracks).
-  await mapConcurrent(starred.artists.slice(0, MAX_PREFETCH_ARTISTS).map((a) => a.id), CONCURRENCY, async (id) => {
-    try {
-      const { artist, albums } = await data.getArtist(id);
-      const top = artist.name
-        ? await data.getTopSongs(artist.name, 10, id).catch(() => [] as Song[])
-        : [];
-      const parent = `artist:${id}`;
-      const children: CarNode[] = [...top.map((s) => songNode(s, parent)), ...albums.map(albumNode)];
-      tree[parent] = children;
-      parentTracks.set(parent, children.filter((n) => n.playable).map((n) => n.id));
-      for (const a of albums.slice(0, MAX_ARTIST_ALBUMS)) {
-        const ap = `album:${a.id}`;
-        if (!tree[ap]) {
-          try {
-            const { songs } = await albumDetail(a.id);
-            tree[ap] = songs.map((s) => songNode(s, ap));
-            parentTracks.set(ap, tree[ap].map((n) => n.id));
-          } catch {
-            tree[ap] = [];
-          }
-        }
-      }
-    } catch {
-      tree[`artist:${id}`] = [];
-    }
-  });
+  await mapConcurrent(starred.artists.slice(0, MAX_PREFETCH_ARTISTS).map((a) => a.id), CONCURRENCY, (id) =>
+    fillArtist(tree, id),
+  );
 
   return { nodes: tree, profile };
+}
+
+// ── The songs inside one collection ──────────────────────────────────────────
+
+async function fillAlbum(tree: Record<string, CarNode[]>, id: string): Promise<void> {
+  const parent = `album:${id}`;
+  try {
+    const { songs } = await albumDetail(id);
+    tree[parent] = songs.map((s) => songNode(s, parent));
+    parentTracks.set(parent, tree[parent].map((n) => n.id));
+  } catch {
+    tree[parent] = [];
+  }
+}
+
+async function fillPlaylist(tree: Record<string, CarNode[]>, id: string): Promise<void> {
+  const parent = `playlist:${id}`;
+  try {
+    const { songs } = await playlistDetail(id);
+    tree[parent] = songs.map((s) => songNode(s, parent));
+    parentTracks.set(parent, tree[parent].map((n) => n.id));
+  } catch {
+    tree[parent] = [];
+  }
+}
+
+/** Top songs and albums, and the songs of the first few of those. */
+async function fillArtist(tree: Record<string, CarNode[]>, id: string): Promise<void> {
+  const parent = `artist:${id}`;
+  try {
+    const { artist, albums } = await data.getArtist(id);
+    const top = artist.name ? await data.getTopSongs(artist.name, 10, id).catch(() => [] as Song[]) : [];
+    const children: CarNode[] = [...top.map((s) => songNode(s, parent)), ...albums.map(albumNode)];
+    tree[parent] = children;
+    parentTracks.set(parent, children.filter((n) => n.playable).map((n) => n.id));
+    for (const a of albums.slice(0, MAX_ARTIST_ALBUMS)) {
+      if (!tree[`album:${a.id}`]) await fillAlbum(tree, a.id);
+    }
+  } catch {
+    tree[parent] = [];
+  }
+}
+
+/**
+ * The songs of whatever was played last, and nothing else, as a partial tree.
+ *
+ * Starting an album used to rebuild the whole tree: around seventy albums and
+ * fifteen artists asked again each time, since the cache had gone stale. What
+ * moved is the top of Recents, so that is all this fills.
+ */
+export async function buildLatestRecent(): Promise<CarTree | null> {
+  const profile = profileScopeId();
+  // The lists of another account are still on their way; they clear the maps.
+  if (profile !== mapsProfile) return null;
+  const latest = recentNodes()[0];
+  if (!latest) return null;
+  const tree: Record<string, CarNode[]> = {};
+  const [kind, ...rest] = latest.id.split(':');
+  const id = rest.join(':');
+  if (kind === 'album') await fillAlbum(tree, id);
+  else if (kind === 'playlist') await fillPlaylist(tree, id);
+  else if (kind === 'artist') await fillArtist(tree, id);
+  return { nodes: tree, partial: true, profile };
 }
 
 // ── Playback resolution on car tap ───────────────────────────────────────────

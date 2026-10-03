@@ -67,6 +67,7 @@ export function remapSong(song: Song, f: Remap): Song {
     artistId: map(song.artistId, f),
     artists: remapNamed(song.artists, f),
     albumArtists: remapNamed(song.albumArtists, f),
+    contributors: song.contributors?.map((c) => ({ ...c, artist: { ...c.artist, id: f(c.artist.id) } })),
   };
 }
 

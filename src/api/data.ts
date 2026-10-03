@@ -23,7 +23,7 @@ import { queryClient } from '@/lib/query';
 import { getItem, setItem } from '@/lib/storage';
 import { useLastPlayed } from '@/store/lastPlayed';
 import { useLibraryMirror } from '@/store/libraryMirror';
-import { useOfflineQueue, type PlayOp, type QueuePlaylist } from '@/store/offlineQueue';
+import { outboxFileFor, useOfflineQueue, type PlayOp, type QueuePlaylist } from '@/store/offlineQueue';
 import { usePlayHistory } from '@/store/playHistory';
 import { isManualOffline } from './netGate';
 import { getLocalLyrics, getOnlineLyrics } from '@/lib/localLyrics';
@@ -268,10 +268,29 @@ function onlyPlayed(albums: Subsonic.Album[]): Subsonic.Album[] {
   return albums.some((al) => al.played) ? albums.filter((al) => al.played) : albums;
 }
 
+/**
+ * The album lists Navidrome's own API gives in the same order as Subsonic's,
+ * across several libraries in one request. Left out on purpose: `recent` and
+ * `frequent` (Subsonic drops what was never played, the REST list keeps it),
+ * `byYear` (sorted here by release date, which that list does not carry) and
+ * `starred`.
+ */
+const ND_ALBUM_LIST: Partial<Record<Subsonic.AlbumListType, Navidrome.NdAlbumSort>> = {
+  newest: 'recently_added',
+  random: 'random',
+  alphabeticalByName: 'name',
+  alphabeticalByArtist: 'artist',
+};
+
 export function getAlbumList(type: Subsonic.AlbumListType = 'newest', size?: number, offset?: number): Promise<Subsonic.Album[]> {
   if (isOffline()) return Local.getAlbumList(type, size, offset);
   const a = auth();
   const ids = enabledFolderIds(a);
+  const merged = (folders: string[]) =>
+    mergedAlbumPage(a, `albums|${type}`, type, folders, size ?? 20, offset ?? 0, (id, s, o) =>
+      Subsonic.getAlbumList(a, type, s, o, id),
+    );
+  const native = ND_ALBUM_LIST[type];
   const page =
     type === 'byYear' && (!ids || ids.length === 1)
       ? byYearPage(a, size ?? 20, offset ?? 0, ids?.[0])
@@ -279,9 +298,14 @@ export function getAlbumList(type: Subsonic.AlbumListType = 'newest', size?: num
         ? Subsonic.getAlbumList(a, type, size, offset)
         : ids.length === 1
           ? Subsonic.getAlbumList(a, type, size, offset, ids[0])
-          : mergedAlbumPage(a, `albums|${type}`, type, ids, size ?? 20, offset ?? 0, (id, s, o) =>
-              Subsonic.getAlbumList(a, type, s, o, id),
-            );
+          : // Several libraries: one request instead of one per library, each
+            // parsed on the JS thread and merged here.
+            native && canListNative(a)
+            ? Navidrome.listAlbums(a, native, size ?? 20, offset ?? 0, ids).catch(() => {
+                bump('album list · native failed');
+                return merged(ids);
+              })
+            : merged(ids);
   return type === 'recent' ? page.then(onlyPlayed) : page;
 }
 
@@ -430,6 +454,16 @@ export function getAlbumsByGenre(
       });
   }
   return subsonicGenreAlbums(a, genre, size, offset);
+}
+
+/**
+ * The first few albums of a genre, for the covers on its card. One request on
+ * Navidrome whatever the library filter: through Subsonic it is one per
+ * library, and with four libraries a scroll through the genres was 1400
+ * requests (each parsed on the JS thread) for two covers a card.
+ */
+export function getGenreArt(genre: string, count: number): Promise<Subsonic.Album[]> {
+  return getAlbumsByGenre(genre, count, 0, canListNative(auth()) ? 'alpha' : 'server');
 }
 
 function subsonicGenreAlbums(
@@ -1283,7 +1317,25 @@ export function unstar(id: string, type?: Subsonic.StarType): Promise<void> {
  * Flushes the offline action queue to the server (on reconnect). Best-effort:
  * whatever fails is kept for the next reconnection.
  */
-export async function flushOfflineQueue(auth: Subsonic.SubsonicAuth): Promise<void> {
+/** One flush at a time: two at once would each send the same listens. One
+ *  for the same account is joined, another account's waits its turn. */
+let flushInFlight: { file: string; run: Promise<void> } | null = null;
+
+export function flushOfflineQueue(auth: Subsonic.SubsonicAuth): Promise<void> {
+  const file = outboxFileFor(auth);
+  if (flushInFlight?.file === file) return flushInFlight.run;
+  const before = flushInFlight?.run ?? Promise.resolve();
+  const run = before
+    .catch(() => {})
+    .then(() => flushOutbox(auth, file))
+    .finally(() => {
+      if (flushInFlight?.run === run) flushInFlight = null;
+    });
+  flushInFlight = { file, run };
+  return run;
+}
+
+async function flushOutbox(auth: Subsonic.SubsonicAuth, file: string): Promise<void> {
   const q = useOfflineQueue.getState();
   await q.load();
   // Read the outbox through this, never off `q`: `getState()` hands back a
@@ -1316,6 +1368,10 @@ export async function flushOfflineQueue(auth: Subsonic.SubsonicAuth): Promise<vo
   }
 
   // Favorites.
+  // Checked before each part: switching profile mid-flush loads the other
+  // account's queue into the same store.
+  const ours = () => useOfflineQueue.getState().loadedFile === file;
+  if (!ours()) return;
   const favs = data().favs ?? {};
   const favFailed: [string, { type: Subsonic.StarType; starred: boolean }][] = [];
   for (const [id, op] of Object.entries(favs)) {
@@ -1326,6 +1382,7 @@ export async function flushOfflineQueue(auth: Subsonic.SubsonicAuth): Promise<vo
       favFailed.push([id, op]);
     }
   }
+  if (!ours()) return;
   if (Object.keys(favs).length > 0) {
     q.clearFavs();
     for (const [id, op] of favFailed) q.setFav(id, op.type, op.starred);
@@ -1341,6 +1398,7 @@ export async function flushOfflineQueue(auth: Subsonic.SubsonicAuth): Promise<vo
       ratingFailed.push([id, rating]);
     }
   }
+  if (!ours()) return;
   if (Object.keys(ratings).length > 0) {
     q.clearRatings();
     for (const [id, rating] of ratingFailed) q.setRating(id, rating);
@@ -1376,6 +1434,7 @@ export async function flushOfflineQueue(auth: Subsonic.SubsonicAuth): Promise<vo
     }
   }
   bump('outbox · plays sent', sent.length);
+  if (!ours()) return;
   if (sent.length > 0) q.removePlays(sent);
 
   // Playlists. Rewrites the final state of each one (create/delete/rename +
@@ -1410,6 +1469,7 @@ export async function flushOfflineQueue(auth: Subsonic.SubsonicAuth): Promise<vo
       plFailed.push([id, edit]);
     }
   }
+  if (!ours()) return;
   if (Object.keys(playlists).length > 0) {
     q.clearPlaylists();
     for (const [id, edit] of plFailed) q.setPlaylist(id, edit);

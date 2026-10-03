@@ -154,7 +154,15 @@ export function SyncedLyricsView({
   /** Color to which the top/bottom edges fade (the background). */
   fadeColor?: string;
 }) {
-  const positionSec = usePlayerStore((s) => s.positionSec);
+  // The line, not the position: the position moves twice a second and the
+  // line every few, and only a new line has anything to redraw.
+  const current = usePlayerStore((s) => {
+    // Small advance so the highlight doesn't lag behind the ear.
+    const posMs = s.positionSec * 1000 + LINE_LEAD_MS;
+    let at = -1;
+    for (let i = 0; i < lines.length && (lines[i].start ?? 0) <= posMs; i++) at = i;
+    return at;
+  });
   const seekTo = usePlayerStore((s) => s.seekTo);
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   // Real scroll position (regardless of who moved it: user or auto-scroll).
@@ -184,10 +192,6 @@ export function SyncedLyricsView({
   /** What `onMeasure` needs to know without being rebuilt on every line. */
   const currentRef = useRef(-1);
 
-  // Small advance so the highlight doesn't lag behind the ear.
-  const posMs = positionSec * 1000 + LINE_LEAD_MS;
-  let current = -1;
-  for (let i = 0; i < lines.length && (lines[i].start ?? 0) <= posMs; i++) current = i;
   currentRef.current = current;
 
   // In full screen we anchor the active line near the center (and pad

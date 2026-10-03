@@ -1,0 +1,2 @@
+package android.util;
+public class SparseIntArray { private final java.util.HashMap<Integer, Integer> m = new java.util.HashMap<>(); public int get(int k) { return m.getOrDefault(k, 0); } public int get(int k, int d) { return m.getOrDefault(k, d); } public void put(int k, int v) { m.put(k, v); } public void delete(int k) { m.remove(k); } public void clear() { m.clear(); } public int size() { return m.size(); } }

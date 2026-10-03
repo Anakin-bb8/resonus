@@ -81,13 +81,14 @@ export type { PlayOp, QueuePlaylist };
  */
 const PLAYS_MAX = 500;
 
-function fileFor(auth: SubsonicAuth): string {
+/** The outbox file of an account; `loadedFile` equal to it means memory is its queue. */
+export function outboxFileFor(auth: SubsonicAuth): string {
   return `${DIR}${hashKey(`${primaryUrl(auth)}|${auth.username}`)}.json`;
 }
 
 function activeFile(): string | null {
   const auth = useAuthStore.getState().auth;
-  return auth ? fileFor(auth) : null;
+  return auth ? outboxFileFor(auth) : null;
 }
 
 interface QueueState {
@@ -196,7 +197,10 @@ export const useOfflineQueue = create<QueueState>((set, get) => {
         } catch {
           // Corrupt or missing file: empty queue.
         }
-        set({ data: mergePending(data, get().data), loadedFile: file });
+        // Memory holds another profile's queue once one was loaded (it is
+        // already in that file); only before the first load is it this one's.
+        const pending = get().loadedFile === null ? get().data : {};
+        set({ data: mergePending(data, pending), loadedFile: file });
       })().finally(() => {
         loadPromise = null;
         loadingFile = null;

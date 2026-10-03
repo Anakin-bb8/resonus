@@ -9,18 +9,49 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.7.14] - 2026-10-03
+
 ### Added
 
-- Settings > About > Share diagnostic report hands over your setup and the last playback problems as text, to paste into a bug report, without turning anything on first.
+- The update prompt sums up what the new version brings.
 
 ### Changed
 
-- Settings drop the descriptions that only repeated the name of the option.
-- Coming back to the app always leaves it on the screen you left, however long it was away, so the Keep where you were switch is gone (#225).
+- The player shows only the Devices and Queue buttons by default.
 
 ### Fixed
 
-- A fragmented M4A plays from the start again instead of stopping after two seconds, which the seeking fix in 0.7.12 had broken (#242).
+- Starting an album no longer refetches the whole Android Auto library.
+- The diagnostics report no longer counts frames while the app is in the background.
+- Home redraws its album cards less often.
+- Genre cards load their covers with one request each, even with several libraries.
+- Long queues redraw fewer rows when the song changes.
+- With several libraries on Navidrome, album lists load in one request instead of one per library.
+- Lyrics redraw only when the line or the word changes.
+
+## [0.7.13] - 2026-10-02
+
+### Added
+
+- Settings > About > Share diagnostic report, for bug reports.
+- The diagnostics report counts late frames per screen and row redraws.
+- Remixers show up as artists, with their remixes under Appears on (#215).
+
+### Changed
+
+- Settings drop descriptions that only repeated the option.
+- Settings > Appearance shows the chosen theme mode.
+- The app always reopens where you left it; the Keep where you were switch is gone (#225).
+
+### Fixed
+
+- Fragmented M4As no longer stop after two seconds (#242).
+- Offline, songs not on the phone are greyed out again.
+- Offline changes no longer go to another profile's account.
+- Offline listens are no longer scrobbled twice.
+- One profile's albums and playlists no longer leak into another's offline library.
+- Skipping while casting no longer leaves the speaker on the previous song.
+- Casting retries a track the TV refuses while another is playing (#246).
 
 ## [0.7.12] - 2026-10-01
 

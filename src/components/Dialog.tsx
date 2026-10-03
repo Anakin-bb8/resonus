@@ -4,7 +4,7 @@
  * destructive actions (without input).
  */
 import Icon from '@/components/Icon';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Modal,
   Pressable,
@@ -21,6 +21,8 @@ interface Props {
   visible: boolean;
   title: string;
   message?: string;
+  /** Anything else to show under the message. */
+  children?: ReactNode;
   /** If provided, shows a text field initialized with `initialValue`. */
   input?: { placeholder?: string; initialValue?: string; secure?: boolean };
   confirmLabel: string;
@@ -47,6 +49,7 @@ export function Dialog({
   visible,
   title,
   message,
+  children,
   input,
   confirmLabel,
   neutral,
@@ -85,6 +88,7 @@ export function Dialog({
         <View style={styles.card}>
           <Text style={styles.title}>{title}</Text>
           {message ? <Text style={styles.message}>{message}</Text> : null}
+          {children}
           {input ? (
             <TextInput
               ref={inputRef}

@@ -42,6 +42,7 @@ import {
 import { useAccent } from '@/hooks/useAccent';
 import { useT } from '@/i18n';
 import { clearDownloadedApk, currentVersion, RELEASES_PAGE } from '@/lib/appUpdate';
+import { summarize, type NoteKind, type ReleaseNotes } from '@/lib/releaseNotes';
 import { useAuthStore } from '@/store/auth';
 import { useNetworkType } from '@/store/networkType';
 import { useSettings } from '@/store/settings';
@@ -162,7 +163,9 @@ export function UpdatePrompt() {
         }}
         onCancel={close}
         onConfirm={start}
-      />
+      >
+        {release?.notes ? <NotesSummary notes={release.notes} /> : null}
+      </Dialog>
 
       {/* Nothing to say while the system screen is open: it is on top of us and
           the prompt underneath would only be in the way when it closes. */}
@@ -208,7 +211,49 @@ export function UpdatePrompt() {
   );
 }
 
+/** How many lines of the notes the prompt shows, all sections together. */
+const SUMMARY_LINES = 4;
+
+/**
+ * What the release brings, in a few lines: enough to tell new things from
+ * fixes and decide, not the notes themselves, which are a tap away under
+ * What's new. The lines are the CHANGELOG's own, so they stay in English.
+ */
+function NotesSummary({ notes }: { notes: ReleaseNotes }) {
+  const t = useT();
+  const label: Record<NoteKind, string> = {
+    added: t('New features'),
+    changed: t('Changes'),
+    fixed: t('Fixes'),
+  };
+  return (
+    <View style={styles.notes}>
+      {summarize(notes, SUMMARY_LINES).map(({ kind, shown, more }) => (
+        <View key={kind} style={styles.section}>
+          <Text style={styles.sectionLabel}>{label[kind]}</Text>
+          {shown.map((line, i) => (
+            <View key={i} style={styles.item}>
+              <Text style={styles.dot}>•</Text>
+              <Text style={styles.itemText} numberOfLines={2}>
+                {line}
+              </Text>
+            </View>
+          ))}
+          {more > 0 ? <Text style={styles.more}>{t('{n} more', { n: more })}</Text> : null}
+        </View>
+      ))}
+    </View>
+  );
+}
+
 const styles = themed((colors) => ({
+  notes: { gap: spacing.sm },
+  section: { gap: 2 },
+  sectionLabel: { color: colors.text, fontSize: fontSize.sm, fontWeight: '500' },
+  item: { flexDirection: 'row', gap: spacing.xs + 2 },
+  dot: { color: colors.textSecondary, fontSize: fontSize.sm },
+  itemText: { flex: 1, color: colors.textSecondary, fontSize: fontSize.sm },
+  more: { color: colors.textMuted, fontSize: fontSize.xs, marginLeft: spacing.sm + 4 },
   backdrop: {
     flex: 1,
     backgroundColor: colors.backdropStrong,

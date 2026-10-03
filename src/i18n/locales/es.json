@@ -760,5 +760,9 @@
   "Couldn't read this settings file": "No se pudo leer este archivo de ajustes",
   "Your preferences will be replaced by the ones in the file. Your language and accounts stay.": "Tus preferencias se sustituirán por las del archivo. Tu idioma y tus cuentas se mantienen.",
   "Import": "Importar",
-  "Settings imported": "Ajustes importados"
+  "Settings imported": "Ajustes importados",
+  "New features": "Novedades",
+  "Changes": "Cambios",
+  "Fixes": "Arreglos",
+  "{n} more": "{n} más"
 }

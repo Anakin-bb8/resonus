@@ -15,6 +15,7 @@ import { usePressFeedback } from '@/hooks/usePressFeedback';
 import { haptic } from '@/lib/haptics';
 import { useMediaMenu } from '@/store/mediaMenu';
 import { fontSize, spacing, themed, useTheme } from '@/theme';
+import { bump } from '@/lib/perfLog';
 import { Cover } from './Cover';
 import { ExplicitBadge, useExplicitBadge } from './ExplicitBadge';
 
@@ -25,6 +26,7 @@ interface Props {
 }
 
 export function AlbumRow({ album, pinned }: Props) {
+  bump('render · AlbumRow');
   const openMenu = useMediaMenu((s) => s.open);
   // Subscribed, not read straight off `colors`: without it the pin would keep
   // the previous accent while the screen stays mounted.

@@ -14,6 +14,7 @@ import { COVER, songCoverUrl, type Song } from '@/api/data';
 import { useAuthStore } from '@/store/auth';
 import { useDownloads } from '@/store/downloads';
 import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
+import { bump } from '@/lib/perfLog';
 import { Cover, useCoverRadius } from './Cover';
 import { ExplicitBadge, useExplicitBadge } from './ExplicitBadge';
 
@@ -41,6 +42,7 @@ export const SongCard = memo(function SongCard({
   onPressIn,
   onLongPress,
 }: Props) {
+  bump('render · SongCard');
   // Worked out here rather than read off the song: see the same note in
   // `TrackRow`. A list the server answered before the connection went away
   // carries no mark, and would show as if it were on the phone.

@@ -8,7 +8,7 @@
  */
 import { useQuery } from '@tanstack/react-query';
 
-import { getAlbumsByGenre } from '@/api/data';
+import { getGenreArt } from '@/api/data';
 import { useAuthStore } from '@/store/auth';
 
 /** How many covers a card fans out. */
@@ -45,7 +45,7 @@ export function useGenreArt(name: string, albumCount?: number) {
     queryFn: async () => {
       await acquire();
       try {
-        return await getAlbumsByGenre(name, GENRE_ART_COUNT);
+        return await getGenreArt(name, GENRE_ART_COUNT);
       } finally {
         release();
       }

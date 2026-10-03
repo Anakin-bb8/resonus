@@ -15,6 +15,7 @@ import Constants from 'expo-constants';
 import { Directory, File, Paths } from 'expo-file-system';
 import { requireOptionalNativeModule } from 'expo-modules-core';
 
+import { parseReleaseNotes, type ReleaseNotes } from './releaseNotes';
 import { getItem, setItem } from './storage';
 
 const native = requireOptionalNativeModule<{
@@ -46,6 +47,8 @@ export interface Release {
   size?: number;
   /** The release page, for when installing is not on the table. */
   pageUrl: string;
+  /** Its notes by section, for the prompt's summary; undefined if unreadable. */
+  notes?: ReleaseNotes;
 }
 
 export function currentVersion(): string {
@@ -121,6 +124,7 @@ async function fetchLatest(): Promise<Release | null> {
   const body = (await res.json()) as {
     tag_name?: string;
     html_url?: string;
+    body?: string;
     assets?: { name?: string; browser_download_url?: string; size?: number }[];
   };
   const tag = body.tag_name;
@@ -131,6 +135,7 @@ async function fetchLatest(): Promise<Release | null> {
     apkUrl: apk?.browser_download_url,
     size: apk?.size,
     pageUrl: body.html_url ?? RELEASES_PAGE,
+    notes: parseReleaseNotes(body.body),
   };
 }
 
