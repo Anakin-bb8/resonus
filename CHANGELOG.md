@@ -14,6 +14,8 @@ Releases before 0.2.1 are only listed on the
 - Starting an album no longer refetches the whole Android Auto library.
 - The diagnostics report no longer counts frames while the app is in the background.
 - Home redraws its album cards less often.
+- Genre cards load their covers with one request each, even with several libraries.
+- Long queues redraw fewer rows when the song changes.
 
 ## [0.7.13] - 2026-10-02
 

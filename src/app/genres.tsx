@@ -5,7 +5,7 @@
  */
 import Icon from '@/components/Icon';
 import { useQuery } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   FlatList,
   Pressable,
@@ -78,6 +78,12 @@ export function GenresBrowser({ embedded, searchOpen }: BrowserProps) {
     return q ? all.filter((g) => g.value.toLowerCase().includes(q)) : all;
   }, [data, query]);
 
+  // Stable, with the cards memoised: a new one per render redrew every card.
+  const renderGenre = useCallback(
+    ({ item }: { item: Genre }) => <GenreCard name={item.value} albumCount={item.albumCount} />,
+    [],
+  );
+
   return (
     <BrowseFrame embedded={embedded}>
       {embedded ? null : (
@@ -130,9 +136,7 @@ export function GenresBrowser({ embedded, searchOpen }: BrowserProps) {
           numColumns={columns}
           columnWrapperStyle={{ gap: spacing.sm }}
           contentContainerStyle={[styles.list, { paddingBottom: bottomPad }]}
-          renderItem={({ item }: { item: Genre }) => (
-            <GenreCard name={item.value} albumCount={item.albumCount} />
-          )}
+          renderItem={renderGenre}
           ListEmptyComponent={
             <EmptyState
               icon="pricetags-outline"

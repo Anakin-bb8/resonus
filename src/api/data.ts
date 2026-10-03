@@ -432,6 +432,16 @@ export function getAlbumsByGenre(
   return subsonicGenreAlbums(a, genre, size, offset);
 }
 
+/**
+ * The first few albums of a genre, for the covers on its card. One request on
+ * Navidrome whatever the library filter: through Subsonic it is one per
+ * library, and with four libraries a scroll through the genres was 1400
+ * requests (each parsed on the JS thread) for two covers a card.
+ */
+export function getGenreArt(genre: string, count: number): Promise<Subsonic.Album[]> {
+  return getAlbumsByGenre(genre, count, 0, canListNative(auth()) ? 'alpha' : 'server');
+}
+
 function subsonicGenreAlbums(
   a: Subsonic.SubsonicAuth,
   genre: string,

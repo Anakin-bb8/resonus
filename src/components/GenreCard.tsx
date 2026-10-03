@@ -1,5 +1,6 @@
 /** Colored card for a genre, with its first covers fanned out. Links to /genre/[name]. */
 import { Link } from 'expo-router';
+import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { COVER, coverArtUrl } from '@/api/data';
@@ -99,7 +100,7 @@ function genreColors(name: string): { card: string; ink: string } {
   };
 }
 
-export function GenreCard({
+export const GenreCard = memo(function GenreCard({
   name,
   albumCount,
   width,
@@ -158,7 +159,7 @@ export function GenreCard({
       </Pressable>
     </Link>
   );
-}
+});
 
 const styles = themed((colors) => ({
   card: { height: GENRE_CARD_HEIGHT, borderRadius: radius.lg, overflow: 'hidden' },

@@ -17,7 +17,7 @@
  */
 import Icon from '@/components/Icon';
 import { useRouter } from 'expo-router';
-import { useMemo, useRef, useState } from 'react';
+import { memo, useMemo, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import ReorderableList, {
   useReorderableDrag,
@@ -82,7 +82,9 @@ function ArtistLine({ song }: { song: Song }) {
  * three drag and remove the same way (#157); the state only decides how the row
  * reads and what a tap does.
  */
-function QueueRow({
+// Memoised: the cursor moving re-renders the list, and with a long queue
+// that was every mounted row rather than the two whose state changed.
+const QueueRow = memo(function QueueRow({
   item,
   absIndex,
   state,
@@ -137,7 +139,7 @@ function QueueRow({
       </View>
     </View>
   );
-}
+});
 
 export default function QueueScreen() {
   useSettings((s) => s.appFont); // re-render when font changes
