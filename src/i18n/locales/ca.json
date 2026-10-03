@@ -747,5 +747,9 @@
   "Couldn't read this settings file": "No s'ha pogut llegir aquest fitxer de configuració",
   "Your preferences will be replaced by the ones in the file. Your language and accounts stay.": "Les teves preferències se substituiran per les del fitxer. El teu idioma i els teus comptes es mantenen.",
   "Import": "Importa",
-  "Settings imported": "Configuració importada"
+  "Settings imported": "Configuració importada",
+  "New features": "Novetats",
+  "Changes": "Canvis",
+  "Fixes": "Correccions",
+  "{n} more": "{n} més"
 }

@@ -562,6 +562,10 @@
     // ── Settings › About ─────────────────────────────────────────────────────
     "Version": "Which version of Resonus this is. Tapping it five times opens Diagnostics",
     "What's new": "Opens what changed in this version",
+    "New features": "Heading in the update prompt over the new things a release brings. The lines under it stay in English",
+    "Changes": "Heading in the update prompt over what a release changes",
+    "Fixes": "Heading in the update prompt over the bugs a release fixes",
+    "{n} more": "Under a heading of the update prompt: how many more lines of that kind the release notes have",
     "Support Resonus": "The row for whoever wants to give something. The app needs nothing to work",
 
     // ── Radio ────────────────────────────────────────────────────────────────

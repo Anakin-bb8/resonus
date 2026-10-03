@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 760 of them.
+Every string the app can show, under the screen it shows up on. 764 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -30,6 +30,7 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `{n} minutes` | A value of the sleep timer, in minutes from now |
+| `{n} more` | Under a heading of the update prompt: how many more lines of that kind the release notes have |
 | `{n} songs, {size}, copied into a folder of their own.` | The line under that title |
 | `1 day` | How long a shared link lasts, counted from the moment it is made |
 | `1 hour` | How long a shared link lasts, counted from the moment it is made. Not a time of day |
@@ -42,6 +43,7 @@ you are actually typing into, which is easier than reading it here.
 | `Back online` | The toast shown when the server answers again and the app comes out of offline mode |
 | `Battery optimization is on` | Title of the card warning that Android may cut playback off |
 | `BPM` | A property of the audio: beats per minute |
+| `Changes` | Heading in the update prompt over what a release changes |
 | `Channels` | A property of the audio: mono, stereo |
 | `Clean` | A value of `Content`: the edited version, with the explicit language taken out. Not "tidy" and not "free of noise" |
 | `Comment` | The file's comment tag, where people keep notes about a recording |
@@ -59,6 +61,7 @@ you are actually typing into, which is easier than reading it here.
 | `Duration` | Label of a field in the song information sheet: how long the song is |
 | `Explicit` | A value of `Content`: the recording carries a parental advisory (strong language). Also read out for the E badge next to a title |
 | `Export “{name}”?` | Confirms getting the files of an album or playlist out of the app |
+| `Fixes` | Heading in the update prompt over the bugs a release fixes |
 | `Format` | The file format (FLAC, MP3…), written as the player writes it |
 | `Genre` | Label of a field in the song information sheet |
 | `Go to album` | Leave this sheet and open the album the song is on |
@@ -68,6 +71,7 @@ you are actually typing into, which is easier than reading it here.
 | `Mix of “{name}”` | What the player calls the queue once it has grown past its album into songs the app picked itself. `{name}` is the song it was grown from |
 | `Mix started` | The toast that says the app is now picking the songs |
 | `Moods` | Mood tags the server has on the song: mellow, energetic… |
+| `New features` | Heading in the update prompt over the new things a release brings. The lines under it stay in English |
 | `Open settings` | Its confirm button: goes to Android's own settings, not the app's |
 | `Pick a date…` | Opens the calendar to choose the day the link stops working |
 | `Pin to top` | Keep this at the top of its list, above everything else. `Unpin` undoes it |

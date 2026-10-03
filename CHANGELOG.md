@@ -9,6 +9,10 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Added
+
+- The update prompt sums up what the new version brings.
+
 ### Changed
 
 - The player shows only the Devices and Queue buttons by default.

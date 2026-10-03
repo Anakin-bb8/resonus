@@ -758,5 +758,9 @@
   "Couldn't read this settings file": "Couldn't read this settings file",
   "Your preferences will be replaced by the ones in the file. Your language and accounts stay.": "Your preferences will be replaced by the ones in the file. Your language and accounts stay.",
   "Import": "Import",
-  "Settings imported": "Settings imported"
+  "Settings imported": "Settings imported",
+  "New features": "New features",
+  "Changes": "Changes",
+  "Fixes": "Fixes",
+  "{n} more": "{n} more"
 }
