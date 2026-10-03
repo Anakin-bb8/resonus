@@ -9,6 +9,8 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.7.14] - 2026-10-03
+
 ### Added
 
 - The update prompt sums up what the new version brings.
