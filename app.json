@@ -13,7 +13,11 @@
       "icon": "./assets/images/resonus-ios.icon",
       "infoPlist": {
         "UIBackgroundModes": [
-          "audio"
+          "audio",
+          "fetch"
+        ],
+        "BGTaskSchedulerPermittedIdentifiers": [
+          "com.juananzzz.resonus.pendingPressRefresh"
         ]
       }
     },

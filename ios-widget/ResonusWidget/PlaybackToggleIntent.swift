@@ -1,4 +1,5 @@
 import AppIntents
+import BackgroundTasks
 import Foundation
 
 /// The widget's play/pause button: one press, the player toggles, and the
@@ -35,11 +36,42 @@ enum PlaybackToggleRelay {
     static let pendingKey = "pendingPlaybackToggle"
     static let noteName = "ResonusPlaybackToggle"
 
+    /// The cross-process half of the note: `NotificationCenter.default`
+    /// stays inside one process, and the extension is not the app's. The app
+    /// observes this Darwin notification in `HomeWidgetModule`.
+    static let darwinNote = "com.juananzzz.resonus.playbackToggle"
+
+    /// The refresh task that gets the app running when nothing else can.
+    /// This extension schedules it, the app registers it in its AppDelegate
+    /// (both plists permit it), and the system launches the app in the
+    /// background to run it — JavaScript then takes the press on startup,
+    /// while the handler keeps the process up long enough to play.
+    static let refreshTask = "com.juananzzz.resonus.pendingPressRefresh"
+
     static func request() {
         let now = Date().timeIntervalSince1970
         for group in SharedAppGroup.granted() {
-            UserDefaults(suiteName: group)?.set(now, forKey: pendingKey)
+            guard let defaults = UserDefaults(suiteName: group) else { continue }
+            defaults.set(now, forKey: pendingKey)
+            // This process dies the moment `perform()` returns: flush the
+            // write, or the press can die with it before the app ever reads.
+            defaults.synchronize()
         }
+        // Two roads for an app that is up to hear it: the local note when
+        // the intent happened to run in its own process, the Darwin one when
+        // it ran here and the app's process is merely alive.
         NotificationCenter.default.post(name: Notification.Name(noteName), object: nil)
+        CFNotificationCenterPostNotification(
+            CFNotificationCenterGetDarwinNotifyCenter(),
+            CFNotificationName(darwinNote as CFString),
+            nil,
+            nil,
+            true
+        )
+        // And the road for an app that is suspended or not up at all: the
+        // system relaunches it in the background to run this task. Submitted
+        // on every press, so a later press never waits on an earlier one.
+        let request = BGAppRefreshTaskRequest(identifier: refreshTask)
+        try? BGTaskScheduler.shared.submit(request)
     }
 }

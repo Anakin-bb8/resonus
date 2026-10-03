@@ -24,6 +24,7 @@ const fs = require('fs');
 const path = require('path');
 
 const {
+  withAppDelegate,
   withDangerousMod,
   withEntitlementsPlist,
   withXcodeProject,
@@ -31,6 +32,16 @@ const {
 
 /** Shared with the widget's own `ResonusWidget.entitlements`. */
 const APP_GROUP = 'group.com.juananzzz.resonus';
+
+/**
+ * The refresh task whose only job is to get the app running: the widget's
+ * play button schedules it, and the system launches the app in the
+ * background to run it. Spelled the same in `PlaybackToggleIntent` and in
+ * the register call injected into the AppDelegate below; both plists
+ * (app.json for the app, `ResonusWidget-Info.plist` for the extension)
+ * permit it.
+ */
+const PRESS_TASK = 'com.juananzzz.resonus.pendingPressRefresh';
 
 const NAME = 'ResonusWidget';
 const BUNDLE_ID = 'com.juananzzz.resonus.ResonusWidget';
@@ -77,6 +88,41 @@ module.exports = function withResonusWidget(config) {
       return cfg;
     },
   ]);
+
+  // The register call for the press's background launch, put where iOS looks
+  // for it: before `didFinishLaunchingWithOptions` returns. The handler does
+  // not touch the group — the press waits there, JavaScript takes it on
+  // startup (the cold case) or on its one-second poll (the suspended one) —
+  // it only keeps the process up long enough for that to happen.
+  config = withAppDelegate(config, (cfg) => {
+    if (cfg.modResults.language !== 'swift') return cfg;
+    const before = cfg.modResults.contents;
+    if (before.includes(PRESS_TASK)) return cfg;
+    const marker =
+      'return super.application(application, didFinishLaunchingWithOptions: launchOptions)';
+    cfg.modResults.contents = before
+      .replace(
+        'import ReactAppDependencyProvider',
+        'import ReactAppDependencyProvider\nimport BackgroundTasks',
+      )
+      .replace(
+        marker,
+        `BGTaskScheduler.shared.register(forTaskWithIdentifier: "${PRESS_TASK}", using: nil) { task in
+      DispatchQueue.main.asyncAfter(deadline: .now() + 20) {
+        task.setTaskCompleted(success: true)
+      }
+    }
+
+    ${marker}`,
+      );
+    if (
+      !cfg.modResults.contents.includes(PRESS_TASK) ||
+      !cfg.modResults.contents.includes('import BackgroundTasks')
+    ) {
+      throw new Error('withResonusWidget: AppDelegate template not as expected');
+    }
+    return cfg;
+  });
 
   return withXcodeProject(config, (cfg) => {
     const project = cfg.modResults;

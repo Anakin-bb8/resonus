@@ -19,6 +19,21 @@ public class HomeWidgetModule: Module {
       ) { [weak self] _ in
         self?.sendEvent("playbackToggle", [:])
       }
+      // The same press from the widget's own process: a Darwin notification
+      // is the one kind that crosses processes, so this fires the instant the
+      // extension posts it — no waiting for the one-second poll.
+      CFNotificationCenterAddObserver(
+        CFNotificationCenterGetDarwinNotifyCenter(),
+        Unmanaged.passUnretained(self).toOpaque(),
+        { _, observer, _, _, _ in
+          guard let observer else { return }
+          let module = Unmanaged<HomeWidgetModule>.fromOpaque(observer).takeUnretainedValue()
+          DispatchQueue.main.async { module.sendEvent("playbackToggle", [:]) }
+        },
+        CFNotificationName(HomeWidgetStore.darwinNote),
+        nil,
+        .deliverImmediately
+      )
     }
 
     Function("update") { (state: [String: Any]) in
@@ -57,6 +72,13 @@ private enum HomeWidgetStore {
   static let toggleNoteName = "ResonusPlaybackToggle"
   private static let toggleWindowSec: Double = 300
 
+  /// The Darwin notification, spelled the same in `PlaybackToggleRelay`.
+  static let darwinNote = "com.juananzzz.resonus.playbackToggle" as CFString
+
+  /// What the app writes when it takes a press: for `status()`, to tell
+  /// "the press never arrived" from "it arrived and something else failed".
+  private static let takenKey = "lastPressTaken"
+
   /// The groups this build was granted, of which there may be none. Fixed for
   /// the life of the process, because the entitlements are.
   private static let groups = SharedAppGroup.granted()
@@ -86,7 +108,14 @@ private enum HomeWidgetStore {
         found = true
       }
     }
-    return found && since > 0 && Date().timeIntervalSince1970 - since <= toggleWindowSec
+    let valid = found && since > 0 && Date().timeIntervalSince1970 - since <= toggleWindowSec
+    if valid {
+      let now = Date().timeIntervalSince1970
+      for group in groups {
+        UserDefaults(suiteName: group)?.set(now, forKey: takenKey)
+      }
+    }
+    return valid
   }
 
   static func write(_ state: [String: Any]) {
@@ -181,6 +210,30 @@ private enum HomeWidgetStore {
       return parts.joined(separator: " · ")
     }
     parts.append("granted: \(groups.joined(separator: ", "))")
+
+    // The press itself, from the same group: waiting means the app has not
+    // read it yet (the poll is asleep or the window has not opened), taken is
+    // the last one it did — together they say whether the road works at all.
+    let pressFormat = DateFormatter()
+    pressFormat.dateFormat = "HH:mm:ss"
+    var waiting: Double = 0
+    var taken: Double = 0
+    for group in groups {
+      let defaults = UserDefaults(suiteName: group)
+      if waiting == 0, let value = (defaults?.object(forKey: toggleKey) as? NSNumber)?.doubleValue, value > 0 {
+        waiting = value
+      }
+      if taken == 0, let value = defaults?.double(forKey: takenKey), value > 0 {
+        taken = value
+      }
+    }
+    if waiting > 0 {
+      parts.append("press waiting \(pressFormat.string(from: Date(timeIntervalSince1970: waiting)))")
+    } else if taken > 0 {
+      parts.append("press taken \(pressFormat.string(from: Date(timeIntervalSince1970: taken)))")
+    } else {
+      parts.append("no press yet")
+    }
 
     var unreadable = false
     for group in groups {
