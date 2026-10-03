@@ -13,12 +13,14 @@
  * and it uses its own `JsProxyPlayer`, not this player.
  */
 import {
+  AudioModule,
   createAudioPlayer,
   setAudioModeAsync,
   type AudioMetadata,
   type AudioPlayer,
   type AudioSource,
   type AudioStatus,
+  type NativeAudioModule,
 } from 'expo-audio';
 import { fetch as expoFetch } from 'expo/fetch';
 import { AppState } from 'react-native';
@@ -48,7 +50,7 @@ import { CLIENT_NAME } from '@/api/subsonic';
 // filter and asks each library for its share (the rest of the mix cannot be
 // filtered, see `radioCandidates`), and `coverArtUrl` hands back the file on
 // disk when the album is downloaded instead of an address on the server.
-import { COVER, coverArtUrl, getRandomSongs } from '@/api/data';
+import { CACHED_COVER, COVER, coverArtUrl, getRandomSongs } from '@/api/data';
 import { prefetchLyrics } from '@/hooks/useLyrics';
 import { tg } from '@/i18n';
 import { transcodeTarget } from '@/lib/audioQuality';
@@ -629,6 +631,39 @@ export function artworkUrlFor(song: Song): string | undefined {
   // A radio has no album to fall back to, but the server may hold an image for
   // the station, and one picked on the device arrives as a file:// path.
   return coverArtUrl(song.coverArt ?? (song.url ? undefined : song.albumId), COVER.card);
+}
+
+/** How many tracks behind the current one get their covers warmed this way. */
+const ARTWORK_LOOKAHEAD = 3;
+
+/** Covers already handed to the native preloader, once each per session. */
+const warmedArtwork = new Set<string>();
+
+/**
+ * The native module under its own type: the module exports its instance, and
+ * the namespace rule at an import reads nothing off it — this alias keeps the
+ * warming call below going somewhere the compiler checks.
+ */
+const audioModule = AudioModule as NativeAudioModule;
+
+/**
+ * Starts a cover downloading, and its lock screen clip encoding, with no
+ * track attached to it: the queue ahead is warmed this way, so every cover
+ * is on disk well before its track plays and the lock screen has nothing
+ * left to wait for. The native side keeps a small cache of its own — this
+ * set only stops the queue's constant re-evaluation from asking twice.
+ */
+function warmArtwork(song: Song) {
+  const url = artworkUrlFor(song);
+  // A cover the app only holds in its own image cache is no address the
+  // native fetcher can use, and anything already asked for is under way.
+  if (!url || url.startsWith(CACHED_COVER) || warmedArtwork.has(url)) return;
+  warmedArtwork.add(url);
+  try {
+    audioModule.warmArtwork(url);
+  } catch {
+    // A build without the patched module: covers load the old way.
+  }
 }
 
 /**
@@ -1788,6 +1823,15 @@ function scheduleNextSource(force = false) {
   const p = activePlayer();
   if (!p) return;
   const st = usePlayerStore.getState();
+  // The covers of the tracks walking in behind this one: fetched and encoded
+  // while the current one still plays. Gapless queues the next track natively
+  // (and warms its cover); this is the three behind it, and the whole walk
+  // under crossfade, which queues no track at all. Every path through this
+  // function reaches the loop — the set inside makes it once per URL.
+  for (let k = 1; k <= ARTWORK_LOOKAHEAD; k += 1) {
+    const ahead = st.queue[st.index + k];
+    if (ahead && !ahead.url) warmArtwork(ahead);
+  }
   // Repeating one song is the native `loop`, which a source holding only part
   // of the song cannot do (see `applyLoop`). What comes after that source is
   // the same song from the beginning: queued here, the player joins them by

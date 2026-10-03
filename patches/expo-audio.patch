@@ -781,7 +781,7 @@ index 149e9075c8630b14a69318aa6c37d9ff82b23f05..40f5d256923a603933c7c436367bac86
  
 diff --git a/android/src/main/java/expo/modules/audio/FragmentSeekingExtractor.kt b/android/src/main/java/expo/modules/audio/FragmentSeekingExtractor.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..19f244ce7589fc228e63c99051dd36680e6ffedd
+index 0000000000000000000000000000000000000000..a63387bc8748af54e1afc24712b1f85f9410f3e6
 --- /dev/null
 +++ b/android/src/main/java/expo/modules/audio/FragmentSeekingExtractor.kt
 @@ -0,0 +1,393 @@
@@ -1810,7 +1810,7 @@ index 0000000000000000000000000000000000000000..e0bd757158c66f762766a76e6c486cbd
 +  }
 +}
 diff --git a/build/Audio.types.d.ts b/build/Audio.types.d.ts
-index 25604783649fe9b64f6655172f08471a5efcbf45..9433f680d8547608077385ae4c343f6a6993542f 100644
+index 25604783649fe9b64f6655172f08471a5efcbf45..885474cb5e5ce99b758c307f95bb6782d6d63ba0 100644
 --- a/build/Audio.types.d.ts
 +++ b/build/Audio.types.d.ts
 @@ -34,6 +34,28 @@ export type AudioSource = string | number | null | {
@@ -1874,10 +1874,24 @@ index cfd92ad0ff5765254c4e6db974fe44bce34aad06..d16fb49bb630dd95f26abfb6260ade9c
  //# sourceMappingURL=AudioConstants.d.ts.map
 \ No newline at end of file
 diff --git a/build/AudioModule.types.d.ts b/build/AudioModule.types.d.ts
-index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..967554dbfde096c1ad211c078345c12ea73bffc1 100644
+index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..04cbb9d83deeadfc145d8c329b6d39ed0cfddfdc 100644
 --- a/build/AudioModule.types.d.ts
 +++ b/build/AudioModule.types.d.ts
-@@ -31,6 +31,11 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
+@@ -16,6 +16,13 @@ export declare class NativeAudioModule extends NativeModule {
+     clearPreloadedSource(source: AudioSource): Promise<void>;
+     clearAllPreloadedSources(): Promise<void>;
+     getPreloadedSources(): Promise<string[]>;
++    /**
++     * Starts the cover at `url` downloading — and, when it animates, its clip
++     * encoding — with no track attached: the queue ahead is warmed this way,
++     * and the lock screen reads the result the moment each track starts.
++     * @param url The cover's URL, as metadata carries it.
++     */
++    warmArtwork(url: string): void;
+     readonly AudioPlayer: typeof AudioPlayer;
+     readonly AudioRecorder: typeof AudioRecorder;
+     readonly AudioPlaylist: typeof AudioPlaylist;
+@@ -31,6 +38,11 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
       * Unique identifier for the player object.
       */
      id: string;
@@ -1889,7 +1903,7 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..967554dbfde096c1ad211c078345c12e
      /**
       * Boolean value indicating whether the player is currently playing.
       */
-@@ -141,6 +146,14 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
+@@ -141,6 +153,14 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
       * Replaces the current audio source with a new one.
       */
      replace(source: AudioSource): void;
@@ -1904,7 +1918,7 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..967554dbfde096c1ad211c078345c12e
      /**
       * Seeks the playback by the given number of seconds.
       * @param seconds The number of seconds to seek by.
-@@ -183,6 +196,24 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
+@@ -183,6 +203,24 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
       * This will clear the lock screen's now playing info.
       */
      clearLockScreenControls(): void;
@@ -1929,7 +1943,7 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..967554dbfde096c1ad211c078345c12e
      /**
       * Remove the player from memory to free up resources.
       */
-@@ -222,6 +253,29 @@ export type AudioEvents = {
+@@ -222,6 +260,29 @@ export type AudioEvents = {
      playbackStatusUpdate(status: AudioStatus): void;
      /** Fired when audio sampling is enabled and new sample data is available. */
      audioSampleUpdate(data: AudioSample): void;
@@ -2561,7 +2575,7 @@ index 0000000000000000000000000000000000000000..b7329bcb0466efb330dd3afa01b0c4b5
 +#endif
 diff --git a/ios/ArtworkPreloader.swift b/ios/ArtworkPreloader.swift
 new file mode 100644
-index 0000000000000000000000000000000000000000..e10b28deb11a023d1956b93b89e22f29057c1003
+index 0000000000000000000000000000000000000000..3f23f0177668f354b005580174b2a30bde0ccbfa
 --- /dev/null
 +++ b/ios/ArtworkPreloader.swift
 @@ -0,0 +1,103 @@
@@ -2669,10 +2683,28 @@ index 0000000000000000000000000000000000000000..e10b28deb11a023d1956b93b89e22f29
 +  }
 +}
 diff --git a/ios/AudioModule.swift b/ios/AudioModule.swift
-index d26560627c2dfa97370440ad28304617f3f9f0f7..5ba926fe07d5ca41bde8c56bd8e275b8f4ad8577 100644
+index d26560627c2dfa97370440ad28304617f3f9f0f7..9fc06a2bad585b3c978ad8055c8da4c0c165a9f9 100644
 --- a/ios/AudioModule.swift
 +++ b/ios/AudioModule.swift
-@@ -241,6 +241,18 @@ public class AudioModule: Module {
+@@ -32,6 +32,17 @@ public class AudioModule: Module {
+       try setAudioMode(mode: mode)
+     }
+ 
++    /// The lock screen's cover for `url`, fetched and its clip encoded with no
++    /// track attached to it: how the queue ahead is warmed, covers of tracks
++    /// the player has not been pointed at yet. (`setNextSource` warms the one
++    /// queued behind the current, `replaceCurrentSource` the one loading.)
++    Function("warmArtwork") { (urlString: String?) in
++      guard let urlString, let url = URL(string: urlString) else {
++        return
++      }
++      ArtworkPreloader.shared.warm(url)
++    }
++
+     AsyncFunction("setIsAudioActiveAsync") { (isActive: Bool)  in
+       try setIsAudioActive(isActive)
+     }
+@@ -241,6 +252,18 @@ public class AudioModule: Module {
          }
        }
  
@@ -2692,7 +2724,7 @@ index d26560627c2dfa97370440ad28304617f3f9f0f7..5ba926fe07d5ca41bde8c56bd8e275b8
          player.ref.pause()
          if !player.keepAudioSessionActive {
 diff --git a/ios/AudioPlayer.swift b/ios/AudioPlayer.swift
-index 074294321e872bb53c0b2d41044dac3c612f14f0..04ff64285be8f38578f1a9f86b4c2e69f9e75d5d 100644
+index 074294321e872bb53c0b2d41044dac3c612f14f0..c3f06ed799a991d94e9cd2516ed9b80f57f3159b 100644
 --- a/ios/AudioPlayer.swift
 +++ b/ios/AudioPlayer.swift
 @@ -4,6 +4,7 @@ import Combine
@@ -2830,7 +2862,18 @@ index 074294321e872bb53c0b2d41044dac3c612f14f0..04ff64285be8f38578f1a9f86b4c2e69
          if self.isLooping {
            self.enqueueNextLoopItem()
            self.addPlaybackEndNotification()
-@@ -319,6 +380,7 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+@@ -262,6 +323,10 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+ 
+   func replaceCurrentSource(source: AudioSource) {
+     self.source = source
++    // Its cover too: the lock screen asks the moment a source lands, and a
++    // track loaded by hand never passed through the warm `setNextSource` does
++    // — a tap in a list, a crossfade's reserve player, a resume from pause.
++    ArtworkPreloader.shared.warm(source.metadata?.artworkUrl)
+     let wasPlaying = ref.timeControlStatus == .playing
+     let wasSamplingEnabled = samplingEnabled
+     removeQueuedLoopItems()
+@@ -319,6 +384,7 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
    }
  
    private func teardownPlayer() {
@@ -2838,7 +2881,7 @@ index 074294321e872bb53c0b2d41044dac3c612f14f0..04ff64285be8f38578f1a9f86b4c2e69
      removeQueuedLoopItems()
      if samplingEnabled {
        uninstallTap()
-@@ -346,7 +408,7 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+@@ -346,7 +412,7 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
  
    private func restorePlaybackState(time: Double, shouldResume: Bool, rate: Float) {
      let cmTime = CMTime(seconds: time, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
@@ -2847,7 +2890,7 @@ index 074294321e872bb53c0b2d41044dac3c612f14f0..04ff64285be8f38578f1a9f86b4c2e69
        guard let self, shouldResume else { return }
        self.play(at: rate)
      }
-@@ -405,6 +467,11 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+@@ -405,6 +471,11 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
    }
  
    private func replacePlayerItem(with item: AVPlayerItem?) {
@@ -2859,7 +2902,7 @@ index 074294321e872bb53c0b2d41044dac3c612f14f0..04ff64285be8f38578f1a9f86b4c2e69
      if let queuePlayer = ref as? AVQueuePlayer {
        queuePlayer.removeAllItems()
        if let item {
-@@ -429,12 +496,67 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+@@ -429,12 +500,67 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
      queuePlayer.insert(nextItem, after: currentItem)
    }
  
@@ -2928,7 +2971,7 @@ index 074294321e872bb53c0b2d41044dac3c612f14f0..04ff64285be8f38578f1a9f86b4c2e69
        queuePlayer.remove(item)
      }
    }
-@@ -459,7 +581,21 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+@@ -459,7 +585,21 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
          return
        }
  
@@ -2973,7 +3016,7 @@ index 33db27c3b8fb40fa9db6659a0787c6b2b503d1ab..ae00508e44a1632dafe1bedc2d326c31
  
  enum BitRateStrategy: String, Enumerable {
 diff --git a/ios/AudioSource.swift b/ios/AudioSource.swift
-index 0c8c2fede4b079f6d71217bafe07b5de55438821..fc6b758c482b020b24ef8485dbf506e0ced8c10a 100644
+index 0c8c2fede4b079f6d71217bafe07b5de55438821..9870ce6b1e038ab701591c7bebead6b95db80dd4 100644
 --- a/ios/AudioSource.swift
 +++ b/ios/AudioSource.swift
 @@ -10,4 +10,13 @@ struct AudioSource: Record {
@@ -3021,7 +3064,7 @@ index 79c7c0b256581a768c42a0291bf84bdff4c4b142..ca13e59c53a7f9a3a5fc49d94b266c62
  
      let asset = AVURLAsset(url: finalUrl, options: options)
 diff --git a/ios/MediaController.swift b/ios/MediaController.swift
-index e977f577cd2e16b194b56537ad76b423f40d2496..d5e4df5eaf76cd03e1a025a579d53db750eced34 100644
+index e977f577cd2e16b194b56537ad76b423f40d2496..4f16e709309c0a9f8b690232ae23d8067cdb1cda 100644
 --- a/ios/MediaController.swift
 +++ b/ios/MediaController.swift
 @@ -11,9 +11,12 @@ class MediaController {
@@ -3168,27 +3211,13 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..d5e4df5eaf76cd03e1a025a579d53db7
 -        }
 -        return
 -      }
--
--      guard let data, let image = UIImage(data: data) else {
--        self.performOnMain {
--          completion(nil)
--        }
--        return
--      }
--
--      let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
--      self.performOnMain {
--        completion(artwork)
--      }
--    }
--    .resume()
--  }
 +  private struct LoadedArtwork {
 +    let still: MPMediaItemArtwork?
 +    let square: AnyObject?
 +    let tall: AnyObject?
 +  }
-+
+ 
+-      guard let data, let image = UIImage(data: data) else {
 +  private func loadArtworkFromURL(url: URL, completion: @escaping (LoadedArtwork) -> Void) {
 +    // Through the preloader, which `setNextSource` warms while the track it
 +    // belongs to is still the NEXT one: the bytes, and the clip's encode
@@ -3197,19 +3226,22 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..d5e4df5eaf76cd03e1a025a579d53db7
 +    // instead of once each.
 +    ArtworkPreloader.shared.fetch(url) { ready in
 +      guard let ready, let image = UIImage(data: ready.data) else {
-+        self.performOnMain {
+         self.performOnMain {
+-          completion(nil)
 +          completion(LoadedArtwork(still: nil, square: nil, tall: nil))
-+        }
-+        return
-+      }
-+
+         }
+         return
+       }
+ 
+-      let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
 +      let still = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
-+      self.performOnMain {
+       self.performOnMain {
+-        completion(artwork)
 +        completion(LoadedArtwork(still: still, square: ready.square, tall: ready.tall))
 +      }
 +    }
 +  }
- 
++
 +  // Both variants are published: the system drops the key it does not support
 +  // on its own, and gating on `supportedAnimatedArtworkKeys` is what kept the
 +  // lock screen on the static artwork — the tall 3:4 variant is the one the
@@ -3230,8 +3262,9 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..d5e4df5eaf76cd03e1a025a579d53db7
 +        info[MPNowPlayingInfoProperty3x4AnimatedArtwork] = item
 +      } else {
 +        info.removeValue(forKey: MPNowPlayingInfoProperty3x4AnimatedArtwork)
-+      }
-+    }
+       }
+     }
+-    .resume()
 +#endif
 +  }
 +
@@ -3242,8 +3275,8 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..d5e4df5eaf76cd03e1a025a579d53db7
 +      info.removeValue(forKey: MPNowPlayingInfoProperty3x4AnimatedArtwork)
 +    }
 +#endif
-+  }
-+
+   }
+ 
    private func enableRemoteCommands(options: LockScreenOptions?) {
 +    updateRemoteCommandAvailability(options: options)
 +
