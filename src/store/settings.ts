@@ -869,9 +869,6 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   blurBars: boolean;
   /** What the navigation bar is filled with: flat, or fading out at the top. */
   navBarStyle: NavBarStyle;
-  /** The top bar of a detail screen (playlist, artist, album): the header's
-   *  colour fading into the page, or the flat colour it used to be. */
-  barGradient: boolean;
   /** Blur what scrolls under the mini player. */
   blurMiniPlayer: boolean;
   /** Song duration in lists (Spotify doesn't show it). */
@@ -1221,7 +1218,6 @@ const DEFAULTS = {
   alwaysShowTabs: true,
   blurBars: true,
   navBarStyle: 'solid' as NavBarStyle,
-  barGradient: true,
   blurMiniPlayer: true,
   showSongDuration: false,
   showListRating: false,

@@ -12,11 +12,9 @@
  * what is behind it without hiding it.
  */
 import { BlurTargetView, BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
 import { createRef, type ReactNode } from 'react';
 import { Animated, Platform, StyleSheet, View } from 'react-native';
 
-import { easedFade } from '@/lib/fade';
 import { useSettings } from '@/store/settings';
 import { useTheme, useThemeMode } from '@/theme';
 
@@ -73,20 +71,13 @@ export function BarBlur({ tint, alpha }: { tint?: string; alpha?: number }) {
 
 /**
  * The background of a screen's top bar, which fades in as the header scrolls
- * away: the header's colour running out to the page's own, opaque and arrived
- * high — two thirds of the way down — so the bar never thins over the list
- * scrolling under it. The blend is eased: smoothstep meets the flat run with
- * no slope left, and the run itself is many stops rather than a straight one,
- * so neither end of it draws a line to see.
+ * away: the header's own flat colour, so the bar never thins over the list
+ * scrolling under it.
  *
  * Not blurred. A bar inside a screen can only blur a target of its own around
  * that screen's list, and a screen wrapped in a `BlurTargetView` stops being
  * drawn the moment it starts to leave: going back showed an empty page for a
  * few frames before the fade.
- *
- * The fade itself is a setting (`barGradient`): off, the bar is the header's
- * flat colour, which was how it looked before. The header under it keeps its
- * own gradient either way — this only ever draws the bar.
  */
 export function TopBarBackground({
   color,
@@ -95,22 +86,9 @@ export function TopBarBackground({
   color: string;
   opacity: Animated.AnimatedInterpolation<number> | number;
 }) {
-  const background = useTheme().background;
-  const gradient = useSettings((s) => s.barGradient);
   return (
     <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity }]}>
-      {gradient ? (
-        // The page's own colour arrives opaque, two thirds of the way down:
-        // high enough that the tail of the run is flat long before the bar's
-        // lower edge, eased over stops rather than a straight run so the run
-        // itself has no banding to look at.
-        <LinearGradient
-          {...easedFade(color, background, { until: 0.65 })}
-          style={StyleSheet.absoluteFill}
-        />
-      ) : (
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: color }]} />
-      )}
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: color }]} />
     </Animated.View>
   );
 }
