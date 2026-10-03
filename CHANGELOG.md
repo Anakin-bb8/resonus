@@ -9,6 +9,12 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Fixed
+
+- Starting an album no longer refetches the whole Android Auto library.
+- The diagnostics report no longer counts frames while the app is in the background.
+- Home redraws its album cards less often.
+
 ## [0.7.13] - 2026-10-02
 
 ### Added

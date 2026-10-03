@@ -21,7 +21,7 @@ import {
   setQueue,
   type CarTrack,
 } from '@/lib/carAuto';
-import { buildBrowseTree, handleBrowsePlay } from '@/lib/carAutoTree';
+import { buildBrowseTree, buildLatestRecent, handleBrowsePlay } from '@/lib/carAutoTree';
 import { bump } from '@/lib/perfLog';
 import { getItem, setItem } from '@/lib/storage';
 import { useAuthStore } from '@/store/auth';
@@ -113,11 +113,24 @@ export function CarAutoSync() {
     });
     // Starting an album or a playlist writes it down as recently played, and
     // the car's Recents tab is built out of exactly that. Without this the tab
-    // only ever knew what had been played before the app opened. Deep on
-    // purpose: what has just moved to the top of Recents is the likeliest
-    // thing to be tapped next, and the lists alone would leave it with no
-    // songs of its own.
-    const unsubRecent = useLastPlayed.subscribe(() => scheduleDeep());
+    // only ever knew what had been played before the app opened. The lists,
+    // plus the songs of what has just moved to the top, the likeliest thing to
+    // be tapped next. Not the full tree: that was dozens of requests per album
+    // started (a report had 201 getAlbum in 47 minutes).
+    let recentTimer: ReturnType<typeof setTimeout> | null = null;
+    const unsubRecent = useLastPlayed.subscribe(() => {
+      if (!carSeen) return;
+      if (recentTimer) clearTimeout(recentTimer);
+      recentTimer = setTimeout(async () => {
+        const { auth, offline } = useAuthStore.getState();
+        if (!auth && !offline) return;
+        const lists = await buildBrowseTree(false).catch(() => null);
+        if (cancelled || !lists) return;
+        setNodes(lists);
+        const latest = await buildLatestRecent().catch(() => null);
+        if (!cancelled && latest) setNodes(latest);
+      }, REBUILD_DEBOUNCE_MS);
+    });
     // Plugging into a car is the one moment the tree is certain to be needed,
     // and the wait was being counted from the launch: forty five seconds of
     // app in the foreground is a thing that never happens to somebody who
@@ -187,8 +200,9 @@ export function CarAutoSync() {
     // ── Events from the car ──
     const playSub = onPlay((e) => {
       // Something is playing from the car, so the wait no longer applies: fill
-      // the tree in now rather than at the end of the delay.
-      scheduleDeep(0);
+      // the tree in now rather than at the end of the delay. Once per drive, like
+      // a connect: every tap in the car was a full rebuild.
+      if (Date.now() - lastDeepAt > DEEP_MIN_INTERVAL_MS) scheduleDeep(0);
       void handleBrowsePlay(e.mediaId, e.parentId);
     });
     const transportSub = onTransport((e) => {
@@ -237,6 +251,7 @@ export function CarAutoSync() {
       cancelled = true;
       if (rebuildTimer) clearTimeout(rebuildTimer);
       if (deepTimer) clearTimeout(deepTimer);
+      if (recentTimer) clearTimeout(recentTimer);
       clearInterval(interval);
       unsubAuth();
       unsubRecent();

@@ -1,7 +1,8 @@
 /** UI-thread frame counts for the diagnostics report. Off unless measuring:
  *  a running frame callback keeps the UI thread drawing. */
 import { useSegments } from 'expo-router';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import { useFrameCallback, useSharedValue } from 'react-native-reanimated';
 
 import { addUiFrames, AWAY_GAP_MS, LATE_MS, setPerfScreen, VERY_LATE_MS } from '@/lib/perfLog';
@@ -10,7 +11,12 @@ import { useSettings } from '@/store/settings';
 const FLUSH_MS = 1000;
 
 export function FrameMeter() {
-  const on = useSettings((s) => s.diagnostics);
+  const enabled = useSettings((s) => s.diagnostics);
+  // The UI thread keeps drawing with the app away and the screen on, and those
+  // frames were landing on whatever screen was left open: a report had 200k of
+  // them against one minute on screen.
+  const [active, setActive] = useState(AppState.currentState === 'active');
+  const on = enabled && active;
   const segments = useSegments() as string[];
   const screen = segments.filter((s) => !s.startsWith('(')).join('/') || 'home';
 
@@ -43,6 +49,11 @@ export function FrameMeter() {
     worst.set(0);
     read.current = now;
   };
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (s) => setActive(s === 'active'));
+    return () => sub.remove();
+  }, []);
 
   useEffect(() => {
     meter.setActive(on);

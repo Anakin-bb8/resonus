@@ -1,5 +1,6 @@
 /** Album card for home and search grids/carousels. */
 import { Link } from 'expo-router';
+import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { COVER, coverArtUrl, type Album } from '@/api/data';
@@ -17,7 +18,9 @@ interface Props {
   onPress?: () => void;
 }
 
-export function AlbumCard({ album, width = 150, onPress }: Props) {
+// Memoised: a Home render redrew every card on every shelf (a report had 77
+// card renders per Home render).
+export const AlbumCard = memo(function AlbumCard({ album, width = 150, onPress }: Props) {
   bump('render · AlbumCard');
   const cover = coverArtUrl(album.coverArt ?? album.id, COVER.card);
   const openMenu = useMediaMenu((s) => s.open);
@@ -52,7 +55,7 @@ export function AlbumCard({ album, width = 150, onPress }: Props) {
       </Pressable>
     </Link>
   );
-}
+});
 
 const styles = themed((colors) => ({
   container: {
