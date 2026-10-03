@@ -29,6 +29,14 @@
             ],
             "versions": [
                 {
+                    "version": "0.7.14",
+                    "date": "2026-10-03T18:26:47+02:00",
+                    "size": 19974389,
+                    "downloadURL": "https://github.com/juananzzz/resonus/releases/download/v0.7.14/resonus-v0.7.14.ipa",
+                    "localizedDescription": "Added\nThe update prompt sums up what the new version brings.\nChanged\nThe player shows only the Devices and Queue buttons by default.\nFixed\nStarting an album no longer refetches the whole Android Auto library.\nThe diagnostics report no longer counts frames while the app is in the background.\nHome redraws its album cards less often.\nGenre cards load their covers with one request each, even with several libraries.\nLong queues redraw fewer rows when the song changes.\nWith several libraries on Navidrome, album lists load in one request instead of one per library.\nLyrics redraw only when the line or the word changes.",
+                    "minOSVersion": "16.4"
+                },
+                {
                     "version": "0.7.13",
                     "date": "2026-10-02T21:48:16+02:00",
                     "size": 19970474,
