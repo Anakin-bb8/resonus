@@ -31,8 +31,10 @@ import * as MediaLibrary from 'expo-media-library/legacy';
 import { type Song } from '@/api/subsonic';
 import { bump } from '@/lib/perfLog';
 import { useScanProgress } from '@/store/scanProgress';
+import { isFlac, isMp4, readFlacTags, readMp4Tags } from './containerTags';
 import { base64ToUint8, parseID3, type ID3Tags } from './id3';
 import * as Db from './localDb';
+import { getItem, setItem } from './storage';
 
 const AUDIO_EXT = /\.(mp3|flac|m4a|aac|ogg|opus|wav|wma|alac|aif|aiff)$/i;
 
@@ -257,6 +259,19 @@ async function readTagBuffer(uri: string, maxBytes: number): Promise<Uint8Array 
 export async function readTags(uri: string, maxBytes = TAG_CAP): Promise<ID3Tags | null> {
   const buf = await readTagBuffer(uri, maxBytes);
   if (!buf) return null;
+  // M4A and FLAC keep their tags in their own way, not in ID3 (#249). The text
+  // pass leaves their cover out the same way, for the second pass to fetch.
+  if (isMp4(buf) || isFlac(buf)) {
+    // A read past the end of the file is an empty one, not a failed scan.
+    const read = (position: number, length: number) =>
+      readBytes(uri, position, length).catch(() => new Uint8Array(0));
+    const withCover = maxBytes > TEXT_TAG_BYTES;
+    try {
+      return isMp4(buf) ? await readMp4Tags(read, withCover, maxBytes) : await readFlacTags(read, withCover, maxBytes);
+    } catch {
+      return null;
+    }
+  }
   let tags = parseID3(buf);
   if (maxBytes < TAG_CAP && tags.cutFrame && (tags.cutFrame !== 'APIC' || !tags.title)) {
     const full = await readTagBuffer(uri, TAG_CAP);
@@ -1017,10 +1032,20 @@ function dbName(sourceMode: string, uri?: string): string {
   return `c_${hashKey(cacheKey(sourceMode, uri))}.db`;
 }
 
+/**
+ * Bumped when the scan learns to read something it used to miss, so a catalog
+ * made before that is scanned again once rather than waiting for somebody to
+ * think of it. 2: M4A and FLAC tags (#249).
+ */
+const TAG_READER = '2';
+const TAG_READER_KEY = 'resonus.localTagReader';
+const NON_ID3 = /\.(m4a|mp4|alac|flac)$/i;
+
 async function saveCatalogToDisk(sourceMode: string, uri: string | undefined, catalog: LocalCatalog): Promise<void> {
   try {
     await FileSystem.makeDirectoryAsync(CATALOG_DIR, { intermediates: true }).catch(() => {});
     await Db.saveCatalog(CATALOG_DIR, dbName(sourceMode, uri), catalog);
+    await setItem(`${TAG_READER_KEY}.${dbName(sourceMode, uri)}`, TAG_READER);
   } catch {
     // If it cannot be saved, the next time will read it again. No harm done.
   }
@@ -1033,6 +1058,12 @@ async function loadCatalogFromDisk(sourceMode: string, uri?: string): Promise<Lo
       (await Db.loadCatalog<LocalAlbum, LocalArtist>(CATALOG_DIR, dbName(sourceMode, uri))) ??
       (await migrateCatalogFile(sourceMode, uri));
     if (!stored?.songs?.length) return null;
+    // Read before the scan knew these formats: they are all filed under their
+    // file name. Only when there are any, so an MP3 library is left alone.
+    const reader = await getItem(`${TAG_READER_KEY}.${dbName(sourceMode, uri)}`).catch(() => null);
+    if (reader !== TAG_READER && stored.songs.some((s) => NON_ID3.test(s.localUri ?? ''))) {
+      return null;
+    }
     const catalog: LocalCatalog = stored;
     // Migration: older catalogs carry their covers embedded as base64. They
     // are written out to files once and the lighter catalog is saved again.

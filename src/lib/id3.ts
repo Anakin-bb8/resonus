@@ -470,7 +470,7 @@ export function parseID3(buffer: Uint8Array): ID3Tags {
   }
 }
 
-function uint8ToBase64(bytes: Uint8Array): string {
+export function uint8ToBase64(bytes: Uint8Array): string {
   let binary = '';
   for (let i = 0; i < bytes.length; i++) {
     binary += String.fromCharCode(bytes[i]);
