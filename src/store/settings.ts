@@ -654,11 +654,15 @@ export interface PlayerButton {
   enabled: boolean;
 }
 
+/**
+ * Devices and queue on, the rest off: lyrics have their card and the ⋯ menu,
+ * the sleep timer the ⋯ menu, and speed is for the few who turn it on.
+ */
 export const DEFAULT_PLAYER_BUTTONS: PlayerButton[] = [
   { key: 'devices', enabled: true },
-  { key: 'lyrics', enabled: true },
-  { key: 'speed', enabled: true },
-  { key: 'sleep', enabled: true },
+  { key: 'lyrics', enabled: false },
+  { key: 'speed', enabled: false },
+  { key: 'sleep', enabled: false },
   { key: 'queue', enabled: true },
 ];
 

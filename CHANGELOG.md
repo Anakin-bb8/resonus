@@ -9,6 +9,10 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Changed
+
+- The player shows only the Devices and Queue buttons by default.
+
 ### Fixed
 
 - Starting an album no longer refetches the whole Android Auto library.
