@@ -223,6 +223,7 @@
   "Reorder": "Riordina",
   "Repeat": "Ripetizione",
   "Report a bug": "Segnala un bug",
+  "Share diagnostic report": "Condividi il resoconto diagnostico",
   "Rescan": "Nuova scansione",
   "Rescanning your music…": "Nuova scansione della musica…",
   "Restore": "Ripristina",
@@ -563,6 +564,7 @@
   "Share “{name}”": "Condividi “{name}”",
   "Show explicit tag": "Mostra etichetta explicit",
   "Show icons": "Mostra icone",
+  "Show chips": "Mostra le chip",
   "Singles": "Singoli",
   "Song information": "Informazioni sul brano",
   "Soundtracks": "Colonne sonore",
@@ -782,5 +784,9 @@
   "Couldn't read this settings file": "Impossibile leggere questo file di impostazioni",
   "Your preferences will be replaced by the ones in the file. Your language and accounts stay.": "Le tue preferenze verranno sostituite da quelle del file. Lingua e account restano invariati.",
   "Import": "Importa",
-  "Settings imported": "Impostazioni importate"
+  "Settings imported": "Impostazioni importate",
+  "New features": "Novità",
+  "Changes": "Modifiche",
+  "Fixes": "Correzioni",
+  "{n} more": "{n} in più"
 }

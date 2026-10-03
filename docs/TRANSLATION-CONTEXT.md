@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 767 of them.
+Every string the app can show, under the screen it shows up on. 771 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -30,6 +30,7 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `{n} minutes` | A value of the sleep timer, in minutes from now |
+| `{n} more` | Under a heading of the update prompt: how many more lines of that kind the release notes have |
 | `{n} songs, {size}, copied into a folder of their own.` | The line under that title |
 | `1 day` | How long a shared link lasts, counted from the moment it is made |
 | `1 hour` | How long a shared link lasts, counted from the moment it is made. Not a time of day |
@@ -42,6 +43,7 @@ you are actually typing into, which is easier than reading it here.
 | `Back online` | The toast shown when the server answers again and the app comes out of offline mode |
 | `Battery optimization is on` | Title of the card warning that Android may cut playback off |
 | `BPM` | A property of the audio: beats per minute |
+| `Changes` | Heading in the update prompt over what a release changes |
 | `Channels` | A property of the audio: mono, stereo |
 | `Clean` | A value of `Content`: the edited version, with the explicit language taken out. Not "tidy" and not "free of noise" |
 | `Comment` | The file's comment tag, where people keep notes about a recording |
@@ -59,6 +61,7 @@ you are actually typing into, which is easier than reading it here.
 | `Duration` | Label of a field in the song information sheet: how long the song is |
 | `Explicit` | A value of `Content`: the recording carries a parental advisory (strong language). Also read out for the E badge next to a title |
 | `Export “{name}”?` | Confirms getting the files of an album or playlist out of the app |
+| `Fixes` | Heading in the update prompt over the bugs a release fixes |
 | `Format` | The file format (FLAC, MP3…), written as the player writes it |
 | `Genre` | Label of a field in the song information sheet |
 | `Go to album` | Leave this sheet and open the album the song is on |
@@ -68,6 +71,7 @@ you are actually typing into, which is easier than reading it here.
 | `Mix of “{name}”` | What the player calls the queue once it has grown past its album into songs the app picked itself. `{name}` is the song it was grown from |
 | `Mix started` | The toast that says the app is now picking the songs |
 | `Moods` | Mood tags the server has on the song: mellow, energetic… |
+| `New features` | Heading in the update prompt over the new things a release brings. The lines under it stay in English |
 | `Open settings` | Its confirm button: goes to Android's own settings, not the app's |
 | `Pick a date…` | Opens the calendar to choose the day the link stops working |
 | `Pin to top` | Keep this at the top of its list, above everything else. `Unpin` undoes it |
@@ -861,6 +865,7 @@ you are actually typing into, which is easier than reading it here.
 | `Appearance` |  |
 | `At the top of Home, what is playing in your other apps and devices, ready to carry on here.` |  |
 | `Cover corners` |  |
+| `Dark` | The appearance the app has always had, and what it uses unless the other is chosen. |
 | `Explore` | The tab holding everything the server has: all albums, artists, songs, genres, stations and folders |
 | `Explore sections` |  |
 | `Flat, or black fading out at the top edge. Gradient ignores the blur.` | The line under “Navigation bar style”, explaining it |
@@ -876,6 +881,7 @@ you are actually typing into, which is easier than reading it here.
 | `Interaction` | Section header grouping toggles |
 | `Interface` | Section header grouping toggles |
 | `Language` |  |
+| `Light` | The light appearance, in Settings › Theme |
 | `More rounded` | One of the values of “Cover corners” |
 | `Navigation` | Section header: how you move around the app |
 | `Navigation bar` | Settings screen: which tabs are on the bar at the bottom, and in what order |
@@ -886,6 +892,7 @@ you are actually typing into, which is easier than reading it here.
 | `Playing on other devices` |  |
 | `Quick grid` | The grid of shortcut tiles on Home |
 | `Rounded` | One of the values of “Cover corners” |
+| `Scheduled` |  |
 | `Show tab names` |  |
 | `Solid` | One of the values of “Navigation bar style” |
 | `Song lists` | The setting for how song lists look |
@@ -893,6 +900,7 @@ you are actually typing into, which is easier than reading it here.
 | `Start on your playlists` | A switch: with it on, Your library with no chip pressed shows the Favorites entry and the playlists, the way it used to, instead of albums, artists and playlists mixed together |
 | `Swipe left` | What dragging a song to the left in a list does |
 | `Swipe right` | What dragging a song to the right in a list does. Its values are the actions listed under it |
+| `System` | Two places: a theme setting (use whichever appearance the phone itself is set to, light or dark), and `System::section`, the heading in Settings › Quality & playback over Keep screen on and the battery warning. Add `System::section` to your file if one word cannot do both |
 | `Theme` | The screen where the appearance and the accent colour are chosen, and the name of the row that opens it |
 | `With no chip pressed, Your library shows Favorites and your playlists instead of everything mixed together.` |  |
 | `Your library` | The tab with your albums, artists and playlists |
