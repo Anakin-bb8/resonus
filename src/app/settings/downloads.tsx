@@ -261,17 +261,11 @@ export default function DownloadsSettings() {
           options={[
             {
               label: t('Automatic offline mode'),
-              description: t(
-                'Switch to your downloads when the server is unreachable, and back when it returns.',
-              ),
               value: autoOfflineSwitch,
               onChange: setAutoOfflineSwitch,
             },
             {
               label: t('Hide unavailable songs'),
-              description: t(
-                "In offline mode, hide songs that aren't downloaded instead of showing them greyed out.",
-              ),
               value: hideUnavailableOffline,
               onChange: setHideUnavailableOffline,
             },

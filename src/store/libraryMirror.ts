@@ -198,7 +198,9 @@ async function unchanged(
 function writeMirror(key: string, fn: (dir: string, profile: string) => Promise<unknown>): void {
   // The last word about a thing is the only one worth writing: a list refetched
   // five times while somebody browses is one row's worth of work, not five.
-  queued.set(key, fn);
+  const target = active();
+  if (!target) return;
+  queued.set(key, { profile: target.profile, fn });
   if (flushTimer) return;
   flushTimer = setTimeout(() => {
     flushTimer = null;
@@ -212,7 +214,10 @@ function writeMirror(key: string, fn: (dir: string, profile: string) => Promise<
  * short enough that little is lost if the app is killed.
  */
 const FLUSH_AFTER_MS = 8000;
-const queued = new Map<string, (dir: string, profile: string) => Promise<unknown>>();
+const queued = new Map<
+  string,
+  { profile: string; fn: (dir: string, profile: string) => Promise<unknown> }
+>();
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 let flushing: Promise<void> = Promise.resolve();
 
@@ -232,8 +237,10 @@ export function flushMirror(): Promise<void> {
   queued.clear();
   if (batch.length === 0) return flushing;
   flushing = flushing.then(async () => {
-    for (const fn of batch) {
-      await withMirror(fn, undefined);
+    for (const { profile: queuedFor, fn } of batch) {
+      // Queued for a profile that is no longer the active one: what it holds
+      // was fetched from that server and must not land in this mirror.
+      await withMirror((dir, profile) => (profile === queuedFor ? fn(dir, profile) : Promise.resolve()), undefined);
       // A breath between one and the next. Writing an entry is a transaction
       // and a `JSON.stringify` per song, and a queue of them back to back holds
       // the thread for as long as it takes them all: the screen that was being

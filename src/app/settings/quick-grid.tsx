@@ -31,7 +31,6 @@ export default function QuickGridSettings() {
   const sources = [
     {
       label: t('Pin favorites'),
-      description: t('Keep the Favorites tile first.'),
       value: withFavorites,
       onChange: setWithFavorites,
     },

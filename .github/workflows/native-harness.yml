@@ -1,0 +1,51 @@
+name: Native harness
+
+# The patched expo-audio extractors over a corpus of formats, on the JVM
+# (scripts/native-harness/run.sh). Only when something it covers changes.
+
+on:
+  pull_request:
+    paths:
+      - patches/expo-audio.patch
+      - scripts/native-harness/**
+      - pnpm-lock.yaml
+      - .github/workflows/native-harness.yml
+  push:
+    branches: [main]
+    paths:
+      - patches/expo-audio.patch
+      - scripts/native-harness/**
+      - pnpm-lock.yaml
+      - .github/workflows/native-harness.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-harness-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  harness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - run: sudo apt-get update -q && sudo apt-get install -y -q ffmpeg
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@v4
+        with:
+          path: node_modules/.cache/native-harness/m2
+          key: native-harness-m2-${{ hashFiles('scripts/native-harness/run.sh', 'pnpm-lock.yaml') }}
+      - run: pnpm harness:extractor

@@ -8,6 +8,7 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { COVER, coverArtUrl, type Artist } from '@/api/data';
 import { fontSize, spacing, themed } from '@/theme';
+import { bump } from '@/lib/perfLog';
 import { Cover } from './Cover';
 
 interface Props {
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export function ArtistCard({ artist, width = 150 }: Props) {
+  bump('render · ArtistCard');
   const cover = coverArtUrl(artist.coverArt ?? artist.id, COVER.card);
 
   return (

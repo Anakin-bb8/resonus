@@ -57,8 +57,21 @@ import { favoriteLabel, favoriteState, onFavoritesChange, toggleFavorite } from 
 import type { Remap } from '@/lib/navidromeRemap';
 import { remapSong } from '@/lib/navidromeRemap';
 import { noteOwnReport } from '@/lib/ownReports';
-import { beat, bump, timed } from '@/lib/perfLog';
+import { beat, bump, note, timed } from '@/lib/perfLog';
 import { queryClient } from '@/lib/query';
+import {
+  appendEnd,
+  dealt,
+  indexInOriginal,
+  insertNext,
+  moveIn,
+  nextPlayable,
+  queuedAfterMove,
+  removeFrom,
+  restoreRemoved,
+  shuffleOn,
+  type RepeatMode,
+} from '@/lib/queue';
 import { primaryUrl } from '@/lib/serverUrls';
 import { getItem, setItem } from '@/lib/storage';
 import { useAuthStore } from './auth';
@@ -94,6 +107,7 @@ import {
   upnpSetCrossfade,
   upnpSetSleepTimer,
   upnpSetVolume,
+  useUpnp,
   type RemoteEvents,
 } from './upnp';
 import {
@@ -102,7 +116,7 @@ import {
   syncUpnpRemoteQueue,
 } from './upnpRemoteSync';
 
-export type RepeatMode = 'off' | 'all' | 'one';
+export type { RepeatMode };
 
 /**
  * Sentinel for origins that must be translated on the fly (they are not real
@@ -303,22 +317,6 @@ function playableOffline(song: Song | null | undefined): boolean {
   return !!song && (!!song.url || !!song.localUri || !!copyOnPhone(song));
 }
 
-/** The same song as it goes into the queue by hand: autoplay's mark comes off
- *  (it is here because you put it here, whatever it was doing before) and it
- *  takes one of its own, which is what the player announces while it plays. */
-function handAdded(song: Song): Song {
-  const { fromMix: _fromMix, ...rest } = song;
-  return { ...rest, queued: true };
-}
-
-/** The same song with neither mark on it, for when the queue stops having the
- *  blocks they name (see `toggleShuffle`). */
-function unmarked(song: Song): Song {
-  if (!song.fromMix && !song.queued) return song;
-  const { fromMix: _fromMix, queued: _queued, ...rest } = song;
-  return rest;
-}
-
 /** Max streaming bitrate according to current network (Wi-Fi or mobile data). */
 function effectiveMaxBitRate(): number {
   const s = useSettings.getState();
@@ -489,6 +487,16 @@ let transcodeOffsetSupported: boolean | null = null;
  * serves the cached transcode, with length.
  */
 let sourceHasLength: boolean | null = null;
+
+/** Where a queue with no list behind it came from, for the diagnostics report. */
+let queueOrigin: 'server queue' | 'saved queue' | null = null;
+
+/** Where the queue came from, as far as the state says, for the report. */
+function originOf(st: { radioMode: boolean; sourceHref: string | null; source: string | null }): string {
+  if (st.radioMode) return 'mix';
+  if (st.sourceHref) return st.sourceHref.split('/')[1] || 'home';
+  return queueOrigin ?? (st.source ? 'list' : 'no list');
+}
 
 /** Is this song being transcoded (the server generates it on the fly)? */
 function isTranscoded(song: Song): boolean {
@@ -838,6 +846,9 @@ async function remoteLoadIndex(index: number, autoplay: boolean, startSec = 0) {
         autoplay,
       );
   if (!ok) {
+    const { devices, deviceId } = useUpnp.getState();
+    const device = isJukeboxActive() ? 'jukebox' : devices.find((d) => d.id === deviceId)?.name ?? '?';
+    note(`cast refused: ${song.suffix ?? '?'} on ${device}`);
     useToast.getState().show(tg("This song can't be cast"));
     usePlayerStore.setState({ index, isPlaying: false, isBuffering: false });
     return;
@@ -858,11 +869,9 @@ async function remoteLoadIndex(index: number, autoplay: boolean, startSec = 0) {
  * any other position dissolves the block (becomes a normal queue).
  */
 function consumeQueuedOnIndexChange(next: number) {
-  const { index, queuedCount } = usePlayerStore.getState();
-  if (next === index || queuedCount === 0) return;
-  usePlayerStore.setState({
-    queuedCount: next === index + 1 ? queuedCount - 1 : 0,
-  });
+  const st = usePlayerStore.getState();
+  const queuedCount = queuedAfterMove(st, next);
+  if (queuedCount !== st.queuedCount) usePlayerStore.setState({ queuedCount });
 }
 
 /** Which load is in charge, so an older one can tell it has been overtaken. */
@@ -927,6 +936,14 @@ async function loadIndex(index: number, autoplay: boolean): Promise<boolean> {
   if (token !== loadToken) return true;
   const song = usePlayerStore.getState().queue[index];
   if (!song) return false;
+  // A song with no duration draws 0:00 and every seek on the bar lands on zero.
+  // The keys say which code built the song object, which is the open question.
+  if (!song.duration && !song.url) {
+    bump('player · song with no duration');
+    note(
+      `song with no duration: ${song.id} · from ${originOf(usePlayerStore.getState())} · keys ${Object.keys(song).sort().join(',')}`,
+    );
+  }
   const p = ensurePlayer(activeIdx);
   // The player may have just been created, so the reset above had nothing to
   // reach: this source starts at the beginning either way.
@@ -943,6 +960,7 @@ async function loadIndex(index: number, autoplay: boolean): Promise<boolean> {
     // outside: the same toast over a song that does not start. A report of one
     // is unanswerable without knowing which it was (see `onPlaybackError`).
     bump(`player · could not install the source (${errorTag(String(e))})`);
+    note(`could not install the source: ${errorTag(String(e))} · ${song.id}`);
     useToast.getState().show(tg("Couldn't play the song"));
     return false;
   }
@@ -1127,21 +1145,6 @@ function reportState(state: PlaybackState, song: Song | undefined, positionSec: 
     }
     void reportPlayback(auth, song.id, state, positionSec).catch(() => {});
   });
-}
-
-/**
- * A list in a new order, without touching the one handed in. Fisher-Yates,
- * shared by the shuffle button and by starting a list while shuffle is already
- * on, because those two have to deal the same way: the second used to turn
- * shuffle off instead of dealing at all.
- */
-function dealt<T>(list: T[]): T[] {
-  const out = [...list];
-  for (let i = out.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [out[i], out[j]] = [out[j], out[i]];
-  }
-  return out;
 }
 
 /** Sends the real scrobble once per track when crossing the threshold. */
@@ -1449,16 +1452,6 @@ const SONGS_PER_SIMILAR_ARTIST = 5;
 /** Songs a batch aims for (the queue is then extended by up to 10). */
 const BATCH_SIZE = 12;
 
-/** Shuffles a copy (Fisher-Yates). */
-function shuffled<T>(items: T[]): T[] {
-  const a = items.slice();
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
 /**
  * Top songs by artists similar to the seed's. This is the tier that actually
  * gives a mix its range: everything else either stays on the seed's artist or
@@ -1479,7 +1472,7 @@ async function similarArtistCandidates(auth: SubsonicAuth, seed: Song): Promise<
   }
   // Shuffled, not the top N: over a long mix this walks the whole list instead
   // of hammering the same four artists batch after batch.
-  const names = shuffled(similarArtistsCache.names).slice(0, SIMILAR_ARTISTS);
+  const names = dealt(similarArtistsCache.names).slice(0, SIMILAR_ARTISTS);
   const lists = await Promise.all(
     names.map((n) => getTopSongs(auth, n, SONGS_PER_SIMILAR_ARTIST).catch(() => [] as Song[])),
   );
@@ -1519,7 +1512,7 @@ async function radioCandidates(auth: SubsonicAuth, seed: Song, have: Set<string>
 
   /** Adds what fits from a pool, in random order and respecting the cap. */
   const take = (songs: Song[]) => {
-    for (const s of shuffled(songs)) {
+    for (const s of dealt(songs)) {
       if (picked.length >= BATCH_SIZE) return;
       if (s.url || seen.has(s.id)) continue;
       const artist = s.artistId ?? s.artist ?? '';
@@ -1695,18 +1688,7 @@ function nextIndex(_manual: boolean): number | null {
   // Offline, tracks without local file (stream-only) are skipped; online any is
   // fine. `ok` decides if an index is a candidate.
   const offline = useAuthStore.getState().offline;
-  const ok = (i: number) => !offline || playableOffline(queue[i]);
-  for (let i = index + 1; i < queue.length; i++) {
-    if (ok(i)) return i;
-  }
-  // End of queue: with repeat 'all' it wraps around searching from the beginning
-  // (includes the current index, so a single playable track repeats).
-  if (repeat === 'all') {
-    for (let i = 0; i <= index; i++) {
-      if (ok(i)) return i;
-    }
-  }
-  return null;
+  return nextPlayable(queue, index, repeat, (i) => !offline || playableOffline(queue[i]));
 }
 
 // ── Gapless ─────────────────────────────────────────────────────────────────
@@ -2456,6 +2438,9 @@ function onPlaybackError(message: string, wasPlaying: boolean): void {
     errorTrackId = song.id;
     errorAttempts = 0;
   }
+  note(
+    `playback error: ${errorTag(message)} · ${song.id} · ${localSourceFor(song) ? 'file' : 'stream'} · attempt ${errorAttempts + 1}`,
+  );
   if (errorAttempts >= MAX_ERROR_ATTEMPTS) {
     bump('player · gave up on the track');
     usePlayerStore.setState({ isPlaying: false, isBuffering: false });
@@ -2551,7 +2536,15 @@ function onStatus(status: AudioStatus) {
     intendPlay && !status.didJustFinish && (status.isBuffering || !status.isLoaded);
   // Only once loaded: while buffering the duration is still unknown and would
   // pass for a stream generated on the fly (see `sourceHasLength`).
-  if (status.isLoaded) sourceHasLength = (status.duration ?? 0) > 0;
+  if (status.isLoaded) {
+    const hasLength = (status.duration ?? 0) > 0;
+    const song = currentSong(usePlayerStore.getState());
+    if (sourceHasLength === null && !hasLength && song && !song.url && !localSourceFor(song)) {
+      bump('player · stream with no length');
+      note(`stream with no length: ${song.id}${isTranscoded(song) ? ' · transcoding asked' : ''}`);
+    }
+    sourceHasLength = hasLength;
+  }
   // With a stream re-requested with timeOffset, the native player counts from 0:
   // the real position is the offset plus its time.
   let positionSec = streamOffsetSec + (status.currentTime ?? 0);
@@ -3524,6 +3517,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       radioMode: get().radioMode,
       radioSeed: get().radioSeed,
     };
+    queueOrigin = null;
     set({
       queue: queued,
       index: at,
@@ -3633,41 +3627,29 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       void get().playQueue([song], 0);
       return;
     }
-    set({ queue: [...queue, handAdded(song)] });
+    set({ queue: appendEnd(queue, [song]) });
     scheduleSync();
   },
 
   playNext: (song) => {
-    const { queue, index, queuedCount } = get();
-    if (queue.length === 0) {
+    const st = get();
+    if (st.queue.length === 0) {
       void get().playQueue([song], 0);
       return;
     }
-    const next = [...queue];
-    next.splice(index + 1, 0, handAdded(song));
-    // It jumps to the front of the "queued" block; the block grows with it.
-    set({ queue: next, queuedCount: queuedCount + 1 });
+    set(insertNext(st, [song]));
     scheduleSync();
   },
 
   queueMany: (songs, where) => {
     if (songs.length === 0) return;
-    const { queue, index, queuedCount } = get();
+    const st = get();
     // Nothing playing: this is not a queue to add to, it is the queue.
-    if (queue.length === 0) {
+    if (st.queue.length === 0) {
       void get().playQueue(songs, 0);
       return;
     }
-    // Built by hand rather than spread into `splice`: a playlist of thousands
-    // would be that many arguments in one call.
-    if (where === 'end') {
-      set({ queue: queue.concat(songs.map(handAdded)) });
-      scheduleSync();
-      return;
-    }
-    const at = index + 1;
-    const next = queue.slice(0, at).concat(songs.map(handAdded), queue.slice(at));
-    set({ queue: next, queuedCount: queuedCount + songs.length });
+    set(where === 'end' ? { queue: appendEnd(st.queue, songs) } : insertNext(st, songs));
     scheduleSync();
   },
 
@@ -3850,43 +3832,28 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   removeAt: async (index) => {
-    const { queue, index: cur, queuedCount } = get();
-    if (index < 0 || index >= queue.length) return undefined;
-    const removed = queue[index];
-    const next = queue.filter((_, i) => i !== index);
-    if (next.length === 0) {
+    const removal = removeFrom(get(), index);
+    if (!removal) return undefined;
+    const removed = get().queue[index];
+    const { state: next, inQueuedBlock } = removal;
+    if (next.queue.length === 0) {
       clearQueueLocal();
       await get().reset();
       return undefined;
     }
-    if (index === cur) {
-      // We remove the current one: load the song now at that position. If it was
-      // the first in the "queued" block, it now plays and is consumed.
-      const newIndex = Math.min(cur, next.length - 1);
-      set({ queue: next, index: newIndex, queuedCount: Math.max(0, queuedCount - 1) });
-      await loadIndex(newIndex, get().isPlaying);
+    set(next);
+    if (removal.wasCurrent) {
+      await loadIndex(next.index, get().isPlaying);
       scheduleSync();
       return undefined;
     }
-    const inQueuedBlock = index > cur && index <= cur + queuedCount;
-    set({
-      queue: next,
-      index: index < cur ? cur - 1 : cur,
-      queuedCount: inQueuedBlock ? queuedCount - 1 : queuedCount,
-    });
     scheduleSync();
     return () => {
       // Only if the queue hasn't changed since then (same reference; auto-advance
       // does not replace it, so the index is adjusted).
       const st = get();
-      if (st.queue !== next) return;
-      const q = [...st.queue];
-      q.splice(index, 0, removed);
-      set({
-        queue: q,
-        index: st.index >= index ? st.index + 1 : st.index,
-        queuedCount: inQueuedBlock ? st.queuedCount + 1 : st.queuedCount,
-      });
+      if (st.queue !== next.queue) return;
+      set(restoreRemoved(st, index, removed, inQueuedBlock));
       scheduleSync();
     };
   },
@@ -3982,39 +3949,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   moveTrack: async (from, to) => {
-    const { queue, index, queuedCount } = get();
-    if (
-      from === to ||
-      from < 0 ||
-      to < 0 ||
-      from >= queue.length ||
-      to >= queue.length
-    ) {
-      return;
-    }
-    const next = [...queue];
-    const [moved] = next.splice(from, 1);
-    next.splice(to, 0, moved);
-    // Re-position the current index so it keeps pointing to the same song.
-    let newIndex = index;
-    if (from === index) newIndex = to;
-    else if (from < index && to >= index) newIndex = index - 1;
-    else if (from > index && to <= index) newIndex = index + 1;
-    // The "queued" block (index+1..index+queuedCount) is preserved when
-    // reordering within what's coming: if a source one enters the queue zone it
-    // becomes queued, and if a queued one leaves it stops being (Spotify-style).
-    // Any move that touches the current song or what's already played dissolves
-    // the block.
-    let newQueuedCount = 0;
-    if (from > index && to > index) {
-      const fromQueued = from - (index + 1) < queuedCount;
-      const toQueued = to - (index + 1) < queuedCount;
-      newQueuedCount = Math.max(
-        0,
-        queuedCount + (!fromQueued && toQueued ? 1 : 0) - (fromQueued && !toQueued ? 1 : 0),
-      );
-    }
-    set({ queue: next, index: newIndex, queuedCount: newQueuedCount });
+    const next = moveIn(get(), from, to);
+    if (!next) return;
+    set(next);
     scheduleSync();
   },
 
@@ -4031,46 +3968,20 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     if (key) forgetHistoryOf(key);
 
     if (!shuffle) {
-      const rest = dealt(queue.filter((_, i) => i !== index));
-      // Both marks come off with the shuffle, the same as the "queued" block
-      // does and for the same reason: they name blocks (the mix at the end, the
-      // added songs after the current one) and there are no blocks left in
-      // here. Left on, their songs would be scattered among the album's and the
-      // header would have flipped on every track. `originalQueue` keeps the
-      // marked copies, so turning shuffle off brings them back with them.
-      if (upnpActive && current) {
-        // While UPnP is active, keep the current track index stable and only
-        // shuffle upcoming tracks. This keeps Sonos and app queue indices aligned.
-        const preservedHead = queue.slice(0, index + 1);
-        const shuffledTail = dealt(queue.slice(index + 1));
-        set({
-          shuffle: true,
-          queueDealt: true,
-          originalQueue: queue,
-          queue: [...preservedHead, ...shuffledTail].map(unmarked),
-          index,
-          queuedCount: 0,
-        });
-      } else {
-        const newQueue = (current ? [current, ...rest] : rest).map(unmarked);
-        // The current song keeps playing; we only reorder and leave it at index 0.
-        // Shuffling dissolves the "queued" block (the positions no longer exist).
-        set({
-          shuffle: true,
-          queueDealt: true,
-          originalQueue: queue,
-          queue: newQueue,
-          index: 0,
-          queuedCount: 0,
-        });
-      }
+      // `originalQueue` keeps the marks that shuffling takes off.
+      set({
+        shuffle: true,
+        queueDealt: true,
+        originalQueue: queue,
+        ...shuffleOn(queue, index, upnpActive),
+        queuedCount: 0,
+      });
     } else if (originalQueue && current) {
-      const newIndex = Math.max(0, originalQueue.findIndex((s) => s.id === current.id));
       set({
         shuffle: false,
         queueDealt: false,
         queue: originalQueue,
-        index: newIndex,
+        index: indexInOriginal(originalQueue, current),
         originalQueue: null,
         queuedCount: 0,
       });
@@ -4142,6 +4053,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     // `playedHere`). Otherwise adopting a queue and putting the phone away
     // wrote it straight back, stamped with our name.
     clearPlayedHere();
+    queueOrigin = 'server queue';
     set({
       queue: songs,
       index,
@@ -4204,6 +4116,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         ? Math.max(0, saved.positionSec)
         : 0;
     attachAppState();
+    queueOrigin = 'saved queue';
     set({
       queue: saved.queue,
       index,

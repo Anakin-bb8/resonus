@@ -1,20 +1,14 @@
 /**
- * Startup tab + reset on reopen.
+ * Startup tab.
  *
- * - On cold start, if the default tab is not Home, jump to it.
- * - On returning from background after a while (RESET_AFTER_MS), dismiss any
- *   stacked screens and go back to the default tab (like Spotify/YouTube).
- *   A brief app switch preserves where you were, and so does the whole return
- *   for anyone who asked for it (`keepScreenOnReturn`, #225).
- * - Except the player: whoever left from it comes back to it, however long it
- *   was. The music is still there, and so is the reason they were looking at
- *   it; that is not a screen anyone forgot they had open.
+ * On cold start, if the default tab is not Home, jump to it. Coming back from
+ * the background leaves the app where it was, however long it was away (#225).
  *
  * Renders nothing; only orchestrates navigation. Mounted with an active session.
  */
 import { usePathname, useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { AppState, type AppStateStatus } from 'react-native';
+import { AppState } from 'react-native';
 
 import { mark } from '@/lib/perfLog';
 import { useAutoDownloads } from '@/store/autoDownloads';
@@ -27,19 +21,9 @@ const TAB_HREF: Record<DefaultTab, '/' | '/search' | '/library' | '/explore'> = 
   explore: '/explore',
 };
 
-// Time in background after which, on return, the app opens on the default
-// tab. Below this (quick app switch) the current screen is preserved.
-const RESET_AFTER_MS = 3 * 60 * 1000;
-
-// The player and the two screens that open from it (the queue, the lyrics).
-// Leaving from any of them is leaving from the player, and the reset above
-// does not apply.
-const PLAYER_PATHS = new Set(['/player', '/queue', '/lyrics']);
-
 export function AppStartupTab() {
   const router = useRouter();
   const chosenTab = useSettings((s) => s.defaultTab);
-  const keepScreen = useSettings((s) => s.keepScreenOnReturn);
   const bottomTabs = useSettings((s) => s.bottomTabs);
   /**
    * The tab to open on, which is not always the one that was chosen: it can
@@ -50,15 +34,8 @@ export function AppStartupTab() {
   const defaultTab = bottomTabs.some((t) => t.key === chosenTab && t.enabled)
     ? chosenTab
     : 'index';
-  const backgroundedAt = useRef<number | null>(null);
   const didInitial = useRef(false);
-  // Where the app was when it went away. Read in the listener, which has no
-  // render of its own to take the value from.
   const pathname = usePathname();
-  const path = useRef(pathname);
-  useEffect(() => {
-    path.current = pathname;
-  }, [pathname]);
 
   /**
    * How long the thread takes to come back after a screen changes.
@@ -82,55 +59,27 @@ export function AppStartupTab() {
     const frame = requestAnimationFrame(() => mark(`nav ${section}`, Date.now() - started));
     return () => cancelAnimationFrame(frame);
   }, [pathname]);
-  const leftFromPlayer = useRef(false);
-
-  const goToDefaultTab = () => {
-    // Dismiss whatever was stacked on top of the tabs (album, settings,
-    // player…) and activate the default tab.
-    if (router.canDismiss()) router.dismissAll();
-    router.navigate(TAB_HREF[defaultTab]);
-  };
 
   // Cold start: if the default tab is not Home, jump to it.
   useEffect(() => {
     if (didInitial.current) return;
     didInitial.current = true;
-    if (defaultTab !== 'index') goToDefaultTab();
+    if (defaultTab !== 'index') {
+      if (router.canDismiss()) router.dismissAll();
+      router.navigate(TAB_HREF[defaultTab]);
+    }
     // On mount only; the value lives in the guard ref.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    const sub = AppState.addEventListener('change', (state: AppStateStatus) => {
-      if (state === 'background') {
-        if (backgroundedAt.current === null) {
-          backgroundedAt.current = Date.now();
-          leftFromPlayer.current = PLAYER_PATHS.has(path.current);
-        }
-      } else if (state === 'active') {
-        const since = backgroundedAt.current;
-        backgroundedAt.current = null;
-        // The path is checked again here as well: a tap on the media
-        // notification opens the player through a deep link, and that arrives
-        // around now, with the app already coming back.
-        const player = leftFromPlayer.current || PLAYER_PATHS.has(path.current);
-        leftFromPlayer.current = false;
-        if (
-          !keepScreen &&
-          since !== null &&
-          !player &&
-          Date.now() - since > RESET_AFTER_MS
-        ) {
-          goToDefaultTab();
-        }
-        // On return, sync auto-download playlists (catch what was added from
-        // another client while the app was in the background).
-        void useAutoDownloads.getState().reconcileAll();
-      }
+    const sub = AppState.addEventListener('change', (state) => {
+      // On return, sync auto-download playlists (catch what was added from
+      // another client while the app was in the background).
+      if (state === 'active') void useAutoDownloads.getState().reconcileAll();
     });
     return () => sub.remove();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [defaultTab, keepScreen]);
+  }, []);
 
   return null;
 }

@@ -57,9 +57,6 @@ export default function SongListsSettings() {
             },
             {
               label: t('Show explicit tag'),
-              description: t(
-                'Mark songs and albums tagged as explicit with an E, in lists, on the player and in album headers.',
-              ),
               value: showExplicitTag,
               onChange: setShowExplicitTag,
             },

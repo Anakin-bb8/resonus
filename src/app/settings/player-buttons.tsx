@@ -28,17 +28,10 @@ import {
 } from '@/theme';
 
 /** The icon each one wears in the player, so the list reads like the row. */
-const BUTTONS: Record<
-  PlayerButtonKey,
-  { label: string; icon: keyof typeof Icon.glyphMap; description?: string }
-> = {
+const BUTTONS: Record<PlayerButtonKey, { label: string; icon: keyof typeof Icon.glyphMap }> = {
   devices: { label: 'Devices', icon: 'laptop-outline' },
   lyrics: { label: 'Lyrics', icon: 'mic-outline' },
-  speed: {
-    label: 'Playback speed',
-    icon: 'speedometer-outline',
-    description: 'Play the music slower or faster, keeping its pitch.',
-  },
+  speed: { label: 'Playback speed', icon: 'speedometer-outline' },
   sleep: { label: 'Sleep timer', icon: 'moon-outline' },
   queue: { label: 'Queue', icon: 'layers-outline' },
 };
@@ -48,7 +41,7 @@ function ButtonRow({ button }: { button: PlayerButton }) {
   const drag = useReorderableDrag();
   const setPlayerButton = useSettings((s) => s.setPlayerButton);
   const accent = useAccent();
-  const { label, icon, description } = BUTTONS[button.key];
+  const { label, icon } = BUTTONS[button.key];
   return (
     <View style={styles.row}>
       <Pressable
@@ -65,7 +58,6 @@ function ButtonRow({ button }: { button: PlayerButton }) {
       <Icon name={icon} size={22} color={colors.textSecondary} />
       <View style={styles.text}>
         <Text style={styles.label}>{t(label)}</Text>
-        {description ? <Text style={styles.description}>{t(description)}</Text> : null}
       </View>
       <Switch
         value={button.enabled}
@@ -143,5 +135,4 @@ const styles = themed((colors) => ({
   },
   text: { flex: 1 },
   label: { color: colors.text, fontSize: fontSize.md },
-  description: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: 2 },
 }));

@@ -39,7 +39,10 @@ export function resetUpnpRemoteSyncState(): void {
 
 export async function loadUpnpRemoteTrack(state: UpnpRemoteState, autoplay: boolean): Promise<boolean> {
   if (!isUpnpConnected()) return false;
-  if (inFlightSync) return inFlightSync;
+  // Wait our turn rather than take the in-flight result: that one loaded or
+  // synced something else, and the renderer would stay on it.
+  while (inFlightSync) await inFlightSync.catch(() => false);
+  if (!isUpnpConnected()) return false;
   const playMode = playModeForState(state);
   const run = (async () => {
     const ok = await upnpLoad(state.queue, state.index, autoplay, state.positionSec, playMode);

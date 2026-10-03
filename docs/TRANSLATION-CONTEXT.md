@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 775 of them.
+Every string the app can show, under the screen it shows up on. 765 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -632,6 +632,7 @@ you are actually typing into, which is easier than reading it here.
 | `Restore default settings` | Put every setting back the way it came |
 | `Settings imported` |  |
 | `Settings restored` | Toast after putting the settings back to their defaults |
+| `Share diagnostic report` | Settings › About, under “Report a bug”: hands over a plain-text report (setup and recent playback errors) through the share sheet |
 | `Support Resonus` | The row for whoever wants to give something. The app needs nothing to work |
 | `Version` | Which version of Resonus this is. Tapping it five times opens Diagnostics |
 | `What's new` | Opens what changed in this version |
@@ -696,7 +697,6 @@ you are actually typing into, which is easier than reading it here.
 | `Downloads deleted` |  |
 | `Free` | Free disk space in the storage bar (Other / Downloads / Free). Not "free of charge" |
 | `Hide unavailable songs` |  |
-| `In offline mode, hide songs that aren't downloaded instead of showing them greyed out.` |  |
 | `Library metadata copy` | The offline copy of the library: the album, artist and playlist lists kept so the app works with no connection. Not the songs themselves, which are the downloads |
 | `Local library index` | A line of the storage breakdown: what the app remembers about the phone's own music files. A size, not a setting |
 | `MP3, AAC, Opus and other lossy files are downloaded as they are. Only files like FLAC are transcoded.` |  |
@@ -711,7 +711,6 @@ you are actually typing into, which is easier than reading it here.
 | `Song cache` | Copies of streamed songs the app keeps by itself and deletes to make room. Not the same as Downloads, which the person chose |
 | `Songs you stream are kept on this phone and play from it next time, with or without a connection. The next song in the queue is fetched ahead, so it is not streamed at all. When the cache is full, the songs played longest ago make room.` |  |
 | `Storage used` | Section header over the bar showing what is taking up room on the phone |
-| `Switch to your downloads when the server is unreachable, and back when it returns.` |  |
 | `Transcode lossless files only` |  |
 | `Your server must support it.` |  |
 
@@ -768,6 +767,7 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `Home chips` | The row of tappable category chips |
+| `Show chips` | A switch over the Home chips list: turns every chip on or off at once |
 | `Show icons` |  |
 
 ## Settings › Home sections
@@ -851,7 +851,6 @@ you are actually typing into, which is easier than reading it here.
 | `Network` |  |
 | `Remote` | An address reachable from outside the home network |
 | `Server addresses` | Section header: a profile can have several addresses for the same account, one at home and one from outside |
-| `Switches to your remote address automatically when you leave home.` | The line under “Automatic URL switching”, explaining it |
 | `This address is already in the list.` | Validation message: that one is already there |
 
 ## Settings › Personalization
@@ -861,9 +860,8 @@ you are actually typing into, which is easier than reading it here.
 | `Always show the navigation bar` |  |
 | `Appearance` |  |
 | `At the top of Home, what is playing in your other apps and devices, ready to carry on here.` |  |
-| `Browse your library by folders (Subsonic servers).` |  |
-| `Coming back after a few minutes leaves the app on the screen you left, instead of on the tab above.` | The line under that switch. “The tab above” is the “Open the app on” setting sitting right above it |
 | `Cover corners` |  |
+| `Dark` | The appearance the app has always had, and what it uses unless the other is chosen. |
 | `Explore` | The tab holding everything the server has: all albums, artists, songs, genres, stations and folders |
 | `Explore sections` |  |
 | `Folder browsing` | Browsing the server's folders as folders, instead of by album and artist |
@@ -876,8 +874,8 @@ you are actually typing into, which is easier than reading it here.
 | `Home sections` | Reorder which sections appear on Home |
 | `Interaction` | Section header grouping toggles |
 | `Interface` | Section header grouping toggles |
-| `Keep where you were` | A switch in Settings › Appearance, right under “Open the app on”: with it on, reopening the app after a while leaves it where it was instead of going back to that tab |
 | `Language` |  |
+| `Light` | The light appearance, in Settings › Theme |
 | `More rounded` | One of the values of “Cover corners” |
 | `Navigation` | Section header: how you move around the app |
 | `Navigation bar` | Settings screen: which tabs are on the bar at the bottom, and in what order |
@@ -887,12 +885,14 @@ you are actually typing into, which is easier than reading it here.
 | `Playing on other devices` |  |
 | `Quick grid` | The grid of shortcut tiles on Home |
 | `Rounded` | One of the values of “Cover corners” |
+| `Scheduled` |  |
 | `Show tab names` |  |
 | `Song lists` | The setting for how song lists look |
 | `Square` | One of the values of “Cover corners” |
 | `Start on your playlists` | A switch: with it on, Your library with no chip pressed shows the Favorites entry and the playlists, the way it used to, instead of albums, artists and playlists mixed together |
 | `Swipe left` | What dragging a song to the left in a list does |
 | `Swipe right` | What dragging a song to the right in a list does. Its values are the actions listed under it |
+| `System` | Two places: a theme setting (use whichever appearance the phone itself is set to, light or dark), and `System::section`, the heading in Settings › Quality & playback over Keep screen on and the battery warning. Add `System::section` to your file if one word cannot do both |
 | `Theme` | The screen where the appearance and the accent colour are chosen, and the name of the row that opens it |
 | `With no chip pressed, Your library shows Favorites and your playlists instead of everything mixed together.` |  |
 | `Your library` | The tab with your albums, artists and playlists |
@@ -907,11 +907,9 @@ you are actually typing into, which is easier than reading it here.
 | `Autoplay` | When the queue runs out, keep playing with similar songs instead of stopping |
 | `By album` | Volume normalization (ReplayGain) mode: even out loudness album by album |
 | `By track` | Volume normalization (ReplayGain) mode: even out loudness track by track |
-| `Check on startup whether Android is limiting the app in the background.` | The line under “Warn about battery optimization”, explaining it |
 | `Crossfade` | One song fading into the next |
 | `Done` | The button that leaves drag-to-reorder, or accepts a fine-tuned number |
 | `Equalizer` |  |
-| `Fetch the next tracks ahead so they start instantly. Helps with slow servers and proxies.` | The line under “Preload upcoming tracks”, explaining it |
 | `Keep screen on` |  |
 | `Mobile data` | Group header under `Streaming`: the settings that apply on mobile data, as opposed to Wi-Fi |
 | `MP3, AAC, Opus and other lossy files stream as they are. Only files like FLAC are transcoded.` |  |
@@ -1005,7 +1003,6 @@ you are actually typing into, which is easier than reading it here.
 | `Show progress bar` |  |
 | `Show quality label` |  |
 | `Show rating` |  |
-| `Show the whole artwork instead of cropping it to a square.` | The line under “Fit cover art”, explaining it |
 | `Skip buttons` | The seek forward / back buttons setting |
 | `Slightly blur synchronized lyrics other than the current line to emphasize what is playing.` | Help text under that switch. Only the current synchronized lyric line stays sharp |
 | `Swap favorite and menu` | Exchange the places of those two buttons in the player, for whichever hand you hold the phone in |
@@ -1018,7 +1015,6 @@ you are actually typing into, which is easier than reading it here.
 | `Arrangement` |  |
 | `Bottom row` |  |
 | `Grouped in the middle` | One of the values of “Arrangement” |
-| `Play the music slower or faster, keeping its pitch.` |  |
 | `Spread across the width` | One of the values of “Arrangement” |
 
 ## Settings › Quick grid
@@ -1026,7 +1022,6 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `{n} cards` | How many tiles fit across the quick grid. `{n}` is a number of columns |
-| `Keep the Favorites tile first.` | The line under “Pin favorites”, explaining it |
 | `Pin favorites` | Pin favourites to the quick grid |
 | `Quick grid` | The grid of shortcut tiles on Home |
 | `Recent albums` | A source the quick grid can draw its tiles from |
@@ -1051,7 +1046,6 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `Mark songs and albums tagged as explicit with an E, in lists, on the player and in album headers.` |  |
 | `Show artist photo` | Whether the artist's photo shows at the top of their screen |
 | `Show artwork` | Whether song rows carry the album's little picture |
 | `Show description` | A setting: whether playlist and album descriptions are drawn under their names on their screens |

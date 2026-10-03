@@ -9,13 +9,48 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.7.13] - 2026-10-02
+
 ### Added
 
-- Brazilian Portuguese, thanks to @vicsantus (#240).
-- Settings > About can export your settings to a file and import them on another phone or someone else's, without accounts or passwords (#243).
+- Settings > About > Share diagnostic report, for bug reports.
+- The diagnostics report counts late frames per screen and row redraws.
+- Remixers show up as artists, with their remixes under Appears on (#215).
+
+### Changed
+
+- Settings drop descriptions that only repeated the option.
+- Settings > Appearance shows the chosen theme mode.
+- The app always reopens where you left it; the Keep where you were switch is gone (#225).
 
 ### Fixed
 
+- Fragmented M4As no longer stop after two seconds (#242).
+- Offline, songs not on the phone are greyed out again.
+- Offline changes no longer go to another profile's account.
+- Offline listens are no longer scrobbled twice.
+- One profile's albums and playlists no longer leak into another's offline library.
+- Skipping while casting no longer leaves the speaker on the previous song.
+- Casting retries a track the TV refuses while another is playing (#246).
+
+## [0.7.12] - 2026-10-01
+
+### Added
+
+- Brazilian Portuguese, thanks to @vicsantus (#240).
+- Settings > Home chips has a switch on top that turns every chip on or off at once.
+- Settings > About can export your settings to a file and import them on another phone or someone else's, without accounts or passwords (#243).
+
+### Changed
+
+- The chips and the quick grid on Home start turned off on a new install; existing setups keep theirs.
+- The greeting and buttons at the top of Home scroll away with the rest instead of staying pinned.
+- The buttons under the player controls are spread across the width by default on a new install.
+- The Ukrainian translation is complete again, thanks to @albedych (#245).
+
+### Fixed
+
+- Opening Search no longer makes the page jump down a moment after it appears.
 - A cover opened full screen is now shown with square corners, whatever the cover corners setting (#241).
 - Dragging the seek bar in a fragmented M4A, such as the ones many downloaders save from streaming services, no longer starts the song over (#242).
 - Home no longer offers the song paused on this same phone as playing on Resonus.
