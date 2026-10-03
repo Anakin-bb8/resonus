@@ -12,28 +12,7 @@ public class HomeWidgetModule: Module {
     /// flag below is what the press rides in on, and the poll on the
     /// JavaScript side reads it back either way — one press, one toggle.
     OnCreate {
-      NotificationCenter.default.addObserver(
-        forName: Notification.Name(HomeWidgetStore.toggleNoteName),
-        object: nil,
-        queue: .main
-      ) { [weak self] _ in
-        self?.sendEvent("playbackToggle", [:])
-      }
-      // The same press from the widget's own process: a Darwin notification
-      // is the one kind that crosses processes, so this fires the instant the
-      // extension posts it — no waiting for the one-second poll.
-      CFNotificationCenterAddObserver(
-        CFNotificationCenterGetDarwinNotifyCenter(),
-        Unmanaged.passUnretained(self).toOpaque(),
-        { _, observer, _, _, _ in
-          guard let observer else { return }
-          let module = Unmanaged<HomeWidgetModule>.fromOpaque(observer).takeUnretainedValue()
-          DispatchQueue.main.async { module.sendEvent("playbackToggle", [:]) }
-        },
-        CFNotificationName(HomeWidgetStore.darwinNote),
-        nil,
-        .deliverImmediately
-      )
+      self.observePress()
     }
 
     Function("update") { (state: [String: Any]) in
@@ -57,6 +36,38 @@ public class HomeWidgetModule: Module {
     Function("status") { () -> String in
       HomeWidgetStore.status()
     }
+  }
+
+  /// Both roads a press can arrive on, registered outside `definition()`
+  /// itself: the type checker gives up on a C callback inlined into the
+  /// module's result builder, and the whole definition fails with no
+  /// diagnostic to point at it.
+  private func observePress() {
+    NotificationCenter.default.addObserver(
+      forName: Notification.Name(HomeWidgetStore.toggleNoteName),
+      object: nil,
+      queue: .main
+    ) { [weak self] _ in
+      self?.sendEvent("playbackToggle", [:])
+    }
+    // The same press from the widget's own process: a Darwin notification
+    // is the one kind that crosses processes, so this fires the instant the
+    // extension posts it — no waiting for the one-second poll.
+    let callback: CFNotificationCallback = { _, observer, _, _, _ in
+      guard let observer else { return }
+      let module = Unmanaged<HomeWidgetModule>.fromOpaque(observer).takeUnretainedValue()
+      DispatchQueue.main.async {
+        module.sendEvent("playbackToggle", [:])
+      }
+    }
+    CFNotificationCenterAddObserver(
+      CFNotificationCenterGetDarwinNotifyCenter(),
+      Unmanaged.passUnretained(self).toOpaque(),
+      callback,
+      CFNotificationName(HomeWidgetStore.darwinNote),
+      nil,
+      .deliverImmediately
+    )
   }
 }
 
