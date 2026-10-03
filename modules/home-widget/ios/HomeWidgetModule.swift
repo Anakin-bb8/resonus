@@ -64,7 +64,7 @@ public class HomeWidgetModule: Module {
       CFNotificationCenterGetDarwinNotifyCenter(),
       Unmanaged.passUnretained(self).toOpaque(),
       callback,
-      CFNotificationName(HomeWidgetStore.darwinNote),
+      HomeWidgetStore.darwinNote,
       nil,
       .deliverImmediately
     )
@@ -84,7 +84,9 @@ private enum HomeWidgetStore {
   private static let toggleWindowSec: Double = 300
 
   /// The Darwin notification, spelled the same in `PlaybackToggleRelay`.
-  static let darwinNote = "com.juananzzz.resonus.playbackToggle" as CFString
+  /// Built the way the extension builds its copy (from the CFString): the
+  /// shortcut of naming the type directly does not type-check here.
+  static let darwinNote = CFNotificationName("com.juananzzz.resonus.playbackToggle" as CFString)
 
   /// What the app writes when it takes a press: for `status()`, to tell
   /// "the press never arrived" from "it arrived and something else failed".
