@@ -414,7 +414,13 @@ function sourceFor(song: Song, timeOffsetSec = 0): AudioSource {
   // and not the stream URL: this reaches every connected controller, and the
   // URL carries the credentials.
   const mediaId = song.id;
-  if (song.url) return { uri: song.url, metadata, mediaId };
+  // Whether the asset may take its time resolving exact timing. Asked of the
+  // asset on every source, so the setting takes effect on the next track and
+  // on every re-request (a seek with `timeOffset` builds a source too). Local
+  // files get the same answer for free: reading an index you already hold is
+  // not the wait this avoids — the wait is scanning a stream for one.
+  const preferPreciseTiming = useSettings.getState().preferPreciseTiming;
+  if (song.url) return { uri: song.url, metadata, mediaId, preferPreciseTiming };
   const local = localSourceFor(song);
   // Counted where the decision is acted on, once per install, and not inside
   // `localSourceFor`, which every render and every heartbeat asks. "Streamed
@@ -423,7 +429,7 @@ function sourceFor(song: Song, timeOffsetSec = 0): AudioSource {
   // connection, which cannot happen to a file.
   if (local) {
     bump('player · played the file on disk');
-    return { uri: local, metadata, mediaId };
+    return { uri: local, metadata, mediaId, preferPreciseTiming };
   }
   bump(
     downloadedUri(song)
@@ -436,6 +442,7 @@ function sourceFor(song: Song, timeOffsetSec = 0): AudioSource {
     uri: streamUrl(auth, song.id, bitRate, timeOffsetSec, format),
     metadata,
     mediaId,
+    preferPreciseTiming,
   };
 }
 

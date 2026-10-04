@@ -1,0 +1,11 @@
+{
+  "platforms": ["android", "ios"],
+  "android": {
+    "modules": ["expo.modules.radioart.RadioArtModule"]
+  },
+  "ios": {
+    "modules": ["RadioArtModule"],
+    "swiftModuleName": "radio_art",
+    "podspecPath": "radio-art.podspec"
+  }
+}

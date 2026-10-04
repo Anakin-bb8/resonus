@@ -64,6 +64,8 @@ export default function PlaybackSettings() {
   const preferDownloads = useSettings((s) => s.preferDownloads);
   const setPreferDownloads = useSettings((s) => s.setPreferDownloads);
   const setPreloadUpcoming = useSettings((s) => s.setPreloadUpcoming);
+  const preferPreciseTiming = useSettings((s) => s.preferPreciseTiming);
+  const setPreferPreciseTiming = useSettings((s) => s.setPreferPreciseTiming);
   const replayGain = useSettings((s) => s.replayGain);
   const setReplayGain = useSettings((s) => s.setReplayGain);
   const replayGainPreampDb = useSettings((s) => s.replayGainPreampDb);
@@ -128,6 +130,15 @@ export default function PlaybackSettings() {
                     label: t('Preload upcoming tracks'),
                     value: preloadUpcoming,
                     onChange: setPreloadUpcoming,
+                    disabled: offline,
+                  },
+                  {
+                    label: t('Precise timing'),
+                    description: t(
+                      'Asks the file for frame-exact seeks and durations before playing. On a stream with no index that means scanning it first — the wait before a track starts. Off, tracks start at once: the clock still follows the audio, seeks may land a fraction of a second off.',
+                    ),
+                    value: preferPreciseTiming,
+                    onChange: setPreferPreciseTiming,
                     disabled: offline,
                   },
                   {

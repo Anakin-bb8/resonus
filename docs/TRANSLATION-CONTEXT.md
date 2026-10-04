@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 771 of them.
+Every string the app can show, under the screen it shows up on. 782 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -183,6 +183,14 @@ you are actually typing into, which is easier than reading it here.
 | `Nothing to change` | Answer to favouriting a selection that already is one, or unfavouriting one that isn't |
 | `Try exploring another artist.` |  |
 
+## Artist radio
+
+| String | What it is |
+| --- | --- |
+| `Couldn't build the radio.` |  |
+| `The {artist} Radio` |  |
+| `With {artists} and more` |  |
+
 ## Browse › Albums
 
 | String | What it is |
@@ -326,6 +334,7 @@ you are actually typing into, which is easier than reading it here.
 | `Paused on {player}` |  |
 | `Play here` |  |
 | `Playing on {player}` | Heading of the card at the top of Home: a song playing right now in another app or on another device of the same account. {player} is that app's name, like Feishin |
+| `Radios` |  |
 | `Random albums` | A section of Home: albums picked at random, to happen upon something |
 | `Random artists` | A section of Home: artists picked at random |
 | `Random songs` |  |
@@ -910,6 +919,7 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `Always` | A value of when a downloaded song is played from the file instead of streamed |
+| `Asks the file for frame-exact seeks and durations before playing. On a stream with no index that means scanning it first — the wait before a track starts. Off, tracks start at once: the clock still follows the audio, seeks may land a fraction of a second off.` |  |
 | `At “Original” quality nothing is transcoded.` |  |
 | `Automatic` | A value of `Normalize volume`: let the app decide between per track and per album |
 | `Autoplay` | When the queue runs out, keep playing with similar songs instead of stopping |
@@ -936,6 +946,7 @@ you are actually typing into, which is easier than reading it here.
 | `Playback` |  |
 | `Playing the file costs no data. Choose otherwise if your downloads are smaller copies. Offline, the file is always used.` |  |
 | `Pre-amp` | A gain in decibels applied on top of normalization, for when everything ends up too quiet |
+| `Precise timing` |  |
 | `Preload upcoming tracks` |  |
 | `Quality & playback` |  |
 | `Scrobbling` | Reporting a song as played, to the user's own server and from there to Last.fm or ListenBrainz. The title of its own screen and the row that opens it. The word comes from Last.fm and most languages keep it; use whatever those services call it in yours if they do |
@@ -1039,13 +1050,19 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
+| `API key` |  |
 | `Done` | The button that leaves drag-to-reorder, or accepts a fine-tuned number |
 | `How far into a song it counts as played. Whichever of the two comes first.` | At the top of the `Scrobbling` screen, over the two rows below it |
+| `Last.fm` |  |
+| `ListenBrainz` |  |
 | `Off` | A setting value meaning disabled (crossfade, normalization…) |
 | `Part of the song` | How much of a song must have played before it counts, as a percentage. One of the two scrobble rules, and it can be `Off` |
 | `Restore defaults` | Button at the end of the `Scrobbling` screen, putting both rules back to what they came as |
 | `Scrobbling` | Reporting a song as played, to the user's own server and from there to Last.fm or ListenBrainz. The title of its own screen and the row that opens it. The word comes from Last.fm and most languages keep it; use whatever those services call it in yours if they do |
 | `Time played` | How long a song must have played before it counts, as a time. The other scrobble rule, and it can be `Off` too. Whichever of the two comes first is the one that counts |
+| `User token` |  |
+| `Username` | The username field |
+| `What these services heard is what the radios on Home suggest. Both are optional: with nothing filled in, the radios come from what you play on this server.` |  |
 | `With both off nothing is reported, not even to your own server.` | Shown only when both scrobble rules are `Off`, since that also stops the play counts on the user's own server |
 
 ## Settings › Song lists

@@ -1,15 +1,24 @@
 /**
- * Settings › Quality & playback › Scrobbling: when a song counts as played.
+ * Settings › Quality & playback › Scrobbling: when a song counts as played,
+ * and the services whose listening builds the radios on Home.
  *
  * Two rules rather than one number: a share of the song, which is what makes a
  * listen mean the same on a two-minute track and on a ten-minute one, and a
  * flat time, which is what keeps the long ones from asking for five minutes
  * before they count. Either can be off, and the earlier one is what fires. What
- * they add up to lives in `scrobbleThresholdSec` (#126).
+ * they add up to lives in `scrobbleThresholdSec` (#126). Below them, Last.fm
+ * and ListenBrainz: read-only, optional, and where the Home radios' seeds come
+ * from when they're filled in.
  */
 import { ScrollView, Text } from 'react-native';
 
-import { SettingRow, SettingsPage, settingsStyles, SliderRow } from '@/components/SettingsUI';
+import {
+  SettingRow,
+  SettingsPage,
+  settingsStyles,
+  SliderRow,
+  TextRow,
+} from '@/components/SettingsUI';
 import { useT } from '@/i18n';
 import { formatDuration } from '@/lib/format';
 import { SCROBBLE_SECONDS_MAX, useSettings } from '@/store/settings';
@@ -25,6 +34,14 @@ export default function ScrobblingSettings() {
   const scrobbleSeconds = useSettings((s) => s.scrobbleSeconds);
   const setScrobbleSeconds = useSettings((s) => s.setScrobbleSeconds);
   const resetScrobbleRules = useSettings((s) => s.resetScrobbleRules);
+  const lastfmUser = useSettings((s) => s.lastfmUser);
+  const setLastfmUser = useSettings((s) => s.setLastfmUser);
+  const lastfmApiKey = useSettings((s) => s.lastfmApiKey);
+  const setLastfmApiKey = useSettings((s) => s.setLastfmApiKey);
+  const listenbrainzUser = useSettings((s) => s.listenbrainzUser);
+  const setListenbrainzUser = useSettings((s) => s.setListenbrainzUser);
+  const listenbrainzToken = useSettings((s) => s.listenbrainzToken);
+  const setListenbrainzToken = useSettings((s) => s.setListenbrainzToken);
 
   return (
     <SettingsPage title={t('Scrobbling')}>
@@ -69,6 +86,42 @@ export default function ScrobblingSettings() {
           icon="arrow-undo-outline"
           label={t('Restore defaults')}
           onPress={resetScrobbleRules}
+        />
+        {/* Read-only services: nothing here reports to them (the player's
+            scrobbling does, when it is on) — these keys only let the radios
+            on Home read what you have already told them you listen to. */}
+        <Text style={settingsStyles.sectionDescription}>
+          {t('What these services heard is what the radios on Home suggest. Both are optional: with nothing filled in, the radios come from what you play on this server.')}
+        </Text>
+        <TextRow
+          label={t('Last.fm')}
+          description={t('Username')}
+          value={lastfmUser}
+          placeholder="—"
+          maxLength={64}
+          onChange={setLastfmUser}
+        />
+        <TextRow
+          label={t('API key')}
+          value={lastfmApiKey}
+          placeholder="—"
+          maxLength={64}
+          onChange={setLastfmApiKey}
+        />
+        <TextRow
+          label={t('ListenBrainz')}
+          description={t('Username')}
+          value={listenbrainzUser}
+          placeholder="—"
+          maxLength={64}
+          onChange={setListenbrainzUser}
+        />
+        <TextRow
+          label={t('User token')}
+          value={listenbrainzToken}
+          placeholder="—"
+          maxLength={64}
+          onChange={setListenbrainzToken}
         />
       </ScrollView>
     </SettingsPage>
