@@ -131,7 +131,8 @@ public class RadioArtModule: Module {
     let bounds = (text as NSString).boundingRect(
       with: CGSize(width: maxWidth, height: side),
       options: [.usesLineFragmentOrigin],
-      attributes: attrs
+      attributes: attrs,
+      context: nil
     )
     let x = alignRight ? point.x - bounds.width : point.x
     (text as NSString).draw(at: CGPoint(x: x, y: point.y), withAttributes: attrs)
@@ -152,7 +153,8 @@ public class RadioArtModule: Module {
     var bounds = (title as NSString).boundingRect(
       with: CGSize(width: maxWidth, height: .greatestFiniteMagnitude),
       options: [.usesLineFragmentOrigin],
-      attributes: attrs
+      attributes: attrs,
+      context: nil
     )
     while (bounds.height > fontSize * 2.3 || bounds.width > maxWidth) && fontSize > 34 {
       fontSize -= 4
@@ -160,12 +162,14 @@ public class RadioArtModule: Module {
       bounds = (title as NSString).boundingRect(
         with: CGSize(width: maxWidth, height: .greatestFiniteMagnitude),
         options: [.usesLineFragmentOrigin],
-        attributes: attrs
+        attributes: attrs,
+        context: nil
       )
     }
     let rect = CGRect(x: 28, y: size.height - 28 - bounds.height,
                       width: maxWidth, height: bounds.height)
-    (title as NSString).draw(with: rect, options: [.usesLineFragmentOrigin], attributes: attrs)
+    (title as NSString).draw(with: rect, options: [.usesLineFragmentOrigin],
+                             attributes: attrs, context: nil)
   }
 
   /// The name sits over covers nobody chose: a shadow opposite to the ink, so
