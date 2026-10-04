@@ -21,6 +21,7 @@ Releases before 0.2.1 are only listed on the
 - Casting to a TV moves on to the next song on time with the screen off (#246).
 - On phones that freeze apps in the background, the player no longer shows the old song for seconds on return (#192).
 - Offline, a song whose cover is not downloaded no longer breaks the lock screen and the car.
+- Playlists open without waiting behind the suggested tracks of the last one, on servers slow to find similar songs.
 
 ## [0.7.14] - 2026-10-03
 
