@@ -57,7 +57,7 @@ export const LANGUAGES = [
   { code: 'pl', name: 'Polski', dict: pl },
   { code: 'sv', name: 'Svenska', dict: sv },
   { code: 'pt-BR', name: 'Português (Brasil)', dict: ptBR },
-  { code: 'tr', name: 'Türkçe', dict: TR },
+  { code: 'tr', name: 'Türkçe', dict: tr },
 ] as const satisfies readonly LangDef[];
 
 export type Language = (typeof LANGUAGES)[number]['code'];
