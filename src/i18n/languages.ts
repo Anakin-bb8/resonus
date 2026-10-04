@@ -21,7 +21,7 @@ import uk from './locales/uk.json';
 import pl from './locales/pl.json';
 import sv from './locales/sv.json';
 import ptBR from './locales/pt-BR.json';
-import TR from './locales/tr.json';
+import tr from './locales/tr.json';
 
 type Dict = Record<string, string>;
 /**
