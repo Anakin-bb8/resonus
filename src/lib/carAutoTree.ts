@@ -9,6 +9,8 @@
  *
  * Adapted from the wavio pattern (github.com/Joel-Mercier/wavio, MIT).
  */
+import { AppState } from 'react-native';
+
 import * as data from '@/api/data';
 import { type Album, type Artist, type Playlist, type Song } from '@/api/subsonic';
 import { songsLabel, tg } from '@/i18n';
@@ -32,7 +34,15 @@ function albumDetail(id: string): Promise<{ songs: Song[] }> {
 function playlistDetail(id: string): Promise<{ songs: Song[] }> {
   return queryClient.fetchQuery({ queryKey: ['playlist', id], queryFn: () => data.getPlaylist(id) });
 }
-const CONCURRENCY = 4;
+/**
+ * Requests at once while filling the tree. Android sends five to one host at a
+ * time, so four left whoever was using the app one, and opening an album
+ * waited behind a car that is mostly not there. Two while the app is on screen;
+ * four when it is not, which is the car with the phone in a pocket.
+ */
+function concurrency(): number {
+  return AppState.currentState === 'active' ? 2 : 4;
+}
 /**
  * Ceilings for what gets fetched ahead of a car that may never be plugged in.
  * Everything above them still appears in the browse tree; what it doesn't have
@@ -368,7 +378,7 @@ export async function buildBrowseTree(deep = true): Promise<CarTree> {
     byLastPlayed(playlists, (p) => `/playlist/${p.id}`)
       .slice(0, MAX_PREFETCH_PLAYLISTS)
       .map((p) => p.id),
-    CONCURRENCY,
+    concurrency(),
     (id) => fillPlaylist(tree, id),
   );
 
@@ -377,12 +387,12 @@ export async function buildBrowseTree(deep = true): Promise<CarTree> {
   // hundred and forty four album requests in a single minute, plus their top
   // songs, every time the app opened. What a car needs at hand is the top of
   // each list; the rest can be empty until someone asks for it (#50).
-  await mapConcurrent(Array.from(albumIds).slice(0, MAX_PREFETCH_ALBUMS), CONCURRENCY, (id) =>
+  await mapConcurrent(Array.from(albumIds).slice(0, MAX_PREFETCH_ALBUMS), concurrency(), (id) =>
     fillAlbum(tree, id),
   );
 
   // Prefetch for starred artists: top songs + albums (and their tracks).
-  await mapConcurrent(starred.artists.slice(0, MAX_PREFETCH_ARTISTS).map((a) => a.id), CONCURRENCY, (id) =>
+  await mapConcurrent(starred.artists.slice(0, MAX_PREFETCH_ARTISTS).map((a) => a.id), concurrency(), (id) =>
     fillArtist(tree, id),
   );
 

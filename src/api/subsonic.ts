@@ -17,6 +17,7 @@ import { markAbsentCovers, omitsAbsentCovers } from '@/lib/absentCovers';
 import { wordsFromCues } from '@/lib/lyricWords';
 import { canonicalId, idWouldChange } from '@/lib/navidromeIds';
 import { netTally, timed } from '@/lib/perfLog';
+import { createSlots } from '@/lib/slots';
 import { assertCanRequest } from './netGate';
 
 export const CLIENT_NAME = 'Resonus';
@@ -419,6 +420,19 @@ function buildUrl(
 
 const REQUEST_TIMEOUT_MS = 15000;
 
+/**
+ * What a server may answer by asking the internet first (Navidrome goes to
+ * Last.fm and the like), which can take seconds a call.
+ *
+ * Android sends at most five requests to one host at once and queues the rest.
+ * A mix asking for a dozen artists' top songs, or a screen of suggestions, took
+ * every slot, and opening an album then waited behind them; the queued ones
+ * also ran out their timeout before leaving the phone. Two at a time leaves the
+ * others free, and the timeout starts when the request does.
+ */
+const AGENT_ENDPOINTS = new Set(['getSimilarSongs2.view', 'getTopSongs.view', 'getArtistInfo2.view']);
+const agentSlots = createSlots(2);
+
 /** Makes a request and unwraps the Subsonic response. */
 /**
  * Subsonic request error. `network` distinguishes "server didn't respond"
@@ -497,6 +511,17 @@ async function request<T>(
 ): Promise<T> {
   // Offline mode stops here, before the socket (see netGate).
   assertCanRequest(allowOffline);
+  const agent = AGENT_ENDPOINTS.has(endpoint);
+  if (agent) {
+    await agentSlots.take();
+    // Asked again: offline mode may have come on while it waited its turn.
+    try {
+      assertCanRequest(allowOffline);
+    } catch (e) {
+      agentSlots.release();
+      throw e;
+    }
+  }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
@@ -516,6 +541,7 @@ async function request<T>(
     throw new SubsonicRequestError('Could not connect to the server', true);
   } finally {
     clearTimeout(timer);
+    if (agent) agentSlots.release();
   }
 
   // Before the status is judged: an error is a request that went out and came
