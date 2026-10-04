@@ -9,6 +9,10 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Fixed
+
+- Albums and playlists fade their colour in instead of flashing grey first.
+
 ## [0.8.1] - 2026-10-04
 
 ### Added

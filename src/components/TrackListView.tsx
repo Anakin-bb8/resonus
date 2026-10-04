@@ -6,7 +6,7 @@
 import Icon from '@/components/Icon';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
-import { useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -31,7 +31,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { type Song, type StarType } from '@/api/subsonic';
-import { useDominantColor } from '@/hooks/useDominantColor';
+import { useCoverTint } from '@/hooks/useDominantColor';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { centredPadding, useScreenSize } from '@/hooks/useScreenSize';
 import { useSelectionMenu } from '@/hooks/useSelectionMenu';
@@ -234,7 +234,16 @@ export function TrackListView({
   const insets = useSafeAreaInsets();
   const { width: screenW, height: screenH } = useScreenSize();
   const bottomPad = useScreenBottomPadding();
-  const dominant = useDominantColor(coverUri, true);
+  const tint = useCoverTint(coverUri, true);
+  const dominant = tint.color;
+  // A cover read for the first time fades its tint in over the page, instead
+  // of the header being painted the plain grey and jumping to the colour a
+  // moment later. One already read is there from the first frame.
+  const tintIn = useRef(new Animated.Value(tint.known ? 1 : 0)).current;
+  useEffect(() => {
+    if (!tint.known) return;
+    Animated.timing(tintIn, { toValue: 1, duration: motion.duration.fade, useNativeDriver: true }).start();
+  }, [tint.known, tintIn]);
   const headerColor = accentColor ?? dominant;
   const shuffle = usePlayerStore((s) => s.shuffle);
   const queueDealt = usePlayerStore((s) => s.queueDealt);
@@ -490,7 +499,7 @@ export function TrackListView({
             style={[
               StyleSheet.absoluteFill,
               // And follows the scroll 1:1, natively.
-              { transform: [{ translateY: Animated.multiply(scrollY, -1) }] },
+              { opacity: tintIn, transform: [{ translateY: Animated.multiply(scrollY, -1) }] },
             ]}
           >
             {/* Color band above the gradient: when the search bar is revealed,
