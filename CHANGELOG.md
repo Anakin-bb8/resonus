@@ -13,6 +13,7 @@ Releases before 0.2.1 are only listed on the
 
 - Albums and playlists fade their colour in instead of flashing grey first.
 - Screens no longer wait behind slow similar-song, top-song and artist-info requests, or behind the Android Auto library filling in.
+- A shelf with a title in Japanese, Chinese or with an emoji is no longer taller than the rest.
 
 ## [0.8.1] - 2026-10-04
 
