@@ -9,9 +9,8 @@
  */
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { useState } from 'react';import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CACHED_COVER, COVER, coverArtUrl, getArtistInfo } from '@/api/data';
 import { useT } from '@/i18n';
@@ -27,7 +26,6 @@ const BIO_TOGGLE_AT = 220;
 
 export function ArtistPlayerCard() {
   const t = useT();
-  const router = useRouter();
   const song = usePlayerStore(currentSong);
   const artistId = song?.artistId;
   // Same question the artist screen asks: offline answers from the phone, a
@@ -54,8 +52,13 @@ export function ArtistPlayerCard() {
     <View style={styles.card}>
       {/* The whole card goes to the artist, the way tapping the cover goes to
           the lyrics. The toggle below is a Pressable of its own, so it takes
-          its own taps and only unfolds the text. */}
-      <Pressable accessibilityRole="button" onPress={() => router.push(`/artist/${artistId}`)}>
+          its own taps and only unfolds the text. Replaces rather than pushes:
+          this card only exists inside the player modal, and on iOS a push out
+          of it would land the artist in a sheet. */}
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => router.replace(`/artist/${artistId}`)}
+      >
         <View style={styles.photo}>
           {imageUri ? (
             <Image source={{ uri: imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
