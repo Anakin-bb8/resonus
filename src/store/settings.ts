@@ -954,18 +954,6 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
    */
   preferPreciseTiming: boolean;
   /**
-   * The scrobble services behind the radios on Home (Settings › Scrobbling):
-   * what they have heard of you is what suggests the artist radios, so "Radio
-   * di …" is about the music you actually play rather than whatever the server
-   * ranks highest. All four are optional — with none of them filled the radios
-   * fall back to this server's own play counts, which is the only listening
-   * history a local profile or a server without scrobbling ever has.
-   */
-  lastfmUser: string;
-  lastfmApiKey: string;
-  listenbrainzUser: string;
-  listenbrainzToken: string;
-  /**
    * Auto-switch between online and offline based on connectivity: fall back to
    * downloads when the server doesn't respond and reconnect when it comes back.
    * On by default. If turned off, the user manually controls the mode
@@ -1288,10 +1276,6 @@ const DEFAULTS = {
   scrobbleSeconds: SCROBBLE_SECONDS_DEFAULT,
   preloadUpcoming: false,
   preferPreciseTiming: false,
-  lastfmUser: '',
-  lastfmApiKey: '',
-  listenbrainzUser: '',
-  listenbrainzToken: '',
   autoOfflineSwitch: true,
   hideUnavailableOffline: false,
   replayGain: 'off' as ReplayGainMode,
@@ -1444,10 +1428,6 @@ function applyFactoryLook() {
  * the factory values. Shared by the read at startup and an imported file (#243),
  * so both go through the same checks and the same migrations.
  */
-/** The scrobble-service credentials: free text, so they are validated one by
- *  one rather than by the boolean/number passes above. */
-const RADIO_CREDENTIAL_KEYS = ['lastfmUser', 'lastfmApiKey', 'listenbrainzUser', 'listenbrainzToken'] as const;
-
 function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void) {
   // Typed as what this version writes, plus the earlier shapes that are
   // read only to migrate them. Nothing here is trusted: every value is
@@ -1480,15 +1460,6 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
     if (typeof DEFAULTS[key] === 'boolean' && typeof value === 'boolean') flags[key] = value;
   }
   set(flags as Partial<SettingsState>);
-  // Credentials are free text: taken only as strings, and only up to a length
-  // no key or username honestly needs, so a saved object of the wrong shape
-  // cannot ride along into the scrobble requests.
-  const text: Record<string, string> = {};
-  for (const key of RADIO_CREDENTIAL_KEYS) {
-    const value: unknown = parsed[key];
-    if (typeof value === 'string' && value.length <= 256) text[key] = value;
-  }
-  set(text as Partial<SettingsState>);
   // One switch used to blur both bars.
   if (typeof parsed.blurMiniPlayer !== 'boolean' && typeof parsed.blurBars === 'boolean') {
     set({ blurMiniPlayer: parsed.blurBars });

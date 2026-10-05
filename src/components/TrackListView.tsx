@@ -69,8 +69,12 @@ const TOPBAR_H = 48;
  *  bar holds once it reaches the bar (half inside it, half below its edge). */
 const PLAY_SIZE = 56;
 /** Height of the hidden search bar ("Find in playlist" Spotify style),
- * including the separation gap from the cover. */
+ *  including the separation gap from the cover. */
 const SEARCH_H = 72;
+/** How far the wide cover's gradient runs: from the picture's lower edge,
+ *  through the title and the buttons, arriving at the page's own colour
+ *  around the play button ("circa", as the order asked for it). */
+const WIDE_GRADIENT_H = 240;
 /** Lines of the description shown before "Show more". */
 const DESCRIPTION_LINES = 2;
 
@@ -131,6 +135,17 @@ interface Props {
   onCoverPress?: () => void;
   /** Hides the header cover and reclaims that space (e.g. Favorites). */
   hideCover?: boolean;
+  /**
+   * Full-bleed cover across the top (the radio's): edge to edge from the very
+   * top of the display, cropped to `height`, with the gradient starting at
+   * its lower edge instead of running behind it. Clamped inside so it always
+   * ends a little above where the square cover would; the rows keep their own
+   * width, only the picture takes the whole screen.
+   */
+  wideCover?: {
+    height: number;
+    render: (width: number, height: number) => ReactNode;
+  };
   /** Gradient/bar color if there's no cover with a dominant color. */
   accentColor?: string;
   songs: Song[];
@@ -213,6 +228,7 @@ export function TrackListView({
   renderCover,
   onCoverPress,
   hideCover,
+  wideCover,
   accentColor,
   songs,
   currentId,
@@ -464,12 +480,20 @@ export function TrackListView({
   // Without cover, the header is shorter: the gradient and bar collapse adjust
   // to a smaller distance so the transition fits.
   const art = coverSize(screenW, screenH);
-  const cover = hideCover ? 0 : art;
-  const collapse = hideCover ? 120 : art;
+  // Where the square cover's content starts: the bar's own slice of the
+  // screen plus the gap under it. The wide cover starts at zero instead —
+  // it goes under the bar — but is clamped so it ends just above where this
+  // one would, on every screen there is.
+  const albumPadTop = insets.top + TOPBAR_H + spacing.md;
+  const wideH = wideCover ? Math.min(wideCover.height, albumPadTop + art - 24) : 0;
+  const cover = wideCover || hideCover ? 0 : art;
+  const collapse = wideCover ? wideH : hideCover ? 120 : art;
   // Down past the title and the buttons, so the header is the cover's colour
-  // and not only the space around the cover.
-  const gradientH = insets.top + TOPBAR_H + cover + 280;
-  const band = searchable ? SEARCH_H * 4 : 0;
+  // and not only the space around the cover. The wide one runs from its own
+  // picture's edge instead: the picture is what covers the space above.
+  const gradientH = wideCover ? WIDE_GRADIENT_H : insets.top + TOPBAR_H + cover + 280;
+  const band = searchable && !wideCover ? SEARCH_H * 4 : 0;
+  const gradientTop = wideCover ? wideH : -band;
   const coverOpacity = scrollY.interpolate({
     inputRange: [0, collapse * 0.7],
     outputRange: [1, 0],
@@ -489,8 +513,8 @@ export function TrackListView({
   // Where the play button sits in the scroll content: its distance from the
   // top of the list header, plus the padding the list starts with — which is
   // the same expression the list is padded by below, so the two cannot drift
-  // apart.
-  const listPadTop = insets.top + TOPBAR_H + spacing.md;
+  // apart. The wide cover needs no top padding: its picture is the top.
+  const listPadTop = wideCover ? 0 : albumPadTop;
 
   // The two ends of that distance are read in window coordinates in the same
   // tick, so the scroll underneath them cancels out: the number is the same
@@ -645,11 +669,11 @@ export function TrackListView({
       {searching ? null : (
         <Animated.View
           pointerEvents="none"
-          style={[
-            styles.gradientWrap,
-            {
-              top: -band,
-              height: gradientH + band,
+            style={[
+              styles.gradientWrap,
+              {
+                top: gradientTop,
+                height: gradientH + band,
               // Moves down with the revealed search bar, which pushes the header
               // down without moving the scroll offset. On its own view, because
               // this is a height animated from JS and the scroll below is not:
@@ -789,7 +813,34 @@ export function TrackListView({
                 the button on its own (see `searchShift`). */}
             {searching ? null : (
           <View ref={headerRootRef} style={styles.header}>
-            {hideCover ? null : (
+            {wideCover ? (
+              /* The picture at the very top, pulled out of the rows' inset to
+                 the edges of the display: it fades with the scroll the way
+                 the square one does, and the bar rides over it. */
+              <Animated.View
+                style={[
+                  styles.wideCover,
+                  {
+                    width: screenW,
+                    height: wideH,
+                    opacity: coverOpacity,
+                    marginHorizontal: -centredPadding(screenW, spacing.lg),
+                  },
+                ]}
+              >
+                {onCoverPress ? (
+                  <Pressable
+                    onPress={onCoverPress}
+                    accessibilityRole="imagebutton"
+                    accessibilityLabel={t('View cover')}
+                  >
+                    {wideCover.render(screenW, wideH)}
+                  </Pressable>
+                ) : (
+                  wideCover.render(screenW, wideH)
+                )}
+              </Animated.View>
+            ) : hideCover ? null : (
               <Animated.View style={[styles.coverCenter, { opacity: coverOpacity }]}>
                 {onCoverPress ? (
                   <Pressable
@@ -1261,6 +1312,12 @@ const styles = themed((colors) => ({
     shadowOpacity: 0.45,
     shadowRadius: 16,
     elevation: 8,
+  },
+  wideCover: {
+    // No corners and no shadow: the picture is printed into the page itself,
+    // from the very top edge, and the rows below come back into their inset.
+    overflow: 'hidden',
+    marginBottom: spacing.lg,
   },
   title: {
     color: colors.text,

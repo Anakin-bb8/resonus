@@ -4,14 +4,16 @@
  *
  * A radio is a seed artist (the one in its title, "Radio di …") plus similar
  * artists mixed beside it — never a saved playlist: nothing is written to
- * the server, and the tracks are fetched again when the radio opens so the
- * list reflects the library as it is now.
+ * the server. The def carries a snapshot of the tracks it opened with, so
+ * the screen is already full the first time it is drawn, and a fresh list is
+ * asked for whenever it has gone stale — the mix still reflects the library
+ * as it is now.
  *
- * The seeds come from listening history where there is any (Last.fm and
- * ListenBrainz, Settings › Scrobbling) and from the server's own play counts
- * where there isn't, which covers a local profile and any server without
- * scrobbling. Both paths end in the same shape, so the Home section and the
- * screen below it never know which one they got.
+ * The seeds come from the server's own play counts, which is where every
+ * listen lands anyway: the player reports to the server, and the server
+ * passes it on to Last.fm or ListenBrainz when it is set up for that. A
+ * local profile has the same counts, so there is one path to read and
+ * nothing to fill in.
  */
 import {
   COVER,
@@ -30,8 +32,6 @@ import { ensureRadioIcons } from '@/lib/radioArt';
 import { useRadios, radiosStale, type RadioArtist, type RadioDef } from '@/store/radios';
 import { themeMode } from '@/theme';
 
-import { recentArtistWeights } from './listeningHistory';
-
 /** How many radios the section offers. */
 export const RADIO_SEEDS = 6;
 
@@ -49,22 +49,6 @@ function shuffled<T>(arr: T[]): T[] {
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
-}
-
-/**
- * Seeds from what the scrobble services heard: the artists in the recent
- * window, most played first, matched into the library by name (both services
- * key on names, and the artist index is where the ids live).
- */
-async function historySeeds(limit: number): Promise<RadioArtist[]> {
-  const weights = await recentArtistWeights();
-  if (weights.size === 0) return [];
-  const artists = await getArtists();
-  const scored = artists
-    .map((a) => ({ a, w: weights.get(a.name.trim().toLowerCase()) ?? 0 }))
-    .filter((x) => x.w > 0)
-    .sort((x, y) => y.w - x.w);
-  return scored.slice(0, limit).map(({ a }) => ({ id: a.id, name: a.name, coverArt: a.coverArt }));
 }
 
 /**
@@ -89,9 +73,9 @@ async function serverSeeds(limit: number): Promise<RadioArtist[]> {
 }
 
 /**
- * The radio seeds, history first and the server's own listening filling the
- * rest. The last tier is any artists at all: six radios about artists you
- * never played beats no radios, and the section still hides itself when even
+ * The radio seeds: the artists behind the most played songs, and any
+ * artists at all filling the rest. Six radios about artists you never
+ * played beats no radios, and the section still hides itself when even
  * that comes back empty (a library with no artists).
  */
 export async function pickSeeds(limit: number): Promise<RadioArtist[]> {
@@ -106,17 +90,9 @@ export async function pickSeeds(limit: number): Promise<RadioArtist[]> {
   };
 
   try {
-    take(await historySeeds(limit));
+    take(await serverSeeds(limit));
   } catch {
-    // The scrobble services or the artist index didn't answer; the tiers
-    // below still can.
-  }
-  if (out.length < limit) {
-    try {
-      take(await serverSeeds(limit));
-    } catch {
-      // Same, one tier down.
-    }
+    // The play counts didn't answer; the tier below still can.
   }
   if (out.length < limit) {
     try {
@@ -165,30 +141,23 @@ export async function buildRadioDef(seed: RadioArtist): Promise<RadioDef | null>
 }
 
 /**
- * The tracks of one radio, aiming at `RADIO_TARGET`: the seed's top songs
- * first, then the similar artists a song at a time in rounds, then whatever
- * the server suggests as similar to the seed's own top track, and last the
- * library's random songs.
+ * The tracks of one radio, aiming at `RADIO_TARGET`.
  *
- * The per-artist caps are what keep it a radio rather than an album run —
- * two or three from each artist and on to the next, the same rule the
- * player's own radio extension works by (see `radioCandidates` in player.ts).
+ * Four pools are gathered — the seed's own top songs, the similar artists'
+ * top songs, whatever the server suggests as similar to the seed's first
+ * track, and the library's random songs — each shuffled, so the order is
+ * not the same twice the way a server's ranking always is. The pools are
+ * then dealt out round by round, one song from each per pass: every source
+ * keeps feeding the mix instead of playing as a block.
+ *
+ * Three rules make it a radio rather than shuffled bins. It opens on the
+ * seed's own most played — a radio never starts anywhere else. No two tracks
+ * in a row are ever the same artist. And each artist is capped by the pool
+ * it came from (six from the seed, three from a similar, two from the
+ * filler) so nobody takes the list over, the same rule the player's own
+ * radio extension works by (see `radioCandidates` in player.ts).
  */
 export async function radioTracks(def: RadioDef): Promise<Song[]> {
-  const picked: Song[] = [];
-  const seen = new Set<string>();
-  const perArtist = new Map<string, number>();
-  const push = (s: Song | undefined, cap: number) => {
-    if (!s || picked.length >= RADIO_TARGET) return;
-    if (!s.id || seen.has(s.id) || s.url) return;
-    const artist = s.artistId ?? s.artist ?? '';
-    const n = perArtist.get(artist) ?? 0;
-    if (n >= cap) return;
-    perArtist.set(artist, n + 1);
-    seen.add(s.id);
-    picked.push(s);
-  };
-
   const [seedTop, similarLists] = await Promise.all([
     getTopSongs(def.seed.name, 15, def.seed.id).catch(() => [] as Song[]),
     Promise.all(
@@ -197,33 +166,67 @@ export async function radioTracks(def: RadioDef): Promise<Song[]> {
         .map((a) => getTopSongs(a.name, 6, a.id).catch(() => [] as Song[])),
     ),
   ]);
+  const extras = seedTop[0]
+    ? await getSimilarSongs(seedTop[0].id, 30).catch(() => [] as Song[])
+    : [];
+  const random = await getRandomSongs(50).catch(() => [] as Song[]);
 
-  // The seed's own first — a radio never opens on a similar artist's track
-  // before its own — then the similar artists one song at a time in rounds,
-  // so the mix walks across them instead of playing each list as a block.
-  for (const s of seedTop) push(s, 6);
-  let round = 0;
-  let added = true;
-  while (picked.length < RADIO_TARGET && added && round < 8) {
-    added = false;
-    for (const list of similarLists) {
-      if (picked.length >= RADIO_TARGET) break;
-      const before = picked.length;
-      push(list[round], 3);
-      if (picked.length > before) added = true;
+  const artistOf = (s: Song): string => s.artistId ?? s.artist ?? '';
+  // The opener: the seed's own most played, taken before the shuffle that
+  // scrambles the rest — the first frame of the list is always the same.
+  const opener = seedTop.find((s) => s.id && !s.url);
+  const pools = [
+    { songs: shuffled(seedTop.filter((s) => s !== opener)), cap: 6 },
+    ...similarLists.map((list) => ({ songs: shuffled(list), cap: 3 })),
+    { songs: shuffled(extras), cap: 2 },
+    { songs: shuffled(random), cap: 2 },
+  ].filter((p) => p.songs.length > 0);
+
+  // Per pool, filter once: playable, not a repeat of a song already handed
+  // out (the pools overlap — an artist's track can sit in three of them),
+  // and within its artist's cap. The opener counts against the seed pool's
+  // cap: six of the seed's own songs in all, opener included.
+  const seen = new Set<string>();
+  if (opener?.id) seen.add(opener.id);
+  const lists = pools.map((p, i) => {
+    const perArtist = new Map<string, number>();
+    if (i === 0 && opener) perArtist.set(artistOf(opener), 1);
+    const out: Song[] = [];
+    for (const s of p.songs) {
+      if (!s.id || s.url || seen.has(s.id)) continue;
+      const artist = artistOf(s);
+      const n = (perArtist.get(artist) ?? 0) + 1;
+      if (n > p.cap) continue;
+      perArtist.set(artist, n);
+      seen.add(s.id);
+      out.push(s);
     }
-    round++;
-  }
+    return out;
+  });
 
-  if (picked.length < RADIO_TARGET) {
-    const extra = seedTop[0]
-      ? await getSimilarSongs(seedTop[0].id, 30).catch(() => [] as Song[])
-      : [];
-    for (const s of shuffled(extra)) push(s, 2);
-  }
-  if (picked.length < RADIO_TARGET) {
-    const random = await getRandomSongs(50).catch(() => [] as Song[]);
-    for (const s of shuffled(random)) push(s, 2);
+  const picked: Song[] = [];
+  if (opener) picked.push(opener);
+
+  // Deal: each pass takes the next song from every pool in turn. A pool
+  // whose head repeats the artist just played holds it back for a later
+  // slot; when every remaining head repeats it, the mix has said what it
+  // has to say and the list stops where it is — the rule does not bend.
+  const ptr = lists.map(() => 0);
+  let cursor = 0;
+  let guard = 0;
+  while (picked.length < RADIO_TARGET && guard++ < RADIO_TARGET * 4) {
+    const live = lists.map((_, i) => i).filter((i) => ptr[i] < lists[i].length);
+    if (live.length === 0) break;
+    const i = live[cursor++ % live.length];
+    const head = lists[i][ptr[i]];
+    const last = picked.length > 0 ? artistOf(picked[picked.length - 1]) : null;
+    if (artistOf(head) === last) {
+      const free = live.some((j) => artistOf(lists[j][ptr[j]]) !== last);
+      if (!free) break;
+      continue; // the head waits; another pool gets this slot
+    }
+    picked.push(head);
+    ptr[i]++;
   }
   return picked;
 }
@@ -249,6 +252,14 @@ export function refreshRadios(opts: { force?: boolean } = {}): Promise<RadioDef[
     const seeds = await pickSeeds(RADIO_SEEDS);
     const defs = (await Promise.all(seeds.map(buildRadioDef))).filter(
       (d): d is RadioDef => d !== null,
+    );
+    // Each def gets its snapshot of tracks before the index is written: the
+    // screen can then be full on the very first frame, with the fresh list
+    // asked for in the background when the snapshot has gone stale.
+    await Promise.all(
+      defs.map(async (d) => {
+        d.tracks = await radioTracks(d).catch(() => [] as Song[]);
+      }),
     );
     await useRadios.getState().setDefs(defs);
     void ensureRadioIcons(defs);

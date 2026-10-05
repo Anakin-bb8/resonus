@@ -3,9 +3,11 @@
  * and kept on the device, plus the icon files made for them.
  *
  * They are deliberately NOT playlists — nothing here is written to the
- * server. A def is the seed artist, the similar artists mixed into it, and
- * the colour its icon was tinted with; the track list itself is rebuilt from
- * the server each time the radio opens, so a radio stays current the way a
+ * server. A def is the seed artist, the similar artists mixed into it, the
+ * colour its icon was tinted with, and the snapshot of tracks it opens with
+ * — kept so the screen can paint its list the moment it is asked for, with
+ * the server asked again in the background whenever it has gone stale. The
+ * def itself is rebuilt when it goes old, so a radio stays current the way a
  * saved playlist does not. Everything is one JSON file under the app's
  * documents (`radios/index.json`), scoped to the active profile the same way
  * the settings are, with the icon PNGs beside it in the same folder.
@@ -13,6 +15,7 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import { create } from 'zustand';
 
+import type { Song } from '@/api/subsonic';
 import { hashKey } from '@/lib/localLibrary';
 import { profileScopeId } from './auth';
 
@@ -31,6 +34,9 @@ export interface RadioDef {
   /** The icon's background colour, read from the seed's cover at build time. */
   color: string;
   createdAt: number;
+  /** The tracks it opened with: a snapshot, so the first frame of the screen
+   *  is already full while the fresh list is being asked for. */
+  tracks?: Song[];
 }
 
 /** The folder the index and the icons live in (the app's own documents). */
@@ -46,9 +52,11 @@ export function radioIconPath(id: string): string {
  *  similar artists, a cover that changed on the server). */
 const STALE_MS = 7 * 24 * 60 * 60 * 1000;
 
-/** True when the radios are missing or old enough to rebuild. */
+/** True when the radios are missing, old enough to rebuild, or a def predates
+ *  the snapshot of tracks (one rebuild after the app updates, then quiet). */
 export function radiosStale(defs: RadioDef[]): boolean {
   if (defs.length === 0) return true;
+  if (defs.some((d) => !d.tracks)) return true;
   const newest = Math.max(...defs.map((d) => d.createdAt));
   return Date.now() - newest > STALE_MS;
 }

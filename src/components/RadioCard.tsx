@@ -71,20 +71,42 @@ function shadow(ink: string): string {
 
 /** The radio's picture: the generated icon file when there is one, the same
  *  collage drawn as views when there isn't. Shared with the radio screen, so
- *  the shelf and the screen show one image. */
-export function RadioArt({ def, width }: { def: RadioDef; width: number }) {
+ *  the shelf and the screen show one image. `cropHeight` turns the square
+ *  into a shorter, full-bleed rectangle for the screen's header: the art is
+ *  bottom-aligned inside it, so the crop takes the top off — the decorative
+ *  RADIO word goes, the artist's name at the bottom stays, untouched. */
+export function RadioArt({
+  def,
+  width,
+  cropHeight,
+}: {
+  def: RadioDef;
+  width: number;
+  cropHeight?: number;
+}) {
   const uri = useRadios((s) => s.icons[def.seed.id]);
-  if (uri) {
-    return (
-      <Image
-        source={{ uri }}
-        style={{ width, height: width, borderRadius: radius.md }}
-        contentFit="cover"
-        transition={150}
-      />
-    );
-  }
-  return <RadioCollage def={def} width={width} />;
+  const height = cropHeight ?? width;
+  // Corners only when the art is the card's full square: the screen's cover
+  // runs edge to edge of the display and has none.
+  const frame = {
+    width,
+    height,
+    overflow: 'hidden' as const,
+    borderRadius: cropHeight == null ? radius.md : 0,
+  };
+  const art = uri ? (
+    <Image source={{ uri }} style={{ width, height: width }} contentFit="cover" transition={150} />
+  ) : (
+    <RadioCollage def={def} width={width} />
+  );
+  if (height >= width) return <View style={frame}>{art}</View>;
+  // The square hangs from the bottom of the rectangle: whatever is cut off
+  // is cut from above, which is where the word is.
+  return (
+    <View style={frame}>
+      <View style={{ width, height: width, marginTop: height - width }}>{art}</View>
+    </View>
+  );
 }
 
 export const RadioCard = memo(function RadioCard({
@@ -123,7 +145,8 @@ const styles = themed((t) => ({
     marginTop: spacing.xs,
   },
   collage: {
-    borderRadius: radius.md,
+    // The radius is the frame's, outside: the collage only has to keep its
+    // circles inside the square.
     overflow: 'hidden',
     justifyContent: 'flex-end',
   },

@@ -1,28 +1,23 @@
 /** Playlist detail with its songs. */
 import Icon from '@/components/Icon';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, Pressable, StyleSheet, Text, View } from 'react-native';
-import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
 
 import {
   coverArtUrl,
-  songCoverUrl,
   deletePlaylist,
   getPlaylist,
   removeFromPlaylist,
   reorderPlaylist,
   updatePlaylist,
   addToPlaylist,
-  getSimilarSongs,
   COVER,
 } from '@/api/data';
-import { streamUrl } from '@/api/backend';
 import { type Song } from '@/api/subsonic';
 import { CoverViewer } from '@/components/CoverViewer';
-import { Cover } from '@/components/Cover';
 import { Dialog } from '@/components/Dialog';
 import { EmptyState } from '@/components/EmptyState';
 import { BackButton } from '@/components/BackButton';
@@ -31,6 +26,7 @@ import { PlaylistEditSheet, type PlaylistEdit } from '@/components/PlaylistEditS
 import { PlaylistPickerSheet } from '@/components/PlaylistPickerSheet';
 import { PlaylistReorder } from '@/components/PlaylistReorder';
 import { SheetModal } from '@/components/SheetModal';
+import { SuggestedTracks } from '@/components/SuggestedTracks';
 import { TrackListSkeleton } from '@/components/TrackListSkeleton';
 import { TrackListView } from '@/components/TrackListView';
 import { useCanShare } from '@/hooks/useCanShare';
@@ -48,315 +44,7 @@ import { usePins } from '@/store/pins';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
 import { showUndoToast, useToast } from '@/store/toast';
-import { colors, fontSize, spacing, themed, useTheme, tracking } from '@/theme';
-
-const SEED_COUNT = 5;
-const SIMILAR_PER_SEED = 3;
-const SUGGESTION_MAX = 5;
-const SEEDS_AT_ONCE = 2;
-
-/** Stops the preview playing on whichever playlist screen started it, so a
- *  second screen never plays over the first. */
-let activePreview: { player: AudioPlayer; stop: () => void } | null = null;
-
-/**
- * Two seeds at a time, and only until there are enough.
- *
- * `getSimilarSongs2` can take seconds a call on a server that asks Last.fm, and
- * Android sends at most five requests to one host at once: the five seeds in
- * parallel took every slot, so the next playlist opened sat on its placeholder
- * behind suggestions nobody was looking at. Two usually bring enough and leave
- * the rest free. `stale` says the screen has gone or asked again.
- */
-async function fetchSuggestions(
-  songs: Song[],
-  existingIds: Set<string>,
-  stale: () => boolean,
-): Promise<Song[]> {
-  if (songs.length === 0) return [];
-  const shuffled = songs.slice().sort(() => Math.random() - 0.5);
-  const seeds = shuffled.slice(0, SEED_COUNT);
-  const seen = new Set<string>();
-  const out: Song[] = [];
-  for (let i = 0; i < seeds.length; i += SEEDS_AT_ONCE) {
-    if (stale()) return out;
-    const lists = await Promise.all(
-      seeds
-        .slice(i, i + SEEDS_AT_ONCE)
-        .map((seed) => getSimilarSongs(seed.id, SIMILAR_PER_SEED).catch(() => [] as Song[])),
-    );
-    for (const song of lists.flat()) {
-      if (!seen.has(song.id) && !existingIds.has(song.id)) {
-        seen.add(song.id);
-        out.push(song);
-        if (out.length >= SUGGESTION_MAX) return out;
-      }
-    }
-  }
-  return out;
-}
-
-function SuggestedTracks({
-  songs,
-  playlistId,
-  playlistName,
-  onAdded,
-}: {
-  songs: Song[];
-  playlistId: string;
-  playlistName: string;
-  onAdded: () => void;
-}) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  const toast = useToast();
-  const auth = useAuthStore((s) => s.auth);
-  const [suggestions, setSuggestions] = useState<Song[]>([]);
-  const [previewing, setPreviewing] = useState<string | null>(null);
-  const previewPlayer = useRef<AudioPlayer | null>(null);
-  const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const wasPlayingRef = useRef(false);
-  const existingIds = useMemo(() => new Set(songs.map((s) => s.id)), [songs]);
-  // Read by `refresh` without being a dependency: adding a suggestion refetches
-  // the playlist, and that must not throw away and redraw the other suggestions.
-  const songsRef = useRef(songs);
-  songsRef.current = songs;
-  const existingRef = useRef(existingIds);
-  existingRef.current = existingIds;
-  // Only the latest request may land; an older one finishing late is dropped.
-  const requestRef = useRef(0);
-  const unmountedRef = useRef(false);
-
-  /** Puts the music back the way the preview found it. Sets, never toggles:
-   *  if the listener pressed play meanwhile, it is already playing. */
-  const resumeMusic = useCallback(() => {
-    if (!wasPlayingRef.current) return;
-    wasPlayingRef.current = false;
-    if (!usePlayerStore.getState().isPlaying) usePlayerStore.getState().toggle();
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      unmountedRef.current = true;
-      requestRef.current++;
-    };
-  }, []);
-
-  const refresh = useCallback(async () => {
-    const request = ++requestRef.current;
-    const result = await fetchSuggestions(
-      songsRef.current,
-      existingRef.current,
-      () => request !== requestRef.current,
-    );
-    if (request !== requestRef.current) return;
-    setSuggestions(result);
-  }, []);
-
-  // Once, when the playlist's songs are first known. Refresh asks again.
-  const hasSongs = songs.length > 0;
-  useEffect(() => {
-    if (hasSongs) void refresh();
-  }, [hasSongs, refresh]);
-
-  const addSong = useCallback(
-    async (song: Song) => {
-      try {
-        await addToPlaylist(playlistId, song.id);
-        setSuggestions((prev) => prev.filter((s) => s.id !== song.id));
-        // Same as every other way into a playlist: the Library count, the
-        // playlist itself, and its auto-download if it has one.
-        queryClient.setQueryData<{ id: string; songCount?: number }[]>(['playlists'], (list) =>
-          list?.map((p) => (p.id === playlistId ? { ...p, songCount: (p.songCount ?? 0) + 1 } : p)),
-        );
-        queryClient.invalidateQueries({ queryKey: ['playlist', playlistId] });
-        queryClient.invalidateQueries({ queryKey: ['playlists'] });
-        void useAutoDownloads.getState().reconcile(playlistId, true);
-        toast.show(t('Added to “{name}”', { name: playlistName }));
-      } catch {
-        toast.show(t("Couldn't add to the playlist"));
-      }
-    },
-    [playlistId, playlistName, queryClient, toast, t],
-  );
-
-  // `remove()` alone leaves the native player sounding until it is collected.
-  const stopPreview = useCallback(() => {
-    if (previewTimer.current) {
-      clearTimeout(previewTimer.current);
-      previewTimer.current = null;
-    }
-    const p = previewPlayer.current;
-    previewPlayer.current = null;
-    if (p && activePreview?.player === p) activePreview = null;
-    if (!unmountedRef.current) setPreviewing(null);
-    if (p) {
-      try {
-        p.pause();
-        p.remove();
-      } catch {}
-    }
-    resumeMusic();
-  }, [resumeMusic]);
-
-  // Leaving the screen, or the app, ends the preview.
-  const focusedRef = useRef(false);
-  useFocusEffect(
-    useCallback(() => {
-      focusedRef.current = true;
-      const sub = AppState.addEventListener('change', (state) => {
-        if (state === 'background') stopPreview();
-      });
-      return () => {
-        focusedRef.current = false;
-        sub.remove();
-        stopPreview();
-      };
-    }, [stopPreview]),
-  );
-
-  // The music starting some other way ends the preview, and it stays playing.
-  useEffect(
-    () =>
-      usePlayerStore.subscribe((s, prev) => {
-        if (s.isPlaying && !prev.isPlaying && previewPlayer.current) {
-          wasPlayingRef.current = false;
-          stopPreview();
-        }
-      }),
-    [stopPreview],
-  );
-
-  const previewSong = useCallback(
-    (song: Song) => {
-      if (previewing === song.id) {
-        stopPreview();
-        return;
-      }
-      activePreview?.stop();
-      stopPreview();
-      if (!auth) return;
-      const url = song.url || streamUrl(auth, song.id);
-      if (!url) return;
-      wasPlayingRef.current = usePlayerStore.getState().isPlaying;
-      if (wasPlayingRef.current) usePlayerStore.getState().toggle();
-      // No precise timing: the preview only has to land near second 38, and on
-      // iOS the exact seek scans the whole file first, which is the wait.
-      const player = createAudioPlayer({ uri: url, preferPreciseTiming: false });
-      previewPlayer.current = player;
-      activePreview = { player, stop: stopPreview };
-      player.play();
-      const startSec = (song.duration ?? 0) > 38 ? 38 : 0;
-      if (startSec > 0) player.seekTo(startSec);
-      setPreviewing(song.id);
-      previewTimer.current = setTimeout(stopPreview, 45_000);
-    },
-    [auth, previewing, stopPreview],
-  );
-
-  // What was added some other way meanwhile is no longer a suggestion.
-  const visible = suggestions.filter((s) => !existingIds.has(s.id));
-  if (visible.length === 0) return null;
-
-  return (
-    <View style={suggestedStyles.section}>
-      <Text style={suggestedStyles.title}>{t('Suggested tracks')}</Text>
-      <Text style={suggestedStyles.subtitle}>
-        {t('Based on the tracks in this playlist')}
-      </Text>
-      {visible.map((song) => (
-        <Pressable
-          key={song.id}
-          style={suggestedStyles.row}
-          onPress={() => previewSong(song)}
-        >
-          <View style={suggestedStyles.artwork}>
-            <Cover uri={songCoverUrl(song, COVER.thumb)} size={48} />
-          </View>
-          <View style={suggestedStyles.info}>
-            <Text
-              style={[
-                suggestedStyles.songTitle,
-                previewing === song.id && { color: colors.accent },
-              ]}
-              numberOfLines={1}
-            >
-              {song.title}
-            </Text>
-            {song.artist ? (
-              <Text style={suggestedStyles.artist} numberOfLines={1}>
-                {song.artist}
-              </Text>
-            ) : null}
-          </View>
-          <Pressable
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel={t('Add to a playlist')}
-            onPress={() => void addSong(song)}
-            style={({ pressed }) => [
-              suggestedStyles.addButton,
-              pressed && { opacity: 0.6 },
-            ]}
-          >
-            <Icon name="add-circle-outline" size={26} color={colors.text} />
-          </Pressable>
-        </Pressable>
-      ))}
-      <Pressable
-        onPress={() => void refresh()}
-        style={({ pressed }) => [
-          suggestedStyles.refreshButton,
-          pressed && { opacity: 0.6 },
-        ]}
-      >
-        <Text style={suggestedStyles.refreshText}>{t('Refresh')}</Text>
-      </Pressable>
-    </View>
-  );
-}
-
-const suggestedStyles = themed((colors) => ({
-  section: {
-    marginTop: spacing.xl,
-    paddingBottom: spacing.xl,
-  },
-  title: {
-    color: colors.text,
-    fontSize: fontSize.lg,
-    letterSpacing: tracking.heading,
-    fontWeight: '500',
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    marginBottom: spacing.lg,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    gap: spacing.md,
-  },
-  artwork: {
-    width: 48,
-    height: 48,
-  },
-  info: { flex: 1 },
-  songTitle: { color: colors.text, fontSize: fontSize.sm, fontWeight: '500' },
-  artist: { color: colors.textSecondary, fontSize: fontSize.xs },
-  addButton: { padding: spacing.xs },
-  refreshButton: {
-    alignSelf: 'center',
-    marginTop: spacing.lg,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xl,
-    borderRadius: 999,
-    backgroundColor: colors.surfaceHighlight,
-  },
-  refreshText: { color: colors.text, fontSize: fontSize.sm, fontWeight: '500' },
-}));
+import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
 
 export default function PlaylistScreen() {
   // Repaints on a change of appearance or accent: a stack keeps this screen
@@ -702,9 +390,31 @@ export default function PlaylistScreen() {
           !offline && data.songs.length > 0 ? (
             <SuggestedTracks
               songs={data.songs}
-              playlistId={id}
-              playlistName={data.playlist.name}
-              onAdded={() => {}}
+              subtitle={t('Based on the tracks in this playlist')}
+              addLabel={t('Add to a playlist')}
+              onAdd={async (song) => {
+                try {
+                  await addToPlaylist(id, song.id);
+                  // Same as every other way into a playlist: the Library
+                  // count, the playlist itself, and its auto-download if
+                  // it has one.
+                  queryClient.setQueryData<{ id: string; songCount?: number }[]>(
+                    ['playlists'],
+                    (list) =>
+                      list?.map((p) =>
+                        p.id === id ? { ...p, songCount: (p.songCount ?? 0) + 1 } : p,
+                      ),
+                  );
+                  queryClient.invalidateQueries({ queryKey: ['playlist', id] });
+                  queryClient.invalidateQueries({ queryKey: ['playlists'] });
+                  void useAutoDownloads.getState().reconcile(id, true);
+                  toast(t('Added to “{name}”', { name: data.playlist.name }));
+                  return true;
+                } catch {
+                  toast(t("Couldn't add to the playlist"));
+                  return false;
+                }
+              }}
             />
           ) : undefined
         }
