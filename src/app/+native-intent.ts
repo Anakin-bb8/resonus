@@ -7,6 +7,8 @@
  * Route", so the notification tap is routed to the player.
  *
  * A launcher shortcut (`resonus://shortcut/<action>`) goes through `/shortcut`.
+ * The home screen widget links deeper (`resonus://album/<id>`), which is the
+ * app's own scheme and so a path as soon as the scheme is taken off.
  */
 
 export function redirectSystemPath({ path }: { path: string; initial: boolean }): string {
@@ -17,6 +19,9 @@ export function redirectSystemPath({ path }: { path: string; initial: boolean })
     // A launcher shortcut (see `lib/homeWidget`).
     const shortcut = path.match(/shortcut\/([a-z-]+)/);
     if (shortcut) return `/shortcut?action=${shortcut[1]}`;
+    // Anything else under our own scheme: the widget's links, and bare
+    // `resonus://` back to the start.
+    if (path.startsWith('resonus://')) return `/${path.slice('resonus://'.length)}`;
     return path;
   } catch {
     return '/';

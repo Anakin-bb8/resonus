@@ -71,6 +71,17 @@ const FULL_MODAL = {
   animation: Platform.OS === 'ios' ? 'fade' : 'fade_from_bottom',
 } as const;
 
+/* The detail screens take the ordinary push, like every other screen here.
+ * They were `fullScreenModal` for a while: iOS presents a full screen modal
+ * over everything the app draws, and `GlobalTabBar` and `GlobalMiniPlayer`
+ * live beside the Stack rather than inside it, so on those screens the bar
+ * and the mini player went missing while they stayed on every other one.
+ * A push is full screen too — it just stays under the two of them.
+ *
+ * A push out of the player or one of the menus would still land in a sheet
+ * on iOS; those pushes replace the modal instead — see `pushOrReplace`.
+ */
+
 /*
  * There is no `dangerouslySingular` on any route here, and there is not going
  * to be. It asks the router for one screen per name, and the router delivers by
@@ -327,6 +338,7 @@ export default function RootLayout() {
                 <Stack.Screen name="playlist/[id]" />
                 <Stack.Screen name="artist/[id]" />
                 <Stack.Screen name="artist/discography/[id]" />
+                <Stack.Screen name="artist/songs/[id]" />
                 <Stack.Screen name="browse/albums" />
                 <Stack.Screen name="browse/artists" />
                 <Stack.Screen name="browse/folder/[id]" />
@@ -347,6 +359,7 @@ export default function RootLayout() {
                 <Stack.Screen name="settings/personalization" />
                 <Stack.Screen name="settings/home-chips" />
                 <Stack.Screen name="settings/home-sections" />
+                <Stack.Screen name="settings/radios" />
                 <Stack.Screen name="settings/equalizer" />
                 <Stack.Screen name="settings/scrobbling" />
                 <Stack.Screen name="settings/theme" />
@@ -397,8 +410,13 @@ export default function RootLayout() {
             </BarBlurTarget>
             {auth || offline ? <AppStartupTab /> : null}
             <FrameMeter />
-            {auth || offline ? <GlobalMiniPlayer /> : null}
+            {/* Bar first, mini player second: the bar's gradient fill reaches
+                up past its own edge to the middle of that card, and drawing
+                the card after it keeps the card on top of the fill instead of
+                under it. Neither overlaps the other's hit area, so the order
+                only decides who paints over whom. */}
             {auth || offline ? <GlobalTabBar /> : null}
+            {auth || offline ? <GlobalMiniPlayer /> : null}
             {auth || offline ? <SongMenuSheet /> : null}
             {auth || offline ? <SongInfoSheet /> : null}
             {auth || offline ? <ArtistPickerSheet /> : null}

@@ -23,9 +23,17 @@ export const canBlurBars =
 
 const target = createRef<View | null>();
 
-/** Whether a bar is see-through, blurring what scrolls under it. */
+/**
+ * Whether a bar is see-through, blurring what scrolls under it.
+ *
+ * The navigation bar never is while the gradient style is on: the two fill the
+ * same pixels, so the style wins and the blur setting stops having any effect
+ * at all (it still switches, it just does not show while the gradient is on).
+ */
 export function useBarBlur(bar: 'tabs' | 'miniPlayer'): boolean {
-  return useSettings((s) => (bar === 'tabs' ? s.blurBars : s.blurMiniPlayer)) && canBlurBars;
+  const blur = useSettings((s) => (bar === 'tabs' ? s.blurBars : s.blurMiniPlayer));
+  const style = useSettings((s) => s.navBarStyle);
+  return blur && !(bar === 'tabs' && style === 'gradient') && canBlurBars;
 }
 
 
@@ -63,7 +71,8 @@ export function BarBlur({ tint, alpha }: { tint?: string; alpha?: number }) {
 
 /**
  * The background of a screen's top bar, which fades in as the header scrolls
- * away: the header's colour, solid.
+ * away: the header's own flat colour, so the bar never thins over the list
+ * scrolling under it.
  *
  * Not blurred. A bar inside a screen can only blur a target of its own around
  * that screen's list, and a screen wrapped in a `BlurTargetView` stops being
@@ -78,10 +87,9 @@ export function TopBarBackground({
   opacity: Animated.AnimatedInterpolation<number> | number;
 }) {
   return (
-    <Animated.View
-      pointerEvents="none"
-      style={[StyleSheet.absoluteFill, { opacity, backgroundColor: color }]}
-    />
+    <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity }]}>
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: color }]} />
+    </Animated.View>
   );
 }
 

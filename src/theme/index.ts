@@ -64,7 +64,12 @@ export interface Palette {
   textSecondary: string;
   /** Muted text: descriptions, disabled icons, placeholders. */
   textMuted: string;
-  /** The times under the progress bar: lighter than the greys, short of white. */
+  /**
+   * The two times under the progress bar, on the player and on the lyrics
+   * screen. A step from the greys towards white and short of it: over artwork
+   * the muted greys sit too far back to be read at a glance, and full white
+   * glares out of the screen beside the cover.
+   */
   textTime: string;
   /** The accent, for fills (play button, active dot, switch track). */
   accent: string;

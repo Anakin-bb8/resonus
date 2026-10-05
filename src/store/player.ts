@@ -13,13 +13,14 @@
  * and it uses its own `JsProxyPlayer`, not this player.
  */
 import {
+  AudioModule,
   createAudioPlayer,
   setAudioModeAsync,
-  setIsAudioActiveAsync,
   type AudioMetadata,
   type AudioPlayer,
   type AudioSource,
   type AudioStatus,
+  type NativeAudioModule,
 } from 'expo-audio';
 import { fetch as expoFetch } from 'expo/fetch';
 import { AppState } from 'react-native';
@@ -288,7 +289,11 @@ async function ensureAudioMode() {
       shouldPlayInBackground: true,
       playsInSilentMode: true,
     });
-    await setIsAudioActiveAsync(true);
+    // Deliberately no `setIsAudioActiveAsync(true)` here. This runs once at
+    // open, and on iOS it is a real `AVAudioSession.setActive(true)`: it takes
+    // the session away from whatever is playing — a podcast, a radio stream —
+    // before the user has pressed anything. The session gets activated on the
+    // first `play()` instead, which is also the only moment we need it.
   } catch {
     // ignore
   }
@@ -409,7 +414,13 @@ function sourceFor(song: Song, timeOffsetSec = 0): AudioSource {
   // and not the stream URL: this reaches every connected controller, and the
   // URL carries the credentials.
   const mediaId = song.id;
-  if (song.url) return { uri: song.url, metadata, mediaId };
+  // Whether the asset may take its time resolving exact timing. Asked of the
+  // asset on every source, so the setting takes effect on the next track and
+  // on every re-request (a seek with `timeOffset` builds a source too). Local
+  // files get the same answer for free: reading an index you already hold is
+  // not the wait this avoids — the wait is scanning a stream for one.
+  const preferPreciseTiming = useSettings.getState().preferPreciseTiming;
+  if (song.url) return { uri: song.url, metadata, mediaId, preferPreciseTiming };
   const local = localSourceFor(song);
   // Counted where the decision is acted on, once per install, and not inside
   // `localSourceFor`, which every render and every heartbeat asks. "Streamed
@@ -418,7 +429,7 @@ function sourceFor(song: Song, timeOffsetSec = 0): AudioSource {
   // connection, which cannot happen to a file.
   if (local) {
     bump('player · played the file on disk');
-    return { uri: local, metadata, mediaId };
+    return { uri: local, metadata, mediaId, preferPreciseTiming };
   }
   bump(
     downloadedUri(song)
@@ -431,6 +442,7 @@ function sourceFor(song: Song, timeOffsetSec = 0): AudioSource {
     uri: streamUrl(auth, song.id, bitRate, timeOffsetSec, format),
     metadata,
     mediaId,
+    preferPreciseTiming,
   };
 }
 
@@ -627,6 +639,42 @@ export function artworkUrlFor(song: Song): string | undefined {
   // Offline, a cover only in the image cache is no address at all, and the
   // media session throws on what it cannot parse as a URL.
   return url?.startsWith(CACHED_COVER) ? undefined : url;
+}
+
+/** How many tracks behind the current one get their covers warmed this way. */
+const ARTWORK_LOOKAHEAD = 6;
+
+/** Covers already handed to the native preloader, once each per session. */
+const warmedArtwork = new Set<string>();
+
+/**
+ * The native module under its own type: the module exports its instance, and
+ * the namespace rule at an import reads nothing off it — this alias keeps the
+ * warming call below going somewhere the compiler checks.
+ */
+const audioModule = AudioModule as NativeAudioModule;
+
+/**
+ * Starts a cover downloading, and its lock screen clip encoding, with no
+ * track attached to it: the queue ahead is warmed this way, so every cover
+ * is on disk well before its track plays and the lock screen has nothing
+ * left to wait for. The native side keeps a small cache of its own — this
+ * set only stops the queue's constant re-evaluation from asking twice.
+ */
+function warmArtwork(song: Song) {
+  const url = artworkUrlFor(song);
+  // A cover the app only holds in its own image cache is no address the
+  // native fetcher can use, and anything already asked for is under way.
+  if (!url || url.startsWith(CACHED_COVER) || warmedArtwork.has(url)) return;
+  try {
+    audioModule.warmArtwork(url);
+    // Only after the call went through: on a build without the patched
+    // module nothing was warmed, and marking it warmed would keep this
+    // session from ever asking again if a later build could.
+    warmedArtwork.add(url);
+  } catch {
+    // A build without the patched module: covers load the old way.
+  }
 }
 
 /**
@@ -1748,9 +1796,24 @@ function gaplessReady(): boolean {
  * (its URL changed: bitrate, format).
  */
 function scheduleNextSource(force = false) {
+  const st = usePlayerStore.getState();
+  // The covers of the tracks walking in behind this one: fetched and encoded
+  // while the current one still plays. The current track's own is in the
+  // window too (k = 0) — it is the one the lock screen shows first. Before
+  // the `activePlayer()` gate below on purpose: warming needs no player, and
+  // waiting for one left the covers of a cold start unwarmed until the first
+  // play. Gapless queues the next track natively (and warms its cover); this
+  // is the window behind it, and the whole walk under crossfade, which queues
+  // no track at all. With 'all' the window wraps to the queue's start.
+  for (let k = 0; k <= ARTWORK_LOOKAHEAD; k += 1) {
+    const ahead =
+      st.repeat === 'all' && st.queue.length > 0
+        ? st.queue[(st.index + k) % st.queue.length]
+        : st.queue[st.index + k];
+    if (ahead && !ahead.url) warmArtwork(ahead);
+  }
   const p = activePlayer();
   if (!p) return;
-  const st = usePlayerStore.getState();
   // Repeating one song is the native `loop`, which a source holding only part
   // of the song cannot do (see `applyLoop`). What comes after that source is
   // the same song from the beginning: queued here, the player joins them by
@@ -4302,6 +4365,11 @@ usePlayerStore.subscribe((st, prev) => {
     st.repeat !== prev.repeat ||
     st.sleepAtSongEnd !== prev.sleepAtSongEnd
   ) {
+    // A replaced queue is a new walk, and the covers the last one had under
+    // way are not this one's: asking again is cheap (the native side
+    // remembers its own), and it is what re-warms a cover the native cache
+    // has since dropped.
+    if (st.queue !== prev.queue) warmedArtwork.clear();
     scheduleNextSource();
     // What is coming has moved, so the warming window has too. Queueing the
     // next source is not this: that hands the track to the player, which

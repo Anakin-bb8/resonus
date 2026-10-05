@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 764 of them.
+Every string the app can show, under the screen it shows up on. 789 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -21,9 +21,7 @@ you are actually typing into, which is easier than reading it here.
 | --- | --- |
 | `Couldn't load the album.` | Error on the screen, with a Retry button |
 | `Disc {n}` | Heading over the songs of one disc of a multi-disc album. `{n}` is its number |
-| `Find in playlist` | Placeholder of the search box hidden above a tracklist, for finding a song within it |
 | `More from {artist}` | Heading under an album: their other records. `{artist}` is the name |
-| `View cover` | The same as `View image`, for album and playlist artwork |
 
 ## Anywhere in the app
 
@@ -186,6 +184,17 @@ you are actually typing into, which is easier than reading it here.
 | `Nothing to change` | Answer to favouriting a selection that already is one, or unfavouriting one that isn't |
 | `Try exploring another artist.` |  |
 
+## Artist radio
+
+| String | What it is |
+| --- | --- |
+| `Based on the tracks in this radio` |  |
+| `Couldn't build the radio.` |  |
+| `Refresh` | Ask the server for this playlist again, in case it changed elsewhere. Also the button under suggested tracks to regenerate them |
+| `Suggested tracks` | Section heading at the bottom of a playlist: songs the server recommends based on what is already in the playlist |
+| `The {artist} Radio` |  |
+| `With {artists} and more` |  |
+
 ## Browse › Albums
 
 | String | What it is |
@@ -257,10 +266,8 @@ you are actually typing into, which is easier than reading it here.
 | `Auto-download on` | The toast that says it was turned on |
 | `Couldn't load favorites.` | Error on the screen, with a Retry button |
 | `Find in favorites` | Placeholder of the search box that narrows the favourites already shown |
-| `Find in playlist` | Placeholder of the search box hidden above a tracklist, for finding a song within it |
 | `No favorites yet` | Empty state heading |
 | `Tap the heart on songs to see them here.` | The line under an empty state, saying how to fill it |
-| `View cover` | The same as `View image`, for album and playlist artwork |
 
 ## Favorites add
 
@@ -329,6 +336,7 @@ you are actually typing into, which is easier than reading it here.
 | `Paused on {player}` |  |
 | `Play here` |  |
 | `Playing on {player}` | Heading of the card at the top of Home: a song playing right now in another app or on another device of the same account. {player} is that app's name, like Feishin |
+| `Radios` |  |
 | `Random albums` | A section of Home: albums picked at random, to happen upon something |
 | `Random artists` | A section of Home: artists picked at random |
 | `Random songs` |  |
@@ -471,7 +479,6 @@ you are actually typing into, which is easier than reading it here.
 | `Description` | The playlist's own description: what whoever made it wrote about it |
 | `Done` | The button that leaves drag-to-reorder, or accepts a fine-tuned number |
 | `Edit playlist` | Menu action, and the title of the sheet it opens |
-| `Find in playlist` | Placeholder of the search box hidden above a tracklist, for finding a song within it |
 | `Name` | The Name field when editing a playlist or a station |
 | `Password` | The password field, on the login screen and wherever the server asks again |
 | `Playlist` | A list saved on the server. Not the queue |
@@ -488,7 +495,6 @@ you are actually typing into, which is easier than reading it here.
 | `Turn on` | The confirm button of that question |
 | `Turn on auto-download?` | Asks whether new songs added to this playlist should download by themselves from now on |
 | `Updated` | Toast after a change went through |
-| `View cover` | The same as `View image`, for album and playlist artwork |
 | `Visible to other users on the server` | The line under `Public playlist` |
 | `Wrong password` | The password typed to confirm a cover change was not right |
 | `Your password is needed to upload images and will be stored securely.` | The line explaining why the password is asked for again |
@@ -871,8 +877,10 @@ you are actually typing into, which is easier than reading it here.
 | `Dark` | The appearance the app has always had, and what it uses unless the other is chosen. |
 | `Explore` | The tab holding everything the server has: all albums, artists, songs, genres, stations and folders |
 | `Explore sections` |  |
+| `Flat, or black fading out at the top edge. Gradient ignores the blur.` | The line under “Navigation bar style”, explaining it |
 | `Folder browsing` | Browsing the server's folders as folders, instead of by album and artist |
 | `Font` |  |
+| `Gradient` | One of the values of “Navigation bar style” |
 | `Greeting` | Home's "Good morning" line |
 | `Haptic feedback` | The small vibration when something is tapped |
 | `Home` | The first tab, and a folder in the car |
@@ -887,13 +895,16 @@ you are actually typing into, which is easier than reading it here.
 | `Navigation` | Section header: how you move around the app |
 | `Navigation bar` | Settings screen: which tabs are on the bar at the bottom, and in what order |
 | `Navigation bar blur` |  |
+| `Navigation bar style` |  |
 | `Off` | A setting value meaning disabled (crossfade, normalization…) |
 | `Open the app on` | Which tab the app opens on, and comes back to after a while away |
 | `Playing on other devices` |  |
 | `Quick grid` | The grid of shortcut tiles on Home |
+| `Radios` |  |
 | `Rounded` | One of the values of “Cover corners” |
 | `Scheduled` |  |
 | `Show tab names` |  |
+| `Solid` | One of the values of “Navigation bar style” |
 | `Song lists` | The setting for how song lists look |
 | `Square` | One of the values of “Cover corners” |
 | `Start on your playlists` | A switch: with it on, Your library with no chip pressed shows the Favorites entry and the playlists, the way it used to, instead of albums, artists and playlists mixed together |
@@ -909,6 +920,7 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `Always` | A value of when a downloaded song is played from the file instead of streamed |
+| `Asks the file for frame-exact seeks and durations before playing. On a stream with no index that means scanning it first — the wait before a track starts. Off, tracks start at once: the clock still follows the audio, seeks may land a fraction of a second off.` |  |
 | `At “Original” quality nothing is transcoded.` |  |
 | `Automatic` | A value of `Normalize volume`: let the app decide between per track and per album |
 | `Autoplay` | When the queue runs out, keep playing with similar songs instead of stopping |
@@ -935,6 +947,7 @@ you are actually typing into, which is easier than reading it here.
 | `Playback` |  |
 | `Playing the file costs no data. Choose otherwise if your downloads are smaller copies. Offline, the file is always used.` |  |
 | `Pre-amp` | A gain in decibels applied on top of normalization, for when everything ends up too quiet |
+| `Precise timing` |  |
 | `Preload upcoming tracks` |  |
 | `Quality & playback` |  |
 | `Scrobbling` | Reporting a song as played, to the user's own server and from there to Last.fm or ListenBrainz. The title of its own screen and the row that opens it. The word comes from Last.fm and most languages keep it; use whatever those services call it in yours if they do |
@@ -953,8 +966,11 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
+| `30 fps` | One of the values of “Animated cover frame rate” |
+| `60 fps` | One of the values of “Animated cover frame rate” |
 | `Always previous track` | A value of `Previous button`: never restarts, always goes back a song |
 | `Animated cover background` | A setting: an animated cover (GIF, animated WebP) is shown full screen behind the player instead of inside the square |
+| `Animated cover frame rate` |  |
 | `Background` | Section header over what is drawn behind the player. Its two values are `Plain` and `Blurred cover` |
 | `Blurred cover` | A value of `Background`: the album art, blurred, behind the player |
 | `Bottom row` |  |
@@ -1030,6 +1046,24 @@ you are actually typing into, which is easier than reading it here.
 | `Show quick grid` | Whether the grid of shortcut tiles shows on Home |
 | `Size` | The size of the quick grid tiles |
 | `Sources` | Which shortcuts the quick grid shows |
+
+## Settings › Radios
+
+| String | What it is |
+| --- | --- |
+| `Couldn't refresh the radios` |  |
+| `Every 2 weeks` | One of the values of “Update radios automatically” |
+| `Every 3 days` | One of the values of “Update radios automatically” |
+| `Every day` | One of the values of “Update radios automatically” |
+| `Every week` | One of the values of “Update radios automatically” |
+| `How often the radios rebuild their artists and tracks.` | The line under “Update radios automatically”, explaining it |
+| `Never` | A value of `Play downloaded songs from the phone`: always stream, never use the file on the phone. The share sheet's own "never expires" is a separate key, `Never::expiry`, so a language that needs two different words can have them |
+| `Radios` |  |
+| `Radios updated` |  |
+| `Rebuild the radios with new artists and tracks right away.` |  |
+| `Refresh radios now` |  |
+| `Refreshing radios.` |  |
+| `Update radios automatically` |  |
 
 ## Settings › Scrobbling
 
@@ -1147,6 +1181,7 @@ you are actually typing into, which is easier than reading it here.
 | `Export` | Get the downloaded file itself out of the app, as a file. Not the same as `Share`, which makes a link on the server |
 | `Exporting…` | The file is being copied out |
 | `Favorites` | The songs, albums and artists you starred |
+| `Find in playlist` | Placeholder of the search box hidden above a tracklist, for finding a song within it |
 | `Hold to go back to {tab}` | The hint on holding the back arrow. `{tab}` is Home, Search or Library |
 | `List` | An option in that menu: one row per item, instead of cards |
 | `Lyrics` | The words of the song. Also a line of the storage bar, where it is their size on the phone |
@@ -1199,4 +1234,5 @@ you are actually typing into, which is easier than reading it here.
 | `Unknown album` | Fallback when the file and the server have no album |
 | `Unknown artist` | Fallback when the file and the server have no artist |
 | `View` | Title of the menu that chooses how a collection is drawn, and the label of the button that opens it. A noun: what you are looking at, not the verb |
+| `View cover` | The same as `View image`, for album and playlist artwork |
 | `Wrong username or password` |  |

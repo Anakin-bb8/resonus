@@ -8,6 +8,7 @@
 import Constants from 'expo-constants';
 
 import { COVER, songCoverUrl, songListSorts } from '@/api/data';
+import { widgetStatus } from '@/lib/homeWidget';
 import { coverSourceOf, mirrorCoverState } from '@/lib/mirrorCovers';
 import { repairStatus } from '@/lib/navidromeRepair';
 import { formatMs, perfEnabled, perfEvents, perfReport, perfTime } from '@/lib/perfLog';
@@ -102,6 +103,11 @@ export function stateLines(screensOpen?: number): string[] {
   const downloading = Object.keys(dl.active).length;
   const covers = mirrorCoverState();
   return [
+    // Whether the widget's half of the handover is there: the group it writes
+    // into, and what was last written to it. A widget showing only its icon
+    // says nothing about which side of that is missing, and this does — and
+    // on a sideloaded build, which group the signing profile granted.
+    `widget: ${widgetStatus()}`,
     // The denominator for every count below. A hundred of anything is one
     // story over ten minutes and another over a night, and the split says
     // which side of the screen going off it happened on.

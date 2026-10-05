@@ -1,0 +1,7 @@
+{
+  "name": "radio-art",
+  "version": "0.0.1",
+  "description": "Radio icon generator: three circles, the artist's name, one PNG under radios/ (local Expo module)",
+  "main": "index.ts",
+  "private": true
+}

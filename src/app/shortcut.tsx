@@ -8,31 +8,17 @@ import { ActivityIndicator, View } from 'react-native';
 
 import { getStarred } from '@/api/data';
 import { useT } from '@/i18n';
-import type { ShortcutAction } from '@/lib/homeWidget';
+import {
+  RESTORE_WAIT_MS,
+  type ShortcutAction,
+  runPlaybackToggle,
+  waitFor,
+} from '@/lib/homeWidget';
 import { requestSearchFocus } from '@/lib/tabOrigin';
 import { useAuthStore } from '@/store/auth';
 import { SOURCE_FAVORITES, usePlayerStore } from '@/store/player';
 import { useToast } from '@/store/toast';
 import { colors, themed, useTheme } from '@/theme';
-
-/** How long a cold start gets to bring the saved queue back. */
-const RESTORE_WAIT_MS = 8000;
-
-function waitFor(check: () => boolean, ms: number): Promise<boolean> {
-  return new Promise((resolve) => {
-    if (check()) return resolve(true);
-    const started = Date.now();
-    const timer = setInterval(() => {
-      if (check()) {
-        clearInterval(timer);
-        resolve(true);
-      } else if (Date.now() - started > ms) {
-        clearInterval(timer);
-        resolve(false);
-      }
-    }, 150);
-  });
-}
 
 export default function ShortcutScreen() {
   useTheme();
@@ -89,6 +75,16 @@ export default function ShortcutScreen() {
           return go('/player');
         }
         toast(t('Nothing to continue'));
+        return go('/(tabs)');
+      }
+
+      if (action === 'playback-toggle') {
+        // The button's own deep link, which only iOS 16 still takes (the
+        // intent has no room there): it still toggles and still lands in the
+        // player, because this route opened the app to get here. iOS 17 and
+        // up never come this way — the press runs where it stands, with the
+        // app untouched (see PlaybackToggleIntent).
+        if (await runPlaybackToggle()) return go('/player');
         return go('/(tabs)');
       }
 

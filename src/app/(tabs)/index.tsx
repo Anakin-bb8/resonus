@@ -39,6 +39,7 @@ import { Message } from '@/components/Message';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { PlaylistCard } from '@/components/PlaylistCard';
 import { PodcastEpisodeCard } from '@/components/PodcastEpisodeCard';
+import { RadioCard } from '@/components/RadioCard';
 import { TrackRow } from '@/components/TrackRow';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { columnsFor, useScreenSize } from '@/hooks/useScreenSize';
@@ -48,11 +49,13 @@ import { haptic } from '@/lib/haptics';
 import { listPerf } from '@/lib/listPerf';
 import { bump } from '@/lib/perfLog';
 import { playShuffle } from '@/lib/playShuffle';
+import { refreshRadios } from '@/lib/radioBuild';
 import { requestSearchFocus } from '@/lib/tabOrigin';
 import { useAuthStore } from '@/store/auth';
 import { checkAutoUrlNow } from '@/store/autoUrl';
 import { useLastPlayed } from '@/store/lastPlayed';
 import { usePlayerStore } from '@/store/player';
+import { useRadios } from '@/store/radios';
 import { useScanProgress } from '@/store/scanProgress';
 import {
   useSettings,
@@ -645,6 +648,54 @@ function DiscoverSection({ title, reshuffleKey }: { title: string; reshuffleKey:
   );
 }
 
+/**
+ * The personalised artist radios: built from the scrobble services (or this
+ * server's play counts when there are none), kept on the device, rebuilt
+ * when they go stale (how stale is a setting: Radios).
+ *
+ * The query only refreshes what is saved: `refreshRadios` itself decides
+ * whether there is anything to rebuild, so pulling to refresh or coming back
+ * to Home costs nothing while the radios are fresh. The shelf holds its
+ * place behind the skeleton during the first build, the way the artist
+ * index does four seconds in.
+ */
+function RadiosSection({ title }: { title: string }) {
+  const canFetch = useAuthStore((s) => !!s.auth || s.offline);
+  const card = useShelfCard();
+  const defs = useRadios((s) => s.defs);
+  const { isLoading } = useQuery({
+    queryKey: ['radios'],
+    queryFn: () => refreshRadios().catch(() => useRadios.getState().defs),
+    staleTime: 6 * 60 * 60 * 1000,
+    enabled: canFetch,
+  });
+
+  if (isLoading) {
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        <AlbumCardsSkeleton horizontal />
+      </View>
+    );
+  }
+  if (defs.length === 0) return null;
+
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      <FlatList
+        {...listPerf}
+        horizontal
+        data={defs}
+        keyExtractor={(item) => item.seed.id}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.rowContent}
+        renderItem={({ item }) => <RadioCard def={item} width={card} />}
+      />
+    </View>
+  );
+}
+
 /** Look and target of each chip; order and state are set by the user
  *  (Settings → Appearance → Home chips). Without `href` = plays instead of
  *  navigating (only the shuffle one). */
@@ -793,7 +844,13 @@ function ScanningPanel() {
 const HOME_ALBUM_CONFIG: Record<
   Exclude<
     HomeSectionKey,
-    'randomArtists' | 'discover' | 'playlists' | 'mostPlayedSongs' | 'randomSongs' | 'podcasts'
+    | 'randomArtists'
+    | 'discover'
+    | 'radios'
+    | 'playlists'
+    | 'mostPlayedSongs'
+    | 'randomSongs'
+    | 'podcasts'
   >,
   { title: string; type: 'newest' | 'recent' | 'frequent' | 'random' | 'byYear' }
 > = {
@@ -1017,6 +1074,12 @@ export default function HomeScreen() {
                 return (
                   <DiscoverSection key={s.key} title={t('Discover')} reshuffleKey={reshuffleKey} />
                 );
+              }
+              // The radios build on first show (a handful of requests) and
+              // are kept afterwards, so nothing here waits on the server
+              // beyond what a local profile can answer for itself.
+              if (s.key === 'radios') {
+                return <RadiosSection key={s.key} title={t('Radios')} />;
               }
               if (s.key === 'randomArtists') {
                 return (

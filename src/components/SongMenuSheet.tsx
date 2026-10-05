@@ -1,7 +1,7 @@
 /** Bottom sheet with actions for a song (⋯ menu). */
 import Icon from '@/components/Icon';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
+import { useRouter, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -38,6 +38,7 @@ import { useCanShare } from '@/hooks/useCanShare';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { applyStarChange, resyncFavorites } from '@/lib/favoritesCache';
 import { artistTargets } from '@/lib/artistNav';
+import { pushOrReplace } from '@/lib/pushOrReplace';
 import { exportToFolder, shareSongFile } from '@/lib/exportSong';
 import { useSharePicker } from '@/store/sharePicker';
 import { normKey, pickFolder } from '@/lib/localLibrary';
@@ -121,6 +122,9 @@ export function SongMenuSheet() {
   const insets = useSafeAreaInsets();
   const { height: screenH } = useScreenSize();
   const router = useRouter();
+  // Read here, before the early return below: what is on top decides whether
+  // detail screens push or replace the modal (see `goDetail`).
+  const top = useSegments()[0];
   const auth = useAuthStore((s) => s.auth);
   const offline = useAuthStore((s) => s.offline);
   const queryClient = useQueryClient();
@@ -204,6 +208,15 @@ export function SongMenuSheet() {
     dismiss(() => {
       closeNow();
       router.push(path);
+    });
+
+  // Detail screens (album, artist) go through here instead of `go`: opened
+  // with the player on top, a push would land them in a sheet on iOS, so the
+  // modal is replaced there (see `pushOrReplace`).
+  const goDetail = (path: string) =>
+    dismiss(() => {
+      closeNow();
+      pushOrReplace(path, top);
     });
 
   /**
@@ -572,10 +585,10 @@ export function SongMenuSheet() {
                       icon="disc-outline"
                       label={t('Go to album')}
                       onPress={() => {
-                        if (song.albumId) { go(`/album/${song.albumId}`); return; }
+                        if (song.albumId) { goDetail(`/album/${song.albumId}`); return; }
                         if (song.album) {
                           const key = normKey(song.album) + '|' + normKey(song.artist || '');
-                          go(`/album/${key}`);
+                          goDetail(`/album/${key}`);
                         }
                       }}
                     />
@@ -596,7 +609,7 @@ export function SongMenuSheet() {
                           return;
                         }
                         const id = targets[0]?.id ?? (song.artist ? normKey(song.artist) : '');
-                        if (id) go(`/artist/${id}`);
+                        if (id) goDetail(`/artist/${id}`);
                       }}
                     />
                   ) : null}

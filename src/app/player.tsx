@@ -753,7 +753,10 @@ export default function PlayerScreen() {
         void toggleFavorite();
         break;
       case 'album':
-        if (song?.albumId) pushOnce(`/album/${song.albumId}`);
+        // Replaces rather than pushes: the player is a modal, and on iOS a
+        // push out of it would land the album in a sheet. A second tap lands
+        // on the same screen, so the double-tap guard is unneeded here.
+        if (song?.albumId) router.replace(`/album/${song.albumId}` as never);
         break;
       default:
         break;
@@ -1230,7 +1233,9 @@ export default function PlayerScreen() {
                 <Pressable
                   style={styles.tapText}
                   hitSlop={6}
-                  onPress={() => router.push(`/album/${song.albumId}` as never)}
+                  // Replaces: from the player modal a push would land the
+                  // album in a sheet on iOS.
+                  onPress={() => router.replace(`/album/${song.albumId}` as never)}
                 >
                   <MarqueeText text={title} style={styles.title} enabled={marqueeTitles} />
                 </Pressable>
@@ -1239,15 +1244,17 @@ export default function PlayerScreen() {
               )}
               {(() => {
                 const targets = artistTargets(song);
+                // From the player these replace rather than push: on iOS a
+                // push out of the modal would land the screen in a sheet.
                 const goArtist =
                   targets.length === 0
                     ? undefined
                     : () =>
                         targets.length > 1
                           ? openArtistPicker(targets)
-                          : router.push(`/artist/${targets[0].id}`);
+                          : router.replace(`/artist/${targets[0].id}`);
                 const goAlbum = song.albumId
-                  ? () => router.push(`/album/${song.albumId}` as never)
+                  ? () => router.replace(`/album/${song.albumId}` as never)
                   : undefined;
                 return (
                   <>
@@ -1381,6 +1388,12 @@ export default function PlayerScreen() {
                   });
               }}
             >
+              {/* Phosphor's play triangle is not centred in its own box: it is
+                  drawn from 256 to 960 of a 1024-unit em, so the tip almost
+                  touches the right edge while the base sits a quarter of the
+                  way in. Centred as it comes, the icon still reads as pushed
+                  right, so the box itself moves left — padding on the right,
+                  the only side with room to take it. */}
               {isBuffering ? (
                 <ActivityIndicator size="small" color={playInk} />
               ) : (
@@ -1388,6 +1401,7 @@ export default function PlayerScreen() {
                   name={isPlaying ? 'pause' : 'play'}
                   size={34}
                   color={playInk}
+                  style={!isPlaying && { paddingRight: 4.5 }}
                 />
               )}
             </Pressable>

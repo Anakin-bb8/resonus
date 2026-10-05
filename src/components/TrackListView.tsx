@@ -6,7 +6,7 @@
 import Icon from '@/components/Icon';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -28,15 +28,16 @@ import {
   GestureDetector,
   type GestureType,
 } from 'react-native-gesture-handler';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { type Song, type StarType } from '@/api/subsonic';
 import { useCoverTint } from '@/hooks/useDominantColor';
+import { useInsets } from '@/hooks/useInsets';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { centredPadding, useScreenSize } from '@/hooks/useScreenSize';
 import { useSelectionMenu } from '@/hooks/useSelectionMenu';
 import { useT } from '@/i18n';
 import { artistTargets } from '@/lib/artistNav';
+import { easedFade } from '@/lib/fade';
 import { haptic } from '@/lib/haptics';
 import { listPerf } from '@/lib/listPerf';
 import { useArtistPicker } from '@/store/artistPicker';
@@ -64,9 +65,21 @@ function coverSize(width: number, height: number): number {
   return Math.round(Math.min(width * 0.58, height * 0.4, 250));
 }
 const TOPBAR_H = 48;
+/** The round play button in the header: its size, and the share of it the
+ *  bar holds once it reaches the bar (half inside it, half below its edge). */
+const PLAY_SIZE = 56;
 /** Height of the hidden search bar ("Find in playlist" Spotify style),
- * including the separation gap from the cover. */
+ *  including the separation gap from the cover. */
 const SEARCH_H = 72;
+/** How far the wide cover's gradient runs: from the picture's lower edge,
+ *  through the title and the buttons, arriving at the page's own colour
+ *  around the play button ("circa", as the order asked for it). */
+const WIDE_GRADIENT_H = 240;
+/** How far above the content the accent reaches: iOS reveals that strip on a
+ *  pull-down bounce, and without it the page background would flash where the
+ *  cover's own colour belongs. Tall enough for any pull; one view, no paint
+ *  cost at rest, where it hangs off screen. */
+const OVERSCROLL_H = 1200;
 /** Lines of the description shown before "Show more". */
 const DESCRIPTION_LINES = 2;
 
@@ -127,6 +140,17 @@ interface Props {
   onCoverPress?: () => void;
   /** Hides the header cover and reclaims that space (e.g. Favorites). */
   hideCover?: boolean;
+  /**
+   * Full-bleed cover across the top (the radio's): edge to edge from the very
+   * top of the display, cropped to `height`, with the gradient starting at
+   * its lower edge instead of running behind it. Clamped inside so it always
+   * ends a little above where the square cover would; the rows keep their own
+   * width, only the picture takes the whole screen.
+   */
+  wideCover?: {
+    height: number;
+    render: (width: number, height: number) => ReactNode;
+  };
   /** Gradient/bar color if there's no cover with a dominant color. */
   accentColor?: string;
   songs: Song[];
@@ -209,6 +233,7 @@ export function TrackListView({
   renderCover,
   onCoverPress,
   hideCover,
+  wideCover,
   accentColor,
   songs,
   currentId,
@@ -231,8 +256,14 @@ export function TrackListView({
 }: Props) {
   const router = useRouter();
   const t = useT();
-  const insets = useSafeAreaInsets();
+  const insets = useInsets();
   const { width: screenW, height: screenH } = useScreenSize();
+  // The bar's two ends: the back chevron on the left, the play button on the
+  // right, and the button is the wider of the two. The title takes the larger
+  // of the clearances on *both* sides, so a long name stops short of the
+  // button instead of running under it, and the name itself still sits in the
+  // middle of the screen rather than a button's width to the left of it.
+  const titleInset = centredPadding(screenW, spacing.lg) + PLAY_SIZE + spacing.md;
   const bottomPad = useScreenBottomPadding();
   const tint = useCoverTint(coverUri, true);
   const dominant = tint.color;
@@ -290,6 +321,32 @@ export function TrackListView({
   const searchH = useRef(new Animated.Value(0)).current;
   const searchBar = !!searchable && songs.length > 0;
 
+  // ── The play button ──────────────────────────────────────────────────────
+  // The button is drawn outside the list, over the bar: it follows the place
+  // it has in the header and, on reaching the bar, holds there — half in the
+  // bar, half below it — so it never passes behind the bar and never fades
+  // out from under the eye. What the header keeps is the place itself, laid
+  // out (and measured) where the button would be.
+  const headerRootRef = useRef<View>(null);
+  const playBtnRef = useRef<View>(null);
+  /** The button's own place in the scroll content (see the effect below). */
+  const [playContentY, setPlayContentY] = useState(0);
+  /** Whether the bar has reached it: from there the copy drawn over the bar
+   *  takes the taps (the place itself is behind the bar by then) and is the
+   *  one the screen reader is offered; before that it is the other way round,
+   *  so the drags that start on the button still belong to the list. */
+  const [overBar, setOverBar] = useState(false);
+  const overBarRef = useRef(false);
+  /** The scroll it happens at; `Infinity` until the place is known. */
+  const behindAtRef = useRef(Infinity);
+  /** Bumped when something moved the button without a render being able to
+   *  see it (the search bar's height animation) or before it was laid out,
+   *  so the measurement below runs again. Only the write is used: the
+   *  effect reads no dependencies, any render will do, and this is what
+   *  makes one happen. */
+  const [, setMeasureTick] = useState(0);
+  const measureRetries = useRef(0);
+
   // `setRevealed` is async: the gesture fires `onChange` many times per drag,
   // and several would pass the `!revealed` guard before the re-render, each
   // triggering haptic. The ref updates instantly and stops the rest.
@@ -300,13 +357,23 @@ export function TrackListView({
     revealedRef.current = true;
     haptic('light');
     setRevealed(true);
-    Animated.timing(searchH, { toValue: SEARCH_H, duration: motion.duration.fade, useNativeDriver: false }).start();
+    Animated.timing(searchH, {
+      toValue: SEARCH_H,
+      duration: motion.duration.fade,
+      useNativeDriver: false,
+      // The header (and the play button in it) moves down as this runs, and
+      // nothing re-renders when it lands: the measure below is told here.
+    }).start(() => setMeasureTick((v) => v + 1));
   }
 
   function collapseSearchBar() {
     revealedRef.current = false;
     setRevealed(false);
-    Animated.timing(searchH, { toValue: 0, duration: motion.duration.fade, useNativeDriver: false }).start();
+    Animated.timing(searchH, {
+      toValue: 0,
+      duration: motion.duration.fade,
+      useNativeDriver: false,
+    }).start(() => setMeasureTick((v) => v + 1));
   }
 
   // Simultaneous pan with the list scroll: doesn't steal the gesture, just
@@ -418,12 +485,20 @@ export function TrackListView({
   // Without cover, the header is shorter: the gradient and bar collapse adjust
   // to a smaller distance so the transition fits.
   const art = coverSize(screenW, screenH);
-  const cover = hideCover ? 0 : art;
-  const collapse = hideCover ? 120 : art;
+  // Where the square cover's content starts: the bar's own slice of the
+  // screen plus the gap under it. The wide cover starts at zero instead —
+  // it goes under the bar — but is clamped so it ends just above where this
+  // one would, on every screen there is.
+  const albumPadTop = insets.top + TOPBAR_H + spacing.md;
+  const wideH = wideCover ? Math.min(wideCover.height, albumPadTop + art - 24) : 0;
+  const cover = wideCover || hideCover ? 0 : art;
+  const collapse = wideCover ? wideH : hideCover ? 120 : art;
   // Down past the title and the buttons, so the header is the cover's colour
-  // and not only the space around the cover.
-  const gradientH = insets.top + TOPBAR_H + cover + 280;
-  const band = searchable ? SEARCH_H * 4 : 0;
+  // and not only the space around the cover. The wide one runs from its own
+  // picture's edge instead: the picture is what covers the space above.
+  const gradientH = wideCover ? WIDE_GRADIENT_H : insets.top + TOPBAR_H + cover + 280;
+  const band = searchable && !wideCover ? SEARCH_H * 4 : 0;
+  const gradientTop = wideCover ? wideH : -band;
   const coverOpacity = scrollY.interpolate({
     inputRange: [0, collapse * 0.7],
     outputRange: [1, 0],
@@ -439,6 +514,94 @@ export function TrackListView({
     outputRange: [0, 1],
     extrapolate: 'clamp',
   });
+
+  // Where the play button sits in the scroll content: its distance from the
+  // top of the list header, plus the padding the list starts with — which is
+  // the same expression the list is padded by below, so the two cannot drift
+  // apart. The wide cover needs no top padding: its picture is the top.
+  const listPadTop = wideCover ? 0 : albumPadTop;
+
+  // The two ends of that distance are read in window coordinates in the same
+  // tick, so the scroll underneath them cancels out: the number is the same
+  // whether the list is at rest or mid-fling. Adding the scroll offset by
+  // hand instead would not be — the offset JS has is a frame behind whatever
+  // is on screen, and a fling travels a long way in a frame.
+  //
+  // Measured after every render (the header moves for reasons a render knows
+  // about: the description opening, the search bar's height landing) and
+  // again when the search bar's animation ends, which no render sees.
+  useLayoutEffect(() => {
+    if (searching) return;
+    const btn = playBtnRef.current;
+    const head = headerRootRef.current;
+    if (!btn || !head) return;
+    let btnY: number | null = null;
+    let headY: number | null = null;
+    const both = () => {
+      if (btnY === null || headY === null) return;
+      const rel = btnY - headY;
+      if (rel <= 0) {
+        // Nothing laid out yet: the first frame, before the header has a
+        // place to report. A few tries at most, then give up — a button that
+        // never turns up is one that is not on screen.
+        if (measureRetries.current < 5) {
+          measureRetries.current += 1;
+          requestAnimationFrame(() => setMeasureTick((v) => v + 1));
+        }
+        return;
+      }
+      measureRetries.current = 0;
+      const y = listPadTop + rel;
+      setPlayContentY((cur) => (Math.abs(cur - y) > 2 ? y : cur));
+    };
+    btn.measureInWindow((_bx, by) => {
+      if (typeof by === 'number') {
+        btnY = by;
+        both();
+      }
+    });
+    head.measureInWindow((_hx, hy) => {
+      if (typeof hy === 'number') {
+        headY = hy;
+        both();
+      }
+    });
+  });
+
+  // The line the button holds on: centred on the bar's lower edge, so half of
+  // it is in the bar and half of it is under it. Below it the button tracks
+  // the header 1:1 (the interpolation's slope is the scroll's own), from there
+  // on it does not move at all.
+  const dockTop = insets.top + TOPBAR_H - PLAY_SIZE / 2;
+  // The revealed search row is not scroll: it sits above the header and pushes
+  // it down without the offset moving, so the button starts that much lower and
+  // reaches the line that much later. Its height is animated from JS (a height
+  // is not something the scroll's native driver does), which is why it travels
+  // in a wrapper of its own below rather than in the interpolation.
+  const searchShift = revealed ? SEARCH_H : 0;
+  // The scroll at which the button's top reaches the bar's lower edge: from
+  // there the bar is between it and the eye (and between it and the hand).
+  const behindAt = Math.max(playContentY + searchShift - (insets.top + TOPBAR_H), 1);
+  const dockAt = Math.max(playContentY + searchShift - dockTop, 1);
+  const playDockY = scrollY.interpolate({
+    inputRange: [0, dockAt],
+    outputRange: [playContentY, dockTop - searchShift],
+    // Left extends, right clamps: once docked the button goes no further, but
+    // while the list is rubber-banded past the top the header keeps moving down
+    // and the button has to move with it instead of sitting still (#overscroll).
+    extrapolateLeft: 'extend',
+    extrapolateRight: 'clamp',
+  });
+
+  // The threshold the listener reads, kept with what it depends on.
+  useLayoutEffect(() => {
+    behindAtRef.current = playContentY > 0 ? behindAt : Infinity;
+    const should = playContentY > 0 && lastOffsetY.current >= behindAt;
+    if (should !== overBarRef.current) {
+      overBarRef.current = should;
+      setOverBar(should);
+    }
+  }, [behindAt, playContentY]);
 
   // Live filtering; preserves each song's original index so play/enqueue/remove
   // still point to the correct position.
@@ -473,6 +636,36 @@ export function TrackListView({
     void onPlay(0, { shuffled: true });
   }
 
+  // The play button: the one and only one, so nothing about it fades or is
+  // swapped for anything else. It follows the place laid out for it in the
+  // header — the search row's height riding in the outer wrapper, the scroll
+  // in the one inside it — until it reaches the bar's line, and holds there:
+  // half in the bar, half below its lower edge. Drawn after the bar (below),
+  // so it is always in front of it; while the bar has not reached it yet, it
+  // leaves the taps (and the screen reader) to the place in the header.
+  const playOverlay =
+    searching || playContentY <= 0 ? null : (
+      <Animated.View
+        pointerEvents={overBar && !selecting ? 'auto' : 'none'}
+        accessibilityElementsHidden={!overBar || selecting}
+        importantForAccessibility={overBar && !selecting ? 'auto' : 'no-hide-descendants'}
+        style={[styles.playDock, { right: centredPadding(screenW, spacing.lg) }]}
+      >
+        <Animated.View style={{ transform: [{ translateY: searchH }] }}>
+          <Animated.View style={{ transform: [{ translateY: playDockY }] }}>
+            <Pressable
+              style={[styles.playButton, { backgroundColor: colors.accent }]}
+              accessibilityRole="button"
+              accessibilityLabel={t('Play')}
+              onPress={() => songs.length > 0 && onPlay(0)}
+            >
+              <Icon name="play" size={28} color={colors.onAccent} />
+            </Pressable>
+          </Animated.View>
+        </Animated.View>
+      </Animated.View>
+    );
+
   return (
     <View style={styles.root}>
       <View style={{ flex: 1 }}>
@@ -481,11 +674,11 @@ export function TrackListView({
       {searching ? null : (
         <Animated.View
           pointerEvents="none"
-          style={[
-            styles.gradientWrap,
-            {
-              top: -band,
-              height: gradientH + band,
+            style={[
+              styles.gradientWrap,
+              {
+                top: gradientTop,
+                height: gradientH + band,
               // Moves down with the revealed search bar, which pushes the header
               // down without moving the scroll offset. On its own view, because
               // this is a height animated from JS and the scroll below is not:
@@ -498,8 +691,24 @@ export function TrackListView({
           <Animated.View
             style={[
               StyleSheet.absoluteFill,
-              // And follows the scroll 1:1, natively.
-              { opacity: tintIn, transform: [{ translateY: Animated.multiply(scrollY, -1) }] },
+              // And follows the scroll 1:1, natively — but never below zero:
+              // an over-scroll drags `scrollY` negative, and the gradient
+              // moving down with it would uncover the page's own colour where
+              // the accent's band sits. Held at the top, the bounce reveals
+              // the accent instead of the background. The tint itself fades
+              // in with `tintIn`, rather than flashing grey first.
+              {
+                opacity: tintIn,
+                transform: [
+                  {
+                    translateY: scrollY.interpolate({
+                      inputRange: [-1e7, 0, 1e7],
+                      outputRange: [0, 0, -1e7],
+                      extrapolate: 'clamp',
+                    }),
+                  },
+                ],
+              },
             ]}
           >
             {/* Color band above the gradient: when the search bar is revealed,
@@ -536,7 +745,7 @@ export function TrackListView({
         contentContainerStyle={[
           styles.list,
           {
-            paddingTop: insets.top + TOPBAR_H + spacing.md,
+            paddingTop: listPadTop,
             paddingBottom: bottomPad,
             // Centred on a wide screen instead of stretched across it: a row
             // whose title is at one edge and whose duration is at the other,
@@ -554,6 +763,13 @@ export function TrackListView({
             lastOffsetY.current = y;
             // Scrolling down with the bar open collapses it.
             if (revealed && !searching && y > 30) collapseSearchBar();
+            // The bar reaching the button hands the taps (and the screen
+            // reader) over to what is drawn above the bar.
+            const should = y >= behindAtRef.current;
+            if (should !== overBarRef.current) {
+              overBarRef.current = should;
+              setOverBar(should);
+            }
           },
         })}
         ListHeaderComponent={
@@ -596,10 +812,57 @@ export function TrackListView({
               </Animated.View>
             ) : null}
             {/* While searching, the large header is hidden: results stay flush
-                with the bar, which is what Spotify does. */}
+                with the bar, which is what Spotify does. It is also what the
+                button's place is measured against, and not the wrapper: the
+                search row above it is not scroll, and its height travels with
+                the button on its own (see `searchShift`). */}
             {searching ? null : (
-          <View style={styles.header}>
-            {hideCover ? null : (
+          <View ref={headerRootRef} style={styles.header}>
+            {wideCover ? (
+              /* Paint above the first pixel: the pull-down bounce reveals
+                 whatever sits above the content — the page background by
+                 default — and on the radio that strip must stay the accent,
+                 the cover's own colour. Zero net layout: it hangs off the top
+                 of the header, off screen until a pull uncovers it. */
+              <View
+                pointerEvents="none"
+                style={{
+                  width: screenW,
+                  height: OVERSCROLL_H,
+                  marginTop: -OVERSCROLL_H,
+                  marginHorizontal: -centredPadding(screenW, spacing.lg),
+                  backgroundColor: headerColor,
+                }}
+              />
+            ) : null}
+            {wideCover ? (
+              /* The picture at the very top, pulled out of the rows' inset to
+                 the edges of the display: it fades with the scroll the way
+                 the square one does, and the bar rides over it. */
+              <Animated.View
+                style={[
+                  styles.wideCover,
+                  {
+                    width: screenW,
+                    height: wideH,
+                    opacity: coverOpacity,
+                    marginHorizontal: -centredPadding(screenW, spacing.lg),
+                  },
+                ]}
+              >
+                {onCoverPress ? (
+                  <Pressable
+                    onPress={onCoverPress}
+                    accessibilityRole="imagebutton"
+                    accessibilityLabel={t('View cover')}
+                  >
+                    {wideCover.render(screenW, wideH)}
+                  </Pressable>
+                ) : (
+                  wideCover.render(screenW, wideH)
+                )}
+              </Animated.View>
+            ) : hideCover ? null : (
               <Animated.View style={[styles.coverCenter, { opacity: coverOpacity }]}>
                 {onCoverPress ? (
                   <Pressable
@@ -768,18 +1031,23 @@ export function TrackListView({
                     color={shuffleActive ? colors.accent : colors.textSecondary}
                   />
                 </Pressable>
+                {/* What the button does while it is still in the header: laid
+                    out where it goes, transparent because the circle is drawn
+                    above the bar (it is always above it now), and taking the
+                    taps from there down — a dragger that starts on it is the
+                    list's, as it always was. */}
                 <Pressable
-                  style={[styles.playButton, { backgroundColor: colors.accent }]}
+                  ref={playBtnRef}
+                  style={styles.playSlot}
+                  collapsable={false}
+                  accessibilityElementsHidden={overBar && !selecting}
+                  importantForAccessibility={
+                    overBar && !selecting ? 'no-hide-descendants' : 'auto'
+                  }
                   accessibilityRole="button"
                   accessibilityLabel={t('Play')}
                   onPress={() => songs.length > 0 && onPlay(0)}
-                >
-                  <Icon
-                    name="play"
-                    size={28}
-                    color={colors.onAccent}
-                  />
-                </Pressable>
+                />
               </View>
             </View>
 
@@ -867,12 +1135,20 @@ export function TrackListView({
       </GestureDetector>
       </View>
 
+      {/* In selection mode the button is drawn under the bar: that bar belongs
+          to the selection, and the button would land on its own controls —
+          which is where the header's button always was, behind it. */}
+      {selecting ? playOverlay : null}
+
       {/* Fixed top bar: the background and title appear on collapse. In
           selection mode it's replaced by ✕ + counter + select all. */}
       <View style={[styles.bar, { height: insets.top + TOPBAR_H, paddingTop: insets.top }]}>
         {selecting ? (
           <>
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: headerColor }]} />
+            {/* The same bar, the same colour falling away: the two swap in
+                place, and a flat one behind the counter would read as the
+                bar changing rather than as what it says changing. */}
+            <TopBarBackground color={headerColor} opacity={1} />
             <Pressable
               hitSlop={12}
               accessibilityRole="button"
@@ -904,14 +1180,27 @@ export function TrackListView({
             <TopBarBackground color={headerColor} opacity={barBgOpacity} />
             <BackChevron size={28} label={t('Close')} />
             <Animated.Text
-              style={[styles.barTitleCentered, { top: insets.top + 10, opacity: barContentOpacity }]}
+              style={[
+                styles.barTitleCentered,
+                {
+                  top: insets.top + 10,
+                  opacity: barContentOpacity,
+                  left: titleInset,
+                  right: titleInset,
+                },
+              ]}
               numberOfLines={1}
+              ellipsizeMode="tail"
             >
               {title}
             </Animated.Text>
           </>
         )}
       </View>
+
+      {/* Over the bar everywhere else: it is the only copy of the button
+          there is, so it has to be in front of it at all times. */}
+      {selecting ? null : playOverlay}
 
       {selecting ? (
         <SelectionBar
@@ -1036,6 +1325,21 @@ const styles = themed((colors) => ({
   coverCenter: {
     alignItems: 'center',
     marginBottom: spacing.lg,
+    // The big cover sits on the page rather than being printed on it: a soft
+    // shadow under it and to the sides, less over the top. The offset is what
+    // puts the weight at the bottom, and the radius what softens it — one
+    // shadow, both edges handled. It fades out with the cover it belongs to.
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.45,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  wideCover: {
+    // No corners and no shadow: the picture is printed into the page itself,
+    // from the very top edge, and the rows below come back into their inset.
+    overflow: 'hidden',
+    marginBottom: spacing.lg,
   },
   title: {
     color: colors.text,
@@ -1146,11 +1450,22 @@ const styles = themed((colors) => ({
   },
   playButton: {
     backgroundColor: colors.accent,
-    width: 56,
-    height: 56,
+    width: PLAY_SIZE,
+    height: PLAY_SIZE,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // The place the button takes in the header: the size and nothing else, no
+  // colour — the circle itself is drawn above the bar, always over this.
+  playSlot: {
+    width: PLAY_SIZE,
+    height: PLAY_SIZE,
+  },
+  // The button over the bar: only the column's `right` comes with each
+  // render; the scroll and the search row's height travel in wrappers.
+  playDock: {
+    position: 'absolute',
   },
   bar: {
     position: 'absolute',
@@ -1173,10 +1488,8 @@ const styles = themed((colors) => ({
     top: 0,
     bottom: 0,
     justifyContent: 'center',
-    // The same clearance on both sides, the width of the back chevron and its
-    // gap: centered on the screen, and a long name stops short of the chevron.
-    left: spacing.lg + 28 + spacing.md,
-    right: spacing.lg + 28 + spacing.md,
+    // Both ends come with each render (they need the screen's width): the same
+    // clearance either side is what puts the name in the middle of the screen.
     textAlign: 'center',
     includeFontPadding: false,
     color: colors.text,
@@ -1185,37 +1498,3 @@ const styles = themed((colors) => ({
   },
 }));
 
-/**
- * The header's fade from the cover colour into the page, eased rather than
- * straight: a straight blend has a visible corner where it starts and a line
- * where it lands. Smoothstep eases in and out of both, over several stops since
- * the gradient itself only blends in straight lines between them.
- */
-function easedFade(from: string, to: string): { colors: [string, string, ...string[]]; locations: [number, number, ...number[]] } {
-  const a = hexChannels(from);
-  const b = hexChannels(to);
-  if (!a || !b) return { colors: [from, from, to], locations: [0, 0.35, 1] };
-  const START = 0.25;
-  const STEPS = 8;
-  const colors: string[] = [from];
-  const locations: number[] = [0];
-  for (let i = 0; i <= STEPS; i++) {
-    const u = i / STEPS;
-    const k = u * u * (3 - 2 * u);
-    colors.push(
-      `rgb(${a.map((c, j) => Math.round(c + (b[j] - c) * k)).join(', ')})`,
-    );
-    locations.push(START + (1 - START) * u);
-  }
-  return {
-    colors: colors as [string, string, ...string[]],
-    locations: locations as [number, number, ...number[]],
-  };
-}
-
-function hexChannels(hex: string): [number, number, number] | null {
-  const m = /^#([0-9a-f]{6})$/i.exec(hex);
-  if (!m) return null;
-  const n = parseInt(m[1], 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}

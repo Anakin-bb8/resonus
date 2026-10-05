@@ -171,6 +171,53 @@ function paletteUri(uri: string): string {
 }
 
 /**
+ * The same colour, worked out once and awaited: the palette, the platform's
+ * own picker and the band, outside React, for callers the hook cannot reach —
+ * the widget's handover runs from the player's store, not from a component,
+ * and the radio art reads colours on its way to drawing a file.
+ * The plain tint is what comes back when there is no cover to read or it
+ * cannot be read, which is also what the hook falls back to.
+ */
+export async function dominantColorOf(
+  uri: string | undefined,
+  mode: ThemeMode,
+  vivid = false,
+): Promise<string> {
+  // A cover marked as cache-only (offline, see `CACHED_COVER`) is not a URL
+  // and is not ours to fetch: `getColors` downloads on its own, so it would
+  // be exactly the request offline mode is there to avoid. The tint stays the
+  // plain one, which is what a cover nobody can see should look like.
+  if (!uri || uri.startsWith(CACHED_COVER)) return theme.surfaceHighlight;
+  const src = paletteUri(uri);
+  // Keyed by the small URL: two screens showing the same cover at different
+  // sizes now share one cached palette. `quality` is read on iOS only, where
+  // it decides how much of the image is looked at before averaging, and the
+  // URL above already brought the cover down to `PALETTE_SIZE`, so there is
+  // nothing to save by looking at less than all of it.
+  try {
+    const { getColors } = await import('react-native-image-colors');
+    const res = await getColors(src, {
+      fallback: theme.surfaceHighlight,
+      cache: true,
+      key: src,
+      quality: 'high',
+    });
+    if (!res) return theme.surfaceHighlight;
+    let c: string = theme.surfaceHighlight;
+    if (res.platform === 'android') {
+      c = res.vibrant || res.darkVibrant || res.muted || res.dominant || c;
+    } else if (res.platform === 'ios') {
+      c = pickIosColor(res.background, res.primary, res.secondary, res.detail) || c;
+    } else if (res.platform === 'web') {
+      c = res.vibrant || res.darkVibrant || res.dominant || c;
+    }
+    return normalize(c, mode, vivid);
+  } catch {
+    return theme.surfaceHighlight;
+  }
+}
+
+/**
  * Colours already worked out, by palette URL, appearance and band. Filled as
  * covers are read, so a screen opened again draws its tint on the first frame
  * instead of starting from the plain one and jumping (which `getColors`'s own
@@ -208,37 +255,13 @@ export function useCoverTint(uri?: string, vivid = false): { color: string; know
   useEffect(() => {
     if (!src || !key || resolved.has(key)) return;
     let active = true;
-    // Keyed by the small URL: two screens showing the same cover at different
-    // sizes now share one cached palette. `quality` is read on iOS only, where
-    // it decides how much of the image is looked at before averaging, and the
-    // URL above already brought the cover down to `PALETTE_SIZE`, so there is
-    // nothing to save by looking at less than all of it.
-    import('react-native-image-colors')
-      .then(({ getColors }) =>
-        getColors(src, {
-          fallback: theme.surfaceHighlight,
-          cache: true,
-          key: src,
-          quality: 'high',
-        }),
-      )
-      .then((res) => {
-        if (!res) return;
-        let c: string = theme.surfaceHighlight;
-        if (res.platform === 'android') {
-          c = res.vibrant || res.darkVibrant || res.muted || res.dominant || c;
-        } else if (res.platform === 'ios') {
-          c = pickIosColor(res.background, res.primary, res.secondary, res.detail) || c;
-        } else if (res.platform === 'web') {
-          c = res.vibrant || res.darkVibrant || res.dominant || c;
-        }
-        const color = normalize(c, mode, vivid);
-        resolved.set(key, color);
-        if (active) setRead({ key, color });
-      })
-      .catch(() => {
-        if (active) setRead({ key, color: theme.surfaceHighlight });
-      });
+    // One reader for every caller: `dominantColorOf` does the palette work
+    // (and answers with the plain tint when there is no cover to read), and
+    // the result lands in the cache this hook is drawn from.
+    dominantColorOf(src, mode, vivid).then((c) => {
+      resolved.set(key, c);
+      if (active) setRead({ key, color: c });
+    });
     return () => {
       active = false;
     };

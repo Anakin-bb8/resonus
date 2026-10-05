@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { parseLrc, serializeLrc } from '@/lib/lrc';
-import { indexOfByte, wordsFromCues } from '@/lib/lyricWords';
+import { indexOfByte, wordEnds, wordsFromCues } from '@/lib/lyricWords';
 import { parseTtml, ttmlTime } from '@/lib/ttml';
 
 /** The start of the file attached to #165, and one line from its end. */
@@ -201,5 +201,63 @@ describe('OpenSubsonic cues', () => {
   it('counts a character outside the basic plane as four bytes and two units', () => {
     assert.equal(indexOfByte('a😀b', 5), 3);
     assert.equal(indexOfByte('a😀b', 2), -1);
+  });
+});
+
+describe('Word ends', () => {
+  it('takes the end the source sent', () => {
+    assert.deepEqual(
+      wordEnds([
+        { start: 100, end: 500, value: 'hold ' },
+        { start: 600, end: 800, value: 'on' },
+      ]),
+      [500, 800],
+    );
+  });
+
+  it('never runs past the next word, whatever the source said', () => {
+    assert.deepEqual(
+      wordEnds([
+        { start: 100, end: 900, value: 'a ' },
+        { start: 300, value: 'b' },
+      ]),
+      [300, 300 + 2500],
+    );
+  });
+
+  it('falls back to the next word when only the starts were timed', () => {
+    assert.deepEqual(
+      wordEnds(
+        [
+          { start: 0, value: 'one ' },
+          { start: 250, value: 'two ' },
+          { start: 900, value: 'three' },
+        ],
+        1400,
+      ),
+      [250, 900, 1400],
+    );
+  });
+
+  it('holds the last word until the next line, but not through a silence', () => {
+    // A real end is believed, however long the note.
+    assert.deepEqual(wordEnds([{ start: 1000, end: 4000, value: 'stay' }], 9000), [4000]);
+    // A gap nobody timed is not a note held that long.
+    assert.deepEqual(wordEnds([{ start: 1000, value: 'stay' }], 9000), [3500]);
+  });
+
+  it('stops the last word at the handover, however long the source holds it', () => {
+    // The row is gone by then: still filling would jump to full colour on
+    // the way out, and the shine would vanish instead of dimming.
+    assert.deepEqual(wordEnds([{ start: 1000, end: 5000, value: 'stay' }], 3000), [3000]);
+    assert.deepEqual(wordEnds([{ start: 1000, value: 'stay' }], 1500), [1500]);
+  });
+
+  it('guesses when nothing follows the word at all', () => {
+    assert.deepEqual(wordEnds([{ start: 1200, value: 'oh' }]), [1200 + 2500]);
+  });
+
+  it('never ends before it starts', () => {
+    assert.deepEqual(wordEnds([{ start: 500, end: 100, value: 'odd' }]), [500]);
   });
 });

@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import { create } from 'zustand';
 
 import { isLanguage, LANGUAGE_NAMES, type Language } from '@/i18n/languages';
+import { pushArtworkEncodeFps } from '@/lib/artworkEncode';
 import { type TabSegment } from '@/lib/tabOrigin';
 import { hashKey } from '@/lib/localLibrary';
 import { setPerfEnabled } from '@/lib/perfLog';
@@ -87,6 +88,28 @@ export const BITRATE_OPTIONS = [
  * much; two still overlaps one transfer with the next.
  */
 export const DOWNLOAD_CONCURRENCY_OPTIONS = [1, 2, 3];
+
+/**
+ * The fps animated covers encode at for the lock screen. 30 is the default:
+ * half the frames of 60 for a cover that reads the same, and half the work
+ * for a phone that is already doing plenty. 60 is there for whoever wants
+ * the smoother clip. The native side refuses anything above Apple's own 60.
+ */
+export const ANIMATED_ARTWORK_FPS_OPTIONS = [30, 60] as const;
+
+/**
+ * How often the Home radios rebuild themselves: the seed artists, the mix
+ * beside them, the tracks. `never` leaves them to the manual refresh in
+ * Settings › Appearance › Home › Radios.
+ */
+export type RadioRefreshCadence = 'day' | '3days' | 'week' | '2weeks' | 'never';
+export const RADIO_REFRESH_CADENCES: RadioRefreshCadence[] = [
+  'day',
+  '3days',
+  'week',
+  '2weeks',
+  'never',
+];
 
 /**
  * Codec to request for transcoding (Subsonic `format` parameter).
@@ -272,6 +295,14 @@ export type ScreenBackground = 'none' | 'color' | 'cover';
 export type CardBackground = 'none' | 'color';
 
 /**
+ * What fills the navigation bar: the page colour it has always had, or black
+ * fading out at the top edge, so the bar has no edge to show against whatever
+ * scrolls under it. Gradient wins over the blur, and the blur setting does
+ * nothing while it is on.
+ */
+export type NavBarStyle = 'solid' | 'gradient';
+
+/**
  * What tapping the cover in the player does.
  *
  * One tap and two draw from the same list. Which action belongs on which is
@@ -369,6 +400,7 @@ export type HomeSectionKey =
   | 'mostPlayedSongs'
   | 'randomSongs'
   | 'discover'
+  | 'radios'
   | 'playlists'
   | 'podcasts'
   | 'randomAlbums'
@@ -388,6 +420,7 @@ const HOME_SECTION_KEYS: HomeSectionKey[] = [
   'mostPlayedSongs',
   'randomSongs',
   'discover',
+  'radios',
   'playlists',
   'podcasts',
   'randomAlbums',
@@ -410,6 +443,9 @@ const HOME_SECTION_KEYS: HomeSectionKey[] = [
  */
 export const DEFAULT_HOME_SECTIONS: HomeSection[] = [
   { key: 'discover', enabled: true },
+  // The personalised artist radios (built from listening history when the
+  // scrobble services are filled in, from this server's play counts when not).
+  { key: 'radios', enabled: true },
   { key: 'playlists', enabled: true },
   // Draws nothing without a subscription, so it costs nobody a row.
   { key: 'podcasts', enabled: true },
@@ -806,6 +842,7 @@ type CustomSetter =
   | 'setThemeLightFrom'
   | 'setThemeDarkFrom'
   | 'setPureBlack'
+  | 'setAnimatedArtworkFps'
   | 'setBackgroundTint';
 
 interface SettingsState extends Omit<AutoSetters, CustomSetter> {
@@ -866,6 +903,8 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   alwaysShowTabs: boolean;
   /** Blur what scrolls under the navigation bar. */
   blurBars: boolean;
+  /** What the navigation bar is filled with: flat, or fading out at the top. */
+  navBarStyle: NavBarStyle;
   /** Blur what scrolls under the mini player. */
   blurMiniPlayer: boolean;
   /** Song duration in lists (Spotify doesn't show it). */
@@ -882,6 +921,8 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   showExplicitTag: boolean;
   /** When the queue ends, continue with similar songs (getSimilarSongs2). */
   autoplaySimilar: boolean;
+  /** How often the Home radios rebuild themselves on their own. */
+  radioRefreshCadence: RadioRefreshCadence;
   /**
    * Whether the app measures itself (Settings › About → Diagnostics). On for
    * everybody, since a report from the phone with the problem is worth more
@@ -916,6 +957,18 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
    * (transcodes, stats) without the user asking.
    */
   preloadUpcoming: boolean;
+  /**
+   * Ask the asset for frame-exact timing before anything plays: the
+   * `AVURLAssetPreferPreciseDurationAndTimingKey` on iOS, which is what makes a
+   * seek land on the exact frame and the duration be the file's own. The cost
+   * is a scan of the file for an index before the first second plays — on a
+   * stream that has none (a transcoded mp3 over HTTP) that scan is the wait
+   * before a track starts. Off by default: the clock follows the audio either
+   * way, so positions, lyrics and scrobbles stay in step; what off gives up is
+   * exact seek landing and exact duration on the files that need a scan to
+   * know it. iOS only.
+   */
+  preferPreciseTiming: boolean;
   /**
    * Auto-switch between online and offline based on connectivity: fall back to
    * downloads when the server doesn't respond and reconnect when it comes back.
@@ -991,6 +1044,12 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
    * the title. Off by default: the cover plays inside the square as before.
    */
   animatedCoverBackground: boolean;
+  /**
+   * The fps animated covers encode at for the lock screen (30 or 60). A clip
+   * already on disk keeps the rate it was written at; the next one picks up
+   * whatever this says.
+   */
+  animatedArtworkFps: number;
   /**
    * Show non-square artwork whole in the player instead of cropping it to a
    * square. Off by default: cropping is what it has always done, and every
@@ -1136,6 +1195,7 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   customFontUri: string | null;
   setLanguage: (language: Language) => void;
   setDiagnostics: (value: boolean) => void;
+  setAnimatedArtworkFps: (value: number) => void;
   resetScrobbleRules: () => void;
   setHideUnavailableOffline: (value: boolean) => void;
   setReplayGainPreampDb: (value: number) => void;
@@ -1214,6 +1274,7 @@ const DEFAULTS = {
   showPlaylistDescription: true,
   alwaysShowTabs: true,
   blurBars: true,
+  navBarStyle: 'solid' as NavBarStyle,
   blurMiniPlayer: true,
   showSongDuration: false,
   showListRating: false,
@@ -1221,6 +1282,8 @@ const DEFAULTS = {
   // nowhere, and where it does draw it is the tag the file was given.
   showExplicitTag: true,
   autoplaySimilar: true,
+  // A week, like before there was a choice.
+  radioRefreshCadence: 'week' as RadioRefreshCadence,
   // Off: measuring is for somebody who is being asked to measure. Everyone
   // else was paying for a report they will never send.
   diagnostics: false,
@@ -1230,6 +1293,7 @@ const DEFAULTS = {
   scrobblePercent: SCROBBLE_PERCENT_DEFAULT,
   scrobbleSeconds: SCROBBLE_SECONDS_DEFAULT,
   preloadUpcoming: false,
+  preferPreciseTiming: false,
   autoOfflineSwitch: true,
   hideUnavailableOffline: false,
   replayGain: 'off' as ReplayGainMode,
@@ -1255,6 +1319,9 @@ const DEFAULTS = {
   batteryWarning: true,
   playerBackground: 'cover' as ScreenBackground,
   animatedCoverBackground: false,
+  // 30: half the frames of 60 for a cover that reads the same; see
+  // `ANIMATED_ARTWORK_FPS_OPTIONS`.
+  animatedArtworkFps: 30,
   fitCoverArt: false,
   miniPlayerColorBackground: true,
   // Off by default: the card pushes the controls up on shorter screens, and
@@ -1432,6 +1499,12 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
   if (DOWNLOAD_CONCURRENCY_OPTIONS.includes(parsed.downloadConcurrency as number)) {
     set({ downloadConcurrency: parsed.downloadConcurrency as number });
   }
+  if ((ANIMATED_ARTWORK_FPS_OPTIONS as readonly number[]).includes(parsed.animatedArtworkFps as number)) {
+    set({ animatedArtworkFps: parsed.animatedArtworkFps as number });
+  }
+  if ((RADIO_REFRESH_CADENCES as readonly string[]).includes(parsed.radioRefreshCadence as string)) {
+    set({ radioRefreshCadence: parsed.radioRefreshCadence as RadioRefreshCadence });
+  }
   if (TRANSCODE_FORMATS.includes(parsed.streamFormat as TranscodeFormat)) {
     set({ streamFormat: parsed.streamFormat as TranscodeFormat });
   }
@@ -1549,6 +1622,9 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
   }
   if (parsed.previousButtonMode === 'restart' || parsed.previousButtonMode === 'always') {
     set({ previousButtonMode: parsed.previousButtonMode });
+  }
+  if (parsed.navBarStyle === 'solid' || parsed.navBarStyle === 'gradient') {
+    set({ navBarStyle: parsed.navBarStyle });
   }
   if (
     parsed.swipeAction === 'off' ||
@@ -1752,6 +1828,14 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setAnimatedArtworkFps: (animatedArtworkFps) => {
+    set({ animatedArtworkFps });
+    persist(snapshot(get));
+    // The encoder reads this the next time a clip is built; one already on
+    // disk keeps the rate it was written at, which is the rate it holds.
+    pushArtworkEncodeFps(animatedArtworkFps);
+  },
+
   // Both at once, and one write: put back separately, the first of the two
   // spends a moment as a rule nobody chose next to the other one's old value.
   resetScrobbleRules: () => {
@@ -1879,6 +1963,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
     // Language is preserved: resetting shouldn't change your language.
     set({ ...DEFAULTS, language: get().language });
     applyFactoryLook();
+    pushArtworkEncodeFps(get().animatedArtworkFps);
     persist(snapshot(get));
   },
 
@@ -1891,6 +1976,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
     applySaved({ ...(saved as object), customFontFamily: null, customFontUri: null }, set);
     if (get().appFont === 'custom' && !customFontFamily) set({ appFont: 'system' });
     setPerfEnabled(get().diagnostics);
+    pushArtworkEncodeFps(get().animatedArtworkFps);
     persist(snapshot(get));
     if (useAuthStore.getState().offline) queryClient.invalidateQueries();
   },
@@ -1966,6 +2052,10 @@ export const useSettings = create<SettingsState>((set, get) => ({
       // the startup it would otherwise miss, and this is where it is told
       // whether anybody asked for it.
       setPerfEnabled(get().diagnostics);
+      // The encoder's rate is native state with no way to read it back, so it
+      // is pushed here for the same reason: every profile's saved value takes
+      // effect on the first clip it builds, not on the next launch.
+      pushArtworkEncodeFps(get().animatedArtworkFps);
     }
   },
 }));

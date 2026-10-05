@@ -22,6 +22,7 @@ import {
   useSettings,
   type CoverCorners,
   type DefaultTab,
+  type NavBarStyle,
   type SwipeAction,
 } from '@/store/settings';
 
@@ -60,6 +61,8 @@ export default function AppearanceSettings() {
   const setShowPlayingElsewhere = useSettings((s) => s.setShowPlayingElsewhere);
   const blurBars = useSettings((s) => s.blurBars);
   const setBlurBars = useSettings((s) => s.setBlurBars);
+  const navBarStyle = useSettings((s) => s.navBarStyle);
+  const setNavBarStyle = useSettings((s) => s.setNavBarStyle);
   const defaultTab = useSettings((s) => s.defaultTab);
   const setDefaultTab = useSettings((s) => s.setDefaultTab);
   const libraryShowsPlaylists = useSettings((s) => s.libraryShowsPlaylists);
@@ -154,6 +157,16 @@ export default function AppearanceSettings() {
               ]}
             />
           ) : null}
+          <SelectList<NavBarStyle>
+            label={t('Navigation bar style')}
+            description={t('Flat, or black fading out at the top edge. Gradient ignores the blur.')}
+            options={[
+              { value: 'solid', label: t('Solid') },
+              { value: 'gradient', label: t('Gradient') },
+            ]}
+            value={navBarStyle}
+            onChange={setNavBarStyle}
+          />
         </SettingsGroup>
 
         <Text style={settingsStyles.sectionTitle}>{t('Explore')}</Text>
@@ -215,6 +228,12 @@ export default function AppearanceSettings() {
             label={t('Home sections')}
             chevron
             onPress={() => router.push('/settings/home-sections')}
+          />
+
+          <SettingRow
+            label={t('Radios')}
+            chevron
+            onPress={() => router.push('/settings/radios')}
           />
 
           <SettingRow
