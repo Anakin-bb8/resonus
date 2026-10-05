@@ -22,7 +22,7 @@ import org.json.JSONObject
 /**
  * The radio icon, drawn once and written to disk: the seed's colour as the
  * background, up to three covers as overlapping circles (seed on top) and
- * the artist's name at the bottom — the shape Spotify gives its radios.
+ * the artist's name at the bottom - the shape Spotify gives its radios.
  *
  * One JSON payload in, the file's uri back, so the JS side stays in charge
  * of what goes in it (see `src/lib/radioArt.ts`). The body runs on the
@@ -137,7 +137,7 @@ class RadioArtModule : Module() {
   ) {
     val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
       color = ink
-      textSize = textSize
+      this.textSize = textSize
       typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
       letterSpacing = kernEm
       setShadowLayer(3f, 0f, 1f, shadowOf(ink))
