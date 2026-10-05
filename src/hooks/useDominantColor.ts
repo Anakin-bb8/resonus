@@ -221,7 +221,10 @@ export async function coverColorOf(
     }
     let c: string = theme.surfaceHighlight;
     if (res.platform === 'android') {
-      c = res.vibrant || res.darkVibrant || res.muted || res.dominant || c;
+      // A swatch the palette did not find comes back as the fallback: a black
+      // and white photo has no vibrant one, and taking it painted it grey.
+      const found = [res.vibrant, res.darkVibrant, res.muted, res.dominant, res.average];
+      c = found.find((x) => x && x !== fallback) || c;
     } else if (res.platform === 'ios') {
       c = pickIosColor(res.background, res.primary, res.secondary, res.detail) || c;
     } else if (res.platform === 'web') {

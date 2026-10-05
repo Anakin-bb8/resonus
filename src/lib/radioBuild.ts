@@ -18,6 +18,7 @@
 import {
   COVER,
   coverArtUrl,
+  getAlbum,
   getArtists,
   getArtist,
   getArtistInfo,
@@ -217,7 +218,7 @@ async function recolor(defs: RadioDef[]): Promise<RadioDef[] | null> {
  */
 export async function radioTracks(def: RadioDef): Promise<Song[]> {
   const [seedTop, similarLists] = await Promise.all([
-    getTopSongs(def.seed.name, 15, def.seed.id).catch(() => [] as Song[]),
+    seedSongs(def.seed),
     Promise.all(
       def.similar
         .slice(0, 6)
@@ -316,6 +317,43 @@ export async function radioTracks(def: RadioDef): Promise<Song[]> {
   return picked;
 }
 
+/** Whether a song is the seed artist's own, collaborations included: the
+ *  song's `artistId` is only its first artist's. */
+function bySeed(s: Song, seed: RadioArtist): boolean {
+  const name = seed.name.toLowerCase();
+  return (
+    s.artistId === seed.id ||
+    s.artist?.toLowerCase() === name ||
+    !!s.artists?.some((a) => a.id === seed.id || a.name.toLowerCase() === name) ||
+    !!s.albumArtists?.some((a) => a.id === seed.id)
+  );
+}
+
+/**
+ * The seed's own songs, most played first. The top songs come from Last.fm,
+ * which knows nothing of an artist it never heard of: those fall back to the
+ * artist's albums on this server. Without them the radio had no opener and
+ * the last resort filled it with thirty strangers.
+ */
+async function seedSongs(seed: RadioArtist): Promise<Song[]> {
+  const top = await getTopSongs(seed.name, 15, seed.id).catch(() => [] as Song[]);
+  if (top.length >= 5) return top;
+  try {
+    const { albums } = await getArtist(seed.id);
+    const lists = await Promise.all(
+      albums.slice(0, 6).map((a) => getAlbum(a.id).then((d) => d.songs).catch(() => [] as Song[])),
+    );
+    const ids = new Set(top.map((s) => s.id));
+    const own = lists
+      .flat()
+      .filter((s) => bySeed(s, seed) && !ids.has(s.id))
+      .sort((x, y) => (y.playCount ?? 0) - (x.playCount ?? 0));
+    return [...top, ...own].slice(0, 15);
+  } catch {
+    return top;
+  }
+}
+
 let inflight: Promise<RadioDef[]> | null = null;
 
 /**
@@ -333,6 +371,21 @@ export function refreshRadios(opts: { force?: boolean } = {}): Promise<RadioDef[
     await store.hydrate();
     const staleMs = radioStaleMs(useSettings.getState().radioRefreshCadence);
     if (!opts.force && !radiosStale(useRadios.getState().defs, staleMs)) {
+      // Radios saved before a seed without Last.fm top songs got its own
+      // songs: their list is made again, and dropped if it still has none.
+      const saved = useRadios.getState().defs;
+      if (saved.some((d) => d.tracks?.length && !d.tracks.some((s) => bySeed(s, d.seed)))) {
+        const fixed = await Promise.all(
+          saved.map(async (d) =>
+            d.tracks?.some((s) => bySeed(s, d.seed))
+              ? d
+              : { ...d, tracks: await radioTracks(d).catch(() => [] as Song[]) },
+          ),
+        );
+        await useRadios
+          .getState()
+          .setDefs(fixed.filter((d) => d.tracks?.some((s) => bySeed(s, d.seed))));
+      }
       const recolored = await recolor(useRadios.getState().defs);
       if (recolored) await useRadios.getState().recolor(recolored);
       // Fresh radios can still be missing an icon (one whose drawing changed).
@@ -356,9 +409,12 @@ export function refreshRadios(opts: { force?: boolean } = {}): Promise<RadioDef[
         if (!d.color) d.color = await radioColor(d);
       }),
     );
-    await useRadios.getState().setDefs(defs);
+    // A radio with none of its seed's songs is somebody else's music under
+    // the seed's name: it is left out rather than offered.
+    const playable = defs.filter((d) => d.tracks?.some((s) => bySeed(s, d.seed)));
+    await useRadios.getState().setDefs(playable);
     await useRadios.getState().rememberSeeds(defs.map((d) => d.seed.id));
-    void ensureRadioIcons(defs);
+    void ensureRadioIcons(playable);
     return useRadios.getState().defs;
   })().finally(() => {
     inflight = null;
