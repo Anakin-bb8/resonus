@@ -128,6 +128,7 @@ export function SongMenuSheet() {
   const context = useSongMenu((s) => s.context);
   const showLyrics = useSongMenu((s) => s.showLyrics);
   const startInSleep = useSongMenu((s) => s.sleep);
+  const extras = useSongMenu((s) => s.extras);
   const closeNow = useSongMenu((s) => s.close);
   const { dismiss, pan, makePan, backdropStyle, sheetStyle, onSheetLayout } = useBottomSheetAnim(
     !!song,
@@ -635,6 +636,37 @@ export function SongMenuSheet() {
                       icon="mic-outline"
                       label={t('Lyrics')}
                       onPress={() => go('/lyrics')}
+                    />
+                  ) : null}
+                  {/* The player's buttons that are hidden from its bottom row,
+                      so hiding them does not hide what they open (#248). */}
+                  {extras.queue ? (
+                    <Action icon="layers-outline" label={t('View queue')} onPress={() => go('/queue')} />
+                  ) : null}
+                  {extras.devices ? (
+                    <Action
+                      icon="laptop-outline"
+                      label={t('Devices')}
+                      onPress={() => {
+                        const open = extras.devices!;
+                        dismiss(() => {
+                          closeNow();
+                          open();
+                        });
+                      }}
+                    />
+                  ) : null}
+                  {extras.speed ? (
+                    <Action
+                      icon="speedometer-outline"
+                      label={t('Playback speed')}
+                      onPress={() => {
+                        const open = extras.speed!;
+                        dismiss(() => {
+                          closeNow();
+                          open();
+                        });
+                      }}
                     />
                   ) : null}
                   {/* Online only (similar songs are found by the server) and not for

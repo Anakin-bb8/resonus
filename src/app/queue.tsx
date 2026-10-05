@@ -371,6 +371,20 @@ export default function QueueScreen() {
             icon="list-outline"
             title={t('The queue is empty.')}
             subtitle={t('Play a song or album to start the queue.')}
+            // Empty is exactly when the queue left on another player is worth
+            // bringing over, and the ⋯ menu that offers it only shows with a
+            // queue (#248 made this screen reachable without one).
+            action={
+              hasServerQueue
+                ? {
+                    label: t("Get the server's queue"),
+                    onPress: () =>
+                      void restoreFromServer(true).then((found) => {
+                        if (!found) toast(t('The server has no saved queue'));
+                      }),
+                  }
+                : undefined
+            }
           />
         </View>
       )}

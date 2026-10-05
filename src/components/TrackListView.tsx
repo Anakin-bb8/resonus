@@ -6,7 +6,7 @@
 import Icon from '@/components/Icon';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
-import { useMemo, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -30,7 +30,7 @@ import {
 } from 'react-native-gesture-handler';
 
 import { type Song, type StarType } from '@/api/subsonic';
-import { useDominantColor } from '@/hooks/useDominantColor';
+import { useCoverTint } from '@/hooks/useDominantColor';
 import { useInsets } from '@/hooks/useInsets';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { centredPadding, useScreenSize } from '@/hooks/useScreenSize';
@@ -244,7 +244,16 @@ export function TrackListView({
   // middle of the screen rather than a button's width to the left of it.
   const titleInset = centredPadding(screenW, spacing.lg) + PLAY_SIZE + spacing.md;
   const bottomPad = useScreenBottomPadding();
-  const dominant = useDominantColor(coverUri, true);
+  const tint = useCoverTint(coverUri, true);
+  const dominant = tint.color;
+  // A cover read for the first time fades its tint in over the page, instead
+  // of the header being painted the plain grey and jumping to the colour a
+  // moment later. One already read is there from the first frame.
+  const tintIn = useRef(new Animated.Value(tint.known ? 1 : 0)).current;
+  useEffect(() => {
+    if (!tint.known) return;
+    Animated.timing(tintIn, { toValue: 1, duration: motion.duration.fade, useNativeDriver: true }).start();
+  }, [tint.known, tintIn]);
   const headerColor = accentColor ?? dominant;
   const shuffle = usePlayerStore((s) => s.shuffle);
   const queueDealt = usePlayerStore((s) => s.queueDealt);
@@ -657,8 +666,10 @@ export function TrackListView({
               // an over-scroll drags `scrollY` negative, and the gradient
               // moving down with it would uncover the page's own colour where
               // the accent's band sits. Held at the top, the bounce reveals
-              // the accent instead of the background.
+              // the accent instead of the background. The tint itself fades
+              // in with `tintIn`, rather than flashing grey first.
               {
+                opacity: tintIn,
                 transform: [
                   {
                     translateY: scrollY.interpolate({

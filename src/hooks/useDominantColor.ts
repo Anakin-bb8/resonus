@@ -173,7 +173,8 @@ function paletteUri(uri: string): string {
 /**
  * The same colour, worked out once and awaited: the palette, the platform's
  * own picker and the band, outside React, for callers the hook cannot reach —
- * the widget's handover runs from the player's store, not from a component.
+ * the widget's handover runs from the player's store, not from a component,
+ * and the radio art reads colours on its way to drawing a file.
  * The plain tint is what comes back when there is no cover to read or it
  * cannot be read, which is also what the hook falls back to.
  */
@@ -217,25 +218,68 @@ export async function dominantColorOf(
 }
 
 /**
+ * Colours already worked out, by palette URL, appearance and band. Filled as
+ * covers are read, so a screen opened again draws its tint on the first frame
+ * instead of starting from the plain one and jumping (which `getColors`'s own
+ * cache cannot prevent: it answers asynchronously even when it has the answer).
+ */
+const resolved = new Map<string, string>();
+
+function resolvedKey(src: string, mode: ThemeMode, vivid: boolean): string {
+  return `${mode}|${vivid ? 'v' : 'c'}|${src}`;
+}
+
+/**
+ * The cover's colour, and whether it is known yet. `known` is false only
+ * while a cover nobody has read before is being read: a screen can keep its
+ * tint out of sight until then and fade it in, rather than paint the plain
+ * one first and jump.
+ *
  * `vivid` is a brighter, more saturated band for a header that fades into the
  * page, where the colour is behind the title rather than under body text.
  */
-export function useDominantColor(uri?: string, vivid = false): string {
-  const [color, setColor] = useState<string>(theme.surfaceHighlight);
+export function useCoverTint(uri?: string, vivid = false): { color: string; known: boolean } {
   // Switching appearance re-runs the whole thing: the palette `getColors`
   // returns is cached, so this is a second pass through `normalize` and not a
   // second download.
   const mode = useThemeMode();
+  // A cover marked as cache-only (offline, see `CACHED_COVER`) is not a URL
+  // and is not ours to fetch: `getColors` downloads on its own, so it would
+  // be exactly the request offline mode is there to avoid. The tint stays the
+  // plain one, which is what a cover nobody can see should look like.
+  const readable = !!uri && !uri.startsWith(CACHED_COVER);
+  const src = readable ? paletteUri(uri) : undefined;
+  const key = src ? resolvedKey(src, mode, vivid) : undefined;
+  const [read, setRead] = useState<{ key: string; color: string } | undefined>(undefined);
 
   useEffect(() => {
+    if (!src || !key || resolved.has(key)) return;
     let active = true;
-    dominantColorOf(uri, mode, vivid).then((c) => {
-      if (active) setColor(c);
+    // One reader for every caller: `dominantColorOf` does the palette work
+    // (and answers with the plain tint when there is no cover to read), and
+    // the result lands in the cache this hook is drawn from.
+    dominantColorOf(src, mode, vivid).then((c) => {
+      resolved.set(key, c);
+      if (active) setRead({ key, color: c });
     });
     return () => {
       active = false;
     };
-  }, [uri, mode, vivid]);
+  }, [src, key, mode, vivid]);
 
-  return color;
+  if (!key) return { color: theme.surfaceHighlight, known: true };
+  const color = resolved.get(key) ?? (read?.key === key ? read.color : undefined);
+  return color ? { color, known: true } : { color: theme.surfaceHighlight, known: false };
+}
+
+/**
+ * The cover's colour (see `useCoverTint`). While a new cover is being read the
+ * last colour stays, so the player moving on to the next song eases from one
+ * tint to the other instead of passing through the plain one.
+ */
+export function useDominantColor(uri?: string, vivid = false): string {
+  const { color, known } = useCoverTint(uri, vivid);
+  const [last, setLast] = useState(color);
+  if (known && color !== last) setLast(color);
+  return known ? color : last;
 }

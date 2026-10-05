@@ -17,13 +17,30 @@ export interface SongMenuOptions {
   showLyrics?: boolean;
   /** Opens straight on the sleep timer's choices (the player's button). */
   sleep?: boolean;
+  /**
+   * The player's own buttons, for when they are hidden from the row under the
+   * controls: hiding all of them left the queue out of reach (#248).
+   */
+  queue?: boolean;
+  devices?: () => void;
+  speed?: () => void;
 }
+
+/** What the player hands over of its own buttons; empty from anywhere else. */
+export interface PlayerExtras {
+  queue: boolean;
+  devices?: () => void;
+  speed?: () => void;
+}
+
+const NO_EXTRAS: PlayerExtras = { queue: false };
 
 interface SongMenuState {
   song: Song | null;
   context: SongMenuContext | null;
   showLyrics: boolean;
   sleep: boolean;
+  extras: PlayerExtras;
   open: (song: Song, context?: SongMenuContext, opts?: SongMenuOptions) => void;
   close: () => void;
 }
@@ -33,7 +50,14 @@ export const useSongMenu = create<SongMenuState>((set) => ({
   context: null,
   showLyrics: false,
   sleep: false,
+  extras: NO_EXTRAS,
   open: (song, context, opts) =>
-    set({ song, context: context ?? null, showLyrics: !!opts?.showLyrics, sleep: !!opts?.sleep }),
-  close: () => set({ song: null, context: null, showLyrics: false, sleep: false }),
+    set({
+      song,
+      context: context ?? null,
+      showLyrics: !!opts?.showLyrics,
+      sleep: !!opts?.sleep,
+      extras: { queue: !!opts?.queue, devices: opts?.devices, speed: opts?.speed },
+    }),
+  close: () => set({ song: null, context: null, showLyrics: false, sleep: false, extras: NO_EXTRAS }),
 }));

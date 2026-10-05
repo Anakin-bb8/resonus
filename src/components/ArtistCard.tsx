@@ -8,7 +8,7 @@ import { memo } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { COVER, coverArtUrl, type Artist } from '@/api/data';
-import { fontSize, spacing, themed, useTheme } from '@/theme';
+import { fontSize, lineHeight, spacing, themed, useTheme } from '@/theme';
 import { bump } from '@/lib/perfLog';
 import { Cover } from './Cover';
 
@@ -42,6 +42,7 @@ const styles = themed((colors) => ({
   name: {
     color: colors.text,
     fontSize: fontSize.sm,
+    lineHeight: lineHeight.sm,
     fontWeight: '500',
     marginTop: spacing.xs,
     textAlign: 'center',

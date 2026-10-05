@@ -926,6 +926,16 @@ export default function PlayerScreen() {
    * file behind a URL, not a station (`vod`).
    */
   const canSpeed = (!song.url || song.vod) && !remoteDevice;
+  // The ⋯ menu always leads to the queue, and to devices and speed when their
+  // buttons are hidden (#248): the devices button also shows while casting,
+  // and the speed button while not at 1×, and then it is there.
+  const buttonOn = (key: string) => playerButtons.some((b) => b.key === key && b.enabled);
+  const menuOptions = () => ({
+    showLyrics: hasLyrics,
+    queue: true,
+    devices: !buttonOn('devices') && canDevices && !remoteDevice ? () => setOutputOpen(true) : undefined,
+    speed: !buttonOn('speed') && canSpeed && speed === 1 ? () => openSpeedSheet.current() : undefined,
+  });
 
   return (
     <GestureDetector gesture={dismissPan}>
@@ -1095,7 +1105,7 @@ export default function PlayerScreen() {
               <FavoriteButton id={song.id} starred={favorited} size={24} />
             </View>
           ) : (
-            <CircleButton name="ellipsis-horizontal" label={t('More options')} onPress={() => openMenu(song, undefined, { showLyrics: hasLyrics })} />
+            <CircleButton name="ellipsis-horizontal" label={t('More options')} onPress={() => openMenu(song, undefined, menuOptions())} />
           )}
         </View>
 
@@ -1293,7 +1303,7 @@ export default function PlayerScreen() {
               <CircleButton
                 name="ellipsis-horizontal"
                 label={t('More options')}
-                onPress={() => openMenu(song, undefined, { showLyrics: hasLyrics })}
+                onPress={() => openMenu(song, undefined, menuOptions())}
               />
             ) : (
               <FavoriteButton id={song.id} starred={favorited} size={26} />
@@ -1515,7 +1525,7 @@ export default function PlayerScreen() {
                     <SleepButton
                       key={key}
                       color={ink}
-                      onPress={() => openMenu(song, undefined, { showLyrics: hasLyrics, sleep: true })}
+                      onPress={() => openMenu(song, undefined, { ...menuOptions(), sleep: true })}
                     />
                   ) : null;
                 case 'queue':

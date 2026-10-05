@@ -8,7 +8,7 @@ import { songsLabel } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { useMediaMenu } from '@/store/mediaMenu';
 import { useSettings } from '@/store/settings';
-import { fontSize, spacing, themed, useTheme } from '@/theme';
+import { fontSize, lineHeight, spacing, themed, useTheme } from '@/theme';
 import { bump } from '@/lib/perfLog';
 import { Cover } from './Cover';
 
@@ -55,11 +55,13 @@ const styles = themed((colors) => ({
   title: {
     color: colors.text,
     fontSize: fontSize.sm,
+    lineHeight: lineHeight.sm,
     fontWeight: '500',
     marginTop: spacing.xs,
   },
   sub: {
     color: colors.textSecondary,
     fontSize: fontSize.xs,
+    lineHeight: lineHeight.xs,
   },
 }));

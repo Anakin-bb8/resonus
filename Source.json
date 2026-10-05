@@ -29,6 +29,22 @@
             ],
             "versions": [
                 {
+                    "version": "0.8.1",
+                    "date": "2026-10-04T13:19:37+02:00",
+                    "size": 19982837,
+                    "downloadURL": "https://github.com/juananzzz/resonus/releases/download/v0.8.1/resonus-v0.8.1.ipa",
+                    "localizedDescription": "Added\nThe player's ⋯ menu always opens the queue, and devices and speed when their buttons are hidden (#248).\nAn optional Queue button at the top of Home, off by default.\nAn empty queue offers to bring over the server's saved queue.\nFixed\nLocal M4A and FLAC files show their titles, artists, albums and covers (#249).\nCasting to a TV moves on to the next song on time with the screen off (#246).\nOn phones that freeze apps in the background, the player no longer shows the old song for seconds on return (#192).\nOffline, a song whose cover is not downloaded no longer breaks the lock screen and the car.\nPlaylists open without waiting behind the suggested tracks of the last one, on servers slow to find similar songs.",
+                    "minOSVersion": "16.4"
+                },
+                {
+                    "version": "0.7.14",
+                    "date": "2026-10-03T18:26:47+02:00",
+                    "size": 19974389,
+                    "downloadURL": "https://github.com/juananzzz/resonus/releases/download/v0.7.14/resonus-v0.7.14.ipa",
+                    "localizedDescription": "Added\nThe update prompt sums up what the new version brings.\nChanged\nThe player shows only the Devices and Queue buttons by default.\nFixed\nStarting an album no longer refetches the whole Android Auto library.\nThe diagnostics report no longer counts frames while the app is in the background.\nHome redraws its album cards less often.\nGenre cards load their covers with one request each, even with several libraries.\nLong queues redraw fewer rows when the song changes.\nWith several libraries on Navidrome, album lists load in one request instead of one per library.\nLyrics redraw only when the line or the word changes.",
+                    "minOSVersion": "16.4"
+                },
+                {
                     "version": "0.7.13",
                     "date": "2026-10-02T21:48:16+02:00",
                     "size": 19970474,

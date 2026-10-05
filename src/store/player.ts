@@ -635,7 +635,10 @@ function seekActive(sec: number) {
 export function artworkUrlFor(song: Song): string | undefined {
   // A radio has no album to fall back to, but the server may hold an image for
   // the station, and one picked on the device arrives as a file:// path.
-  return coverArtUrl(song.coverArt ?? (song.url ? undefined : song.albumId), COVER.card);
+  const url = coverArtUrl(song.coverArt ?? (song.url ? undefined : song.albumId), COVER.card);
+  // Offline, a cover only in the image cache is no address at all, and the
+  // media session throws on what it cannot parse as a URL.
+  return url?.startsWith(CACHED_COVER) ? undefined : url;
 }
 
 /** How many tracks behind the current one get their covers warmed this way. */
@@ -2553,7 +2556,12 @@ async function reloadCurrent(atSec: number, autoplay: boolean): Promise<void> {
   }
 }
 
-function onStatus(status: AudioStatus) {
+/** When the last status was taken in, and how close a next one means a pile. */
+let lastStatusAt = 0;
+const BACKLOG_GAP_MS = 200;
+
+/** `live`: read from the player just now, never part of a pile. */
+function onStatus(status: AudioStatus, live = false) {
   // Before anything can decide not to use it. This beat is the only clock that
   // survives the app being minimized, so whether it arrives is the first thing
   // worth knowing about the minutes nobody was watching (see `beat`).
@@ -2580,6 +2588,29 @@ function onStatus(status: AudioStatus) {
   // the incoming song stops staying silent at volume 0 on minimize.
   if (fadeState) tickFade();
   const prev = usePlayerStore.getState();
+  // A backlog, not a beat (#192). Where the system freezes the app in the
+  // background (Android Go does), the beats of the whole time away wait in line
+  // and arrive back to back on the way in, each one redrawing the bar, the mini
+  // player and the lyrics: four minutes away was eight seconds of the player
+  // showing the song from before, on a phone slow enough to freeze it. The
+  // live beats are half a second apart, so one that lands right on the last is
+  // part of a pile, and one that changes nothing but the position is dropped.
+  // The return itself reads the player's live status (see `attachAppState`).
+  const now = Date.now();
+  const routine =
+    !status.didJustFinish &&
+    !status.error &&
+    status.isLoaded &&
+    !status.isBuffering &&
+    status.playing === prev.isPlaying &&
+    !prev.isBuffering &&
+    !pendingSeek &&
+    !fadeState;
+  if (routine && !live && now - lastStatusAt < BACKLOG_GAP_MS) {
+    bump('player · piled-up beat dropped');
+    return;
+  }
+  lastStatusAt = now;
   // Buffering if we want to play but audio isn't flowing yet (initial load,
   // streaming rebuffer, seek…). If paused, it's not buffering.
   const intendPlay = status.playing || prev.isPlaying;
@@ -3091,7 +3122,7 @@ function attachAppState() {
     const p = activePlayer();
     if (p && !remoteKind()) {
       try {
-        onStatus(p.currentStatus);
+        onStatus(p.currentStatus, true);
       } catch {
         // A stale native player can throw on read; the next heartbeat recovers.
       }

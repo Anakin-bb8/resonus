@@ -49,7 +49,7 @@ import { SORT_LABELS, byCodepoint, matches, normQ, sortItems } from '@/lib/libra
 import { useSettings, type LibrarySort } from '@/store/settings';
 import { useAccent } from '@/hooks/useAccent';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, radius, SHEET_MAX_WIDTH, spacing, themed, useTheme, tracking } from '@/theme';
+import { colors, fontSize, lineHeight, radius, SHEET_MAX_WIDTH, spacing, themed, useTheme, tracking } from '@/theme';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { columnsFor, useListPadding, useScreenSize } from '@/hooks/useScreenSize';
 import { listPerf } from '@/lib/listPerf';
@@ -1232,9 +1232,9 @@ const styles = themed((colors) => ({
   },
   card: { gap: spacing.xs },
   cardCentered: { alignItems: 'center' },
-  cardTitle: { color: colors.text, fontSize: fontSize.xs, fontWeight: '500', marginTop: spacing.xs },
+  cardTitle: { color: colors.text, fontSize: fontSize.xs, lineHeight: lineHeight.xs, fontWeight: '500', marginTop: spacing.xs },
   centerText: { textAlign: 'center' },
-  cardSub: { color: colors.textSecondary, fontSize: fontSize.xs },
+  cardSub: { color: colors.textSecondary, fontSize: fontSize.xs, lineHeight: lineHeight.xs },
   cardSubLine: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   rowInfo: { flex: 1 },

@@ -866,6 +866,17 @@ export const fontSize = {
 } as const;
 
 /**
+ * Fixed line heights for one-line text set side by side, at what Roboto gives
+ * the Latin alphabet on its own. A title in Japanese or with an emoji falls
+ * back to a font with a taller line, so one such card in a shelf made the whole
+ * shelf taller than the next, and the page below it shifted.
+ */
+export const lineHeight = {
+  xs: 16,
+  sm: 16.5,
+} as const;
+
+/**
  * Letter spacing for headings, tighter the bigger they are: at these
  * sizes the default spacing reads loose, and pulling it in is most of what
  * makes a title look current. Body text keeps the font's own.

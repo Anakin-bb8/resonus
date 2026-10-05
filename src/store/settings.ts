@@ -646,14 +646,14 @@ function normalizeBottomTabs(raw: unknown): BottomTab[] {
  * is only reachable from there, so hiding it would leave no way back to this
  * very screen.
  */
-export type HomeButtonKey = 'search' | 'history' | 'settings';
+export type HomeButtonKey = 'queue' | 'search' | 'history' | 'settings';
 
 export interface HomeButton {
   key: HomeButtonKey;
   enabled: boolean;
 }
 
-const HOME_BUTTON_KEYS: HomeButtonKey[] = ['search', 'history', 'settings'];
+const HOME_BUTTON_KEYS: HomeButtonKey[] = ['queue', 'search', 'history', 'settings'];
 
 /**
  * Left to right as they shipped.
@@ -663,6 +663,9 @@ const HOME_BUTTON_KEYS: HomeButtonKey[] = ['search', 'history', 'settings'];
  * there for whoever takes that tab off the bar, or just prefers it up here.
  */
 export const DEFAULT_HOME_BUTTONS: HomeButton[] = [
+  // Off: the player and the mini player already lead there. For whoever hides
+  // the player's buttons and wants it a tap from Home (#248).
+  { key: 'queue', enabled: false },
   { key: 'search', enabled: true },
   { key: 'history', enabled: true },
   { key: 'settings', enabled: true },
