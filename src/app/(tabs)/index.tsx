@@ -300,11 +300,18 @@ const MOST_PLAYED_SONGS = 30;
 const SONG_PAGE_SIZE = 3;
 
 /**
+ * How wide a page of songs gets. A row stops reading as one thing well before
+ * the width of a phone on its side, so past this the pages sit side by side.
+ */
+const SONG_PAGE_MAX = 420;
+
+/**
  * A horizontal carousel of small vertical song lists.
  *
  * Each page is a slightly narrower-than-screen card holding up to
  * SONG_PAGE_SIZE TrackRow items. Swiping reveals the next page peeking from
- * the right, inviting the user to scroll.
+ * the right, inviting the user to scroll. Virtualized: only the pages near the
+ * screen are mounted.
  */
 function SongListCarousel({
   songs,
@@ -321,25 +328,36 @@ function SongListCarousel({
   const playQueue = usePlayerStore((s) => s.playQueue);
   const showArtwork = useSettings((s) => s.showListArtwork);
 
-  const pageWidth = Math.round(screenWidth * 0.85);
+  const pageWidth = Math.min(Math.round(screenWidth * 0.85), SONG_PAGE_MAX);
   const gap = spacing.md;
   const pages: Song[][] = [];
   for (let i = 0; i < songs.length; i += SONG_PAGE_SIZE) {
     pages.push(songs.slice(i, i + SONG_PAGE_SIZE));
   }
+  // The visible pages and the one peeking in, so nothing pops in on mount.
+  const onScreen = Math.ceil(screenWidth / (pageWidth + gap)) + 1;
 
   return (
-    <ScrollView
+    <FlatList
       horizontal
-      pagingEnabled
+      data={pages}
+      keyExtractor={(_, pi) => String(pi)}
+      extraData={currentId}
+      initialNumToRender={onScreen}
+      maxToRenderPerBatch={onScreen}
+      windowSize={3}
+      getItemLayout={(_, pi) => ({
+        length: pageWidth + gap,
+        offset: spacing.lg + (pageWidth + gap) * pi,
+        index: pi,
+      })}
       decelerationRate="fast"
       snapToInterval={pageWidth + gap}
       snapToAlignment="start"
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{ paddingHorizontal: spacing.lg, gap }}
-    >
-      {pages.map((page, pi) => (
-        <View key={pi} style={[songListStyles.page, { width: pageWidth }]}>
+      contentContainerStyle={{ paddingHorizontal: spacing.lg }}
+      renderItem={({ item: page, index: pi }) => (
+        <View style={[songListStyles.page, { width: pageWidth, marginRight: gap }]}>
           {page.map((song, ri) => {
             const globalIndex = pi * SONG_PAGE_SIZE + ri;
             return (
@@ -359,8 +377,8 @@ function SongListCarousel({
             );
           })}
         </View>
-      ))}
-    </ScrollView>
+      )}
+    />
   );
 }
 
