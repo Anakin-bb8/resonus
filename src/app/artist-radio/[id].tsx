@@ -18,6 +18,7 @@ import { getArtist } from '@/api/data';
 import { AlbumRowsSkeleton } from '@/components/AlbumRowsSkeleton';
 import { Message } from '@/components/Message';
 import { RadioArt } from '@/components/RadioCard';
+import { openRadioMenu } from '@/components/RadioMenuSheet';
 import { SuggestedTracks } from '@/components/SuggestedTracks';
 import { TOPBAR_H, TrackListView } from '@/components/TrackListView';
 import { tintForMode } from '@/hooks/useDominantColor';
@@ -132,6 +133,7 @@ export default function ArtistRadioScreen() {
       }
       meta={tracks.length > 0 ? songsLabel(tracks.length, lang) : undefined}
       accentColor={def?.color ? tintForMode(def.color, mode, true) : undefined}
+      onMenu={def && tracks.length > 0 ? () => openRadioMenu(def, tracks) : undefined}
       songs={tracks}
       currentId={playing?.id}
       showArtwork={showListArtwork}

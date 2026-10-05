@@ -786,5 +786,9 @@
   "New features": "New features",
   "Changes": "Changes",
   "Fixes": "Fixes",
-  "{n} more": "{n} more"
+  "{n} more": "{n} more",
+  "Save as playlist": "Save as playlist",
+  "Refresh this radio": "Refresh this radio",
+  "Radio updated": "Radio updated",
+  "Couldn't refresh the radio": "Couldn't refresh the radio"
 }

@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 788 of them.
+Every string the app can show, under the screen it shows up on. 792 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -27,6 +27,7 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
+| `{artist} Radio` |  |
 | `{n} minutes` | A value of the sleep timer, in minutes from now |
 | `{n} more` | Under a heading of the update prompt: how many more lines of that kind the release notes have |
 | `{n} songs, {size}, copied into a folder of their own.` | The line under that title |
@@ -49,6 +50,7 @@ you are actually typing into, which is easier than reading it here.
 | `Continue listening` | Shortcut on the app's launcher icon (long press): resumes the last queue. Short: launchers cut long labels |
 | `Couldn't create the link` | The server would not make a share link |
 | `Couldn't find anything to mix with this song` | Toast: the server had nothing similar to carry on with |
+| `Couldn't refresh the radio` |  |
 | `Couldn't save the file` | Toast: writing to the chosen folder failed |
 | `Couldn't send the file` | Toast: handing it to another app failed |
 | `Cover art` | Three places, one word: a section header in Settings › Player, a line of the storage bar in Settings › Downloads, and what the screen reader calls the picture in the song information sheet |
@@ -76,16 +78,20 @@ you are actually typing into, which is easier than reading it here.
 | `Pin to top` | Keep this at the top of its list, above everything else. `Unpin` undoes it |
 | `Playback speed` |  |
 | `Playback stopped` | The mini player when there is nothing playing any more |
+| `Playlist created` | The toast after making one |
 | `Plays` | How many times the song has been played |
 | `Previous` | Player control: the previous track (accessibility label) |
+| `Radio updated` |  |
 | `Rate` | Verb: give it stars. Used for a song and for an artist. Not "bitrate" |
 | `Rating` | The stars given to the song. Not a bitrate, not a review |
 | `Recents` | Library section and its sort order: recently opened items |
+| `Refresh this radio` |  |
 | `Remove from playlist` | Menu action: take this song out of the playlist it was opened from |
 | `Removed from playlist` | Toast, with an undo button next to it |
 | `Resonus {new} is out. You have {old}.` |  |
 | `Resonus {new} is out. You have {old}. The download is about {mb} MB.` |  |
 | `Sample rate` | A property of the audio, in kHz |
+| `Save as playlist` |  |
 | `Save to a folder` | A value of `Export`: write the file somewhere on the phone |
 | `Saved as “{name}”` | Where the exported file ended up. `{name}` is the file's name |
 | `Send to another app` | A value of `Export`: hand the file to another app |
@@ -191,7 +197,13 @@ you are actually typing into, which is easier than reading it here.
 | `{artist} Radio` |  |
 | `Based on the tracks in this radio` |  |
 | `Couldn't build the radio.` |  |
+| `Couldn't refresh the radio` |  |
+| `Go to artist` | Leave this sheet and open the artist |
+| `Playlist created` | The toast after making one |
+| `Radio updated` |  |
 | `Refresh` | Ask the server for this playlist again, in case it changed elsewhere. Also the button under suggested tracks to regenerate them |
+| `Refresh this radio` |  |
+| `Save as playlist` |  |
 | `Suggested tracks` | Section heading at the bottom of a playlist: songs the server recommends based on what is already in the playlist |
 | `With {artists} and more` |  |
 

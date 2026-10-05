@@ -15,6 +15,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AppStartupTab } from '@/components/AppStartupTab';
 import { ArtistPickerSheet } from '@/components/ArtistPickerSheet';
+import { RadioMenuSheet } from '@/components/RadioMenuSheet';
 import { BarBlurTarget } from '@/components/BarBlur';
 import { BatteryWarning } from '@/components/BatteryWarning';
 import { CarAutoSync } from '@/components/CarAutoSync';
@@ -420,6 +421,7 @@ export default function RootLayout() {
             {auth || offline ? <SongMenuSheet /> : null}
             {auth || offline ? <SongInfoSheet /> : null}
             {auth || offline ? <ArtistPickerSheet /> : null}
+            {auth || offline ? <RadioMenuSheet /> : null}
             {auth || offline ? <MediaMenuSheet /> : null}
             {auth || offline ? <GlobalPlaylistPicker /> : null}
             {auth || offline ? <GlobalShareSheet /> : null}

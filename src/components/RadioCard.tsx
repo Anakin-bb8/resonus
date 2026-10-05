@@ -7,7 +7,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Cover } from './Cover';
 import { songsLabel } from '@/i18n';
+import { haptic } from '@/lib/haptics';
 import { collageCovers, textOn } from '@/lib/radioArt';
+import { openRadioMenu } from './RadioMenuSheet';
 import { useSettings } from '@/store/settings';
 import { useRadios, type RadioDef } from '@/store/radios';
 import { tintForMode } from '@/hooks/useDominantColor';
@@ -181,6 +183,10 @@ export const RadioCard = memo(function RadioCard({
         style={StyleSheet.flatten([styles.container, { width }])}
         accessibilityRole="button"
         accessibilityLabel={def.seed.name}
+        onLongPress={() => {
+          haptic('light');
+          openRadioMenu(def, def.tracks ?? []);
+        }}
       >
         <RadioArt def={def} width={width} />
         <Text style={styles.artists} numberOfLines={1}>

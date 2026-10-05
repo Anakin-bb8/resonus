@@ -788,5 +788,9 @@
   "Navigation bar style": "Estilo de la barra de navegación",
   "Solid": "Lisa",
   "Gradient": "Degradado",
-  "Blur": "Desenfoque"
+  "Blur": "Desenfoque",
+  "Save as playlist": "Guardar como lista",
+  "Refresh this radio": "Actualizar esta radio",
+  "Radio updated": "Radio actualizada",
+  "Couldn't refresh the radio": "No se pudo actualizar la radio"
 }
