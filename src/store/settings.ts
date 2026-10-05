@@ -103,6 +103,8 @@ export const ANIMATED_ARTWORK_FPS_OPTIONS = [30, 60] as const;
  * Settings › Appearance › Home › Radios.
  */
 export type RadioRefreshCadence = 'day' | '3days' | 'week' | '2weeks' | 'never';
+/** How many radios Home offers. */
+export const RADIO_COUNT_OPTIONS = [3, 6, 9] as const;
 export const RADIO_REFRESH_CADENCES: RadioRefreshCadence[] = [
   'day',
   '3days',
@@ -923,6 +925,15 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   /** How often the Home radios rebuild themselves on their own. */
   radioRefreshCadence: RadioRefreshCadence;
   /**
+   * The artist radios at all. Off, nothing is built or asked for: no shelf on
+   * Home, no radio in the menus, no round added at the end of one.
+   */
+  radiosEnabled: boolean;
+  /** How many radios Home offers (`RADIO_COUNT_OPTIONS`). */
+  radioCount: number;
+  /** A radio draws another round when its songs run out. */
+  radioEndless: boolean;
+  /**
    * Whether the app measures itself (Settings › About → Diagnostics). On for
    * everybody, since a report from the phone with the problem is worth more
    * than the little it costs, and off for whoever is chasing that problem and
@@ -1283,6 +1294,9 @@ const DEFAULTS = {
   autoplaySimilar: true,
   // A week, like before there was a choice.
   radioRefreshCadence: 'week' as RadioRefreshCadence,
+  radiosEnabled: true,
+  radioCount: 6,
+  radioEndless: true,
   // Off: measuring is for somebody who is being asked to measure. Everyone
   // else was paying for a report they will never send.
   diagnostics: false,
@@ -1500,6 +1514,9 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
   }
   if ((ANIMATED_ARTWORK_FPS_OPTIONS as readonly number[]).includes(parsed.animatedArtworkFps as number)) {
     set({ animatedArtworkFps: parsed.animatedArtworkFps as number });
+  }
+  if ((RADIO_COUNT_OPTIONS as readonly number[]).includes(parsed.radioCount as number)) {
+    set({ radioCount: parsed.radioCount as number });
   }
   if ((RADIO_REFRESH_CADENCES as readonly string[]).includes(parsed.radioRefreshCadence as string)) {
     set({ radioRefreshCadence: parsed.radioRefreshCadence as RadioRefreshCadence });

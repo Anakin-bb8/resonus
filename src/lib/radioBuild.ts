@@ -34,7 +34,7 @@ import { useRadios, radiosStale, radioStaleMs, type RadioArtist, type RadioDef }
 import { useSettings } from '@/store/settings';
 import { themeMode } from '@/theme';
 
-/** How many radios the section offers. */
+/** How many radios the section offers, unless Settings says otherwise. */
 export const RADIO_SEEDS = 6;
 
 /** The artists a build chooses from: the most played, this many deep, so
@@ -394,9 +394,13 @@ let inflight: Promise<RadioDef[]> | null = null;
 export function refreshRadios(opts: { force?: boolean } = {}): Promise<RadioDef[]> {
   if (inflight) return inflight;
   inflight = (async () => {
+    const { radiosEnabled, radioCount, radioRefreshCadence } = useSettings.getState();
+    // Turned off: nothing is built and nothing is asked of the server.
+    if (!radiosEnabled) return [];
     const store = useRadios.getState();
     await store.hydrate();
-    const staleMs = radioStaleMs(useSettings.getState().radioRefreshCadence);
+    const count = radioCount || RADIO_SEEDS;
+    const staleMs = radioStaleMs(radioRefreshCadence);
     if (!opts.force && !radiosStale(useRadios.getState().defs, staleMs)) {
       // Radios saved before a seed without Last.fm top songs got its own
       // songs: their list is made again, and dropped if it still has none.
@@ -423,21 +427,21 @@ export function refreshRadios(opts: { force?: boolean } = {}): Promise<RadioDef[
     // are passed over (see `MIN_SEED_SONGS`), and only when that leaves too
     // few does the bar drop to one song.
     const candidates = await pickSeeds(
-      RADIO_SEEDS * 3,
+      count * 3,
       new Set([...useRadios.getState().defs.map((d) => d.seed.id), ...useRadios.getState().pastSeeds]),
     );
     const own = new Map<string, Song[]>();
     const seeds: RadioArtist[] = [];
-    for (let i = 0; i < candidates.length && seeds.length < RADIO_SEEDS; i += RADIO_SEEDS) {
+    for (let i = 0; i < candidates.length && seeds.length < count; i += RADIO_SEEDS) {
       const batch = candidates.slice(i, i + RADIO_SEEDS);
       const songs = await Promise.all(batch.map((c) => seedSongs(c).catch(() => [] as Song[])));
       batch.forEach((c, j) => {
         own.set(c.id, songs[j]);
-        if (seeds.length < RADIO_SEEDS && songs[j].length >= MIN_SEED_SONGS) seeds.push(c);
+        if (seeds.length < count && songs[j].length >= MIN_SEED_SONGS) seeds.push(c);
       });
     }
     for (const c of candidates) {
-      if (seeds.length >= RADIO_SEEDS) break;
+      if (seeds.length >= count) break;
       if (!seeds.includes(c) && (own.get(c.id)?.length ?? 0) > 0) seeds.push(c);
     }
     const defs = (await Promise.all(seeds.map(buildRadioDef))).filter(

@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 793 of them.
+Every string the app can show, under the screen it shows up on. 798 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -913,7 +913,6 @@ you are actually typing into, which is easier than reading it here.
 | `Open the app on` | Which tab the app opens on, and comes back to after a while away |
 | `Playing on other devices` |  |
 | `Quick grid` | The grid of shortcut tiles on Home |
-| `Radios` |  |
 | `Rounded` | One of the values of “Cover corners” |
 | `Scheduled` |  |
 | `Show tab names` |  |
@@ -1064,19 +1063,24 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
+| `Artist radios` |  |
 | `Couldn't refresh the radios` |  |
 | `Every 2 weeks` | One of the values of “Update radios automatically” |
 | `Every 3 days` | One of the values of “Update radios automatically” |
 | `Every day` | One of the values of “Update radios automatically” |
 | `Every week` | One of the values of “Update radios automatically” |
 | `How often the radios rebuild their artists and tracks.` | The line under “Update radios automatically”, explaining it |
+| `Keep playing when a radio ends` |  |
 | `Never` | A value of `Play downloaded songs from the phone`: always stream, never use the file on the phone. The share sheet's own "never expires" is a separate key, `Never::expiry`, so a language that needs two different words can have them |
 | `Radios` |  |
+| `Radios built from the artists you play most. Off, there are none on Home or in the menus, and nothing is fetched for them.` |  |
+| `Radios on Home` |  |
 | `Radios updated` |  |
 | `Rebuild the radios with new artists and tracks right away.` |  |
 | `Refresh radios now` |  |
 | `Refreshing radios.` |  |
 | `Update radios automatically` |  |
+| `When its songs run out, another round from the same artists.` | The line under “Keep playing when a radio ends”, explaining it |
 
 ## Settings › Scrobbling
 

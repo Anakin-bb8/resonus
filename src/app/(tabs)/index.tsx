@@ -662,7 +662,10 @@ function DiscoverSection({ title, reshuffleKey }: { title: string; reshuffleKey:
 function RadiosSection({ title }: { title: string }) {
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
   const card = useShelfCard();
-  const defs = useRadios((s) => s.defs);
+  const count = useSettings((s) => s.radioCount);
+  // Fewer asked for than are saved: the shelf shortens at once, without
+  // waiting on the rebuild Settings starts.
+  const defs = useRadios((s) => s.defs).slice(0, count);
   const { isLoading } = useQuery({
     queryKey: ['radios'],
     queryFn: () => refreshRadios().catch(() => useRadios.getState().defs),
@@ -937,6 +940,7 @@ export default function HomeScreen() {
   const customGreeting = useSettings((s) => s.customGreeting);
   const language = useSettings((s) => s.language);
   const homeSections = useSettings((s) => s.homeSections);
+  const radiosEnabled = useSettings((s) => s.radiosEnabled);
   useSettings((s) => s.appFont); // re-render when font changes
   // Four slots, and when each one starts comes from the language rather than
   // from here: at 6pm English is in the evening and Spanish is still in the
@@ -1079,6 +1083,7 @@ export default function HomeScreen() {
               // are kept afterwards, so nothing here waits on the server
               // beyond what a local profile can answer for itself.
               if (s.key === 'radios') {
+                if (!radiosEnabled) return null;
                 return <RadiosSection key={s.key} title={t('Radios')} />;
               }
               if (s.key === 'randomArtists') {

@@ -793,5 +793,10 @@
   "Refresh this radio": "Actualitza aquesta ràdio",
   "Radio updated": "Ràdio actualitzada",
   "Couldn't refresh the radio": "No s'ha pogut actualitzar la ràdio",
-  "Go to artist radio": "Ves a la ràdio de l'artista"
+  "Go to artist radio": "Ves a la ràdio de l'artista",
+  "Artist radios": "Ràdios d'artistes",
+  "Radios built from the artists you play most. Off, there are none on Home or in the menus, and nothing is fetched for them.": "Ràdios fetes amb els artistes que més escoltes. Desactivades, no apareixen a Inici ni als menús i no es descarrega res per a elles.",
+  "Radios on Home": "Ràdios a Inici",
+  "Keep playing when a radio ends": "Continua sonant quan s'acaba una ràdio",
+  "When its songs run out, another round from the same artists.": "Quan s'acaben les cançons, una altra tanda dels mateixos artistes."
 }

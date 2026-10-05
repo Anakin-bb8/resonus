@@ -134,6 +134,7 @@ export default function ArtistScreen() {
   // it is recorded and sent on reconnect, so it stays; a local profile has no
   // account and never gets here.
   const serverType = useAuthStore((s) => s.auth?.serverType);
+  const radiosEnabled = useSettings((s) => s.radiosEnabled);
   const canRate = useAuthStore((s) => !!s.auth) && serverType !== 'jellyfin';
 
   // ── Download the discography ────────────────────────────────────────────
@@ -863,7 +864,7 @@ export default function ArtistScreen() {
               </Pressable>
               {/* The radio is built from the server (similar artists, top
                   songs), so offline it is not offered. */}
-              {offline ? null : (
+              {offline || !radiosEnabled ? null : (
                 <Pressable
                   style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
                   onPress={() => close(() => router.push(`/artist-radio/${id}`))}

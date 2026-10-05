@@ -793,5 +793,10 @@
   "Refresh this radio": "Actualizar esta radio",
   "Radio updated": "Radio actualizada",
   "Couldn't refresh the radio": "No se pudo actualizar la radio",
-  "Go to artist radio": "Ir a la radio del artista"
+  "Go to artist radio": "Ir a la radio del artista",
+  "Artist radios": "Radios de artistas",
+  "Radios built from the artists you play most. Off, there are none on Home or in the menus, and nothing is fetched for them.": "Radios hechas con los artistas que más escuchas. Desactivadas, no aparecen en Inicio ni en los menús y no se descarga nada para ellas.",
+  "Radios on Home": "Radios en Inicio",
+  "Keep playing when a radio ends": "Seguir sonando cuando acaba una radio",
+  "When its songs run out, another round from the same artists.": "Cuando se acaban sus canciones, otra tanda de los mismos artistas."
 }

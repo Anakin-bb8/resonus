@@ -791,5 +791,10 @@
   "Refresh this radio": "Refresh this radio",
   "Radio updated": "Radio updated",
   "Couldn't refresh the radio": "Couldn't refresh the radio",
-  "Go to artist radio": "Go to artist radio"
+  "Go to artist radio": "Go to artist radio",
+  "Artist radios": "Artist radios",
+  "Radios built from the artists you play most. Off, there are none on Home or in the menus, and nothing is fetched for them.": "Radios built from the artists you play most. Off, there are none on Home or in the menus, and nothing is fetched for them.",
+  "Radios on Home": "Radios on Home",
+  "Keep playing when a radio ends": "Keep playing when a radio ends",
+  "When its songs run out, another round from the same artists.": "When its songs run out, another round from the same artists."
 }

@@ -4,6 +4,7 @@
  * applied and saved immediately.
  */
 import Icon from '@/components/Icon';
+import { router } from 'expo-router';
 import { Pressable, Switch, Text, View } from 'react-native';
 import ReorderableList, {
   useReorderableDrag,
@@ -48,6 +49,7 @@ function SectionRow({ section }: { section: HomeSection }) {
   const t = useT();
   const drag = useReorderableDrag();
   const setHomeSection = useSettings((s) => s.setHomeSection);
+  const radiosEnabled = useSettings((s) => s.radiosEnabled);
   // From the store, not `colors.accent`: without subscription the switch would
   // keep the previous accent while the screen stays mounted.
   const { accent } = useTheme();
@@ -64,13 +66,30 @@ function SectionRow({ section }: { section: HomeSection }) {
       >
         <Icon name="reorder-two" size={24} color={colors.textSecondary} />
       </Pressable>
-      <Text style={styles.label}>{t(LABEL[section.key])}</Text>
-      <Switch
-        value={section.enabled}
-        onValueChange={(v) => setHomeSection(section.key, v)}
-        trackColor={{ false: colors.control, true: accent }}
-        thumbColor={colors.knob}
-      />
+      {section.key === 'radios' ? (
+        // The radios have settings of their own (and a switch for the whole
+        // feature): the row is the way to them.
+        <Pressable
+          style={styles.linkLabel}
+          onPress={() => router.push('/settings/radios')}
+          accessibilityRole="button"
+        >
+          <Text style={styles.label}>{t(LABEL[section.key])}</Text>
+          <Icon name="chevron-forward" size={18} color={colors.textMuted} />
+        </Pressable>
+      ) : (
+        <Text style={styles.label}>{t(LABEL[section.key])}</Text>
+      )}
+      {/* With the radios off as a whole the shelf has nothing to show:
+          the switch goes, and the row leads to where they are turned on. */}
+      {section.key === 'radios' && !radiosEnabled ? null : (
+        <Switch
+          value={section.enabled}
+          onValueChange={(v) => setHomeSection(section.key, v)}
+          trackColor={{ false: colors.control, true: accent }}
+          thumbColor={colors.knob}
+        />
+      )}
     </View>
   );
 }
@@ -143,4 +162,5 @@ const styles = themed((colors) => ({
     borderRadius: radius.md,
   },
   label: { flex: 1, color: colors.text, fontSize: fontSize.md },
+  linkLabel: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
 }));

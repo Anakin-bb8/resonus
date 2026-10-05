@@ -1715,7 +1715,9 @@ async function maybeQueueAutoplay() {
   // Before the mix, and before the autoplay setting has a say: this is not
   // similar music, it is the artist that was asked for. A mix is left alone,
   // since there the drift is the whole point.
-  const radioId = radioMode ? null : radioOfQueue(sourceHref);
+  const { radiosEnabled, radioEndless } = useSettings.getState();
+  const radioId =
+    radioMode || !radiosEnabled || !radioEndless ? null : radioOfQueue(sourceHref);
   const tail = queue[queue.length - 1];
   if (radioId && tail) {
     try {
