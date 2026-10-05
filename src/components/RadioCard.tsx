@@ -5,18 +5,12 @@ import { Link } from 'expo-router';
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { COVER, coverArtUrl } from '@/api/data';
 import { Cover } from './Cover';
 import { songsLabel } from '@/i18n';
-import { textOn } from '@/lib/radioArt';
+import { collageCovers, textOn } from '@/lib/radioArt';
 import { useSettings } from '@/store/settings';
-import { useRadios, type RadioDef, type RadioArtist } from '@/store/radios';
+import { useRadios, type RadioDef } from '@/store/radios';
 import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
-
-/** The three covers in the collage: seed first, then similar artists. */
-function collageArtists(def: RadioDef): RadioArtist[] {
-  return [def.seed, ...def.similar].slice(0, 3);
-}
 
 /**
  * The icon as the native module draws it, in views: same layout, so the
@@ -35,9 +29,7 @@ function RadioCollage({
 }) {
   const bg = def.color || colors.surfaceHighlight;
   const ink = textOn(bg);
-  // The covers as URLs: `coverArt` is a server id, like every other card
-  // asks for its picture (see AlbumCard).
-  const covers = collageArtists(def).map((a) => coverArtUrl(a.coverArt ?? a.id, COVER.card));
+  const covers = collageCovers(def);
   const artists = covers.length;
   const sideD = Math.round(width * 0.4);
   const centerD = Math.round(width * 0.6);

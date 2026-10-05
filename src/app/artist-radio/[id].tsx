@@ -127,7 +127,7 @@ export default function ArtistRadioScreen() {
         similarNames ? t('With {artists} and more', { artists: similarNames }) : undefined
       }
       meta={tracks.length > 0 ? songsLabel(tracks.length, lang) : undefined}
-      accentColor={def?.color}
+      accentColor={def?.color || undefined}
       songs={tracks}
       currentId={playing?.id}
       showArtwork={showListArtwork}

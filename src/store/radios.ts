@@ -45,17 +45,25 @@ export const RADIO_DIR = FileSystem.documentDirectory + 'radios/';
 const INDEX_PATH = RADIO_DIR + 'index.json';
 
 /** Where one radio's icon is written. The number goes up when the drawing
- *  changes, so icons from the old one are made again. */
-export function radioIconPath(id: string): string {
-  return `${RADIO_DIR}icon-2-${hashKey(id)}.png`;
+ *  changes, so icons from the old one are made again; the colour is in the
+ *  name because the image cache goes by it, and a recoloured icon written
+ *  over the old file would keep showing the old one. */
+export function radioIconPath(def: RadioDef): string {
+  return `${RADIO_DIR}icon-3-${hashKey(def.seed.id)}-${def.color.replace('#', '')}.png`;
 }
 
-/** Keeps the icons drawn at the current path and deletes the rest. */
-function currentIcons(icons: Record<string, string>): Record<string, string> {
+function deleteIcon(uri: string | undefined) {
+  if (uri) void FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
+}
+
+/** Keeps the icons drawn at their radio's current path and deletes the rest. */
+function currentIcons(icons: Record<string, string>, defs: RadioDef[]): Record<string, string> {
+  const byId = new Map(defs.map((d) => [d.seed.id, d]));
   const out: Record<string, string> = {};
   for (const [id, uri] of Object.entries(icons)) {
-    if (uri === radioIconPath(id)) out[id] = uri;
-    else void FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
+    const def = byId.get(id);
+    if (def && uri === radioIconPath(def)) out[id] = uri;
+    else deleteIcon(uri);
   }
   return out;
 }
@@ -108,6 +116,8 @@ interface RadiosState {
   hydrate: () => Promise<void>;
   setDefs: (defs: RadioDef[]) => Promise<void>;
   setIcon: (id: string, uri: string) => void;
+  /** The same radios in new colours: their icons go, to be drawn again. */
+  recolor: (defs: RadioDef[]) => Promise<void>;
   rememberSeeds: (ids: string[]) => Promise<void>;
 }
 
@@ -149,10 +159,13 @@ export const useRadios = create<RadiosState>((set, get) => ({
         // Another profile's radios (another server) are not this one's: the
         // ids mean nothing here and the seeds are somebody else's listening.
         if (parsed && parsed.scope === hashKey(profileScopeId())) {
+          const defs = Array.isArray(parsed.defs) ? parsed.defs : [];
           set({
-            defs: Array.isArray(parsed.defs) ? parsed.defs : [],
+            defs,
             icons:
-              parsed.icons && typeof parsed.icons === 'object' ? currentIcons(parsed.icons) : {},
+              parsed.icons && typeof parsed.icons === 'object'
+                ? currentIcons(parsed.icons, defs)
+                : {},
             pastSeeds: Array.isArray(parsed.pastSeeds)
               ? parsed.pastSeeds.filter((id): id is string => typeof id === 'string')
               : [],
@@ -175,8 +188,20 @@ export const useRadios = create<RadiosState>((set, get) => ({
     const icons = { ...get().icons };
     for (const id of Object.keys(icons)) {
       if (keep.has(id)) continue;
+      deleteIcon(icons[id]);
       delete icons[id];
-      void FileSystem.deleteAsync(radioIconPath(id), { idempotent: true }).catch(() => {});
+    }
+    set({ defs, icons });
+    await enqueue();
+  },
+
+  recolor: async (defs) => {
+    const before = new Map(get().defs.map((d) => [d.seed.id, d.color]));
+    const icons = { ...get().icons };
+    for (const d of defs) {
+      if (before.get(d.seed.id) === d.color || !icons[d.seed.id]) continue;
+      deleteIcon(icons[d.seed.id]);
+      delete icons[d.seed.id];
     }
     set({ defs, icons });
     await enqueue();

@@ -27,7 +27,7 @@ import {
   getTopSongs,
 } from '@/api/data';
 import type { Artist, Song } from '@/api/subsonic';
-import { dominantColorOf } from '@/hooks/useDominantColor';
+import { coverColorOf, isPlainTint } from '@/hooks/useDominantColor';
 import { ensureRadioIcons } from '@/lib/radioArt';
 import { useRadios, radiosStale, radioStaleMs, type RadioArtist, type RadioDef } from '@/store/radios';
 import { useSettings } from '@/store/settings';
@@ -159,12 +159,40 @@ export async function buildRadioDef(seed: RadioArtist): Promise<RadioDef | null>
     // No similables: the radio is the seed's own.
   }
 
-  const color = await dominantColorOf(
-    coverArtUrl(base.coverArt ?? base.id, COVER.thumb),
-    themeMode(),
-    true,
+  const def: RadioDef = { seed: base, similar, color: '', createdAt: Date.now() };
+  def.color = await radioColor(def);
+  return def;
+}
+
+/**
+ * The radio's colour: read off the seed's picture, or off its first track's
+ * cover when the picture can't be read (no artist image, or the server still
+ * fetching it from outside). Empty when neither can: the next refresh tries
+ * again instead of keeping a grey for a week.
+ */
+async function radioColor(def: RadioDef): Promise<string> {
+  const mode = themeMode();
+  const seed = await coverColorOf(coverArtUrl(def.seed.coverArt || def.seed.id, COVER.thumb), mode, true);
+  if (seed) return seed;
+  const cover = def.tracks?.find((s) => s.coverArt)?.coverArt;
+  if (!cover) return '';
+  return (await coverColorOf(coverArtUrl(cover, COVER.thumb), mode, true)) ?? '';
+}
+
+/** Gives a colour to the radios that have none (or the plain grey an older
+ *  build saved), and drops their icons so they are drawn again in it. */
+async function recolor(defs: RadioDef[]): Promise<RadioDef[] | null> {
+  let changed = false;
+  const next = await Promise.all(
+    defs.map(async (d) => {
+      if (d.color && !isPlainTint(d.color)) return d;
+      const color = await radioColor(d);
+      if (!color || color === d.color) return d;
+      changed = true;
+      return { ...d, color };
+    }),
   );
-  return { seed: base, similar, color, createdAt: Date.now() };
+  return changed ? next : null;
 }
 
 /**
@@ -305,6 +333,8 @@ export function refreshRadios(opts: { force?: boolean } = {}): Promise<RadioDef[
     await store.hydrate();
     const staleMs = radioStaleMs(useSettings.getState().radioRefreshCadence);
     if (!opts.force && !radiosStale(useRadios.getState().defs, staleMs)) {
+      const recolored = await recolor(useRadios.getState().defs);
+      if (recolored) await useRadios.getState().recolor(recolored);
       // Fresh radios can still be missing an icon (one whose drawing changed).
       void ensureRadioIcons(useRadios.getState().defs);
       return useRadios.getState().defs;
@@ -322,6 +352,8 @@ export function refreshRadios(opts: { force?: boolean } = {}): Promise<RadioDef[
     await Promise.all(
       defs.map(async (d) => {
         d.tracks = await radioTracks(d).catch(() => [] as Song[]);
+        // The seed's picture had no colour to give: its first track might.
+        if (!d.color) d.color = await radioColor(d);
       }),
     );
     await useRadios.getState().setDefs(defs);

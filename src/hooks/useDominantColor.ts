@@ -14,7 +14,7 @@
 import { useEffect, useState } from 'react';
 
 import { CACHED_COVER, COVER } from '@/api/data';
-import { colors as theme, useThemeMode, type ThemeMode } from '@/theme';
+import { BACKGROUND_TINTS, colors as theme, useThemeMode, type ThemeMode } from '@/theme';
 
 function hexToRgb(hex: string): [number, number, number] | null {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
@@ -183,11 +183,24 @@ export async function dominantColorOf(
   mode: ThemeMode,
   vivid = false,
 ): Promise<string> {
+  return (await coverColorOf(uri, mode, vivid)) ?? theme.surfaceHighlight;
+}
+
+/**
+ * `dominantColorOf`, but null when the cover could not be read: the download
+ * failed, or (Android) the palette did and every swatch came back as the
+ * fallback, which the library would otherwise cache for the session.
+ */
+export async function coverColorOf(
+  uri: string | undefined,
+  mode: ThemeMode,
+  vivid = false,
+): Promise<string | null> {
   // A cover marked as cache-only (offline, see `CACHED_COVER`) is not a URL
   // and is not ours to fetch: `getColors` downloads on its own, so it would
   // be exactly the request offline mode is there to avoid. The tint stays the
   // plain one, which is what a cover nobody can see should look like.
-  if (!uri || uri.startsWith(CACHED_COVER)) return theme.surfaceHighlight;
+  if (!uri || uri.startsWith(CACHED_COVER)) return null;
   const src = paletteUri(uri);
   // Keyed by the small URL: two screens showing the same cover at different
   // sizes now share one cached palette. `quality` is read on iOS only, where
@@ -195,14 +208,17 @@ export async function dominantColorOf(
   // URL above already brought the cover down to `PALETTE_SIZE`, so there is
   // nothing to save by looking at less than all of it.
   try {
-    const { getColors } = await import('react-native-image-colors');
-    const res = await getColors(src, {
-      fallback: theme.surfaceHighlight,
-      cache: true,
-      key: src,
-      quality: 'high',
-    });
-    if (!res) return theme.surfaceHighlight;
+    const { getColors, cache } = await import('react-native-image-colors');
+    const fallback = theme.surfaceHighlight;
+    const res = await getColors(src, { fallback, cache: true, key: src, quality: 'high' });
+    if (!res) return null;
+    const swatches = Object.entries(res).filter(
+      ([k]) => k !== 'platform' && k !== 'quality' && k !== 'average',
+    );
+    if (swatches.length > 0 && swatches.every(([, v]) => v === fallback)) {
+      cache.removeItem(src);
+      return null;
+    }
     let c: string = theme.surfaceHighlight;
     if (res.platform === 'android') {
       c = res.vibrant || res.darkVibrant || res.muted || res.dominant || c;
@@ -213,8 +229,27 @@ export async function dominantColorOf(
     }
     return normalize(c, mode, vivid);
   } catch {
-    return theme.surfaceHighlight;
+    return null;
   }
+}
+
+/** Every plain tint `dominantColorOf` can answer with when a cover could not
+ *  be read, in any appearance, background tint and band. */
+const PLAIN_TINTS = new Set(
+  Object.values(BACKGROUND_TINTS).flatMap(({ dark, light }) =>
+    [dark.surfaceHighlight, light.surfaceHighlight].flatMap((c) => [
+      c.toLowerCase(),
+      ...(['dark', 'light'] as const).flatMap((m) => [
+        normalize(c, m, true).toLowerCase(),
+        normalize(c, m, false).toLowerCase(),
+      ]),
+    ]),
+  ),
+);
+
+/** Whether a colour is the plain tint rather than one read off a cover. */
+export function isPlainTint(c: string): boolean {
+  return PLAIN_TINTS.has(c.toLowerCase());
 }
 
 /**
@@ -258,8 +293,11 @@ export function useCoverTint(uri?: string, vivid = false): { color: string; know
     // One reader for every caller: `dominantColorOf` does the palette work
     // (and answers with the plain tint when there is no cover to read), and
     // the result lands in the cache this hook is drawn from.
-    dominantColorOf(src, mode, vivid).then((c) => {
-      resolved.set(key, c);
+    coverColorOf(src, mode, vivid).then((read) => {
+      const c = read ?? theme.surfaceHighlight;
+      // A cover that could not be read is not remembered: the next screen
+      // that shows it asks again.
+      if (read) resolved.set(key, c);
       if (active) setRead({ key, color: c });
     });
     return () => {
