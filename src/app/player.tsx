@@ -753,7 +753,10 @@ export default function PlayerScreen() {
         void toggleFavorite();
         break;
       case 'album':
-        if (song?.albumId) pushOnce(`/album/${song.albumId}`);
+        // Replaces rather than pushes: the player is a modal, and on iOS a
+        // push out of it would land the album in a sheet. A second tap lands
+        // on the same screen, so the double-tap guard is unneeded here.
+        if (song?.albumId) router.replace(`/album/${song.albumId}` as never);
         break;
       default:
         break;
@@ -1230,7 +1233,9 @@ export default function PlayerScreen() {
                 <Pressable
                   style={styles.tapText}
                   hitSlop={6}
-                  onPress={() => router.push(`/album/${song.albumId}` as never)}
+                  // Replaces: from the player modal a push would land the
+                  // album in a sheet on iOS.
+                  onPress={() => router.replace(`/album/${song.albumId}` as never)}
                 >
                   <MarqueeText text={title} style={styles.title} enabled={marqueeTitles} />
                 </Pressable>
@@ -1239,15 +1244,17 @@ export default function PlayerScreen() {
               )}
               {(() => {
                 const targets = artistTargets(song);
+                // From the player these replace rather than push: on iOS a
+                // push out of the modal would land the screen in a sheet.
                 const goArtist =
                   targets.length === 0
                     ? undefined
                     : () =>
                         targets.length > 1
                           ? openArtistPicker(targets)
-                          : router.push(`/artist/${targets[0].id}`);
+                          : router.replace(`/artist/${targets[0].id}`);
                 const goAlbum = song.albumId
-                  ? () => router.push(`/album/${song.albumId}` as never)
+                  ? () => router.replace(`/album/${song.albumId}` as never)
                   : undefined;
                 return (
                   <>

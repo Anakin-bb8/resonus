@@ -5,7 +5,7 @@
  * is chosen (same query the screen uses, so cache is shared).
  */
 import Icon from '@/components/Icon';
-import { useRouter } from 'expo-router';
+import { useSegments } from 'expo-router';
 import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -22,6 +22,7 @@ import { artistTargets } from '@/lib/artistNav';
 import { exportManyToFolder, totalBytes } from '@/lib/exportSong';
 import { formatBytes } from '@/lib/format';
 import { pickFolder } from '@/lib/localLibrary';
+import { pushOrReplace } from '@/lib/pushOrReplace';
 import { queryClient } from '@/lib/query';
 import { useArtistPicker } from '@/store/artistPicker';
 import { useAuthStore } from '@/store/auth';
@@ -89,7 +90,9 @@ export function MediaMenuSheet() {
   const togglePin = usePins((s) => s.toggle);
   const playQueue = usePlayerStore((s) => s.playQueue);
   const queueMany = usePlayerStore((s) => s.queueMany);
-  const router = useRouter();
+  // What is on top decides whether detail screens push or replace the modal
+  // (see `pushOrReplace`); read before the early return below.
+  const top = useSegments()[0];
   const openArtistPicker = useArtistPicker((s) => s.open);
   const [confirmDelete, setConfirmDelete] = useState(false);
   /** Songs gathered for the download dialog (its size needs them). */
@@ -345,7 +348,7 @@ export function MediaMenuSheet() {
                   }
                   dismiss(() => {
                     closeNow();
-                    router.push(`/artist/${targets[0].id}`);
+                    pushOrReplace(`/artist/${targets[0].id}`, top);
                   });
                 }}
               />

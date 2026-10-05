@@ -2,7 +2,7 @@
  * Bottom sheet for choosing which artist to go to when a song or album has
  * multiple artists (collaborations). Opened from the `artistPicker` store.
  */
-import { useRouter } from 'expo-router';
+import { useSegments } from 'expo-router';
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -12,13 +12,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COVER, coverArtUrl } from '@/api/data';
 import { useBottomSheetAnim } from '@/hooks/useBottomSheetAnim';
 import { useT } from '@/i18n';
+import { pushOrReplace } from '@/lib/pushOrReplace';
 import { useArtistPicker } from '@/store/artistPicker';
 import { fontSize, radius, SHEET_MAX_WIDTH, spacing, themed, tracking } from '@/theme';
 import { Cover } from './Cover';
 
 export function ArtistPickerSheet() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
+  // What is on top decides whether the artist pushes or replaces the modal
+  // (see `pushOrReplace`); read before the early return below.
+  const top = useSegments()[0];
   const t = useT();
   const artists = useArtistPicker((s) => s.artists);
   const closeNow = useArtistPicker((s) => s.close);
@@ -36,12 +39,14 @@ export function ArtistPickerSheet() {
   if (!artists) return null;
 
   const go = (id: string) => {
-    // The push waits for the sheet's exit animation, like the song, media
-    // and info sheets do: pushing while the Modal is still up races its
-    // unmount with the stack commit, and on iOS that race crashes.
+    // The navigation waits for the sheet's exit animation, like the song,
+    // media and info sheets do: pushing while the Modal is still up races its
+    // unmount with the stack commit, and on iOS that race crashes. It also
+    // replaces rather than pushes when a modal is on top, or the artist would
+    // land in a sheet there.
     dismiss(() => {
       closeNow();
-      router.push(`/artist/${id}`);
+      pushOrReplace(`/artist/${id}`, top);
     });
   };
 

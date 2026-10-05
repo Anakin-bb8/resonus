@@ -10,7 +10,7 @@
  * fourteen dashes next to them is harder to read than the six lines that were
  * really filled in.
  */
-import { useRouter } from 'expo-router';
+import { useSegments } from 'expo-router';
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -23,6 +23,7 @@ import { useT } from '@/i18n';
 import { artistTargets } from '@/lib/artistNav';
 import { qualityLabel, sampleLabel, transcodeTarget } from '@/lib/audioQuality';
 import { formatBytes, formatDuration } from '@/lib/format';
+import { pushOrReplace } from '@/lib/pushOrReplace';
 import { useDownloads } from '@/store/downloads';
 import { useNetworkType } from '@/store/networkType';
 import { useSettings } from '@/store/settings';
@@ -75,7 +76,9 @@ export function SongInfoSheet() {
   const song = useSongInfo((s) => s.song);
   const closeNow = useSongInfo((s) => s.close);
   const t = useT();
-  const router = useRouter();
+  // What is on top decides whether detail screens push or replace the modal
+  // (see `pushOrReplace`); read before the early return below.
+  const top = useSegments()[0];
   const insets = useSafeAreaInsets();
   const [coverOpen, setCoverOpen] = useState(false);
   // The list is scrolled to the top: only then does a downward drag belong to
@@ -99,11 +102,12 @@ export function SongInfoSheet() {
 
   const close = () => dismiss(closeNow);
 
-  /** Goes somewhere, closing the sheet on the way out. */
+  /** Goes somewhere, closing the sheet on the way out. Detail screens replace
+   *  the modal when one is on top instead of pushing into a sheet on iOS. */
   const go = (path: string) =>
     dismiss(() => {
       closeNow();
-      router.push(path);
+      pushOrReplace(path, top);
     });
 
   type InfoRow = { label: string; value: string } | { label: string; chips: Chip[] };
