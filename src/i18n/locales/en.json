@@ -292,7 +292,7 @@
   "Popular": "Popular",
   "Pre-amp": "Pre-amp",
   "Precise timing": "Precise timing",
-  "Asks the file for frame-exact seeks and durations before playing. On a stream with no index that means scanning it first — the wait before a track starts. Off, tracks start at once: the clock still follows the audio, seeks may land a fraction of a second off.": "Asks the file for frame-exact seeks and durations before playing. On a stream with no index that means scanning it first — the wait before a track starts. Off, tracks start at once: the clock still follows the audio, seeks may land a fraction of a second off.",
+  "Asks the file for frame-exact seeks and durations before playing. On a stream with no index that means scanning it first, which is the wait before a track starts. Off, tracks start at once: the clock still follows the audio, seeks may land a fraction of a second off.": "Asks the file for frame-exact seeks and durations before playing. On a stream with no index that means scanning it first, which is the wait before a track starts. Off, tracks start at once: the clock still follows the audio, seeks may land a fraction of a second off.",
   "Preload upcoming tracks": "Preload upcoming tracks",
   "Previous": "Previous",
   "Public playlist": "Public playlist",

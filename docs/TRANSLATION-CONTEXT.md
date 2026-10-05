@@ -920,7 +920,7 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `Always` | A value of when a downloaded song is played from the file instead of streamed |
-| `Asks the file for frame-exact seeks and durations before playing. On a stream with no index that means scanning it first — the wait before a track starts. Off, tracks start at once: the clock still follows the audio, seeks may land a fraction of a second off.` |  |
+| `Asks the file for frame-exact seeks and durations before playing. On a stream with no index that means scanning it first, which is the wait before a track starts. Off, tracks start at once: the clock still follows the audio, seeks may land a fraction of a second off.` |  |
 | `At “Original” quality nothing is transcoded.` |  |
 | `Automatic` | A value of `Normalize volume`: let the app decide between per track and per album |
 | `Autoplay` | When the queue runs out, keep playing with similar songs instead of stopping |

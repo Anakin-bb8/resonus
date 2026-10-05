@@ -199,7 +199,7 @@ export default function ArtistScreen() {
   // Where the play button rides. Its top in the scroll content: the header
   // photo is the first thing in it and has the fixed `headerH` height, the
   // actions row comes straight after and starts with its own `spacing.md` top
-  // padding — no measurement needed, the layout is all fixed sizes.
+  // padding - no measurement needed, the layout is all fixed sizes.
   const playContentTop = headerH + spacing.md;
   // The line it holds on: centred on the bar's lower edge, so half of it is in
   // the bar and half of it is under it. Below it the button tracks the header
@@ -460,7 +460,7 @@ export default function ArtistScreen() {
 
   // The play button: the one and only one, so nothing about it fades or is
   // swapped for anything else. It follows the place laid out for it in the
-  // actions row until it reaches the bar's line, and holds there — half in the
+  // actions row until it reaches the bar's line, and holds there - half in the
   // bar, half below its lower edge. Drawn after the bar (below), so it is
   // always in front of it; while the bar has not reached it yet, it leaves the
   // taps (and the screen reader) to the place in the header.
@@ -603,7 +603,7 @@ export default function ArtistScreen() {
           {/* What the button does while it is still in the header: laid out
               where it goes, transparent because the circle is drawn above the
               bar (it is always above it now), and taking the taps from there
-              down — a dragger that starts on it is the scroll's, as it was. */}
+              down - a dragger that starts on it is the scroll's, as it was. */}
           <Pressable
             style={styles.playSlot}
             collapsable={false}
@@ -986,7 +986,7 @@ const styles = themed((colors) => ({
     justifyContent: 'center',
   },
   // The place the button takes in the actions row: the size and nothing else,
-  // no colour — the circle itself is drawn above the bar, always over this.
+  // no colour - the circle itself is drawn above the bar, always over this.
   playSlot: {
     width: PLAY_SIZE,
     height: PLAY_SIZE,

@@ -4,7 +4,7 @@ import Foundation
 
 /// The widget's play/pause button: one press, the player toggles, and the
 /// app never comes up. `openAppWhenRun` false is the point of the whole
-/// file — with it the system runs the intent on its own, the app is neither
+/// file - with it the system runs the intent on its own, the app is neither
 /// foregrounded nor shown, and the press still reaches JavaScript: it is
 /// written into the shared group as a timestamp, and posted as a
 /// notification for the case that this all runs in the app's own process.
@@ -25,7 +25,7 @@ struct PlaybackToggleIntent: AppIntent {
 
 /// One press, carried from wherever the intent ran to the JavaScript that
 /// owns the queue. The flag is the road: it survives any process, and the
-/// app takes it back whichever way it is woken — on the notification, on
+/// app takes it back whichever way it is woken - on the notification, on
 /// its own poll, or on the next launch if it was not up to hear either.
 enum PlaybackToggleRelay {
     /// Key and note, as `HomeWidgetModule` spells them: that module compiles
@@ -44,7 +44,7 @@ enum PlaybackToggleRelay {
     /// The refresh task that gets the app running when nothing else can.
     /// This extension schedules it, the app registers it in its AppDelegate
     /// (both plists permit it), and the system launches the app in the
-    /// background to run it — JavaScript then takes the press on startup,
+    /// background to run it - JavaScript then takes the press on startup,
     /// while the handler keeps the process up long enough to play.
     static let refreshTask = "com.juananzzz.resonus.pendingPressRefresh"
 

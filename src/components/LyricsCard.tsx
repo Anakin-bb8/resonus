@@ -423,7 +423,7 @@ const LINE_LEAD_MS = 300;
  * fill WORD_LEAD_MS ahead of the ear, so from where the fill reads, the row
  * goes when the next line is LINE_LEAD_MS - WORD_LEAD_MS out. Ending words
  * there rather than at whatever the source says is what keeps the last word
- * of a phrase — the held one, the one this was all asked for — from jumping
+ * of a phrase - the held one, the one this was all asked for - from jumping
  * to full colour (and its shine from vanishing) the moment its row stops
  * being the active one.
  */
@@ -499,7 +499,7 @@ function waitingColor(text: string): string {
 /** Where a word is in its own span: before its start, past its end, between. */
 function clamp01(value: number): number {
   // The fill calls this from a worklet, which runs on the UI thread: without
-  // the directive it arrives there as a remote function and throws — hard
+  // the directive it arrives there as a remote function and throws - hard
   // enough to take the whole app down with it.
   'worklet';
   if (!Number.isFinite(value)) return 0;
@@ -509,8 +509,8 @@ function clamp01(value: number): number {
 /**
  * How long a word is sung before it counts as one sung slowly: nothing for a
  * word got through under a quarter of a second, everything for a note held
- * over a second. The case this was asked for — the last word of a phrase,
- * held while the line waits for the next one — lands at the far end of it.
+ * over a second. The case this was asked for - the last word of a phrase,
+ * held while the line waits for the next one - lands at the far end of it.
  */
 const QUICK_WORD_MS = 250;
 const HELD_WORD_MS = 1200;
@@ -536,7 +536,7 @@ const BLOOM_FADE_MIN_MS = 120;
  * Not a light switched on at its start: the fill is where the song is against
  * this word's own span, read on the UI thread every frame, so it moves at the
  * song's own rate and never steps. `slow` is how long the word is given, and
- * it is what the shine answers to — a word pronounced slowly blooms as it
+ * it is what the shine answers to - a word pronounced slowly blooms as it
  * fills, a quick one barely does. The shine is gone again shortly after the
  * word is out, and always before the row does, so what shines is the word
  * being sung and not the line it sits in.
@@ -563,7 +563,7 @@ const SungWord = memo(function SungWord({
   /** How slowly this word is sung: 0 for a quick one, 1 for a held note. */
   const slow = clamp01((dur - QUICK_WORD_MS) / (HELD_WORD_MS - QUICK_WORD_MS));
   // When the shine is out: the full fade when there is room for it, and
-  // whatever room there is when there is not — but never past the handover,
+  // whatever room there is when there is not - but never past the handover,
   // where the row leaves the screen and it would vanish instead of dimming.
   const fadeEnd = Math.min(end + BLOOM_FADE_MS, handover ?? Infinity);
   const fadeStart = Math.min(end, fadeEnd - BLOOM_FADE_MIN_MS);
@@ -588,7 +588,7 @@ SungWord.displayName = 'SungWord';
 
 /**
  * The line being sung, word by word (#165): what has been sung is filled and
- * the rest waits, dimmer — each word taking as long to fill as it takes to
+ * the rest waits, dimmer - each word taking as long to fill as it takes to
  * sing. Only the active line runs.
  */
 function SungWords({ words, handover }: { words: LyricWord[]; handover?: number }) {

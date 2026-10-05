@@ -23,7 +23,7 @@ import {
   type NativeAudioModule,
 } from 'expo-audio';
 import { fetch as expoFetch } from 'expo/fetch';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { create } from 'zustand';
 
 import {
@@ -291,7 +291,7 @@ async function ensureAudioMode() {
     });
     // Deliberately no `setIsAudioActiveAsync(true)` here. This runs once at
     // open, and on iOS it is a real `AVAudioSession.setActive(true)`: it takes
-    // the session away from whatever is playing — a podcast, a radio stream —
+    // the session away from whatever is playing - a podcast, a radio stream -
     // before the user has pressed anything. The session gets activated on the
     // first `play()` instead, which is also the only moment we need it.
   } catch {
@@ -418,7 +418,7 @@ function sourceFor(song: Song, timeOffsetSec = 0): AudioSource {
   // asset on every source, so the setting takes effect on the next track and
   // on every re-request (a seek with `timeOffset` builds a source too). Local
   // files get the same answer for free: reading an index you already hold is
-  // not the wait this avoids — the wait is scanning a stream for one.
+  // not the wait this avoids - the wait is scanning a stream for one.
   const preferPreciseTiming = useSettings.getState().preferPreciseTiming;
   if (song.url) return { uri: song.url, metadata, mediaId, preferPreciseTiming };
   const local = localSourceFor(song);
@@ -649,7 +649,7 @@ const warmedArtwork = new Set<string>();
 
 /**
  * The native module under its own type: the module exports its instance, and
- * the namespace rule at an import reads nothing off it — this alias keeps the
+ * the namespace rule at an import reads nothing off it - this alias keeps the
  * warming call below going somewhere the compiler checks.
  */
 const audioModule = AudioModule as NativeAudioModule;
@@ -658,10 +658,12 @@ const audioModule = AudioModule as NativeAudioModule;
  * Starts a cover downloading, and its lock screen clip encoding, with no
  * track attached to it: the queue ahead is warmed this way, so every cover
  * is on disk well before its track plays and the lock screen has nothing
- * left to wait for. The native side keeps a small cache of its own — this
+ * left to wait for. The native side keeps a small cache of its own - this
  * set only stops the queue's constant re-evaluation from asking twice.
  */
 function warmArtwork(song: Song) {
+  // Only the iOS patch has the preloader; asking Android would throw every time.
+  if (Platform.OS !== 'ios') return;
   const url = artworkUrlFor(song);
   // A cover the app only holds in its own image cache is no address the
   // native fetcher can use, and anything already asked for is under way.
@@ -1799,7 +1801,7 @@ function scheduleNextSource(force = false) {
   const st = usePlayerStore.getState();
   // The covers of the tracks walking in behind this one: fetched and encoded
   // while the current one still plays. The current track's own is in the
-  // window too (k = 0) — it is the one the lock screen shows first. Before
+  // window too (k = 0) - it is the one the lock screen shows first. Before
   // the `activePlayer()` gate below on purpose: warming needs no player, and
   // waiting for one left the covers of a cold start unwarmed until the first
   // play. Gapless queues the next track natively (and warms its cover); this

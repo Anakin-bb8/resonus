@@ -1,5 +1,5 @@
 /**
- * One radio: what its Home card opens, in the shape its siblings use — the
+ * One radio: what its Home card opens, in the shape its siblings use - the
  * picture edge to edge from the very top of the display, artwork only (the
  * name lives in the title underneath); the radio's colour fading out
  * of it under the title and the buttons; the tracks below; and a short set
@@ -63,7 +63,7 @@ export default function ArtistRadioScreen() {
       const saved = useRadios.getState().defs.find((d) => d.seed.id === radioId);
       if (saved) return saved;
       // Straight into the screen without Home having built anything: make
-      // just this one (and leave it out of the store — the section's own
+      // just this one (and leave it out of the store - the section's own
       // refresh decides what belongs there).
       const { artist } = await getArtist(radioId);
       const built = await buildRadioDef({ id: radioId, name: artist.name, coverArt: artist.coverArt });
@@ -83,7 +83,7 @@ export default function ArtistRadioScreen() {
     retry: 1,
   });
   // The snapshot Home saved is what the screen wears while the fresh list is
-  // being asked for — and stays when it can't be, so a list once seen is
+  // being asked for - and stays when it can't be, so a list once seen is
   // never an empty page.
   const tracks = tracksQuery.data ?? def?.tracks ?? [];
 

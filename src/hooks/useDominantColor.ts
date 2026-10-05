@@ -172,7 +172,7 @@ function paletteUri(uri: string): string {
 
 /**
  * The same colour, worked out once and awaited: the palette, the platform's
- * own picker and the band, outside React, for callers the hook cannot reach —
+ * own picker and the band, outside React, for callers the hook cannot reach -
  * the widget's handover runs from the player's store, not from a component,
  * and the radio art reads colours on its way to drawing a file.
  * The plain tint is what comes back when there is no cover to read or it

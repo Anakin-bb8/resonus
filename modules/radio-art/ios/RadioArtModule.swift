@@ -3,7 +3,7 @@ import UIKit
 
 /// The radio icon, drawn once and written to disk: the seed's colour as the
 /// background, up to three covers as overlapping circles (seed on top) and
-/// the artist's name at the bottom — the shape Spotify gives its radios.
+/// the artist's name at the bottom - the shape Spotify gives its radios.
 ///
 /// One JSON payload in, the file's uri back, so the JS side stays in charge
 /// of what goes in it (see `src/lib/radioArt.ts`). Everything runs off the

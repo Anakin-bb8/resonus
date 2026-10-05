@@ -10,7 +10,7 @@ public class HomeWidgetModule: Module {
     /// The widget's press, when the intent ran in this process: the
     /// notification crosses nothing, but it is instant. Everywhere else the
     /// flag below is what the press rides in on, and the poll on the
-    /// JavaScript side reads it back either way — one press, one toggle.
+    /// JavaScript side reads it back either way - one press, one toggle.
     OnCreate {
       self.observePress()
     }
@@ -22,7 +22,7 @@ public class HomeWidgetModule: Module {
     /// The widget's play button, taken back. The press waits in the shared
     /// group as the time it happened (the extension wrote it, this reads it,
     /// and they are different processes); reading clears it, so one press
-    /// toggles once, and one read after the window toggles not at all —
+    /// toggles once, and one read after the window toggles not at all -
     /// music that old is not what the finger meant.
     Function("takePendingPlaybackToggle") { () -> Bool in
       HomeWidgetStore.takePendingToggle()
@@ -31,7 +31,7 @@ public class HomeWidgetModule: Module {
     /// What the app can see of its own handover, read back from the group it
     /// writes into. For Settings › Diagnostics: a widget showing only its
     /// icon looks the same whether the group was never granted, the write
-    /// never happened, or the data went down on the way out — and on a
+    /// never happened, or the data went down on the way out - and on a
     /// sideloaded build, which group the profile even granted.
     Function("status") { () -> String in
       HomeWidgetStore.status()
@@ -52,7 +52,7 @@ public class HomeWidgetModule: Module {
     }
     // The same press from the widget's own process: a Darwin notification
     // is the one kind that crosses processes, so this fires the instant the
-    // extension posts it — no waiting for the one-second poll.
+    // extension posts it - no waiting for the one-second poll.
     let callback: CFNotificationCallback = { _, observer, _, _, _ in
       guard let observer else { return }
       let module = Unmanaged<HomeWidgetModule>.fromOpaque(observer).takeUnretainedValue()
@@ -77,7 +77,7 @@ private enum HomeWidgetStore {
 
   /// The widget's press, and the window it counts down in. Spelled the same
   /// in `PlaybackToggleIntent`, which compiles into the extension and cannot
-  /// import this pod — the same way `nowPlaying` is shared with the widget's
+  /// import this pod - the same way `nowPlaying` is shared with the widget's
   /// own `WidgetStore`.
   static let toggleKey = "pendingPlaybackToggle"
   static let toggleNoteName = "ResonusPlaybackToggle"
@@ -86,7 +86,7 @@ private enum HomeWidgetStore {
   /// The Darwin notification, spelled the same in `PlaybackToggleRelay`. A
   /// plain CFString: `CFNotificationCenterAddObserver` takes the name as one
   /// here, while the Post in the extension wants it wrapped as a
-  /// `CFNotificationName` — two signatures, one spelling.
+  /// `CFNotificationName` - two signatures, one spelling.
   static let darwinNote = "com.juananzzz.resonus.playbackToggle" as CFString
 
   /// What the app writes when it takes a press: for `status()`, to tell
@@ -106,7 +106,7 @@ private enum HomeWidgetStore {
   }
 
   /// One press out of the group: read from whichever of the groups holds
-  /// one, and cleared from all of them — the widget writes every group it
+  /// one, and cleared from all of them - the widget writes every group it
   /// was granted, and a press left behind in any other would toggle twice.
   static func takePendingToggle() -> Bool {
     var since: Double = 0
@@ -205,7 +205,7 @@ private enum HomeWidgetStore {
   /// read off: it ends up in a bug report. The profile and the granted groups
   /// come first because a sideload takes both from the signer's profile, not
   /// from this repo, and which of the two is missing decides where the fault
-  /// is — nobody here can fix a certificate that registered no app group.
+  /// is - nobody here can fix a certificate that registered no app group.
   static func status() -> String {
     var parts: [String] = []
     if let id = Bundle.main.bundleIdentifier { parts.append("id \(id)") }
@@ -227,7 +227,7 @@ private enum HomeWidgetStore {
 
     // The press itself, from the same group: waiting means the app has not
     // read it yet (the poll is asleep or the window has not opened), taken is
-    // the last one it did — together they say whether the road works at all.
+    // the last one it did - together they say whether the road works at all.
     let pressFormat = DateFormatter()
     pressFormat.dateFormat = "HH:mm:ss"
     var waiting: Double = 0

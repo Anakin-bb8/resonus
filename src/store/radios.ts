@@ -1,11 +1,11 @@
 /**
- * The radios on Home: their definitions, built once from listening history
+ * The radios on Home: their definitions, built once from the play counts
  * and kept on the device, plus the icon files made for them.
  *
- * They are deliberately NOT playlists — nothing here is written to the
+ * They are deliberately NOT playlists - nothing here is written to the
  * server. A def is the seed artist, the similar artists mixed into it, the
  * colour its icon was tinted with, and the snapshot of tracks it opens with
- * — kept so the screen can paint its list the moment it is asked for, with
+ * - kept so the screen can paint its list the moment it is asked for, with
  * the server asked again in the background whenever it has gone stale. The
  * def itself is rebuilt when it goes old, so a radio stays current the way a
  * saved playlist does not. Everything is one JSON file under the app's
@@ -27,7 +27,7 @@ export interface RadioArtist {
   coverArt?: string;
 }
 
-/** One Home radio. `seed` is the artist in its title ("Radio di …"). */
+/** One Home radio. `seed` is the artist in its title ("The … Radio"). */
 export interface RadioDef {
   seed: RadioArtist;
   /** Artists mixed in beside the seed's own top tracks. */
@@ -50,7 +50,7 @@ export function radioIconPath(id: string): string {
 }
 
 /** A def older than this gets rebuilt when Home asks (new listening, new
- *  similar artists, a cover that changed on the server) — per cadence, which
+ *  similar artists, a cover that changed on the server) - per cadence, which
  *  Settings › Appearance › Home › Radios lets whoever listens choose. `never`
  *  is manual refresh only: no age ever counts as old. */
 const STALE_MS: Record<RadioRefreshCadence, number> = {

@@ -51,7 +51,7 @@ function RadioCollage({
   );
   return (
     <View style={[styles.collage, { width, height: width, backgroundColor: bg }]}>
-      {/* Sides first, the seed's own cover on top of them — the same order
+      {/* Sides first, the seed's own cover on top of them - the same order
           the native renderer paints in, and the same numbers (its 0.10/0.90
           centres): the file and the views are one picture. */}
       {circle(covers[1], sideD, -Math.round(sideD * 0.25), Math.round(width * 0.34), 'left')}
@@ -87,7 +87,7 @@ function shadow(ink: string): string {
  *  collage drawn as views when there isn't. Shared with the radio screen, so
  *  the shelf and the screen show one image. `cropHeight` turns the square
  *  into a shorter, full-bleed rectangle for the screen's header: the art is
- *  bottom-aligned inside it, so the crop takes the top off — the decorative
+ *  bottom-aligned inside it, so the crop takes the top off - the decorative
  *  RADIO word goes, the artist's name at the bottom stays, untouched. `bare`
  *  is the header's variant: no words at all, since the file would carry the
  *  name baked in and the title underneath says it already. */

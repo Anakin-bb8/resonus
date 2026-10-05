@@ -443,8 +443,7 @@ const HOME_SECTION_KEYS: HomeSectionKey[] = [
  */
 export const DEFAULT_HOME_SECTIONS: HomeSection[] = [
   { key: 'discover', enabled: true },
-  // The personalised artist radios (built from listening history when the
-  // scrobble services are filled in, from this server's play counts when not).
+  // The personalised artist radios, built from this server's play counts.
   { key: 'radios', enabled: true },
   { key: 'playlists', enabled: true },
   // Draws nothing without a subscription, so it costs nobody a row.
@@ -961,7 +960,7 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
    * Ask the asset for frame-exact timing before anything plays: the
    * `AVURLAssetPreferPreciseDurationAndTimingKey` on iOS, which is what makes a
    * seek land on the exact frame and the duration be the file's own. The cost
-   * is a scan of the file for an index before the first second plays — on a
+   * is a scan of the file for an index before the first second plays - on a
    * stream that has none (a transcoded mp3 over HTTP) that scan is the wait
    * before a track starts. Off by default: the clock follows the audio either
    * way, so positions, lyrics and scrobbles stay in step; what off gives up is

@@ -2,11 +2,11 @@
  * The radios on Home: which artists get one, what goes in it, and when the
  * set is rebuilt.
  *
- * A radio is a seed artist (the one in its title, "Radio di …") plus similar
- * artists mixed beside it — never a saved playlist: nothing is written to
+ * A radio is a seed artist (the one in its title, "The … Radio") plus similar
+ * artists mixed beside it - never a saved playlist: nothing is written to
  * the server. The def carries a snapshot of the tracks it opened with, so
  * the screen is already full the first time it is drawn, and a fresh list is
- * asked for whenever it has gone stale — the mix still reflects the library
+ * asked for whenever it has gone stale - the mix still reflects the library
  * as it is now.
  *
  * The seeds come from the server's own play counts, which is where every
@@ -63,7 +63,7 @@ function shuffled<T>(arr: T[]): T[] {
 
 /**
  * Seeds from this server's play counts: the artists behind the most played
- * songs, ordered by plays. The cover is the album's, not the artist's — what
+ * songs, ordered by plays. The cover is the album's, not the artist's - what
  * `buildRadioDef` fetches upgrades it to the artist's own when there is one.
  */
 async function serverSeeds(): Promise<RadioArtist[]> {
@@ -84,7 +84,7 @@ async function serverSeeds(): Promise<RadioArtist[]> {
 
 /**
  * The radio seeds: the artists behind the most played songs, and any
- * artists at all filling the rest — but never the ones the last builds just
+ * artists at all filling the rest - but never the ones the last builds just
  * used, so every refresh brings new radios instead of the same six. Six
  * radios about artists you never played beats no radios, and the section
  * still hides itself when even that comes back empty (a library with no
@@ -135,8 +135,8 @@ export async function pickSeeds(limit: number, exclude: Set<string> = new Set())
  * One radio definition: the seed confirmed against the server (its current
  * name and cover), its similar artists, and the colour its icon will use.
  *
- * Every fetch has its own catch so a server without the Last.fm agent — or
- * with `getArtistInfo` off — still produces a radio of the seed's own top
+ * Every fetch has its own catch so a server without the Last.fm agent - or
+ * with `getArtistInfo` off - still produces a radio of the seed's own top
  * tracks, which is what an empty `similar` means for the mix below.
  */
 export async function buildRadioDef(seed: RadioArtist): Promise<RadioDef | null> {
@@ -170,9 +170,9 @@ export async function buildRadioDef(seed: RadioArtist): Promise<RadioDef | null>
 /**
  * The tracks of one radio, aiming at `RADIO_TARGET`.
  *
- * Four pools are gathered — the seed's own top songs, the similar artists'
+ * Four pools are gathered - the seed's own top songs, the similar artists'
  * top songs, whatever the server suggests as similar to the seed's first
- * track, and the library's random songs — each shuffled, so the order is
+ * track, and the library's random songs - each shuffled, so the order is
  * not the same twice the way a server's ranking always is. The last two
  * pools only draw from the neighbourhood (the seed and its similar
  * artists): unfiltered, they are where the children's songs and the
@@ -181,7 +181,7 @@ export async function buildRadioDef(seed: RadioArtist): Promise<RadioDef | null>
  * playing as a block.
  *
  * Three rules make it a radio rather than shuffled bins. It opens on the
- * seed's own most played — a radio never starts anywhere else. No two tracks
+ * seed's own most played - a radio never starts anywhere else. No two tracks
  * in a row are ever the same artist. And each artist is capped by the pool
  * it came from (six from the seed, three from a similar, two from the
  * filler) so nobody takes the list over, the same rule the player's own
@@ -212,7 +212,7 @@ export async function radioTracks(def: RadioDef): Promise<Song[]> {
     (s.artistId != null && allowIds.has(s.artistId)) ||
     (s.artist != null && allowNames.has(s.artist.toLowerCase()));
   // The opener: the seed's own most played, taken before the shuffle that
-  // scrambles the rest — the first frame of the list is always the same.
+  // scrambles the rest - the first frame of the list is always the same.
   const opener = seedTop.find((s) => s.id && !s.url);
   const pools = [
     { songs: shuffled(seedTop.filter((s) => s !== opener)), cap: 6 },
@@ -222,7 +222,7 @@ export async function radioTracks(def: RadioDef): Promise<Song[]> {
   ].filter((p) => p.songs.length > 0);
 
   // Per pool, filter once: playable, not a repeat of a song already handed
-  // out (the pools overlap — an artist's track can sit in three of them),
+  // out (the pools overlap - an artist's track can sit in three of them),
   // and within its artist's cap. The opener counts against the seed pool's
   // cap: six of the seed's own songs in all, opener included.
   const seen = new Set<string>();
@@ -249,7 +249,7 @@ export async function radioTracks(def: RadioDef): Promise<Song[]> {
   // Deal: each pass takes the next song from every pool in turn. A pool
   // whose head repeats the artist just played holds it back for a later
   // slot; when every remaining head repeats it, the mix has said what it
-  // has to say and the list stops where it is — the rule does not bend.
+  // has to say and the list stops where it is - the rule does not bend.
   const ptr = lists.map(() => 0);
   let cursor = 0;
   let guard = 0;
@@ -269,7 +269,7 @@ export async function radioTracks(def: RadioDef): Promise<Song[]> {
   }
 
   // Last resort, and only when the neighbourhood came up short: whatever is
-  // left of the two filler pools, unfiltered — one track per artist at most,
+  // left of the two filler pools, unfiltered - one track per artist at most,
   // and never two in a row. A filler with no artist to its name is skipped:
   // unattributed is exactly the untrustworthy kind.
   if (picked.length < MIN_RADIO_TRACKS) {

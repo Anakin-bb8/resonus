@@ -90,7 +90,7 @@ enum WidgetStore {
 
     /// The colour the app read off the cover, in the band the app read it in:
     /// white text has to read on it, so the dark band, whichever theme the
-    /// app is in — the widget's text does not follow the theme. The app's own
+    /// app is in - the widget's text does not follow the theme. The app's own
     /// background stands in when there is no cover, or the handover is from a
     /// build that sent no colour of its own.
     static func background(_ state: NowPlaying?) -> Color {

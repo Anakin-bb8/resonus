@@ -76,10 +76,10 @@ const FULL_MODAL = {
  * over everything the app draws, and `GlobalTabBar` and `GlobalMiniPlayer`
  * live beside the Stack rather than inside it, so on those screens the bar
  * and the mini player went missing while they stayed on every other one.
- * A push is full screen too — it just stays under the two of them.
+ * A push is full screen too - it just stays under the two of them.
  *
  * A push out of the player or one of the menus would still land in a sheet
- * on iOS; those pushes replace the modal instead — see `pushOrReplace`.
+ * on iOS; those pushes replace the modal instead - see `pushOrReplace`.
  */
 
 /*

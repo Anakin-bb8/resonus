@@ -6,7 +6,7 @@
  *
  * The drawing itself happens in the native module `RadioArt` (there is no way
  * to rasterise a view from JS on React Native). On a build without the
- * module — a dev client that predates it — `ensureRadioIcon` gives up and
+ * module - a dev client that predates it - `ensureRadioIcon` gives up and
  * RadioCard draws the same collage as live views instead, which is the same
  * picture for as long as the shelf is on screen.
  */
