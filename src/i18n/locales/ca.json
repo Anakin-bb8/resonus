@@ -672,7 +672,6 @@
   "Playing on other devices": "El que sona en altres dispositius",
   "At the top of Home, what is playing in your other apps and devices, ready to carry on here.": "A dalt de tot a Inici, el que sona a les teves altres apps i dispositius, a punt per continuar aquí.",
   "Left on {player}": "Ho vas deixar a {player}",
-  "Navigation bar blur": "Desenfocament de la barra de navegació",
   "Mini player blur": "Desenfocament del mini reproductor",
   "Playing the file costs no data. Choose otherwise if your downloads are smaller copies. Offline, the file is always used.": "Reproduir el fitxer no gasta dades. Tria una altra cosa si les teves descàrregues són còpies més petites. Sense connexió sempre es fa servir el fitxer.",
   "MP3, AAC, Opus and other lossy files stream as they are. Only files like FLAC are transcoded.": "Els MP3, AAC, Opus i altres fitxers amb pèrdua sonen tal com són. Només es transcodifiquen fitxers com FLAC.",
@@ -787,7 +786,7 @@
   "Active": "Activa",
   "Remove custom font": "Treu la font personalitzada",
   "Navigation bar style": "Estil de la barra de navegació",
-  "Flat, or black fading out at the top edge. Gradient ignores the blur.": "Llisa, o negra i esvaint-se cap a la vora superior. El degradat ignora el desenfocament.",
   "Solid": "Llisa",
-  "Gradient": "Degradat"
+  "Gradient": "Degradat",
+  "Blur": "Desenfocament"
 }

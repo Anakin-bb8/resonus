@@ -685,7 +685,6 @@
   "Playing on other devices": "Lo que suena en otros dispositivos",
   "At the top of Home, what is playing in your other apps and devices, ready to carry on here.": "Arriba del todo en Inicio, lo que suena en tus otras apps y dispositivos, listo para seguir aquí.",
   "Left on {player}": "Lo dejaste en {player}",
-  "Navigation bar blur": "Desenfoque de la barra de navegación",
   "Mini player blur": "Desenfoque del mini reproductor",
   "Playing the file costs no data. Choose otherwise if your downloads are smaller copies. Offline, the file is always used.": "Reproducir el fichero no gasta datos. Elige otra cosa si tus descargas son copias más pequeñas. Sin conexión siempre se usa el fichero.",
   "MP3, AAC, Opus and other lossy files stream as they are. Only files like FLAC are transcoded.": "Los MP3, AAC, Opus y demás archivos con pérdida suenan tal cual. Solo se transcodifican archivos como FLAC.",
@@ -787,7 +786,7 @@
   "Radios updated": "Radios actualizadas",
   "Couldn't refresh the radios": "No se pudieron actualizar las radios",
   "Navigation bar style": "Estilo de la barra de navegación",
-  "Flat, or black fading out at the top edge. Gradient ignores the blur.": "Lisa, o negra y desvaneciéndose hacia el borde superior. El degradado ignora el desenfoque.",
   "Solid": "Lisa",
-  "Gradient": "Degradado"
+  "Gradient": "Degradado",
+  "Blur": "Desenfoque"
 }
