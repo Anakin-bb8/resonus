@@ -595,6 +595,23 @@ export function TrackListView({
     extrapolateRight: 'clamp',
   });
 
+  // Which of the two circles shows. Until the bar reaches it, the one laid out
+  // in the header: it is part of the list, so Android's overscroll stretch
+  // (which moves no offset, so nothing driven by the offset can follow it)
+  // takes it along with the buttons beside it. From there the copy over the
+  // bar, sitting on exactly the same spot at the switch. Both on the native
+  // driver, so the swap lands on one frame.
+  const slotOpacity = scrollY.interpolate({
+    inputRange: [behindAt - 1, behindAt],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+  const dockOpacity = scrollY.interpolate({
+    inputRange: [behindAt - 1, behindAt],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
   // The threshold the listener reads, kept with what it depends on.
   useLayoutEffect(() => {
     behindAtRef.current = playContentY > 0 ? behindAt : Infinity;
@@ -638,13 +655,13 @@ export function TrackListView({
     void onPlay(0, { shuffled: true });
   }
 
-  // The play button: the one and only one, so nothing about it fades or is
-  // swapped for anything else. It follows the place laid out for it in the
+  // The play button over the bar. It follows the place laid out for it in the
   // header - the search row's height riding in the outer wrapper, the scroll
   // in the one inside it - until it reaches the bar's line, and holds there:
   // half in the bar, half below its lower edge. Drawn after the bar (below),
-  // so it is always in front of it; while the bar has not reached it yet, it
-  // leaves the taps (and the screen reader) to the place in the header.
+  // so it is in front of it. Until the bar reaches it, it is the header's own
+  // circle that shows (see `slotOpacity`), and the taps and the screen reader
+  // are the header's too.
   const playOverlay =
     searching || playContentY <= 0 ? null : (
       <Animated.View
@@ -654,7 +671,7 @@ export function TrackListView({
         style={[styles.playDock, { right: centredPadding(screenW, spacing.lg) }]}
       >
         <Animated.View style={{ transform: [{ translateY: searchH }] }}>
-          <Animated.View style={{ transform: [{ translateY: playDockY }] }}>
+          <Animated.View style={{ opacity: dockOpacity, transform: [{ translateY: playDockY }] }}>
             <Pressable
               style={[styles.playButton, { backgroundColor: colors.accent }]}
               accessibilityRole="button"
@@ -1044,9 +1061,8 @@ export function TrackListView({
                     color={shuffleActive ? colors.accent : colors.textSecondary}
                   />
                 </Pressable>
-                {/* What the button does while it is still in the header: laid
-                    out where it goes, transparent because the circle is drawn
-                    above the bar (it is always above it now), and taking the
+                {/* The button while it is still in the header: drawn here so
+                    it moves with the list, overscroll included, and taking the
                     taps from there down - a dragger that starts on it is the
                     list's, as it always was. */}
                 <Pressable
@@ -1060,7 +1076,16 @@ export function TrackListView({
                   accessibilityRole="button"
                   accessibilityLabel={t('Play')}
                   onPress={() => songs.length > 0 && onPlay(0)}
-                />
+                >
+                  <Animated.View
+                    style={[
+                      styles.playButton,
+                      { backgroundColor: colors.accent, opacity: slotOpacity },
+                    ]}
+                  >
+                    <Icon name="play" size={28} color={colors.onAccent} />
+                  </Animated.View>
+                </Pressable>
               </View>
             </View>
 
@@ -1468,8 +1493,7 @@ const styles = themed((colors) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // The place the button takes in the header: the size and nothing else, no
-  // colour - the circle itself is drawn above the bar, always over this.
+  // The place the button takes in the header.
   playSlot: {
     width: PLAY_SIZE,
     height: PLAY_SIZE,

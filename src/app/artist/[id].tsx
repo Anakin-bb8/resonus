@@ -219,6 +219,20 @@ export default function ArtistScreen() {
     extrapolateLeft: 'extend',
     extrapolateRight: 'clamp',
   });
+  // Which circle shows: the actions row's own until the bar reaches it, so
+  // Android's overscroll stretch takes it along with the row, then the copy
+  // over the bar, on the same spot at the switch (see TrackListView).
+  const slotOpacity = scrollY.interpolate({
+    inputRange: [behindAt - 1, behindAt],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+  const dockOpacity = scrollY.interpolate({
+    inputRange: [behindAt - 1, behindAt],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
   // The threshold the listener reads, kept with what it depends on.
   useLayoutEffect(() => {
     behindAtRef.current = behindAt;
@@ -458,18 +472,20 @@ export default function ArtistScreen() {
     <Icon name={showPause ? 'pause' : 'play'} size={28} color={colors.onAccent} />
   );
 
-  // The play button: the one and only one, so nothing about it fades or is
-  // swapped for anything else. It follows the place laid out for it in the
+  // The play button over the bar. It follows the place laid out for it in the
   // actions row until it reaches the bar's line, and holds there - half in the
-  // bar, half below its lower edge. Drawn after the bar (below), so it is
-  // always in front of it; while the bar has not reached it yet, it leaves the
-  // taps (and the screen reader) to the place in the header.
+  // bar, half below its lower edge. Drawn after the bar (below), so it is in
+  // front of it. Until the bar reaches it, the row's own circle is the one
+  // that shows (see `slotOpacity`), with the taps and the screen reader.
   const playOverlay = (
     <Animated.View
       pointerEvents={overBar ? 'auto' : 'none'}
       accessibilityElementsHidden={!overBar}
       importantForAccessibility={overBar ? 'auto' : 'no-hide-descendants'}
-      style={[styles.playDock, { right: spacing.lg, transform: [{ translateY: playDockY }] }]}
+      style={[
+        styles.playDock,
+        { right: spacing.lg, opacity: dockOpacity, transform: [{ translateY: playDockY }] },
+      ]}
     >
       <Pressable
         style={styles.playButton}
@@ -612,7 +628,11 @@ export default function ArtistScreen() {
             accessibilityRole="button"
             accessibilityLabel={showPause ? t('Pause') : t('Play')}
             onPress={onPressPlay}
-          />
+          >
+            <Animated.View style={[styles.playButton, { opacity: slotOpacity }]}>
+              {playGlyph}
+            </Animated.View>
+          </Pressable>
         </View>
 
         {top.length > 0 ? (
@@ -985,8 +1005,7 @@ const styles = themed((colors) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // The place the button takes in the actions row: the size and nothing else,
-  // no colour - the circle itself is drawn above the bar, always over this.
+  // The place the button takes in the actions row.
   playSlot: {
     width: PLAY_SIZE,
     height: PLAY_SIZE,
