@@ -135,6 +135,12 @@ function pickIosColor(
  * dark band gives white text. Saturation is allowed a little further up there
  * because at that lightness a clamp of 0.55 comes out as grey.
  */
+/** A colour already read off a cover, brought into another appearance's band:
+ *  the same hue, the lightness and saturation the other theme uses. */
+export function tintForMode(hex: string, mode: ThemeMode, vivid = false): string {
+  return normalize(hex, mode, vivid);
+}
+
 function normalize(hex: string, mode: ThemeMode, vivid: boolean): string {
   const rgb = hexToRgb(hex);
   if (!rgb) return hex;

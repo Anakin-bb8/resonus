@@ -188,11 +188,11 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
+| `{artist} Radio` |  |
 | `Based on the tracks in this radio` |  |
 | `Couldn't build the radio.` |  |
 | `Refresh` | Ask the server for this playlist again, in case it changed elsewhere. Also the button under suggested tracks to regenerate them |
 | `Suggested tracks` | Section heading at the bottom of a playlist: songs the server recommends based on what is already in the playlist |
-| `The {artist} Radio` |  |
 | `With {artists} and more` |  |
 
 ## Browse › Albums

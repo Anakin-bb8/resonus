@@ -301,7 +301,7 @@
   "Queue cleared": "Queue cleared",
   "Radio": "Radio",
   "Radios": "Radios",
-  "The {artist} Radio": "The {artist} Radio",
+  "{artist} Radio": "{artist} Radio",
   "With {artists} and more": "With {artists} and more",
   "Couldn't build the radio.": "Couldn't build the radio.",
   "Rate": "Rate",

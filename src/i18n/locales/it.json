@@ -551,7 +551,7 @@
   "Radio": "Radio",
   "Radio station art": "Immagini stazioni radio",
   "Radios": "Radio",
-  "The {artist} Radio": "Radio di {artist}",
+  "{artist} Radio": "Radio di {artist}",
   "With {artists} and more": "Con {artists} e molti altri",
   "Couldn't build the radio.": "Impossibile creare la radio.",
   "Rating": "Valutazione",

@@ -27,7 +27,7 @@ export interface RadioArtist {
   coverArt?: string;
 }
 
-/** One Home radio. `seed` is the artist in its title ("The … Radio"). */
+/** One Home radio. `seed` is the artist in its title ("… Radio"). */
 export interface RadioDef {
   seed: RadioArtist;
   /** Artists mixed in beside the seed's own top tracks. */

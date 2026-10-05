@@ -759,7 +759,7 @@
   "Precise timing": "Temps exactes",
   "Asks the file for frame-exact seeks and durations before playing. On a stream with no index that means scanning it first, which is the wait before a track starts. Off, tracks start at once: the clock still follows the audio, seeks may land a fraction of a second off.": "Demana al fitxer salts i durades exactes al fotograma abans de reproduir. En un stream sense índex això vol dir recórrer-lo primer, que és l'espera abans que comenci una cançó. Desactivat, les cançons comencen de seguida: el rellotge segueix l'àudio igualment, i un salt pot caure una fracció de segon desviat.",
   "Radios": "Ràdios",
-  "The {artist} Radio": "Ràdio de {artist}",
+  "{artist} Radio": "Ràdio de {artist}",
   "With {artists} and more": "Amb {artists} i més",
   "Couldn't build the radio.": "No s'ha pogut crear la ràdio.",
   "Animated cover frame rate": "Fotogrames de la caràtula animada",

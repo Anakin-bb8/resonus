@@ -768,7 +768,7 @@
   "Precise timing": "Tiempos exactos",
   "Asks the file for frame-exact seeks and durations before playing. On a stream with no index that means scanning it first, which is the wait before a track starts. Off, tracks start at once: the clock still follows the audio, seeks may land a fraction of a second off.": "Pide al archivo saltos y duraciones exactos al fotograma antes de reproducir. En un stream sin índice eso supone recorrerlo primero, que es la espera antes de que empiece una canción. Desactivado, las canciones empiezan al momento: el reloj sigue al audio igualmente, y un salto puede caer una fracción de segundo desviado.",
   "Radios": "Radios",
-  "The {artist} Radio": "Radio de {artist}",
+  "{artist} Radio": "Radio de {artist}",
   "With {artists} and more": "Con {artists} y más",
   "Couldn't build the radio.": "No se pudo crear la radio.",
   "Animated cover frame rate": "Fotogramas de la carátula animada",

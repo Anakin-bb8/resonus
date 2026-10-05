@@ -2,7 +2,7 @@
  * The radios on Home: which artists get one, what goes in it, and when the
  * set is rebuilt.
  *
- * A radio is a seed artist (the one in its title, "The … Radio") plus similar
+ * A radio is a seed artist (the one in its title, "… Radio") plus similar
  * artists mixed beside it - never a saved playlist: nothing is written to
  * the server. The def carries a snapshot of the tracks it opened with, so
  * the screen is already full the first time it is drawn, and a fresh list is

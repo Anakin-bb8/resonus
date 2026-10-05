@@ -10,7 +10,8 @@ import { songsLabel } from '@/i18n';
 import { collageCovers, textOn } from '@/lib/radioArt';
 import { useSettings } from '@/store/settings';
 import { useRadios, type RadioDef } from '@/store/radios';
-import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
+import { tintForMode } from '@/hooks/useDominantColor';
+import { colors, fontSize, radius, spacing, themed, useTheme, useThemeMode } from '@/theme';
 
 /**
  * The icon as the native module draws it, in views: same layout, so the
@@ -20,14 +21,17 @@ function RadioCollage({
   def,
   width,
   bare,
+  color,
 }: {
   def: RadioDef;
   width: number;
+  /** The background, when it is not the one the radio was built with. */
+  color?: string;
   /** No words on the picture: the screen that wears this as its header says
    *  the name underneath it already. */
   bare?: boolean;
 }) {
-  const bg = def.color || colors.surfaceHighlight;
+  const bg = color || def.color || colors.surfaceHighlight;
   const ink = textOn(bg);
   const covers = collageCovers(def);
   const artists = covers.length;
@@ -110,6 +114,10 @@ export function RadioArt({
   padTop?: number;
 }) {
   const uri = useRadios((s) => s.icons[def.seed.id]);
+  // The screen's header takes the colour in the current appearance, like the
+  // gradient it runs into; the card keeps the one its icon file was drawn in.
+  const mode = useThemeMode();
+  const tint = bare && def.color ? tintForMode(def.color, mode, true) : undefined;
   const height = cropHeight ?? width;
   // Corners only when the art is the card's full square: the screen's cover
   // runs edge to edge of the display and has none. The frame wears the radio
@@ -120,12 +128,12 @@ export function RadioArt({
     height,
     overflow: 'hidden' as const,
     borderRadius: cropHeight == null ? radius.md : 0,
-    backgroundColor: def.color || colors.surfaceHighlight,
+    backgroundColor: tint || def.color || colors.surfaceHighlight,
   };
   const art = !bare && uri ? (
     <Image source={{ uri }} style={{ width, height: width }} contentFit="cover" transition={150} />
   ) : (
-    <RadioCollage def={def} width={width} bare={bare} />
+    <RadioCollage def={def} width={width} bare={bare} color={tint} />
   );
   if (height >= width) return <View style={frame}>{art}</View>;
   if (bare) {
@@ -137,7 +145,7 @@ export function RadioArt({
     return (
       <View style={frame}>
         <View style={{ position: 'absolute', left: (width - side) / 2, top }}>
-          <RadioCollage def={def} width={side} bare />
+          <RadioCollage def={def} width={side} bare color={tint} />
         </View>
       </View>
     );

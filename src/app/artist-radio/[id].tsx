@@ -20,6 +20,7 @@ import { Message } from '@/components/Message';
 import { RadioArt } from '@/components/RadioCard';
 import { SuggestedTracks } from '@/components/SuggestedTracks';
 import { TOPBAR_H, TrackListView } from '@/components/TrackListView';
+import { tintForMode } from '@/hooks/useDominantColor';
 import { useInsets } from '@/hooks/useInsets';
 import { useScreenSize } from '@/hooks/useScreenSize';
 import { songsLabel, useT } from '@/i18n';
@@ -29,7 +30,7 @@ import { currentSong, usePlayerStore } from '@/store/player';
 import { useRadios, type RadioDef } from '@/store/radios';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
-import { themed, useTheme } from '@/theme';
+import { themed, useTheme, useThemeMode } from '@/theme';
 
 /** Fisher–Yates, so shuffle plays this radio's own list in another order
  *  (the queue shows exactly what is playing, which a mode flag wouldn't). */
@@ -48,6 +49,9 @@ export default function ArtistRadioScreen() {
   useTheme();
   const { width } = useScreenSize();
   const insets = useInsets();
+  // The colour was read in whichever appearance the radio was built under;
+  // the header takes it in this one, as an album's does.
+  const mode = useThemeMode();
   const { id } = useLocalSearchParams<{ id: string }>();
   const radioId = id ?? '';
   const t = useT();
@@ -93,7 +97,7 @@ export default function ArtistRadioScreen() {
   });
   const tracks = def?.tracks?.length ? def.tracks : (tracksQuery.data ?? []);
 
-  const title = def ? t('The {artist} Radio', { artist: def.seed.name }) : '';
+  const title = def ? t('{artist} Radio', { artist: def.seed.name }) : '';
   const href = `/artist-radio/${radioId}`;
   const similarNames = def?.similar
     .slice(0, 3)
@@ -127,7 +131,7 @@ export default function ArtistRadioScreen() {
         similarNames ? t('With {artists} and more', { artists: similarNames }) : undefined
       }
       meta={tracks.length > 0 ? songsLabel(tracks.length, lang) : undefined}
-      accentColor={def?.color || undefined}
+      accentColor={def?.color ? tintForMode(def.color, mode, true) : undefined}
       songs={tracks}
       currentId={playing?.id}
       showArtwork={showListArtwork}
