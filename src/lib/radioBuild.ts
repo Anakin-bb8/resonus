@@ -36,6 +36,10 @@ import { themeMode } from '@/theme';
 /** How many radios the section offers. */
 export const RADIO_SEEDS = 6;
 
+/** The artists a build chooses from: the most played, this many deep, so
+ *  skipping the recently used still leaves unplayed favourites. */
+const SEED_POOL = 24;
+
 /** How many tracks a radio aims for. */
 export const RADIO_TARGET = 30;
 
@@ -62,7 +66,7 @@ function shuffled<T>(arr: T[]): T[] {
  * songs, ordered by plays. The cover is the album's, not the artist's — what
  * `buildRadioDef` fetches upgrades it to the artist's own when there is one.
  */
-async function serverSeeds(limit: number): Promise<RadioArtist[]> {
+async function serverSeeds(): Promise<RadioArtist[]> {
   const songs = await getMostPlayedSongs(100);
   const byArtist = new Map<string, { artist: RadioArtist; plays: number }>();
   for (const s of songs) {
@@ -74,39 +78,56 @@ async function serverSeeds(limit: number): Promise<RadioArtist[]> {
   }
   return [...byArtist.values()]
     .sort((x, y) => y.plays - x.plays)
-    .slice(0, limit)
+    .slice(0, SEED_POOL)
     .map((x) => x.artist);
 }
 
 /**
  * The radio seeds: the artists behind the most played songs, and any
- * artists at all filling the rest. Six radios about artists you never
- * played beats no radios, and the section still hides itself when even
- * that comes back empty (a library with no artists).
+ * artists at all filling the rest — but never the ones the last builds just
+ * used, so every refresh brings new radios instead of the same six. Six
+ * radios about artists you never played beats no radios, and the section
+ * still hides itself when even that comes back empty (a library with no
+ * artists). When the library is smaller than the memory, repeats are
+ * allowed: the same radio again beats no radio.
  */
-export async function pickSeeds(limit: number): Promise<RadioArtist[]> {
+export async function pickSeeds(limit: number, exclude: Set<string> = new Set()): Promise<RadioArtist[]> {
   const out: RadioArtist[] = [];
   const seen = new Set<string>();
-  const take = (list: RadioArtist[]) => {
+  const take = (list: RadioArtist[], skipExcluded: boolean) => {
     for (const a of list) {
       if (out.length >= limit || seen.has(a.id)) continue;
+      if (skipExcluded && exclude.has(a.id)) continue;
       seen.add(a.id);
       out.push(a);
     }
   };
 
+  let ranked: RadioArtist[] = [];
   try {
-    take(await serverSeeds(limit));
+    ranked = await serverSeeds();
   } catch {
     // The play counts didn't answer; the tier below still can.
   }
-  if (out.length < limit) {
-    try {
-      take(shuffled(await getArtists()).map((a: Artist) => ({ id: a.id, name: a.name, coverArt: a.coverArt })));
-    } catch {
-      // Nothing left to try.
+  take(ranked, true);
+  let all: RadioArtist[] | null = null;
+  const library = async (): Promise<RadioArtist[]> => {
+    if (!all) {
+      try {
+        all = shuffled(await getArtists()).map((a: Artist) => ({
+          id: a.id,
+          name: a.name,
+          coverArt: a.coverArt,
+        }));
+      } catch {
+        all = [];
+      }
     }
-  }
+    return all;
+  };
+  if (out.length < limit) take(await library(), true);
+  if (out.length < limit) take(ranked, false);
+  if (out.length < limit) take(await library(), false);
   return out.slice(0, limit);
 }
 
@@ -286,7 +307,10 @@ export function refreshRadios(opts: { force?: boolean } = {}): Promise<RadioDef[
     if (!opts.force && !radiosStale(useRadios.getState().defs, staleMs)) {
       return useRadios.getState().defs;
     }
-    const seeds = await pickSeeds(RADIO_SEEDS);
+    const seeds = await pickSeeds(
+      RADIO_SEEDS,
+      new Set([...useRadios.getState().defs.map((d) => d.seed.id), ...useRadios.getState().pastSeeds]),
+    );
     const defs = (await Promise.all(seeds.map(buildRadioDef))).filter(
       (d): d is RadioDef => d !== null,
     );
@@ -299,6 +323,7 @@ export function refreshRadios(opts: { force?: boolean } = {}): Promise<RadioDef[
       }),
     );
     await useRadios.getState().setDefs(defs);
+    await useRadios.getState().rememberSeeds(defs.map((d) => d.seed.id));
     void ensureRadioIcons(defs);
     return useRadios.getState().defs;
   })().finally(() => {

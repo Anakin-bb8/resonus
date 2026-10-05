@@ -79,26 +79,36 @@ interface PersistedShape {
   scope: string;
   defs: RadioDef[];
   icons: Record<string, string>;
+  pastSeeds?: string[];
 }
+
+/** How many recent seed artists the next build avoids: three rebuilds back,
+ *  so consecutive refreshes change the shelf instead of remaking it. */
+const PAST_SEEDS_KEPT = 18;
 
 interface RadiosState {
   defs: RadioDef[];
   /** Radio id (its seed's id) → uri of the generated icon file. */
   icons: Record<string, string>;
+  /** Seed artists the last builds used: the next build picks around them,
+   *  so a refresh brings new radios instead of the same six. */
+  pastSeeds: string[];
   hydrated: boolean;
   hydrate: () => Promise<void>;
   setDefs: (defs: RadioDef[]) => Promise<void>;
   setIcon: (id: string, uri: string) => void;
+  rememberSeeds: (ids: string[]) => Promise<void>;
 }
 
 // One write at a time: the icons for six radios finish in parallel, and
 // six overlapping read-modify-writes of the index would lose all but one.
 let writing: Promise<void> = Promise.resolve();
 
-async function persist(defs: RadioDef[], icons: Record<string, string>): Promise<void> {
+async function persistNow(): Promise<void> {
+  const { defs, icons, pastSeeds } = useRadios.getState();
   try {
     await FileSystem.makeDirectoryAsync(RADIO_DIR, { intermediates: true });
-    const body: PersistedShape = { scope: hashKey(profileScopeId()), defs, icons };
+    const body: PersistedShape = { scope: hashKey(profileScopeId()), defs, icons, pastSeeds };
     await FileSystem.writeAsStringAsync(INDEX_PATH, JSON.stringify(body));
   } catch (e) {
     // Radios are a suggestion, not a library: a failed write costs the next
@@ -107,14 +117,15 @@ async function persist(defs: RadioDef[], icons: Record<string, string>): Promise
   }
 }
 
-function enqueue(defs: RadioDef[], icons: Record<string, string>): Promise<void> {
-  writing = writing.then(() => persist(defs, icons));
+function enqueue(): Promise<void> {
+  writing = writing.then(() => persistNow());
   return writing;
 }
 
 export const useRadios = create<RadiosState>((set, get) => ({
   defs: [],
   icons: {},
+  pastSeeds: [],
   hydrated: false,
 
   hydrate: async () => {
@@ -130,6 +141,9 @@ export const useRadios = create<RadiosState>((set, get) => ({
           set({
             defs: Array.isArray(parsed.defs) ? parsed.defs : [],
             icons: parsed.icons && typeof parsed.icons === 'object' ? parsed.icons : {},
+            pastSeeds: Array.isArray(parsed.pastSeeds)
+              ? parsed.pastSeeds.filter((id): id is string => typeof id === 'string')
+              : [],
             hydrated: true,
           });
           return;
@@ -153,12 +167,25 @@ export const useRadios = create<RadiosState>((set, get) => ({
       void FileSystem.deleteAsync(radioIconPath(id), { idempotent: true }).catch(() => {});
     }
     set({ defs, icons });
-    await enqueue(defs, icons);
+    await enqueue();
   },
 
   setIcon: (id, uri) => {
     const icons = { ...get().icons, [id]: uri };
     set({ icons });
-    void enqueue(get().defs, icons);
+    void enqueue();
+  },
+
+  rememberSeeds: async (ids) => {
+    const seen = new Set<string>();
+    const next: string[] = [];
+    for (const id of [...ids, ...get().pastSeeds]) {
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      next.push(id);
+      if (next.length >= PAST_SEEDS_KEPT) break;
+    }
+    set({ pastSeeds: next });
+    await enqueue();
   },
 }));
