@@ -224,3 +224,4 @@ missing, so it is much better said early than translated around.
 | Polski | [pegaz19803-spec](https://github.com/pegaz19803-spec) |
 | Svenska | [Jonatan Nyberg](https://github.com/NickWick13) |
 | Português (Brasil) | [Victor Santos](https://github.com/vicsantus) |
+| Türkçe | [Section](https://github.com/sectns) |

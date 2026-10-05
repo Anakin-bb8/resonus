@@ -15,6 +15,7 @@ Releases before 0.2.1 are only listed on the
 - An optional gradient style for the navigation bar (#252).
 - iOS: a home screen widget with the current track and a play/pause button (#252).
 - iOS: a Precise timing switch and a frame rate choice for animated lock screen covers (#252).
+- Turkish, thanks to @sectns (#250).
 
 ### Changed
 
