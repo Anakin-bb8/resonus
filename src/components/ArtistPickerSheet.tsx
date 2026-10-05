@@ -36,8 +36,13 @@ export function ArtistPickerSheet() {
   if (!artists) return null;
 
   const go = (id: string) => {
-    close();
-    router.push(`/artist/${id}`);
+    // The push waits for the sheet's exit animation, like the song, media
+    // and info sheets do: pushing while the Modal is still up races its
+    // unmount with the stack commit, and on iOS that race crashes.
+    dismiss(() => {
+      closeNow();
+      router.push(`/artist/${id}`);
+    });
   };
 
   return (

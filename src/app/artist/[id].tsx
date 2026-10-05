@@ -855,10 +855,9 @@ export default function ArtistScreen() {
               {albums.length > 0 ? (
                 <Pressable
                   style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
-                  onPress={() => {
-                    close();
-                    router.push(`/artist/discography/${id}`);
-                  }}
+                onPress={() => {
+                  close(() => router.push(`/artist/discography/${id}`));
+                }}
                 >
                   <Icon name="albums-outline" size={24} color={colors.text} />
                   <Text style={styles.actionText}>{t('All releases')}</Text>

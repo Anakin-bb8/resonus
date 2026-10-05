@@ -27,8 +27,10 @@ export function SheetModal({
   /** Runs once the sheet is off screen, however it was closed. For an action
    *  that unmounts the sheet along with whatever declares it. */
   onClosed?: () => void;
-  /** `close()` closes the sheet. */
-  children: (close: () => void) => ReactNode;
+  /** `close()` closes the sheet; `close(after)` runs `after` once the sheet is
+   *  off screen, for actions that navigate away — pushing while the Modal is
+   *  still up races its unmount with the stack commit (see ArtistPickerSheet). */
+  children: (close: (after?: () => void) => void) => ReactNode;
 }) {
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
@@ -44,7 +46,11 @@ export function SheetModal({
   );
   // The sheet slides down and only then is the Modal dismissed. Actions close
   // through here, so choosing one looks the same as swiping it away.
-  const close = () => dismiss(closeNow);
+  const close = (after?: () => void) =>
+    dismiss(() => {
+      closeNow();
+      after?.();
+    });
 
   return (
     <Modal
