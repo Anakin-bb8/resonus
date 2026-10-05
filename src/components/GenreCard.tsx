@@ -132,6 +132,10 @@ export const GenreCard = memo(function GenreCard({
   return (
     <Link href={`/genre/${encodeURIComponent(name)}`} asChild>
       <Pressable
+        // Painted once and moved as a texture: two turned covers with shadows,
+        // clipped to a rounded card, cost every frame of a scroll otherwise,
+        // and the grid stuttered more with each card whose art arrived.
+        renderToHardwareTextureAndroid
         style={StyleSheet.flatten([
           styles.card,
           { backgroundColor: card },
