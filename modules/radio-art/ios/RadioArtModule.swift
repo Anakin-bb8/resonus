@@ -74,10 +74,15 @@ public class RadioArtModule: Module {
       // live collage paints in, so the file and the views are one picture.
       let sideR = size.width * 0.20
       let centerR = size.width * 0.30
-      drawCircle(context: c, cx: size.width * 0.10, cy: size.height * 0.54, r: sideR,
-                 image: downloaded.count > 1 ? downloaded[1] : nil, background: background)
-      drawCircle(context: c, cx: size.width * 0.90, cy: size.height * 0.54, r: sideR,
-                 image: downloaded.count > 2 ? downloaded[2] : nil, background: background)
+      // A side with no artist behind it is left out, not drawn as an empty disc.
+      if urls.count > 1 {
+        drawCircle(context: c, cx: size.width * 0.10, cy: size.height * 0.54, r: sideR,
+                   image: downloaded.count > 1 ? downloaded[1] : nil, background: background)
+      }
+      if urls.count > 2 {
+        drawCircle(context: c, cx: size.width * 0.90, cy: size.height * 0.54, r: sideR,
+                   image: downloaded.count > 2 ? downloaded[2] : nil, background: background)
+      }
       drawCircle(context: c, cx: size.width * 0.50, cy: size.height * 0.46, r: centerR,
                  image: downloaded.first ?? nil, background: background)
 

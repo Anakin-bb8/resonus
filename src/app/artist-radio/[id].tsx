@@ -11,25 +11,26 @@
  * the first frame; the fresh list follows when the server answers, and the
  * screen plays whichever of the two it has.
  */
-import { useQuery } from '@tanstack/react-query';
-import { useLocalSearchParams } from 'expo-router';
-import { View } from 'react-native';
+import { useQuery } from "@tanstack/react-query";
+import { useLocalSearchParams } from "expo-router";
+import { View } from "react-native";
 
-import { getArtist } from '@/api/data';
-import { AlbumRowsSkeleton } from '@/components/AlbumRowsSkeleton';
-import { Message } from '@/components/Message';
-import { RadioArt } from '@/components/RadioCard';
-import { SuggestedTracks } from '@/components/SuggestedTracks';
-import { TrackListView } from '@/components/TrackListView';
-import { useScreenSize } from '@/hooks/useScreenSize';
-import { songsLabel, useT } from '@/i18n';
-import { haptic } from '@/lib/haptics';
-import { buildRadioDef, radioTracks } from '@/lib/radioBuild';
-import { currentSong, usePlayerStore } from '@/store/player';
-import { useRadios, type RadioDef } from '@/store/radios';
-import { useSettings } from '@/store/settings';
-import { useToast } from '@/store/toast';
-import { themed, useTheme } from '@/theme';
+import { getArtist } from "@/api/data";
+import { AlbumRowsSkeleton } from "@/components/AlbumRowsSkeleton";
+import { Message } from "@/components/Message";
+import { RadioArt } from "@/components/RadioCard";
+import { SuggestedTracks } from "@/components/SuggestedTracks";
+import { TOPBAR_H, TrackListView } from "@/components/TrackListView";
+import { useInsets } from "@/hooks/useInsets";
+import { useScreenSize } from "@/hooks/useScreenSize";
+import { songsLabel, useT } from "@/i18n";
+import { haptic } from "@/lib/haptics";
+import { buildRadioDef, radioTracks } from "@/lib/radioBuild";
+import { currentSong, usePlayerStore } from "@/store/player";
+import { useRadios, type RadioDef } from "@/store/radios";
+import { useSettings } from "@/store/settings";
+import { useToast } from "@/store/toast";
+import { themed, useTheme } from "@/theme";
 
 /** Fisher–Yates, so shuffle plays this radio's own list in another order
  *  (the queue shows exactly what is playing, which a mode flag wouldn't). */
@@ -47,8 +48,9 @@ export default function ArtistRadioScreen() {
   // mounted while you are on another one, out of reach of anything else.
   useTheme();
   const { width } = useScreenSize();
+  const insets = useInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const radioId = id ?? '';
+  const radioId = id ?? "";
   const t = useT();
   const toast = useToast((s) => s.show);
   const playQueue = usePlayerStore((s) => s.playQueue);
@@ -58,16 +60,22 @@ export default function ArtistRadioScreen() {
   const lang = useSettings((s) => s.language);
 
   const defQuery = useQuery({
-    queryKey: ['radio-def', radioId],
+    queryKey: ["radio-def", radioId],
     queryFn: async (): Promise<RadioDef> => {
-      const saved = useRadios.getState().defs.find((d) => d.seed.id === radioId);
+      const saved = useRadios
+        .getState()
+        .defs.find((d) => d.seed.id === radioId);
       if (saved) return saved;
       // Straight into the screen without Home having built anything: make
       // just this one (and leave it out of the store - the section's own
       // refresh decides what belongs there).
       const { artist } = await getArtist(radioId);
-      const built = await buildRadioDef({ id: radioId, name: artist.name, coverArt: artist.coverArt });
-      if (!built) throw new Error('radio');
+      const built = await buildRadioDef({
+        id: radioId,
+        name: artist.name,
+        coverArt: artist.coverArt,
+      });
+      if (!built) throw new Error("radio");
       return built;
     },
     staleTime: Number.POSITIVE_INFINITY,
@@ -76,7 +84,7 @@ export default function ArtistRadioScreen() {
   const def = defQuery.data;
 
   const tracksQuery = useQuery({
-    queryKey: ['radio-tracks', radioId],
+    queryKey: ["radio-tracks", radioId],
     queryFn: () => radioTracks(def as RadioDef),
     enabled: !!def,
     staleTime: 10 * 60 * 1000,
@@ -87,12 +95,12 @@ export default function ArtistRadioScreen() {
   // never an empty page.
   const tracks = tracksQuery.data ?? def?.tracks ?? [];
 
-  const title = def ? t('The {artist} Radio', { artist: def.seed.name }) : '';
+  const title = def ? t("The {artist} Radio", { artist: def.seed.name }) : "";
   const href = `/artist-radio/${radioId}`;
   const similarNames = def?.similar
     .slice(0, 3)
     .map((a) => a.name)
-    .join(', ');
+    .join(", ");
   // The picture takes the top of the display: 80% of its width, which the
   // list clamps so it always ends a little above where a square cover would
   // have, on any screen there is.
@@ -100,7 +108,7 @@ export default function ArtistRadioScreen() {
 
   const play = (index: number, opts?: { shuffled?: boolean }) => {
     if (tracks.length === 0) return;
-    haptic('medium');
+    haptic("medium");
     const list = opts?.shuffled ? shuffled(tracks) : tracks;
     void playQueue(list, index, title, href);
   };
@@ -109,16 +117,24 @@ export default function ArtistRadioScreen() {
     defQuery.isLoading || tracksQuery.isLoading ? (
       <AlbumRowsSkeleton />
     ) : defQuery.isError ? (
-      <Message text={t("Couldn't build the radio.")} onRetry={() => void defQuery.refetch()} />
+      <Message
+        text={t("Couldn't build the radio.")}
+        onRetry={() => void defQuery.refetch()}
+      />
     ) : (
-      <Message text={t("Couldn't load songs.")} onRetry={() => void tracksQuery.refetch()} />
+      <Message
+        text={t("Couldn't load songs.")}
+        onRetry={() => void tracksQuery.refetch()}
+      />
     );
 
   return (
     <TrackListView
       title={title}
       subtitle={
-        similarNames ? t('With {artists} and more', { artists: similarNames }) : undefined
+        similarNames
+          ? t("With {artists} and more", { artists: similarNames })
+          : undefined
       }
       meta={tracks.length > 0 ? songsLabel(tracks.length, lang) : undefined}
       accentColor={def?.color}
@@ -129,7 +145,13 @@ export default function ArtistRadioScreen() {
         height: coverH,
         render: (w, h) =>
           def ? (
-            <RadioArt def={def} width={w} cropHeight={h} bare />
+            <RadioArt
+              def={def}
+              width={w}
+              cropHeight={h}
+              padTop={insets.top + TOPBAR_H}
+              bare
+            />
           ) : (
             <View style={[styles.placeholder, { width: w, height: h }]} />
           ),
@@ -139,11 +161,11 @@ export default function ArtistRadioScreen() {
         tracks.length > 0 && def ? (
           <SuggestedTracks
             songs={tracks}
-            subtitle={t('Based on the tracks in this radio')}
-            addLabel={t('Add to queue')}
+            subtitle={t("Based on the tracks in this radio")}
+            addLabel={t("Add to queue")}
             onAdd={async (song) => {
               addToQueue(song);
-              toast(t('Added to queue'));
+              toast(t("Added to queue"));
               return true;
             }}
           />

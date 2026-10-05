@@ -44,9 +44,20 @@ export interface RadioDef {
 export const RADIO_DIR = FileSystem.documentDirectory + 'radios/';
 const INDEX_PATH = RADIO_DIR + 'index.json';
 
-/** Where one radio's icon is written. */
+/** Where one radio's icon is written. The number goes up when the drawing
+ *  changes, so icons from the old one are made again. */
 export function radioIconPath(id: string): string {
-  return `${RADIO_DIR}icon-${hashKey(id)}.png`;
+  return `${RADIO_DIR}icon-2-${hashKey(id)}.png`;
+}
+
+/** Keeps the icons drawn at the current path and deletes the rest. */
+function currentIcons(icons: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [id, uri] of Object.entries(icons)) {
+    if (uri === radioIconPath(id)) out[id] = uri;
+    else void FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
+  }
+  return out;
 }
 
 /** A def older than this gets rebuilt when Home asks (new listening, new
@@ -140,7 +151,8 @@ export const useRadios = create<RadiosState>((set, get) => ({
         if (parsed && parsed.scope === hashKey(profileScopeId())) {
           set({
             defs: Array.isArray(parsed.defs) ? parsed.defs : [],
-            icons: parsed.icons && typeof parsed.icons === 'object' ? parsed.icons : {},
+            icons:
+              parsed.icons && typeof parsed.icons === 'object' ? currentIcons(parsed.icons) : {},
             pastSeeds: Array.isArray(parsed.pastSeeds)
               ? parsed.pastSeeds.filter((id): id is string => typeof id === 'string')
               : [],

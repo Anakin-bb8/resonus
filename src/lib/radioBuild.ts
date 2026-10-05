@@ -305,6 +305,8 @@ export function refreshRadios(opts: { force?: boolean } = {}): Promise<RadioDef[
     await store.hydrate();
     const staleMs = radioStaleMs(useSettings.getState().radioRefreshCadence);
     if (!opts.force && !radiosStale(useRadios.getState().defs, staleMs)) {
+      // Fresh radios can still be missing an icon (one whose drawing changed).
+      void ensureRadioIcons(useRadios.getState().defs);
       return useRadios.getState().defs;
     }
     const seeds = await pickSeeds(

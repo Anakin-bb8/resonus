@@ -64,7 +64,7 @@ import { TrackRow } from './TrackRow';
 function coverSize(width: number, height: number): number {
   return Math.round(Math.min(width * 0.58, height * 0.4, 250));
 }
-const TOPBAR_H = 48;
+export const TOPBAR_H = 48;
 /** The round play button in the header: its size, and the share of it the
  *  bar holds once it reaches the bar (half inside it, half below its edge). */
 const PLAY_SIZE = 56;

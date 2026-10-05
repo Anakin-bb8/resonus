@@ -68,8 +68,9 @@ class RadioArtModule : Module() {
     // live collage paints in, so the file and the views are one picture.
     val sideR = side * 0.20f
     val centerR = side * 0.30f
-    drawCircle(canvas, side * 0.10f, side * 0.54f, sideR, covers.getOrNull(1), background)
-    drawCircle(canvas, side * 0.90f, side * 0.54f, sideR, covers.getOrNull(2), background)
+    // A side with no artist behind it is left out, not drawn as an empty disc.
+    if (urls.size > 1) drawCircle(canvas, side * 0.10f, side * 0.54f, sideR, covers[1], background)
+    if (urls.size > 2) drawCircle(canvas, side * 0.90f, side * 0.54f, sideR, covers[2], background)
     drawCircle(canvas, side * 0.50f, side * 0.46f, centerR, covers.getOrNull(0), background)
 
     // 0.1 em ≈ the 2.5 pt kern the iOS renderer draws with at this size.
