@@ -71,13 +71,14 @@ const FULL_MODAL = {
   animation: Platform.OS === 'ios' ? 'fade' : 'fade_from_bottom',
 } as const;
 
-/* The detail screens take the ordinary push, like every other screen here.
- * They were `fullScreenModal` for a while: iOS presents a full screen modal
- * over everything the app draws, and `GlobalTabBar` and `GlobalMiniPlayer`
- * live beside the Stack rather than inside it, so on those screens the bar
- * and the mini player went missing while they stayed on every other one.
- * A push is full screen too — it just stays under the two of them.
- */
+/** The detail screens are whole screens too, and a push out of the player or
+ *  one of the menus lands on iOS in a sheet — which is how they were coming
+ *  up, the same way the lyrics screen used to. Same treatment as queue and
+ *  lyrics: a full screen modal. That covers GlobalTabBar and GlobalMiniPlayer,
+ *  which live beside the Stack rather than inside it (and the Toast with
+ *  them): the ordinary push kept the bar, and the sheet came back with it.
+ *  Android keeps the push: it has no sheet to become. */
+const DETAIL_FULL = Platform.OS === 'ios' ? ({ presentation: 'fullScreenModal' } as const) : {};
 
 /*
  * There is no `dangerouslySingular` on any route here, and there is not going
@@ -331,11 +332,11 @@ export default function RootLayout() {
             >
               <Stack.Protected guard={ready}>
                 <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="album/[id]" />
-                <Stack.Screen name="playlist/[id]" />
-                <Stack.Screen name="artist/[id]" />
-                <Stack.Screen name="artist/discography/[id]" />
-                <Stack.Screen name="artist/songs/[id]" />
+                <Stack.Screen name="album/[id]" options={DETAIL_FULL} />
+                <Stack.Screen name="playlist/[id]" options={DETAIL_FULL} />
+                <Stack.Screen name="artist/[id]" options={DETAIL_FULL} />
+                <Stack.Screen name="artist/discography/[id]" options={DETAIL_FULL} />
+                <Stack.Screen name="artist/songs/[id]" options={DETAIL_FULL} />
                 <Stack.Screen name="browse/albums" />
                 <Stack.Screen name="browse/artists" />
                 <Stack.Screen name="browse/folder/[id]" />
