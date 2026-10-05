@@ -105,12 +105,15 @@ export function RadioArt({
   const uri = useRadios((s) => s.icons[def.seed.id]);
   const height = cropHeight ?? width;
   // Corners only when the art is the card's full square: the screen's cover
-  // runs edge to edge of the display and has none.
+  // runs edge to edge of the display and has none. The frame wears the radio
+  // colour behind the art: the cropped strip above it would otherwise show
+  // the page background (a black bar in the dark theme).
   const frame = {
     width,
     height,
     overflow: 'hidden' as const,
     borderRadius: cropHeight == null ? radius.md : 0,
+    backgroundColor: def.color || colors.surfaceHighlight,
   };
   const art = !bare && uri ? (
     <Image source={{ uri }} style={{ width, height: width }} contentFit="cover" transition={150} />
