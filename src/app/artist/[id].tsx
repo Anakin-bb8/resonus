@@ -861,6 +861,17 @@ export default function ArtistScreen() {
                 <Icon name="play" size={24} color={colors.text} />
                 <Text style={styles.actionText}>{t('Play discography')}</Text>
               </Pressable>
+              {/* The radio is built from the server (similar artists, top
+                  songs), so offline it is not offered. */}
+              {offline ? null : (
+                <Pressable
+                  style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+                  onPress={() => close(() => router.push(`/artist-radio/${id}`))}
+                >
+                  <Icon name="radio-outline" size={24} color={colors.text} />
+                  <Text style={styles.actionText}>{t('Go to artist radio')}</Text>
+                </Pressable>
+              )}
               {/* The way back to the one undivided list the discography was
                   before it was split into shelves (#138): the same screen the
                   shelves open, with no kind asked for.

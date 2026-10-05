@@ -613,6 +613,13 @@ export function SongMenuSheet() {
                       }}
                     />
                   ) : null}
+                  {song.artistId && !offline ? (
+                    <Action
+                      icon="radio-outline"
+                      label={t('Go to artist radio')}
+                      onPress={() => goDetail(`/artist-radio/${song.artistId}`)}
+                    />
+                  ) : null}
                   {downloaded ? (
                     <Action
                       icon="arrow-down-circle-outline"

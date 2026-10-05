@@ -792,5 +792,6 @@
   "Save as playlist": "Guardar como lista",
   "Refresh this radio": "Actualizar esta radio",
   "Radio updated": "Radio actualizada",
-  "Couldn't refresh the radio": "No se pudo actualizar la radio"
+  "Couldn't refresh the radio": "No se pudo actualizar la radio",
+  "Go to artist radio": "Ir a la radio del artista"
 }

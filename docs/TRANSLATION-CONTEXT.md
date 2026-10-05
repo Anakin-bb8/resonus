@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 792 of them.
+Every string the app can show, under the screen it shows up on. 793 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -67,6 +67,7 @@ you are actually typing into, which is easier than reading it here.
 | `Genre` | Label of a field in the song information sheet |
 | `Go to album` | Leave this sheet and open the album the song is on |
 | `Go to artist` | Leave this sheet and open the artist |
+| `Go to artist radio` |  |
 | `Home` | The first tab, and a folder in the car |
 | `Library` | The settings section, and a folder in the car |
 | `Mix of “{name}”` | What the player calls the queue once it has grown past its album into songs the app picked itself. `{name}` is the song it was grown from |
@@ -143,6 +144,7 @@ you are actually typing into, which is easier than reading it here.
 | `Downloaded` | Badge on something whose files are on the phone |
 | `EPs` | Shelf heading: records longer than a single and shorter than an album |
 | `Field recordings` | Shelf heading: records made of the world itself, nature or a city, rather than of performed music |
+| `Go to artist radio` |  |
 | `Interviews` | Shelf heading: records of somebody being interviewed, usually the artist |
 | `Live` | Shelf heading: records of a performance in front of an audience. Not the verb, and not “currently playing” |
 | `Mixtapes` | Shelf heading: MusicBrainz's “Mixtape/Street”, promotional records with new material, common in rap and hip hop. Kept as-is where the term travels |

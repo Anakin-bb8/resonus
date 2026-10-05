@@ -7,8 +7,11 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Cover } from './Cover';
 import { songsLabel } from '@/i18n';
+import { useAccent } from '@/hooks/useAccent';
 import { haptic } from '@/lib/haptics';
+import { usePlayerStore } from '@/store/player';
 import { collageCovers, textOn } from '@/lib/radioArt';
+import { PlayingBars } from './PlayingBars';
 import { openRadioMenu } from './RadioMenuSheet';
 import { useSettings } from '@/store/settings';
 import { useRadios, type RadioDef } from '@/store/radios';
@@ -171,6 +174,8 @@ export const RadioCard = memo(function RadioCard({
   // Memoised, so it has to ask for a repaint on a theme change itself.
   useTheme();
   const lang = useSettings((s) => s.language);
+  const playingHere = usePlayerStore((s) => s.sourceHref === `/artist-radio/${def.seed.id}`);
+  const accent = useAccent();
   const similar = def.similar.slice(0, 3).map((a) => a.name);
   // The seed's name is on the picture already; with nobody beside it, the
   // line says how much is in it instead of saying the name twice.
@@ -189,9 +194,17 @@ export const RadioCard = memo(function RadioCard({
         }}
       >
         <RadioArt def={def} width={width} />
-        <Text style={styles.artists} numberOfLines={1}>
-          {artists}
-        </Text>
+        {/* The radio that is playing says so where a list's playing row
+            does: the bars, and its line in the accent. */}
+        <View style={styles.caption}>
+          {playingHere ? <PlayingBars size={12} /> : null}
+          <Text
+            style={[styles.artists, playingHere && { color: accent }]}
+            numberOfLines={1}
+          >
+            {artists}
+          </Text>
+        </View>
       </Pressable>
     </Link>
   );
@@ -199,10 +212,16 @@ export const RadioCard = memo(function RadioCard({
 
 const styles = themed((t) => ({
   container: { gap: spacing.xs },
+  caption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+  },
   artists: {
+    flexShrink: 1,
     color: t.textSecondary,
     fontSize: fontSize.sm,
-    marginTop: spacing.xs,
   },
   collage: {
     // The radius is the frame's, outside: the collage only has to keep its

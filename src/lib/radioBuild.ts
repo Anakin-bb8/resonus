@@ -216,9 +216,9 @@ async function recolor(defs: RadioDef[]): Promise<RadioDef[] | null> {
  * filler) so nobody takes the list over, the same rule the player's own
  * radio extension works by (see `radioCandidates` in player.ts).
  */
-export async function radioTracks(def: RadioDef): Promise<Song[]> {
+export async function radioTracks(def: RadioDef, ownSongs?: Song[]): Promise<Song[]> {
   const [seedTop, similarLists] = await Promise.all([
-    seedSongs(def.seed),
+    ownSongs ?? seedSongs(def.seed),
     Promise.all(
       def.similar
         .slice(0, 6)
@@ -229,6 +229,12 @@ export async function radioTracks(def: RadioDef): Promise<Song[]> {
     ? await getSimilarSongs(seedTop[0].id, 30).catch(() => [] as Song[])
     : [];
   const random = await getRandomSongs(100).catch(() => [] as Song[]);
+  // An artist Last.fm has few neighbours for gets its genre instead: songs
+  // of the same style, rather than the last resort's strangers.
+  const genre = few(def.similar) ? mainGenre(seedTop) : undefined;
+  const sameGenre = genre
+    ? (await getRandomSongs(60, genre).catch(() => [] as Song[])).filter((s) => !bySeed(s, def.seed))
+    : [];
 
   const artistOf = (s: Song): string => s.artistId ?? s.artist ?? '';
   // The neighbourhood, by id and by name (a song without an id still tells
@@ -248,6 +254,7 @@ export async function radioTracks(def: RadioDef): Promise<Song[]> {
     ...similarLists.map((list) => ({ songs: shuffled(list), cap: 3 })),
     { songs: shuffled(extras.filter(inNeighborhood)), cap: 2 },
     { songs: shuffled(random.filter(inNeighborhood)), cap: 2 },
+    { songs: shuffled(sameGenre), cap: 2 },
   ].filter((p) => p.songs.length > 0);
 
   // Per pool, filter once: playable, not a repeat of a song already handed
@@ -317,6 +324,22 @@ export async function radioTracks(def: RadioDef): Promise<Song[]> {
   return picked;
 }
 
+/** Fewer similar artists than a mix can be made of. */
+function few(similar: RadioArtist[]): boolean {
+  return similar.length < 3;
+}
+
+/** The genre most of these songs carry, if any of them carry one. */
+function mainGenre(songs: Song[]): string | undefined {
+  const counts = new Map<string, number>();
+  for (const s of songs) if (s.genre) counts.set(s.genre, (counts.get(s.genre) ?? 0) + 1);
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+}
+
+/** Songs of its own a seed needs to make a radio of: below that it is a
+ *  name on somebody else's hit, and its radio would be everyone else. */
+const MIN_SEED_SONGS = 3;
+
 /** Whether a song is the seed artist's own, collaborations included: the
  *  song's `artistId` is only its first artist's. */
 function bySeed(s: Song, seed: RadioArtist): boolean {
@@ -336,7 +359,11 @@ function bySeed(s: Song, seed: RadioArtist): boolean {
  * the last resort filled it with thirty strangers.
  */
 async function seedSongs(seed: RadioArtist): Promise<Song[]> {
-  const top = await getTopSongs(seed.name, 15, seed.id).catch(() => [] as Song[]);
+  // Last.fm's top songs are matched to the library by name, which lets other
+  // artists' songs in: only the seed's own are kept.
+  const top = (await getTopSongs(seed.name, 15, seed.id).catch(() => [] as Song[])).filter((s) =>
+    bySeed(s, seed),
+  );
   if (top.length >= 5) return top;
   try {
     const { albums } = await getArtist(seed.id);
@@ -392,10 +419,27 @@ export function refreshRadios(opts: { force?: boolean } = {}): Promise<RadioDef[
       void ensureRadioIcons(useRadios.getState().defs);
       return useRadios.getState().defs;
     }
-    const seeds = await pickSeeds(
-      RADIO_SEEDS,
+    // More candidates than radios: the ones with too few songs of their own
+    // are passed over (see `MIN_SEED_SONGS`), and only when that leaves too
+    // few does the bar drop to one song.
+    const candidates = await pickSeeds(
+      RADIO_SEEDS * 3,
       new Set([...useRadios.getState().defs.map((d) => d.seed.id), ...useRadios.getState().pastSeeds]),
     );
+    const own = new Map<string, Song[]>();
+    const seeds: RadioArtist[] = [];
+    for (let i = 0; i < candidates.length && seeds.length < RADIO_SEEDS; i += RADIO_SEEDS) {
+      const batch = candidates.slice(i, i + RADIO_SEEDS);
+      const songs = await Promise.all(batch.map((c) => seedSongs(c).catch(() => [] as Song[])));
+      batch.forEach((c, j) => {
+        own.set(c.id, songs[j]);
+        if (seeds.length < RADIO_SEEDS && songs[j].length >= MIN_SEED_SONGS) seeds.push(c);
+      });
+    }
+    for (const c of candidates) {
+      if (seeds.length >= RADIO_SEEDS) break;
+      if (!seeds.includes(c) && (own.get(c.id)?.length ?? 0) > 0) seeds.push(c);
+    }
     const defs = (await Promise.all(seeds.map(buildRadioDef))).filter(
       (d): d is RadioDef => d !== null,
     );
@@ -404,7 +448,7 @@ export function refreshRadios(opts: { force?: boolean } = {}): Promise<RadioDef[
     // asked for in the background when the snapshot has gone stale.
     await Promise.all(
       defs.map(async (d) => {
-        d.tracks = await radioTracks(d).catch(() => [] as Song[]);
+        d.tracks = await radioTracks(d, own.get(d.seed.id)).catch(() => [] as Song[]);
         // The seed's picture had no colour to give: its first track might.
         if (!d.color) d.color = await radioColor(d);
       }),
@@ -420,4 +464,20 @@ export function refreshRadios(opts: { force?: boolean } = {}): Promise<RadioDef[
     inflight = null;
   });
   return inflight;
+}
+
+/**
+ * The next round of a radio being played, for the player once its queue is
+ * near the end: the same mix, drawn again, without what the queue already has.
+ * Null when the radio cannot be made (an artist the server no longer knows).
+ */
+export async function moreRadioTracks(id: string, have: Set<string>): Promise<Song[] | null> {
+  await useRadios.getState().hydrate();
+  let def = useRadios.getState().defs.find((d) => d.seed.id === id) ?? null;
+  if (!def) {
+    const { artist } = await getArtist(id);
+    def = await buildRadioDef({ id, name: artist.name, coverArt: artist.coverArt });
+  }
+  if (!def) return null;
+  return (await radioTracks(def)).filter((s) => !have.has(s.id));
 }
