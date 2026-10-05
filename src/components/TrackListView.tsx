@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Animated,
   Keyboard,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -46,7 +47,7 @@ import { colors, fontSize, radius, spacing, themed, tracking } from '@/theme';
 import { motion } from '@/theme/motion';
 import { BackChevron } from './BackChevron';
 import { TopBarBackground } from './BarBlur';
-import { Cover } from './Cover';
+import { Cover, useCoverRadius } from './Cover';
 import { ExplicitBadge, useExplicitBadge } from './ExplicitBadge';
 import { FavoriteButton } from './FavoriteButton';
 import { SelectionBar, type SelectionAction } from './SelectionBar';
@@ -485,6 +486,7 @@ export function TrackListView({
   // Without cover, the header is shorter: the gradient and bar collapse adjust
   // to a smaller distance so the transition fits.
   const art = coverSize(screenW, screenH);
+  const artRadius = useCoverRadius(art);
   // Where the square cover's content starts: the bar's own slice of the
   // screen plus the gap under it. The wide cover starts at zero instead -
   // it goes under the bar - but is clamped so it ends just above where this
@@ -864,19 +866,30 @@ export function TrackListView({
               </Animated.View>
             ) : hideCover ? null : (
               <Animated.View style={[styles.coverCenter, { opacity: coverOpacity }]}>
-                {onCoverPress ? (
-                  <Pressable
-                    onPress={onCoverPress}
-                    accessibilityRole="imagebutton"
-                    accessibilityLabel={t('View cover')}
-                  >
-                    {renderCover ? renderCover(art) : <Cover uri={coverUri} size={art} />}
-                  </Pressable>
-                ) : renderCover ? (
-                  renderCover(art)
-                ) : (
-                  <Cover uri={coverUri} size={art} />
-                )}
+                {/* Android draws no shadow from a transparent view's content
+                    the way iOS does: there it is a box shadow the size and
+                    shape of the cover. */}
+                <View
+                  style={
+                    Platform.OS === 'android'
+                      ? { borderRadius: artRadius, boxShadow: '0px 10px 32px rgba(0, 0, 0, 0.45)' }
+                      : null
+                  }
+                >
+                  {onCoverPress ? (
+                    <Pressable
+                      onPress={onCoverPress}
+                      accessibilityRole="imagebutton"
+                      accessibilityLabel={t('View cover')}
+                    >
+                      {renderCover ? renderCover(art) : <Cover uri={coverUri} size={art} />}
+                    </Pressable>
+                  ) : renderCover ? (
+                    renderCover(art)
+                  ) : (
+                    <Cover uri={coverUri} size={art} />
+                  )}
+                </View>
               </Animated.View>
             )}
             <Text style={styles.title} numberOfLines={2}>
@@ -1333,7 +1346,6 @@ const styles = themed((colors) => ({
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.45,
     shadowRadius: 16,
-    elevation: 8,
   },
   wideCover: {
     // No corners and no shadow: the picture is printed into the page itself,
