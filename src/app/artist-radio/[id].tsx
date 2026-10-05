@@ -6,9 +6,9 @@
  * of suggestions at their foot.
  *
  * The definition comes from what Home saved when it has it, and is built
- * here when it doesn't (a deep link, or the section turned off). What Home
- * saved carries the tracks it opened with, so the list is already full on
- * the first frame and stays that list until the radios are rebuilt.
+ * here when it doesn't (a deep link, or the section turned off). Its list is
+ * made the first time it is opened and saved with it, so from then on it is
+ * full on the first frame and stays that list until the radios are replaced.
  */
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
@@ -88,10 +88,19 @@ export default function ArtistRadioScreen() {
 
   const tracksQuery = useQuery({
     queryKey: ['radio-tracks', radioId],
-    queryFn: () => radioTracks(def as RadioDef),
-    // Only for a def without its snapshot. Each build is a new draw, so
-    // asking again on the way in swapped the list a few seconds after it
-    // was drawn; the snapshot is the radio until the radios are rebuilt.
+    queryFn: async () => {
+      const tracks = await radioTracks(def as RadioDef);
+      // Kept with the radio, so it is this same list every time it is opened
+      // (and the card on Home can say how long it is).
+      const { defs, setDefs } = useRadios.getState();
+      if (defs.some((d) => d.seed.id === radioId)) {
+        await setDefs(defs.map((d) => (d.seed.id === radioId ? { ...d, tracks } : d)));
+      }
+      return tracks;
+    },
+    // Only for a radio not opened yet. Each build is a new draw, so asking
+    // again on the way in would swap the list a few seconds after it was
+    // drawn; once made, the list is the radio until the radios are replaced.
     enabled: !!def && !def.tracks?.length,
     staleTime: Number.POSITIVE_INFINITY,
     retry: 1,

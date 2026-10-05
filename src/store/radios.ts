@@ -17,7 +17,6 @@ import { create } from 'zustand';
 
 import type { Song } from '@/api/subsonic';
 import { hashKey } from '@/lib/localLibrary';
-import type { RadioRefreshCadence } from './settings';
 import { profileScopeId } from './auth';
 
 /** An artist a radio is built from: id, display name and cover if known. */
@@ -35,8 +34,8 @@ export interface RadioDef {
   /** The icon's background colour, read from the seed's cover at build time. */
   color: string;
   createdAt: number;
-  /** The tracks it opened with: a snapshot, so the first frame of the screen
-   *  is already full while the fresh list is being asked for. */
+  /** Its list, made the first time it is opened and kept from then on, so
+   *  the radio is the same radio until it is replaced. */
   tracks?: Song[];
 }
 
@@ -68,57 +67,33 @@ function currentIcons(icons: Record<string, string>, defs: RadioDef[]): Record<s
   return out;
 }
 
-/** A def older than this gets rebuilt when Home asks (new listening, new
- *  similar artists, a cover that changed on the server) - per cadence, which
- *  Settings › Appearance › Home › Radios lets whoever listens choose. `never`
- *  is manual refresh only: no age ever counts as old. */
-const STALE_MS: Record<RadioRefreshCadence, number> = {
-  day: 24 * 60 * 60 * 1000,
-  '3days': 3 * 24 * 60 * 60 * 1000,
-  week: 7 * 24 * 60 * 60 * 1000,
-  '2weeks': 14 * 24 * 60 * 60 * 1000,
-  never: Number.POSITIVE_INFINITY,
-};
+/** Radios this old are replaced when Home asks, for whoever never pulls Home
+ *  to refresh (which replaces them every time). */
+const STALE_MS = 7 * 24 * 60 * 60 * 1000;
 
-/** The cadence in milliseconds, for whoever asks the server. */
-export function radioStaleMs(cadence: RadioRefreshCadence): number {
-  return STALE_MS[cadence] ?? STALE_MS.week;
-}
-
-/** True when the radios are missing, old enough to rebuild, or a def predates
- *  the snapshot of tracks (one rebuild after the app updates, then quiet). */
-export function radiosStale(defs: RadioDef[], staleMs: number = STALE_MS.week): boolean {
+/** True when the radios are missing or old enough to be replaced. */
+export function radiosStale(defs: RadioDef[]): boolean {
   if (defs.length === 0) return true;
-  if (defs.some((d) => !d.tracks)) return true;
   const newest = Math.max(...defs.map((d) => d.createdAt));
-  return Date.now() - newest > staleMs;
+  return Date.now() - newest > STALE_MS;
 }
 
 interface PersistedShape {
   scope: string;
   defs: RadioDef[];
   icons: Record<string, string>;
-  pastSeeds?: string[];
 }
-
-/** How many recent seed artists the next build avoids: three rebuilds back,
- *  so consecutive refreshes change the shelf instead of remaking it. */
-const PAST_SEEDS_KEPT = 18;
 
 interface RadiosState {
   defs: RadioDef[];
   /** Radio id (its seed's id) → uri of the generated icon file. */
   icons: Record<string, string>;
-  /** Seed artists the last builds used: the next build picks around them,
-   *  so a refresh brings new radios instead of the same six. */
-  pastSeeds: string[];
   hydrated: boolean;
   hydrate: () => Promise<void>;
   setDefs: (defs: RadioDef[]) => Promise<void>;
   setIcon: (id: string, uri: string) => void;
   /** The same radios in new colours: their icons go, to be drawn again. */
   recolor: (defs: RadioDef[]) => Promise<void>;
-  rememberSeeds: (ids: string[]) => Promise<void>;
 }
 
 // One write at a time: the icons for six radios finish in parallel, and
@@ -126,10 +101,10 @@ interface RadiosState {
 let writing: Promise<void> = Promise.resolve();
 
 async function persistNow(): Promise<void> {
-  const { defs, icons, pastSeeds } = useRadios.getState();
+  const { defs, icons } = useRadios.getState();
   try {
     await FileSystem.makeDirectoryAsync(RADIO_DIR, { intermediates: true });
-    const body: PersistedShape = { scope: hashKey(profileScopeId()), defs, icons, pastSeeds };
+    const body: PersistedShape = { scope: hashKey(profileScopeId()), defs, icons };
     await FileSystem.writeAsStringAsync(INDEX_PATH, JSON.stringify(body));
   } catch (e) {
     // Radios are a suggestion, not a library: a failed write costs the next
@@ -146,7 +121,6 @@ function enqueue(): Promise<void> {
 export const useRadios = create<RadiosState>((set, get) => ({
   defs: [],
   icons: {},
-  pastSeeds: [],
   hydrated: false,
 
   hydrate: async () => {
@@ -166,9 +140,6 @@ export const useRadios = create<RadiosState>((set, get) => ({
               parsed.icons && typeof parsed.icons === 'object'
                 ? currentIcons(parsed.icons, defs)
                 : {},
-            pastSeeds: Array.isArray(parsed.pastSeeds)
-              ? parsed.pastSeeds.filter((id): id is string => typeof id === 'string')
-              : [],
             hydrated: true,
           });
           return;
@@ -213,16 +184,4 @@ export const useRadios = create<RadiosState>((set, get) => ({
     void enqueue();
   },
 
-  rememberSeeds: async (ids) => {
-    const seen = new Set<string>();
-    const next: string[] = [];
-    for (const id of [...ids, ...get().pastSeeds]) {
-      if (!id || seen.has(id)) continue;
-      seen.add(id);
-      next.push(id);
-      if (next.length >= PAST_SEEDS_KEPT) break;
-    }
-    set({ pastSeeds: next });
-    await enqueue();
-  },
 }));

@@ -11,7 +11,7 @@ Releases before 0.2.1 are only listed on the
 
 ### Added
 
-- Artist radios on Home, built from your most played artists and refreshed on a schedule you choose (#252).
+- Artist radios on Home, built from your most played artists, with new ones each time Home is pulled to refresh (#252).
 - A radio's ⋯ menu, also on a long press of its card, to queue it, save it as a playlist, refresh it or go to its artist.
 - Any artist's radio from the artist's ⋯ menu or a song's menu, and a radio keeps playing once its songs run out.
 - Radio settings in Appearance: turn them off entirely, choose how many Home shows and whether they keep playing.

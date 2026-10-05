@@ -30,7 +30,7 @@ import {
 import type { Artist, Song } from '@/api/subsonic';
 import { coverColorOf, isPlainTint } from '@/hooks/useDominantColor';
 import { ensureRadioIcons } from '@/lib/radioArt';
-import { useRadios, radiosStale, radioStaleMs, type RadioArtist, type RadioDef } from '@/store/radios';
+import { useRadios, radiosStale, type RadioArtist, type RadioDef } from '@/store/radios';
 import { useSettings } from '@/store/settings';
 import { themeMode } from '@/theme';
 
@@ -84,13 +84,12 @@ async function serverSeeds(): Promise<RadioArtist[]> {
 }
 
 /**
- * The radio seeds: the artists behind the most played songs, and any
- * artists at all filling the rest - but never the ones the last builds just
- * used, so every refresh brings new radios instead of the same six. Six
- * radios about artists you never played beats no radios, and the section
- * still hides itself when even that comes back empty (a library with no
- * artists). When the library is smaller than the memory, repeats are
- * allowed: the same radio again beats no radio.
+ * The radio seeds: the artists behind the most played songs, in a new order
+ * each time, and any artists at all filling the rest - but not the ones on
+ * screen, so every refresh brings different radios. Six radios about artists
+ * you never played beats no radios, and the section still hides itself when
+ * even that comes back empty (a library with no artists). When there are too
+ * few to avoid them, repeats are allowed: the same radio again beats none.
  */
 export async function pickSeeds(limit: number, exclude: Set<string> = new Set()): Promise<RadioArtist[]> {
   const out: RadioArtist[] = [];
@@ -110,7 +109,9 @@ export async function pickSeeds(limit: number, exclude: Set<string> = new Set())
   } catch {
     // The play counts didn't answer; the tier below still can.
   }
-  take(ranked, true);
+  // In a different order every time: each refresh is another handful of the
+  // artists played most, not the same top six.
+  take(shuffled(ranked), true);
   let all: RadioArtist[] | null = null;
   const library = async (): Promise<RadioArtist[]> => {
     if (!all) {
@@ -140,14 +141,16 @@ export async function pickSeeds(limit: number, exclude: Set<string> = new Set())
  * with `getArtistInfo` off - still produces a radio of the seed's own top
  * tracks, which is what an empty `similar` means for the mix below.
  */
-export async function buildRadioDef(seed: RadioArtist): Promise<RadioDef | null> {
+export async function buildRadioDef(seed: RadioArtist, own?: Song[]): Promise<RadioDef | null> {
   let base = seed;
   try {
     const { artist } = await getArtist(seed.id);
-    base = { id: seed.id, name: artist.name || seed.name, coverArt: artist.coverArt ?? seed.coverArt };
+    base = { id: seed.id, name: artist.name || seed.name, coverArt: artist.coverArt || seed.coverArt };
   } catch {
     if (!seed.name) return null; // nothing to title it with
   }
+  // An artist without a picture of its own wears its best known album's.
+  if (!base.coverArt) base = { ...base, coverArt: own?.find((s) => s.coverArt)?.coverArt };
 
   let similar: RadioArtist[] = [];
   try {
@@ -392,31 +395,17 @@ let inflight: Promise<RadioDef[]> | null = null;
  * swap in the files as they land.
  */
 export function refreshRadios(opts: { force?: boolean } = {}): Promise<RadioDef[]> {
-  if (inflight) return inflight;
+  // A forced one (pulling Home) waits for whatever is under way and then
+  // builds anyway: sharing a quiet check's answer would make the pull a no-op.
+  if (inflight) return opts.force ? inflight.then(() => refreshRadios(opts)) : inflight;
   inflight = (async () => {
-    const { radiosEnabled, radioCount, radioRefreshCadence } = useSettings.getState();
+    const { radiosEnabled, radioCount } = useSettings.getState();
     // Turned off: nothing is built and nothing is asked of the server.
     if (!radiosEnabled) return [];
     const store = useRadios.getState();
     await store.hydrate();
     const count = radioCount || RADIO_SEEDS;
-    const staleMs = radioStaleMs(radioRefreshCadence);
-    if (!opts.force && !radiosStale(useRadios.getState().defs, staleMs)) {
-      // Radios saved before a seed without Last.fm top songs got its own
-      // songs: their list is made again, and dropped if it still has none.
-      const saved = useRadios.getState().defs;
-      if (saved.some((d) => d.tracks?.length && !d.tracks.some((s) => bySeed(s, d.seed)))) {
-        const fixed = await Promise.all(
-          saved.map(async (d) =>
-            d.tracks?.some((s) => bySeed(s, d.seed))
-              ? d
-              : { ...d, tracks: await radioTracks(d).catch(() => [] as Song[]) },
-          ),
-        );
-        await useRadios
-          .getState()
-          .setDefs(fixed.filter((d) => d.tracks?.some((s) => bySeed(s, d.seed))));
-      }
+    if (!opts.force && !radiosStale(useRadios.getState().defs)) {
       const recolored = await recolor(useRadios.getState().defs);
       if (recolored) await useRadios.getState().recolor(recolored);
       // Fresh radios can still be missing an icon (one whose drawing changed).
@@ -428,7 +417,7 @@ export function refreshRadios(opts: { force?: boolean } = {}): Promise<RadioDef[
     // few does the bar drop to one song.
     const candidates = await pickSeeds(
       count * 3,
-      new Set([...useRadios.getState().defs.map((d) => d.seed.id), ...useRadios.getState().pastSeeds]),
+      new Set(useRadios.getState().defs.map((d) => d.seed.id)),
     );
     const own = new Map<string, Song[]>();
     const seeds: RadioArtist[] = [];
@@ -444,25 +433,14 @@ export function refreshRadios(opts: { force?: boolean } = {}): Promise<RadioDef[
       if (seeds.length >= count) break;
       if (!seeds.includes(c) && (own.get(c.id)?.length ?? 0) > 0) seeds.push(c);
     }
-    const defs = (await Promise.all(seeds.map(buildRadioDef))).filter(
+    // Only the cards: the artist, its neighbours and its colour. The list of
+    // songs is the expensive part, and it is made when a radio is opened.
+    const defs = (await Promise.all(seeds.map((s) => buildRadioDef(s, own.get(s.id))))).filter(
       (d): d is RadioDef => d !== null,
     );
-    // Each def gets its snapshot of tracks before the index is written: the
-    // screen can then be full on the very first frame, with the fresh list
-    // asked for in the background when the snapshot has gone stale.
-    await Promise.all(
-      defs.map(async (d) => {
-        d.tracks = await radioTracks(d, own.get(d.seed.id)).catch(() => [] as Song[]);
-        // The seed's picture had no colour to give: its first track might.
-        if (!d.color) d.color = await radioColor(d);
-      }),
-    );
-    // A radio with none of its seed's songs is somebody else's music under
-    // the seed's name: it is left out rather than offered.
-    const playable = defs.filter((d) => d.tracks?.some((s) => bySeed(s, d.seed)));
-    await useRadios.getState().setDefs(playable);
-    await useRadios.getState().rememberSeeds(defs.map((d) => d.seed.id));
-    void ensureRadioIcons(playable);
+    // All at once, so the shelf swaps whole rather than one card at a time.
+    await useRadios.getState().setDefs(defs);
+    void ensureRadioIcons(defs);
     return useRadios.getState().defs;
   })().finally(() => {
     inflight = null;

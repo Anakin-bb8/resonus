@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 798 of them.
+Every string the app can show, under the screen it shows up on. 787 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -457,7 +457,6 @@ you are actually typing into, which is easier than reading it here.
 | `PLAYING FROM` | Small label above the cover, followed by the name of the album, playlist or mix it is playing from, or by `Queue` while the song is one that was added to the queue by hand. Written in capitals by the design, so it can be capitals in your language too, or not, whichever reads right |
 | `Previous` | Player control: the previous track (accessibility label) |
 | `Queue` | The list of songs waiting to play. Not a playlist |
-| `Radio` | Internet radio stations. Most languages keep the word |
 | `Remove from the group` | The − beside `Add to the group`, and the same in reverse: it takes that room out of the group so it stops playing along. Read out by the screen reader, never shown, and Sonos only |
 | `Repeat` | Start again at the end |
 | `Search again` |  |
@@ -598,7 +597,6 @@ you are actually typing into, which is easier than reading it here.
 | `No radio stations` | Empty state heading |
 | `Password` | The password field, on the login screen and wherever the server asks again |
 | `Pin to top` | Keep this at the top of its list, above everything else. `Unpin` undoes it |
-| `Radio` | Internet radio stations. Most languages keep the word |
 | `Remove “{name}” from your server?` | Dialog title: stations live on the server, so this deletes it for everybody |
 | `Remove cover` | Screen reader label for the small x on a chosen picture |
 | `Station name` | The name field when adding an internet radio station |
@@ -618,7 +616,6 @@ you are actually typing into, which is easier than reading it here.
 | `Artist` | In search results, the little word under a result saying what kind of thing it is |
 | `Artists` | A heading over a list of them, never a count |
 | `Couldn't reach the server. Check your connection.` | Error on Home when the server does not answer at all |
-| `Radio` | Internet radio stations. Most languages keep the word |
 | `Recent searches` | What was searched for before, kept on the phone |
 | `Search your music` |  |
 | `Song` | In search results, the little word under a result saying what kind of thing it is |
@@ -913,6 +910,7 @@ you are actually typing into, which is easier than reading it here.
 | `Open the app on` | Which tab the app opens on, and comes back to after a while away |
 | `Playing on other devices` |  |
 | `Quick grid` | The grid of shortcut tiles on Home |
+| `Radios` |  |
 | `Rounded` | One of the values of “Cover corners” |
 | `Scheduled` |  |
 | `Show tab names` |  |
@@ -1064,22 +1062,10 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `Artist radios` |  |
-| `Couldn't refresh the radios` |  |
-| `Every 2 weeks` | One of the values of “Update radios automatically” |
-| `Every 3 days` | One of the values of “Update radios automatically” |
-| `Every day` | One of the values of “Update radios automatically” |
-| `Every week` | One of the values of “Update radios automatically” |
-| `How often the radios rebuild their artists and tracks.` | The line under “Update radios automatically”, explaining it |
 | `Keep playing when a radio ends` |  |
-| `Never` | A value of `Play downloaded songs from the phone`: always stream, never use the file on the phone. The share sheet's own "never expires" is a separate key, `Never::expiry`, so a language that needs two different words can have them |
 | `Radios` |  |
 | `Radios built from the artists you play most. Off, there are none on Home or in the menus, and nothing is fetched for them.` |  |
 | `Radios on Home` |  |
-| `Radios updated` |  |
-| `Rebuild the radios with new artists and tracks right away.` |  |
-| `Refresh radios now` |  |
-| `Refreshing radios.` |  |
-| `Update radios automatically` |  |
 | `When its songs run out, another round from the same artists.` | The line under “Keep playing when a radio ends”, explaining it |
 
 ## Settings › Scrobbling
@@ -1218,6 +1204,7 @@ you are actually typing into, which is easier than reading it here.
 | `Playing next` | The toast that says `Play next` worked. Not the same string, and not a heading |
 | `Playlist name` | The name field when making or renaming a playlist |
 | `Playlists` | A section on Home and in the library, and a folder in the car |
+| `Radio` | Internet radio stations. Most languages keep the word |
 | `Rate {n} stars` | Read out by the screen reader for each star. `{n}` is which star it is |
 | `Recently added` | A sort order, and a section: newest first (in Favorites, last favorited first) |
 | `Remove` | Take something out of a list. Deleting for good is `Delete` |

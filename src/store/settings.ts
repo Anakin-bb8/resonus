@@ -97,21 +97,8 @@ export const DOWNLOAD_CONCURRENCY_OPTIONS = [1, 2, 3];
  */
 export const ANIMATED_ARTWORK_FPS_OPTIONS = [30, 60] as const;
 
-/**
- * How often the Home radios rebuild themselves: the seed artists, the mix
- * beside them, the tracks. `never` leaves them to the manual refresh in
- * Settings › Appearance › Home › Radios.
- */
-export type RadioRefreshCadence = 'day' | '3days' | 'week' | '2weeks' | 'never';
 /** How many radios Home offers. */
 export const RADIO_COUNT_OPTIONS = [3, 6, 9] as const;
-export const RADIO_REFRESH_CADENCES: RadioRefreshCadence[] = [
-  'day',
-  '3days',
-  'week',
-  '2weeks',
-  'never',
-];
 
 /**
  * Codec to request for transcoding (Subsonic `format` parameter).
@@ -922,8 +909,6 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   showExplicitTag: boolean;
   /** When the queue ends, continue with similar songs (getSimilarSongs2). */
   autoplaySimilar: boolean;
-  /** How often the Home radios rebuild themselves on their own. */
-  radioRefreshCadence: RadioRefreshCadence;
   /**
    * The artist radios at all. Off, nothing is built or asked for: no shelf on
    * Home, no radio in the menus, no round added at the end of one.
@@ -1292,8 +1277,6 @@ const DEFAULTS = {
   // nowhere, and where it does draw it is the tag the file was given.
   showExplicitTag: true,
   autoplaySimilar: true,
-  // A week, like before there was a choice.
-  radioRefreshCadence: 'week' as RadioRefreshCadence,
   radiosEnabled: true,
   radioCount: 6,
   radioEndless: true,
@@ -1517,9 +1500,6 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
   }
   if ((RADIO_COUNT_OPTIONS as readonly number[]).includes(parsed.radioCount as number)) {
     set({ radioCount: parsed.radioCount as number });
-  }
-  if ((RADIO_REFRESH_CADENCES as readonly string[]).includes(parsed.radioRefreshCadence as string)) {
-    set({ radioRefreshCadence: parsed.radioRefreshCadence as RadioRefreshCadence });
   }
   if (TRANSCODE_FORMATS.includes(parsed.streamFormat as TranscodeFormat)) {
     set({ streamFormat: parsed.streamFormat as TranscodeFormat });

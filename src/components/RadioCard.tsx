@@ -6,7 +6,7 @@ import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Cover } from './Cover';
-import { songsLabel } from '@/i18n';
+import { songsLabel, useT } from '@/i18n';
 import { useAccent } from '@/hooks/useAccent';
 import { haptic } from '@/lib/haptics';
 import { usePlayerStore } from '@/store/player';
@@ -173,6 +173,7 @@ export const RadioCard = memo(function RadioCard({
 }) {
   // Memoised, so it has to ask for a repaint on a theme change itself.
   useTheme();
+  const t = useT();
   const lang = useSettings((s) => s.language);
   const playingHere = usePlayerStore((s) => s.sourceHref === `/artist-radio/${def.seed.id}`);
   const accent = useAccent();
@@ -180,7 +181,11 @@ export const RadioCard = memo(function RadioCard({
   // The seed's name is on the picture already; with nobody beside it, the
   // line says how much is in it instead of saying the name twice.
   const artists =
-    similar.length > 0 ? similar.join(', ') : def.tracks ? songsLabel(def.tracks.length, lang) : '';
+    similar.length > 0
+      ? similar.join(', ')
+      : def.tracks
+        ? songsLabel(def.tracks.length, lang)
+        : t('Radio');
 
   return (
     <Link href={`/artist-radio/${def.seed.id}`} asChild>
