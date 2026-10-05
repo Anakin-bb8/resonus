@@ -3305,7 +3305,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..4f16e709309c0a9f8b690232ae23d806
    }
  
    private func clearNowPlayingInfoOnMain() {
-@@ -204,34 +267,82 @@ class MediaController {
+@@ -204,34 +267,120 @@ class MediaController {
    private func resetArtworkState() {
      currentArtworkUrl = nil
      cachedArtwork = nil
@@ -3345,7 +3345,17 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..4f16e709309c0a9f8b690232ae23d806
        }
  
 -      let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
-+      let still = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
++      // The request carries the size the surface wants: a square one (the
++      // Dynamic Island's compact artwork) gets the cover's centered square,
++      // while a taller one keeps the whole tall picture — which is what the
++      // full-screen lock screen draws.
++      let square = Self.centeredSquarePreview(of: image)
++      let still = MPMediaItemArtwork(boundsSize: image.size) { requested in
++        if let square, Self.isSquare(requested) {
++          return square
++        }
++        return image
++      }
        self.performOnMain {
 -        completion(artwork)
 +        completion(LoadedArtwork(still: still, square: ready.square, tall: ready.tall))
@@ -3387,6 +3397,34 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..4f16e709309c0a9f8b690232ae23d806
 +    }
 +#endif
    }
++
++  // Whether a requested artwork size reads as a square: what the Dynamic
++  // Island's compact artwork asks for, as opposed to the tall sizes the
++  // full-screen lock screen asks for.
++  private static func isSquare(_ size: CGSize) -> Bool {
++    guard size.width > 0, size.height > 0 else {
++      return false
++    }
++    let difference = (size.width - size.height).magnitude
++    return difference <= max(size.width, size.height) * 0.1
++  }
++
++  // The cover's centered square, for the surfaces that ask square — and only
++  // when the cover is meaningfully tall. A square cover comes back untouched,
++  // so nothing about it changes anywhere.
++  private static func centeredSquarePreview(of image: UIImage) -> UIImage? {
++    let width = image.size.width
++    let height = image.size.height
++    guard width > 0, height > width * 1.05 else {
++      return nil
++    }
++    let side = min(width, height)
++    let format = UIGraphicsImageRendererFormat()
++    format.scale = image.scale
++    return UIGraphicsImageRenderer(size: CGSize(width: side, height: side), format: format).image { _ in
++      image.draw(at: CGPoint(x: (side - width) / 2, y: (side - height) / 2))
++    }
++  }
  
    private func enableRemoteCommands(options: LockScreenOptions?) {
 +    updateRemoteCommandAvailability(options: options)
@@ -3401,7 +3439,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..4f16e709309c0a9f8b690232ae23d806
      remoteCommandCenter.playCommand.addTarget { [weak self] _ in
        guard let player = self?.activePlayer else {
          return .commandFailed
-@@ -270,7 +381,7 @@ class MediaController {
+@@ -270,7 +419,7 @@ class MediaController {
        }
  
        let seekTime = CMTime(seconds: event.positionTime, preferredTimescale: 1)
@@ -3410,7 +3448,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..4f16e709309c0a9f8b690232ae23d806
  
        return .success
      }
-@@ -303,12 +414,34 @@ class MediaController {
+@@ -303,12 +452,34 @@ class MediaController {
        return .success
      }
  
@@ -3445,7 +3483,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..4f16e709309c0a9f8b690232ae23d806
    }
  
    private func disableRemoteCommands() {
-@@ -318,6 +451,8 @@ class MediaController {
+@@ -318,6 +489,8 @@ class MediaController {
      remoteCommandCenter.changePlaybackPositionCommand.isEnabled = false
      remoteCommandCenter.skipForwardCommand.isEnabled = false
      remoteCommandCenter.skipBackwardCommand.isEnabled = false
