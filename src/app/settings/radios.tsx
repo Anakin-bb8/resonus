@@ -1,7 +1,5 @@
 /**
- * Settings › Appearance › Home › Home sections › Radios: the artist radios as
- * a whole. Reached from their row in Home sections, where the shelf is turned
- * on and placed, since this is the rest of what there is to say about it.
+ * Settings › Appearance › Home › Radios: the artist radios as a whole.
  *
  * Off at the top means off everywhere: no shelf, no radio in the menus, and
  * nothing built or asked for in the background. Below it, how many radios

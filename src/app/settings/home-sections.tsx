@@ -4,7 +4,6 @@
  * applied and saved immediately.
  */
 import Icon from '@/components/Icon';
-import { router } from 'expo-router';
 import { Pressable, Switch, Text, View } from 'react-native';
 import ReorderableList, {
   useReorderableDrag,
@@ -49,7 +48,6 @@ function SectionRow({ section }: { section: HomeSection }) {
   const t = useT();
   const drag = useReorderableDrag();
   const setHomeSection = useSettings((s) => s.setHomeSection);
-  const radiosEnabled = useSettings((s) => s.radiosEnabled);
   // From the store, not `colors.accent`: without subscription the switch would
   // keep the previous accent while the screen stays mounted.
   const { accent } = useTheme();
@@ -66,30 +64,13 @@ function SectionRow({ section }: { section: HomeSection }) {
       >
         <Icon name="reorder-two" size={24} color={colors.textSecondary} />
       </Pressable>
-      {section.key === 'radios' ? (
-        // The radios have settings of their own (and a switch for the whole
-        // feature): the row is the way to them.
-        <Pressable
-          style={styles.linkLabel}
-          onPress={() => router.push('/settings/radios')}
-          accessibilityRole="button"
-        >
-          <Text style={styles.label}>{t(LABEL[section.key])}</Text>
-          <Icon name="chevron-forward" size={18} color={colors.textMuted} />
-        </Pressable>
-      ) : (
-        <Text style={styles.label}>{t(LABEL[section.key])}</Text>
-      )}
-      {/* With the radios off as a whole the shelf has nothing to show:
-          the switch goes, and the row leads to where they are turned on. */}
-      {section.key === 'radios' && !radiosEnabled ? null : (
-        <Switch
-          value={section.enabled}
-          onValueChange={(v) => setHomeSection(section.key, v)}
-          trackColor={{ false: colors.control, true: accent }}
-          thumbColor={colors.knob}
-        />
-      )}
+      <Text style={styles.label}>{t(LABEL[section.key])}</Text>
+      <Switch
+        value={section.enabled}
+        onValueChange={(v) => setHomeSection(section.key, v)}
+        trackColor={{ false: colors.control, true: accent }}
+        thumbColor={colors.knob}
+      />
     </View>
   );
 }
@@ -108,9 +89,12 @@ export default function HomeSectionsSettings() {
   const offline = useAuthStore((s) => s.offline);
   const homeSections = useSettings((s) => s.homeSections);
   const setHomeSections = useSettings((s) => s.setHomeSections);
-  const visible = offline
-    ? homeSections.filter((s) => !SERVER_ONLY.includes(s.key))
-    : homeSections;
+  const radiosEnabled = useSettings((s) => s.radiosEnabled);
+  // Rows Home would never draw: the server-only ones offline, and the radios
+  // while they are turned off (Appearance › Radios).
+  const hidden = (key: HomeSectionKey) =>
+    (offline && SERVER_ONLY.includes(key)) || (!radiosEnabled && key === 'radios');
+  const visible = homeSections.filter((s) => !hidden(s.key));
 
   return (
     <SettingsSafeArea>
@@ -125,11 +109,9 @@ export default function HomeSectionsSettings() {
           const [moved] = nextVisible.splice(from, 1);
           nextVisible.splice(to, 0, moved);
           // Hidden ones go back to their absolute position: reordering locally
-          // must not lose or reposition the config of server-only rows.
+          // must not lose or reposition the config of the hidden rows.
           let vi = 0;
-          const next = homeSections.map((s) =>
-            offline && SERVER_ONLY.includes(s.key) ? s : nextVisible[vi++],
-          );
+          const next = homeSections.map((s) => (hidden(s.key) ? s : nextVisible[vi++]));
           setHomeSections(next);
         }}
         contentContainerStyle={[
@@ -162,5 +144,4 @@ const styles = themed((colors) => ({
     borderRadius: radius.md,
   },
   label: { flex: 1, color: colors.text, fontSize: fontSize.md },
-  linkLabel: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
 }));
