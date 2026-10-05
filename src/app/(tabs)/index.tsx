@@ -633,7 +633,7 @@ function DiscoverSection({ title, reshuffleKey }: { title: string; reshuffleKey:
 /**
  * The personalised artist radios: built from the scrobble services (or this
  * server's play counts when there are none), kept on the device, rebuilt
- * when they go a week old.
+ * when they go stale (how stale is a setting: Radios).
  *
  * The query only refreshes what is saved: `refreshRadios` itself decides
  * whether there is anything to rebuild, so pulling to refresh or coming back

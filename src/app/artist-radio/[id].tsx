@@ -1,7 +1,7 @@
 /**
  * One radio: what its Home card opens, in the shape its siblings use — the
- * picture edge to edge from the very top of the display, cropped so what
- * remains is the artist's name at its foot; the radio's colour fading out
+ * picture edge to edge from the very top of the display, artwork only (the
+ * name lives in the title underneath); the radio's colour fading out
  * of it under the title and the buttons; the tracks below; and a short set
  * of suggestions at their foot.
  *
@@ -129,7 +129,7 @@ export default function ArtistRadioScreen() {
         height: coverH,
         render: (w, h) =>
           def ? (
-            <RadioArt def={def} width={w} cropHeight={h} />
+            <RadioArt def={def} width={w} cropHeight={h} bare />
           ) : (
             <View style={[styles.placeholder, { width: w, height: h }]} />
           ),

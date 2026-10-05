@@ -20,7 +20,17 @@ function collageArtists(def: RadioDef): RadioArtist[] {
  * The icon as the native module draws it, in views: same layout, so the
  * shelf looks the same on a build without the module as on one with it.
  */
-function RadioCollage({ def, width }: { def: RadioDef; width: number }) {
+function RadioCollage({
+  def,
+  width,
+  bare,
+}: {
+  def: RadioDef;
+  width: number;
+  /** No words on the picture: the screen that wears this as its header says
+   *  the name underneath it already. */
+  bare?: boolean;
+}) {
   const bg = def.color || colors.surfaceHighlight;
   const ink = textOn(bg);
   // The covers as URLs: `coverArt` is a server id, like every other card
@@ -47,18 +57,22 @@ function RadioCollage({ def, width }: { def: RadioDef; width: number }) {
       {circle(covers[1], sideD, -Math.round(sideD * 0.25), Math.round(width * 0.34), 'left')}
       {circle(covers[2], sideD, width - sideD + Math.round(sideD * 0.25), Math.round(width * 0.34), 'right')}
       {circle(covers[0], centerD, Math.round((width - centerD) / 2), Math.round(width * 0.16), 'center')}
-      <Text
-        style={[styles.collageWord, { color: ink, textShadowColor: shadow(ink) }]}
-        numberOfLines={1}
-      >
-        RADIO
-      </Text>
-      <Text
-        style={[styles.collageName, { color: ink, textShadowColor: shadow(ink) }]}
-        numberOfLines={2}
-      >
-        {def.seed.name}
-      </Text>
+      {bare ? null : (
+        <>
+          <Text
+            style={[styles.collageWord, { color: ink, textShadowColor: shadow(ink) }]}
+            numberOfLines={1}
+          >
+            RADIO
+          </Text>
+          <Text
+            style={[styles.collageName, { color: ink, textShadowColor: shadow(ink) }]}
+            numberOfLines={2}
+          >
+            {def.seed.name}
+          </Text>
+        </>
+      )}
     </View>
   );
 }
@@ -74,15 +88,19 @@ function shadow(ink: string): string {
  *  the shelf and the screen show one image. `cropHeight` turns the square
  *  into a shorter, full-bleed rectangle for the screen's header: the art is
  *  bottom-aligned inside it, so the crop takes the top off — the decorative
- *  RADIO word goes, the artist's name at the bottom stays, untouched. */
+ *  RADIO word goes, the artist's name at the bottom stays, untouched. `bare`
+ *  is the header's variant: no words at all, since the file would carry the
+ *  name baked in and the title underneath says it already. */
 export function RadioArt({
   def,
   width,
   cropHeight,
+  bare,
 }: {
   def: RadioDef;
   width: number;
   cropHeight?: number;
+  bare?: boolean;
 }) {
   const uri = useRadios((s) => s.icons[def.seed.id]);
   const height = cropHeight ?? width;
@@ -94,10 +112,10 @@ export function RadioArt({
     overflow: 'hidden' as const,
     borderRadius: cropHeight == null ? radius.md : 0,
   };
-  const art = uri ? (
+  const art = !bare && uri ? (
     <Image source={{ uri }} style={{ width, height: width }} contentFit="cover" transition={150} />
   ) : (
-    <RadioCollage def={def} width={width} />
+    <RadioCollage def={def} width={width} bare={bare} />
   );
   if (height >= width) return <View style={frame}>{art}</View>;
   // The square hangs from the bottom of the rectangle: whatever is cut off

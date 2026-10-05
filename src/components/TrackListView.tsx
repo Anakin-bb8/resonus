@@ -75,6 +75,11 @@ const SEARCH_H = 72;
  *  through the title and the buttons, arriving at the page's own colour
  *  around the play button ("circa", as the order asked for it). */
 const WIDE_GRADIENT_H = 240;
+/** How far above the content the accent reaches: iOS reveals that strip on a
+ *  pull-down bounce, and without it the page background would flash where the
+ *  cover's own colour belongs. Tall enough for any pull; one view, no paint
+ *  cost at rest, where it hangs off screen. */
+const OVERSCROLL_H = 1200;
 /** Lines of the description shown before "Show more". */
 const DESCRIPTION_LINES = 2;
 
@@ -813,6 +818,23 @@ export function TrackListView({
                 the button on its own (see `searchShift`). */}
             {searching ? null : (
           <View ref={headerRootRef} style={styles.header}>
+            {wideCover ? (
+              /* Paint above the first pixel: the pull-down bounce reveals
+                 whatever sits above the content — the page background by
+                 default — and on the radio that strip must stay the accent,
+                 the cover's own colour. Zero net layout: it hangs off the top
+                 of the header, off screen until a pull uncovers it. */
+              <View
+                pointerEvents="none"
+                style={{
+                  width: screenW,
+                  height: OVERSCROLL_H,
+                  marginTop: -OVERSCROLL_H,
+                  marginHorizontal: -centredPadding(screenW, spacing.lg),
+                  backgroundColor: headerColor,
+                }}
+              />
+            ) : null}
             {wideCover ? (
               /* The picture at the very top, pulled out of the rows' inset to
                  the edges of the display: it fades with the scroll the way

@@ -98,6 +98,20 @@ export const DOWNLOAD_CONCURRENCY_OPTIONS = [1, 2, 3];
 export const ANIMATED_ARTWORK_FPS_OPTIONS = [30, 60] as const;
 
 /**
+ * How often the Home radios rebuild themselves: the seed artists, the mix
+ * beside them, the tracks. `never` leaves them to the manual refresh in
+ * Settings › Appearance › Home › Radios.
+ */
+export type RadioRefreshCadence = 'day' | '3days' | 'week' | '2weeks' | 'never';
+export const RADIO_REFRESH_CADENCES: RadioRefreshCadence[] = [
+  'day',
+  '3days',
+  'week',
+  '2weeks',
+  'never',
+];
+
+/**
  * Codec to request for transcoding (Subsonic `format` parameter).
  * '' = the server's default transcoder (MP3 on Navidrome). Only relevant
  * when a bitrate is selected (with "Original" the raw file is served).
@@ -907,6 +921,8 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   showExplicitTag: boolean;
   /** When the queue ends, continue with similar songs (getSimilarSongs2). */
   autoplaySimilar: boolean;
+  /** How often the Home radios rebuild themselves on their own. */
+  radioRefreshCadence: RadioRefreshCadence;
   /**
    * Whether the app measures itself (Settings › About → Diagnostics). On for
    * everybody, since a report from the phone with the problem is worth more
@@ -1266,6 +1282,8 @@ const DEFAULTS = {
   // nowhere, and where it does draw it is the tag the file was given.
   showExplicitTag: true,
   autoplaySimilar: true,
+  // A week, like before there was a choice.
+  radioRefreshCadence: 'week' as RadioRefreshCadence,
   // Off: measuring is for somebody who is being asked to measure. Everyone
   // else was paying for a report they will never send.
   diagnostics: false,
@@ -1483,6 +1501,9 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
   }
   if ((ANIMATED_ARTWORK_FPS_OPTIONS as readonly number[]).includes(parsed.animatedArtworkFps as number)) {
     set({ animatedArtworkFps: parsed.animatedArtworkFps as number });
+  }
+  if ((RADIO_REFRESH_CADENCES as readonly string[]).includes(parsed.radioRefreshCadence as string)) {
+    set({ radioRefreshCadence: parsed.radioRefreshCadence as RadioRefreshCadence });
   }
   if (TRANSCODE_FORMATS.includes(parsed.streamFormat as TranscodeFormat)) {
     set({ streamFormat: parsed.streamFormat as TranscodeFormat });

@@ -17,6 +17,7 @@ import { create } from 'zustand';
 
 import type { Song } from '@/api/subsonic';
 import { hashKey } from '@/lib/localLibrary';
+import type { RadioRefreshCadence } from './settings';
 import { profileScopeId } from './auth';
 
 /** An artist a radio is built from: id, display name and cover if known. */
@@ -49,16 +50,29 @@ export function radioIconPath(id: string): string {
 }
 
 /** A def older than this gets rebuilt when Home asks (new listening, new
- *  similar artists, a cover that changed on the server). */
-const STALE_MS = 7 * 24 * 60 * 60 * 1000;
+ *  similar artists, a cover that changed on the server) — per cadence, which
+ *  Settings › Appearance › Home › Radios lets whoever listens choose. `never`
+ *  is manual refresh only: no age ever counts as old. */
+const STALE_MS: Record<RadioRefreshCadence, number> = {
+  day: 24 * 60 * 60 * 1000,
+  '3days': 3 * 24 * 60 * 60 * 1000,
+  week: 7 * 24 * 60 * 60 * 1000,
+  '2weeks': 14 * 24 * 60 * 60 * 1000,
+  never: Number.POSITIVE_INFINITY,
+};
+
+/** The cadence in milliseconds, for whoever asks the server. */
+export function radioStaleMs(cadence: RadioRefreshCadence): number {
+  return STALE_MS[cadence] ?? STALE_MS.week;
+}
 
 /** True when the radios are missing, old enough to rebuild, or a def predates
  *  the snapshot of tracks (one rebuild after the app updates, then quiet). */
-export function radiosStale(defs: RadioDef[]): boolean {
+export function radiosStale(defs: RadioDef[], staleMs: number = STALE_MS.week): boolean {
   if (defs.length === 0) return true;
   if (defs.some((d) => !d.tracks)) return true;
   const newest = Math.max(...defs.map((d) => d.createdAt));
-  return Date.now() - newest > STALE_MS;
+  return Date.now() - newest > staleMs;
 }
 
 interface PersistedShape {

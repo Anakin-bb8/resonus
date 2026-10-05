@@ -29,7 +29,8 @@ import {
 import type { Artist, Song } from '@/api/subsonic';
 import { dominantColorOf } from '@/hooks/useDominantColor';
 import { ensureRadioIcons } from '@/lib/radioArt';
-import { useRadios, radiosStale, type RadioArtist, type RadioDef } from '@/store/radios';
+import { useRadios, radiosStale, radioStaleMs, type RadioArtist, type RadioDef } from '@/store/radios';
+import { useSettings } from '@/store/settings';
 import { themeMode } from '@/theme';
 
 /** How many radios the section offers. */
@@ -37,6 +38,11 @@ export const RADIO_SEEDS = 6;
 
 /** How many tracks a radio aims for. */
 export const RADIO_TARGET = 30;
+
+/** Below this many tracks the mix takes one outsider per artist rather than
+ *  stopping: a short list that holds together beats a long one that wanders
+ *  off into children's songs. */
+const MIN_RADIO_TRACKS = 12;
 
 /** Similar artists kept per radio: the pool the track mix draws from. */
 const SIMILAR_PER_RADIO = 8;
@@ -146,9 +152,12 @@ export async function buildRadioDef(seed: RadioArtist): Promise<RadioDef | null>
  * Four pools are gathered — the seed's own top songs, the similar artists'
  * top songs, whatever the server suggests as similar to the seed's first
  * track, and the library's random songs — each shuffled, so the order is
- * not the same twice the way a server's ranking always is. The pools are
- * then dealt out round by round, one song from each per pass: every source
- * keeps feeding the mix instead of playing as a block.
+ * not the same twice the way a server's ranking always is. The last two
+ * pools only draw from the neighbourhood (the seed and its similar
+ * artists): unfiltered, they are where the children's songs and the
+ * strangers came from. The pools are then dealt out round by round, one
+ * song from each per pass: every source keeps feeding the mix instead of
+ * playing as a block.
  *
  * Three rules make it a radio rather than shuffled bins. It opens on the
  * seed's own most played — a radio never starts anywhere else. No two tracks
@@ -169,17 +178,26 @@ export async function radioTracks(def: RadioDef): Promise<Song[]> {
   const extras = seedTop[0]
     ? await getSimilarSongs(seedTop[0].id, 30).catch(() => [] as Song[])
     : [];
-  const random = await getRandomSongs(50).catch(() => [] as Song[]);
+  const random = await getRandomSongs(100).catch(() => [] as Song[]);
 
   const artistOf = (s: Song): string => s.artistId ?? s.artist ?? '';
+  // The neighbourhood, by id and by name (a song without an id still tells
+  // whose it is): the filler pools below only take songs from inside it.
+  const allowIds = new Set([def.seed.id, ...def.similar.map((a) => a.id)]);
+  const allowNames = new Set(
+    [def.seed.name, ...def.similar.map((a) => a.name)].map((n) => n.toLowerCase()),
+  );
+  const inNeighborhood = (s: Song): boolean =>
+    (s.artistId != null && allowIds.has(s.artistId)) ||
+    (s.artist != null && allowNames.has(s.artist.toLowerCase()));
   // The opener: the seed's own most played, taken before the shuffle that
   // scrambles the rest — the first frame of the list is always the same.
   const opener = seedTop.find((s) => s.id && !s.url);
   const pools = [
     { songs: shuffled(seedTop.filter((s) => s !== opener)), cap: 6 },
     ...similarLists.map((list) => ({ songs: shuffled(list), cap: 3 })),
-    { songs: shuffled(extras), cap: 2 },
-    { songs: shuffled(random), cap: 2 },
+    { songs: shuffled(extras.filter(inNeighborhood)), cap: 2 },
+    { songs: shuffled(random.filter(inNeighborhood)), cap: 2 },
   ].filter((p) => p.songs.length > 0);
 
   // Per pool, filter once: playable, not a repeat of a song already handed
@@ -228,6 +246,24 @@ export async function radioTracks(def: RadioDef): Promise<Song[]> {
     picked.push(head);
     ptr[i]++;
   }
+
+  // Last resort, and only when the neighbourhood came up short: whatever is
+  // left of the two filler pools, unfiltered — one track per artist at most,
+  // and never two in a row. A filler with no artist to its name is skipped:
+  // unattributed is exactly the untrustworthy kind.
+  if (picked.length < MIN_RADIO_TRACKS) {
+    const outsiders = new Set<string>();
+    for (const s of shuffled([...extras, ...random])) {
+      if (picked.length >= RADIO_TARGET) break;
+      if (!s.id || s.url || seen.has(s.id)) continue;
+      const artist = artistOf(s);
+      if (!artist || outsiders.has(artist)) continue;
+      if (picked.length > 0 && artist === artistOf(picked[picked.length - 1])) continue;
+      outsiders.add(artist);
+      seen.add(s.id);
+      picked.push(s);
+    }
+  }
   return picked;
 }
 
@@ -246,7 +282,8 @@ export function refreshRadios(opts: { force?: boolean } = {}): Promise<RadioDef[
   inflight = (async () => {
     const store = useRadios.getState();
     await store.hydrate();
-    if (!opts.force && !radiosStale(useRadios.getState().defs)) {
+    const staleMs = radioStaleMs(useSettings.getState().radioRefreshCadence);
+    if (!opts.force && !radiosStale(useRadios.getState().defs, staleMs)) {
       return useRadios.getState().defs;
     }
     const seeds = await pickSeeds(RADIO_SEEDS);

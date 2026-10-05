@@ -231,6 +231,12 @@ export default function AppearanceSettings() {
           />
 
           <SettingRow
+            label={t('Radios')}
+            chevron
+            onPress={() => router.push('/settings/radios')}
+          />
+
+          <SettingRow
             label={t('Greeting')}
             chevron
             onPress={() => router.push('/settings/greeting')}
