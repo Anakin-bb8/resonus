@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 789 of them.
+Every string the app can show, under the screen it shows up on. 787 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -27,6 +27,7 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
+| `{artist} Radio` |  |
 | `{n} minutes` | A value of the sleep timer, in minutes from now |
 | `{n} more` | Under a heading of the update prompt: how many more lines of that kind the release notes have |
 | `{n} songs, {size}, copied into a folder of their own.` | The line under that title |
@@ -49,6 +50,7 @@ you are actually typing into, which is easier than reading it here.
 | `Continue listening` | Shortcut on the app's launcher icon (long press): resumes the last queue. Short: launchers cut long labels |
 | `Couldn't create the link` | The server would not make a share link |
 | `Couldn't find anything to mix with this song` | Toast: the server had nothing similar to carry on with |
+| `Couldn't refresh the radio` |  |
 | `Couldn't save the file` | Toast: writing to the chosen folder failed |
 | `Couldn't send the file` | Toast: handing it to another app failed |
 | `Cover art` | Three places, one word: a section header in Settings › Player, a line of the storage bar in Settings › Downloads, and what the screen reader calls the picture in the song information sheet |
@@ -65,6 +67,7 @@ you are actually typing into, which is easier than reading it here.
 | `Genre` | Label of a field in the song information sheet |
 | `Go to album` | Leave this sheet and open the album the song is on |
 | `Go to artist` | Leave this sheet and open the artist |
+| `Go to artist radio` |  |
 | `Home` | The first tab, and a folder in the car |
 | `Library` | The settings section, and a folder in the car |
 | `Mix of “{name}”` | What the player calls the queue once it has grown past its album into songs the app picked itself. `{name}` is the song it was grown from |
@@ -76,16 +79,20 @@ you are actually typing into, which is easier than reading it here.
 | `Pin to top` | Keep this at the top of its list, above everything else. `Unpin` undoes it |
 | `Playback speed` |  |
 | `Playback stopped` | The mini player when there is nothing playing any more |
+| `Playlist created` | The toast after making one |
 | `Plays` | How many times the song has been played |
 | `Previous` | Player control: the previous track (accessibility label) |
+| `Radio updated` |  |
 | `Rate` | Verb: give it stars. Used for a song and for an artist. Not "bitrate" |
 | `Rating` | The stars given to the song. Not a bitrate, not a review |
 | `Recents` | Library section and its sort order: recently opened items |
+| `Refresh this radio` |  |
 | `Remove from playlist` | Menu action: take this song out of the playlist it was opened from |
 | `Removed from playlist` | Toast, with an undo button next to it |
 | `Resonus {new} is out. You have {old}.` |  |
 | `Resonus {new} is out. You have {old}. The download is about {mb} MB.` |  |
 | `Sample rate` | A property of the audio, in kHz |
+| `Save as playlist` |  |
 | `Save to a folder` | A value of `Export`: write the file somewhere on the phone |
 | `Saved as “{name}”` | Where the exported file ended up. `{name}` is the file's name |
 | `Send to another app` | A value of `Export`: hand the file to another app |
@@ -137,6 +144,7 @@ you are actually typing into, which is easier than reading it here.
 | `Downloaded` | Badge on something whose files are on the phone |
 | `EPs` | Shelf heading: records longer than a single and shorter than an album |
 | `Field recordings` | Shelf heading: records made of the world itself, nature or a city, rather than of performed music |
+| `Go to artist radio` |  |
 | `Interviews` | Shelf heading: records of somebody being interviewed, usually the artist |
 | `Live` | Shelf heading: records of a performance in front of an audience. Not the verb, and not “currently playing” |
 | `Mixtapes` | Shelf heading: MusicBrainz's “Mixtape/Street”, promotional records with new material, common in rap and hip hop. Kept as-is where the term travels |
@@ -188,11 +196,17 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
+| `{artist} Radio` |  |
 | `Based on the tracks in this radio` |  |
 | `Couldn't build the radio.` |  |
+| `Couldn't refresh the radio` |  |
+| `Go to artist` | Leave this sheet and open the artist |
+| `Playlist created` | The toast after making one |
+| `Radio updated` |  |
 | `Refresh` | Ask the server for this playlist again, in case it changed elsewhere. Also the button under suggested tracks to regenerate them |
+| `Refresh this radio` |  |
+| `Save as playlist` |  |
 | `Suggested tracks` | Section heading at the bottom of a playlist: songs the server recommends based on what is already in the playlist |
-| `The {artist} Radio` |  |
 | `With {artists} and more` |  |
 
 ## Browse › Albums
@@ -443,7 +457,6 @@ you are actually typing into, which is easier than reading it here.
 | `PLAYING FROM` | Small label above the cover, followed by the name of the album, playlist or mix it is playing from, or by `Queue` while the song is one that was added to the queue by hand. Written in capitals by the design, so it can be capitals in your language too, or not, whichever reads right |
 | `Previous` | Player control: the previous track (accessibility label) |
 | `Queue` | The list of songs waiting to play. Not a playlist |
-| `Radio` | Internet radio stations. Most languages keep the word |
 | `Remove from the group` | The − beside `Add to the group`, and the same in reverse: it takes that room out of the group so it stops playing along. Read out by the screen reader, never shown, and Sonos only |
 | `Repeat` | Start again at the end |
 | `Search again` |  |
@@ -584,7 +597,6 @@ you are actually typing into, which is easier than reading it here.
 | `No radio stations` | Empty state heading |
 | `Password` | The password field, on the login screen and wherever the server asks again |
 | `Pin to top` | Keep this at the top of its list, above everything else. `Unpin` undoes it |
-| `Radio` | Internet radio stations. Most languages keep the word |
 | `Remove “{name}” from your server?` | Dialog title: stations live on the server, so this deletes it for everybody |
 | `Remove cover` | Screen reader label for the small x on a chosen picture |
 | `Station name` | The name field when adding an internet radio station |
@@ -604,7 +616,6 @@ you are actually typing into, which is easier than reading it here.
 | `Artist` | In search results, the little word under a result saying what kind of thing it is |
 | `Artists` | A heading over a list of them, never a count |
 | `Couldn't reach the server. Check your connection.` | Error on Home when the server does not answer at all |
-| `Radio` | Internet radio stations. Most languages keep the word |
 | `Recent searches` | What was searched for before, kept on the phone |
 | `Search your music` |  |
 | `Song` | In search results, the little word under a result saying what kind of thing it is |
@@ -873,11 +884,11 @@ you are actually typing into, which is easier than reading it here.
 | `Always show the navigation bar` |  |
 | `Appearance` |  |
 | `At the top of Home, what is playing in your other apps and devices, ready to carry on here.` |  |
+| `Blur` | One of the values of “Navigation bar style” |
 | `Cover corners` |  |
 | `Dark` | The appearance the app has always had, and what it uses unless the other is chosen. |
 | `Explore` | The tab holding everything the server has: all albums, artists, songs, genres, stations and folders |
 | `Explore sections` |  |
-| `Flat, or black fading out at the top edge. Gradient ignores the blur.` | The line under “Navigation bar style”, explaining it |
 | `Folder browsing` | Browsing the server's folders as folders, instead of by album and artist |
 | `Font` |  |
 | `Gradient` | One of the values of “Navigation bar style” |
@@ -894,7 +905,6 @@ you are actually typing into, which is easier than reading it here.
 | `More rounded` | One of the values of “Cover corners” |
 | `Navigation` | Section header: how you move around the app |
 | `Navigation bar` | Settings screen: which tabs are on the bar at the bottom, and in what order |
-| `Navigation bar blur` |  |
 | `Navigation bar style` |  |
 | `Off` | A setting value meaning disabled (crossfade, normalization…) |
 | `Open the app on` | Which tab the app opens on, and comes back to after a while away |
@@ -920,7 +930,7 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `Always` | A value of when a downloaded song is played from the file instead of streamed |
-| `Asks the file for frame-exact seeks and durations before playing. On a stream with no index that means scanning it first — the wait before a track starts. Off, tracks start at once: the clock still follows the audio, seeks may land a fraction of a second off.` |  |
+| `Asks the file for frame-exact seeks and durations before playing. On a stream with no index that means scanning it first, which is the wait before a track starts. Off, tracks start at once: the clock still follows the audio, seeks may land a fraction of a second off.` |  |
 | `At “Original” quality nothing is transcoded.` |  |
 | `Automatic` | A value of `Normalize volume`: let the app decide between per track and per album |
 | `Autoplay` | When the queue runs out, keep playing with similar songs instead of stopping |
@@ -1051,19 +1061,12 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `Couldn't refresh the radios` |  |
-| `Every 2 weeks` | One of the values of “Update radios automatically” |
-| `Every 3 days` | One of the values of “Update radios automatically” |
-| `Every day` | One of the values of “Update radios automatically” |
-| `Every week` | One of the values of “Update radios automatically” |
-| `How often the radios rebuild their artists and tracks.` | The line under “Update radios automatically”, explaining it |
-| `Never` | A value of `Play downloaded songs from the phone`: always stream, never use the file on the phone. The share sheet's own "never expires" is a separate key, `Never::expiry`, so a language that needs two different words can have them |
+| `Artist radios` |  |
+| `Keep playing when a radio ends` |  |
 | `Radios` |  |
-| `Radios updated` |  |
-| `Rebuild the radios with new artists and tracks right away.` |  |
-| `Refresh radios now` |  |
-| `Refreshing radios.` |  |
-| `Update radios automatically` |  |
+| `Radios built from the artists you play most. Off, there are none on Home or in the menus, and nothing is fetched for them.` |  |
+| `Radios on Home` |  |
+| `When its songs run out, another round from the same artists.` | The line under “Keep playing when a radio ends”, explaining it |
 
 ## Settings › Scrobbling
 
@@ -1201,6 +1204,7 @@ you are actually typing into, which is easier than reading it here.
 | `Playing next` | The toast that says `Play next` worked. Not the same string, and not a heading |
 | `Playlist name` | The name field when making or renaming a playlist |
 | `Playlists` | A section on Home and in the library, and a folder in the car |
+| `Radio` | Internet radio stations. Most languages keep the word |
 | `Rate {n} stars` | Read out by the screen reader for each star. `{n}` is which star it is |
 | `Recently added` | A sort order, and a section: newest first (in Favorites, last favorited first) |
 | `Remove` | Take something out of a list. Deleting for good is `Delete` |

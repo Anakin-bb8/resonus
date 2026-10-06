@@ -1,12 +1,12 @@
 /**
  * The gradients that run one colour into the page's own, eased rather than
  * straight: a straight blend has a visible corner where it starts and a line
- * where it lands — the stacco at the end of the top bar's fade. Smoothstep
+ * where it lands - the stacco at the end of the top bar's fade. Smoothstep
  * eases in and out of both, over several stops, since the gradient itself
  * only blends in straight lines between them.
  *
- * The first quarter of the run holds `from` flat — the header keeps its
- * colour under the title before letting go — and `to` arrives at `until`
+ * The first quarter of the run holds `from` flat - the header keeps its
+ * colour under the title before letting go - and `to` arrives at `until`
  * with the slope there already zero, so what follows is a flat run in the
  * page's own colour that begins without an edge to find.
  */

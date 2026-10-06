@@ -5,7 +5,7 @@
  *
  * On iOS the widget is the small "now playing" one: it shows the track the app
  * last wrote, opens the album for it, and its play button presses through an
- * intent — a toggle with the app left exactly where it was. On Android this
+ * intent - a toggle with the app left exactly where it was. On Android this
  * also drives the launcher shortcuts. On a build without the module, all of it
  * does nothing.
  */
@@ -75,7 +75,7 @@ export function waitFor(check: () => boolean, ms: number): Promise<boolean> {
 
 /**
  * The widget's play button, wherever the press came from: the queue gets its
- * usual chance to come back, the player toggles, and that is all of it — no
+ * usual chance to come back, the player toggles, and that is all of it - no
  * navigation, no screen, the app stays where it is, which is the entire
  * point of the button. True when there was a queue to press into.
  */
@@ -99,7 +99,7 @@ const SEEK_JUMP_SEC = 4;
  * the handover runs from the store, outside React. The dark band, whichever
  * theme the app is in: the widget's text is always white, and the band is
  * what keeps white readable on a cover's colour. Empty while a new cover is
- * being read — the widget falls back to the page's own colour for that one
+ * being read - the widget falls back to the page's own colour for that one
  * write, and the colour's own write follows.
  */
 let accent = '';
@@ -190,7 +190,7 @@ function push() {
     native.update(state);
     last = key;
   } catch {
-    // A widget that misses one update catches the next — and this one is
+    // A widget that misses one update catches the next - and this one is
     // not marked as sent, so the next write sends it again.
   }
 }
@@ -235,7 +235,7 @@ export function initHomeWidget() {
     }
   });
   // The widget's play button: an intent writes the press into the group and
-  // posts the notification, and this reads it back — instantly from the
+  // posts the notification, and this reads it back - instantly from the
   // notification when the intent ran in this process, within the second from
   // the poll when it did not (different processes; the flag is the only road
   // between them), and on this very call for a press made while the app was

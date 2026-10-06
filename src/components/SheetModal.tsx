@@ -28,7 +28,7 @@ export function SheetModal({
    *  that unmounts the sheet along with whatever declares it. */
   onClosed?: () => void;
   /** `close()` closes the sheet; `close(after)` runs `after` once the sheet is
-   *  off screen, for actions that navigate away — pushing while the Modal is
+   *  off screen, for actions that navigate away - pushing while the Modal is
    *  still up races its unmount with the stack commit (see ArtistPickerSheet). */
   children: (close: (after?: () => void) => void) => ReactNode;
 }) {

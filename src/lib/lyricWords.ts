@@ -67,7 +67,7 @@ export function trimmedWords(
  *
  * The source's own end when it sent one (TTML and Jellyfin do); the next
  * word's start when it did not, since words follow one another; for the last
- * word, the next line's start — how long the phrase is held — capped, because
+ * word, the next line's start - how long the phrase is held - capped, because
  * that gap is often silence rather than a note, and a word that takes four
  * seconds to fill reads as one that never does. Nothing after the word at all:
  * a guess, which is all it can be.
@@ -76,7 +76,7 @@ export function trimmedWords(
  * clock these times are read in. Nothing fills past it: a word still filling
  * when its row stops being the active one would jump to full colour (and its
  * shine disappear) in front of whoever is watching. Nor past the next word,
- * whatever the source said — fills follow one another, they do not overlap.
+ * whatever the source said - fills follow one another, they do not overlap.
  */
 export function wordEnds(words: LyricWord[], handover?: number): number[] {
   const gone = handover ?? Infinity;

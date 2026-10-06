@@ -70,14 +70,15 @@ export function normQ(str: string): string {
 }
 
 /**
- * How many edits a query word forgives: short words none (two letters match
- * half the library), a few letters one (a missing letter, a swap), long ones
- * two (a couple of pasticci).
+ * How many edits a query word forgives: two letters or less none (they match
+ * half the library), then more rope the longer the word — a missing letter,
+ * a swap, a couple of pasticci, and then some.
  */
 function allowedEdits(len: number): number {
   if (len <= 2) return 0;
-  if (len <= 5) return 1;
-  return 2;
+  if (len <= 4) return 1;
+  if (len <= 7) return 2;
+  return 3;
 }
 
 /**
@@ -137,15 +138,18 @@ function matchWord(qw: string, words: string[]): boolean {
 /**
  * Does any of the fields match the query? Every query word has to land
  * somewhere (in any order, so "rojo nino" finds "Niño Rojo"), each as a
- * substring or a typo away. Fields are normalized here; the query is too,
- * so callers can hand over what the box holds.
+ * substring or a typo away. One- and two-letter words ("of", "di", "y") only
+ * count when they sit inside a field word: requiring them whole would make
+ * every query carrying a stopword fail. Fields are normalized here; the query
+ * is too, so callers can hand over what the box holds.
  */
 export function matches(query: string, ...fields: (string | undefined)[]): boolean {
   const q = normQ(query.trim());
   if (!q) return true;
   const hay = fields.filter((f): f is string => !!f).map(normQ);
   if (hay.some((f) => f.includes(q))) return true;
-  const words = q.split(/\s+/);
+  const words = q.split(/\s+/).filter((w) => w.length >= 3);
+  if (words.length === 0) return false;
   const split = hay.map((f) => f.split(/\s+/));
   return words.every((qw) => split.some((ws) => matchWord(qw, ws)));
 }

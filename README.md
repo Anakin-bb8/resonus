@@ -67,7 +67,7 @@ Not available on iOS yet: CarPlay, casting, the equalizer and gapless playback.
 - **Android Auto** (experimental)
 - **Landscape and tablet layouts**
 - **Queue sync across devices**
-- **In 11 languages**: English, Spanish, German, Catalan, Russian, Italian, Simplified Chinese, Ukrainian, Polish, Swedish, Brazilian Portuguese
+- **In 12 languages**: English, Spanish, German, Catalan, Russian, Italian, Simplified Chinese, Ukrainian, Polish, Swedish, Brazilian Portuguese, Turkish
 
 ## FAQ
 

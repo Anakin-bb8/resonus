@@ -13,7 +13,7 @@
  * Settings › Player.
  */
 import { useRouter } from 'expo-router';
-import { ScrollView, Text } from 'react-native';
+import { Platform, ScrollView, Text } from 'react-native';
 
 import {
   SelectList,
@@ -132,15 +132,20 @@ export default function PlaybackSettings() {
                     onChange: setPreloadUpcoming,
                     disabled: offline,
                   },
-                  {
-                    label: t('Precise timing'),
-                    description: t(
-                      'Asks the file for frame-exact seeks and durations before playing. On a stream with no index that means scanning it first — the wait before a track starts. Off, tracks start at once: the clock still follows the audio, seeks may land a fraction of a second off.',
-                    ),
-                    value: preferPreciseTiming,
-                    onChange: setPreferPreciseTiming,
-                    disabled: offline,
-                  },
+                  // AVFoundation's key: Android has no such switch to throw.
+                  ...(Platform.OS === 'ios'
+                    ? [
+                        {
+                          label: t('Precise timing'),
+                          description: t(
+                            'Asks the file for frame-exact seeks and durations before playing. On a stream with no index that means scanning it first, which is the wait before a track starts. Off, tracks start at once: the clock still follows the audio, seeks may land a fraction of a second off.',
+                          ),
+                          value: preferPreciseTiming,
+                          onChange: setPreferPreciseTiming,
+                          disabled: offline,
+                        },
+                      ]
+                    : []),
                   {
                     label: t('Transcode lossless files only'),
                     description: t(

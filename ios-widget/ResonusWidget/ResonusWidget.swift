@@ -176,7 +176,7 @@ struct TrackWidgetView: View {
     }
 
     /// The press itself: an intent from iOS 17 on, which toggles the player
-    /// where it stands and leaves the app where it was — not opened, not on
+    /// where it stands and leaves the app where it was - not opened, not on
     /// the now playing screen. Before that the deep link, which is the only
     /// road an older system leaves, app and all.
     @ViewBuilder

@@ -3,7 +3,7 @@ import { initialWindowMetrics, useSafeAreaInsets } from 'react-native-safe-area-
 /**
  * Safe area insets with a top that is never zero.
  *
- * iOS reports no top inset inside a modal presentation — the full-screen modals
+ * iOS reports no top inset inside a modal presentation - the full-screen modals
  * for queue and lyrics hit it and keep their own 12 for it. Everything that
  * hangs its own bar under the status bar (the artist bar, the track list's bar
  * and the play button docked in it) would end up *above* the bar instead of

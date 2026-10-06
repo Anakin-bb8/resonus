@@ -1,15 +1,14 @@
 /**
- * One radio: what its Home card opens, in the shape its siblings use — the
+ * One radio: what its Home card opens, in the shape its siblings use - the
  * picture edge to edge from the very top of the display, artwork only (the
  * name lives in the title underneath); the radio's colour fading out
  * of it under the title and the buttons; the tracks below; and a short set
  * of suggestions at their foot.
  *
  * The definition comes from what Home saved when it has it, and is built
- * here when it doesn't (a deep link, or the section turned off). What Home
- * saved carries the tracks it opened with, so the list is already full on
- * the first frame; the fresh list follows when the server answers, and the
- * screen plays whichever of the two it has.
+ * here when it doesn't (a deep link, or the section turned off). Its list is
+ * made the first time it is opened and saved with it, so from then on it is
+ * full on the first frame and stays that list until the radios are replaced.
  */
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
@@ -19,8 +18,11 @@ import { getArtist } from '@/api/data';
 import { AlbumRowsSkeleton } from '@/components/AlbumRowsSkeleton';
 import { Message } from '@/components/Message';
 import { RadioArt } from '@/components/RadioCard';
+import { openRadioMenu } from '@/components/RadioMenuSheet';
 import { SuggestedTracks } from '@/components/SuggestedTracks';
-import { TrackListView } from '@/components/TrackListView';
+import { TOPBAR_H, TrackListView } from '@/components/TrackListView';
+import { tintForMode } from '@/hooks/useDominantColor';
+import { useInsets } from '@/hooks/useInsets';
 import { useScreenSize } from '@/hooks/useScreenSize';
 import { songsLabel, useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
@@ -29,7 +31,7 @@ import { currentSong, usePlayerStore } from '@/store/player';
 import { useRadios, type RadioDef } from '@/store/radios';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
-import { themed, useTheme } from '@/theme';
+import { themed, useTheme, useThemeMode } from '@/theme';
 
 /** Fisher–Yates, so shuffle plays this radio's own list in another order
  *  (the queue shows exactly what is playing, which a mode flag wouldn't). */
@@ -47,6 +49,10 @@ export default function ArtistRadioScreen() {
   // mounted while you are on another one, out of reach of anything else.
   useTheme();
   const { width } = useScreenSize();
+  const insets = useInsets();
+  // The colour was read in whichever appearance the radio was built under;
+  // the header takes it in this one, as an album's does.
+  const mode = useThemeMode();
   const { id } = useLocalSearchParams<{ id: string }>();
   const radioId = id ?? '';
   const t = useT();
@@ -57,13 +63,17 @@ export default function ArtistRadioScreen() {
   const showListArtwork = useSettings((s) => s.showListArtwork);
   const lang = useSettings((s) => s.language);
 
+  // Read live from the store, so a rebuild that keeps this seed is what the
+  // screen shows next time, not a copy the query cache held on to.
+  const saved = useRadios((s) => s.defs.find((d) => d.seed.id === radioId));
   const defQuery = useQuery({
     queryKey: ['radio-def', radioId],
     queryFn: async (): Promise<RadioDef> => {
-      const saved = useRadios.getState().defs.find((d) => d.seed.id === radioId);
-      if (saved) return saved;
+      await useRadios.getState().hydrate();
+      const stored = useRadios.getState().defs.find((d) => d.seed.id === radioId);
+      if (stored) return stored;
       // Straight into the screen without Home having built anything: make
-      // just this one (and leave it out of the store — the section's own
+      // just this one (and leave it out of the store - the section's own
       // refresh decides what belongs there).
       const { artist } = await getArtist(radioId);
       const built = await buildRadioDef({ id: radioId, name: artist.name, coverArt: artist.coverArt });
@@ -72,22 +82,32 @@ export default function ArtistRadioScreen() {
     },
     staleTime: Number.POSITIVE_INFINITY,
     retry: 1,
+    enabled: !saved,
   });
-  const def = defQuery.data;
+  const def = saved ?? defQuery.data;
 
   const tracksQuery = useQuery({
     queryKey: ['radio-tracks', radioId],
-    queryFn: () => radioTracks(def as RadioDef),
-    enabled: !!def,
-    staleTime: 10 * 60 * 1000,
+    queryFn: async () => {
+      const tracks = await radioTracks(def as RadioDef);
+      // Kept with the radio, so it is this same list every time it is opened
+      // (and the card on Home can say how long it is).
+      const { defs, setDefs } = useRadios.getState();
+      if (defs.some((d) => d.seed.id === radioId)) {
+        await setDefs(defs.map((d) => (d.seed.id === radioId ? { ...d, tracks } : d)));
+      }
+      return tracks;
+    },
+    // Only for a radio not opened yet. Each build is a new draw, so asking
+    // again on the way in would swap the list a few seconds after it was
+    // drawn; once made, the list is the radio until the radios are replaced.
+    enabled: !!def && !def.tracks?.length,
+    staleTime: Number.POSITIVE_INFINITY,
     retry: 1,
   });
-  // The snapshot Home saved is what the screen wears while the fresh list is
-  // being asked for — and stays when it can't be, so a list once seen is
-  // never an empty page.
-  const tracks = tracksQuery.data ?? def?.tracks ?? [];
+  const tracks = def?.tracks?.length ? def.tracks : (tracksQuery.data ?? []);
 
-  const title = def ? t('The {artist} Radio', { artist: def.seed.name }) : '';
+  const title = def ? t('{artist} Radio', { artist: def.seed.name }) : '';
   const href = `/artist-radio/${radioId}`;
   const similarNames = def?.similar
     .slice(0, 3)
@@ -121,7 +141,8 @@ export default function ArtistRadioScreen() {
         similarNames ? t('With {artists} and more', { artists: similarNames }) : undefined
       }
       meta={tracks.length > 0 ? songsLabel(tracks.length, lang) : undefined}
-      accentColor={def?.color}
+      accentColor={def?.color ? tintForMode(def.color, mode, true) : undefined}
+      onMenu={def && tracks.length > 0 ? () => openRadioMenu(def, tracks) : undefined}
       songs={tracks}
       currentId={playing?.id}
       showArtwork={showListArtwork}
@@ -129,7 +150,7 @@ export default function ArtistRadioScreen() {
         height: coverH,
         render: (w, h) =>
           def ? (
-            <RadioArt def={def} width={w} cropHeight={h} bare />
+            <RadioArt def={def} width={w} cropHeight={h} padTop={insets.top + TOPBAR_H} bare />
           ) : (
             <View style={[styles.placeholder, { width: w, height: h }]} />
           ),

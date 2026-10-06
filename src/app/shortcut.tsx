@@ -82,7 +82,7 @@ export default function ShortcutScreen() {
         // The button's own deep link, which only iOS 16 still takes (the
         // intent has no room there): it still toggles and still lands in the
         // player, because this route opened the app to get here. iOS 17 and
-        // up never come this way — the press runs where it stands, with the
+        // up never come this way - the press runs where it stands, with the
         // app untouched (see PlaybackToggleIntent).
         if (await runPlaybackToggle()) return go('/player');
         return go('/(tabs)');

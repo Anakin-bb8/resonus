@@ -5,7 +5,7 @@ import Foundation
 ///
 /// This repo ships an unsigned IPA: there are no entitlements until something
 /// signs the build, and a sideload signs with its own provisioning profile.
-/// The app group in that profile is whatever the certificate registered — a
+/// The app group in that profile is whatever the certificate registered - a
 /// name this repo can neither predict nor carry. The profile travels inside
 /// the bundle as `embedded.mobileprovision`, so both halves read the group
 /// names out of it and use whichever one iOS actually granted. The stock group
@@ -28,7 +28,7 @@ enum SharedAppGroup {
         let own = Bundle.main.bundleIdentifier ?? ""
         if !own.isEmpty { offered.append("group.\(own)") }
         // The widget's id is the app's with the target's name on the end, so
-        // the app's comes off its own with that taken away — which lands on
+        // the app's comes off its own with that taken away - which lands on
         // the certificate's id when a sideloader stamped that into both.
         let suffix = ".ResonusWidget"
         if own.hasSuffix(suffix) { offered.append("group.\(own.dropLast(suffix.count))") }
@@ -73,7 +73,7 @@ enum SharedAppGroup {
 
     /// The profile is a CMS blob with the plist sitting in the middle of it:
     /// the plist is found by its markers rather than unwrapped, which needs no
-    /// crypto and no framework. Only the app groups are taken out — everything
+    /// crypto and no framework. Only the app groups are taken out - everything
     /// else in there belongs to the signer, not to this.
     private static func readGroups(from profile: Data) -> [String] {
         guard

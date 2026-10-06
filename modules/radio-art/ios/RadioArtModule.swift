@@ -3,7 +3,7 @@ import UIKit
 
 /// The radio icon, drawn once and written to disk: the seed's colour as the
 /// background, up to three covers as overlapping circles (seed on top) and
-/// the artist's name at the bottom — the shape Spotify gives its radios.
+/// the artist's name at the bottom - the shape Spotify gives its radios.
 ///
 /// One JSON payload in, the file's uri back, so the JS side stays in charge
 /// of what goes in it (see `src/lib/radioArt.ts`). Everything runs off the
@@ -74,10 +74,15 @@ public class RadioArtModule: Module {
       // live collage paints in, so the file and the views are one picture.
       let sideR = size.width * 0.20
       let centerR = size.width * 0.30
-      drawCircle(context: c, cx: size.width * 0.10, cy: size.height * 0.54, r: sideR,
-                 image: downloaded.count > 1 ? downloaded[1] : nil, background: background)
-      drawCircle(context: c, cx: size.width * 0.90, cy: size.height * 0.54, r: sideR,
-                 image: downloaded.count > 2 ? downloaded[2] : nil, background: background)
+      // A side with no artist behind it is left out, not drawn as an empty disc.
+      if urls.count > 1 {
+        drawCircle(context: c, cx: size.width * 0.10, cy: size.height * 0.54, r: sideR,
+                   image: downloaded.count > 1 ? downloaded[1] : nil, background: background)
+      }
+      if urls.count > 2 {
+        drawCircle(context: c, cx: size.width * 0.90, cy: size.height * 0.54, r: sideR,
+                   image: downloaded.count > 2 ? downloaded[2] : nil, background: background)
+      }
       drawCircle(context: c, cx: size.width * 0.50, cy: size.height * 0.46, r: centerR,
                  image: downloaded.first ?? nil, background: background)
 

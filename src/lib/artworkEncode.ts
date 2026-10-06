@@ -3,7 +3,7 @@
  *
  * The value itself lives in settings (`animatedArtworkFps`); this is the
  * one place that tells the encoder about it, so the store never has to know
- * what the native side looks like — and a build without the patched module
+ * what the native side looks like - and a build without the patched module
  * keeps its own default, because the call below simply throws and is caught.
  */
 import { AudioModule, type NativeAudioModule } from 'expo-audio';

@@ -46,7 +46,7 @@ const ICONS: Record<string, 'home' | 'search' | 'library' | 'albums' | 'settings
 };
 
 /**
- * The gradient fill (Settings › Appearance › Navigation bar style).
+ * The gradient fill (Settings › Appearance › Navigation bar style: Gradient).
  *
  * The shape the first draft was after, taken off a Figma ramp: clear at the
  * bar's top edge, a scrim by 19%, most of the ink in by the middle, solid a

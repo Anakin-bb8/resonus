@@ -91,8 +91,8 @@ module.exports = function withResonusWidget(config) {
 
   // The register call for the press's background launch, put where iOS looks
   // for it: before `didFinishLaunchingWithOptions` returns. The handler does
-  // not touch the group — the press waits there, JavaScript takes it on
-  // startup (the cold case) or on its one-second poll (the suspended one) —
+  // not touch the group - the press waits there, JavaScript takes it on
+  // startup (the cold case) or on its one-second poll (the suspended one) -
   // it only keeps the process up long enough for that to happen.
   config = withAppDelegate(config, (cfg) => {
     if (cfg.modResults.language !== 'swift') return cfg;

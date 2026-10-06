@@ -97,19 +97,8 @@ export const DOWNLOAD_CONCURRENCY_OPTIONS = [1, 2, 3];
  */
 export const ANIMATED_ARTWORK_FPS_OPTIONS = [30, 60] as const;
 
-/**
- * How often the Home radios rebuild themselves: the seed artists, the mix
- * beside them, the tracks. `never` leaves them to the manual refresh in
- * Settings › Appearance › Home › Radios.
- */
-export type RadioRefreshCadence = 'day' | '3days' | 'week' | '2weeks' | 'never';
-export const RADIO_REFRESH_CADENCES: RadioRefreshCadence[] = [
-  'day',
-  '3days',
-  'week',
-  '2weeks',
-  'never',
-];
+/** How many radios Home offers. */
+export const RADIO_COUNT_OPTIONS = [3, 6, 9] as const;
 
 /**
  * Codec to request for transcoding (Subsonic `format` parameter).
@@ -443,8 +432,7 @@ const HOME_SECTION_KEYS: HomeSectionKey[] = [
  */
 export const DEFAULT_HOME_SECTIONS: HomeSection[] = [
   { key: 'discover', enabled: true },
-  // The personalised artist radios (built from listening history when the
-  // scrobble services are filled in, from this server's play counts when not).
+  // The personalised artist radios, built from this server's play counts.
   { key: 'radios', enabled: true },
   { key: 'playlists', enabled: true },
   // Draws nothing without a subscription, so it costs nobody a row.
@@ -921,8 +909,15 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   showExplicitTag: boolean;
   /** When the queue ends, continue with similar songs (getSimilarSongs2). */
   autoplaySimilar: boolean;
-  /** How often the Home radios rebuild themselves on their own. */
-  radioRefreshCadence: RadioRefreshCadence;
+  /**
+   * The artist radios at all. Off, nothing is built or asked for: no shelf on
+   * Home, no radio in the menus, no round added at the end of one.
+   */
+  radiosEnabled: boolean;
+  /** How many radios Home offers (`RADIO_COUNT_OPTIONS`). */
+  radioCount: number;
+  /** A radio draws another round when its songs run out. */
+  radioEndless: boolean;
   /**
    * Whether the app measures itself (Settings › About → Diagnostics). On for
    * everybody, since a report from the phone with the problem is worth more
@@ -961,7 +956,7 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
    * Ask the asset for frame-exact timing before anything plays: the
    * `AVURLAssetPreferPreciseDurationAndTimingKey` on iOS, which is what makes a
    * seek land on the exact frame and the duration be the file's own. The cost
-   * is a scan of the file for an index before the first second plays — on a
+   * is a scan of the file for an index before the first second plays - on a
    * stream that has none (a transcoded mp3 over HTTP) that scan is the wait
    * before a track starts. Off by default: the clock follows the audio either
    * way, so positions, lyrics and scrobbles stay in step; what off gives up is
@@ -1282,8 +1277,9 @@ const DEFAULTS = {
   // nowhere, and where it does draw it is the tag the file was given.
   showExplicitTag: true,
   autoplaySimilar: true,
-  // A week, like before there was a choice.
-  radioRefreshCadence: 'week' as RadioRefreshCadence,
+  radiosEnabled: true,
+  radioCount: 6,
+  radioEndless: true,
   // Off: measuring is for somebody who is being asked to measure. Everyone
   // else was paying for a report they will never send.
   diagnostics: false,
@@ -1502,8 +1498,8 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
   if ((ANIMATED_ARTWORK_FPS_OPTIONS as readonly number[]).includes(parsed.animatedArtworkFps as number)) {
     set({ animatedArtworkFps: parsed.animatedArtworkFps as number });
   }
-  if ((RADIO_REFRESH_CADENCES as readonly string[]).includes(parsed.radioRefreshCadence as string)) {
-    set({ radioRefreshCadence: parsed.radioRefreshCadence as RadioRefreshCadence });
+  if ((RADIO_COUNT_OPTIONS as readonly number[]).includes(parsed.radioCount as number)) {
+    set({ radioCount: parsed.radioCount as number });
   }
   if (TRANSCODE_FORMATS.includes(parsed.streamFormat as TranscodeFormat)) {
     set({ streamFormat: parsed.streamFormat as TranscodeFormat });

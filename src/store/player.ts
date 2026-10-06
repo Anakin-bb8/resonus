@@ -24,7 +24,7 @@ import {
 } from 'expo-audio';
 import { fetch as expoFetch } from 'expo/fetch';
 import * as FileSystem from 'expo-file-system/legacy';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { create } from 'zustand';
 
 import {
@@ -74,6 +74,7 @@ import {
   shuffleOn,
   type RepeatMode,
 } from '@/lib/queue';
+import { moreRadioTracks } from '@/lib/radioBuild';
 import { primaryUrl } from '@/lib/serverUrls';
 import { getItem, setItem } from '@/lib/storage';
 import { useAuthStore } from './auth';
@@ -292,7 +293,7 @@ async function ensureAudioMode() {
     });
     // Deliberately no `setIsAudioActiveAsync(true)` here. This runs once at
     // open, and on iOS it is a real `AVAudioSession.setActive(true)`: it takes
-    // the session away from whatever is playing — a podcast, a radio stream —
+    // the session away from whatever is playing - a podcast, a radio stream -
     // before the user has pressed anything. The session gets activated on the
     // first `play()` instead, which is also the only moment we need it.
   } catch {
@@ -419,7 +420,7 @@ function sourceFor(song: Song, timeOffsetSec = 0): AudioSource {
   // asset on every source, so the setting takes effect on the next track and
   // on every re-request (a seek with `timeOffset` builds a source too). Local
   // files get the same answer for free: reading an index you already hold is
-  // not the wait this avoids — the wait is scanning a stream for one.
+  // not the wait this avoids - the wait is scanning a stream for one.
   const preferPreciseTiming = useSettings.getState().preferPreciseTiming;
   if (song.url) return { uri: song.url, metadata, mediaId, preferPreciseTiming };
   const local = localSourceFor(song);
@@ -650,7 +651,7 @@ const warmedArtwork = new Set<string>();
 
 /**
  * The native module under its own type: the module exports its instance, and
- * the namespace rule at an import reads nothing off it — this alias keeps the
+ * the namespace rule at an import reads nothing off it - this alias keeps the
  * warming call below going somewhere the compiler checks.
  */
 const audioModule = AudioModule as NativeAudioModule;
@@ -659,10 +660,12 @@ const audioModule = AudioModule as NativeAudioModule;
  * Starts a cover downloading, and its lock screen clip encoding, with no
  * track attached to it: the queue ahead is warmed this way, so every cover
  * is on disk well before its track plays and the lock screen has nothing
- * left to wait for. The native side keeps a small cache of its own — this
+ * left to wait for. The native side keeps a small cache of its own - this
  * set only stops the queue's constant re-evaluation from asking twice.
  */
 function warmArtwork(song: Song) {
+  // Only the iOS patch has the preloader; asking Android would throw every time.
+  if (Platform.OS !== 'ios') return;
   const url = artworkUrlFor(song);
   // A cover the app only holds in its own image cache is no address the
   // native fetcher can use, and anything already asked for is under way.
@@ -1664,6 +1667,44 @@ async function extendWithArtistCatalog(auth: SubsonicAuth, artistId: string, hre
   return false;
 }
 
+/** The Home radio a queue came from, or null if it came from anywhere else. */
+function radioOfQueue(sourceHref: string | null): string | null {
+  const match = sourceHref?.match(/^\/artist-radio\/([^/]+)$/);
+  return match ? match[1] : null;
+}
+
+/** The round of a radio under way, by the queue's tail it was asked for. */
+let radioRound: { tail: string; done: Promise<boolean> } | null = null;
+
+/**
+ * Adds another round of the radio the queue came from. A radio does not end
+ * at its thirty songs: it draws again from the same artists, the same way,
+ * leaving out what was already played. True if it added anything.
+ */
+function extendWithRadio(radioId: string, href: string, tail: string): Promise<boolean> {
+  if (radioRound?.tail === tail) return radioRound.done;
+  const done = (async () => {
+    const have = new Set(usePlayerStore.getState().queue.map((s) => s.id));
+    const more = await moreRadioTracks(radioId, have);
+    const st = usePlayerStore.getState();
+    // The queue may have moved on while the server answered.
+    if (!more || more.length === 0 || st.sourceHref !== href) return false;
+    const inQueue = new Set(st.queue.map((s) => s.id));
+    const fresh = more.filter((s) => !inQueue.has(s.id) && !s.url);
+    if (fresh.length === 0) return false;
+    // The seam: the round opens on the seed, which may be who just played.
+    const lastArtist = st.queue[st.queue.length - 1]?.artistId;
+    if (fresh.length > 1 && fresh[0].artistId && fresh[0].artistId === lastArtist) {
+      fresh.push(fresh.shift()!);
+    }
+    usePlayerStore.setState({ queue: [...st.queue, ...fresh] });
+    scheduleSync();
+    return true;
+  })();
+  radioRound = { tail, done };
+  return done;
+}
+
 async function maybeQueueAutoplay() {
   const { queue, index, repeat, radioMode, radioSeed, sourceHref } = usePlayerStore.getState();
   // With repeat the queue never "runs out", so plain autoplay has no end to
@@ -1681,6 +1722,17 @@ async function maybeQueueAutoplay() {
   // Before the mix, and before the autoplay setting has a say: this is not
   // similar music, it is the artist that was asked for. A mix is left alone,
   // since there the drift is the whole point.
+  const { radiosEnabled, radioEndless } = useSettings.getState();
+  const radioId =
+    radioMode || !radiosEnabled || !radioEndless ? null : radioOfQueue(sourceHref);
+  const tail = queue[queue.length - 1];
+  if (radioId && tail) {
+    try {
+      if (await extendWithRadio(radioId, sourceHref!, tail.id)) return;
+    } catch {
+      // The radio cannot be drawn again; the mix below is still worth a try.
+    }
+  }
   const artistId = radioMode ? null : artistOfQueue(sourceHref);
   if (artistId) {
     try {
@@ -1806,7 +1858,7 @@ function scheduleNextSource(force = false) {
   const st = usePlayerStore.getState();
   // The covers of the tracks walking in behind this one: fetched and encoded
   // while the current one still plays. The current track's own is in the
-  // window too (k = 0) — it is the one the lock screen shows first. Before
+  // window too (k = 0) - it is the one the lock screen shows first. Before
   // the `activePlayer()` gate below on purpose: warming needs no player, and
   // waiting for one left the covers of a cold start unwarmed until the first
   // play. Gapless queues the next track natively (and warms its cover); this

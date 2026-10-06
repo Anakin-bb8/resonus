@@ -9,8 +9,26 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Added
+
+- Artist radios on Home, built from your most played artists, with new ones each time Home is pulled to refresh (#252).
+- A radio's ⋯ menu, also on a long press of its card, to queue it, save it as a playlist, refresh it or go to its artist.
+- Any artist's radio from the artist's ⋯ menu or a song's menu, and a radio keeps playing once its songs run out.
+- Radio settings in Appearance: turn them off entirely, choose how many Home shows and whether they keep playing.
+- The navigation bar can be solid, blurred or a gradient, from one setting (#252).
+- iOS: a home screen widget with the current track and a play/pause button (#252).
+- iOS: a Precise timing switch and a frame rate choice for animated lock screen covers (#252).
+- Turkish, thanks to @sectns (#250).
+
+### Changed
+
+- Word-timed lyrics fill each word with colour as it is sung (#252).
+
 ### Fixed
 
+- iOS: opening an artist or album from the player no longer lands it in a sheet (#252).
+- iOS: the Dynamic Island shows tall covers square (#252).
+- iOS: opening the app no longer stops what another app is playing (#252).
 - Albums and playlists fade their colour in instead of flashing grey first.
 - Screens no longer wait behind slow similar-song, top-song and artist-info requests, or behind the Android Auto library filling in.
 - A shelf with a title in Japanese, Chinese or with an emoji is no longer taller than the rest.

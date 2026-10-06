@@ -105,7 +105,7 @@ export function stateLines(screensOpen?: number): string[] {
   return [
     // Whether the widget's half of the handover is there: the group it writes
     // into, and what was last written to it. A widget showing only its icon
-    // says nothing about which side of that is missing, and this does — and
+    // says nothing about which side of that is missing, and this does - and
     // on a sideloaded build, which group the signing profile granted.
     `widget: ${widgetStatus()}`,
     // The denominator for every count below. A hundred of anything is one

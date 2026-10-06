@@ -649,26 +649,34 @@ function DiscoverSection({ title, reshuffleKey }: { title: string; reshuffleKey:
 }
 
 /**
- * The personalised artist radios: built from the scrobble services (or this
- * server's play counts when there are none), kept on the device, rebuilt
- * when they go stale (how stale is a setting: Radios).
+ * The personalised artist radios: built from this server's play counts and
+ * kept on the device. Pulling Home brings a new set, like it reshuffles the
+ * random shelves; left alone, they are replaced after a week.
  *
- * The query only refreshes what is saved: `refreshRadios` itself decides
- * whether there is anything to rebuild, so pulling to refresh or coming back
- * to Home costs nothing while the radios are fresh. The shelf holds its
- * place behind the skeleton during the first build, the way the artist
- * index does four seconds in.
+ * The query only reads what is saved (`refreshRadios` decides whether there
+ * is anything to build), so coming back to Home costs nothing. The shelf
+ * holds its place behind the skeleton during the first build, the way the
+ * artist index does four seconds in.
  */
-function RadiosSection({ title }: { title: string }) {
+function RadiosSection({ title, reshuffleKey }: { title: string; reshuffleKey: number }) {
   const canFetch = useAuthStore((s) => !!s.auth || s.offline);
   const card = useShelfCard();
-  const defs = useRadios((s) => s.defs);
+  const count = useSettings((s) => s.radioCount);
+  // Fewer asked for than are saved: the shelf shortens at once, without
+  // waiting on the rebuild Settings starts.
+  const defs = useRadios((s) => s.defs).slice(0, count);
   const { isLoading } = useQuery({
     queryKey: ['radios'],
     queryFn: () => refreshRadios().catch(() => useRadios.getState().defs),
     staleTime: 6 * 60 * 60 * 1000,
     enabled: canFetch,
   });
+
+  // Pulling Home brings new radios, like it reshuffles the random shelves.
+  // The ones on screen stay until the new set is ready, then swap whole.
+  useEffect(() => {
+    if (reshuffleKey > 0 && canFetch) void refreshRadios({ force: true }).catch(() => {});
+  }, [reshuffleKey, canFetch]);
 
   if (isLoading) {
     return (
@@ -937,6 +945,7 @@ export default function HomeScreen() {
   const customGreeting = useSettings((s) => s.customGreeting);
   const language = useSettings((s) => s.language);
   const homeSections = useSettings((s) => s.homeSections);
+  const radiosEnabled = useSettings((s) => s.radiosEnabled);
   useSettings((s) => s.appFont); // re-render when font changes
   // Four slots, and when each one starts comes from the language rather than
   // from here: at 6pm English is in the evening and Spanish is still in the
@@ -1079,7 +1088,10 @@ export default function HomeScreen() {
               // are kept afterwards, so nothing here waits on the server
               // beyond what a local profile can answer for itself.
               if (s.key === 'radios') {
-                return <RadiosSection key={s.key} title={t('Radios')} />;
+                if (!radiosEnabled) return null;
+                return (
+                  <RadiosSection key={s.key} title={t('Radios')} reshuffleKey={reshuffleKey} />
+                );
               }
               if (s.key === 'randomArtists') {
                 return (

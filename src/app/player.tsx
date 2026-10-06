@@ -8,6 +8,7 @@ import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   AppState,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -55,6 +56,7 @@ import { applyStarChange, resyncFavorites } from '@/lib/favoritesCache';
 import { haptic } from '@/lib/haptics';
 import { localHttpAvailable } from '@/lib/localHttp';
 import { pushOnce } from '@/lib/pushOnce';
+import { pushOrReplace } from '@/lib/pushOrReplace';
 import { getItem, setItem } from '@/lib/storage';
 import { useArtistPicker } from '@/store/artistPicker';
 import { useAuthStore } from '@/store/auth';
@@ -753,10 +755,12 @@ export default function PlayerScreen() {
         void toggleFavorite();
         break;
       case 'album':
-        // Replaces rather than pushes: the player is a modal, and on iOS a
-        // push out of it would land the album in a sheet. A second tap lands
-        // on the same screen, so the double-tap guard is unneeded here.
-        if (song?.albumId) router.replace(`/album/${song.albumId}` as never);
+        // On iOS the player modal is replaced (a push out of it would land the
+        // album in a sheet); elsewhere it is the guarded push it always was.
+        if (song?.albumId) {
+          if (Platform.OS === 'ios') pushOrReplace(`/album/${song.albumId}`, 'player');
+          else pushOnce(`/album/${song.albumId}`);
+        }
         break;
       default:
         break;
@@ -1242,9 +1246,7 @@ export default function PlayerScreen() {
                 <Pressable
                   style={styles.tapText}
                   hitSlop={6}
-                  // Replaces: from the player modal a push would land the
-                  // album in a sheet on iOS.
-                  onPress={() => router.replace(`/album/${song.albumId}` as never)}
+                  onPress={() => pushOrReplace(`/album/${song.albumId}`, 'player')}
                 >
                   <MarqueeText text={title} style={styles.title} enabled={marqueeTitles} />
                 </Pressable>
@@ -1253,17 +1255,15 @@ export default function PlayerScreen() {
               )}
               {(() => {
                 const targets = artistTargets(song);
-                // From the player these replace rather than push: on iOS a
-                // push out of the modal would land the screen in a sheet.
                 const goArtist =
                   targets.length === 0
                     ? undefined
                     : () =>
                         targets.length > 1
                           ? openArtistPicker(targets)
-                          : router.replace(`/artist/${targets[0].id}`);
+                          : pushOrReplace(`/artist/${targets[0].id}`, 'player');
                 const goAlbum = song.albumId
-                  ? () => router.replace(`/album/${song.albumId}` as never)
+                  ? () => pushOrReplace(`/album/${song.albumId}`, 'player')
                   : undefined;
                 return (
                   <>
@@ -1401,7 +1401,7 @@ export default function PlayerScreen() {
                   drawn from 256 to 960 of a 1024-unit em, so the tip almost
                   touches the right edge while the base sits a quarter of the
                   way in. Centred as it comes, the icon still reads as pushed
-                  right, so the box itself moves left — padding on the right,
+                  right, so the box itself moves left - padding on the right,
                   the only side with room to take it. */}
               {isBuffering ? (
                 <ActivityIndicator size="small" color={playInk} />
@@ -1655,7 +1655,7 @@ const styles = themed((colors) => ({
     // weight sits underneath, and the offset is what puts it there.
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.28,
+    shadowOpacity: 0.32,
     shadowRadius: 12,
     elevation: 6,
   },

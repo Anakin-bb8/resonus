@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Animated,
   Keyboard,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -47,7 +48,7 @@ import { colors, fontSize, radius, spacing, themed, tracking } from '@/theme';
 import { motion } from '@/theme/motion';
 import { BackChevron } from './BackChevron';
 import { TopBarBackground } from './BarBlur';
-import { Cover } from './Cover';
+import { Cover, useCoverRadius } from './Cover';
 import { ExplicitBadge, useExplicitBadge } from './ExplicitBadge';
 import { FavoriteButton } from './FavoriteButton';
 import { SelectionBar, type SelectionAction } from './SelectionBar';
@@ -65,7 +66,7 @@ import { TrackRow } from './TrackRow';
 function coverSize(width: number, height: number): number {
   return Math.round(Math.min(width * 0.58, height * 0.4, 250));
 }
-const TOPBAR_H = 48;
+export const TOPBAR_H = 48;
 /** The round play button in the header: its size, and the share of it the
  *  bar holds once it reaches the bar (half inside it, half below its edge). */
 const PLAY_SIZE = 56;
@@ -319,8 +320,8 @@ export function TrackListView({
 
   // ── The play button ──────────────────────────────────────────────────────
   // The button is drawn outside the list, over the bar: it follows the place
-  // it has in the header and, on reaching the bar, holds there — half in the
-  // bar, half below it — so it never passes behind the bar and never fades
+  // it has in the header and, on reaching the bar, holds there - half in the
+  // bar, half below it - so it never passes behind the bar and never fades
   // out from under the eye. What the header keeps is the place itself, laid
   // out (and measured) where the button would be.
   const headerRootRef = useRef<View>(null);
@@ -481,9 +482,10 @@ export function TrackListView({
   // Without cover, the header is shorter: the gradient and bar collapse adjust
   // to a smaller distance so the transition fits.
   const art = coverSize(screenW, screenH);
+  const artRadius = useCoverRadius(art);
   // Where the square cover's content starts: the bar's own slice of the
-  // screen plus the gap under it. The wide cover starts at zero instead —
-  // it goes under the bar — but is clamped so it ends just above where this
+  // screen plus the gap under it. The wide cover starts at zero instead -
+  // it goes under the bar - but is clamped so it ends just above where this
   // one would, on every screen there is.
   const albumPadTop = insets.top + TOPBAR_H + spacing.md;
   const wideH = wideCover ? Math.min(wideCover.height, albumPadTop + art - 24) : 0;
@@ -512,7 +514,7 @@ export function TrackListView({
   });
 
   // Where the play button sits in the scroll content: its distance from the
-  // top of the list header, plus the padding the list starts with — which is
+  // top of the list header, plus the padding the list starts with - which is
   // the same expression the list is padded by below, so the two cannot drift
   // apart. The wide cover needs no top padding: its picture is the top.
   const listPadTop = wideCover ? 0 : albumPadTop;
@@ -520,7 +522,7 @@ export function TrackListView({
   // The two ends of that distance are read in window coordinates in the same
   // tick, so the scroll underneath them cancels out: the number is the same
   // whether the list is at rest or mid-fling. Adding the scroll offset by
-  // hand instead would not be — the offset JS has is a frame behind whatever
+  // hand instead would not be - the offset JS has is a frame behind whatever
   // is on screen, and a fling travels a long way in a frame.
   //
   // Measured after every render (the header moves for reasons a render knows
@@ -538,7 +540,7 @@ export function TrackListView({
       const rel = btnY - headY;
       if (rel <= 0) {
         // Nothing laid out yet: the first frame, before the header has a
-        // place to report. A few tries at most, then give up — a button that
+        // place to report. A few tries at most, then give up - a button that
         // never turns up is one that is not on screen.
         if (measureRetries.current < 5) {
           measureRetries.current += 1;
@@ -589,6 +591,23 @@ export function TrackListView({
     extrapolateRight: 'clamp',
   });
 
+  // Which of the two circles shows. Until the bar reaches it, the one laid out
+  // in the header: it is part of the list, so Android's overscroll stretch
+  // (which moves no offset, so nothing driven by the offset can follow it)
+  // takes it along with the buttons beside it. From there the copy over the
+  // bar, sitting on exactly the same spot at the switch. Both on the native
+  // driver, so the swap lands on one frame.
+  const slotOpacity = scrollY.interpolate({
+    inputRange: [behindAt - 1, behindAt],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+  const dockOpacity = scrollY.interpolate({
+    inputRange: [behindAt - 1, behindAt],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
   // The threshold the listener reads, kept with what it depends on.
   useLayoutEffect(() => {
     behindAtRef.current = playContentY > 0 ? behindAt : Infinity;
@@ -631,13 +650,13 @@ export function TrackListView({
     void onPlay(0, { shuffled: true });
   }
 
-  // The play button: the one and only one, so nothing about it fades or is
-  // swapped for anything else. It follows the place laid out for it in the
-  // header — the search row's height riding in the outer wrapper, the scroll
-  // in the one inside it — until it reaches the bar's line, and holds there:
+  // The play button over the bar. It follows the place laid out for it in the
+  // header - the search row's height riding in the outer wrapper, the scroll
+  // in the one inside it - until it reaches the bar's line, and holds there:
   // half in the bar, half below its lower edge. Drawn after the bar (below),
-  // so it is always in front of it; while the bar has not reached it yet, it
-  // leaves the taps (and the screen reader) to the place in the header.
+  // so it is in front of it. Until the bar reaches it, it is the header's own
+  // circle that shows (see `slotOpacity`), and the taps and the screen reader
+  // are the header's too.
   const playOverlay =
     searching || playContentY <= 0 ? null : (
       <Animated.View
@@ -647,7 +666,7 @@ export function TrackListView({
         style={[styles.playDock, { right: centredPadding(screenW, spacing.lg) }]}
       >
         <Animated.View style={{ transform: [{ translateY: searchH }] }}>
-          <Animated.View style={{ transform: [{ translateY: playDockY }] }}>
+          <Animated.View style={{ opacity: dockOpacity, transform: [{ translateY: playDockY }] }}>
             <Pressable
               style={[styles.playButton, { backgroundColor: colors.accent }]}
               accessibilityRole="button"
@@ -686,7 +705,7 @@ export function TrackListView({
           <Animated.View
             style={[
               StyleSheet.absoluteFill,
-              // And follows the scroll 1:1, natively — but never below zero:
+              // And follows the scroll 1:1, natively - but never below zero:
               // an over-scroll drags `scrollY` negative, and the gradient
               // moving down with it would uncover the page's own colour where
               // the accent's band sits. Held at the top, the bounce reveals
@@ -815,8 +834,8 @@ export function TrackListView({
           <View ref={headerRootRef} style={styles.header}>
             {wideCover ? (
               /* Paint above the first pixel: the pull-down bounce reveals
-                 whatever sits above the content — the page background by
-                 default — and on the radio that strip must stay the accent,
+                 whatever sits above the content - the page background by
+                 default - and on the radio that strip must stay the accent,
                  the cover's own colour. Zero net layout: it hangs off the top
                  of the header, off screen until a pull uncovers it. */
               <View
@@ -859,19 +878,30 @@ export function TrackListView({
               </Animated.View>
             ) : hideCover ? null : (
               <Animated.View style={[styles.coverCenter, { opacity: coverOpacity }]}>
-                {onCoverPress ? (
-                  <Pressable
-                    onPress={onCoverPress}
-                    accessibilityRole="imagebutton"
-                    accessibilityLabel={t('View cover')}
-                  >
-                    {renderCover ? renderCover(art) : <Cover uri={coverUri} size={art} />}
-                  </Pressable>
-                ) : renderCover ? (
-                  renderCover(art)
-                ) : (
-                  <Cover uri={coverUri} size={art} />
-                )}
+                {/* Android draws no shadow from a transparent view's content
+                    the way iOS does: there it is a box shadow the size and
+                    shape of the cover. */}
+                <View
+                  style={
+                    Platform.OS === 'android'
+                      ? { borderRadius: artRadius, boxShadow: '0px 10px 32px rgba(0, 0, 0, 0.45)' }
+                      : null
+                  }
+                >
+                  {onCoverPress ? (
+                    <Pressable
+                      onPress={onCoverPress}
+                      accessibilityRole="imagebutton"
+                      accessibilityLabel={t('View cover')}
+                    >
+                      {renderCover ? renderCover(art) : <Cover uri={coverUri} size={art} />}
+                    </Pressable>
+                  ) : renderCover ? (
+                    renderCover(art)
+                  ) : (
+                    <Cover uri={coverUri} size={art} />
+                  )}
+                </View>
               </Animated.View>
             )}
             <Text style={styles.title} numberOfLines={2}>
@@ -1026,10 +1056,9 @@ export function TrackListView({
                     color={shuffleActive ? colors.accent : colors.textSecondary}
                   />
                 </Pressable>
-                {/* What the button does while it is still in the header: laid
-                    out where it goes, transparent because the circle is drawn
-                    above the bar (it is always above it now), and taking the
-                    taps from there down — a dragger that starts on it is the
+                {/* The button while it is still in the header: drawn here so
+                    it moves with the list, overscroll included, and taking the
+                    taps from there down - a dragger that starts on it is the
                     list's, as it always was. */}
                 <Pressable
                   ref={playBtnRef}
@@ -1042,7 +1071,16 @@ export function TrackListView({
                   accessibilityRole="button"
                   accessibilityLabel={t('Play')}
                   onPress={() => songs.length > 0 && onPlay(0)}
-                />
+                >
+                  <Animated.View
+                    style={[
+                      styles.playButton,
+                      { backgroundColor: colors.accent, opacity: slotOpacity },
+                    ]}
+                  >
+                    <Icon name="play" size={28} color={colors.onAccent} />
+                  </Animated.View>
+                </Pressable>
               </View>
             </View>
 
@@ -1131,7 +1169,7 @@ export function TrackListView({
       </View>
 
       {/* In selection mode the button is drawn under the bar: that bar belongs
-          to the selection, and the button would land on its own controls —
+          to the selection, and the button would land on its own controls -
           which is where the header's button always was, behind it. */}
       {selecting ? playOverlay : null}
 
@@ -1322,13 +1360,12 @@ const styles = themed((colors) => ({
     marginBottom: spacing.lg,
     // The big cover sits on the page rather than being printed on it: a soft
     // shadow under it and to the sides, less over the top. The offset is what
-    // puts the weight at the bottom, and the radius what softens it — one
+    // puts the weight at the bottom, and the radius what softens it - one
     // shadow, both edges handled. It fades out with the cover it belongs to.
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.45,
     shadowRadius: 16,
-    elevation: 8,
   },
   wideCover: {
     // No corners and no shadow: the picture is printed into the page itself,
@@ -1451,8 +1488,7 @@ const styles = themed((colors) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // The place the button takes in the header: the size and nothing else, no
-  // colour — the circle itself is drawn above the bar, always over this.
+  // The place the button takes in the header.
   playSlot: {
     width: PLAY_SIZE,
     height: PLAY_SIZE,

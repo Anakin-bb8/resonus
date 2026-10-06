@@ -663,7 +663,6 @@
   "Session expired: sign in again": "Сеанс минув: увійдіть знову",
   "Wrong username or password": "Неправильне ім'я користувача або пароль",
   "Unexpected server response": "Неочікувана відповідь сервера",
-  "Navigation bar blur": "Розмиття панелі навігації",
   "Pure black": "Чистий чорний",
   "Transcode lossless files only": "Перекодовувати лише файли без втрат",
   "MP3, AAC, Opus and other lossy files stream as they are. Only files like FLAC are transcoded.": "MP3, AAC, Opus та інші файли з втратами транслюються як є. Перекодовуються лише файли на зразок FLAC.",
