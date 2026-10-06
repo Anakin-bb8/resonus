@@ -1,6 +1,6 @@
 /**
- * "Suggested tracks": a short list of similar songs drawn beside a list —
- * a playlist's own, or a radio's — with a preview on tap and a button that
+ * "Suggested tracks": a short list of similar songs drawn beside a list -
+ * a playlist's own, or a radio's - with a preview on tap and a button that
  * hands the song to wherever it is being shown.
  *
  * The suggestions come two seeds at a time (see `fetchSuggestions`), and the
@@ -83,7 +83,7 @@ export function SuggestedTracks({
   /** Accessibility label on the add button, for where this is being shown. */
   addLabel: string;
   /** Hands the song to wherever this list is shown. Resolve `true` when it
-   *  was taken — the row then leaves the suggestions. */
+   *  was taken - the row then leaves the suggestions. */
   onAdd: (song: Song) => Promise<boolean>;
 }) {
   const t = useT();

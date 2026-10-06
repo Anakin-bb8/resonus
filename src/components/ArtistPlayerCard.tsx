@@ -9,11 +9,12 @@
  */
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
-import { useState } from 'react';import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CACHED_COVER, COVER, coverArtUrl, getArtistInfo } from '@/api/data';
 import { useT } from '@/i18n';
+import { pushOrReplace } from '@/lib/pushOrReplace';
 import { useAuthStore } from '@/store/auth';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { fontSize, radius, spacing, themed, tracking } from '@/theme';
@@ -52,12 +53,12 @@ export function ArtistPlayerCard() {
     <View style={styles.card}>
       {/* The whole card goes to the artist, the way tapping the cover goes to
           the lyrics. The toggle below is a Pressable of its own, so it takes
-          its own taps and only unfolds the text. Replaces rather than pushes:
-          this card only exists inside the player modal, and on iOS a push out
-          of it would land the artist in a sheet. */}
+          its own taps and only unfolds the text. It lives inside the player
+          modal, which iOS replaces rather than pushes out of (see
+          `pushOrReplace`). */}
       <Pressable
         accessibilityRole="button"
-        onPress={() => router.replace(`/artist/${artistId}`)}
+        onPress={() => pushOrReplace(`/artist/${artistId}`, 'player')}
       >
         <View style={styles.photo}>
           {imageUri ? (

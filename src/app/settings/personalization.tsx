@@ -22,7 +22,6 @@ import {
   useSettings,
   type CoverCorners,
   type DefaultTab,
-  type NavBarStyle,
   type SwipeAction,
 } from '@/store/settings';
 
@@ -144,28 +143,25 @@ export default function AppearanceSettings() {
             chevron
             onPress={() => router.push('/settings/navigation-bar')}
           />
-          {/* Android draws the blur from Android 12 on; before that there is
-              only a tint, which is what was tried and dropped (b8bb8b1). */}
-          {canBlurBars ? (
-            <SwitchList
-              options={[
-                {
-                  label: t('Navigation bar blur'),
-                  value: blurBars,
-                  onChange: setBlurBars,
-                },
-              ]}
-            />
-          ) : null}
-          <SelectList<NavBarStyle>
+          {/* One choice for what fills the bar. Underneath it is still the
+              blur switch and the style, so what anyone had saved holds. Blur
+              is offered where the system draws it: Android 12 on, since
+              before that there is only a tint, which was tried and dropped
+              (b8bb8b1). */}
+          <SelectList<'solid' | 'blur' | 'gradient'>
             label={t('Navigation bar style')}
-            description={t('Flat, or black fading out at the top edge. Gradient ignores the blur.')}
             options={[
               { value: 'solid', label: t('Solid') },
+              ...(canBlurBars ? [{ value: 'blur' as const, label: t('Blur') }] : []),
               { value: 'gradient', label: t('Gradient') },
             ]}
-            value={navBarStyle}
-            onChange={setNavBarStyle}
+            value={
+              navBarStyle === 'gradient' ? 'gradient' : blurBars && canBlurBars ? 'blur' : 'solid'
+            }
+            onChange={(v) => {
+              setNavBarStyle(v === 'gradient' ? 'gradient' : 'solid');
+              if (v !== 'gradient') setBlurBars(v === 'blur');
+            }}
           />
         </SettingsGroup>
 

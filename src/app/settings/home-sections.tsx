@@ -89,9 +89,12 @@ export default function HomeSectionsSettings() {
   const offline = useAuthStore((s) => s.offline);
   const homeSections = useSettings((s) => s.homeSections);
   const setHomeSections = useSettings((s) => s.setHomeSections);
-  const visible = offline
-    ? homeSections.filter((s) => !SERVER_ONLY.includes(s.key))
-    : homeSections;
+  const radiosEnabled = useSettings((s) => s.radiosEnabled);
+  // Rows Home would never draw: the server-only ones offline, and the radios
+  // while they are turned off (Appearance › Radios).
+  const hidden = (key: HomeSectionKey) =>
+    (offline && SERVER_ONLY.includes(key)) || (!radiosEnabled && key === 'radios');
+  const visible = homeSections.filter((s) => !hidden(s.key));
 
   return (
     <SettingsSafeArea>
@@ -106,11 +109,9 @@ export default function HomeSectionsSettings() {
           const [moved] = nextVisible.splice(from, 1);
           nextVisible.splice(to, 0, moved);
           // Hidden ones go back to their absolute position: reordering locally
-          // must not lose or reposition the config of server-only rows.
+          // must not lose or reposition the config of the hidden rows.
           let vi = 0;
-          const next = homeSections.map((s) =>
-            offline && SERVER_ONLY.includes(s.key) ? s : nextVisible[vi++],
-          );
+          const next = homeSections.map((s) => (hidden(s.key) ? s : nextVisible[vi++]));
           setHomeSections(next);
         }}
         contentContainerStyle={[

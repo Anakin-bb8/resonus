@@ -1,12 +1,12 @@
 /**
  * A push that replaces the top route when a modal is sitting on it.
  *
- * On iOS a push out of the player — or the queue or lyrics above it — lands
+ * On iOS a push out of the player - or the queue or lyrics above it - lands
  * in a sheet, the same reason those three wear fullScreenModal. Replacing
  * swaps the modal for the screen, which then takes its own presentation (a
  * card): the detail screens stay whole screens, with the bar and the mini
  * player under them, and the back chevron goes where the modal would have
- * gone. Anywhere else it is an ordinary push — and on Android it always is,
+ * gone. Anywhere else it is an ordinary push - and on Android it always is,
  * where a push out of a modal is just a push and replacing would pointlessly
  * lose the screen below.
  */

@@ -134,6 +134,7 @@ export default function ArtistScreen() {
   // it is recorded and sent on reconnect, so it stays; a local profile has no
   // account and never gets here.
   const serverType = useAuthStore((s) => s.auth?.serverType);
+  const radiosEnabled = useSettings((s) => s.radiosEnabled);
   const canRate = useAuthStore((s) => !!s.auth) && serverType !== 'jellyfin';
 
   // ── Download the discography ────────────────────────────────────────────
@@ -199,7 +200,7 @@ export default function ArtistScreen() {
   // Where the play button rides. Its top in the scroll content: the header
   // photo is the first thing in it and has the fixed `headerH` height, the
   // actions row comes straight after and starts with its own `spacing.md` top
-  // padding — no measurement needed, the layout is all fixed sizes.
+  // padding - no measurement needed, the layout is all fixed sizes.
   const playContentTop = headerH + spacing.md;
   // The line it holds on: centred on the bar's lower edge, so half of it is in
   // the bar and half of it is under it. Below it the button tracks the header
@@ -219,6 +220,20 @@ export default function ArtistScreen() {
     extrapolateLeft: 'extend',
     extrapolateRight: 'clamp',
   });
+  // Which circle shows: the actions row's own until the bar reaches it, so
+  // Android's overscroll stretch takes it along with the row, then the copy
+  // over the bar, on the same spot at the switch (see TrackListView).
+  const slotOpacity = scrollY.interpolate({
+    inputRange: [behindAt - 1, behindAt],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+  const dockOpacity = scrollY.interpolate({
+    inputRange: [behindAt - 1, behindAt],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
   // The threshold the listener reads, kept with what it depends on.
   useLayoutEffect(() => {
     behindAtRef.current = behindAt;
@@ -458,18 +473,20 @@ export default function ArtistScreen() {
     <Icon name={showPause ? 'pause' : 'play'} size={28} color={colors.onAccent} />
   );
 
-  // The play button: the one and only one, so nothing about it fades or is
-  // swapped for anything else. It follows the place laid out for it in the
-  // actions row until it reaches the bar's line, and holds there — half in the
-  // bar, half below its lower edge. Drawn after the bar (below), so it is
-  // always in front of it; while the bar has not reached it yet, it leaves the
-  // taps (and the screen reader) to the place in the header.
+  // The play button over the bar. It follows the place laid out for it in the
+  // actions row until it reaches the bar's line, and holds there - half in the
+  // bar, half below its lower edge. Drawn after the bar (below), so it is in
+  // front of it. Until the bar reaches it, the row's own circle is the one
+  // that shows (see `slotOpacity`), with the taps and the screen reader.
   const playOverlay = (
     <Animated.View
       pointerEvents={overBar ? 'auto' : 'none'}
       accessibilityElementsHidden={!overBar}
       importantForAccessibility={overBar ? 'auto' : 'no-hide-descendants'}
-      style={[styles.playDock, { right: spacing.lg, transform: [{ translateY: playDockY }] }]}
+      style={[
+        styles.playDock,
+        { right: spacing.lg, opacity: dockOpacity, transform: [{ translateY: playDockY }] },
+      ]}
     >
       <Pressable
         style={styles.playButton}
@@ -603,7 +620,7 @@ export default function ArtistScreen() {
           {/* What the button does while it is still in the header: laid out
               where it goes, transparent because the circle is drawn above the
               bar (it is always above it now), and taking the taps from there
-              down — a dragger that starts on it is the scroll's, as it was. */}
+              down - a dragger that starts on it is the scroll's, as it was. */}
           <Pressable
             style={styles.playSlot}
             collapsable={false}
@@ -612,7 +629,11 @@ export default function ArtistScreen() {
             accessibilityRole="button"
             accessibilityLabel={showPause ? t('Pause') : t('Play')}
             onPress={onPressPlay}
-          />
+          >
+            <Animated.View style={[styles.playButton, { opacity: slotOpacity }]}>
+              {playGlyph}
+            </Animated.View>
+          </Pressable>
         </View>
 
         {top.length > 0 ? (
@@ -841,6 +862,17 @@ export default function ArtistScreen() {
                 <Icon name="play" size={24} color={colors.text} />
                 <Text style={styles.actionText}>{t('Play discography')}</Text>
               </Pressable>
+              {/* The radio is built from the server (similar artists, top
+                  songs), so offline it is not offered. */}
+              {offline || !radiosEnabled ? null : (
+                <Pressable
+                  style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+                  onPress={() => close(() => router.push(`/artist-radio/${id}`))}
+                >
+                  <Icon name="radio-outline" size={24} color={colors.text} />
+                  <Text style={styles.actionText}>{t('Go to artist radio')}</Text>
+                </Pressable>
+              )}
               {/* The way back to the one undivided list the discography was
                   before it was split into shelves (#138): the same screen the
                   shelves open, with no kind asked for.
@@ -985,8 +1017,7 @@ const styles = themed((colors) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // The place the button takes in the actions row: the size and nothing else,
-  // no colour — the circle itself is drawn above the bar, always over this.
+  // The place the button takes in the actions row.
   playSlot: {
     width: PLAY_SIZE,
     height: PLAY_SIZE,

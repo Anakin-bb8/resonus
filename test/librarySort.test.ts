@@ -114,4 +114,12 @@ describe('matches', () => {
   it('is false when a query word lands nowhere', () => {
     assert.equal(matches('madonna xyz', 'Madonna'), false);
   });
+
+  it('skips stopwords instead of failing on them', () => {
+    assert.equal(matches('metal of', 'Heavy Metal'), true);
+  });
+
+  it('forgives three edits in a long word', () => {
+    assert.equal(matches('abXdeYgZ', 'Abcdefgh'), true);
+  });
 });

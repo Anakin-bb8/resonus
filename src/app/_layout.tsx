@@ -15,6 +15,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AppStartupTab } from '@/components/AppStartupTab';
 import { ArtistPickerSheet } from '@/components/ArtistPickerSheet';
+import { RadioMenuSheet } from '@/components/RadioMenuSheet';
 import { BarBlurTarget } from '@/components/BarBlur';
 import { BatteryWarning } from '@/components/BatteryWarning';
 import { CarAutoSync } from '@/components/CarAutoSync';
@@ -76,10 +77,10 @@ const FULL_MODAL = {
  * over everything the app draws, and `GlobalTabBar` and `GlobalMiniPlayer`
  * live beside the Stack rather than inside it, so on those screens the bar
  * and the mini player went missing while they stayed on every other one.
- * A push is full screen too — it just stays under the two of them.
+ * A push is full screen too - it just stays under the two of them.
  *
  * A push out of the player or one of the menus would still land in a sheet
- * on iOS; those pushes replace the modal instead — see `pushOrReplace`.
+ * on iOS; those pushes replace the modal instead - see `pushOrReplace`.
  */
 
 /*
@@ -423,6 +424,7 @@ export default function RootLayout() {
             {auth || offline ? <SongMenuSheet /> : null}
             {auth || offline ? <SongInfoSheet /> : null}
             {auth || offline ? <ArtistPickerSheet /> : null}
+            {auth || offline ? <RadioMenuSheet /> : null}
             {auth || offline ? <MediaMenuSheet /> : null}
             {auth || offline ? <GlobalPlaylistPicker /> : null}
             {auth || offline ? <GlobalShareSheet /> : null}

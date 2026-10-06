@@ -1,26 +1,24 @@
 /**
- * Settings › Appearance › Home › Radios: rebuild the Home radios on demand
- * and choose how often they rebuild themselves.
+ * Settings › Appearance › Home › Radios: the artist radios as a whole.
  *
- * Its own screen, next to Home sections: the radios are a Home shelf with a
- * build behind them (seeds, similars, icons), not a row to reorder, and that
- * build is what both controls here drive.
+ * Off at the top means off everywhere: no shelf, no radio in the menus, and
+ * nothing built or asked for in the background. Below it, how many radios
+ * Home offers and whether one keeps playing once its songs run out. New
+ * radios come with pulling Home to refresh, so there is no button for it.
  */
 import { useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
 import { ScrollView } from 'react-native';
 
 import {
   SelectList,
-  SettingRow,
   SettingsGroup,
   SettingsPage,
   settingsStyles,
+  SwitchList,
 } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
 import { refreshRadios } from '@/lib/radioBuild';
-import { useSettings, type RadioRefreshCadence } from '@/store/settings';
-import { useToast } from '@/store/toast';
+import { RADIO_COUNT_OPTIONS, useSettings } from '@/store/settings';
 import { useTheme } from '@/theme';
 
 export default function RadiosSettings() {
@@ -28,53 +26,59 @@ export default function RadiosSettings() {
   // mounted while you are on another one, out of reach of anything else.
   useTheme();
   const t = useT();
-  const toast = useToast((s) => s.show);
   const queryClient = useQueryClient();
-  const cadence = useSettings((s) => s.radioRefreshCadence);
-  const setCadence = useSettings((s) => s.setRadioRefreshCadence);
-  const [refreshing, setRefreshing] = useState(false);
-
-  // A forced rebuild (new seed artists, new similars, new tracks, new icons),
-  // then Home reads what it saved: its shelf paints from the store, and the
-  // invalidation below covers the query that triggered the last build.
-  const refresh = async () => {
-    if (refreshing) return;
-    setRefreshing(true);
-    try {
-      await refreshRadios({ force: true });
-      queryClient.invalidateQueries({ queryKey: ['radios'] });
-      toast(t('Radios updated'));
-    } catch {
-      toast(t("Couldn't refresh the radios"));
-    } finally {
-      setRefreshing(false);
-    }
-  };
+  const enabled = useSettings((s) => s.radiosEnabled);
+  const setEnabled = useSettings((s) => s.setRadiosEnabled);
+  const count = useSettings((s) => s.radioCount);
+  const setCount = useSettings((s) => s.setRadioCount);
+  const endless = useSettings((s) => s.radioEndless);
+  const setEndless = useSettings((s) => s.setRadioEndless);
 
   return (
     <SettingsPage title={t('Radios')}>
       <ScrollView contentContainerStyle={settingsStyles.content}>
         <SettingsGroup>
-          <SelectList<RadioRefreshCadence>
-            label={t('Update radios automatically')}
-            description={t('How often the radios rebuild their artists and tracks.')}
+          <SwitchList
             options={[
-              { value: 'day', label: t('Every day') },
-              { value: '3days', label: t('Every 3 days') },
-              { value: 'week', label: t('Every week') },
-              { value: '2weeks', label: t('Every 2 weeks') },
-              { value: 'never', label: t('Never') },
+              {
+                label: t('Artist radios'),
+                description: t(
+                  'Radios built from the artists you play most. Off, there are none on Home or in the menus, and nothing is fetched for them.',
+                ),
+                value: enabled,
+                onChange: setEnabled,
+              },
             ]}
-            value={cadence}
-            onChange={setCadence}
-          />
-          <SettingRow
-            label={refreshing ? t('Refreshing radios.') : t('Refresh radios now')}
-            description={t('Rebuild the radios with new artists and tracks right away.')}
-            icon="refresh-outline"
-            onPress={() => void refresh()}
           />
         </SettingsGroup>
+        {/* Off, the rest has nothing to act on: taken away rather than greyed. */}
+        {enabled ? (
+          <SettingsGroup>
+            <SelectList<number>
+              label={t('Radios on Home')}
+              options={RADIO_COUNT_OPTIONS.map((n) => ({ value: n, label: String(n) }))}
+              value={count}
+              onChange={(n) => {
+                setCount(n);
+                // A new set of that size, built in the background; fewer show
+                // at once meanwhile (Home slices what is saved).
+                void refreshRadios({ force: true })
+                  .then(() => queryClient.invalidateQueries({ queryKey: ['radios'] }))
+                  .catch(() => {});
+              }}
+            />
+            <SwitchList
+              options={[
+                {
+                  label: t('Keep playing when a radio ends'),
+                  description: t('When its songs run out, another round from the same artists.'),
+                  value: endless,
+                  onChange: setEndless,
+                },
+              ]}
+            />
+          </SettingsGroup>
+        ) : null}
       </ScrollView>
     </SettingsPage>
   );

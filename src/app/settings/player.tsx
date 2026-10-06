@@ -1,6 +1,6 @@
 /** Settings › Player: looks and extras for the playback screen. */
 import { useRouter } from 'expo-router';
-import { ScrollView, Text } from 'react-native';
+import { Platform, ScrollView, Text } from 'react-native';
 
 import { canBlurBars } from '@/components/BarBlur';
 import { SelectList, SettingRow, SettingsGroup, SettingsPage, settingsStyles, SwitchList } from '@/components/SettingsUI';
@@ -187,15 +187,18 @@ export default function PlayerSettings() {
             value={coverDoubleTapAction}
             onChange={setCoverDoubleTapAction}
           />
-          <SelectList<number>
-            label={t('Animated cover frame rate')}
-            options={[
-              { value: 30, label: t('30 fps') },
-              { value: 60, label: t('60 fps') },
-            ]}
-            value={animatedArtworkFps}
-            onChange={setAnimatedArtworkFps}
-          />
+          {/* The lock screen clip is an iOS thing; Android has none to encode. */}
+          {Platform.OS === 'ios' ? (
+            <SelectList<number>
+              label={t('Animated cover frame rate')}
+              options={[
+                { value: 30, label: t('30 fps') },
+                { value: 60, label: t('60 fps') },
+              ]}
+              value={animatedArtworkFps}
+              onChange={setAnimatedArtworkFps}
+            />
+          ) : null}
         </SettingsGroup>
 
         <Text style={settingsStyles.sectionTitle}>{t('Elements')}</Text>

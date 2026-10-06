@@ -44,6 +44,7 @@ import { useSharePicker } from '@/store/sharePicker';
 import { normKey, pickFolder } from '@/lib/localLibrary';
 import { useArtistPicker } from '@/store/artistPicker';
 import { useAuthStore } from '@/store/auth';
+import { useSettings } from '@/store/settings';
 import { useAutoDownloads } from '@/store/autoDownloads';
 import { useDownloads } from '@/store/downloads';
 import { usePlayerStore } from '@/store/player';
@@ -127,6 +128,7 @@ export function SongMenuSheet() {
   const top = useSegments()[0];
   const auth = useAuthStore((s) => s.auth);
   const offline = useAuthStore((s) => s.offline);
+  const radiosEnabled = useSettings((s) => s.radiosEnabled);
   const queryClient = useQueryClient();
   const song = useSongMenu((s) => s.song);
   const context = useSongMenu((s) => s.context);
@@ -611,6 +613,13 @@ export function SongMenuSheet() {
                         const id = targets[0]?.id ?? (song.artist ? normKey(song.artist) : '');
                         if (id) goDetail(`/artist/${id}`);
                       }}
+                    />
+                  ) : null}
+                  {song.artistId && !offline && radiosEnabled ? (
+                    <Action
+                      icon="radio-outline"
+                      label={t('Go to artist radio')}
+                      onPress={() => goDetail(`/artist-radio/${song.artistId}`)}
                     />
                   ) : null}
                   {downloaded ? (
