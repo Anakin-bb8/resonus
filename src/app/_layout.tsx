@@ -49,7 +49,7 @@ import { initNetworkType } from '@/store/networkType';
 import { useOfflineQueue } from '@/store/offlineQueue';
 import { usePins } from '@/store/pins';
 import { usePlayCounts } from '@/store/playCounts';
-import { initRemoteIntegration, usePlayerStore } from '@/store/player';
+import { checkBackgroundDeath, initRemoteIntegration, usePlayerStore } from '@/store/player';
 import { usePlayHistory } from '@/store/playHistory';
 import { useRecentSearches } from '@/store/recentSearches';
 import { APP_FONT_FAMILY, useSettings } from '@/store/settings';
@@ -185,6 +185,9 @@ export default function RootLayout() {
   useEffect(() => {
     // Before anything else, so the first seconds count too.
     startPerfLog();
+    // Was the last session killed while away (background kill, not a close)?
+    // Answered into the diagnostics, where the shared report picks it up.
+    checkBackgroundDeath();
     void removeLegacyRadioCovers();
     // Equalizer: reads device capabilities and applies saved settings. Not the
     // profile's: it belongs to the phone and its output.

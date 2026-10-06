@@ -16,6 +16,7 @@
  */
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Network from 'expo-network';
+import { AppState } from 'react-native';
 import { create } from 'zustand';
 
 import {
@@ -920,6 +921,23 @@ export const useDownloads = create<DownloadsState>((set, get) => {
     string,
     Set<ReturnType<typeof FileSystem.createDownloadResumable>>
   >();
+
+  // A foreground URLSession does not survive the suspension: without this,
+  // every backgrounded song fails, is deleted half-written, and retries from
+  // zero until attempts run out. Pausing keeps the partial file with resume
+  // data; coming back resumes it where it stopped. True completion while
+  // locked needs a native background session, which this is not.
+  AppState.addEventListener('change', (st) => {
+    if (st === 'active') {
+      for (const tasks of activeTasks.values()) {
+        for (const task of tasks) void task.resumeAsync().catch(() => {});
+      }
+    } else {
+      for (const tasks of activeTasks.values()) {
+        for (const task of tasks) void task.pauseAsync().catch(() => {});
+      }
+    }
+  });
 
   /** Downloads a group of songs and updates catalog + progress. */
   async function downloadGroup(groupKey: string, songs: Song[], albums: Album[]): Promise<void> {

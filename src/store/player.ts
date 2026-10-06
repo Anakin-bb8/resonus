@@ -23,6 +23,7 @@ import {
   type NativeAudioModule,
 } from 'expo-audio';
 import { fetch as expoFetch } from 'expo/fetch';
+import * as FileSystem from 'expo-file-system/legacy';
 import { AppState } from 'react-native';
 import { create } from 'zustand';
 
@@ -1319,10 +1320,13 @@ function onTrackChanged(song: Song) {
   // a track change is the busiest moment there is, and the phone only holds a
   // handful of connections to the server at once, so speculative requests sent
   // right then put themselves in front of what the screens are waiting for
-  // (#50). Nobody swipes to the next lyrics in the first five seconds.
-  if (!bootQuiet) prefetchLyrics(song);
+  // (#50). Nobody swipes to the next lyrics in the first five seconds. While
+  // backgrounded nobody swipes at all: the card fetches on demand when it is
+  // shown, so nothing is lost by skipping the warm-up.
+  if (!bootQuiet && AppState.currentState === 'active') prefetchLyrics(song);
   if (nextLyricsTimer) clearTimeout(nextLyricsTimer);
   nextLyricsTimer = setTimeout(() => {
+    if (AppState.currentState !== 'active') return;
     const { queue, index } = usePlayerStore.getState();
     if (queue.length > 1) prefetchLyrics(queue[(index + 1) % queue.length]);
   }, NEXT_LYRICS_DELAY_MS);
@@ -1345,6 +1349,9 @@ function onTrackChanged(song: Song) {
  */
 function cacheUpcoming() {
   if (bootQuiet || !useSettings.getState().songCache) return;
+  // Started backgrounded, it would die on suspend: the foreground return
+  // flushes this again (see `attachAppState`).
+  if (AppState.currentState !== 'active') return;
   const { auth, offline } = useAuthStore.getState();
   // A renderer fetches from the server itself; nothing plays on the phone.
   if (!auth || offline || remoteKind()) return;
@@ -2794,6 +2801,13 @@ function isRepeatMode(v: unknown): v is RepeatMode {
  */
 let queueDirty = true;
 
+/** How often the queue is rewritten while backgrounded with nothing but the
+ *  position moving: SecureStore encrypts every write, and on a locked phone
+ *  those writes can fail outright — while nobody is waiting on them. Track
+ *  changes still write at once (see `queueDirty`), so coming back always
+ *  resumes the right song. */
+const BG_SAVE_MS = 120_000;
+
 /** When this device's queue was last written, for the comparison in
  *  `adoptNewerServerQueue`. Zero until something is saved or restored. */
 let localSavedAt = 0;
@@ -2838,6 +2852,9 @@ function saveQueueLocal(force = false) {
   } = usePlayerStore.getState();
   if (queue.length === 0) return;
   if (!force && !queueDirty && AppState.currentState === 'active') return;
+  // Backgrounded with only the position moving: at most one write per couple
+  // of minutes instead of every twenty seconds.
+  if (!force && !queueDirty && Date.now() - localSavedAt < BG_SAVE_MS) return;
   queueDirty = false;
   // Size cap as a precaution for SecureStore; 500 songs is more than enough.
   const payload: StoredQueue = {
@@ -2908,6 +2925,55 @@ let lastAdoptCheck = 0;
 /** When the app last left the foreground, so a quick trip to another app is
  *  not treated as somebody coming back from a different player. */
 let wentAway = 0;
+
+/** Marker left while the app is away: if it is still there at launch, the
+ *  previous session never came back — killed in the background, not closed.
+ *  A plain file, not SecureStore, which can refuse writes on a locked phone.
+ *  Foreground deletes it, so its presence means the return never happened. */
+function awayMarkerPath(): string | null {
+  const dir = FileSystem.documentDirectory;
+  return dir ? `${dir}away.json` : null;
+}
+
+function markAway() {
+  const path = awayMarkerPath();
+  if (!path) return;
+  void FileSystem.writeAsStringAsync(path, JSON.stringify({ at: Date.now() })).catch(() => {});
+}
+
+function clearAway() {
+  const path = awayMarkerPath();
+  if (!path) return;
+  void FileSystem.deleteAsync(path, { idempotent: true }).catch(() => {});
+}
+
+/** Once, at startup: was the last session killed while away? Answered into
+ *  the diagnostics, where the shared report picks it up. */
+export function checkBackgroundDeath() {
+  const path = awayMarkerPath();
+  if (!path) return;
+  void (async () => {
+    try {
+      const info = await FileSystem.getInfoAsync(path);
+      if (!info.exists) return;
+      const raw = await FileSystem.readAsStringAsync(path);
+      await FileSystem.deleteAsync(path, { idempotent: true }).catch(() => {});
+      let at = 0;
+      try {
+        at = Number(JSON.parse(raw)?.at) || 0;
+      } catch {
+        // A half-written marker still means away, only without the when.
+      }
+      note(
+        at > 0
+          ? `background death: last seen away ${Math.round((Date.now() - at) / 1000)}s before launch`
+          : 'background death: away marker with no time',
+      );
+    } catch {
+      // The marker is a hint, not data: failing to read it changes nothing.
+    }
+  })();
+}
 
 async function adoptNewerServerQueue(): Promise<void> {
   if (!useSettings.getState().syncQueueFromServer) return;
@@ -3109,8 +3175,10 @@ function attachAppState() {
       // current Sonos transport state.
       syncQueueNow(true, false);
       wentAway = Date.now();
+      markAway();
       return;
     }
+    clearAway();
     // Back to foreground. The native `playbackStatusUpdate` heartbeat that feeds
     // `positionSec`/`durationSec` can stall while backgrounded — especially right
     // after a background auto-advance, where the freshly `replace()`d track never
@@ -3142,6 +3210,9 @@ function attachAppState() {
     // Not for a trip to another app and back, though: changing players takes
     // longer than that, and this is a request.
     if (Date.now() - wentAway > 30_000) void adoptNewerServerQueue();
+    // Whatever the background skipped: the cache did not fill while away.
+    // (The cards fetch on demand, but the cache only fills when asked.)
+    cacheUpcoming();
   });
 }
 
