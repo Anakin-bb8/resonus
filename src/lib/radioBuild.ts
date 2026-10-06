@@ -417,7 +417,7 @@ export function refreshRadios(opts: { force?: boolean } = {}): Promise<RadioDef[
     // few does the bar drop to one song.
     const candidates = await pickSeeds(
       count * 3,
-      new Set([...useRadios.getState().defs.map((d) => d.seed.id), ...useRadios.getState().pastSeeds]),
+      new Set(useRadios.getState().defs.map((d) => d.seed.id)),
     );
     const own = new Map<string, Song[]>();
     const seeds: RadioArtist[] = [];
@@ -440,7 +440,6 @@ export function refreshRadios(opts: { force?: boolean } = {}): Promise<RadioDef[
     );
     // All at once, so the shelf swaps whole rather than one card at a time.
     await useRadios.getState().setDefs(defs);
-    await useRadios.getState().rememberSeeds(defs.map((d) => d.seed.id));
     void ensureRadioIcons(defs);
     return useRadios.getState().defs;
   })().finally(() => {
