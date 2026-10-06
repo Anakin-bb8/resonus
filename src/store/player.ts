@@ -24,6 +24,7 @@ import {
 } from 'expo-audio';
 import { fetch as expoFetch } from 'expo/fetch';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as Network from 'expo-network';
 import { AppState, Platform } from 'react-native';
 import { create } from 'zustand';
 
@@ -2531,6 +2532,13 @@ let errorTrackId: string | null = null;
 let errorAttempts = 0;
 /** Two: enough to ride out a hiccup, few enough not to retry a dead source. */
 const MAX_ERROR_ATTEMPTS = 2;
+/** The track given up on for a dead connection, waiting for the network to
+ *  come back (see `tryResumeAfterOutage`). Null the moment anything else
+ *  owns the player again — validated, not cleared, at resume time. */
+let gaveUp: { songId: string; at: number } | null = null;
+/** Auto-resume only soon after giving up: hours later it would be a surprise
+ *  in a meeting, not a rescue in a tunnel. */
+const RESUME_WINDOW_MS = 15 * 60 * 1000;
 
 /**
  * The error in its own words, with anything that looks like an address taken
@@ -2568,6 +2576,13 @@ function onPlaybackError(message: string, wasPlaying: boolean): void {
   );
   if (errorAttempts >= MAX_ERROR_ATTEMPTS) {
     bump('player · gave up on the track');
+    // Where it stopped is written down now, not at the next tick: the queue
+    // position is only saved every so often, so coming back without this
+    // would resume minutes before the stop instead of at it.
+    saveQueueLocal(true);
+    // And the door is left open for the network coming back (see
+    // `tryResumeAfterOutage`): a tunnel is not a dead server.
+    gaveUp = { songId: song.id, at: Date.now() };
     usePlayerStore.setState({ isPlaying: false, isBuffering: false });
     useToast.getState().show(tg("Couldn't play the song"));
     return;
@@ -2613,6 +2628,30 @@ async function reloadCurrent(atSec: number, autoplay: boolean): Promise<void> {
     seekActive(atSec);
     usePlayerStore.setState({ positionSec: atSec });
   }
+}
+
+/**
+ * The network is back after giving up on a track: play it again from where
+ * it stopped, without being asked. Validated, not trusted: anything started,
+ * moved or resumed since clears it instead. Not for remote output, whose
+ * transport belongs to the device, and not forever after — only in the
+ * window where coming back still reads as continuing.
+ */
+async function tryResumeAfterOutage(): Promise<void> {
+  if (!gaveUp || remoteKind()) return;
+  const st = usePlayerStore.getState();
+  const song = st.queue[st.index];
+  if (!song || song.id !== gaveUp.songId || st.isPlaying) {
+    gaveUp = null;
+    return;
+  }
+  if (Date.now() - gaveUp.at > RESUME_WINDOW_MS) {
+    gaveUp = null;
+    return;
+  }
+  gaveUp = null;
+  bump('player · resuming after the network came back');
+  await reloadCurrent(st.positionSec, true);
 }
 
 /** When the last status was taken in, and how close a next one means a pile. */
@@ -3214,6 +3253,21 @@ function stopPeriodicSync() {
 function attachAppState() {
   if (appStateAttached) return;
   appStateAttached = true;
+  // A return of the connection after giving up on a track resumes it (see
+  // `tryResumeAfterOutage`): edge-triggered, so a state that arrives already
+  // up does not count as a return.
+  let netUp = true;
+  Network.addNetworkStateListener((state) => {
+    const up = !!state.isConnected && state.isInternetReachable !== false;
+    if (!up) {
+      netUp = false;
+      return;
+    }
+    if (!netUp) {
+      netUp = true;
+      void tryResumeAfterOutage();
+    }
+  });
   AppState.addEventListener('change', (st) => {
     if (st !== 'active') {
       // A ramp started an instant ago is about to lose its timer, and with it
