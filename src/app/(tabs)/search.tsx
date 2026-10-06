@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { COVER, coverArtUrl, getPlaylists, search } from '@/api/data';
 import { getRadioStations } from '@/api/backend';
+import { matches } from '@/lib/librarySort';
 import { AlbumCard } from '@/components/AlbumCard';
 import { Cover } from '@/components/Cover';
 import { EmptyState } from '@/components/EmptyState';
@@ -173,9 +174,7 @@ export default function SearchScreen() {
   });
   const playlistMatches =
     debouncedQuery.length > 1
-      ? (playlists ?? []).filter((p) =>
-          p.name.toLowerCase().includes(debouncedQuery.toLowerCase()),
-        )
+      ? (playlists ?? []).filter((p) => matches(debouncedQuery, p.name))
       : [];
   // Stations, filtered the same way and for the same reason. Server only:
   // Jellyfin doesn't manage them and offline there's nothing to stream.
@@ -189,9 +188,7 @@ export default function SearchScreen() {
   });
   const stationMatches =
     debouncedQuery.length > 1
-      ? (stations ?? []).filter((r) =>
-          r.name.toLowerCase().includes(debouncedQuery.toLowerCase()),
-        )
+      ? (stations ?? []).filter((r) => matches(debouncedQuery, r.name))
       : [];
 
   /**

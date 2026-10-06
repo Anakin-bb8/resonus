@@ -14,6 +14,7 @@
 import { useEffect, useState } from 'react';
 
 import { CACHED_COVER, COVER } from '@/api/data';
+import { note } from '@/lib/perfLog';
 import { colors as theme, useThemeMode, type ThemeMode } from '@/theme';
 
 function hexToRgb(hex: string): [number, number, number] | null {
@@ -94,11 +95,14 @@ function saturationOf(hex: string): number {
  *
  * They come labeled by role, not by vibrancy: `background` is the dominant
  * area of the cover and `primary`, `secondary` and `detail` are the foreground
- * ones in order of how much of the cover they take. The dominant area is the
- * one that reads as "the color of this cover", so it wins whenever it carries
- * any color at all; the covers it fails on are the ones whose dominant area is
- * a white border or a black void, and there the foreground colors are all
- * there is. Among those, order beats saturation unless the gap is wide: a
+ * ones in order of how much of the cover they take. Android's side of the
+ * same module answers in vibrancy labels (`vibrant`, `darkVibrant`…) instead,
+ * so the two platforms can never pick by the same rule — this mapping is the
+ * price of one module for both, not a workaround to remove. The dominant area
+ * is the one that reads as "the color of this cover", so it wins whenever it
+ * carries any color at all; the covers it fails on are the ones whose dominant
+ * area is a white border or a black void, and there the foreground colors are
+ * all there is. Among those, order beats saturation unless the gap is wide: a
  * small vivid detail should not push aside the color the cover is made of.
  */
 function pickIosColor(
@@ -213,6 +217,12 @@ export async function dominantColorOf(
     }
     return normalize(c, mode, vivid);
   } catch {
+    // A read that fails leaves the plain tint, which is also what "no accent
+    // on this song" looks like — so say which cover it was, with the query
+    // (and its secrets) cut off. The next report that carries one of these
+    // names the format or the host to fix instead of the picker.
+    const tail = src.split('?')[0].split('/').slice(-2).join('/');
+    note(`accent unreadable: ${tail}`);
     return theme.surfaceHighlight;
   }
 }

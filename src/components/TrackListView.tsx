@@ -39,6 +39,7 @@ import { useT } from '@/i18n';
 import { artistTargets } from '@/lib/artistNav';
 import { easedFade } from '@/lib/fade';
 import { haptic } from '@/lib/haptics';
+import { matches } from '@/lib/librarySort';
 import { listPerf } from '@/lib/listPerf';
 import { useArtistPicker } from '@/store/artistPicker';
 import { usePlayerStore } from '@/store/player';
@@ -99,11 +100,6 @@ const DESCRIPTION_LINES = 2;
  * would break both).
  */
 const AnimatedList = Animated.createAnimatedComponent(GHFlatList) as typeof GHFlatList;
-
-/** Normalizes for searching: lowercase and without accents. */
-function normQ(s: string): string {
-  return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-}
 
 interface Props {
   title: string;
@@ -606,12 +602,11 @@ export function TrackListView({
   // Live filtering; preserves each song's original index so play/enqueue/remove
   // still point to the correct position.
   const filtered = useMemo(() => {
-    const q = normQ(query.trim());
+    const q = query.trim();
     if (!searchable || !q) return null;
     const rows: { song: Song; index: number }[] = [];
     songs.forEach((song, index) => {
-      if (normQ(song.title).includes(q) || (song.artist && normQ(song.artist).includes(q)))
-        rows.push({ song, index });
+      if (matches(q, song.title, song.artist)) rows.push({ song, index });
     });
     return rows;
   }, [searchable, query, songs]);

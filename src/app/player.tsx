@@ -1144,7 +1144,16 @@ export default function PlayerScreen() {
                 panel's content only changes off-screen and a fade is pointless
                 here. An animated cover is not here at all: it is the background,
                 and the empty slot it leaves is what the picture shows through. */}
-            <Animated.View style={[{ width: coverSize, height: coverSize }, coverAppearStyle]}>
+            <Animated.View
+              style={[
+                { width: coverSize, height: coverSize },
+                coverAppearStyle,
+                // The still cover sits on the page the way the album one does,
+                // only softer. Not the animated one: that is the background
+                // itself, and the small copy by the title stays flat too.
+                !isAnimatedCover && styles.coverShadow,
+              ]}
+            >
               {!isAnimatedCover ? (
                 paneStyles.map((paneStyle, k) => {
                   const rel = paneRel(k);
@@ -1641,6 +1650,15 @@ const styles = themed((colors) => ({
   // Carousel panels are absolute (usePaneStyle positions them); the row that
   // reserves the cover art slot is sized inline, since it's dynamic now.
   coverPane: { position: 'absolute', top: 0, left: 0 },
+  coverShadow: {
+    // The album and playlist covers cast this same shadow, only heavier: the
+    // weight sits underneath, and the offset is what puts it there.
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.28,
+    shadowRadius: 12,
+    elevation: 6,
+  },
   // Lyrics overlay on top of the cover frame: same height (set inline, it
   // follows the cover) and horizontally centered (coverWrap is wider than the
   // cover; without this the lyrics would be left-aligned).
