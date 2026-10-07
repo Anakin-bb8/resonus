@@ -469,6 +469,9 @@ export default function PlayerScreen() {
   // height (see the album line and the quality badge), so what was remembered
   // holds for every song on this screen.
   const [coverStable, setCoverStable] = useState(!!remembered);
+  /** Animated covers only move while the app is foreground: decoding them is
+   * native and invisible in the background, pure memory and CPU for nobody. */
+  const [isForeground, setIsForeground] = useState(true);
   const coverAppear = useSharedValue(remembered ? 1 : 0);
   /** The numbers this open started with, to know later whether they held. */
   const startedWith = useRef(remembered);
@@ -505,6 +508,7 @@ export default function PlayerScreen() {
      */
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') setCoverStable(true);
+      setIsForeground(state === 'active');
     });
     return () => {
       clearTimeout(id);
@@ -957,6 +961,7 @@ export default function PlayerScreen() {
               source={{ uri: cover }}
               style={StyleSheet.absoluteFill}
               contentFit="cover"
+              autoplay={isForeground}
               transition={BACKDROP_FADE}
               onDisplay={animatedBg.onDisplay}
             />
@@ -1173,7 +1178,7 @@ export default function PlayerScreen() {
                           size={coverSize}
                           contentFit={fitCoverArt ? 'contain' : 'cover'}
                           transition={0}
-                          autoplay={rel === 0}
+                          autoplay={rel === 0 && isForeground}
                           onAnimatedDetected={rel === 0 ? onCoverLoad : undefined}
                           placeholderIcon={paneSong.url ? 'radio' : 'musical-notes'}
                         />
