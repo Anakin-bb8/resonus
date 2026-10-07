@@ -35,7 +35,7 @@ import { initAppLocale } from '@/lib/appLocale';
 import { initHomeWidget } from '@/lib/homeWidget';
 import { loadCustomFont } from '@/lib/customFont';
 import { removeLegacyRadioCovers } from '@/lib/legacyRadioCovers';
-import { startPerfLog } from '@/lib/perfLog';
+import { loadPastEvents, startPerfLog } from '@/lib/perfLog';
 import { queryClient } from '@/lib/query';
 import { primaryUrl } from '@/lib/serverUrls';
 import { useAuthStore } from '@/store/auth';
@@ -186,6 +186,8 @@ export default function RootLayout() {
   useEffect(() => {
     // Before anything else, so the first seconds count too.
     startPerfLog();
+    // What the last session wrote going away, for the report to carry.
+    void loadPastEvents();
     // Was the last session killed while away (background kill, not a close)?
     // Answered into the diagnostics, where the shared report picks it up.
     checkBackgroundDeath();
