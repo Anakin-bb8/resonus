@@ -3013,19 +3013,7 @@ index 074294321e872bb53c0b2d41044dac3c612f14f0..c3f06ed799a991d94e9cd2516ed9b80f
      if let queuePlayer = ref as? AVQueuePlayer {
        queuePlayer.removeAllItems()
        if let item {
-@@ -424,5 +495,9 @@ private func enqueueNextLoopItem() {
-     guard queuePlayer.items().count <= 1 else {
-       return
-     }
--    let nextItem = AVPlayerItem(asset: currentItem.asset)
--    nextItem.audioTimePitchAlgorithm = currentItem.audioTimePitchAlgorithm
-+    let nextItem = AVPlayerItem(asset: currentItem.asset)
-+    // Same lookahead bound as AudioUtils.createAVPlayerItem: a loop copy
-+    // replays the same asset, and without the cap the copy buffers the song
-+    // ahead a second time while the original item holds its own window.
-+    nextItem.preferredForwardBufferDuration = 60
-+    nextItem.audioTimePitchAlgorithm = currentItem.audioTimePitchAlgorithm
-@@ -429,12 +504,67 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+@@ -429,12 +500,67 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
      queuePlayer.insert(nextItem, after: currentItem)
    }
  
@@ -3094,7 +3082,7 @@ index 074294321e872bb53c0b2d41044dac3c612f14f0..c3f06ed799a991d94e9cd2516ed9b80f
        queuePlayer.remove(item)
      }
    }
-@@ -459,7 +589,21 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+@@ -459,7 +585,21 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
          return
        }
  
@@ -3186,18 +3174,6 @@ index 79c7c0b256581a768c42a0291bf84bdff4c4b142..ca13e59c53a7f9a3a5fc49d94b266c62
      }
  
      let asset = AVURLAsset(url: finalUrl, options: options)
-@@ -93,4 +107,10 @@ struct AudioUtils {
--    return AVPlayerItem(asset: asset, automaticallyLoadedAssetKeys: [.tracks, .duration])
-+    let item = AVPlayerItem(asset: asset, automaticallyLoadedAssetKeys: [.tracks, .duration])
-+    // A bounded lookahead: the default buffers a whole file when the network
-+    // is fast, per player, plus the gapless item waiting behind - hundreds of
-+    // MB held for audio minutes away, which is what gets a backgrounded app
-+    // jetsammed on a pressured phone. A minute still rides out any blip.
-+    item.preferredForwardBufferDuration = 60
-+    return item
-   }
- 
-   static func createRecordingOptions(_ options: RecordingOptions) -> [String: Any] {
 diff --git a/ios/MediaController.swift b/ios/MediaController.swift
 index e977f577cd2e16b194b56537ad76b423f40d2496..4f16e709309c0a9f8b690232ae23d8067cdb1cda 100644
 --- a/ios/MediaController.swift
