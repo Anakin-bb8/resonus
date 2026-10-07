@@ -1,8 +1,10 @@
 /** Rich empty state: icon, title, subtitle, and optional action. */
 import Icon from '@/components/Icon';
 import { Pressable, Text, View } from 'react-native';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { colors, fontSize, radius, spacing, themed, tracking } from '@/theme';
+import { motion } from '@/theme/motion';
 
 interface Props {
   icon: keyof typeof Icon.glyphMap;
@@ -13,18 +15,31 @@ interface Props {
 
 export function EmptyState({ icon, title, subtitle, action }: Props) {
   return (
-    <View style={styles.container}>
+    // Fades rather than snaps: empty is a state the screen lands in (a query
+    // with no hits, a tab with nothing in it), rare enough for the bridge.
+    <Animated.View
+      entering={FadeIn.duration(motion.duration.fade)}
+      exiting={FadeOut.duration(motion.duration.exit)}
+      style={styles.container}
+    >
       <View style={styles.iconWrap}>
         <Icon name={icon} size={40} color={colors.textSecondary} />
       </View>
       <Text style={styles.title}>{title}</Text>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       {action ? (
-        <Pressable style={[styles.button, { backgroundColor: colors.accent }]} onPress={action.onPress}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.button,
+            { backgroundColor: colors.accent },
+            pressed && { opacity: 0.6 },
+          ]}
+          onPress={action.onPress}
+        >
           <Text style={styles.buttonText}>{action.label}</Text>
         </Pressable>
       ) : null}
-    </View>
+    </Animated.View>
   );
 }
 
