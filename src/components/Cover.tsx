@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import { AppState, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { CACHED_COVER, COVER } from '@/api/data';
-import { bump } from '@/lib/perfLog';
+import { bump, cpuReload, cpuRemount, cpuShow } from '@/lib/perfLog';
 import { useSettings, type CoverCorners } from '@/store/settings';
 import { colors, radius } from '@/theme';
 
@@ -200,11 +200,13 @@ export function useRedrawOnReturn(
       // these ran, and they want different fixes.
       if (changed) {
         bump('cover · rebuilt on return');
+        cpuRemount();
         setNonce((n) => n + 1);
       } else if (drawn.current !== shown) {
         // Never drew what it was given, and the picture is still the same one:
         // asking is enough here and does not blink.
         bump('cover · asked again on return');
+        cpuReload();
         void ref.current?.reloadAsync().catch(() => {});
       } else {
         bump('cover · looked fine on return');
@@ -218,6 +220,7 @@ export function useRedrawOnReturn(
   // Fired when a picture is put on screen, and only for the real source: a
   // placeholder is not an answer to the question above.
   const onDisplay = useCallback(() => {
+    cpuShow();
     drawn.current = shown;
   }, [shown]);
   return { nonce, onDisplay };
