@@ -2494,12 +2494,14 @@ function maybeDetectStall(intendPlay: boolean, buffering: boolean, positionSec: 
     stallPos = positionSec;
     return;
   }
-  // If the position advances, it's a normal rebuffer, not a stall.
+  // If the position advances, it's a normal rebuffer, not a stall — and any
+  // background wait for this track is over with it.
   if (Math.abs(positionSec - stallPos) > 0.5) {
     stallSince = 0;
     stallProbed = false;
     stallFellBack = false;
     stallPos = positionSec;
+    stopBgRetry();
     return;
   }
   const now = Date.now();
@@ -2520,6 +2522,16 @@ function maybeDetectStall(intendPlay: boolean, buffering: boolean, positionSec: 
     bump('player · fell back to the file after a stall');
     failedSource.set(song.id, 'stream');
     void reloadCurrent(positionSec, true);
+    return;
+  }
+  // Still stuck with nowhere to fall back to: backgrounded, this becomes the
+  // background wait rather than silence forever (see `startBgRetry`) — a
+  // stall nobody watches is the error give-up without the error. Foreground
+  // it stays a stall, with the spinner the watcher can see.
+  if (!stallFellBack && now - stallSince >= STALL_FALLBACK_MS && song && AppState.currentState !== 'active') {
+    stallFellBack = true;
+    gaveUp = { songId: song.id, at: Date.now() };
+    startBgRetry();
   }
 }
 
