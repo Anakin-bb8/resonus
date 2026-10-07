@@ -110,6 +110,57 @@ let trips = 0;
  */
 let bgTicks = 0;
 
+// ── CPU-watch: temporary hunt telemetry ─────────────────────────────────────
+// The background killer is CPU (84% over 57s), not footprint, and no static
+// suspect spins. So count what moves, once a minute, on one line: loop lag
+// off the heartbeat's own lateness, native beats, cover displays, remounts
+// and reloads. In the background the note hits the disk at once and outlives
+// the kill; in the foreground it stays in memory for the report. TEMPORARY:
+// remove once the spinner has a name.
+const CPU_WATCH_MS = 60_000;
+let watchLagSum = 0;
+let watchLagMax = 0;
+let watchFgTicks = 0;
+let watchBgTicks = 0;
+let watchBeats = 0;
+let watchShows = 0;
+let watchRemounts = 0;
+let watchReloads = 0;
+let watchWindowStart = 0;
+
+export function cpuBeat(): void {
+  if (enabled) watchBeats++;
+}
+
+export function cpuShow(): void {
+  if (enabled) watchShows++;
+}
+
+export function cpuRemount(): void {
+  if (enabled) watchRemounts++;
+}
+
+export function cpuReload(): void {
+  if (enabled) watchReloads++;
+}
+
+function watchFlush(now: number): void {
+  const ticks = watchFgTicks + watchBgTicks;
+  const avg = ticks > 0 ? Math.round(watchLagSum / ticks) : 0;
+  note(
+    `cpu-watch 60s: fg=${watchFgTicks} bg=${watchBgTicks} lagAvg=${avg}ms lagMax=${watchLagMax}ms beats=${watchBeats} shows=${watchShows} remounts=${watchRemounts} reloads=${watchReloads}`,
+  );
+  watchLagSum = 0;
+  watchLagMax = 0;
+  watchFgTicks = 0;
+  watchBgTicks = 0;
+  watchBeats = 0;
+  watchShows = 0;
+  watchRemounts = 0;
+  watchReloads = 0;
+  watchWindowStart = now;
+}
+
 /** Books the time since the last change to whichever state it was spent in. */
 function closeSpan(now: number): void {
   const span = now - stateSince;
@@ -185,6 +236,14 @@ export function startPerfLog(): void {
     const now = Date.now();
     const late = now - lastTick - TICK_MS;
     lastTick = now;
+    if (awake) watchFgTicks++;
+    else watchBgTicks++;
+    if (late > 0) {
+      watchLagSum += late;
+      if (late > watchLagMax) watchLagMax = late;
+    }
+    if (watchWindowStart === 0) watchWindowStart = now;
+    else if (now - watchWindowStart >= CPU_WATCH_MS) watchFlush(now);
     if (!awake) {
       // Not a block, and not nothing either: see `bgTicks`.
       bgTicks++;

@@ -60,7 +60,7 @@ import { favoriteLabel, favoriteState, onFavoritesChange, toggleFavorite } from 
 import type { Remap } from '@/lib/navidromeRemap';
 import { remapSong } from '@/lib/navidromeRemap';
 import { noteOwnReport } from '@/lib/ownReports';
-import { beat, bump, note, timed } from '@/lib/perfLog';
+import { beat, bump, cpuBeat, note, timed } from '@/lib/perfLog';
 import { queryClient } from '@/lib/query';
 import {
   appendEnd,
@@ -2768,6 +2768,7 @@ function onStatus(status: AudioStatus, live = false) {
   // survives the app being minimized, so whether it arrives is the first thing
   // worth knowing about the minutes nobody was watching (see `beat`).
   beat(status.playing);
+  cpuBeat();
   // With remote output (UPnP/DLNA) the local player is paused and its
   // states should not override those coming from the remote device.
   if (remoteKind()) return;
