@@ -24,6 +24,7 @@ import {
 } from 'expo-audio';
 import { fetch as expoFetch } from 'expo/fetch';
 import * as FileSystem from 'expo-file-system/legacy';
+import { Image } from 'expo-image';
 import * as Network from 'expo-network';
 import { AppState, Platform } from 'react-native';
 import { create } from 'zustand';
@@ -3390,6 +3391,13 @@ function attachAppState() {
       syncQueueNow(true, false);
       wentAway = Date.now();
       markAway();
+      // The decoded-image pile goes with the screen: hundreds of megabytes of
+      // covers stay resident after scrolling a library, and the image thread
+      // keeps chewing on them out there (cpu_resource kill, 84% over 57s).
+      // Memory cache only — disk stays, and what is on screen re-decodes on
+      // return. Nothing visible changes; the next launch just has less to die
+      // of.
+      void Image.clearMemoryCache().catch(() => {});
       return;
     }
     clearAway();
