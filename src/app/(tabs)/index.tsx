@@ -1205,13 +1205,13 @@ const styles = themed((colors) => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.surface,
-    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceHighlight,
+    borderRadius: radius.sm + 1,
     overflow: 'hidden',
     paddingRight: spacing.sm,
   },
-  /** Small like the tile: both edges share it. */
-  tileCover: { borderRadius: radius.sm },
+  /** A touch rounder than the small step, like the tile. */
+  tileCover: { borderRadius: radius.sm + 1 },
   tileText: {
     flex: 1,
     color: colors.text,

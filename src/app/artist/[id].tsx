@@ -87,8 +87,6 @@ function headerHeight(width: number, height: number): number {
  * which is all four of the ones below.
  */
 const AnimatedPage = Animated.createAnimatedComponent(ScrollView);
-/** The bar's shadow gradient, fading in with the bar itself. */
-const AnimatedGradient = Animated.createAnimatedComponent(LinearGradient);
 
 const CARD_W = 140;
 /**
@@ -753,12 +751,16 @@ export default function ArtistScreen() {
       <View style={[styles.bar, { height: insets.top + BAR_H, paddingTop: insets.top }]}>
         <TopBarBackground color={dominant} opacity={barBgOpacity} />
         {/* The bar's own shadow, like the album and playlist bars: the accent
-            falling slightly darker toward the content, riding the bar's fade. */}
-        <AnimatedGradient
+            falling slightly darker toward the content. */}
+        <Animated.View
           pointerEvents="none"
-          colors={[dominant, darken(dominant, 0.15)]}
           style={[StyleSheet.absoluteFill, { opacity: barBgOpacity }]}
-        />
+        >
+          <LinearGradient
+            colors={[dominant, darken(dominant, 0.15)]}
+            style={StyleSheet.absoluteFill}
+          />
+        </Animated.View>
         {/* The same chevron, at the same size, as the album and playlist bars.
             What it keeps of its own is the disc behind it: those screens open
             on a cover of the app's own making, and this one on a photo from
