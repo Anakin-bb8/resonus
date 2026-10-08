@@ -33,7 +33,7 @@ import { AlbumCard } from '@/components/AlbumCard';
 import { AlbumCardsSkeleton } from '@/components/AlbumCardsSkeleton';
 import { ArtistCard } from '@/components/ArtistCard';
 import { PlayingElsewhereCard } from '@/components/PlayingElsewhereCard';
-import { Cover } from '@/components/Cover';
+import { Cover, useCoverRadius } from '@/components/Cover';
 import { FavoritesArt } from '@/components/FavoritesArt';
 import { Message } from '@/components/Message';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
@@ -105,15 +105,18 @@ function QuickTile({
   favorites?: boolean;
   width: number;
 }) {
+  // The same corners the album and playlist cards get: those follow the
+  // cover-corners setting, and the tile's hardcoded ones stopped matching it.
+  const corner = useCoverRadius(SHELF_CARD);
   return (
     <Link href={href} asChild>
       {/* Flattened, not an array: expo-router hands the style straight to the
           child it clones and refuses a list. */}
-      <Pressable style={StyleSheet.flatten([styles.tile, { width }])}>
+      <Pressable style={StyleSheet.flatten([styles.tile, { width, borderRadius: corner }])}>
         {favorites ? (
           <FavoritesArt size={52} square />
         ) : (
-          <Cover uri={cover} size={52} style={styles.tileCover} />
+          <Cover uri={cover} size={52} style={[styles.tileCover, { borderRadius: corner }]} />
         )}
         <Text style={styles.tileText} numberOfLines={2}>
           {name}

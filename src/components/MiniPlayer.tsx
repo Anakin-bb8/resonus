@@ -309,8 +309,8 @@ const styles = themed((colors) => ({
     gap: spacing.md,
     backgroundColor: colors.surfaceHighlight,
     padding: spacing.sm,
-    // A tighter right edge: the buttons sit further right, clear of the text.
-    paddingRight: spacing.xs,
+    // A step in from the edge: the buttons sit further left, clear of it.
+    paddingRight: spacing.md,
     borderRadius: radius.lg,
     overflow: 'hidden',
   },
@@ -322,12 +322,12 @@ const styles = themed((colors) => ({
     left: spacing.sm,
     right: spacing.sm,
     bottom: 0,
-    height: 3,
+    height: 2,
     borderRadius: radius.pill,
     backgroundColor: colors.highlight,
     overflow: 'hidden',
   },
-  progressFill: { height: 3, borderRadius: radius.pill, backgroundColor: colors.text },
+  progressFill: { height: 2, borderRadius: radius.pill, backgroundColor: colors.text },
   spinner: { width: 26, height: 26 },
   details: {
     flex: 1,

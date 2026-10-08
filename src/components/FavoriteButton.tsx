@@ -1,4 +1,4 @@
-/** Plus-in-a-circle to mark/unmark favorites (Subsonic star/unstar). */
+/** Plus-in-a-circle to mark favorites, filled check when marked (Subsonic star/unstar). */
 import Icon from '@/components/Icon';
 import { useEffect, useState } from 'react';
 import { Pressable, type GestureResponderEvent } from 'react-native';
@@ -78,9 +78,9 @@ export function FavoriteButton({ id, type = 'song', starred, size = 22, undo }: 
       accessibilityLabel={fav ? t('Remove from favorites') : t('Add to favorites')}
     >
       <Icon
-        name="add-circle-outline"
+        name={fav ? 'checkmark-circle' : 'add-circle-outline'}
         size={size}
-        color={fav ? colors.accent : colors.textSecondary}
+        color={fav ? colors.accent : colors.text}
       />
     </Pressable>
   );

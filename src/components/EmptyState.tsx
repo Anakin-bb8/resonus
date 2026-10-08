@@ -8,12 +8,14 @@ import { motion } from '@/theme/motion';
 
 interface Props {
   icon: keyof typeof Icon.glyphMap;
+  /** Solid instead of dimmed, for marks that must read as controls. */
+  iconSolid?: boolean;
   title: string;
   subtitle?: string;
   action?: { label: string; onPress: () => void };
 }
 
-export function EmptyState({ icon, title, subtitle, action }: Props) {
+export function EmptyState({ icon, iconSolid, title, subtitle, action }: Props) {
   return (
     // Fades rather than snaps: empty is a state the screen lands in (a query
     // with no hits, a tab with nothing in it), rare enough for the bridge.
@@ -23,7 +25,7 @@ export function EmptyState({ icon, title, subtitle, action }: Props) {
       style={styles.container}
     >
       <View style={styles.iconWrap}>
-        <Icon name={icon} size={40} color={colors.textSecondary} />
+        <Icon name={icon} size={40} color={iconSolid ? colors.text : colors.textSecondary} />
       </View>
       <Text style={styles.title}>{title}</Text>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
