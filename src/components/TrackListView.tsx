@@ -38,6 +38,7 @@ import { centredPadding, useScreenSize } from '@/hooks/useScreenSize';
 import { useSelectionMenu } from '@/hooks/useSelectionMenu';
 import { useT } from '@/i18n';
 import { artistTargets } from '@/lib/artistNav';
+import { darken } from '@/lib/colorPick';
 import { easedFade } from '@/lib/fade';
 import { haptic } from '@/lib/haptics';
 import { matches } from '@/lib/librarySort';
@@ -64,7 +65,9 @@ import { TrackRow } from './TrackRow';
  * and the tracklist is what people came for (#131).
  */
 function coverSize(width: number, height: number): number {
-  return Math.round(Math.min(width * 0.58, height * 0.4, 250));
+  // A touch larger than the share alone: the top edge sits up with the back
+  // chevron now, and the same share would read smaller for it.
+  return Math.round(Math.min(width * 0.58, height * 0.4, 250) + 12);
 }
 export const TOPBAR_H = 48;
 /** The round play button in the header: its size, and the share of it the
@@ -488,6 +491,10 @@ export function TrackListView({
   // it goes under the bar - but is clamped so it ends just above where this
   // one would, on every screen there is.
   const albumPadTop = insets.top + TOPBAR_H + spacing.md;
+  // The square cover's own top: level with the back chevron (28 points
+  // centred in the 48 point bar), so it starts under the bar instead of
+  // below it. The wide cover keeps the old measure.
+  const coverPadTop = insets.top + (TOPBAR_H - 28) / 2;
   const wideH = wideCover ? Math.min(wideCover.height, albumPadTop + art - 24) : 0;
   const cover = wideCover || hideCover ? 0 : art;
   const collapse = wideCover ? wideH : hideCover ? 120 : art;
@@ -517,7 +524,7 @@ export function TrackListView({
   // top of the list header, plus the padding the list starts with - which is
   // the same expression the list is padded by below, so the two cannot drift
   // apart. The wide cover needs no top padding: its picture is the top.
-  const listPadTop = wideCover ? 0 : albumPadTop;
+  const listPadTop = wideCover ? 0 : coverPadTop;
 
   // The two ends of that distance are read in window coordinates in the same
   // tick, so the scroll underneath them cancels out: the number is the same
@@ -1211,6 +1218,15 @@ export function TrackListView({
         ) : (
           <>
             <TopBarBackground color={headerColor} opacity={barBgOpacity} />
+            {/* The bar's own shadow: the accent falling slightly darker
+                toward the content, constant in both bar states (at rest the
+                background under it is transparent, scrolled it is the solid
+                accent - the same family either way). */}
+            <LinearGradient
+              pointerEvents="none"
+              colors={[headerColor, darken(headerColor, 0.15)]}
+              style={StyleSheet.absoluteFill}
+            />
             <BackChevron size={28} label={t('Close')} />
             <Animated.Text
               style={[

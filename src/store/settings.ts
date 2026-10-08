@@ -726,8 +726,7 @@ function normalizeHomeButtons(raw: unknown): HomeButton[] {
       seen.add(key);
       out.push({
         key,
-        enabled:
-          key === 'settings' ? true : typeof item.enabled === 'boolean' ? item.enabled : true,
+        enabled: typeof item.enabled === 'boolean' ? item.enabled : true,
       });
     }
   }
@@ -1113,8 +1112,14 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   /** "Folders" section in the Library (directory browsing; Subsonic). */
   showFolderBrowser: boolean;
   /** The buttons at the top right of Home, in order (each with its state).
-   *  For those who prefer a minimal UI: all but the gear can go. */
+   *  All of them can go, the gear included: with it off the profile picture
+   *  is forced on, so Settings stay one tap away. */
   homeButtons: HomeButton[];
+  /** The profile picture beside the Home chips: tapping it opens Settings.
+   *  Forced on while the settings gear is off, so settings stay one tap away. */
+  showProfileImage: boolean;
+  /** Local file of that picture (picked on the profile screen), if any. */
+  profileImageUri: string | null;
   /** App startup tab (Home/Search/Library). */
   defaultTab: DefaultTab;
   /** Your library with no chip pressed shows Favorites and the playlists, as
@@ -1354,6 +1359,8 @@ const DEFAULTS = {
   homeChipIcons: true,
   showFolderBrowser: false,
   homeButtons: DEFAULT_HOME_BUTTONS.map((b) => ({ ...b })),
+  showProfileImage: false,
+  profileImageUri: null as string | null,
   defaultTab: 'index' as DefaultTab,
   libraryShowsPlaylists: false,
   librarySort: 'recent' as LibrarySort,
@@ -1653,6 +1660,9 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
   // cap must not sneak in longer than what fits.
   if (typeof parsed.customGreeting === 'string') {
     set({ customGreeting: parsed.customGreeting.slice(0, GREETING_MAX) });
+  }
+  if (typeof parsed.profileImageUri === 'string' && parsed.profileImageUri.length > 0) {
+    set({ profileImageUri: parsed.profileImageUri });
   }
   // Two older names are still read here, and this is the whole of the
   // rename's cost. The row used to be called the Explore chips, one word

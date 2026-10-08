@@ -289,7 +289,6 @@
   "Suggestions": "Suggerimenti",
   "Swipe left": "Scorri verso sinistra",
   "Swipe right": "Scorri verso destra",
-  "Tap the heart on songs to see them here.": "Tocca il cuore sui brani per vederli qui.",
   "The current song keeps playing.": "Il brano corrente continua a riprodursi.",
   "The queue is empty.": "La coda è vuota.",
   "Theme": "Tema",
@@ -793,5 +792,12 @@
   "New features": "Novità",
   "Changes": "Modifiche",
   "Fixes": "Correzioni",
-  "{n} more": "{n} in più"
+  "{n} more": "{n} in più",
+  "Profile picture": "Immagine profilo",
+  "Show profile picture": "Mostra immagine profilo",
+  "Round, beside the Home chips: tapping it opens Settings.": "Tonda, accanto alle chip della Home: toccandola apri le Impostazioni.",
+  "With the settings icon off, your picture stays on so settings are one tap away.": "Con icona impostazioni disattivata, la tua immagine resta visibile e le impostazioni restano a un tocco.",
+  "Choose photo": "Scegli foto",
+  "Remove photo": "Rimuovi foto",
+  "Tap the plus button on songs to see them here.": "Tocca il pulsante più sui brani per vederli qui."
 }

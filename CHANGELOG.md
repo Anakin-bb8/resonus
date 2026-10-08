@@ -11,6 +11,7 @@ Releases before 0.2.1 are only listed on the
 
 ### Added
 
+- A profile picture beside the Home chips, opening Settings on tap and forced on while the settings gear is off; the gear itself can now be hidden from Home buttons, and with the greeting off too the chips slide up into the header.
 - Artist radios on Home, built from your most played artists, with new ones each time Home is pulled to refresh (#252).
 - A radio's ⋯ menu, also on a long press of its card, to queue it, save it as a playlist, refresh it or go to its artist.
 - Any artist's radio from the artist's ⋯ menu or a song's menu, and a radio keeps playing once its songs run out.
@@ -22,6 +23,7 @@ Releases before 0.2.1 are only listed on the
 
 ### Changed
 
+- Alternative look: a flatter corner scale across the app, a shadow gradient in the album, playlist and artist top bars, a slightly larger header cover lined up with the back chevron, and favorites marked with a plus-in-a-circle instead of a heart.
 - Word-timed lyrics fill each word with colour as it is sung (#252).
 
 ### Fixed
