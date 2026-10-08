@@ -418,7 +418,7 @@ const styles = themed((colors) => ({
     marginHorizontal: spacing.lg,
     marginBottom: spacing.md,
     paddingHorizontal: spacing.lg,
-    borderRadius: radius.pill,
+    borderRadius: radius.md,
     backgroundColor: colors.surfaceHighlight,
   },
   searchInput: { flex: 1, color: colors.text, fontSize: fontSize.md, padding: 0 },

@@ -300,7 +300,7 @@ export function MiniPlayer() {
 const styles = themed((colors) => ({
   card: {
     marginHorizontal: spacing.sm,
-    borderRadius: radius.lg,
+    borderRadius: radius.md,
     boxShadow: '0px 6px 16px rgba(0, 0, 0, 0.3)',
   },
   container: {
@@ -311,7 +311,7 @@ const styles = themed((colors) => ({
     padding: spacing.sm,
     // A step in from the edge: the buttons sit further left, clear of it.
     paddingRight: spacing.md,
-    borderRadius: radius.lg,
+    borderRadius: radius.md,
     overflow: 'hidden',
   },
   /** Centred and no wider than a wide screen wants it. */

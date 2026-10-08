@@ -23,7 +23,11 @@ Releases before 0.2.1 are only listed on the
 
 ### Changed
 
-- Alternative look: a flatter corner scale across the app, a shadow gradient in the album, playlist and artist top bars, a slightly larger header cover lined up with the back chevron, and favorites marked with a plus-in-a-circle instead of a heart.
+- Alternative look: a flatter corner scale across the app (small controls keep
+  their steps; cards, panels, sheets and search boxes sit on 12 or below), a
+  shadow gradient in the album, playlist and artist top bars fading in with
+  the bar itself, a slightly larger header cover lined up with the back
+  chevron, and favorites marked with a plus that fills into an accent check.
 - Word-timed lyrics fill each word with colour as it is sung (#252).
 
 ### Fixed

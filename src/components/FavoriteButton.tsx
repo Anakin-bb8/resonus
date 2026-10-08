@@ -19,9 +19,11 @@ interface Props {
   size?: number;
   /** Song lists only: take the favourite off behind an «Undo» toast (#98). */
   undo?: boolean;
+  /** Dimmed when unmarked, like the quieter header buttons around it. */
+  dimmed?: boolean;
 }
 
-export function FavoriteButton({ id, type = 'song', starred, size = 22, undo }: Props) {
+export function FavoriteButton({ id, type = 'song', starred, size = 22, undo, dimmed }: Props) {
   const auth = useAuthStore((s) => s.auth);
   const offline = useAuthStore((s) => s.offline);
   const t = useT();
@@ -80,7 +82,7 @@ export function FavoriteButton({ id, type = 'song', starred, size = 22, undo }: 
       <Icon
         name={fav ? 'checkmark-circle' : 'add-circle-outline'}
         size={size}
-        color={fav ? colors.accent : colors.text}
+        color={fav ? colors.accent : dimmed ? colors.textSecondary : colors.text}
       />
     </Pressable>
   );
