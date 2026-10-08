@@ -543,7 +543,7 @@ const styles = themed((colors) => ({
     backgroundColor: colors.surfaceHighlight,
     margin: spacing.lg,
     paddingHorizontal: spacing.lg,
-    borderRadius: radius.pill,
+    borderRadius: radius.md,
   },
   input: {
     flex: 1,

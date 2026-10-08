@@ -1219,7 +1219,7 @@ const styles = themed((colors) => ({
     height: 44,
     backgroundColor: colors.surfaceHighlight,
     paddingHorizontal: spacing.lg,
-    borderRadius: radius.pill,
+    borderRadius: radius.md,
   },
   searchInput: { flex: 1, color: colors.text, fontSize: fontSize.md, paddingVertical: 0 },
   list: {

@@ -511,13 +511,9 @@ export function TrackListView({
     outputRange: [1, 0],
     extrapolate: 'clamp',
   });
-  const barContentOpacity = scrollY.interpolate({
-    // The title goes first: the bar only starts coming in once it has gone
-    // past it, and is fully there a short way after.
-    inputRange: [collapse * 0.95, collapse * 0.95 + 80],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
+  // The bar only starts coming in once the title has gone past it, background
+  // and title on the same fade: split ranges left a band where the bar showed
+  // with no name in it.
   const barBgOpacity = scrollY.interpolate({
     inputRange: [collapse * 0.85, collapse * 0.85 + 80],
     outputRange: [0, 1],
@@ -1000,6 +996,7 @@ export function TrackListView({
                     type={favorite.type}
                     starred={favorite.starred}
                     size={28}
+                    dimmed
                   />
                 ) : null}
                 {download ? (
@@ -1236,7 +1233,7 @@ export function TrackListView({
                 styles.barTitleCentered,
                 {
                   top: insets.top + 10,
-                  opacity: barContentOpacity,
+                  opacity: barBgOpacity,
                   left: titleInset,
                   right: titleInset,
                 },
@@ -1319,7 +1316,7 @@ const styles = themed((colors) => ({
     gap: spacing.sm,
     // Translucent to let the header's dominant color through (Spotify).
     backgroundColor: colors.highlight,
-    borderRadius: radius.pill,
+    borderRadius: radius.md,
     paddingHorizontal: spacing.lg,
     height: 44,
   },

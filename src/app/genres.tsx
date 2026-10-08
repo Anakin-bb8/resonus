@@ -170,7 +170,7 @@ const styles = themed((colors) => ({
     marginHorizontal: spacing.lg,
     marginBottom: spacing.md,
     paddingHorizontal: spacing.lg,
-    borderRadius: radius.pill,
+    borderRadius: radius.md,
   },
   input: { flex: 1, color: colors.text, fontSize: fontSize.md, paddingVertical: 0 },
   searchGap: { height: spacing.sm },

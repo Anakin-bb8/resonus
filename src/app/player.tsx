@@ -1344,7 +1344,7 @@ export default function PlayerScreen() {
                 onPress={() => openMenu(song, undefined, menuOptions())}
               />
             ) : (
-              <FavoriteButton id={song.id} starred={favorited} size={26} />
+              <FavoriteButton id={song.id} starred={favorited} size={34} />
             )}
           </View>
 
@@ -1700,8 +1700,12 @@ const styles = themed((colors) => ({
   },
   meta: {
     flexDirection: 'row',
-    alignItems: 'center',
+    // Top-aligned: the mark sits by the title line rather than centred
+    // across the whole block.
+    alignItems: 'flex-start',
     gap: spacing.md,
+    // Centred in the cover-to-slider gap: as much above as below it.
+    marginTop: spacing.md,
     marginBottom: spacing.md,
   },
   // The tappable area fits the text (not the full width), to avoid navigating

@@ -364,7 +364,7 @@ const styles = themed((colors) => ({
     height: 44,
     backgroundColor: colors.surfaceHighlight,
     paddingHorizontal: spacing.lg,
-    borderRadius: radius.pill,
+    borderRadius: radius.md,
   },
   input: { flex: 1, color: colors.text, fontSize: fontSize.md, paddingVertical: 0 },
   searchCancel: { color: colors.text, fontSize: fontSize.sm, fontWeight: '500' },
