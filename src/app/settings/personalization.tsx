@@ -237,12 +237,6 @@ export default function AppearanceSettings() {
             chevron
             onPress={() => router.push('/settings/greeting')}
           />
-
-          <SettingRow
-            label={t('Profile picture')}
-            chevron
-            onPress={() => router.push('/settings/profile-picture')}
-          />
         </SettingsGroup>
 
         <Text style={settingsStyles.sectionTitle}>{t('Interface')}</Text>
