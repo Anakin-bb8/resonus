@@ -1,4 +1,4 @@
-/** Heart to mark/unmark favorites (Subsonic star/unstar). */
+/** Plus-in-a-circle to mark/unmark favorites (Subsonic star/unstar). */
 import Icon from '@/components/Icon';
 import { useEffect, useState } from 'react';
 import { Pressable, type GestureResponderEvent } from 'react-native';
@@ -30,7 +30,7 @@ export function FavoriteButton({ id, type = 'song', starred, size = 22, undo }: 
   const [busy, setBusy] = useState(false);
 
   // Resync with the current song: the same component is reused when switching
-  // tracks (mini-player/player), so without this the heart would stay "stuck"
+  // tracks (mini-player/player), so without this the mark would stay "stuck"
   // to the previous song's state.
   useEffect(() => {
     setFav(!!starred);
@@ -40,7 +40,7 @@ export function FavoriteButton({ id, type = 'song', starred, size = 22, undo }: 
     e?.stopPropagation();
     if ((!auth && !offline) || busy) return;
     haptic('medium');
-    // In a song list the heart is small and sits where a finger scrolls, so
+    // In a song list the mark is small and sits where a finger scrolls, so
     // taking a favourite off waits behind «Undo» and nothing is asked of the
     // server until the toast goes. On the player, an artist or an album it is
     // a deliberate tap on a screen about that one thing: it goes out at once.
@@ -78,7 +78,7 @@ export function FavoriteButton({ id, type = 'song', starred, size = 22, undo }: 
       accessibilityLabel={fav ? t('Remove from favorites') : t('Add to favorites')}
     >
       <Icon
-        name={fav ? 'heart' : 'heart-outline'}
+        name="add-circle-outline"
         size={size}
         color={fav ? colors.accent : colors.textSecondary}
       />

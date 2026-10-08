@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { pickIosColor } from '@/lib/colorPick';
+import { darken, pickIosColor } from '@/lib/colorPick';
 
 describe('pickIosColor', () => {
   it('takes a colored dominant area as is', () => {
@@ -27,5 +27,19 @@ describe('pickIosColor', () => {
 
   it('keeps a black void black instead of faint brown', () => {
     assert.equal(pickIosColor('#0a0a0a', '#6f5347', undefined, undefined), '#0a0a0a');
+  });
+});
+
+describe('darken', () => {
+  it('mixes toward black keeping the hue', () => {
+    assert.equal(darken('#c04040', 0.25), '#903030');
+  });
+
+  it('leaves zero amount alone', () => {
+    assert.equal(darken('#c04040', 0), '#c04040');
+  });
+
+  it('returns unreadable input untouched', () => {
+    assert.equal(darken('nope', 0.25), 'nope');
   });
 });

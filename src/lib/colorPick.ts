@@ -47,6 +47,22 @@ export function saturationOf(hex: string): number {
 }
 
 /**
+ * Mixes a hex color toward black by `amount` (0-1): a slightly darker shade
+ * of the same hue, for gradients that fall away like a shadow. Unreadable
+ * input comes back untouched.
+ */
+export function darken(hex: string, amount: number): string {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return hex;
+  const f = 1 - Math.min(Math.max(amount, 0), 1);
+  const to = (v: number) =>
+    Math.round(v * f)
+      .toString(16)
+      .padStart(2, '0');
+  return `#${to(rgb[0])}${to(rgb[1])}${to(rgb[2])}`;
+}
+
+/**
  * The dominant area reads as "the color of this cover", so it wins whenever
  * it carries any color at all; the covers it fails on are the ones whose
  * dominant area is a white border or a black void, and there the foreground

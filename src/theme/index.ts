@@ -831,15 +831,16 @@ export const spacing = {
  *
  * The whole ladder went up a step in August 2026: it used to top out at 16 and
  * almost everything in the app sat on 8, which reads flat next to anything
- * drawn in the last few years.
+ * drawn in the last few years. The alternative branch puts it back where it
+ * was: flatter corners everywhere, sheets included.
  */
 export const radius = {
-  sm: 6,
-  md: 10,
-  lg: 16,
-  xl: 24,
+  sm: 4,
+  md: 8,
+  lg: 12,
+  xl: 16,
   /** A sheet rising from the bottom, and anything else that owns the screen. */
-  xxl: 32,
+  xxl: 16,
   pill: 999,
 } as const;
 

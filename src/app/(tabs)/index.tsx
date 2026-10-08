@@ -39,6 +39,7 @@ import { Message } from '@/components/Message';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { PlaylistCard } from '@/components/PlaylistCard';
 import { PodcastEpisodeCard } from '@/components/PodcastEpisodeCard';
+import { ProfileAvatar } from '@/components/ProfileAvatar';
 import { RadioCard } from '@/components/RadioCard';
 import { TrackRow } from '@/components/TrackRow';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
@@ -742,6 +743,11 @@ function HomeChips({ offline }: { offline: boolean }) {
   // Icons off leaves the name on its own (Settings › Home chips): the row
   // reads as words rather than as buttons, and more of it fits on screen.
   const icons = useSettings((s) => s.homeChipIcons);
+  // The picture is forced on while the settings gear is off, so Settings
+  // stay one tap away through it.
+  const avatarOn = useSettings(
+    (s) => s.showProfileImage || !s.homeButtons.some((b) => b.key === 'settings' && b.enabled),
+  );
   // The shuffle one takes whatever the server returns: without this, you tap
   // and nothing happens for half a second and it feels broken.
   const [shuffling, setShuffling] = useState(false);
@@ -756,8 +762,9 @@ function HomeChips({ offline }: { offline: boolean }) {
     }
   }
 
-  // No chips means no row: this replaces the master toggle that was there.
-  if (chips.length === 0) return null;
+  // No chips means no row, unless the picture is on: that replaces the master
+  // toggle that was there.
+  if (chips.length === 0 && !avatarOn) return null;
   return (
     <ScrollView
       horizontal
@@ -765,6 +772,7 @@ function HomeChips({ offline }: { offline: boolean }) {
       style={styles.chipsRow}
       contentContainerStyle={styles.chips}
     >
+      {avatarOn ? <ProfileAvatar /> : null}
       {chips.map(({ key }) => {
         const cfg = CHIPS[key];
         // The shuffle one is the only one that plays instead of taking you
@@ -943,6 +951,9 @@ export default function HomeScreen() {
   const showPlayingElsewhere = useSettings((s) => s.showPlayingElsewhere);
   const showGreeting = useSettings((s) => s.showGreeting);
   const customGreeting = useSettings((s) => s.customGreeting);
+  // With the greeting off and no header button left on, the chips slide up
+  // into the header's place instead of sitting under an empty row.
+  const slidUp = !showGreeting && !homeButtons.some((b) => b.enabled);
   const language = useSettings((s) => s.language);
   const homeSections = useSettings((s) => s.homeSections);
   const radiosEnabled = useSettings((s) => s.radiosEnabled);
@@ -1023,8 +1034,12 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* Scrolls away with the rest: pinned, it only took room. */}
+        {/* Scrolls away with the rest: pinned, it only took room. Slid up,
+            the chips take the header's place: greeting off, no button on. */}
         <View style={styles.topHeader}>
+        {slidUp ? (
+          <HomeChips offline={offline} />
+        ) : (
           <View style={styles.header}>
             {/* `flexShrink` and `numberOfLines`: the greeting is customizable,
                 and although the setting caps it at GREETING_MAX, those characters
@@ -1055,13 +1070,14 @@ export default function HomeScreen() {
               )}
             </View>
           </View>
+          )}
 
           {offline && scanning ? <ScanningPanel /> : null}
         </View>
         {/* First, above the chips: what was playing on the computer is the
             thing to pick up on opening the app, when there is one. */}
         {showPlayingElsewhere ? <PlayingElsewhereCard /> : null}
-        <HomeChips offline={offline} />
+        {slidUp ? null : <HomeChips offline={offline} />}
         {!offline && serverUnreachable ? (
           <Message
             text={t("Couldn't reach the server. Check your connection.")}
@@ -1144,7 +1160,7 @@ const styles = themed((colors) => ({
     gap: spacing.md,
   },
   chipsRow: { flexGrow: 0, marginBottom: spacing.lg },
-  chips: { gap: spacing.sm, paddingHorizontal: spacing.lg },
+  chips: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -443,7 +443,6 @@
   "Suggestions": "Suggestions",
   "Swipe left": "Swipe left",
   "Swipe right": "Swipe right",
-  "Tap the heart on songs to see them here.": "Tap the heart on songs to see them here.",
   "The current song keeps playing.": "The current song keeps playing.",
   "The queue is empty.": "The queue is empty.",
   "Theme": "Theme",
@@ -785,5 +784,12 @@
   "Radios built from the artists you play most. Off, there are none on Home or in the menus, and nothing is fetched for them.": "Radios built from the artists you play most. Off, there are none on Home or in the menus, and nothing is fetched for them.",
   "Radios on Home": "Radios on Home",
   "Keep playing when a radio ends": "Keep playing when a radio ends",
-  "When its songs run out, another round from the same artists.": "When its songs run out, another round from the same artists."
+  "When its songs run out, another round from the same artists.": "When its songs run out, another round from the same artists.",
+  "Profile picture": "Profile picture",
+  "Show profile picture": "Show profile picture",
+  "Round, beside the Home chips: tapping it opens Settings.": "Round, beside the Home chips: tapping it opens Settings.",
+  "With the settings icon off, your picture stays on so settings are one tap away.": "With the settings icon off, your picture stays on so settings are one tap away.",
+  "Choose photo": "Choose photo",
+  "Remove photo": "Remove photo",
+  "Tap the plus button on songs to see them here.": "Tap the plus button on songs to see them here."
 }
