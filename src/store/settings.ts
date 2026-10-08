@@ -1903,9 +1903,8 @@ export const useSettings = create<SettingsState>((set, get) => ({
   },
 
   setHomeButton: (key, value) => {
-    // The gear's switch is not drawn, but a saved file could still say
-    // otherwise.
-    if (key === 'settings') return;
+    // Every icon has a switch now, the gear included: turning it off forces
+    // the profile picture on, so Settings stay one tap away.
     set((s) => ({
       homeButtons: s.homeButtons.map((x) => (x.key === key ? { ...x, enabled: value } : x)),
     }));

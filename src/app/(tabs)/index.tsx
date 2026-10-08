@@ -735,7 +735,7 @@ const OFFLINE_KEYS = new Set<HomeChipKey>([
   'history',
 ]);
 
-function HomeChips({ offline }: { offline: boolean }) {
+function HomeChips({ offline, slid }: { offline: boolean; slid?: boolean }) {
   const t = useT();
   const chips = useSettings((s) => s.homeChips).filter(
     (c) => c.enabled && (!offline || OFFLINE_KEYS.has(c.key)),
@@ -769,8 +769,8 @@ function HomeChips({ offline }: { offline: boolean }) {
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      style={styles.chipsRow}
-      contentContainerStyle={styles.chips}
+      style={[styles.chipsRow, slid && styles.chipsRowSlid]}
+      contentContainerStyle={[styles.chips, slid && styles.chipsSlid]}
     >
       {avatarOn ? <ProfileAvatar /> : null}
       {chips.map(({ key }) => {
@@ -951,9 +951,10 @@ export default function HomeScreen() {
   const showPlayingElsewhere = useSettings((s) => s.showPlayingElsewhere);
   const showGreeting = useSettings((s) => s.showGreeting);
   const customGreeting = useSettings((s) => s.customGreeting);
-  // With the greeting off and no header button left on, the chips slide up
-  // into the header's place instead of sitting under an empty row.
-  const slidUp = !showGreeting && !homeButtons.some((b) => b.enabled);
+  // With the greeting off and the gear off, the chips slide up into the
+  // greeting's place: the icons left on keep the right end of the row.
+  const gearOn = homeButtons.some((b) => b.key === 'settings' && b.enabled);
+  const slidUp = !showGreeting && !gearOn;
   const language = useSettings((s) => s.language);
   const homeSections = useSettings((s) => s.homeSections);
   const radiosEnabled = useSettings((s) => s.radiosEnabled);
@@ -1035,10 +1036,20 @@ export default function HomeScreen() {
         }
       >
         {/* Scrolls away with the rest: pinned, it only took room. Slid up,
-            the chips take the header's place: greeting off, no button on. */}
+            the chips take the greeting's place: greeting off, gear off. */}
         <View style={styles.topHeader}>
         {slidUp ? (
-          <HomeChips offline={offline} />
+          <View style={styles.headerSlid}>
+            <HomeChips offline={offline} slid />
+            <View style={styles.headerRight}>
+              {/* Before the buttons, and dimmer than them, so it reads as a state
+                  and not as something to press. */}
+              <OfflineIndicator />
+              {homeButtons.map(({ key, enabled }) =>
+                enabled ? <HomeHeaderButton key={key} which={key} /> : null,
+              )}
+            </View>
+          </View>
         ) : (
           <View style={styles.header}>
             {/* `flexShrink` and `numberOfLines`: the greeting is customizable,
@@ -1159,8 +1170,20 @@ const styles = themed((colors) => ({
     alignItems: 'center',
     gap: spacing.md,
   },
+  /** Chips in the greeting's place, icons keeping the right end. */
+  headerSlid: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+  },
   chipsRow: { flexGrow: 0, marginBottom: spacing.lg },
+  /** Slid into the header: fills the row's free half, no margins of its own. */
+  chipsRowSlid: { flex: 1, flexGrow: 1, marginBottom: 0 },
   chips: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg },
+  /** Slid into the header: the row's own padding is the inset. */
+  chipsSlid: { paddingHorizontal: 0 },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1187,8 +1210,8 @@ const styles = themed((colors) => ({
     overflow: 'hidden',
     paddingRight: spacing.sm,
   },
-  /** Square: the tile's own corners round it on the outside. */
-  tileCover: { borderRadius: 0 },
+  /** Rounded like the tile's own outside corners, on both edges. */
+  tileCover: { borderRadius: radius.md },
   tileText: {
     flex: 1,
     color: colors.text,

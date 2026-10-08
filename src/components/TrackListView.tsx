@@ -104,6 +104,8 @@ const DESCRIPTION_LINES = 2;
  * would break both).
  */
 const AnimatedList = Animated.createAnimatedComponent(GHFlatList) as typeof GHFlatList;
+/** The bar's shadow gradient, fading in with the bar itself. */
+const AnimatedGradient = Animated.createAnimatedComponent(LinearGradient);
 
 interface Props {
   title: string;
@@ -510,12 +512,14 @@ export function TrackListView({
     extrapolate: 'clamp',
   });
   const barContentOpacity = scrollY.interpolate({
-    inputRange: [collapse * 0.5, collapse * 0.85],
+    // The title goes first: the bar only starts coming in once it has gone
+    // past it, and is fully there a short way after.
+    inputRange: [collapse * 0.95, collapse * 0.95 + 80],
     outputRange: [0, 1],
     extrapolate: 'clamp',
   });
   const barBgOpacity = scrollY.interpolate({
-    inputRange: [0, collapse * 0.85],
+    inputRange: [collapse * 0.85, collapse * 0.85 + 80],
     outputRange: [0, 1],
     extrapolate: 'clamp',
   });
@@ -1219,13 +1223,12 @@ export function TrackListView({
           <>
             <TopBarBackground color={headerColor} opacity={barBgOpacity} />
             {/* The bar's own shadow: the accent falling slightly darker
-                toward the content, constant in both bar states (at rest the
-                background under it is transparent, scrolled it is the solid
-                accent - the same family either way). */}
-            <LinearGradient
+                toward the content. It rides the bar's own fade, so nothing
+                of the bar shows before the title has gone past it. */}
+            <AnimatedGradient
               pointerEvents="none"
               colors={[headerColor, darken(headerColor, 0.15)]}
-              style={StyleSheet.absoluteFill}
+              style={[StyleSheet.absoluteFill, { opacity: barBgOpacity }]}
             />
             <BackChevron size={28} label={t('Close')} />
             <Animated.Text

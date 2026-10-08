@@ -633,6 +633,7 @@ you are actually typing into, which is easier than reading it here.
 | `Music on your device` | Signing in to nothing at all and playing the phone's own files |
 | `Offline · your downloads` | Settings subtitle shown in offline mode |
 | `Offline mode` | The app working with no server: downloads only |
+| `Profile picture` |  |
 | `Settings` | The app's settings, and the button that opens them |
 
 ## Settings › About
@@ -909,7 +910,6 @@ you are actually typing into, which is easier than reading it here.
 | `Off` | A setting value meaning disabled (crossfade, normalization…) |
 | `Open the app on` | Which tab the app opens on, and comes back to after a while away |
 | `Playing on other devices` |  |
-| `Profile picture` |  |
 | `Quick grid` | The grid of shortcut tiles on Home |
 | `Radios` |  |
 | `Rounded` | One of the values of “Cover corners” |

@@ -309,6 +309,8 @@ const styles = themed((colors) => ({
     gap: spacing.md,
     backgroundColor: colors.surfaceHighlight,
     padding: spacing.sm,
+    // A tighter right edge: the buttons sit further right, clear of the text.
+    paddingRight: spacing.xs,
     borderRadius: radius.lg,
     overflow: 'hidden',
   },
@@ -316,8 +318,9 @@ const styles = themed((colors) => ({
   narrow: { maxWidth: CONTENT_MAX_WIDTH, width: '100%', alignSelf: 'center' },
   progressTrack: {
     position: 'absolute',
-    left: 14,
-    right: 14,
+    // Lined up with the cover's own edges, not the card's padding.
+    left: spacing.sm,
+    right: spacing.sm,
     bottom: 0,
     height: 3,
     borderRadius: radius.pill,
