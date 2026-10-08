@@ -518,14 +518,6 @@ export function TrackListView({
     outputRange: [1, 0],
     extrapolate: 'clamp',
   });
-  // The bar only starts coming in once the title has gone past it, background
-  // and title on the same fade: split ranges left a band where the bar showed
-  // with no name in it.
-  const barBgOpacity = scrollY.interpolate({
-    inputRange: [collapse * 0.85, collapse * 0.85 + 80],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
 
   // Where the play button sits in the scroll content: its distance from the
   // top of the list header, plus the padding the list starts with - which is
@@ -595,6 +587,20 @@ export function TrackListView({
   // there the bar is between it and the eye (and between it and the hand).
   const behindAt = Math.max(playContentY + searchShift - (insets.top + TOPBAR_H), 1);
   const dockAt = Math.max(playContentY + searchShift - dockTop, 1);
+  // Background, shadow and title on one fade, and settled before the button:
+  // the old collapse-based fade finished right where the bar met the play
+  // button (nearer still on short headers), so arriving read as a tone
+  // change. Ending 80 points above the meeting point, the bar is done well
+  // before anything docks onto it, on every header length. Guarded while
+  // unmeasured (behindAt bottoms at 1): without it the range would sit below
+  // zero and the bar would flash in on open.
+  const barFadeStart = Math.max(behindAt - 220, 1);
+  const barFadeEnd = Math.max(behindAt - 80, barFadeStart + 80);
+  const barBgOpacity = scrollY.interpolate({
+    inputRange: [barFadeStart, barFadeEnd],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
   const playDockY = scrollY.interpolate({
     inputRange: [0, dockAt],
     outputRange: [playContentY, dockTop - searchShift],
