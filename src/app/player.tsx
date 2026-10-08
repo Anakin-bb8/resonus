@@ -1344,7 +1344,11 @@ export default function PlayerScreen() {
                 onPress={() => openMenu(song, undefined, menuOptions())}
               />
             ) : (
-              <FavoriteButton id={song.id} starred={favorited} size={34} />
+              // Sitting on the title/artist boundary, following those two
+              // lines rather than centred across the block.
+              <View style={styles.favWrap}>
+                <FavoriteButton id={song.id} starred={favorited} size={34} />
+              </View>
             )}
           </View>
 
@@ -1708,6 +1712,8 @@ const styles = themed((colors) => ({
     marginTop: spacing.md,
     marginBottom: spacing.md,
   },
+  /** The favourite mark down on the title/artist boundary. */
+  favWrap: { marginTop: spacing.md },
   // The tappable area fits the text (not the full width), to avoid navigating
   // when tapping the empty space on the right.
   // Hugs the text: the tappable area is just the title/artist, not the row.
