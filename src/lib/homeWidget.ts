@@ -10,6 +10,7 @@
  * does nothing.
  */
 import { requireOptionalNativeModule } from 'expo-modules-core';
+import { AppState } from 'react-native';
 
 import { CACHED_COVER } from '@/api/data';
 import { dominantColorOf } from '@/hooks/useDominantColor';
@@ -254,7 +255,25 @@ export function initHomeWidget() {
     // intent, and the module below has nothing to take either.
   }
   takeToggle();
-  setInterval(takeToggle, 1000);
+  // Polled, not only event-driven (see above) — but a 1 s poll for the whole
+  // life of the app keeps the JS thread awake in the background, where on iOS
+  // (audio mode) timers keep running. Foreground keeps the second; background
+  // gets a slow safety net, and the press is taken at once on return.
+  const BG_POLL_MS = 10_000;
+  let widgetPoll: ReturnType<typeof setInterval> | null = null;
+  const armPoll = () => {
+    if (widgetPoll) clearInterval(widgetPoll);
+    widgetPoll = setInterval(
+      takeToggle,
+      AppState.currentState === 'active' ? 1000 : BG_POLL_MS,
+    );
+  };
+  armPoll();
+  // Lives for the whole session (init runs once at startup), so no cleanup.
+  AppState.addEventListener('change', (state) => {
+    if (state === 'active') takeToggle();
+    armPoll();
+  });
   installShortcuts();
   // The labels are in the app's language, not the phone's.
   let lang = useSettings.getState().language;
