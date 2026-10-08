@@ -186,8 +186,17 @@ AppState.addEventListener('change', (state) => {
   lastTick = now;
   // Going away with a history worth keeping: if the session dies out there,
   // this file is what the next launch reads the minutes by.
-  if (wasAwake && !nowAwake) persistEvents();
-  if (!wasAwake && awake) onReturn();
+  if (wasAwake && !nowAwake) {
+    persistEvents();
+    // The JS frame loop measures nothing while away (`onJsFrame` drops every
+    // background frame) but keeps the JS thread waking up to 60×/s. On iOS the
+    // audio background mode keeps timers running, so stop it out there.
+    stopJsFrames();
+  }
+  if (!wasAwake && awake) {
+    onReturn();
+    if (enabled) startJsFrames();
+  }
 });
 
 export interface TimeSplit {
@@ -231,7 +240,9 @@ export function startPerfLog(): void {
   backgroundMs = 0;
   trips = 0;
   bgTicks = 0;
-  startJsFrames();
+  // No frames to count while away (see the AppState listener above, which
+  // restarts them on return).
+  if (awake) startJsFrames();
   timer = setInterval(() => {
     const now = Date.now();
     const late = now - lastTick - TICK_MS;

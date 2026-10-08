@@ -2762,6 +2762,14 @@ async function tryResumeAfterOutage(): Promise<void> {
 /** When the last status was taken in, and how close a next one means a pile. */
 let lastStatusAt = 0;
 const BACKLOG_GAP_MS = 200;
+/**
+ * How often the plain position reaches the store while backgrounded. Nobody
+ * watches the slider out there: pushing it 2×/s only re-renders every
+ * subscriber all night. Material changes (play/pause, buffering, duration,
+ * track end) always go through at once.
+ */
+const BG_POSITION_PUSH_MS = 5000;
+let lastBgPositionPush = 0;
 
 /** `live`: read from the player just now, never part of a pile. */
 function onStatus(status: AudioStatus, live = false) {
@@ -2856,16 +2864,31 @@ function onStatus(status: AudioStatus, live = false) {
       positionSec = pendingSeek.sec;
     }
   }
-  usePlayerStore.setState({
-    positionSec,
-    // With offset active the native reports the duration of the remaining segment,
-    // not the song's: the known duration is kept.
-    durationSec: streamOffsetSec > 0 ? prev.durationSec : status.duration || prev.durationSec,
-    // During pause/resume fade the native player keeps playing for a few ms;
-    // we keep the already-set state so the button doesn't flicker.
-    isPlaying: pauseFadeTimer ? prev.isPlaying : status.playing,
-    isBuffering: buffering,
-  });
+  // With offset active the native reports the duration of the remaining segment,
+  // not the song's: the known duration is kept.
+  const nextDurationSec = streamOffsetSec > 0 ? prev.durationSec : status.duration || prev.durationSec;
+  // During pause/resume fade the native player keeps playing for a few ms;
+  // we keep the already-set state so the button doesn't flicker.
+  const nextIsPlaying = pauseFadeTimer ? prev.isPlaying : status.playing;
+  // Backgrounded, the plain position is pushed at most every few seconds (see
+  // `BG_POSITION_PUSH_MS`): 2×/s `setState` re-renders every subscriber all
+  // night on iOS, where timers keep running. Everything below (scrobble,
+  // stall, crossfade, track end) still runs on every beat off the local value.
+  const material =
+    AppState.currentState === 'active' ||
+    nextIsPlaying !== prev.isPlaying ||
+    buffering !== prev.isBuffering ||
+    nextDurationSec !== prev.durationSec ||
+    status.didJustFinish;
+  if (material || now - lastBgPositionPush >= BG_POSITION_PUSH_MS) {
+    lastBgPositionPush = now;
+    usePlayerStore.setState({
+      positionSec,
+      durationSec: nextDurationSec,
+      isPlaying: nextIsPlaying,
+      isBuffering: buffering,
+    });
+  }
   maybeScrobbleThreshold(positionSec);
   maybeDetectStall(intendPlay, buffering, positionSec);
   // Queue sync with the server.
@@ -3348,11 +3371,34 @@ function periodicSync() {
   if (st.isPlaying) reportState('playing', st.queue[st.index], st.positionSec);
 }
 
+const SYNC_MS = 20_000;
+/**
+ * The sync while backgrounded. The server entry only needs keeping alive out
+ * there, not a 20 s refresh all night (on iOS timers keep running in the
+ * audio background).
+ */
+const SYNC_BG_MS = 120_000;
+
+/** Whether playback currently wants the periodic sync (armed rate follows AppState). */
+let syncWanted = false;
+
+function armSync() {
+  if (syncInterval) {
+    clearInterval(syncInterval);
+    syncInterval = null;
+  }
+  if (!syncWanted) return;
+  syncInterval = setInterval(periodicSync, AppState.currentState === 'active' ? SYNC_MS : SYNC_BG_MS);
+}
+
 function startPeriodicSync() {
-  if (!syncInterval) syncInterval = setInterval(periodicSync, 20000);
+  if (syncWanted && syncInterval) return;
+  syncWanted = true;
+  armSync();
 }
 
 function stopPeriodicSync() {
+  syncWanted = false;
   if (syncInterval) {
     clearInterval(syncInterval);
     syncInterval = null;
@@ -3378,6 +3424,9 @@ function attachAppState() {
     }
   });
   AppState.addEventListener('change', (st) => {
+    // The periodic sync rate follows the state (fast in foreground, slow in
+    // background): re-arm on every change so it switches both ways.
+    if (syncWanted) armSync();
     if (st !== 'active') {
       // A ramp started an instant ago is about to lose its timer, and with it
       // whatever was waiting on the end of it (the pause, most of all). This is
