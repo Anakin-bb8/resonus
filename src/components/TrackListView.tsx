@@ -76,6 +76,13 @@ const PLAY_SIZE = 56;
 /** Height of the hidden search bar ("Find in playlist" Spotify style),
  *  including the separation gap from the cover. */
 const SEARCH_H = 72;
+/** Gap above the revealed search row: it must clear the fixed bar, whose
+ *  chevron it used to slide under. Constant, because the bar's own height is
+ *  (the insets cancel out). It rides inside the animated height, so the row
+ *  drops out from under the bar instead of jumping. */
+const SEARCH_TOP_GAP = 46;
+/** The revealed row's full height, gap included. */
+const SEARCH_OPEN_H = SEARCH_H + SEARCH_TOP_GAP;
 /** How far the wide cover's gradient runs: from the picture's lower edge,
  *  through the title and the buttons, arriving at the page's own colour
  *  around the play button ("circa", as the order asked for it). */
@@ -360,7 +367,7 @@ export function TrackListView({
     haptic('light');
     setRevealed(true);
     Animated.timing(searchH, {
-      toValue: SEARCH_H,
+      toValue: SEARCH_OPEN_H,
       duration: motion.duration.fade,
       useNativeDriver: false,
       // The header (and the play button in it) moves down as this runs, and
@@ -504,7 +511,7 @@ export function TrackListView({
   // and not only the space around the cover. The wide one runs from its own
   // picture's edge instead: the picture is what covers the space above.
   const gradientH = wideCover ? WIDE_GRADIENT_H : insets.top + TOPBAR_H + cover + 280;
-  const band = searchable && !wideCover ? SEARCH_H * 4 : 0;
+  const band = searchable && !wideCover ? SEARCH_OPEN_H * 2 : 0;
   const gradientTop = wideCover ? wideH : -band;
   const coverOpacity = scrollY.interpolate({
     inputRange: [0, collapse * 0.7],
@@ -583,7 +590,7 @@ export function TrackListView({
   // reaches the line that much later. Its height is animated from JS (a height
   // is not something the scroll's native driver does), which is why it travels
   // in a wrapper of its own below rather than in the interpolation.
-  const searchShift = revealed ? SEARCH_H : 0;
+  const searchShift = revealed ? SEARCH_OPEN_H : 0;
   // The scroll at which the button's top reaches the bar's lower edge: from
   // there the bar is between it and the eye (and between it and the hand).
   const behindAt = Math.max(playContentY + searchShift - (insets.top + TOPBAR_H), 1);
@@ -733,7 +740,7 @@ export function TrackListView({
             ]}
           >
             {/* Color band above the gradient: when the search bar is revealed,
-                content shifts down SEARCH_H px and this fills the gap at the top.
+                content shifts down and this fills the gap at the top.
                 Inside the view's own bounds: hanging above them, Android left
                 the gap grey. */}
             {band > 0 ? (
@@ -810,6 +817,15 @@ export function TrackListView({
                     value={query}
                     onChangeText={setQuery}
                     onFocus={() => setSearching(true)}
+                    // Away from the field with nothing typed, search mode has
+                    // nothing to show: fully back out, or the open row and the
+                    // hidden header linger with the full list back.
+                    onBlur={() => {
+                      if (query.trim().length === 0) {
+                        setSearching(false);
+                        collapseSearchBar();
+                      }
+                    }}
                     returnKeyType="search"
                     autoCorrect={false}
                   />
@@ -1302,6 +1318,8 @@ const styles = themed((colors) => ({
   },
   searchRow: {
     height: SEARCH_H,
+    // Clear of the fixed bar above: the chevron it used to slide under.
+    marginTop: SEARCH_TOP_GAP,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
