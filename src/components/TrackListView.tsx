@@ -111,8 +111,6 @@ const DESCRIPTION_LINES = 2;
  * would break both).
  */
 const AnimatedList = Animated.createAnimatedComponent(GHFlatList) as typeof GHFlatList;
-/** The bar's shadow gradient, fading in with the bar itself. */
-const AnimatedGradient = Animated.createAnimatedComponent(LinearGradient);
 
 interface Props {
   title: string;
@@ -1242,13 +1240,17 @@ export function TrackListView({
           <>
             <TopBarBackground color={headerColor} opacity={barBgOpacity} />
             {/* The bar's own shadow: the accent falling slightly darker
-                toward the content. It rides the bar's own fade, so nothing
-                of the bar shows before the title has gone past it. */}
-            <AnimatedGradient
+                toward the content. A plain gradient inside a plain fading
+                view, the same shape as every other bar background. */}
+            <Animated.View
               pointerEvents="none"
-              colors={[headerColor, darken(headerColor, 0.15)]}
               style={[StyleSheet.absoluteFill, { opacity: barBgOpacity }]}
-            />
+            >
+              <LinearGradient
+                colors={[headerColor, darken(headerColor, 0.15)]}
+                style={StyleSheet.absoluteFill}
+              />
+            </Animated.View>
             <BackChevron size={28} label={t('Close')} />
             <Animated.Text
               style={[
