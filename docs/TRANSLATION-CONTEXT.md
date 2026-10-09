@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 812 of them.
+Every string the app can show, under the screen it shows up on. 803 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -998,14 +998,11 @@ you are actually typing into, which is easier than reading it here.
 | `Animated cover background` | A setting: an animated cover (GIF, animated WebP) is shown full screen behind the player instead of inside the square |
 | `Animated cover frame rate` |  |
 | `Background` | Section header over what is drawn behind the player. Its two values are `Plain` and `Blurred cover` |
-| `Blur inactive lyrics` | A switch in the Lyrics section: progressively softens synchronized lyric rows away from the current line |
 | `Blurred cover` | A value of `Background`: the album art, blurred, behind the player |
-| `Bold font weight` | One of the values of “Lyrics weight” |
 | `Bottom row` |  |
 | `Buttons` | Which player buttons to show |
 | `Buttons next to play` |  |
 | `Centered` | One of the values of “Lyrics alignment” |
-| `Classic` | One of the values of “Lyrics style” |
 | `Colored mini player` | Tint the mini player with the colour of the cover art |
 | `Cover art` | Three places, one word: a section header in Settings › Player, a line of the storage bar in Settings › Downloads, and what the screen reader calls the picture in the song information sheet |
 | `Cover color` | The colour taken from the cover art |
@@ -1015,23 +1012,19 @@ you are actually typing into, which is easier than reading it here.
 | `Fit cover art` | Show the whole cover even if it is not square, instead of cropping it to fill |
 | `Go to album` | Leave this sheet and open the album the song is on |
 | `Keep paused when skipping` |  |
+| `Large` | One of the values of “Lyrics size” |
 | `Left` | One of the values of “Lyrics alignment” |
-| `Light font weight` | One of the values of “Lyrics weight” |
 | `Lyrics alignment` |  |
 | `Lyrics background` | What is drawn behind the lyrics screen, the full screen one |
 | `Lyrics card background` | What is drawn behind the small lyrics card that peeks under the player. Not the same thing as `Lyrics background` |
 | `Lyrics providers` | A screen: the online lyrics sources in the order they are tried |
 | `Lyrics size` |  |
 | `Lyrics source` | Where lyrics are looked for. Its values are the three `Prefer…`/`Disable…` lines |
-| `Lyrics style` | Classic lines or modern ones |
-| `Lyrics weight` |  |
-| `Medium font weight` | One of the values of “Lyrics weight” |
 | `Mini player` |  |
 | `Mini player blur` |  |
-| `Modern` | A value of `Lyrics style` |
-| `Modern lines sweep and bounce word by word.` | Under `Lyrics style`: what the modern variant changes |
 | `No` | A setting value meaning none or zero, not the answer to a question: no crossfade, no seek buttons |
 | `None` | One of the values of “Buttons next to play” |
+| `Normal` | One of the values of “Lyrics size” |
 | `Nothing` | A value of `On cover tap`: tapping the cover does nothing |
 | `On cover double tap` | Settings > Player: what tapping the album artwork twice does |
 | `On cover tap` | What tapping the cover art in the player does. One tap and two share the same values, listed below |
@@ -1045,10 +1038,8 @@ you are actually typing into, which is easier than reading it here.
 | `Previous and next` | One of the values of “Buttons next to play” |
 | `Previous button` | What the previous button does when a song is already playing. Its values are the two lines below it |
 | `Queue` | The list of songs waiting to play. Not a playlist |
-| `Regular font weight` | One of the values of “Lyrics weight” |
 | `Restart, then previous track` | A value of `Previous button`: the first press goes back to the start of this song, the second to the one before |
 | `Scroll long titles` | A title too long to fit slides sideways, over and over, instead of being cut off |
-| `Semi-bold font weight` | One of the values of “Lyrics weight” |
 | `Show album & year` |  |
 | `Show artist card` |  |
 | `Show lyrics card` |  |
@@ -1058,7 +1049,7 @@ you are actually typing into, which is easier than reading it here.
 | `Show quality label` |  |
 | `Show rating` |  |
 | `Skip buttons` | The seek forward / back buttons setting |
-| `Slightly blur synchronized lyrics other than the current line to emphasize what is playing.` | Help text under that switch. Only the current synchronized lyric line stays sharp |
+| `Small` | One of the values of “Lyrics size” |
 | `Swap favorite and menu` | Exchange the places of those two buttons in the player, for whichever hand you hold the phone in |
 | `Where to get lyrics from. Online search tries each lyrics provider in order (sends the artist and title).` |  |
 

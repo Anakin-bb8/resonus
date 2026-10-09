@@ -809,9 +809,5 @@
   "Better Lyrics crowdsourced lyrics.": "Testi crowdsourced di Better Lyrics.",
   "LRCLIB": "LRCLIB",
   "Community database, lines or words.": "Database della community, righe o parole.",
-  "Lyrics style": "Stile testi",
-  "Modern lines sweep and bounce word by word.": "Le righe moderne scorrono e rimbalzano parola per parola.",
-  "Classic": "Classico",
-  "Modern": "Moderno",
   "Where to get lyrics from. Online search tries each lyrics provider in order (sends the artist and title).": "Dove ottenere i testi. La ricerca online prova ogni provider in ordine (invia artista e titolo)."
 }
