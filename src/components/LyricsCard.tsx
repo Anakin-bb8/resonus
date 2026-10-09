@@ -7,7 +7,7 @@
  */
 import Icon from '@/components/Icon';
 import { LinearGradient } from 'expo-linear-gradient';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Pressable, ScrollView, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -282,30 +282,6 @@ export function SyncedLyricsView({
 
   const fadeH = large ? 56 : 36;
 
-  // Breathing room between sections, Apple-style only: lines of one verse
-  // sit tight, and a pause opens up before the next. The pause that counts
-  // as a section adapts to the song (three times the median line step, at
-  // least 8 seconds), so slow songs don't split on every line.
-  const gaps = useMemo(() => {
-    if (!apple) return null;
-    const steps: number[] = [];
-    for (let i = 1; i < lines.length; i++) {
-      const a = lines[i - 1].start;
-      const b = lines[i].start;
-      if (a !== undefined && b !== undefined && b > a) steps.push(b - a);
-    }
-    if (steps.length === 0) return null;
-    const sorted = steps.slice().sort((x, y) => x - y);
-    const median = sorted[Math.floor(sorted.length / 2)];
-    const over = Math.max(8000, median * 3);
-    return lines.map((l, i) => {
-      if (i === 0) return false;
-      const a = lines[i - 1].start;
-      const b = l.start;
-      return a !== undefined && b !== undefined && b - a > over;
-    });
-  }, [apple, lines]);
-
   return (
     <View style={styles.wrap}>
       <GestureDetector gesture={tapGesture}>
@@ -346,7 +322,6 @@ export function SyncedLyricsView({
             size={size}
             centered={centered}
             apple={apple}
-            gapBefore={gaps?.[i] ?? false}
             onMeasure={onMeasure}
           />
         ))}
@@ -383,7 +358,6 @@ const LyricRow = memo(({
   size,
   centered,
   apple,
-  gapBefore,
   onMeasure,
 }: {
   index: number;
@@ -400,8 +374,6 @@ const LyricRow = memo(({
   centered: boolean;
   /** Apple Music-like: same row, only the words renderer changes (wipe). */
   apple?: boolean;
-  /** A section breathes before this line (Apple-style verse gaps). */
-  gapBefore?: boolean;
   onMeasure: (index: number, y: number, h: number) => void;
 }) => {
   // Memoized, so the screen repainting is not enough to bring this one along.
@@ -438,7 +410,6 @@ const LyricRow = memo(({
   return (
     <View
       onLayout={(e) => onMeasure(index, e.nativeEvent.layout.y, e.nativeEvent.layout.height)}
-      style={gapBefore && styles.appleGap}
     >
       <Animated.Text
         style={[
@@ -725,6 +696,7 @@ function AppleWords({
           value={w.value}
           start={w.start}
           end={ends[i]}
+          handover={handover}
           pos={pos}
           textStyle={textStyle}
         />
@@ -737,12 +709,15 @@ const AppleWord = memo(function AppleWord({
   value,
   start,
   end,
+  handover,
   pos,
   textStyle,
 }: {
   value: string;
   start: number;
   end: number;
+  /** When the row hands over, which the shine never outlives. */
+  handover?: number;
   pos: SharedValue<number>;
   textStyle: object;
 }) {
@@ -751,6 +726,12 @@ const AppleWord = memo(function AppleWord({
   const waiting = waitingColor(theme.text);
   const lit = theme.text;
   const dur = Math.max(end - start, 1);
+  // A held note blooms as it fills, like the classic shine: how slowly this
+  // word is sung, and how much room is left before the handover.
+  const slow = clamp01((dur - QUICK_WORD_MS) / (HELD_WORD_MS - QUICK_WORD_MS));
+  const fadeEnd = Math.min(end + BLOOM_FADE_MS, handover ?? Infinity);
+  const fadeStart = Math.min(end, fadeEnd - BLOOM_FADE_MIN_MS);
+  const fadeDur = Math.max(fadeEnd - fadeStart, 1);
   const rise = useAnimatedStyle(() => {
     const fill = clamp01((pos.value - start) / dur);
     return { transform: [{ translateY: (1 - fill) * 1.5 }] };
@@ -763,16 +744,19 @@ const AppleWord = memo(function AppleWord({
     const pct = Math.round(fill * 1000) / 10;
     return { width: `${pct}%` };
   });
-  // The glow lives only on the frontier: a thin lit bar riding the clip's
-  // right edge, softened by its own shadow. At full fill it sits past the
-  // last glyph and goes out, so a held line doesn't keep a caret.
-  const frontier = useAnimatedStyle(() => {
+  const glow = useAnimatedStyle(() => {
     const fill = clamp01((pos.value - start) / dur);
-    return { opacity: fill > 0 && fill < 0.995 ? 1 : 0 };
+    const after = clamp01((pos.value - fadeStart) / fadeDur);
+    const bloom = fill * (1 - after) * (BLOOM_FLOOR + (1 - BLOOM_FLOOR) * slow);
+    return {
+      textShadowColor: `rgba(255, 255, 255, ${Math.round(bloom * BLOOM_ALPHA * 100) / 100})`,
+      textShadowRadius: bloom * BLOOM_RADIUS,
+      textShadowOffset: { width: 0, height: 0 },
+    };
   });
   return (
     <Animated.View style={rise}>
-      <Animated.Text style={[textStyle, { color: waiting }]}>{value}</Animated.Text>
+      <Animated.Text style={[textStyle, { color: waiting }, glow]}>{value}</Animated.Text>
       <Animated.View
         style={[{ position: 'absolute', left: 0, top: 0, bottom: 0, overflow: 'hidden' }, clip]}
       >
@@ -785,20 +769,6 @@ const AppleWord = memo(function AppleWord({
         >
           {value}
         </Animated.Text>
-        <Animated.View
-          style={[
-            {
-              position: 'absolute',
-              right: 0,
-              top: '15%',
-              bottom: '15%',
-              width: 2.5,
-              backgroundColor: '#fff',
-              boxShadow: '0px 0px 6px 2px rgba(255,255,255,0.9)',
-            },
-            frontier,
-          ]}
-        />
       </Animated.View>
     </Animated.View>
   );
@@ -879,8 +849,6 @@ const styles = themed((colors) => ({
   coverBox: { overflow: 'hidden', padding: spacing.lg },
   coverBody: { flex: 1, overflow: 'hidden' },
   wrap: { flex: 1 },
-  /** Apple-style verse breath: a section opens up before the line. */
-  appleGap: { marginTop: spacing.xl },
   // Right margin so the active line (which grows 8% from the left) doesn't get
   // clipped against the edge.
   content: { paddingBottom: spacing.xl, paddingRight: '10%' },
