@@ -200,8 +200,6 @@ export function SyncedLyricsView({
   const anchor = large ? 0.42 : 0.3;
   const size = useSettings((s) => s.lyricsSize);
   const centered = useSettings((s) => s.lyricsAlign) === 'center';
-  // Apple Music-like lines: brighter focus, steeper dimming (Settings › Lyrics).
-  const apple = useSettings((s) => s.lyricsStyle) === 'apple';
 
   const onMeasure = useCallback((index: number, y: number, h: number) => {
     offsets.current[index] = { y, h };
@@ -321,7 +319,6 @@ export function SyncedLyricsView({
             large={large}
             size={size}
             centered={centered}
-            apple={apple}
             onMeasure={onMeasure}
           />
         ))}
@@ -357,7 +354,6 @@ const LyricRow = memo(({
   large,
   size,
   centered,
-  apple,
   onMeasure,
 }: {
   index: number;
@@ -372,8 +368,6 @@ const LyricRow = memo(({
   large?: boolean;
   size: LyricsSize;
   centered: boolean;
-  /** Apple Music-like: same row, only the words renderer changes (wipe). */
-  apple?: boolean;
   onMeasure: (index: number, y: number, h: number) => void;
 }) => {
   // Memoized, so the screen repainting is not enough to bring this one along.
@@ -404,9 +398,8 @@ const LyricRow = memo(({
     opacity: dim.value,
     transform: [{ scale: 1 + focus.value * 0.08 }],
   }));
-  // One row in both styles: the Apple variant only swaps how the active
-  // line's words are drawn (wipe instead of flip), inside the same text
-  // flow, so switching lines never re-lays anything out.
+  // One row: the active line's words fill as they are sung, inside the same
+  // text flow, so switching lines never re-lays anything out.
   return (
     <View
       onLayout={(e) => onMeasure(index, e.nativeEvent.layout.y, e.nativeEvent.layout.height)}
@@ -418,27 +411,7 @@ const LyricRow = memo(({
           anim,
         ]}
       >
-        {active && words ? (
-          apple ? (
-            <AppleWords
-              words={words}
-              handover={handover}
-              textStyle={lyricsLineStyle(large, size, centered)}
-            />
-          ) : (
-            <SungWords words={words} handover={handover} />
-          )
-        ) : apple && words ? (
-          // Same blocks inactive: fluid text wraps differently from atomic
-          // blocks, and that difference read as the spacing jumping on
-          // activation.
-          <AppleWordsStatic
-            words={words}
-            textStyle={lyricsLineStyle(large, size, centered)}
-          />
-        ) : (
-          text
-        )}
+        {active && words ? <SungWords words={words} handover={handover} /> : text}
       </Animated.Text>
     </View>
   );
@@ -473,8 +446,6 @@ function handoverOf(lines: LyricLine[], i: number): number | undefined {
  * the UI thread, between one read and the next.
  */
 const TICK_MS = 50;
-/** The Apple-style wipe reads every frame: 20 a second steps visibly. */
-const FAST_TICK_MS = 16;
 
 /**
  * The position the words fill at, as a shared value rather than as state.
@@ -488,8 +459,7 @@ const FAST_TICK_MS = 16;
  * fill neither steps (as a value set raw every 50 ms would) nor lags (as one
  * aimed only at the present would, by a tick).
  */
-function useSungPosition(fast = false): SharedValue<number> {
-  const tickMs = fast ? FAST_TICK_MS : TICK_MS;
+function useSungPosition(): SharedValue<number> {
   const pos = useSharedValue(usePlayerStore.getState().positionSec * 1000 + WORD_LEAD_MS);
   useEffect(() => {
     let anchor = { sec: usePlayerStore.getState().positionSec, at: Date.now() };
@@ -509,13 +479,13 @@ function useSungPosition(fast = false): SharedValue<number> {
     let timer: ReturnType<typeof setInterval> | null = null;
     const tick = () => {
       const { isPlaying, speed } = usePlayerStore.getState();
-      const target = read() + tickMs * (isPlaying ? speed || 1 : 0);
+      const target = read() + TICK_MS * (isPlaying ? speed || 1 : 0);
       // A seek is somewhere else entirely: it lands there rather than
       // travelling, which would light up every word on the way through.
       if (Math.abs(target - last) > 1000) pos.value = target;
       else
         pos.value = withTiming(target, {
-          duration: tickMs,
+          duration: TICK_MS,
           easing: Easing.linear,
           // Same answer as the line's own transition: the fill is the
           // karaoke, not something decorating it.
@@ -524,7 +494,7 @@ function useSungPosition(fast = false): SharedValue<number> {
       last = target;
     };
     const start = () => {
-      if (!timer) timer = setInterval(tick, tickMs);
+      if (!timer) timer = setInterval(tick, TICK_MS);
     };
     const stop = () => {
       if (timer) {
@@ -542,7 +512,7 @@ function useSungPosition(fast = false): SharedValue<number> {
       stop();
       appStateSub.remove();
     };
-  }, [pos, tickMs]);
+  }, [pos]);
   return pos;
 }
 
@@ -668,131 +638,6 @@ function SungWords({ words, handover }: { words: LyricWord[]; handover?: number 
   );
 }
 
-/**
- * The line being sung, YouLy+-style: each word an inline block in the text
- * flow (like their syllable spans), filling left to right and rising a touch
- * as it is sung. The block sizes itself to its text once and never again:
- * paint moves (translate, clip width, shadow), layout doesn't, so switching
- * lines re-lays nothing out and there is nothing beside the glyphs to read
- * as bars.
- */
-function AppleWords({
-  words,
-  handover,
-  textStyle,
-}: {
-  words: LyricWord[];
-  handover?: number;
-  textStyle: object;
-}) {
-  // Every frame: the wipe and the rise step visibly at classic rate.
-  const pos = useSungPosition(true);
-  const ends = wordEnds(words, handover);
-  return (
-    <>
-      {words.map((w, i) => (
-        <AppleWord
-          key={i}
-          value={w.value}
-          start={w.start}
-          end={ends[i]}
-          handover={handover}
-          pos={pos}
-          textStyle={textStyle}
-        />
-      ))}
-    </>
-  );
-}
-
-const AppleWord = memo(function AppleWord({
-  value,
-  start,
-  end,
-  handover,
-  pos,
-  textStyle,
-}: {
-  value: string;
-  start: number;
-  end: number;
-  /** When the row hands over, which the shine never outlives. */
-  handover?: number;
-  pos: SharedValue<number>;
-  textStyle: object;
-}) {
-  // Memoized, so the theme has to come in from here (like LyricRow's own).
-  const theme = useTheme();
-  const waiting = waitingColor(theme.text);
-  const lit = theme.text;
-  const dur = Math.max(end - start, 1);
-  // A held note blooms as it fills, like the classic shine: how slowly this
-  // word is sung, and how much room is left before the handover.
-  const slow = clamp01((dur - QUICK_WORD_MS) / (HELD_WORD_MS - QUICK_WORD_MS));
-  const fadeEnd = Math.min(end + BLOOM_FADE_MS, handover ?? Infinity);
-  const fadeStart = Math.min(end, fadeEnd - BLOOM_FADE_MIN_MS);
-  const fadeDur = Math.max(fadeEnd - fadeStart, 1);
-  const rise = useAnimatedStyle(() => {
-    const fill = clamp01((pos.value - start) / dur);
-    return { transform: [{ translateY: (1 - fill) * 1.5 }] };
-  });
-  // Percent of the block, not pixels: measuring inline text never reports,
-  // so there is nothing to measure against. The block sizes itself to the
-  // base text once; the overlay is a share of it.
-  const clip = useAnimatedStyle(() => {
-    const fill = clamp01((pos.value - start) / dur);
-    const pct = Math.round(fill * 1000) / 10;
-    return { width: `${pct}%` };
-  });
-  const glow = useAnimatedStyle(() => {
-    const fill = clamp01((pos.value - start) / dur);
-    const after = clamp01((pos.value - fadeStart) / fadeDur);
-    const bloom = fill * (1 - after) * (BLOOM_FLOOR + (1 - BLOOM_FLOOR) * slow);
-    return {
-      textShadowColor: `rgba(255, 255, 255, ${Math.round(bloom * BLOOM_ALPHA * 100) / 100})`,
-      textShadowRadius: bloom * BLOOM_RADIUS,
-      textShadowOffset: { width: 0, height: 0 },
-    };
-  });
-  return (
-    <Animated.View style={rise}>
-      <Animated.Text style={[textStyle, { color: waiting }, glow]}>{value}</Animated.Text>
-      <Animated.View
-        style={[{ position: 'absolute', left: 0, top: 0, bottom: 0, overflow: 'hidden' }, clip]}
-      >
-        {/* Single line, hard-clipped: the wipe frontier, with no ellipsis
-            glyph sneaking in to mark it. */}
-        <Animated.Text
-          numberOfLines={1}
-          ellipsizeMode="clip"
-          style={[textStyle, { color: lit }]}
-        >
-          {value}
-        </Animated.Text>
-      </Animated.View>
-    </Animated.View>
-  );
-});
-AppleWord.displayName = 'AppleWord';
-
-/**
- * Inactive lines in Apple style: the same word blocks, without any of the
- * machinery (no position, no overlay, no animation). What activating a line
- * adds is paint, never layout.
- */
-function AppleWordsStatic({ words, textStyle }: { words: LyricWord[]; textStyle: object }) {
-  const theme = useTheme();
-  return (
-    <>
-      {words.map((w, i) => (
-        <View key={i}>
-          {/* Full color: the row's own opacity dims it, exactly like classic. */}
-          <Text style={[textStyle, { color: theme.text }]}>{w.value}</Text>
-        </View>
-      ))}
-    </>
-  );
-}
 
 /** Typography shared by the card and the full screen. */
 export const lyricsStyles = themed((colors) => ({
