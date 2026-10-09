@@ -403,15 +403,13 @@ const LyricRow = memo(({
       reduceMotion: motion.reduceMotion.essential,
     });
   }, [active, past, next, dim, apple]);
-  // The growth (8%, 5% Apple-style) is compensated by the right margin of
-  // `content` so the active line, scaling from the left, doesn't overflow
-  // the edge.
+  // The growth is the classic 8% in both styles: same zoom, no surprises.
   const anim = useAnimatedStyle(
     () => ({
       opacity: dim.value,
-      transform: [{ scale: 1 + focus.value * (apple ? 0.05 : 0.08) }],
+      transform: [{ scale: 1 + focus.value * 0.08 }],
     }),
-    [apple],
+    [],
   );
   // Apple-style runs outside text flow: each word is a block with its own
   // clipped overlay, which inline text cannot host (a growing inline block
@@ -729,6 +727,9 @@ function AppleWords({
   );
 }
 
+/** How wide the soft edge on the wipe is: lit fading to clear across it. */
+const FEATHER = 10;
+
 const AppleWord = memo(function AppleWord({
   value,
   start,
@@ -749,6 +750,7 @@ const AppleWord = memo(function AppleWord({
   const theme = useTheme();
   const waiting = waitingColor(theme.text);
   const lit = theme.text;
+  const litClear = lit.length === 7 ? `${lit}00` : 'transparent';
   const dur = Math.max(end - start, 1);
   const [w, setW] = useState(0);
   // A held note blooms as it fills, like the classic shine: how slowly this
@@ -759,11 +761,21 @@ const AppleWord = memo(function AppleWord({
   const fadeDur = Math.max(fadeEnd - fadeStart, 1);
   const rise = useAnimatedStyle(() => {
     const fill = clamp01((pos.value - start) / dur);
-    return { transform: [{ translateY: (1 - fill) * 3 }] };
+    return { transform: [{ translateY: (1 - fill) * 1.5 }] };
   });
   const clip = useAnimatedStyle(() => {
     const fill = clamp01((pos.value - start) / dur);
     return { width: fill * w };
+  });
+  // The soft edge on the wipe: a short gradient straddling the frontier,
+  // fading from lit into the waiting text so there is no hard cut. Hidden
+  // at both ends, where it would stick out past the word.
+  const feather = useAnimatedStyle(() => {
+    const fill = clamp01((pos.value - start) / dur);
+    return {
+      opacity: fill > 0 && fill < 1 ? 1 : 0,
+      transform: [{ translateX: fill * w - FEATHER / 2 }],
+    };
   });
   const glow = useAnimatedStyle(() => {
     const fill = clamp01((pos.value - start) / dur);
@@ -782,12 +794,23 @@ const AppleWord = memo(function AppleWord({
       >
         <Animated.Text style={[textStyle, { color: lit, width: w }, glow]}>{value}</Animated.Text>
       </Animated.View>
+      <Animated.View
+        style={[{ position: 'absolute', left: 0, top: 0, bottom: 0, width: FEATHER }, feather]}
+      >
+        <LinearGradient
+          colors={[lit, litClear]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={{ flex: 1 }}
+        />
+      </Animated.View>
     </Animated.View>
   );
 });
 AppleWord.displayName = 'AppleWord';
 
-/** Typography shared by the card and the full screen. */export const lyricsStyles = themed((colors) => ({
+/** Typography shared by the card and the full screen. */
+export const lyricsStyles = themed((colors) => ({
   line: {
     color: colors.text,
     fontSize: 20,
@@ -845,7 +868,7 @@ const styles = themed((colors) => ({
   appleActive: { fontWeight: '700' },
   /**
    * Apple-style pitch compensation, on every line whether zoomed or not: the
-   * 5% growth adds ~2 points of visual height per side, so each line gives 2
+   * 8% growth adds ~2 points of visual height per side, so each line gives 2
    * back top and bottom. Constant, so activating a line never shifts the rest.
    */
   applePitch: { marginVertical: -2 },
