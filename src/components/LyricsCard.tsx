@@ -718,7 +718,6 @@ const AppleWord = memo(function AppleWord({
   const waiting = waitingColor(theme.text);
   const lit = theme.text;
   const dur = Math.max(end - start, 1);
-  const [w, setW] = useState(0);
   // A held note blooms as it fills, like the classic shine: how slowly this
   // word is sung, and how much room is left before the handover.
   const slow = clamp01((dur - QUICK_WORD_MS) / (HELD_WORD_MS - QUICK_WORD_MS));
@@ -729,9 +728,13 @@ const AppleWord = memo(function AppleWord({
     const fill = clamp01((pos.value - start) / dur);
     return { transform: [{ translateY: (1 - fill) * 1.5 }] };
   });
+  // Percent of the block, not pixels: measuring inline text never reports,
+  // so there is nothing to measure against. The block sizes itself to the
+  // base text once; the overlay is a share of it.
   const clip = useAnimatedStyle(() => {
     const fill = clamp01((pos.value - start) / dur);
-    return { width: fill * w };
+    const pct = Math.round(fill * 1000) / 10;
+    return { width: `${pct}%` };
   });
   const glow = useAnimatedStyle(() => {
     const fill = clamp01((pos.value - start) / dur);
@@ -744,14 +747,20 @@ const AppleWord = memo(function AppleWord({
     };
   });
   return (
-    <Animated.View onLayout={(e) => setW(e.nativeEvent.layout.width)} style={rise}>
-      {/* The shine lives on the unclipped base: inside the wipe's overflow
-          box it was cut off at the frontier and never showed. */}
+    <Animated.View style={rise}>
       <Animated.Text style={[textStyle, { color: waiting }, glow]}>{value}</Animated.Text>
       <Animated.View
         style={[{ position: 'absolute', left: 0, top: 0, bottom: 0, overflow: 'hidden' }, clip]}
       >
-        <Animated.Text style={[textStyle, { color: lit, width: w }]}>{value}</Animated.Text>
+        {/* Single line, hard-clipped: the wipe frontier, with no ellipsis
+            glyph sneaking in to mark it. */}
+        <Animated.Text
+          numberOfLines={1}
+          ellipsizeMode="clip"
+          style={[textStyle, { color: lit }]}
+        >
+          {value}
+        </Animated.Text>
       </Animated.View>
     </Animated.View>
   );
