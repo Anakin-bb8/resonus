@@ -727,9 +727,6 @@ function AppleWords({
   );
 }
 
-/** How wide the soft edge on the wipe is: lit fading to clear across it. */
-const FEATHER = 10;
-
 const AppleWord = memo(function AppleWord({
   value,
   start,
@@ -766,16 +763,6 @@ const AppleWord = memo(function AppleWord({
     const fill = clamp01((pos.value - start) / dur);
     return { width: fill * w };
   });
-  // The soft edge on the wipe: a short gradient straddling the frontier,
-  // fading from lit into the waiting text so there is no hard cut. Hidden
-  // at both ends, where it would stick out past the word.
-  const feather = useAnimatedStyle(() => {
-    const fill = clamp01((pos.value - start) / dur);
-    return {
-      opacity: fill > 0 && fill < 1 ? 1 : 0,
-      transform: [{ translateX: fill * w - FEATHER / 2 }],
-    };
-  });
   const glow = useAnimatedStyle(() => {
     const fill = clamp01((pos.value - start) / dur);
     const after = clamp01((pos.value - fadeStart) / fadeDur);
@@ -783,25 +770,18 @@ const AppleWord = memo(function AppleWord({
     return {
       textShadowColor: `rgba(255, 255, 255, ${Math.round(bloom * BLOOM_ALPHA * 100) / 100})`,
       textShadowRadius: bloom * BLOOM_RADIUS,
+      textShadowOffset: { width: 0, height: 0 },
     };
   });
   return (
     <Animated.View onLayout={(e) => setW(e.nativeEvent.layout.width)} style={rise}>
-      <Animated.Text style={[textStyle, { color: waiting }]}>{value}</Animated.Text>
+      {/* The shine lives on the unclipped base: inside the wipe's overflow
+          box it was cut off at the frontier and never showed. */}
+      <Animated.Text style={[textStyle, { color: waiting }, glow]}>{value}</Animated.Text>
       <Animated.View
         style={[{ position: 'absolute', left: 0, top: 0, bottom: 0, overflow: 'hidden' }, clip]}
       >
-        <Animated.Text style={[textStyle, { color: lit, width: w }, glow]}>{value}</Animated.Text>
-      </Animated.View>
-      <Animated.View
-        style={[{ position: 'absolute', left: 0, top: '15%', bottom: '15%', width: FEATHER }, feather]}
-      >
-        <LinearGradient
-          colors={[lit, waiting]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={{ flex: 1 }}
-        />
+        <Animated.Text style={[textStyle, { color: lit, width: w }]}>{value}</Animated.Text>
       </Animated.View>
     </Animated.View>
   );
