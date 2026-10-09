@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 793 of them.
+Every string the app can show, under the screen it shows up on. 807 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -851,6 +851,21 @@ you are actually typing into, which is easier than reading it here.
 | `We need permission to read your device music.` | Android has not granted access to the phone's files yet |
 | `Where should we get your music?` | Heading when choosing where the phone's own music is read from |
 
+## Settings › Lyrics providers
+
+| String | What it is |
+| --- | --- |
+| `Apple Music lyrics, word by word.` | A lyrics provider blurb: BiniLyrics serves Apple Music TTML |
+| `Better Lyrics crowdsourced lyrics.` | A lyrics provider blurb: Unison belongs to Better Lyrics |
+| `BiniLyrics` |  |
+| `Community database, lines or words.` | A lyrics provider blurb: what LRCLIB answers with |
+| `LRCLIB` |  |
+| `Lyrics providers` | A screen: the online lyrics sources in the order they are tried |
+| `LyricsPlus` |  |
+| `Unison` |  |
+| `Word-by-word lyrics, tried in order. The first synced hit wins.` | Under `Lyrics providers`: how the list is read |
+| `YouLy+ aggregator: Apple, Spotify, Musixmatch.` | A lyrics provider blurb: what LyricsPlus aggregates |
+
 ## Settings › Navigation bar
 
 | String | What it is |
@@ -982,12 +997,15 @@ you are actually typing into, which is easier than reading it here.
 | `Always previous track` | A value of `Previous button`: never restarts, always goes back a song |
 | `Animated cover background` | A setting: an animated cover (GIF, animated WebP) is shown full screen behind the player instead of inside the square |
 | `Animated cover frame rate` |  |
+| `Apple Music-like` | A value of `Lyrics style` |
+| `Apple Music-like lines: brighter focus, steeper dimming.` | Under `Lyrics style`: what the Apple variant changes |
 | `Background` | Section header over what is drawn behind the player. Its two values are `Plain` and `Blurred cover` |
 | `Blurred cover` | A value of `Background`: the album art, blurred, behind the player |
 | `Bottom row` |  |
 | `Buttons` | Which player buttons to show |
 | `Buttons next to play` |  |
 | `Centered` | One of the values of “Lyrics alignment” |
+| `Classic` | One of the values of “Lyrics style” |
 | `Colored mini player` | Tint the mini player with the colour of the cover art |
 | `Cover art` | Three places, one word: a section header in Settings › Player, a line of the storage bar in Settings › Downloads, and what the screen reader calls the picture in the song information sheet |
 | `Cover color` | The colour taken from the cover art |
@@ -1002,8 +1020,10 @@ you are actually typing into, which is easier than reading it here.
 | `Lyrics alignment` |  |
 | `Lyrics background` | What is drawn behind the lyrics screen, the full screen one |
 | `Lyrics card background` | What is drawn behind the small lyrics card that peeks under the player. Not the same thing as `Lyrics background` |
+| `Lyrics providers` | A screen: the online lyrics sources in the order they are tried |
 | `Lyrics size` |  |
 | `Lyrics source` | Where lyrics are looked for. Its values are the three `Prefer…`/`Disable…` lines |
+| `Lyrics style` | Classic lines or Apple Music-like ones |
 | `Mini player` |  |
 | `Mini player blur` |  |
 | `No` | A setting value meaning none or zero, not the answer to a question: no crossfade, no seek buttons |
@@ -1035,7 +1055,6 @@ you are actually typing into, which is easier than reading it here.
 | `Skip buttons` | The seek forward / back buttons setting |
 | `Small` | One of the values of “Lyrics size” |
 | `Swap favorite and menu` | Exchange the places of those two buttons in the player, for whichever hand you hold the phone in |
-| `Where to get lyrics from. Online search uses LRCLIB (sends the artist and title).` |  |
 
 ## Settings › Player buttons
 
@@ -1252,4 +1271,5 @@ you are actually typing into, which is easier than reading it here.
 | `Unknown artist` | Fallback when the file and the server have no artist |
 | `View` | Title of the menu that chooses how a collection is drawn, and the label of the button that opens it. A noun: what you are looking at, not the verb |
 | `View cover` | The same as `View image`, for album and playlist artwork |
+| `Where to get lyrics from. Online search uses LRCLIB (sends the artist and title).` |  |
 | `Wrong username or password` |  |

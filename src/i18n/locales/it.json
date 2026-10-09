@@ -799,5 +799,19 @@
   "With the settings icon off, your picture stays on so settings are one tap away.": "Con icona impostazioni disattivata, la tua immagine resta visibile e le impostazioni restano a un tocco.",
   "Choose photo": "Scegli foto",
   "Remove photo": "Rimuovi foto",
-  "Tap the plus button on songs to see them here.": "Tocca il pulsante più sui brani per vederli qui."
+  "Tap the plus button on songs to see them here.": "Tocca il pulsante più sui brani per vederli qui.",
+  "Lyrics providers": "Provider testi",
+  "Word-by-word lyrics, tried in order. The first synced hit wins.": "Testi parola per parola, provati in ordine. Vince il primo sincronizzato.",
+  "BiniLyrics": "BiniLyrics",
+  "Apple Music lyrics, word by word.": "Testi Apple Music, parola per parola.",
+  "LyricsPlus": "LyricsPlus",
+  "YouLy+ aggregator: Apple, Spotify, Musixmatch.": "Aggregatore YouLy+: Apple, Spotify, Musixmatch.",
+  "Unison": "Unison",
+  "Better Lyrics crowdsourced lyrics.": "Testi crowdsourced di Better Lyrics.",
+  "LRCLIB": "LRCLIB",
+  "Community database, lines or words.": "Database della community, righe o parole.",
+  "Lyrics style": "Stile testi",
+  "Apple Music-like lines: brighter focus, steeper dimming.": "Righe stile Apple Music: fuoco acceso, resto in ombra.",
+  "Classic": "Classico",
+  "Apple Music-like": "Stile Apple Music"
 }

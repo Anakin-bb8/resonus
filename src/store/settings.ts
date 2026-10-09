@@ -350,6 +350,30 @@ export type LyricsSource = 'local' | 'online' | 'off';
 /** Type size on the full-screen lyrics. */
 export type LyricsSize = 'small' | 'normal' | 'large';
 export type LyricsAlign = 'left' | 'center';
+/** How the synced lines are drawn: as they always were, or Apple Music-like. */
+export type LyricsStyle = 'classic' | 'apple';
+
+/**
+ * An online lyrics source, in the order it is tried. BiniLyrics (Apple Music
+ * TTML), LyricsPlus (the YouLy+ aggregator), Unison (Better Lyrics) and
+ * LRCLIB: first synced hit wins.
+ */
+export type LyricProviderKey = 'binilyrics' | 'lyricsplus' | 'unison' | 'lrclib';
+
+export interface LyricProvider {
+  key: LyricProviderKey;
+  enabled: boolean;
+}
+
+const LYRIC_PROVIDER_KEYS: LyricProviderKey[] = ['binilyrics', 'lyricsplus', 'unison', 'lrclib'];
+
+/** Best word-sync first, LRCLIB last as the fallback that also does lines. */
+export const DEFAULT_LYRIC_PROVIDERS: LyricProvider[] = [
+  { key: 'binilyrics', enabled: true },
+  { key: 'lyricsplus', enabled: true },
+  { key: 'unison', enabled: true },
+  { key: 'lrclib', enabled: true },
+];
 /** What sits next to play on the mini player. */
 export type MiniPlayerButtons = 'favorite' | 'next' | 'previousNext' | 'none';
 /** The corners of the cover art in the player. */
@@ -643,10 +667,9 @@ function normalizeBottomTabs(raw: unknown): BottomTab[] {
 /**
  * The buttons at the top right of Home, in the order they sit there.
  *
- * A draggable list like the tabs and the chips, and with the tabs' exemption
- * rather than the chips' freedom: **the gear cannot be turned off**. Settings
- * is only reachable from there, so hiding it would leave no way back to this
- * very screen.
+ * A draggable list like the tabs and the chips. Every icon has a switch now,
+ * the gear included: turning it off forces the profile picture on, so
+ * Settings stay one tap away through it.
  */
 export type HomeButtonKey = 'queue' | 'search' | 'history' | 'settings';
 
@@ -736,6 +759,24 @@ function normalizeHomeButtons(raw: unknown): HomeButton[] {
   return out;
 }
 
+/** The same sanitising as the buttons: order kept, unknown keys dropped. */
+function normalizeLyricProviders(raw: unknown): LyricProvider[] {
+  if (!Array.isArray(raw)) return DEFAULT_LYRIC_PROVIDERS.map((b) => ({ ...b }));
+  const seen = new Set<LyricProviderKey>();
+  const out: LyricProvider[] = [];
+  for (const item of raw) {
+    const key = item?.key as LyricProviderKey;
+    if (LYRIC_PROVIDER_KEYS.includes(key) && !seen.has(key)) {
+      seen.add(key);
+      out.push({ key, enabled: typeof item.enabled === 'boolean' ? item.enabled : true });
+    }
+  }
+  for (const def of DEFAULT_LYRIC_PROVIDERS) {
+    if (!seen.has(def.key)) out.push({ ...def });
+  }
+  return out;
+}
+
 /**
  * Sanitizes the saved list: preserves user order and state, discards unknown
  * keys, and appends new chips not present (so a future version with more chips
@@ -806,7 +847,8 @@ type Reshaped =
   | 'exploreSections'
   | 'bottomTabs'
   | 'homeButtons'
-  | 'playerButtons';
+  | 'playerButtons'
+  | 'lyricsProviders';
 
 /**
  * `setX(value)` for every saved setting: stores it and saves the profile.
@@ -994,12 +1036,17 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   /** Lyrics card (under the player controls): flat or cover color. */
   lyricsCardBackground: CardBackground;
   /**
-   * Where lyrics come from: prefer local, prefer online (LRCLIB), or online
-   * disabled. Defaults to 'local' (local first, LRCLIB as fallback).
+   * Where lyrics come from: prefer local, prefer online, or online disabled.
+   * Online walks the lyrics providers in order (Settings › Lyrics). Defaults
+   * to 'local' (local first, online as fallback).
    */
   lyricsSource: LyricsSource;
+  /** Online lyrics providers, in the order they are tried (each with its state). */
+  lyricsProviders: LyricProvider[];
   lyricsSize: LyricsSize;
   lyricsAlign: LyricsAlign;
+  /** How synced lines are drawn: as always, or Apple Music-like. */
+  lyricsStyle: LyricsStyle;
   /** The names under the icons of the navigation bar. */
   showTabLabels: boolean;
   miniPlayerButtons: MiniPlayerButtons;
@@ -1207,6 +1254,7 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   setExploreSection: (key: ExploreSectionKey, value: boolean) => void;
   setBottomTab: (key: TabSegment, value: boolean) => void;
   setHomeButton: (key: HomeButtonKey, value: boolean) => void;
+  setLyricProvider: (key: LyricProviderKey, value: boolean) => void;
   setPlayerButton: (key: PlayerButtonKey, value: boolean) => void;
   setGridColumns: (key: GridSizeKey, value: number) => void;
   setAccentColor: (value: string, appearance: ThemeMode) => void;
@@ -1308,6 +1356,8 @@ const DEFAULTS = {
   lyricsSource: 'local' as LyricsSource,
   lyricsSize: 'normal' as LyricsSize,
   lyricsAlign: 'left' as LyricsAlign,
+  lyricsStyle: 'classic' as LyricsStyle,
+  lyricsProviders: DEFAULT_LYRIC_PROVIDERS.map((b) => ({ ...b })),
   showTabLabels: true,
   miniPlayerButtons: 'favorite' as MiniPlayerButtons,
   miniPlayerProgress: true,
@@ -1461,6 +1511,7 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
     bottomTabs?: unknown;
     homeButtons?: unknown;
     playerButtons?: unknown;
+    lyricsProviders?: unknown;
     showQueueButton?: boolean;
     showDevicesButton?: boolean;
     showSpeedButton?: boolean;
@@ -1690,6 +1741,12 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
   if (Array.isArray(parsed.exploreSections)) {
     set({ exploreSections: normalizeExploreSections(parsed.exploreSections) });
   }
+  if (Array.isArray(parsed.lyricsProviders)) {
+    set({ lyricsProviders: normalizeLyricProviders(parsed.lyricsProviders) });
+  }
+  if (oneOf(parsed.lyricsStyle, ['classic', 'apple'] as const)) {
+    set({ lyricsStyle: parsed.lyricsStyle });
+  }
   if (Array.isArray(parsed.homeButtons)) {
     set({ homeButtons: normalizeHomeButtons(parsed.homeButtons) });
   } else if (parsed.showHistoryButton === false) {
@@ -1907,6 +1964,13 @@ export const useSettings = create<SettingsState>((set, get) => ({
     // the profile picture on, so Settings stay one tap away.
     set((s) => ({
       homeButtons: s.homeButtons.map((x) => (x.key === key ? { ...x, enabled: value } : x)),
+    }));
+    persist(snapshot(get));
+  },
+
+  setLyricProvider: (key, value) => {
+    set((s) => ({
+      lyricsProviders: s.lyricsProviders.map((x) => (x.key === key ? { ...x, enabled: value } : x)),
     }));
     persist(snapshot(get));
   },

@@ -200,6 +200,8 @@ export function SyncedLyricsView({
   const anchor = large ? 0.42 : 0.3;
   const size = useSettings((s) => s.lyricsSize);
   const centered = useSettings((s) => s.lyricsAlign) === 'center';
+  // Apple Music-like lines: brighter focus, steeper dimming (Settings › Lyrics).
+  const apple = useSettings((s) => s.lyricsStyle) === 'apple';
 
   const onMeasure = useCallback((index: number, y: number, h: number) => {
     offsets.current[index] = { y, h };
@@ -319,6 +321,7 @@ export function SyncedLyricsView({
             large={large}
             size={size}
             centered={centered}
+            apple={apple}
             onMeasure={onMeasure}
           />
         ))}
@@ -354,6 +357,7 @@ const LyricRow = memo(({
   large,
   size,
   centered,
+  apple,
   onMeasure,
 }: {
   index: number;
@@ -368,14 +372,18 @@ const LyricRow = memo(({
   large?: boolean;
   size: LyricsSize;
   centered: boolean;
+  /** Apple Music-like: brighter focus, steeper dimming, heavier active line. */
+  apple?: boolean;
   onMeasure: (index: number, y: number, h: number) => void;
 }) => {
   // Memoized, so the screen repainting is not enough to bring this one along.
   useTheme();
-  // Only the active line grows (spring) and is visible at 100%. Past lines are
-  // nearly as bright; the next one is semi-dimmed; everything else is faint.
+  // Only the active line grows (spring) and is visible at 100%. Apple-style
+  // dims the rest harder: past lines fall back instead of staying bright.
   const focus = useSharedValue(active ? 1 : 0);
-  const dim = useSharedValue(past ? 0.85 : active ? 1 : next ? 0.55 : 0.3);
+  const dimOf = (p: boolean, a: boolean, n: boolean) =>
+    apple ? (a ? 1 : p ? 0.5 : n ? 0.3 : 0.15) : a ? 1 : p ? 0.85 : n ? 0.55 : 0.3;
+  const dim = useSharedValue(dimOf(past, active, next));
   // reduceMotion Never: the transition between lines (karaoke) is the essence
   // of the screen; without this, devices with "reduce motion" skip it.
   useEffect(() => {
@@ -387,23 +395,73 @@ const LyricRow = memo(({
     });
   }, [active, focus]);
   useEffect(() => {
-    dim.value = withTiming(past ? 0.85 : active ? 1 : next ? 0.55 : 0.3, {
+    dim.value = withTiming(dimOf(past, active, next), {
       duration: motion.duration.enter,
       reduceMotion: motion.reduceMotion.essential,
     });
-  }, [active, past, next, dim]);
-  // The growth (8%) is compensated by the right margin of `content` so the
-  // active line, scaling from the left, doesn't overflow the edge.
-  const anim = useAnimatedStyle(() => ({
-    opacity: dim.value,
-    transform: [{ scale: 1 + focus.value * 0.08 }],
-  }));
+  }, [active, past, next, dim, apple]);
+  // The growth (8%, 12% Apple-style) is compensated by the right margin of
+  // `content` so the active line, scaling from the left, doesn't overflow
+  // the edge.
+  const anim = useAnimatedStyle(
+    () => ({
+      opacity: dim.value,
+      transform: [{ scale: 1 + focus.value * (apple ? 0.12 : 0.08) }],
+    }),
+    [apple],
+  );
+  // Apple-style runs outside text flow: each word is a block with its own
+  // clipped overlay, which inline text cannot host (a growing inline block
+  // would reflow the line under it).
+  if (apple) {
+    return (
+      <View
+        onLayout={(e) => onMeasure(index, e.nativeEvent.layout.y, e.nativeEvent.layout.height)}
+      >
+        <Animated.View style={anim}>
+          {active && words ? (
+            <View style={[styles.appleLine, centered && styles.appleLineCentered]}>
+              <AppleWords
+                words={words}
+                handover={handover}
+                textStyle={[
+                  lyricsLineStyle(large, size, centered),
+                  centered ? styles.centerOrigin : styles.leftOrigin,
+                  styles.appleActive,
+                ]}
+              />
+            </View>
+          ) : (
+            <Animated.Text
+              style={[
+                lyricsLineStyle(large, size, centered),
+                centered ? styles.centerOrigin : styles.leftOrigin,
+                active && styles.appleActive,
+              ]}
+            >
+              {text}
+            </Animated.Text>
+          )}
+        </Animated.View>
+      </View>
+    );
+  }
   return (
     <View
       onLayout={(e) => onMeasure(index, e.nativeEvent.layout.y, e.nativeEvent.layout.height)}
     >
-      <Animated.Text style={[lyricsLineStyle(large, size, centered), centered ? styles.centerOrigin : styles.leftOrigin, anim]}>
-        {active && words ? <SungWords words={words} handover={handover} /> : text}
+      <Animated.Text
+        style={[
+          lyricsLineStyle(large, size, centered),
+          centered ? styles.centerOrigin : styles.leftOrigin,
+          anim,
+        ]}
+      >
+        {active && words ? (
+          <SungWords words={words} handover={handover} />
+        ) : (
+          text
+        )}
       </Animated.Text>
     </View>
   );
@@ -630,8 +688,84 @@ function SungWords({ words, handover }: { words: LyricWord[]; handover?: number 
   );
 }
 
-/** Typography shared by the card and the full screen. */
-export const lyricsStyles = themed((colors) => ({
+/**
+ * The line being sung, YouLy+-style: each word fills left to right like a
+ * bar wiping across it, and rises a touch as it is sung. Outside text flow
+ * (a growing inline block would reflow the line under it), so the row lays
+ * words out as blocks that wrap whole.
+ */
+function AppleWords({
+  words,
+  handover,
+  textStyle,
+}: {
+  words: LyricWord[];
+  handover?: number;
+  textStyle: object;
+}) {
+  const pos = useSungPosition();
+  const ends = wordEnds(words, handover);
+  return (
+    <>
+      {words.map((w, i) => (
+        <AppleWord
+          key={i}
+          value={w.value}
+          start={w.start}
+          end={ends[i]}
+          handover={handover}
+          pos={pos}
+          textStyle={textStyle}
+        />
+      ))}
+    </>
+  );
+}
+
+const AppleWord = memo(function AppleWord({
+  value,
+  start,
+  end,
+  handover,
+  pos,
+  textStyle,
+}: {
+  value: string;
+  start: number;
+  end: number;
+  /** When the row hands over, which the fill never outlives. */
+  handover?: number;
+  pos: SharedValue<number>;
+  textStyle: object;
+}) {
+  // Memoized, so the theme has to come in from here (like LyricRow's own).
+  const theme = useTheme();
+  const waiting = waitingColor(theme.text);
+  const lit = theme.text;
+  const dur = Math.max(end - start, 1);
+  const [w, setW] = useState(0);
+  const rise = useAnimatedStyle(() => {
+    const fill = clamp01((pos.value - start) / dur);
+    return { transform: [{ translateY: (1 - fill) * 3 }] };
+  });
+  const clip = useAnimatedStyle(() => {
+    const fill = clamp01((pos.value - start) / dur);
+    return { width: fill * w };
+  });
+  return (
+    <Animated.View onLayout={(e) => setW(e.nativeEvent.layout.width)} style={rise}>
+      <Animated.Text style={[textStyle, { color: waiting }]}>{value}</Animated.Text>
+      <Animated.View
+        style={[{ position: 'absolute', left: 0, top: 0, bottom: 0, overflow: 'hidden' }, clip]}
+      >
+        <Animated.Text style={[textStyle, { color: lit, width: w }]}>{value}</Animated.Text>
+      </Animated.View>
+    </Animated.View>
+  );
+});
+AppleWord.displayName = 'AppleWord';
+
+/** Typography shared by the card and the full screen. */export const lyricsStyles = themed((colors) => ({
   line: {
     color: colors.text,
     fontSize: 20,
@@ -685,6 +819,11 @@ const styles = themed((colors) => ({
   coverBox: { overflow: 'hidden', padding: spacing.lg },
   coverBody: { flex: 1, overflow: 'hidden' },
   wrap: { flex: 1 },
+  /** Apple Music-like active line: heavier, on top of the growth. */
+  appleActive: { fontWeight: '700' },
+  /** Apple-style line: words lay out as blocks that wrap whole. */
+  appleLine: { flexDirection: 'row', flexWrap: 'wrap' },
+  appleLineCentered: { justifyContent: 'center' },
   // Right margin so the active line (which grows 8% from the left) doesn't get
   // clipped against the edge.
   content: { paddingBottom: spacing.xl, paddingRight: '10%' },

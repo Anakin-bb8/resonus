@@ -17,14 +17,24 @@ import { queryClient } from '@/lib/query';
 import { useAuthStore } from '@/store/auth';
 import { type LyricsSource, useSettings } from '@/store/settings';
 
-function lyricsQueryOptions(song: Song, source: LyricsSource) {
+function lyricsQueryOptions(song: Song, source: LyricsSource, providers: string) {
   return {
-    // The source goes in the key: changing it triggers a retry.
-    queryKey: ['lyrics', song.id, source] as const,
+    // The source and the provider order go in the key: changing either
+    // triggers a retry.
+    queryKey: ['lyrics', song.id, source, providers] as const,
     // A song's lyrics don't change: don't re-fetch for the entire session.
     staleTime: Infinity,
     queryFn: () => getSongLyrics(song, source),
   };
+}
+
+/** The enabled providers as one string, for the query key above. */
+function providersSig(): string {
+  return useSettings
+    .getState()
+    .lyricsProviders.filter((p) => p.enabled)
+    .map((p) => p.key)
+    .join('+');
 }
 
 /** Does it make sense to fetch lyrics for this song in the current state? */
@@ -35,9 +45,15 @@ function canFetch(song: Song | undefined, auth: SubsonicAuth | null): song is So
 export function useLyrics(song?: Song) {
   const auth = useAuthStore((s) => s.auth);
   const source = useSettings((s) => s.lyricsSource);
+  const providers = useSettings((s) =>
+    s.lyricsProviders
+      .filter((p) => p.enabled)
+      .map((p) => p.key)
+      .join('+'),
+  );
   const enabled = canFetch(song, auth);
   return useQuery({
-    ...lyricsQueryOptions(song ?? ({ id: '' } as Song), source),
+    ...lyricsQueryOptions(song ?? ({ id: '' } as Song), source, providers),
     enabled,
   });
 }
@@ -47,5 +63,5 @@ export function prefetchLyrics(song: Song | undefined): void {
   const auth = useAuthStore.getState().auth;
   if (!canFetch(song, auth)) return;
   const source = useSettings.getState().lyricsSource;
-  void queryClient.prefetchQuery(lyricsQueryOptions(song, source));
+  void queryClient.prefetchQuery(lyricsQueryOptions(song, source, providersSig()));
 }

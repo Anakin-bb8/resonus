@@ -18,6 +18,8 @@ import { hashKey, readTags } from './localLibrary';
 import { parseLrc } from './lrc';
 import { parseTtml } from './ttml';
 import { isManualOffline } from '@/api/netGate';
+import { useSettings } from '@/store/settings';
+import { fetchWordProviders } from './wordProviders';
 
 const LRCLIB_CACHE_DIR = FileSystem.documentDirectory + 'lyrics-cache/';
 /** Who is asking, for LRCLIB. Sent as both headers: see `fetchLrclib`. */
@@ -87,10 +89,21 @@ export async function getLocalLyrics(
 }
 
 /**
- * Lyrics from LRCLIB with disk cache. Also serves as last resort for server
- * songs whose server doesn't have lyrics.
+ * Lyrics from the online providers in the person's order (Settings › Lyrics),
+ * first synced hit wins. LRCLIB keeps its leg of the chain: same cache file
+ * as always, so what was saved before is still found.
  */
 export async function getOnlineLyrics(song: Song): Promise<SongLyrics | null> {
+  const order = useSettings
+    .getState()
+    .lyricsProviders.filter((p) => p.enabled)
+    .map((p) => p.key);
+  if (order.length === 0) return null;
+  return fetchWordProviders(song, order, () => fetchLrclibLyrics(song));
+}
+
+/** LRCLIB with its disk cache: one leg of the provider chain. */
+async function fetchLrclibLyrics(song: Song): Promise<SongLyrics | null> {
   const file = `${LRCLIB_CACHE_DIR}${hashKey(song.id)}.lrc`;
   const cached = await readTextIfExists(file);
   if (cached) return parseLrc(cached);

@@ -14,6 +14,7 @@ import {
   type CoverTapAction,
   type LyricsAlign,
   type LyricsSize,
+  type LyricsStyle,
   type MiniPlayerButtons,
   type LyricsSource,
   type ScreenBackground,
@@ -79,6 +80,8 @@ export default function PlayerSettings() {
   const setLyricsSize = useSettings((s) => s.setLyricsSize);
   const lyricsAlign = useSettings((s) => s.lyricsAlign);
   const setLyricsAlign = useSettings((s) => s.setLyricsAlign);
+  const lyricsStyle = useSettings((s) => s.lyricsStyle);
+  const setLyricsStyle = useSettings((s) => s.setLyricsStyle);
   const setBlurMiniPlayer = useSettings((s) => s.setBlurMiniPlayer);
   const setMiniPlayerColorBackground = useSettings((s) => s.setMiniPlayerColorBackground);
   const lyricsBackground = useSettings((s) => s.lyricsBackground);
@@ -308,7 +311,7 @@ export default function PlayerSettings() {
           <SelectList<LyricsSource>
             label={t('Lyrics source')}
             description={t(
-              'Where to get lyrics from. Online search uses LRCLIB (sends the artist and title).',
+              'Where to get lyrics from. Online search tries each lyrics provider in order (sends the artist and title).',
             )}
             options={[
               { value: 'local', label: t('Prefer local lyrics') },
@@ -317,6 +320,21 @@ export default function PlayerSettings() {
             ]}
             value={lyricsSource}
             onChange={setLyricsSource}
+          />
+          <SettingRow
+            label={t('Lyrics providers')}
+            chevron
+            onPress={() => router.push('/settings/lyrics-providers')}
+          />
+          <SelectList<LyricsStyle>
+            label={t('Lyrics style')}
+            description={t('Apple Music-like lines: brighter focus, steeper dimming.')}
+            options={[
+              { value: 'classic', label: t('Classic') },
+              { value: 'apple', label: t('Apple Music-like') },
+            ]}
+            value={lyricsStyle}
+            onChange={setLyricsStyle}
           />
           <SelectList<LyricsSize>
             label={t('Lyrics size')}
