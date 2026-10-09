@@ -4,6 +4,7 @@
  * there; the bin on a row drops that song, the one in the bar drops them all.
  */
 import { useEffect, useState } from 'react';
+import * as FileSystem from 'expo-file-system/legacy';
 import { FlatList, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -162,6 +163,14 @@ export default function CachedSongsScreen() {
         onConfirm={async () => {
           setConfirmClear(false);
           await useSongCache.getState().clear();
+          // The animated lock screen clips live beside the songs, in the
+          // system caches directory the native artwork encoder writes to
+          // (`animated-artwork/`): leaving them would keep every clip playable
+          // from Now Playing. They rebuild on demand from the covers.
+          const clips = FileSystem.cacheDirectory
+            ? `${FileSystem.cacheDirectory}animated-artwork`
+            : null;
+          if (clips) await FileSystem.deleteAsync(clips, { idempotent: true }).catch(() => {});
           toast(t('Song cache cleared'));
         }}
       />

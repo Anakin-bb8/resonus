@@ -1973,7 +1973,7 @@ new file mode 100644
 index 0000000000000000000000000000000000000000..7e949bf2fb325d00f0ae39ce158d5365de15228a
 --- /dev/null
 +++ b/ios/AnimatedArtwork.swift
-@@ -0,0 +1,702 @@
+@@ -0,0 +1,717 @@
 +import AVFoundation
 +import CoreGraphics
 +import CoreImage
@@ -2176,7 +2176,7 @@ index 0000000000000000000000000000000000000000..7e949bf2fb325d00f0ae39ce158d5365
 +    var mask: CGImage? = nil
 +    if ratio == .tall {
 +      backdrop = Self.blurred(frame).flatMap { Self.sized($0, to: size) }
-+      mask = Self.featherMask(size: Self.artRect(in: size).size)
++      mask = Self.featherMask(size: Self.fitted(frame, in: Self.artRect(in: size)).size)
 +    }
 +    return UIGraphicsImageRenderer(size: size, format: format).image { renderer in
 +      let context = renderer.cgContext
@@ -2197,6 +2197,21 @@ index 0000000000000000000000000000000000000000..7e949bf2fb325d00f0ae39ce158d5365
 +    return CGRect(x: 0, y: (canvas.height - side) / 2, width: side, height: side)
 +  }
 +
++  /// The frame fitted inside a rect without distortion: a tall cover keeps
++  /// its proportions instead of being stretched into the art square.
++  private static func fitted(_ image: CGImage, in rect: CGRect) -> CGRect {
++    let iw = CGFloat(image.width), ih = CGFloat(image.height)
++    guard iw > 0, ih > 0, rect.width > 0, rect.height > 0 else { return rect }
++    let scale = min(rect.width / iw, rect.height / ih)
++    let size = CGSize(width: iw * scale, height: ih * scale)
++    return CGRect(
++      x: rect.minX + (rect.width - size.width) / 2,
++      y: rect.minY + (rect.height - size.height) / 2,
++      width: size.width,
++      height: size.height
++    )
++  }
++
 +  private func draw(
 +    _ frame: CGImage,
 +    in context: CGContext,
@@ -2209,10 +2224,10 @@ index 0000000000000000000000000000000000000000..7e949bf2fb325d00f0ae39ce158d5365
 +    guard ratio == .tall, let backdrop else {
 +      context.setFillColor(red: 0, green: 0, blue: 0, alpha: 1)
 +      context.fill(bounds)
-+      context.draw(frame, in: bounds)
++      context.draw(frame, in: Self.fitted(frame, in: bounds))
 +      return
 +    }
-+    let art = Self.artRect(in: canvas)
++    let art = Self.fitted(frame, in: Self.artRect(in: canvas))
 +    guard let mask else {
 +      // Only when the mask could not be built: the feather is the point of
 +      // the composition, but a cover without it still reads.
@@ -2498,7 +2513,7 @@ index 0000000000000000000000000000000000000000..7e949bf2fb325d00f0ae39ce158d5365
 +       let first = CGImageSourceCreateImageAtIndex(source, 0, Self.frameOptions),
 +       let blurred = Self.blurred(first) {
 +      backdrop = Self.sized(blurred, to: canvas)
-+      mask = Self.featherMask(size: Self.artRect(in: canvas).size)
++      mask = Self.featherMask(size: Self.fitted(first, in: Self.artRect(in: canvas)).size)
 +    } else {
 +      backdrop = nil
 +      mask = nil
