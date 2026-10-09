@@ -428,6 +428,14 @@ const LyricRow = memo(({
           ) : (
             <SungWords words={words} handover={handover} />
           )
+        ) : apple && words ? (
+          // Same blocks inactive: fluid text wraps differently from atomic
+          // blocks, and that difference read as the spacing jumping on
+          // activation.
+          <AppleWordsStatic
+            words={words}
+            textStyle={lyricsLineStyle(large, size, centered)}
+          />
         ) : (
           text
         )}
@@ -753,11 +761,20 @@ const AppleWord = memo(function AppleWord({
         style={[{ position: 'absolute', left: 0, top: 0, bottom: 0, overflow: 'hidden' }, clip]}
       >
         {/* Single line, hard-clipped: the wipe frontier, with no ellipsis
-            glyph sneaking in to mark it. */}
+            glyph sneaking in to mark it. Its own halo softens the cut: paint
+            over paint, nothing beside the glyphs. */}
         <Animated.Text
           numberOfLines={1}
           ellipsizeMode="clip"
-          style={[textStyle, { color: lit }]}
+          style={[
+            textStyle,
+            {
+              color: lit,
+              textShadowColor: lit,
+              textShadowRadius: 4,
+              textShadowOffset: { width: 0, height: 0 },
+            },
+          ]}
         >
           {value}
         </Animated.Text>
@@ -766,6 +783,25 @@ const AppleWord = memo(function AppleWord({
   );
 });
 AppleWord.displayName = 'AppleWord';
+
+/**
+ * Inactive lines in Apple style: the same word blocks, without any of the
+ * machinery (no position, no overlay, no animation). What activating a line
+ * adds is paint, never layout.
+ */
+function AppleWordsStatic({ words, textStyle }: { words: LyricWord[]; textStyle: object }) {
+  const theme = useTheme();
+  return (
+    <>
+      {words.map((w, i) => (
+        <View key={i}>
+          {/* Full color: the row's own opacity dims it, exactly like classic. */}
+          <Text style={[textStyle, { color: theme.text }]}>{w.value}</Text>
+        </View>
+      ))}
+    </>
+  );
+}
 
 /** Typography shared by the card and the full screen. */
 export const lyricsStyles = themed((colors) => ({
