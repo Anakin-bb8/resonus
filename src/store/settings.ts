@@ -347,11 +347,24 @@ export type CoverDoubleTapAction = CoverTapAction;
  */
 export type LyricsSource = 'local' | 'online' | 'off';
 
-/** Type size on the full-screen lyrics. */
-export type LyricsSize = 'small' | 'normal' | 'large';
+/** Adjustable type size shared by every lyrics surface. */
+export type LyricsSize = number;
+export const LYRICS_SIZE_MIN = 20;
+export const LYRICS_SIZE_DEFAULT = 28;
+export const LYRICS_SIZE_MAX = 40;
+
+/** Keep imported settings and programmatic callers inside the slider's range. */
+export function clampLyricsSize(value: number): LyricsSize {
+  if (!Number.isFinite(value)) return LYRICS_SIZE_DEFAULT;
+  return Math.min(LYRICS_SIZE_MAX, Math.max(LYRICS_SIZE_MIN, Math.round(value)));
+}
+
+/** Font weights Android and iOS can both synthesize consistently. */
+export const LYRICS_WEIGHTS = ['300', '400', '500', '600', '700'] as const;
+export type LyricsWeight = (typeof LYRICS_WEIGHTS)[number];
 export type LyricsAlign = 'left' | 'center';
-/** How the synced lines are drawn: as they always were, or Apple Music-like. */
-export type LyricsStyle = 'classic' | 'apple';
+/** How the synced lines are drawn: as they always were, or modern (Primuse motion). */
+export type LyricsStyle = 'classic' | 'modern';
 
 /**
  * An online lyrics source, in the order it is tried. BiniLyrics (Apple Music
@@ -842,6 +855,7 @@ type PersistedKey = keyof Persisted;
  *  anything and checks. */
 type Reshaped =
   | 'showAudioQuality'
+  | 'lyricsSize'
   | 'homeSections'
   | 'homeChips'
   | 'exploreSections'
@@ -862,6 +876,7 @@ type AutoSetters = {
 /** The generated setters that a hand-written one replaces with another shape. */
 type CustomSetter =
   | 'setDiagnostics'
+  | 'setLyricsSize'
   | 'setHideUnavailableOffline'
   | 'setReplayGainPreampDb'
   | 'setCustomGreeting'
@@ -1044,9 +1059,13 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   /** Online lyrics providers, in the order they are tried (each with its state). */
   lyricsProviders: LyricProvider[];
   lyricsSize: LyricsSize;
+  /** Thickness of lyric glyphs, from light (300) to bold (700). */
+  lyricsWeight: LyricsWeight;
   lyricsAlign: LyricsAlign;
-  /** How synced lines are drawn: as always, or Apple Music-like. */
+  /** How synced lines are drawn: as always, or modern (Primuse motion). */
   lyricsStyle: LyricsStyle;
+  /** Progressively blur synchronized lyric rows away from the current line. */
+  blurInactiveLyrics: boolean;
   /** The names under the icons of the navigation bar. */
   showTabLabels: boolean;
   miniPlayerButtons: MiniPlayerButtons;
@@ -1243,6 +1262,7 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   setLanguage: (language: Language) => void;
   setDiagnostics: (value: boolean) => void;
   setAnimatedArtworkFps: (value: number) => void;
+  setLyricsSize: (value: number) => void;
   resetScrobbleRules: () => void;
   setHideUnavailableOffline: (value: boolean) => void;
   setReplayGainPreampDb: (value: number) => void;
@@ -1354,10 +1374,13 @@ const DEFAULTS = {
   lyricsBackground: 'cover' as ScreenBackground,
   lyricsCardBackground: 'color' as CardBackground,
   lyricsSource: 'local' as LyricsSource,
-  lyricsSize: 'normal' as LyricsSize,
+  lyricsSize: LYRICS_SIZE_DEFAULT as LyricsSize,
+  lyricsWeight: '500' as LyricsWeight,
   lyricsAlign: 'left' as LyricsAlign,
   lyricsStyle: 'classic' as LyricsStyle,
   lyricsProviders: DEFAULT_LYRIC_PROVIDERS.map((b) => ({ ...b })),
+  // Opt-in, matching Primuse: it changes the reading treatment substantially.
+  blurInactiveLyrics: false,
   showTabLabels: true,
   miniPlayerButtons: 'favorite' as MiniPlayerButtons,
   miniPlayerProgress: true,
@@ -1517,6 +1540,7 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
     showSpeedButton?: boolean;
     lyricsColorBackground?: boolean;
     lyricsOnlineFallback?: boolean;
+    lyricsSize?: unknown;
     playerColorBackground?: boolean;
     swipeToQueue?: boolean;
     showExploreChips?: boolean;
@@ -1637,8 +1661,14 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
   }
   const oneOf = <T extends string>(v: unknown, all: readonly T[]): v is T =>
     all.includes(v as T);
-  if (oneOf(parsed.lyricsSize, ['small', 'normal', 'large'] as const)) {
-    set({ lyricsSize: parsed.lyricsSize });
+  if (typeof parsed.lyricsSize === 'number') {
+    set({ lyricsSize: clampLyricsSize(parsed.lyricsSize) });
+  } else if (oneOf(parsed.lyricsSize, ['small', 'normal', 'large'] as const)) {
+    // Before the continuous control these were the three full-screen sizes.
+    set({ lyricsSize: { small: 22, normal: 28, large: 34 }[parsed.lyricsSize] });
+  }
+  if (oneOf(parsed.lyricsWeight, LYRICS_WEIGHTS)) {
+    set({ lyricsWeight: parsed.lyricsWeight });
   }
   if (oneOf(parsed.lyricsAlign, ['left', 'center'] as const)) {
     set({ lyricsAlign: parsed.lyricsAlign });
@@ -1744,8 +1774,11 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
   if (Array.isArray(parsed.lyricsProviders)) {
     set({ lyricsProviders: normalizeLyricProviders(parsed.lyricsProviders) });
   }
-  if (oneOf(parsed.lyricsStyle, ['classic', 'apple'] as const)) {
+  if (oneOf(parsed.lyricsStyle, ['classic', 'modern'] as const)) {
     set({ lyricsStyle: parsed.lyricsStyle });
+  } else if (parsed.lyricsStyle === 'apple') {
+    // Renamed: the home-made Apple style gave way to the Primuse motion.
+    set({ lyricsStyle: 'modern' });
   }
   if (Array.isArray(parsed.homeButtons)) {
     set({ homeButtons: normalizeHomeButtons(parsed.homeButtons) });
@@ -1897,6 +1930,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
     // The encoder reads this the next time a clip is built; one already on
     // disk keeps the rate it was written at, which is the rate it holds.
     pushArtworkEncodeFps(animatedArtworkFps);
+  },
+
+  setLyricsSize: (lyricsSize) => {
+    set({ lyricsSize: clampLyricsSize(lyricsSize) });
+    persist(snapshot(get));
   },
 
   // Both at once, and one write: put back separately, the first of the two

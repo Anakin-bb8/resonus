@@ -11,9 +11,11 @@ Releases before 0.2.1 are only listed on the
 
 ### Added
 
+- Modern lyrics style: word sweep and bounce from upstream PR #244 (Primuse
+  motion, MIT, see THIRD_PARTY_NOTICES.md), behind Settings › Lyrics style,
+  with size slider, weight and Android inactive blur. Classic stays default.
 - Word-by-word online lyrics from BiniLyrics, LyricsPlus and Unison, tried in
-  order with LRCLIB last (Settings › Lyrics), plus an Apple Music-like line
-  style next to the classic one.
+  order with LRCLIB last (Settings › Lyrics).
 - A profile picture beside the Home chips, opening Settings on tap and forced on while the settings gear is off; the gear itself can now be hidden from Home buttons, and with the greeting off too the chips slide up into the header.
 - Artist radios on Home, built from your most played artists, with new ones each time Home is pulled to refresh (#252).
 - A radio's ⋯ menu, also on a long press of its card, to queue it, save it as a playlist, refresh it or go to its artist.

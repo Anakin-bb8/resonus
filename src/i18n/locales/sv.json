@@ -225,7 +225,6 @@
   "Local profile": "Lokal profil",
   "Lyrics": "Låttext",
   "Lyrics source": "Källa för låttexter",
-  "Where to get lyrics from. Online search uses LRCLIB (sends the artist and title).": "Var låttexter ska hämtas från. Sökning på nätet använder LRCLIB (artist och titel skickas).",
   "Prefer local lyrics": "Föredra lokala låttexter",
   "Prefer online search": "Föredra sökning på nätet",
   "Disable online search": "Inaktivera sökning på nätet",

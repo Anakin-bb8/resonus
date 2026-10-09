@@ -418,7 +418,6 @@
   "Download “{name}”?": "Scaricare “{name}”?",
   "Good night": "Buona notte",
   "Lyrics source": "Fonte dei testi",
-  "Where to get lyrics from. Online search uses LRCLIB (sends the artist and title).": "Dove ottenere i testi. La ricerca online utilizza LRCLIB (invia l'artista e il titolo).",
   "Prefer local lyrics": "Preferisci testi locali",
   "Prefer online search": "Preferisci ricerca online",
   "Disable online search": "Disabilita ricerca online",
@@ -811,7 +810,8 @@
   "LRCLIB": "LRCLIB",
   "Community database, lines or words.": "Database della community, righe o parole.",
   "Lyrics style": "Stile testi",
-  "Apple Music-like lines: brighter focus, steeper dimming.": "Righe stile Apple Music: fuoco acceso, resto in ombra.",
+  "Modern lines sweep and bounce word by word.": "Le righe moderne scorrono e rimbalzano parola per parola.",
   "Classic": "Classico",
-  "Apple Music-like": "Stile Apple Music"
+  "Modern": "Moderno",
+  "Where to get lyrics from. Online search tries each lyrics provider in order (sends the artist and title).": "Dove ottenere i testi. La ricerca online prova ogni provider in ordine (invia artista e titolo)."
 }
