@@ -345,6 +345,11 @@ export function SyncedLyricsView({
   );
 }
 
+/** Dim ladder, classic or Apple-style (past falls back instead of glowing). */
+function dimFor(apple: boolean | undefined, past: boolean, active: boolean, next: boolean): number {
+  return apple ? (active ? 1 : past ? 0.5 : next ? 0.3 : 0.15) : active ? 1 : past ? 0.85 : next ? 0.55 : 0.3;
+}
+
 /** A lyric line with animated focus (spring on activation). */
 const LyricRow = memo(({
   index,
@@ -381,9 +386,7 @@ const LyricRow = memo(({
   // Only the active line grows (spring) and is visible at 100%. Apple-style
   // dims the rest harder: past lines fall back instead of staying bright.
   const focus = useSharedValue(active ? 1 : 0);
-  const dimOf = (p: boolean, a: boolean, n: boolean) =>
-    apple ? (a ? 1 : p ? 0.5 : n ? 0.3 : 0.15) : a ? 1 : p ? 0.85 : n ? 0.55 : 0.3;
-  const dim = useSharedValue(dimOf(past, active, next));
+  const dim = useSharedValue(dimFor(apple, past, active, next));
   // reduceMotion Never: the transition between lines (karaoke) is the essence
   // of the screen; without this, devices with "reduce motion" skip it.
   useEffect(() => {
@@ -395,18 +398,18 @@ const LyricRow = memo(({
     });
   }, [active, focus]);
   useEffect(() => {
-    dim.value = withTiming(dimOf(past, active, next), {
+    dim.value = withTiming(dimFor(apple, past, active, next), {
       duration: motion.duration.enter,
       reduceMotion: motion.reduceMotion.essential,
     });
   }, [active, past, next, dim, apple]);
-  // The growth (8%, 12% Apple-style) is compensated by the right margin of
+  // The growth (8%, 5% Apple-style) is compensated by the right margin of
   // `content` so the active line, scaling from the left, doesn't overflow
   // the edge.
   const anim = useAnimatedStyle(
     () => ({
       opacity: dim.value,
-      transform: [{ scale: 1 + focus.value * (apple ? 0.12 : 0.08) }],
+      transform: [{ scale: 1 + focus.value * (apple ? 0.05 : 0.08) }],
     }),
     [apple],
   );
@@ -418,7 +421,7 @@ const LyricRow = memo(({
       <View
         onLayout={(e) => onMeasure(index, e.nativeEvent.layout.y, e.nativeEvent.layout.height)}
       >
-        <Animated.View style={anim}>
+        <Animated.View style={[anim, styles.applePitch]}>
           {active && words ? (
             <View style={[styles.appleLine, centered && styles.appleLineCentered]}>
               <AppleWords
@@ -496,6 +499,8 @@ function handoverOf(lines: LyricLine[], i: number): number | undefined {
  * the UI thread, between one read and the next.
  */
 const TICK_MS = 50;
+/** The Apple-style wipe reads every frame: 20 a second steps visibly. */
+const FAST_TICK_MS = 16;
 
 /**
  * The position the words fill at, as a shared value rather than as state.
@@ -509,7 +514,8 @@ const TICK_MS = 50;
  * fill neither steps (as a value set raw every 50 ms would) nor lags (as one
  * aimed only at the present would, by a tick).
  */
-function useSungPosition(): SharedValue<number> {
+function useSungPosition(fast = false): SharedValue<number> {
+  const tickMs = fast ? FAST_TICK_MS : TICK_MS;
   const pos = useSharedValue(usePlayerStore.getState().positionSec * 1000 + WORD_LEAD_MS);
   useEffect(() => {
     let anchor = { sec: usePlayerStore.getState().positionSec, at: Date.now() };
@@ -529,13 +535,13 @@ function useSungPosition(): SharedValue<number> {
     let timer: ReturnType<typeof setInterval> | null = null;
     const tick = () => {
       const { isPlaying, speed } = usePlayerStore.getState();
-      const target = read() + TICK_MS * (isPlaying ? speed || 1 : 0);
+      const target = read() + tickMs * (isPlaying ? speed || 1 : 0);
       // A seek is somewhere else entirely: it lands there rather than
       // travelling, which would light up every word on the way through.
       if (Math.abs(target - last) > 1000) pos.value = target;
       else
         pos.value = withTiming(target, {
-          duration: TICK_MS,
+          duration: tickMs,
           easing: Easing.linear,
           // Same answer as the line's own transition: the fill is the
           // karaoke, not something decorating it.
@@ -544,7 +550,7 @@ function useSungPosition(): SharedValue<number> {
       last = target;
     };
     const start = () => {
-      if (!timer) timer = setInterval(tick, TICK_MS);
+      if (!timer) timer = setInterval(tick, tickMs);
     };
     const stop = () => {
       if (timer) {
@@ -562,7 +568,7 @@ function useSungPosition(): SharedValue<number> {
       stop();
       appStateSub.remove();
     };
-  }, [pos]);
+  }, [pos, tickMs]);
   return pos;
 }
 
@@ -703,7 +709,8 @@ function AppleWords({
   handover?: number;
   textStyle: object;
 }) {
-  const pos = useSungPosition();
+  // Every frame: the wipe and the rise step visibly at classic rate.
+  const pos = useSungPosition(true);
   const ends = wordEnds(words, handover);
   return (
     <>
@@ -744,6 +751,12 @@ const AppleWord = memo(function AppleWord({
   const lit = theme.text;
   const dur = Math.max(end - start, 1);
   const [w, setW] = useState(0);
+  // A held note blooms as it fills, like the classic shine: how slowly this
+  // word is sung, and how much room is left before the handover.
+  const slow = clamp01((dur - QUICK_WORD_MS) / (HELD_WORD_MS - QUICK_WORD_MS));
+  const fadeEnd = Math.min(end + BLOOM_FADE_MS, handover ?? Infinity);
+  const fadeStart = Math.min(end, fadeEnd - BLOOM_FADE_MIN_MS);
+  const fadeDur = Math.max(fadeEnd - fadeStart, 1);
   const rise = useAnimatedStyle(() => {
     const fill = clamp01((pos.value - start) / dur);
     return { transform: [{ translateY: (1 - fill) * 3 }] };
@@ -752,13 +765,22 @@ const AppleWord = memo(function AppleWord({
     const fill = clamp01((pos.value - start) / dur);
     return { width: fill * w };
   });
+  const glow = useAnimatedStyle(() => {
+    const fill = clamp01((pos.value - start) / dur);
+    const after = clamp01((pos.value - fadeStart) / fadeDur);
+    const bloom = fill * (1 - after) * (BLOOM_FLOOR + (1 - BLOOM_FLOOR) * slow);
+    return {
+      textShadowColor: `rgba(255, 255, 255, ${Math.round(bloom * BLOOM_ALPHA * 100) / 100})`,
+      textShadowRadius: bloom * BLOOM_RADIUS,
+    };
+  });
   return (
     <Animated.View onLayout={(e) => setW(e.nativeEvent.layout.width)} style={rise}>
       <Animated.Text style={[textStyle, { color: waiting }]}>{value}</Animated.Text>
       <Animated.View
         style={[{ position: 'absolute', left: 0, top: 0, bottom: 0, overflow: 'hidden' }, clip]}
       >
-        <Animated.Text style={[textStyle, { color: lit, width: w }]}>{value}</Animated.Text>
+        <Animated.Text style={[textStyle, { color: lit, width: w }, glow]}>{value}</Animated.Text>
       </Animated.View>
     </Animated.View>
   );
@@ -821,6 +843,12 @@ const styles = themed((colors) => ({
   wrap: { flex: 1 },
   /** Apple Music-like active line: heavier, on top of the growth. */
   appleActive: { fontWeight: '700' },
+  /**
+   * Apple-style pitch compensation, on every line whether zoomed or not: the
+   * 5% growth adds ~2 points of visual height per side, so each line gives 2
+   * back top and bottom. Constant, so activating a line never shifts the rest.
+   */
+  applePitch: { marginVertical: -2 },
   /** Apple-style line: words lay out as blocks that wrap whole. */
   appleLine: { flexDirection: 'row', flexWrap: 'wrap' },
   appleLineCentered: { justifyContent: 'center' },
