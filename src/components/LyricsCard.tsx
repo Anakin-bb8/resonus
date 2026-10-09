@@ -419,7 +419,7 @@ const LyricRow = memo(({
       <View
         onLayout={(e) => onMeasure(index, e.nativeEvent.layout.y, e.nativeEvent.layout.height)}
       >
-        <Animated.View style={[anim, styles.applePitch]}>
+        <Animated.View style={anim}>
           {active && words ? (
             <View style={[styles.appleLine, centered && styles.appleLineCentered]}>
               <AppleWords
@@ -750,7 +750,6 @@ const AppleWord = memo(function AppleWord({
   const theme = useTheme();
   const waiting = waitingColor(theme.text);
   const lit = theme.text;
-  const litClear = lit.length === 7 ? `${lit}00` : 'transparent';
   const dur = Math.max(end - start, 1);
   const [w, setW] = useState(0);
   // A held note blooms as it fills, like the classic shine: how slowly this
@@ -795,10 +794,10 @@ const AppleWord = memo(function AppleWord({
         <Animated.Text style={[textStyle, { color: lit, width: w }, glow]}>{value}</Animated.Text>
       </Animated.View>
       <Animated.View
-        style={[{ position: 'absolute', left: 0, top: 0, bottom: 0, width: FEATHER }, feather]}
+        style={[{ position: 'absolute', left: 0, top: '15%', bottom: '15%', width: FEATHER }, feather]}
       >
         <LinearGradient
-          colors={[lit, litClear]}
+          colors={[lit, waiting]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={{ flex: 1 }}
@@ -866,12 +865,6 @@ const styles = themed((colors) => ({
   wrap: { flex: 1 },
   /** Apple Music-like active line: heavier, on top of the growth. */
   appleActive: { fontWeight: '700' },
-  /**
-   * Apple-style pitch compensation, on every line whether zoomed or not: the
-   * 8% growth adds ~2 points of visual height per side, so each line gives 2
-   * back top and bottom. Constant, so activating a line never shifts the rest.
-   */
-  applePitch: { marginVertical: -2 },
   /** Apple-style line: words lay out as blocks that wrap whole. */
   appleLine: { flexDirection: 'row', flexWrap: 'wrap' },
   appleLineCentered: { justifyContent: 'center' },
