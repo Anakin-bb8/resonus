@@ -345,11 +345,6 @@ export function SyncedLyricsView({
   );
 }
 
-/** Dim ladder, classic or Apple-style (past falls back instead of glowing). */
-function dimFor(apple: boolean | undefined, past: boolean, active: boolean, next: boolean): number {
-  return apple ? (active ? 1 : past ? 0.5 : next ? 0.3 : 0.15) : active ? 1 : past ? 0.85 : next ? 0.55 : 0.3;
-}
-
 /** A lyric line with animated focus (spring on activation). */
 const LyricRow = memo(({
   index,
@@ -377,16 +372,16 @@ const LyricRow = memo(({
   large?: boolean;
   size: LyricsSize;
   centered: boolean;
-  /** Apple Music-like: brighter focus, steeper dimming, heavier active line. */
+  /** Apple Music-like: same row, only the words renderer changes (wipe). */
   apple?: boolean;
   onMeasure: (index: number, y: number, h: number) => void;
 }) => {
   // Memoized, so the screen repainting is not enough to bring this one along.
   useTheme();
-  // Only the active line grows (spring) and is visible at 100%. Apple-style
-  // dims the rest harder: past lines fall back instead of staying bright.
+  // Only the active line grows (spring) and is visible at 100%. Past lines are
+  // nearly as bright; the next one is semi-dimmed; everything else is faint.
   const focus = useSharedValue(active ? 1 : 0);
-  const dim = useSharedValue(dimFor(apple, past, active, next));
+  const dim = useSharedValue(past ? 0.85 : active ? 1 : next ? 0.55 : 0.3);
   // reduceMotion Never: the transition between lines (karaoke) is the essence
   // of the screen; without this, devices with "reduce motion" skip it.
   useEffect(() => {
@@ -398,55 +393,20 @@ const LyricRow = memo(({
     });
   }, [active, focus]);
   useEffect(() => {
-    dim.value = withTiming(dimFor(apple, past, active, next), {
+    dim.value = withTiming(past ? 0.85 : active ? 1 : next ? 0.55 : 0.3, {
       duration: motion.duration.enter,
       reduceMotion: motion.reduceMotion.essential,
     });
-  }, [active, past, next, dim, apple]);
-  // The growth is the classic 8% in both styles: same zoom, no surprises.
-  const anim = useAnimatedStyle(
-    () => ({
-      opacity: dim.value,
-      transform: [{ scale: 1 + focus.value * 0.08 }],
-    }),
-    [],
-  );
-  // Apple-style runs outside text flow: each word is a block with its own
-  // clipped overlay, which inline text cannot host (a growing inline block
-  // would reflow the line under it).
-  if (apple) {
-    return (
-      <View
-        onLayout={(e) => onMeasure(index, e.nativeEvent.layout.y, e.nativeEvent.layout.height)}
-      >
-        <Animated.View style={anim}>
-          {active && words ? (
-            <View style={[styles.appleLine, centered && styles.appleLineCentered]}>
-              <AppleWords
-                words={words}
-                handover={handover}
-                textStyle={[
-                  lyricsLineStyle(large, size, centered),
-                  centered ? styles.centerOrigin : styles.leftOrigin,
-                  styles.appleActive,
-                ]}
-              />
-            </View>
-          ) : (
-            <Animated.Text
-              style={[
-                lyricsLineStyle(large, size, centered),
-                centered ? styles.centerOrigin : styles.leftOrigin,
-                active && styles.appleActive,
-              ]}
-            >
-              {text}
-            </Animated.Text>
-          )}
-        </Animated.View>
-      </View>
-    );
-  }
+  }, [active, past, next, dim]);
+  // The growth (8%) is compensated by the right margin of `content` so the
+  // active line, scaling from the left, doesn't overflow the edge.
+  const anim = useAnimatedStyle(() => ({
+    opacity: dim.value,
+    transform: [{ scale: 1 + focus.value * 0.08 }],
+  }));
+  // One row in both styles: the Apple variant only swaps how the active
+  // line's words are drawn (wipe instead of flip), inside the same text
+  // flow, so switching lines never re-lays anything out.
   return (
     <View
       onLayout={(e) => onMeasure(index, e.nativeEvent.layout.y, e.nativeEvent.layout.height)}
@@ -459,7 +419,15 @@ const LyricRow = memo(({
         ]}
       >
         {active && words ? (
-          <SungWords words={words} handover={handover} />
+          apple ? (
+            <AppleWords
+              words={words}
+              handover={handover}
+              textStyle={lyricsLineStyle(large, size, centered)}
+            />
+          ) : (
+            <SungWords words={words} handover={handover} />
+          )
         ) : (
           text
         )}
@@ -693,10 +661,12 @@ function SungWords({ words, handover }: { words: LyricWord[]; handover?: number 
 }
 
 /**
- * The line being sung, YouLy+-style: each word fills left to right like a
- * bar wiping across it, and rises a touch as it is sung. Outside text flow
- * (a growing inline block would reflow the line under it), so the row lays
- * words out as blocks that wrap whole.
+ * The line being sung, YouLy+-style: each word an inline block in the text
+ * flow (like their syllable spans), filling left to right and rising a touch
+ * as it is sung. The block sizes itself to its text once and never again:
+ * paint moves (translate, clip width, shadow), layout doesn't, so switching
+ * lines re-lays nothing out and there is nothing beside the glyphs to read
+ * as bars.
  */
 function AppleWords({
   words,
@@ -843,11 +813,6 @@ const styles = themed((colors) => ({
   coverBox: { overflow: 'hidden', padding: spacing.lg },
   coverBody: { flex: 1, overflow: 'hidden' },
   wrap: { flex: 1 },
-  /** Apple Music-like active line: heavier, on top of the growth. */
-  appleActive: { fontWeight: '700' },
-  /** Apple-style line: words lay out as blocks that wrap whole. */
-  appleLine: { flexDirection: 'row', flexWrap: 'wrap' },
-  appleLineCentered: { justifyContent: 'center' },
   // Right margin so the active line (which grows 8% from the left) doesn't get
   // clipped against the edge.
   content: { paddingBottom: spacing.xl, paddingRight: '10%' },
