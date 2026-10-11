@@ -363,18 +363,14 @@ export default function PlayerSettings() {
           />
           <SwitchList
             options={[
-              ...(Platform.OS === 'android'
-                ? [
-                    {
-                      label: t('Blur inactive lyrics'),
-                      description: t(
-                        'Slightly blur synchronized lyrics other than the current line to emphasize what is playing.',
-                      ),
-                      value: blurInactiveLyrics,
-                      onChange: setBlurInactiveLyrics,
-                    },
-                  ]
-                : []),
+              {
+                label: t('Blur inactive lyrics'),
+                description: t(
+                  'Slightly blur synchronized lyrics other than the current line to emphasize what is playing.',
+                ),
+                value: blurInactiveLyrics,
+                onChange: setBlurInactiveLyrics,
+              },
               {
                 label: t('Show lyrics card'),
                 value: showLyricsCard,

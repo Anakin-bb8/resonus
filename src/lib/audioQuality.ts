@@ -44,6 +44,33 @@ export function isLossless(song: Pick<Song, 'suffix' | 'bitDepth' | 'bitRate'>):
 }
 
 /**
+ * Beyond CD: deeper than 16-bit or past 48 kHz. What Apple calls High-Res.
+ */
+export function isHighRes(song: Pick<Song, 'bitDepth' | 'samplingRate' | 'bitRate'>): boolean {
+  if ((song.bitDepth ?? 0) > 16) return true;
+  if ((song.samplingRate ?? 0) > 48000) return true;
+  return false;
+}
+
+/**
+ * What is actually arriving, for the lossless tag beside the output: null
+ * when a transcode stands between the file and the ears, `lossless` for a
+ * bit-perfect CD-grade stream, `high-res` past that.
+ *
+ * `transcoded` follows the same rule the badge (and the player) uses: a
+ * download whose extension changed, a cache holding a converted stream, or a
+ * server stream over the cap / with a codec asked for.
+ */
+export function playbackLossless(
+  song: Pick<Song, 'suffix' | 'bitDepth' | 'bitRate' | 'samplingRate'>,
+  transcoded: boolean,
+): 'lossless' | 'high-res' | null {
+  if (transcoded) return null;
+  if (!isLossless(song)) return null;
+  return isHighRes(song) ? 'high-res' : 'lossless';
+}
+
+/**
  * What to ask the server for, given the quality settings: `bitRate` 0 means
  * the original file. With `losslessOnly`, a lossy file is never re-encoded
  * (#216).

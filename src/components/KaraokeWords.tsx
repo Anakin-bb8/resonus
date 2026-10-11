@@ -8,7 +8,7 @@
 import MaskedView from '@react-native-masked-view/masked-view';
 import { LinearGradient } from 'expo-linear-gradient';
 import { memo, useEffect } from 'react';
-import { StyleSheet, Text, View, type StyleProp, type TextStyle } from 'react-native';
+import { Platform, StyleSheet, Text, View, type StyleProp, type TextStyle } from 'react-native';
 import Animated, {
   cancelAnimation,
   Easing,
@@ -31,6 +31,19 @@ import {
 import { usePlayerStore } from '@/store/player';
 
 const CLOCK_RUNWAY_MS = 1200;
+
+/**
+ * Held-note shine: below this a word is got through too fast to glow, above
+ * a second it blooms fully. What is sung slowly shines while it is sung and
+ * lets go shortly after, never past the next row.
+ */
+const QUICK_WORD_MS = 250;
+const HELD_WORD_MS = 1200;
+/** How far the shine spreads at full bloom, how bright it gets. */
+const BLOOM_RADIUS = 12;
+const BLOOM_ALPHA = 1;
+/** How long the shine lingers after the word it belongs to is out. */
+const BLOOM_FADE_MS = 500;
 
 interface KaraokeWordsProps {
   words: LyricWord[];
@@ -151,7 +164,14 @@ const TimedWord = memo(function TimedWord({
     if (!animateBounce) return { transform: [{ scale: 1 }] };
     const duration = Math.max(MIN_WORD_TRANSITION_MS, durationMs);
     const raw = Math.max(0, Math.min(1, (clockMs.value - word.start) / duration));
-    const scale = 1 + WORD_BOUNCE_SCALE * Math.sin(raw * Math.PI);
+    const lift = Math.sin(raw * Math.PI);
+    // iOS rasterizes the masked word once, so magnifying it turns the glyphs
+    // soft: there the bounce only lifts, small like the old word rise.
+    // Shifting a layer stays sharp.
+    if (Platform.OS === 'ios') {
+      return { transform: [{ translateY: -height.value * 0.05 * lift }] };
+    }
+    const scale = 1 + WORD_BOUNCE_SCALE * lift;
     return {
       transform: [
         { translateY: -height.value * (scale - 1) * 0.5 },
@@ -185,6 +205,23 @@ const TimedWord = memo(function TimedWord({
     };
   });
 
+  // Held notes bloom: a halo around the word while it is sung, stronger the
+  // longer the note, gone shortly after. Quick words barely light.
+  const glowStyle = useAnimatedStyle(() => {
+    if (!animateBounce) return { textShadowColor: 'transparent', textShadowRadius: 0 };
+    const duration = Math.max(MIN_WORD_TRANSITION_MS, durationMs);
+    const slow = Math.max(0, Math.min(1, (duration - QUICK_WORD_MS) / (HELD_WORD_MS - QUICK_WORD_MS)));
+    if (slow <= 0) return { textShadowColor: 'transparent', textShadowRadius: 0 };
+    const wordEnd = word.end ?? word.start + duration;
+    const fill = Math.max(0, Math.min(1, (clockMs.value - word.start) / duration));
+    const after = Math.max(0, Math.min(1, (clockMs.value - wordEnd) / BLOOM_FADE_MS));
+    const bloom = fill * (1 - after) * slow;
+    return {
+      textShadowColor: `rgba(255, 255, 255, ${(bloom * BLOOM_ALPHA).toFixed(2)})`,
+      textShadowRadius: bloom * BLOOM_RADIUS,
+    };
+  });
+
   return (
     <Animated.View
       style={motionStyle}
@@ -193,9 +230,12 @@ const TimedWord = memo(function TimedWord({
         height.value = event.nativeEvent.layout.height;
       }}
     >
-      <Text accessible={false} style={[textStyle, { color: inactiveColor }]}>
+      <Animated.Text
+        accessible={false}
+        style={[textStyle, { color: inactiveColor, textShadowOffset: { width: 0, height: 0 } }, glowStyle]}
+      >
         {word.value}
-      </Text>
+      </Animated.Text>
       <MaskedView
         pointerEvents="none"
         style={StyleSheet.absoluteFill}

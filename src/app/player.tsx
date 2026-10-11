@@ -4,7 +4,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useIsFocused, useRouter } from 'expo-router';
-import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   AppState,
@@ -43,15 +43,18 @@ import { OutputSheet } from '@/components/OutputSheet';
 import { SpeedSheet } from '@/components/SpeedSheet';
 import { StarRating } from '@/components/StarRating';
 import { useAnimatedCover } from '@/hooks/useAnimatedCover';
+import { useAudioRoute } from '@/hooks/useAudioRoute';
 import { toneOf, useDominantColor } from '@/hooks/useDominantColor';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { useLocalProfile } from '@/hooks/useLocalProfile';
+import { useLosslessTag } from '@/hooks/useLosslessTag';
 import { useLyrics } from '@/hooks/useLyrics';
 import { useScreenSize } from '@/hooks/useScreenSize';
 import { useT } from '@/i18n';
 import { revealOffset } from '@/lib/playerReveal';
 import { artistTargets } from '@/lib/artistNav';
 import { formatGroupedDeviceLabel } from '@/lib/format';
+import { routeIcon, type AudioRouteKind } from '@/lib/audioRouteTypes';
 import { applyStarChange, resyncFavorites } from '@/lib/favoritesCache';
 import { haptic } from '@/lib/haptics';
 import { localHttpAvailable } from '@/lib/localHttp';
@@ -229,6 +232,14 @@ function SleepButton({ onPress, color }: { onPress: () => void; color: string })
   );
 }
 
+/** Generic label for a route kind whose system withheld the real name. */
+function routeFallbackKey(kind: AudioRouteKind): string {
+  if (kind === 'bluetooth') return 'Bluetooth';
+  if (kind === 'wired') return 'Wired headphones';
+  if (kind === 'car') return 'Car';
+  return 'AirPlay';
+}
+
 function usePaneStyle(offset: SharedValue<number>, k: number, step: SharedValue<number>) {
   return useAnimatedStyle(() => {
     // A screen's width, and it is a shared value rather than a constant
@@ -291,7 +302,18 @@ export default function PlayerScreen() {
   const coverDoubleTapAction = useSettings((s) => s.coverDoubleTapAction);
   const marqueeTitles = useSettings((s) => s.marqueeTitles);
   const playerButtons = useSettings((s) => s.playerButtons);
-  const spreadButtons = useSettings((s) => s.playerButtonsLayout === 'spread');
+  // Device extras widen the row: with any of them on the row is always
+  // spread across the width, and holds at most three buttons (two when
+  // both are on). The editor locks itself to the same numbers.
+  const showDeviceName = useSettings((s) => s.showDeviceName);
+  const showLosslessTag = useSettings((s) => s.showLosslessTag);
+  const deviceExtrasOn = (showDeviceName ? 1 : 0) + (showLosslessTag ? 1 : 0);
+  const spreadButtons =
+    useSettings((s) => s.playerButtonsLayout === 'spread') || deviceExtrasOn > 0;
+  const maxBarButtons =
+    deviceExtrasOn === 2 ? 2 : deviceExtrasOn === 1 ? 3 : Number.POSITIVE_INFINITY;
+  const route = useAudioRoute();
+  const losslessTag = useLosslessTag(song ?? null);
   const local = useLocalProfile();
   // The local profile can cast now that the phone serves its own files
   // (`lib/localHttp`), so the only reason left to hide the button there is a
@@ -966,6 +988,33 @@ export default function PlayerScreen() {
     devices: !buttonOn('devices') && canDevices && !remoteDevice ? () => setOutputOpen(true) : undefined,
     speed: !buttonOn('speed') && canSpeed && speed === 1 ? () => openSpeedSheet.current() : undefined,
   });
+  // With device extras the row is crowded: pinned essentials (the cast way
+  // out, an off-normal speed with no other way back) always stay, the rest
+  // fills the row up to the cap, in the listener's order.
+  const barKeys = (() => {
+    const out: string[] = [];
+    let n = 0;
+    for (const { key, enabled } of playerButtons) {
+      const pinned = (key === 'devices' && !!remoteDevice) || (key === 'speed' && speed !== 1);
+      const shown =
+        key === 'devices'
+          ? (enabled && canDevices) || !!remoteDevice
+          : key === 'lyrics'
+            ? enabled
+            : key === 'speed'
+              ? enabled || speed !== 1
+              : enabled;
+      if (!shown) continue;
+      if (pinned || n < maxBarButtons) {
+        out.push(key);
+        if (!pinned) n++;
+      }
+    }
+    return new Set(out);
+  })();
+  // The row in render order, so the lossless mark can sit after the first
+  // button.
+  const visibleBarButtons = playerButtons.filter(({ key }) => barKeys.has(key));
 
   return (
     <GestureDetector gesture={dismissPan}>
@@ -1497,15 +1546,33 @@ export default function PlayerScreen() {
               !(wantsLyricsCard || wantsArtistCard) && { marginTop: spacing.xl },
             ]}
           >
-            {playerButtons.map(({ key, enabled }) => {
-              switch (key) {
-                case 'devices':
+            {visibleBarButtons.map(({ key, enabled }, i) => {
+              const el = (() => {
+                switch (key) {
+                    case 'devices': {
                   // Connected to a remote device it's always shown: it's the
                   // only way to disconnect the cast. Never disabled any more:
                   // downloads cast from the phone, so offline there is
                   // something to send, and going offline mid-cast used to
                   // leave the way out barred.
-                  return (enabled && canDevices) || remoteDevice ? (
+                  if (!((enabled && canDevices) || remoteDevice)) return null;
+                  // A local route worth naming: headphones, Bluetooth, the car
+                  // or AirPlay. The speaker and the unknown read as no device.
+                  const local =
+                    !remoteDevice &&
+                    route &&
+                    route.kind !== 'builtin' &&
+                    route.kind !== 'other'
+                      ? route
+                      : null;
+                  const icon = remoteDevice
+                    ? 'laptop-outline'
+                    : (local && routeIcon(local.kind)) || 'laptop-outline';
+                  const lit = !!remoteDevice || !!local;
+                  const name = showDeviceName
+                    ? (remoteDevice ?? (local ? local.name || t(routeFallbackKey(local.kind)) : null))
+                    : null;
+                  return (
                     <Pressable
                       key={key}
                       hitSlop={10}
@@ -1514,18 +1581,15 @@ export default function PlayerScreen() {
                       onPress={() => setOutputOpen(true)}
                       style={styles.deviceRow}
                     >
-                      <Icon
-                        name="laptop-outline"
-                        size={26}
-                        color={remoteDevice ? colors.accent : ink}
-                      />
-                      {remoteDevice ? (
+                      <Icon name={icon} size={26} color={lit ? colors.accent : ink} />
+                      {name ? (
                         <Text style={[styles.deviceName, { color: colors.accent }]} numberOfLines={1}>
-                          {remoteDevice}
+                          {name}
                         </Text>
                       ) : null}
                     </Pressable>
-                  ) : null;
+                  );
+                }
                 case 'lyrics':
                   return enabled ? (
                     <Pressable
@@ -1584,7 +1648,29 @@ export default function PlayerScreen() {
                       <Icon name="layers-outline" size={26} color={ink} />
                     </Pressable>
                   ) : null;
+                }
+              })();
+              const tag = showLosslessTag && losslessTag ? (
+                // The lossless mark rides with the leftmost button, whatever
+                // it is: a dot and a word, in the accent like the device.
+                <View style={styles.losslessTag}>
+                  <View style={styles.losslessDot} />
+                  <Text style={styles.losslessText} numberOfLines={1}>
+                    {losslessTag === 'high-res' ? t('High-Res Lossless') : t('Lossless')}
+                  </Text>
+                </View>
+              ) : null;
+              if (i === 0 && tag) {
+                // One flex item, so spread keeps button and mark together at
+                // the edge instead of distributing the mark to the middle.
+                return (
+                  <View key={key} style={styles.leadCluster}>
+                    {el}
+                    {tag}
+                  </View>
+                );
               }
+              return <Fragment key={key}>{el}</Fragment>;
             })}
           </View>
         </View>
@@ -1775,8 +1861,8 @@ const styles = themed((colors) => ({
   },
   bottomRowSpread: { justifyContent: 'space-between', gap: 0 },
   // Like Spotify Connect: icon + device name in accent when casting.
-  // The same box as the other buttons in the row; only the device name, while
-  // casting, makes it wider, and it is capped so the row stays centred.
+  // The same box as the other buttons in the row; the name makes it wider,
+  // and it is capped so the row stays centred.
   deviceRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1789,6 +1875,29 @@ const styles = themed((colors) => ({
     fontSize: fontSize.xs,
     fontWeight: '500',
     flexShrink: 1,
+  },
+  // The lossless mark after the first button: a dot and a word in the
+  // accent, the same step from the button as between dot and word.
+  // The first button and the mark ride one flex item (below), so spread
+  // keeps them together at the edge.
+  leadCluster: { flexDirection: 'row', alignItems: 'center' },
+  losslessTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    height: 40,
+    marginLeft: spacing.sm,
+  },
+  losslessDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
+    backgroundColor: colors.accent,
+  },
+  losslessText: {
+    color: colors.accent,
+    fontSize: fontSize.sm,
+    fontWeight: '600',
   },
   bottomButton: {
     flexDirection: 'row',

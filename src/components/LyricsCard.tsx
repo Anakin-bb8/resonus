@@ -7,6 +7,7 @@
  */
 import Icon from '@/components/Icon';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Font from 'expo-font';
 import { Fragment, memo, useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -47,6 +48,7 @@ import { pushOnce } from '@/lib/pushOnce';
 import { currentSong, usePlayerStore } from '@/store/player';
 import {
   LYRICS_SIZE_POINTS,
+  APP_FONT_FAMILY,
   type LyricsSize,
   type LyricsWeight,
   useSettings,
@@ -230,7 +232,7 @@ export function SyncedLyricsView({
   const weight = useSettings((s) => s.lyricsWeight);
   const centered = useSettings((s) => s.lyricsAlign) === 'center';
   const blurInactiveLyrics = useSettings((s) => s.blurInactiveLyrics);
-  const blurEnabled = Platform.OS === 'android' && blurInactiveLyrics && !browsing;
+  const blurEnabled = blurInactiveLyrics && !browsing;
 
   const onMeasure = useCallback((index: number, y: number, h: number) => {
     const previous = offsets.current[index];
@@ -426,9 +428,21 @@ const LyricRow = memo(({
 }) => {
   // Memoized, so the screen repainting is not enough to bring this one along.
   useTheme();
+  // Same custom-font rule as the style hook below: with a user font file the
+  // weight is dropped or iOS falls back to the system font.
+  const appFont = useSettings((s) => s.appFont);
+  const customFontFamily = useSettings((s) => s.customFontFamily);
+  const customFont = appFont === 'custom' && !!customFontFamily;
+  // Animated texts skip the global family injection (it only patches `Text`),
+  // so the karaoke words carry the resolved family explicitly. Unloaded custom
+  // files resolve to nothing and the system font stands in until they load.
+  const fontFamily =
+    appFont === 'custom'
+      ? (customFontFamily && Font.isLoaded(customFontFamily) ? customFontFamily : undefined)
+      : APP_FONT_FAMILY[appFont];
   // Primuse's line takeover coordinates scale and opacity with auto-scroll.
-  // Blur takes a gentler path because Android's filter is visually stronger
-  // and a fast change reads as the completed line suddenly losing focus.
+  // Blur takes a gentler path because a fast change reads as the completed
+  // line suddenly losing focus.
   const focus = useSharedValue(active ? 1 : 0);
   const dim = useSharedValue(active ? 1 : past ? 0.36 : 0.46);
   const blur = useSharedValue(blurRadius);
@@ -454,25 +468,30 @@ const LyricRow = memo(({
     });
   }, [blur, blurRadius]);
   // The growth (8%) is compensated by the right margin of `content` so the
-  // active line, scaling from the left, doesn't overflow the edge.
+  // active line, scaling from the left, doesn't overflow the edge. iOS is
+  // left out of the magnification: like the word bounce, scaling rasterized
+  // masked text softens the glyphs, so there the takeover is dim only.
   const anim = useAnimatedStyle(() => {
     const radius = blur.value;
     return {
       opacity: dim.value,
-      transform: [{ scale: 1 + focus.value * 0.08 }],
+      transform: Platform.OS === 'ios' ? [] : [{ scale: 1 + focus.value * 0.08 }],
       // RN's Android filter clips descendants. Omitting it entirely at zero
       // keeps the active word bounce free to rise outside its glyph box.
       filter: radius > 0.01 ? [{ blur: radius }] : undefined,
     };
   });
-  const lineStyle = lyricsLineStyle(large, size, weight, centered);
+  const lineStyle = lyricsLineStyle(large, size, weight, centered, customFont);
   const flattened = StyleSheet.flatten(lineStyle) as TextStyle;
+  // No `undefined` keys, ever: RN's flatten copies them over earlier styles,
+  // which would wipe the injected font family (killing custom fonts) and the
+  // Android weight fix. Only set keys carry over.
   const wordTextStyle: TextStyle = {
-    fontFamily: flattened.fontFamily,
+    ...(fontFamily ? { fontFamily } : {}),
     fontSize: flattened.fontSize,
-    fontStyle: flattened.fontStyle,
-    fontWeight: flattened.fontWeight,
-    letterSpacing: flattened.letterSpacing,
+    ...(flattened.fontStyle ? { fontStyle: flattened.fontStyle } : {}),
+    ...(flattened.fontWeight ? { fontWeight: flattened.fontWeight } : {}),
+    ...(flattened.letterSpacing ? { letterSpacing: flattened.letterSpacing } : {}),
     lineHeight: flattened.lineHeight,
   };
   const paddingVertical = typeof flattened.paddingVertical === 'number'
@@ -635,7 +654,13 @@ export function useLyricsLineStyle(large?: boolean) {
   const size = useSettings((s) => s.lyricsSize);
   const weight = useSettings((s) => s.lyricsWeight);
   const centered = useSettings((s) => s.lyricsAlign) === 'center';
-  return lyricsLineStyle(large, size, weight, centered);
+  // A user-picked font file holds a single face: on iOS naming both it and a
+  // weight makes CoreText miss the file and fall back to the system font, so
+  // the custom font would never apply to lyrics. With one, the weight goes.
+  const appFont = useSettings((s) => s.appFont);
+  const customFontFamily = useSettings((s) => s.customFontFamily);
+  const customFont = appFont === 'custom' && !!customFontFamily;
+  return lyricsLineStyle(large, size, weight, centered, customFont);
 }
 
 function lyricsLineStyle(
@@ -643,6 +668,7 @@ function lyricsLineStyle(
   size: LyricsSize,
   weight: LyricsWeight,
   centered: boolean,
+  customFont: boolean,
 ) {
   // The setting is expressed in full-screen points. Compact surfaces retain
   // the old 20:28 ratio, so the default is visually unchanged while every
@@ -655,7 +681,9 @@ function lyricsLineStyle(
   return [
     lyricsStyles.line,
     large && lyricsStyles.lineLarge,
-    { fontSize: textSize, lineHeight, fontWeight: weight },
+    // No weight key at all with a custom font file (see above): even an
+    // `undefined` would read as set here.
+    { fontSize: textSize, lineHeight, ...(customFont ? {} : { fontWeight: weight }) },
     centered && lyricsStyles.centered,
   ];
 }

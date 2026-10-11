@@ -1065,6 +1065,10 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   miniPlayerColorBackground: boolean;
   /** Lyrics card below the player controls. */
   showLyricsCard: boolean;
+  /** Output name beside the devices button (headphones, cast target, …). */
+  showDeviceName: boolean;
+  /** Lossless tag beside the output when the stream is bit-perfect. */
+  showLosslessTag: boolean;
   /** Artist card below the player controls. */
   showArtistCard: boolean;
   /** What tapping the player cover does (nothing / lyrics screen /
@@ -1342,6 +1346,9 @@ const DEFAULTS = {
   // Off by default: the card pushes the controls up on shorter screens, and
   // the lyrics screen is one tap away on the cover.
   showLyricsCard: false,
+  // Both on: the devices button carries the output, so they read as one.
+  showDeviceName: true,
+  showLosslessTag: true,
   // Off for the same reason, and it also needs a biography to show anything.
   showArtistCard: false,
   // By default, tapping the cover opens the lyrics screen (as always).
