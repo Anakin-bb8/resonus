@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 793 of them.
+Every string the app can show, under the screen it shows up on. 795 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -281,7 +281,7 @@ you are actually typing into, which is easier than reading it here.
 | `Couldn't load favorites.` | Error on the screen, with a Retry button |
 | `Find in favorites` | Placeholder of the search box that narrows the favourites already shown |
 | `No favorites yet` | Empty state heading |
-| `Tap the plus button on songs to see them here.` | The line under an empty state, saying how to fill it |
+| `Tap the heart on songs to see them here.` | The line under an empty state, saying how to fill it |
 
 ## Favorites add
 
@@ -356,7 +356,6 @@ you are actually typing into, which is easier than reading it here.
 | `Random songs` |  |
 | `Recent episodes` |  |
 | `Scanning your music…` | Going through the phone's own files |
-| `Settings` | The app's settings, and the button that opens them |
 
 ## Library
 
@@ -451,6 +450,7 @@ you are actually typing into, which is easier than reading it here.
 | `History` | The listening history: what was played and when |
 | `Mix of “{name}”` | What the player calls the queue once it has grown past its album into songs the app picked itself. `{name}` is the song it was grown from |
 | `No devices found` |  |
+| `No lyrics available for this song.` | Empty state on the lyrics screen |
 | `NOW PLAYING` | Small label above the cover, in the same place and style as `PLAYING FROM`, when there is nothing to name |
 | `Output` |  |
 | `Playback speed` |  |
@@ -633,7 +633,6 @@ you are actually typing into, which is easier than reading it here.
 | `Music on your device` | Signing in to nothing at all and playing the phone's own files |
 | `Offline · your downloads` | Settings subtitle shown in offline mode |
 | `Offline mode` | The app working with no server: downloads only |
-| `Profile picture` |  |
 | `Settings` | The app's settings, and the button that opens them |
 
 ## Settings › About
@@ -785,6 +784,7 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
+| `Always shown` | Said where a switch would be, on the Home tab, which cannot be taken off the bar |
 | `Home buttons` | The icons at the top right of Home (search, history, settings), which of them show and in what order |
 
 ## Settings › Home chips
@@ -983,7 +983,9 @@ you are actually typing into, which is easier than reading it here.
 | `Animated cover background` | A setting: an animated cover (GIF, animated WebP) is shown full screen behind the player instead of inside the square |
 | `Animated cover frame rate` |  |
 | `Background` | Section header over what is drawn behind the player. Its two values are `Plain` and `Blurred cover` |
+| `Blur inactive lyrics` | A switch in the Lyrics section: progressively softens synchronized lyric rows away from the current line |
 | `Blurred cover` | A value of `Background`: the album art, blurred, behind the player |
+| `Bold font weight` | One of the values of “Lyrics weight” |
 | `Bottom row` |  |
 | `Buttons` | Which player buttons to show |
 | `Buttons next to play` |  |
@@ -999,11 +1001,14 @@ you are actually typing into, which is easier than reading it here.
 | `Keep paused when skipping` |  |
 | `Large` | One of the values of “Lyrics size” |
 | `Left` | One of the values of “Lyrics alignment” |
+| `Light font weight` | One of the values of “Lyrics weight” |
 | `Lyrics alignment` |  |
 | `Lyrics background` | What is drawn behind the lyrics screen, the full screen one |
 | `Lyrics card background` | What is drawn behind the small lyrics card that peeks under the player. Not the same thing as `Lyrics background` |
 | `Lyrics size` |  |
 | `Lyrics source` | Where lyrics are looked for. Its values are the three `Prefer…`/`Disable…` lines |
+| `Lyrics weight` |  |
+| `Medium font weight` | One of the values of “Lyrics weight” |
 | `Mini player` |  |
 | `Mini player blur` |  |
 | `No` | A setting value meaning none or zero, not the answer to a question: no crossfade, no seek buttons |
@@ -1022,8 +1027,10 @@ you are actually typing into, which is easier than reading it here.
 | `Previous and next` | One of the values of “Buttons next to play” |
 | `Previous button` | What the previous button does when a song is already playing. Its values are the two lines below it |
 | `Queue` | The list of songs waiting to play. Not a playlist |
+| `Regular font weight` | One of the values of “Lyrics weight” |
 | `Restart, then previous track` | A value of `Previous button`: the first press goes back to the start of this song, the second to the one before |
 | `Scroll long titles` | A title too long to fit slides sideways, over and over, instead of being cut off |
+| `Semi-bold font weight` | One of the values of “Lyrics weight” |
 | `Show album & year` |  |
 | `Show artist card` |  |
 | `Show lyrics card` |  |
@@ -1033,6 +1040,7 @@ you are actually typing into, which is easier than reading it here.
 | `Show quality label` |  |
 | `Show rating` |  |
 | `Skip buttons` | The seek forward / back buttons setting |
+| `Slightly blur synchronized lyrics other than the current line to emphasize what is playing.` | Help text under that switch. Only the current synchronized lyric line stays sharp |
 | `Small` | One of the values of “Lyrics size” |
 | `Swap favorite and menu` | Exchange the places of those two buttons in the player, for whichever hand you hold the phone in |
 | `Where to get lyrics from. Online search uses LRCLIB (sends the artist and title).` |  |
@@ -1045,18 +1053,6 @@ you are actually typing into, which is easier than reading it here.
 | `Bottom row` |  |
 | `Grouped in the middle` | One of the values of “Arrangement” |
 | `Spread across the width` | One of the values of “Arrangement” |
-
-## Settings › Profile picture
-
-| String | What it is |
-| --- | --- |
-| `Always shown` | Said where a switch would be, on the Home tab, which cannot be taken off the bar |
-| `Choose photo` |  |
-| `Profile picture` |  |
-| `Remove photo` |  |
-| `Round, beside the Home chips: tapping it opens Settings.` | The line under “Show profile picture”, explaining it |
-| `Show profile picture` |  |
-| `With the settings icon off, your picture stays on so settings are one tap away.` |  |
 
 ## Settings › Quick grid
 

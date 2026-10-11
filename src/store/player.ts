@@ -24,7 +24,6 @@ import {
 } from 'expo-audio';
 import { fetch as expoFetch } from 'expo/fetch';
 import * as FileSystem from 'expo-file-system/legacy';
-import { Image } from 'expo-image';
 import * as Network from 'expo-network';
 import { AppState, Platform } from 'react-native';
 import { create } from 'zustand';
@@ -61,7 +60,7 @@ import { favoriteLabel, favoriteState, onFavoritesChange, toggleFavorite } from 
 import type { Remap } from '@/lib/navidromeRemap';
 import { remapSong } from '@/lib/navidromeRemap';
 import { noteOwnReport } from '@/lib/ownReports';
-import { beat, bump, cpuBeat, note, timed } from '@/lib/perfLog';
+import { beat, bump, note, timed } from '@/lib/perfLog';
 import { queryClient } from '@/lib/query';
 import {
   appendEnd,
@@ -1357,9 +1356,6 @@ function onTrackChanged(song: Song) {
  */
 function cacheUpcoming() {
   if (bootQuiet || !useSettings.getState().songCache) return;
-  // Started backgrounded, it would die on suspend: the foreground return
-  // flushes this again (see `attachAppState`).
-  if (AppState.currentState !== 'active') return;
   const { auth, offline } = useAuthStore.getState();
   // A renderer fetches from the server itself; nothing plays on the phone.
   if (!auth || offline || remoteKind()) return;
@@ -2777,7 +2773,6 @@ function onStatus(status: AudioStatus, live = false) {
   // survives the app being minimized, so whether it arrives is the first thing
   // worth knowing about the minutes nobody was watching (see `beat`).
   beat(status.playing);
-  cpuBeat();
   // With remote output (UPnP/DLNA) the local player is paused and its
   // states should not override those coming from the remote device.
   if (remoteKind()) return;
@@ -3440,13 +3435,6 @@ function attachAppState() {
       syncQueueNow(true, false);
       wentAway = Date.now();
       markAway();
-      // The decoded-image pile goes with the screen: hundreds of megabytes of
-      // covers stay resident after scrolling a library, and the image thread
-      // keeps chewing on them out there (cpu_resource kill, 84% over 57s).
-      // Memory cache only — disk stays, and what is on screen re-decodes on
-      // return. Nothing visible changes; the next launch just has less to die
-      // of.
-      void Image.clearMemoryCache().catch(() => {});
       return;
     }
     clearAway();
@@ -3481,9 +3469,6 @@ function attachAppState() {
     // Not for a trip to another app and back, though: changing players takes
     // longer than that, and this is a request.
     if (Date.now() - wentAway > 30_000) void adoptNewerServerQueue();
-    // Whatever the background skipped: the cache did not fill while away.
-    // (The cards fetch on demand, but the cache only fills when asked.)
-    cacheUpcoming();
     // Still waiting out a dead connection: it did not come back while nobody
     // was watching, so the stop becomes final now that somebody is — with
     // the toast the background never showed.

@@ -347,8 +347,14 @@ export type CoverDoubleTapAction = CoverTapAction;
  */
 export type LyricsSource = 'local' | 'online' | 'off';
 
-/** Type size on the full-screen lyrics. */
+/** Type size on every lyrics surface. */
 export type LyricsSize = 'small' | 'normal' | 'large';
+/** Each size in full-screen points; the compact surfaces scale from these. */
+export const LYRICS_SIZE_POINTS: Record<LyricsSize, number> = { small: 22, normal: 28, large: 34 };
+
+/** Font weights Android and iOS can both synthesize consistently. */
+export const LYRICS_WEIGHTS = ['300', '400', '500', '600', '700'] as const;
+export type LyricsWeight = (typeof LYRICS_WEIGHTS)[number];
 export type LyricsAlign = 'left' | 'center';
 /** What sits next to play on the mini player. */
 export type MiniPlayerButtons = 'favorite' | 'next' | 'previousNext' | 'none';
@@ -801,6 +807,7 @@ type PersistedKey = keyof Persisted;
  *  anything and checks. */
 type Reshaped =
   | 'showAudioQuality'
+  | 'lyricsSize'
   | 'homeSections'
   | 'homeChips'
   | 'exploreSections'
@@ -999,7 +1006,11 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
    */
   lyricsSource: LyricsSource;
   lyricsSize: LyricsSize;
+  /** Thickness of lyric glyphs, from light (300) to bold (700). */
+  lyricsWeight: LyricsWeight;
   lyricsAlign: LyricsAlign;
+  /** Progressively blur synchronized lyric rows away from the current line. */
+  blurInactiveLyrics: boolean;
   /** The names under the icons of the navigation bar. */
   showTabLabels: boolean;
   miniPlayerButtons: MiniPlayerButtons;
@@ -1307,7 +1318,10 @@ const DEFAULTS = {
   lyricsCardBackground: 'color' as CardBackground,
   lyricsSource: 'local' as LyricsSource,
   lyricsSize: 'normal' as LyricsSize,
+  lyricsWeight: '500' as LyricsWeight,
   lyricsAlign: 'left' as LyricsAlign,
+  // Opt-in, matching Primuse: it changes the reading treatment substantially.
+  blurInactiveLyrics: false,
   showTabLabels: true,
   miniPlayerButtons: 'favorite' as MiniPlayerButtons,
   miniPlayerProgress: true,
@@ -1466,6 +1480,7 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
     showSpeedButton?: boolean;
     lyricsColorBackground?: boolean;
     lyricsOnlineFallback?: boolean;
+    lyricsSize?: unknown;
     playerColorBackground?: boolean;
     swipeToQueue?: boolean;
     showExploreChips?: boolean;
@@ -1588,6 +1603,13 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
     all.includes(v as T);
   if (oneOf(parsed.lyricsSize, ['small', 'normal', 'large'] as const)) {
     set({ lyricsSize: parsed.lyricsSize });
+  } else if (typeof parsed.lyricsSize === 'number') {
+    // A build briefly stored it as points: the nearest of the three.
+    const pts = parsed.lyricsSize;
+    set({ lyricsSize: pts < 25 ? 'small' : pts < 31 ? 'normal' : 'large' });
+  }
+  if (oneOf(parsed.lyricsWeight, LYRICS_WEIGHTS)) {
+    set({ lyricsWeight: parsed.lyricsWeight });
   }
   if (oneOf(parsed.lyricsAlign, ['left', 'center'] as const)) {
     set({ lyricsAlign: parsed.lyricsAlign });

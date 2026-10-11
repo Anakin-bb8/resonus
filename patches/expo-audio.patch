@@ -1973,7 +1973,7 @@ new file mode 100644
 index 0000000000000000000000000000000000000000..7e949bf2fb325d00f0ae39ce158d5365de15228a
 --- /dev/null
 +++ b/ios/AnimatedArtwork.swift
-@@ -0,0 +1,717 @@
+@@ -0,0 +1,702 @@
 +import AVFoundation
 +import CoreGraphics
 +import CoreImage
@@ -2176,7 +2176,7 @@ index 0000000000000000000000000000000000000000..7e949bf2fb325d00f0ae39ce158d5365
 +    var mask: CGImage? = nil
 +    if ratio == .tall {
 +      backdrop = Self.blurred(frame).flatMap { Self.sized($0, to: size) }
-+      mask = Self.featherMask(size: Self.fitted(frame, in: Self.artRect(in: size)).size)
++      mask = Self.featherMask(size: Self.artRect(in: size).size)
 +    }
 +    return UIGraphicsImageRenderer(size: size, format: format).image { renderer in
 +      let context = renderer.cgContext
@@ -2197,21 +2197,6 @@ index 0000000000000000000000000000000000000000..7e949bf2fb325d00f0ae39ce158d5365
 +    return CGRect(x: 0, y: (canvas.height - side) / 2, width: side, height: side)
 +  }
 +
-+  /// The frame fitted inside a rect without distortion: a tall cover keeps
-+  /// its proportions instead of being stretched into the art square.
-+  private static func fitted(_ image: CGImage, in rect: CGRect) -> CGRect {
-+    let iw = CGFloat(image.width), ih = CGFloat(image.height)
-+    guard iw > 0, ih > 0, rect.width > 0, rect.height > 0 else { return rect }
-+    let scale = min(rect.width / iw, rect.height / ih)
-+    let size = CGSize(width: iw * scale, height: ih * scale)
-+    return CGRect(
-+      x: rect.minX + (rect.width - size.width) / 2,
-+      y: rect.minY + (rect.height - size.height) / 2,
-+      width: size.width,
-+      height: size.height
-+    )
-+  }
-+
 +  private func draw(
 +    _ frame: CGImage,
 +    in context: CGContext,
@@ -2224,10 +2209,10 @@ index 0000000000000000000000000000000000000000..7e949bf2fb325d00f0ae39ce158d5365
 +    guard ratio == .tall, let backdrop else {
 +      context.setFillColor(red: 0, green: 0, blue: 0, alpha: 1)
 +      context.fill(bounds)
-+      context.draw(frame, in: Self.fitted(frame, in: bounds))
++      context.draw(frame, in: bounds)
 +      return
 +    }
-+    let art = Self.fitted(frame, in: Self.artRect(in: canvas))
++    let art = Self.artRect(in: canvas)
 +    guard let mask else {
 +      // Only when the mask could not be built: the feather is the point of
 +      // the composition, but a cover without it still reads.
@@ -2513,7 +2498,7 @@ index 0000000000000000000000000000000000000000..7e949bf2fb325d00f0ae39ce158d5365
 +       let first = CGImageSourceCreateImageAtIndex(source, 0, Self.frameOptions),
 +       let blurred = Self.blurred(first) {
 +      backdrop = Self.sized(blurred, to: canvas)
-+      mask = Self.featherMask(size: Self.fitted(first, in: Self.artRect(in: canvas)).size)
++      mask = Self.featherMask(size: Self.artRect(in: canvas).size)
 +    } else {
 +      backdrop = nil
 +      mask = nil
@@ -3028,19 +3013,7 @@ index 074294321e872bb53c0b2d41044dac3c612f14f0..c3f06ed799a991d94e9cd2516ed9b80f
      if let queuePlayer = ref as? AVQueuePlayer {
        queuePlayer.removeAllItems()
        if let item {
-@@ -424,5 +495,9 @@ private func enqueueNextLoopItem() {
-     guard queuePlayer.items().count <= 1 else {
-       return
-     }
--    let nextItem = AVPlayerItem(asset: currentItem.asset)
--    nextItem.audioTimePitchAlgorithm = currentItem.audioTimePitchAlgorithm
-+    let nextItem = AVPlayerItem(asset: currentItem.asset)
-+    // Same lookahead bound as AudioUtils.createAVPlayerItem: a loop copy
-+    // replays the same asset, and without the cap the copy buffers the song
-+    // ahead a second time while the original item holds its own window.
-+    nextItem.preferredForwardBufferDuration = 60
-+    nextItem.audioTimePitchAlgorithm = currentItem.audioTimePitchAlgorithm
-@@ -429,12 +504,67 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+@@ -429,12 +500,67 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
      queuePlayer.insert(nextItem, after: currentItem)
    }
  
@@ -3109,7 +3082,7 @@ index 074294321e872bb53c0b2d41044dac3c612f14f0..c3f06ed799a991d94e9cd2516ed9b80f
        queuePlayer.remove(item)
      }
    }
-@@ -459,7 +589,21 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+@@ -459,7 +585,21 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
          return
        }
  
@@ -3201,18 +3174,6 @@ index 79c7c0b256581a768c42a0291bf84bdff4c4b142..ca13e59c53a7f9a3a5fc49d94b266c62
      }
  
      let asset = AVURLAsset(url: finalUrl, options: options)
-@@ -93,4 +107,10 @@ struct AudioUtils {
--    return AVPlayerItem(asset: asset, automaticallyLoadedAssetKeys: [.tracks, .duration])
-+    let item = AVPlayerItem(asset: asset, automaticallyLoadedAssetKeys: [.tracks, .duration])
-+    // A bounded lookahead: the default buffers a whole file when the network
-+    // is fast, per player, plus the gapless item waiting behind - hundreds of
-+    // MB held for audio minutes away. Session B died in 27s by jetsam of a
-+    // fat process with the image cache already cleared: this bulk is next.
-+    item.preferredForwardBufferDuration = 60
-+    return item
-   }
- 
-   static func createRecordingOptions(_ options: RecordingOptions) -> [String: Any] {
 diff --git a/ios/MediaController.swift b/ios/MediaController.swift
 index e977f577cd2e16b194b56537ad76b423f40d2496..4f16e709309c0a9f8b690232ae23d8067cdb1cda 100644
 --- a/ios/MediaController.swift
