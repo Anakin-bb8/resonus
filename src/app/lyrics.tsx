@@ -1,22 +1,18 @@
 /**
- * Full-screen lyrics page (expanded from the player card), Spotify-style:
- * background from the cover's dominant color, karaoke with tap-line-to-seek
- * and basic controls (progress and play/pause) at the bottom.
+ * Full-screen lyrics page, Apple/BitChord style: a header (close, title,
+ * artist), the karaoke list, and basic controls (progress and play/pause) at
+ * the bottom. Nothing else — solid background, no artwork wash, no fades.
  */
 import Icon from '@/components/Icon';
-import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { COVER, songCoverUrl } from '@/api/data';
 import { SyncedLyricsView, useLyricsLineStyle } from '@/components/LyricsCard';
 import { SeekBar } from '@/components/SeekBar';
-import { useDominantColor } from '@/hooks/useDominantColor';
 import { useLyrics } from '@/hooks/useLyrics';
 import { useT } from '@/i18n';
 import { currentSong, usePlayerStore } from '@/store/player';
-import { useSettings } from '@/store/settings';
 import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 import { centredPadding, useScreenSize } from '@/hooks/useScreenSize';
 
@@ -35,16 +31,6 @@ export default function LyricsScreen() {
   const next = usePlayerStore((s) => s.next);
   const { data, isLoading } = useLyrics(song ?? undefined);
   const plainLineStyle = useLyricsLineStyle(true);
-  const background = useSettings((s) => s.lyricsBackground);
-  const cover = song ? songCoverUrl(song, COVER.card) : undefined;
-  // Only extract the palette when it's actually going to be used.
-  const dominant = useDominantColor(background === 'color' ? cover : undefined);
-  const bg = background === 'color' ? dominant : colors.background;
-  // No edge fade over the artwork: that effect paints a gradient from a SOLID
-  // colour, and with an image behind there is no colour to fade into — it came
-  // out as two black bands with hard edges, only as wide as the lyrics body.
-  // The scrim already keeps the text readable, so the fade just goes away.
-  const fadeColor = background === 'cover' ? undefined : bg;
   const duration = durationSec || song?.duration || 0;
   const insets = useSafeAreaInsets();
   // Inside a full-screen modal iOS reports no top inset, and the close
@@ -52,24 +38,7 @@ export default function LyricsScreen() {
   const topPad = insets.top > 0 ? insets.top : 12;
 
   return (
-    <View style={[styles.root, { backgroundColor: bg }]}>
-      {background === 'cover' && cover ? (
-        <>
-          {/* Same as the player: no `recyclingKey`, or the change of song
-              blanks this to black before the next cover arrives. */}
-          <Image
-            source={{ uri: cover }}
-            style={StyleSheet.absoluteFill}
-            contentFit="cover"
-            blurRadius={60}
-            transition={600}
-          />
-          {/* Same wash as the player: blur alone doesn't guarantee the lyrics
-              stay readable over a bright cover, and which way it washes
-              follows the appearance. */}
-          <View style={styles.coverScrim} />
-        </>
-      ) : null}
+    <View style={styles.root}>
       <View style={[styles.safe, { paddingTop: topPad, paddingBottom: insets.bottom }]}>
       <View style={styles.header}>
         <Pressable hitSlop={12} accessibilityRole="button" accessibilityLabel={t('Close')} onPress={() => router.back()}>
@@ -94,7 +63,7 @@ export default function LyricsScreen() {
         {isLoading ? (
           <ActivityIndicator style={{ marginTop: spacing.xxl }} color={colors.text} />
         ) : data?.synced ? (
-          <SyncedLyricsView lines={data.lines} large fadeColor={fadeColor} />
+          <SyncedLyricsView lines={data.lines} large />
         ) : data ? (
           <ScrollView contentContainerStyle={styles.plainContent} showsVerticalScrollIndicator={false}>
             <Text style={plainLineStyle}>
@@ -147,7 +116,6 @@ export default function LyricsScreen() {
 const styles = themed((colors) => ({
   root: { flex: 1, backgroundColor: colors.background },
   safe: { flex: 1 },
-  coverScrim: { ...StyleSheet.absoluteFill, backgroundColor: colors.coverWash },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
