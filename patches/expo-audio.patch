@@ -1977,10 +1977,10 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..69b12731c4fe0f401656f362a548e6ff
      /**
 diff --git a/ios/AnimatedArtwork.swift b/ios/AnimatedArtwork.swift
 new file mode 100644
-index 0000000000000000000000000000000000000000..18c03f9e951749586249650012a96c9eb0940fe4
+index 0000000000000000000000000000000000000000..9855ddddf18cd7f0318079a0b48f6ca215d72c40
 --- /dev/null
 +++ b/ios/AnimatedArtwork.swift
-@@ -0,0 +1,808 @@
+@@ -0,0 +1,809 @@
 +import AVFoundation
 +import CoreGraphics
 +import CoreImage
@@ -2900,7 +2900,7 @@ index 0000000000000000000000000000000000000000..3f23f0177668f354b005580174b2a30b
 +  }
 +}
 diff --git a/ios/AudioModule.swift b/ios/AudioModule.swift
-index d26560627c2dfa97370440ad28304617f3f9f0f7..d3db555f44e89bde5f2f14a36fe72ae50c1ea1b0 100644
+index d26560627c2dfa97370440ad28304617f3f9f0f7..c34df955b7c4370a022a962a57fe430175fcba83 100644
 --- a/ios/AudioModule.swift
 +++ b/ios/AudioModule.swift
 @@ -32,6 +32,37 @@ public class AudioModule: Module {
@@ -3301,7 +3301,7 @@ index 79c7c0b256581a768c42a0291bf84bdff4c4b142..ca13e59c53a7f9a3a5fc49d94b266c62
  
      let asset = AVURLAsset(url: finalUrl, options: options)
 diff --git a/ios/MediaController.swift b/ios/MediaController.swift
-index e977f577cd2e16b194b56537ad76b423f40d2496..297a19dec62dfcdabbcc04ebad364d7a63c3f4be 100644
+index e977f577cd2e16b194b56537ad76b423f40d2496..a1b190056d64e4a3c0fbfbc06b2666f6bb7af33a 100644
 --- a/ios/MediaController.swift
 +++ b/ios/MediaController.swift
 @@ -11,9 +11,20 @@ class MediaController {
