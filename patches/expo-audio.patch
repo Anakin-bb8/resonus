@@ -2687,6 +2687,7 @@ index 0000000000000000000000000000000000000000..18c03f9e951749586249650012a96c9e
 +/// encoded clip. One export per artwork URL, shared by whoever asks while it
 +/// runs, and reused from disk after. Nil when the stream cannot be read: the
 +/// caller falls back to the static artwork, which is always there.
++@available(iOS 26.0, tvOS 26.0, *)
 +final class StreamArtworkClip {
 +  private static let lock = NSLock()
 +  private static var inflight: [String: Task<MPMediaItemAnimatedArtwork?, Never>] = [:]
@@ -3550,8 +3551,8 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..297a19dec62dfcdabbcc04ebad364d7a
 +   */
 +  func setStreamClip(tallUrl: URL?, for artworkUrl: URL?) {
 +    performOnMain {
-+      streamTallArtworkUrl = tallUrl == nil ? nil : artworkUrl
-+      streamTallClip = nil
++      self.streamTallArtworkUrl = tallUrl == nil ? nil : artworkUrl
++      self.streamTallClip = nil
 +      var info = self.nowPlayingInfoCenter.nowPlayingInfo ?? [String: Any]()
 +      self.applyAnimatedArtwork(&info)
 +      self.nowPlayingInfoCenter.nowPlayingInfo = info
