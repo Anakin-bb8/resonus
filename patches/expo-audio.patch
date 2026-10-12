@@ -1977,10 +1977,10 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..69b12731c4fe0f401656f362a548e6ff
      /**
 diff --git a/ios/AnimatedArtwork.swift b/ios/AnimatedArtwork.swift
 new file mode 100644
-index 0000000000000000000000000000000000000000..7e949bf2fb325d00f0ae39ce158d5365de15228a
+index 0000000000000000000000000000000000000000..18c03f9e951749586249650012a96c9eb0940fe4
 --- /dev/null
 +++ b/ios/AnimatedArtwork.swift
-@@ -0,0 +1,702 @@
+@@ -0,0 +1,808 @@
 +import AVFoundation
 +import CoreGraphics
 +import CoreImage
@@ -2682,6 +2682,112 @@ index 0000000000000000000000000000000000000000..7e949bf2fb325d00f0ae39ce158d5365
 +  }
 +}
 +
++/// Tall HLS clip from the animated-artwork endpoint: exported once to a local
++/// file — the system only plays local video — then handed out like an
++/// encoded clip. One export per artwork URL, shared by whoever asks while it
++/// runs, and reused from disk after. Nil when the stream cannot be read: the
++/// caller falls back to the static artwork, which is always there.
++final class StreamArtworkClip {
++  private static let lock = NSLock()
++  private static var inflight: [String: Task<MPMediaItemAnimatedArtwork?, Never>] = [:]
++
++  private static func identifier(for url: URL) -> String {
++    SHA256.hash(data: Data(url.absoluteString.utf8))
++      .map { String(format: "%02x", $0) }
++      .joined()
++  }
++
++  private static func destination(id: String) -> URL? {
++    guard let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else {
++      return nil
++    }
++    return base
++      .appendingPathComponent("animated-artwork", isDirectory: true)
++      .appendingPathComponent(id + "-stream-3x4.mp4")
++  }
++
++  static func item(m3u8: URL) -> Task<MPMediaItemAnimatedArtwork?, Never> {
++    let id = identifier(for: m3u8)
++    lock.lock()
++    if let running = inflight[id] {
++      lock.unlock()
++      return running
++    }
++    let task = Task<MPMediaItemAnimatedArtwork?, Never> {
++      defer {
++        lock.lock()
++        inflight.removeValue(forKey: id)
++        lock.unlock()
++      }
++      return await export(m3u8: m3u8, id: id)
++    }
++    inflight[id] = task
++    lock.unlock()
++    return task
++  }
++
++  private static func export(m3u8: URL, id: String) async -> MPMediaItemAnimatedArtwork? {
++    guard let destination = destination(id: id) else {
++      return nil
++    }
++    if !FileManager.default.fileExists(atPath: destination.path) {
++      try? FileManager.default.createDirectory(
++        at: destination.deletingLastPathComponent(),
++        withIntermediateDirectories: true
++      )
++      let asset = AVURLAsset(url: m3u8)
++      guard let duration = try? await asset.load(.duration), duration.seconds > 0 else {
++        return nil
++      }
++      // The system prefers a clip of less than 30 seconds.
++      let range = CMTimeRange(
++        start: .zero,
++        duration: CMTime(seconds: min(29, duration.seconds), preferredTimescale: 600)
++      )
++      try? FileManager.default.removeItem(at: destination)
++      guard let session = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetHighestQuality) else {
++        return nil
++      }
++      session.outputURL = destination
++      session.outputFileType = .mp4
++      session.timeRange = range
++      await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
++        session.exportAsynchronously {
++          continuation.resume()
++        }
++      }
++      guard session.status == .completed else {
++        try? FileManager.default.removeItem(at: destination)
++        return nil
++      }
++    }
++    // The preview is cut from the exported file, not the stream: local, fast,
++    // and the exact frames the clip plays, so the two cannot drift apart. A
++    // preview that does not match makes the system drop the animated artwork.
++    guard let preview = previewFirstFrame(file: destination) else {
++      return nil
++    }
++    return MPMediaItemAnimatedArtwork(
++      artworkID: id + "-stream-3x4",
++      previewImageRequestHandler: { _ in preview },
++      videoAssetFileURLRequestHandler: { _ in destination }
++    )
++  }
++
++  private static func previewFirstFrame(file: URL) -> UIImage? {
++    let generator = AVAssetImageGenerator(asset: AVURLAsset(url: file))
++    generator.appliesPreferredTrackTransform = true
++    generator.maximumSize = CGSize(width: 768, height: 1024)
++    guard let image = try? generator.copyCGImage(
++      at: CMTime(seconds: 0.5, preferredTimescale: 600),
++      actualTime: nil
++    ) else {
++      return nil
++    }
++    return UIImage(cgImage: image)
++  }
++}
++
 +#endif
 diff --git a/ios/ArtworkPreloader.swift b/ios/ArtworkPreloader.swift
 new file mode 100644
@@ -2827,7 +2933,7 @@ index d26560627c2dfa97370440ad28304617f3f9f0f7..d3db555f44e89bde5f2f14a36fe72ae5
 +      guard let artworkUrlString, let artworkUrl = URL(string: artworkUrlString) else {
 +        return
 +      }
-+      let tallUrl = tallUrlString.flatMap(URL.init(string:))
++      let tallUrl = tallUrlString.flatMap { URL(string: $0) }
 +      MediaController.shared.setStreamClip(tallUrl: tallUrl, for: artworkUrl)
 +    }
 +
@@ -3194,7 +3300,7 @@ index 79c7c0b256581a768c42a0291bf84bdff4c4b142..ca13e59c53a7f9a3a5fc49d94b266c62
  
      let asset = AVURLAsset(url: finalUrl, options: options)
 diff --git a/ios/MediaController.swift b/ios/MediaController.swift
-index e977f577cd2e16b194b56537ad76b423f40d2496..43d583c72e5f0acff3ba0e86a31658642f3db13b 100644
+index e977f577cd2e16b194b56537ad76b423f40d2496..297a19dec62dfcdabbcc04ebad364d7a63c3f4be 100644
 --- a/ios/MediaController.swift
 +++ b/ios/MediaController.swift
 @@ -11,9 +11,20 @@ class MediaController {
@@ -3348,7 +3454,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..43d583c72e5f0acff3ba0e86a3165864
      activePlayer = nil
      isLiveStream = false
      resetArtworkState()
-@@ -204,34 +283,153 @@ class MediaController {
+@@ -204,34 +283,170 @@ class MediaController {
    private func resetArtworkState() {
      currentArtworkUrl = nil
      cachedArtwork = nil
@@ -3401,9 +3507,8 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..43d583c72e5f0acff3ba0e86a3165864
        self.performOnMain {
 -        completion(artwork)
 +        completion(LoadedArtwork(still: still, square: ready.square, tall: ready.tall))
-       }
-     }
--    .resume()
++      }
++    }
 +  }
 +
 +  // Both variants are published: the system drops the key it does not support
@@ -3438,29 +3543,46 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..43d583c72e5f0acff3ba0e86a3165864
 +
 +  /**
 +   * Tall HLS clip from the animated-artwork endpoint for one static cover.
-+   * The clip plays straight from its stream — no download, no encode — so a
-+   * prefetched one is already instant when its track starts. Published under
-+   * the tall key the iPhone lock screen draws full screen; the static cover
-+   * stays for every surface that asks square.
++   * Exported in the background and published only while it still belongs to
++   * this artwork: a slow export landing after a skip is dropped, and its file
++   * stays cached for the album either way. The static cover stays for every
++   * surface that asks square.
 +   */
 +  func setStreamClip(tallUrl: URL?, for artworkUrl: URL?) {
 +    performOnMain {
-+      if let tallUrl {
-+        if #available(iOS 26.0, tvOS 26.0, *) {
-+          self.streamTallClip = MPMediaItemAnimatedArtwork(
-+            boundsSize: CGSize(width: 900, height: 1200),
-+            requestHandler: { AVPlayerItem(url: tallUrl) }
-+          )
-+        } else {
-+          self.streamTallClip = nil
-+        }
-+      } else {
-+        self.streamTallClip = nil
-+      }
-+      self.streamTallArtworkUrl = tallUrl == nil ? nil : artworkUrl
++      streamTallArtworkUrl = tallUrl == nil ? nil : artworkUrl
++      streamTallClip = nil
 +      var info = self.nowPlayingInfoCenter.nowPlayingInfo ?? [String: Any]()
 +      self.applyAnimatedArtwork(&info)
 +      self.nowPlayingInfoCenter.nowPlayingInfo = info
++      guard let tallUrl, let artworkUrl else {
++        return
++      }
++#if compiler(>=6.2)
++      if #available(iOS 26.0, tvOS 26.0, *) {
++        let playerId = self.activePlayer?.id
++        let item = self.currentArtworkItemIdentifier
++        Task.detached(priority: .userInitiated) { [weak self] in
++          let clip = await StreamArtworkClip.item(m3u8: tallUrl).value
++          guard let self, let clip else {
++            return
++          }
++          self.performOnMain {
++            guard self.streamTallArtworkUrl == artworkUrl,
++                  self.currentArtworkUrl == artworkUrl,
++                  self.currentArtworkItemIdentifier == item,
++                  self.activePlayer?.id == playerId
++            else {
++              return
++            }
++            self.streamTallClip = clip
++            var latest = self.nowPlayingInfoCenter.nowPlayingInfo ?? [String: Any]()
++            self.applyAnimatedArtwork(&latest)
++            self.nowPlayingInfoCenter.nowPlayingInfo = latest
++          }
++        }
+       }
++#endif
 +    }
 +  }
 +
@@ -3498,7 +3620,8 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..43d583c72e5f0acff3ba0e86a3165864
 +    format.scale = image.scale
 +    return UIGraphicsImageRenderer(size: CGSize(width: side, height: side), format: format).image { _ in
 +      image.draw(at: CGPoint(x: (side - width) / 2, y: (side - height) / 2))
-+    }
+     }
+-    .resume()
    }
  
    private func enableRemoteCommands(options: LockScreenOptions?) {
@@ -3514,7 +3637,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..43d583c72e5f0acff3ba0e86a3165864
      remoteCommandCenter.playCommand.addTarget { [weak self] _ in
        guard let player = self?.activePlayer else {
          return .commandFailed
-@@ -270,7 +468,7 @@ class MediaController {
+@@ -270,7 +485,7 @@ class MediaController {
        }
  
        let seekTime = CMTime(seconds: event.positionTime, preferredTimescale: 1)
@@ -3523,7 +3646,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..43d583c72e5f0acff3ba0e86a3165864
  
        return .success
      }
-@@ -303,12 +501,34 @@ class MediaController {
+@@ -303,12 +518,34 @@ class MediaController {
        return .success
      }
  
@@ -3558,7 +3681,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..43d583c72e5f0acff3ba0e86a3165864
    }
  
    private func disableRemoteCommands() {
-@@ -318,6 +538,8 @@ class MediaController {
+@@ -318,6 +555,8 @@ class MediaController {
      remoteCommandCenter.changePlaybackPositionCommand.isEnabled = false
      remoteCommandCenter.skipForwardCommand.isEnabled = false
      remoteCommandCenter.skipBackwardCommand.isEnabled = false
