@@ -6,6 +6,10 @@ import AVFoundation
  * permission and no entitlement: the port name is what the system calls the
  * device ("AirPods Pro", "iPhone"), and `routeChanged` fires on every
  * plug, pairing and handoff.
+ *
+ * iOS never says what a Bluetooth device is beyond its transport: there is
+ * no public API for the device class, so Bluetooth stays Bluetooth here and
+ * the icon with it. (Android resolves headphones/speaker/car properly.)
  */
 public class AudioRouteModule: Module {
   private var observer: NSObjectProtocol?
@@ -29,9 +33,9 @@ public class AudioRouteModule: Module {
 
   private func currentRoute() -> [String: String] {
     guard let output = AVAudioSession.sharedInstance().currentRoute.outputs.first else {
-      return ["kind": "builtin", "name": ""]
+      return ["kind": "builtin", "name": "", "deviceClass": "", "needsPermission": "false"]
     }
-    return ["kind": kind(of: output.portType), "name": output.portName]
+    return ["kind": kind(of: output.portType), "name": output.portName, "deviceClass": "", "needsPermission": "false"]
   }
 
   public func definition() -> ModuleDefinition {

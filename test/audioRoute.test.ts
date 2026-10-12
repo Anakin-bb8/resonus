@@ -15,8 +15,19 @@ describe('normalizeRoute', () => {
     });
   });
 
-  it('drops unknown kinds and missing answers', () => {
+  it('keeps a known device class and the permission flag', () => {
+    assert.deepEqual(
+      normalizeRoute({ kind: 'bluetooth', name: '', deviceClass: 'headphones', needsPermission: 'false' }),
+      { kind: 'bluetooth', name: '', deviceClass: 'headphones' },
+    );
+  });
+
+  it('drops unknown kinds, classes and missing answers', () => {
     assert.equal(normalizeRoute({ kind: 'telepathy', name: 'X' }), null);
+    assert.deepEqual(normalizeRoute({ kind: 'bluetooth', name: '', deviceClass: 'toaster' }), {
+      kind: 'bluetooth',
+      name: '',
+    });
     assert.equal(normalizeRoute(null), null);
     assert.equal(normalizeRoute(undefined), null);
   });
@@ -37,5 +48,12 @@ describe('routeIcon', () => {
     assert.equal(routeIcon('airplay'), 'tv');
     assert.equal(routeIcon('builtin'), undefined);
     assert.equal(routeIcon('other'), undefined);
+  });
+
+  it('reads a placed Bluetooth device as what it is', () => {
+    assert.equal(routeIcon('bluetooth', 'headphones'), 'headset-outline');
+    assert.equal(routeIcon('bluetooth', 'speaker'), 'volume-high-outline');
+    assert.equal(routeIcon('bluetooth', 'car'), 'car');
+    assert.equal(routeIcon('bluetooth', null), 'bluetooth');
   });
 });

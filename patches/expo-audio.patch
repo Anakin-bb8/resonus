@@ -12,7 +12,7 @@ index 36a19f2d9c4a979a940ab681a1fb844ce45f7c75..5480b0a7f7f587c13cfb03292831766e
 +  <uses-permission android:name="android.permission.WAKE_LOCK" />
  </manifest>
 diff --git a/android/src/main/java/expo/modules/audio/AudioModule.kt b/android/src/main/java/expo/modules/audio/AudioModule.kt
-index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..3acd4b1b7e4bddc79bf9312323ddc3ac78f07bca 100644
+index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..540c3db368196321c22ec67f3f5ea347448733c4 100644
 --- a/android/src/main/java/expo/modules/audio/AudioModule.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioModule.kt
 @@ -18,6 +18,7 @@ import androidx.media3.common.C.CONTENT_TYPE_HLS
@@ -739,7 +739,7 @@ index 149e9075c8630b14a69318aa6c37d9ff82b23f05..40f5d256923a603933c7c436367bac86
  
 diff --git a/android/src/main/java/expo/modules/audio/FragmentSeekingExtractor.kt b/android/src/main/java/expo/modules/audio/FragmentSeekingExtractor.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..a4e9d208d0fa8f34440bc355de02f81129c91a76
+index 0000000000000000000000000000000000000000..3f16cfffc4d353c12330b45677215b0d717fcc4d
 --- /dev/null
 +++ b/android/src/main/java/expo/modules/audio/FragmentSeekingExtractor.kt
 @@ -0,0 +1,425 @@
@@ -1864,10 +1864,10 @@ index cfd92ad0ff5765254c4e6db974fe44bce34aad06..d16fb49bb630dd95f26abfb6260ade9c
  //# sourceMappingURL=AudioConstants.d.ts.map
 \ No newline at end of file
 diff --git a/build/AudioModule.types.d.ts b/build/AudioModule.types.d.ts
-index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..f0ef7c9b823ce5c7154f9f1af88fe1f11ff21763 100644
+index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..69b12731c4fe0f401656f362a548e6ff78129889 100644
 --- a/build/AudioModule.types.d.ts
 +++ b/build/AudioModule.types.d.ts
-@@ -16,6 +16,18 @@ export declare class NativeAudioModule extends NativeModule {
+@@ -16,6 +16,25 @@ export declare class NativeAudioModule extends NativeModule {
      clearPreloadedSource(source: AudioSource): Promise<void>;
      clearAllPreloadedSources(): Promise<void>;
      getPreloadedSources(): Promise<string[]>;
@@ -1883,10 +1883,17 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..f0ef7c9b823ce5c7154f9f1af88fe1f1
 +     * @param fps The frame rate, 30 or 60.
 +     */
 +    setArtworkFps(fps: number): void;
++    /**
++     * Hands the lock screen a tall HLS clip from the animated-artwork
++     * endpoint for one static cover — or clears it with a null clip.
++     * @param artworkUrl The static cover URL the clip was fetched for.
++     * @param tallUrl The tall `.m3u8`, or null when there is none.
++     */
++    setAnimatedClipUrls(artworkUrl: string, tallUrl: string | null): void;
      readonly AudioPlayer: typeof AudioPlayer;
      readonly AudioRecorder: typeof AudioRecorder;
      readonly AudioPlaylist: typeof AudioPlaylist;
-@@ -31,6 +43,11 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
+@@ -31,6 +50,11 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
       * Unique identifier for the player object.
       */
      id: string;
@@ -1898,7 +1905,7 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..f0ef7c9b823ce5c7154f9f1af88fe1f1
      /**
       * Boolean value indicating whether the player is currently playing.
       */
-@@ -141,6 +158,14 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
+@@ -141,6 +165,14 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
       * Replaces the current audio source with a new one.
       */
      replace(source: AudioSource): void;
@@ -1913,7 +1920,7 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..f0ef7c9b823ce5c7154f9f1af88fe1f1
      /**
       * Seeks the playback by the given number of seconds.
       * @param seconds The number of seconds to seek by.
-@@ -183,6 +208,24 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
+@@ -183,6 +215,24 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
       * This will clear the lock screen's now playing info.
       */
      clearLockScreenControls(): void;
@@ -1938,7 +1945,7 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..f0ef7c9b823ce5c7154f9f1af88fe1f1
      /**
       * Remove the player from memory to free up resources.
       */
-@@ -222,6 +265,29 @@ export type AudioEvents = {
+@@ -222,6 +272,29 @@ export type AudioEvents = {
      playbackStatusUpdate(status: AudioStatus): void;
      /** Fired when audio sampling is enabled and new sample data is available. */
      audioSampleUpdate(data: AudioSample): void;
@@ -2786,10 +2793,10 @@ index 0000000000000000000000000000000000000000..3f23f0177668f354b005580174b2a30b
 +  }
 +}
 diff --git a/ios/AudioModule.swift b/ios/AudioModule.swift
-index d26560627c2dfa97370440ad28304617f3f9f0f7..59dd6edd368dddec03162acca38a474371c28ca6 100644
+index d26560627c2dfa97370440ad28304617f3f9f0f7..d3db555f44e89bde5f2f14a36fe72ae50c1ea1b0 100644
 --- a/ios/AudioModule.swift
 +++ b/ios/AudioModule.swift
-@@ -32,6 +32,25 @@ public class AudioModule: Module {
+@@ -32,6 +32,37 @@ public class AudioModule: Module {
        try setAudioMode(mode: mode)
      }
  
@@ -2812,10 +2819,22 @@ index d26560627c2dfa97370440ad28304617f3f9f0f7..59dd6edd368dddec03162acca38a4743
 +      }
 +    }
 +
++    /// Tall HLS clip from the animated-artwork endpoint for one static cover:
++    /// published to the lock screen under it, or cleared with a null clip.
++    /// The static cover URL keys it, so a clip arriving late still lands on
++    /// the track it was fetched for — and never on the next one.
++    Function("setAnimatedClipUrls") { (artworkUrlString: String?, tallUrlString: String?) in
++      guard let artworkUrlString, let artworkUrl = URL(string: artworkUrlString) else {
++        return
++      }
++      let tallUrl = tallUrlString.flatMap(URL.init(string:))
++      MediaController.shared.setStreamClip(tallUrl: tallUrl, for: artworkUrl)
++    }
++
      AsyncFunction("setIsAudioActiveAsync") { (isActive: Bool)  in
        try setIsAudioActive(isActive)
      }
-@@ -241,6 +260,18 @@ public class AudioModule: Module {
+@@ -241,6 +272,18 @@ public class AudioModule: Module {
          }
        }
  
@@ -2835,7 +2854,7 @@ index d26560627c2dfa97370440ad28304617f3f9f0f7..59dd6edd368dddec03162acca38a4743
          player.ref.pause()
          if !player.keepAudioSessionActive {
 diff --git a/ios/AudioPlayer.swift b/ios/AudioPlayer.swift
-index 074294321e872bb53c0b2d41044dac3c612f14f0..c3f06ed799a991d94e9cd2516ed9b80f57f3159b 100644
+index 074294321e872bb53c0b2d41044dac3c612f14f0..1a44724736482ba08f7a1ccab694123548c3543e 100644
 --- a/ios/AudioPlayer.swift
 +++ b/ios/AudioPlayer.swift
 @@ -4,6 +4,7 @@ import Combine
@@ -3175,15 +3194,23 @@ index 79c7c0b256581a768c42a0291bf84bdff4c4b142..ca13e59c53a7f9a3a5fc49d94b266c62
  
      let asset = AVURLAsset(url: finalUrl, options: options)
 diff --git a/ios/MediaController.swift b/ios/MediaController.swift
-index e977f577cd2e16b194b56537ad76b423f40d2496..4f16e709309c0a9f8b690232ae23d8067cdb1cda 100644
+index e977f577cd2e16b194b56537ad76b423f40d2496..43d583c72e5f0acff3ba0e86a31658642f3db13b 100644
 --- a/ios/MediaController.swift
 +++ b/ios/MediaController.swift
-@@ -11,9 +11,12 @@ class MediaController {
+@@ -11,9 +11,20 @@ class MediaController {
  
    private var currentArtworkUrl: URL?
    private var cachedArtwork: MPMediaItemArtwork?
 +  private var cachedAnimatedSquareArtwork: AnyObject?
 +  private var cachedAnimatedTallArtwork: AnyObject?
++  /// Tall HLS clip from the animated-artwork endpoint, keyed by the static
++  /// cover it was fetched for. Set per track from JS; a late arrival lands
++  /// only while the key still matches, so it never leaks onto the next one.
++  /// Deliberately kept out of `resetArtworkState`: the reset runs on every
++  /// artwork change, and wiping here would drop a clip fetched just before
++  /// the metadata carrying it — the key mismatch already invalidates those.
++  private var streamTallClip: AnyObject?
++  private var streamTallArtworkUrl: URL?
    private var artworkLoadToken: UUID?
    private var currentArtworkItemIdentifier: ObjectIdentifier?
    private var isLiveStream = false
@@ -3191,15 +3218,12 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..4f16e709309c0a9f8b690232ae23d806
  
    func setActivePlayer(_ player: AudioPlayer?, options: LockScreenOptions? = nil) {
      performOnMain {
-@@ -68,6 +71,7 @@ class MediaController {
+@@ -68,10 +79,16 @@ class MediaController {
      } else {
        resetArtworkState()
        nowPlayingInfo.removeValue(forKey: MPMediaItemPropertyArtwork)
 +      removeAnimatedArtwork(&nowPlayingInfo)
        applyAssetMetadata(&nowPlayingInfo, for: player)
-     }
- 
-@@ -72,7 +76,12 @@ class MediaController {
      }
  
      nowPlayingInfoCenter.nowPlayingInfo = nowPlayingInfo
@@ -3211,8 +3235,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..4f16e709309c0a9f8b690232ae23d806
    }
  
    private func applyPlaybackInfo(_ info: inout [String: Any], for player: AudioPlayer) {
-     if isLiveStream {
-@@ -80,7 +89,11 @@ class MediaController {
+@@ -80,7 +97,11 @@ class MediaController {
        info.removeValue(forKey: MPMediaItemPropertyPlaybackDuration)
        info.removeValue(forKey: MPNowPlayingInfoPropertyElapsedPlaybackTime)
      } else {
@@ -3225,7 +3248,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..4f16e709309c0a9f8b690232ae23d806
        info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = player.currentTime
      }
      info[MPNowPlayingInfoPropertyPlaybackRate] = player.isPlaying ? player.ref.rate : 0.0
-@@ -139,17 +152,21 @@ class MediaController {
+@@ -139,17 +160,21 @@ class MediaController {
      guard let artworkUrl = metadata.artworkUrl else {
        resetArtworkState()
        info.removeValue(forKey: MPMediaItemPropertyArtwork)
@@ -3247,7 +3270,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..4f16e709309c0a9f8b690232ae23d806
        return
      }
  
-@@ -173,16 +190,67 @@ class MediaController {
+@@ -173,20 +198,74 @@ class MediaController {
          return
        }
  
@@ -3318,8 +3341,6 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..4f16e709309c0a9f8b690232ae23d806
    }
  
    private func clearNowPlayingInfoOnMain() {
-@@ -188,7 +256,10 @@ class MediaController {
-   private func clearNowPlayingInfoOnMain() {
      nowPlayingInfoCenter.nowPlayingInfo = nil
 +    if #available(iOS 13.0, *) {
 +      nowPlayingInfoCenter.playbackState = .stopped
@@ -3327,9 +3348,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..4f16e709309c0a9f8b690232ae23d806
      activePlayer = nil
      isLiveStream = false
      resetArtworkState()
-     currentArtworkItemIdentifier = nil
-   }
-@@ -204,34 +275,120 @@ class MediaController {
+@@ -204,34 +283,153 @@ class MediaController {
    private func resetArtworkState() {
      currentArtworkUrl = nil
      cachedArtwork = nil
@@ -3341,18 +3360,12 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..4f16e709309c0a9f8b690232ae23d806
 -  private func loadArtworkFromURL(url: URL, completion: @escaping (MPMediaItemArtwork?) -> Void) {
 -    URLSession.shared.dataTask(with: url) { data, _, error in
 -      if error != nil {
--        self.performOnMain {
--          completion(nil)
--        }
--        return
--      }
 +  private struct LoadedArtwork {
 +    let still: MPMediaItemArtwork?
 +    let square: AnyObject?
 +    let tall: AnyObject?
 +  }
- 
--      guard let data, let image = UIImage(data: data) else {
++
 +  private func loadArtworkFromURL(url: URL, completion: @escaping (LoadedArtwork) -> Void) {
 +    // Through the preloader, which `setNextSource` warms while the track it
 +    // belongs to is still the NEXT one: the bytes, and the clip's encode
@@ -3368,7 +3381,9 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..4f16e709309c0a9f8b690232ae23d806
          return
        }
  
--      let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+-      guard let data, let image = UIImage(data: data) else {
+-        self.performOnMain {
+-          completion(nil)
 +      // The request carries the size the surface wants: a square one (the
 +      // Dynamic Island's compact artwork) gets the cover's centered square,
 +      // while a taller one keeps the whole tall picture — which is what the
@@ -3377,14 +3392,18 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..4f16e709309c0a9f8b690232ae23d806
 +      let still = MPMediaItemArtwork(boundsSize: image.size) { requested in
 +        if let square, Self.isSquare(requested) {
 +          return square
-+        }
+         }
+-        return
 +        return image
-+      }
+       }
+-
+-      let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
        self.performOnMain {
 -        completion(artwork)
 +        completion(LoadedArtwork(still: still, square: ready.square, tall: ready.tall))
-+      }
-+    }
+       }
+     }
+-    .resume()
 +  }
 +
 +  // Both variants are published: the system drops the key it does not support
@@ -3407,10 +3426,42 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..4f16e709309c0a9f8b690232ae23d806
 +        info[MPNowPlayingInfoProperty3x4AnimatedArtwork] = item
 +      } else {
 +        info.removeValue(forKey: MPNowPlayingInfoProperty3x4AnimatedArtwork)
-       }
-     }
--    .resume()
++      }
++      // An endpoint clip wins over an encoded one when it belongs to this
++      // artwork: it was already streaming while the encoder was still working.
++      if let key = streamTallArtworkUrl, key == currentArtworkUrl, let item = streamTallClip {
++        info[MPNowPlayingInfoProperty3x4AnimatedArtwork] = item
++      }
++    }
 +#endif
++  }
++
++  /**
++   * Tall HLS clip from the animated-artwork endpoint for one static cover.
++   * The clip plays straight from its stream — no download, no encode — so a
++   * prefetched one is already instant when its track starts. Published under
++   * the tall key the iPhone lock screen draws full screen; the static cover
++   * stays for every surface that asks square.
++   */
++  func setStreamClip(tallUrl: URL?, for artworkUrl: URL?) {
++    performOnMain {
++      if let tallUrl {
++        if #available(iOS 26.0, tvOS 26.0, *) {
++          self.streamTallClip = MPMediaItemAnimatedArtwork(
++            boundsSize: CGSize(width: 900, height: 1200),
++            requestHandler: { AVPlayerItem(url: tallUrl) }
++          )
++        } else {
++          self.streamTallClip = nil
++        }
++      } else {
++        self.streamTallClip = nil
++      }
++      self.streamTallArtworkUrl = tallUrl == nil ? nil : artworkUrl
++      var info = self.nowPlayingInfoCenter.nowPlayingInfo ?? [String: Any]()
++      self.applyAnimatedArtwork(&info)
++      self.nowPlayingInfoCenter.nowPlayingInfo = info
++    }
 +  }
 +
 +  private func removeAnimatedArtwork(_ info: inout [String: Any]) {
@@ -3420,7 +3471,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..4f16e709309c0a9f8b690232ae23d806
 +      info.removeValue(forKey: MPNowPlayingInfoProperty3x4AnimatedArtwork)
 +    }
 +#endif
-   }
++  }
 +
 +  // Whether a requested artwork size reads as a square: what the Dynamic
 +  // Island's compact artwork asks for, as opposed to the tall sizes the
@@ -3448,7 +3499,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..4f16e709309c0a9f8b690232ae23d806
 +    return UIGraphicsImageRenderer(size: CGSize(width: side, height: side), format: format).image { _ in
 +      image.draw(at: CGPoint(x: (side - width) / 2, y: (side - height) / 2))
 +    }
-+  }
+   }
  
    private func enableRemoteCommands(options: LockScreenOptions?) {
 +    updateRemoteCommandAvailability(options: options)
@@ -3463,7 +3514,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..4f16e709309c0a9f8b690232ae23d806
      remoteCommandCenter.playCommand.addTarget { [weak self] _ in
        guard let player = self?.activePlayer else {
          return .commandFailed
-@@ -270,7 +427,7 @@ class MediaController {
+@@ -270,7 +468,7 @@ class MediaController {
        }
  
        let seekTime = CMTime(seconds: event.positionTime, preferredTimescale: 1)
@@ -3472,7 +3523,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..4f16e709309c0a9f8b690232ae23d806
  
        return .success
      }
-@@ -303,12 +460,34 @@ class MediaController {
+@@ -303,12 +501,34 @@ class MediaController {
        return .success
      }
  
@@ -3507,7 +3558,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..4f16e709309c0a9f8b690232ae23d806
    }
  
    private func disableRemoteCommands() {
-@@ -318,6 +497,8 @@ class MediaController {
+@@ -318,6 +538,8 @@ class MediaController {
      remoteCommandCenter.changePlaybackPositionCommand.isEnabled = false
      remoteCommandCenter.skipForwardCommand.isEnabled = false
      remoteCommandCenter.skipBackwardCommand.isEnabled = false

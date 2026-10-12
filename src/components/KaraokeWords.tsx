@@ -28,6 +28,7 @@ import {
   WORD_SWEEP_EDGE_FRACTION,
   WORD_SWEEP_LEAD_MS,
 } from '@/lib/lyricMotion';
+import { clamp01 } from '@/lib/lyricSweep';
 import { usePlayerStore } from '@/store/player';
 
 const CLOCK_RUNWAY_MS = 1200;
@@ -77,11 +78,26 @@ export const KaraokeWords = memo(function KaraokeWords({
       inactiveColor={inactiveColor}
     />
   ) : (
-    words.map((word, index) => (
-      <Text key={index} accessible={false} style={[textStyle, { color: activeColor }]}>
-        {word.value}
-      </Text>
-    ))
+    words.map((word, index) => {
+      const chars = splitChars(word.value);
+      if (!chars) {
+        return (
+          <Text key={index} accessible={false} style={[textStyle, { color: activeColor }]}>
+            {word.value}
+          </Text>
+        );
+      }
+      // Same split layout as the active row, without the clock behind it.
+      return (
+        <View key={index} style={styles.charRow}>
+          {chars.map((ch, i) => (
+            <Text key={i} accessible={false} style={[textStyle, { color: activeColor }]}>
+              {ch}
+            </Text>
+          ))}
+        </View>
+      );
+    })
   );
 
   return (
@@ -98,6 +114,53 @@ export const KaraokeWords = memo(function KaraokeWords({
     </View>
   );
 });
+
+/** How far a letter rises at the peak of its wave. */
+const CHAR_RISE_PX = 3;
+/** Hold after a word is sung before its letters fall back, and over what span. */
+const CHAR_FALL_DELAY_MS = 200;
+const CHAR_FALL_MS = 350;
+
+/** Scripts whose glyphs must not be cut apart: shaping and marks would break. */
+const WHOLE_WORD_RE = /[\u0590-\u05FF\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\u0900-\u0DFF\u0E00-\u0EFF\u0F00-\u0FFF\u1000-\u109F]|\p{M}||/u;
+const SPLITTABLE_RE = /^[\u0020-\u02FF\u0370-\u03FF\u0400-\u04FF\u3000-\u303F\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uAC00-\uD7AF\uFF00-\uFFEF\u00A0]*$/;
+
+/**
+ * A word cut into its letters for the rise wave, or null when the script
+ * must stay whole. A trailing space rides as a non-breaking one so words
+ * never glue together (same rule as the sweep word boxes).
+ */
+function splitChars(value: string): string[] | null {
+  const display = value.endsWith(' ') ? value.slice(0, -1) + '\u00A0' : value;
+  if (!SPLITTABLE_RE.test(display) || WHOLE_WORD_RE.test(display)) return null;
+  return Array.from(display);
+}
+
+/**
+ * One letter, rising as the sung frontier reaches it and falling back in
+ * reverse once its word is out: the wave travels left to right through the
+ * word instead of lifting it all at once.
+ */
+const WordChar = memo(function WordChar({ ch, textStyle, color, glow, clockMs, start, durationMs, end, index, count, animated }: { ch: string; textStyle: StyleProp<TextStyle>; color: string; glow?: object; clockMs: SharedValue<number>; start: number; durationMs: number; end: number; index: number; count: number; animated: boolean }) {
+  const lift = useAnimatedStyle(() => {
+    if (!animated) return { transform: [{ translateY: 0 }] };
+    const duration = Math.max(MIN_WORD_TRANSITION_MS, durationMs);
+    const fill = clamp01((clockMs.value - start) / duration);
+    const rise = clamp01(fill * count - index);
+    const after = clamp01((clockMs.value - (end + CHAR_FALL_DELAY_MS)) / CHAR_FALL_MS);
+    const fall = clamp01(after * count - (count - 1 - index));
+    return { transform: [{ translateY: -CHAR_RISE_PX * rise * (1 - fall) }] };
+  });
+  return (
+    <Animated.Text
+      accessible={false}
+      style={[textStyle, { color, textShadowOffset: { width: 0, height: 0 } }, glow, lift]}
+    >
+      {ch}
+    </Animated.Text>
+  );
+});
+WordChar.displayName = 'WordChar';
 
 function ActiveWordFlow({
   words,
@@ -159,24 +222,23 @@ const TimedWord = memo(function TimedWord({
 }) {
   const width = useSharedValue(0);
   const height = useSharedValue(0);
+  const chars = splitChars(word.value);
+  const end = word.end ?? word.start + durationMs;
 
+  // The word-level bounce under the letter wave: a small bottom-anchored
+  // swell while the word is sung. iOS only lifts (magnifying rasterized
+  // masked text turns the glyphs soft); shifting stays sharp.
   const motionStyle = useAnimatedStyle(() => {
     if (!animateBounce) return { transform: [{ scale: 1 }] };
     const duration = Math.max(MIN_WORD_TRANSITION_MS, durationMs);
     const raw = Math.max(0, Math.min(1, (clockMs.value - word.start) / duration));
-    const lift = Math.sin(raw * Math.PI);
-    // iOS rasterizes the masked word once, so magnifying it turns the glyphs
-    // soft: there the bounce only lifts, small like the old word rise.
-    // Shifting a layer stays sharp.
+    const bounce = Math.sin(raw * Math.PI);
     if (Platform.OS === 'ios') {
-      return { transform: [{ translateY: -height.value * 0.05 * lift }] };
+      return { transform: [{ translateY: -height.value * 0.05 * bounce }] };
     }
-    const scale = 1 + WORD_BOUNCE_SCALE * lift;
+    const scale = 1 + WORD_BOUNCE_SCALE * bounce;
     return {
-      transform: [
-        { translateY: -height.value * (scale - 1) * 0.5 },
-        { scale },
-      ],
+      transform: [{ translateY: -height.value * (scale - 1) * 0.5 }, { scale }],
     };
   });
 
@@ -222,6 +284,58 @@ const TimedWord = memo(function TimedWord({
     };
   });
 
+  // The wave on the visible copy and on the mask copy share nothing but
+  // their inputs, so both ride the same letters in step.
+  const base = chars ? (
+    <View style={styles.charRow}>
+      {chars.map((ch, i) => (
+        <WordChar
+          key={i}
+          ch={ch}
+          textStyle={textStyle}
+          color={inactiveColor}
+          glow={glowStyle}
+          clockMs={clockMs}
+          start={word.start}
+          durationMs={durationMs}
+          end={end}
+          index={i}
+          count={chars.length}
+          animated={animateBounce}
+        />
+      ))}
+    </View>
+  ) : (
+    <Animated.Text
+      accessible={false}
+      style={[textStyle, { color: inactiveColor, textShadowOffset: { width: 0, height: 0 } }, glowStyle]}
+    >
+      {word.value}
+    </Animated.Text>
+  );
+  const mask = chars ? (
+    <View style={styles.charRow}>
+      {chars.map((ch, i) => (
+        <WordChar
+          key={i}
+          ch={ch}
+          textStyle={textStyle}
+          color={activeColor}
+          clockMs={clockMs}
+          start={word.start}
+          durationMs={durationMs}
+          end={end}
+          index={i}
+          count={chars.length}
+          animated={animateBounce}
+        />
+      ))}
+    </View>
+  ) : (
+    <Text accessible={false} style={textStyle}>
+      {word.value}
+    </Text>
+  );
   return (
     <Animated.View
       style={motionStyle}
@@ -230,20 +344,11 @@ const TimedWord = memo(function TimedWord({
         height.value = event.nativeEvent.layout.height;
       }}
     >
-      <Animated.Text
-        accessible={false}
-        style={[textStyle, { color: inactiveColor, textShadowOffset: { width: 0, height: 0 } }, glowStyle]}
-      >
-        {word.value}
-      </Animated.Text>
+      {base}
       <MaskedView
         pointerEvents="none"
         style={StyleSheet.absoluteFill}
-        maskElement={(
-          <Text accessible={false} style={textStyle}>
-            {word.value}
-          </Text>
-        )}
+        maskElement={mask}
       >
         <View style={styles.sweepCanvas}>
           <Animated.View style={[styles.sweepSolid, { backgroundColor: activeColor }, solidStyle]} />
@@ -268,6 +373,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   flowCentered: { justifyContent: 'center' },
+  // Letters of one word never wrap apart: the word stays the unit the outer
+  // row wraps, exactly like the single text it replaces.
+  charRow: { flexDirection: 'row', flexWrap: 'nowrap' },
   sweepCanvas: { flex: 1 },
   sweepSolid: {
     position: 'absolute',

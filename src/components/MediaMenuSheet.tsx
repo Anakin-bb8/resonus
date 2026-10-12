@@ -327,6 +327,23 @@ export function MediaMenuSheet() {
                 }}
               />
             ) : null}
+            {/* Albums only: a hand-picked Apple Music URL pins the animated
+                cover the fuzzy search keeps mismatching. */}
+            {album ? (
+              <Action
+                icon="film-outline"
+                label={t('Animated artwork')}
+                onPress={() => {
+                  dismiss(() => {
+                    closeNow();
+                    pushOrReplace(
+                      `/animated-artwork-url?artist=${encodeURIComponent(album.artist ?? '')}&album=${encodeURIComponent(album.name)}`,
+                      top,
+                    );
+                  });
+                }}
+              />
+            ) : null}
             {/* Albums only: a playlist is nobody's. The song menu has had this
                 since always and an album is the one thing on screen that names
                 an artist without offering a way to them. */}

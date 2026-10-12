@@ -11,10 +11,11 @@ import { requireOptionalNativeModule } from 'expo-modules-core';
 import { normalizeRoute, type AudioRoute } from './audioRouteTypes';
 
 interface NativeAudioRoute {
-  getRoute: () => { kind: string; name: string } | null;
+  getRoute: () => { kind: string; name: string; deviceClass?: string; needsPermission?: string } | null;
+  requestBluetoothPermission?: () => Promise<unknown>;
   addListener: (
     event: 'routeChanged',
-    listener: (route: { kind: string; name: string }) => void,
+    listener: (route: { kind: string; name: string; deviceClass?: string; needsPermission?: string }) => void,
   ) => { remove: () => void };
 }
 
@@ -39,5 +40,32 @@ export function subscribeAudioRoute(
     return sub ? () => sub.remove() : undefined;
   } catch {
     return undefined;
+  }
+}
+
+/**
+ * Asks for the Bluetooth permission that names Bluetooth devices and says
+ * what they are (Android 12+; older versions and iOS need nothing). True
+ * when asking is pointless or the answer was yes — the caller refetches
+ * either way, since even a no can change nothing but the mark.
+ */
+export async function requestBluetoothPermission(): Promise<boolean> {
+  try {
+    if (!native?.requestBluetoothPermission) return true;
+    const res = (await native.requestBluetoothPermission()) as
+      | boolean
+      | { granted?: boolean; [permission: string]: { granted?: boolean } | boolean | undefined }
+      | null
+      | undefined;
+    if (typeof res === 'boolean') return res;
+    if (res && typeof res === 'object') {
+      if (res.granted === true) return true;
+      return Object.values(res).some(
+        (v) => v === true || (typeof v === 'object' && v?.granted === true),
+      );
+    }
+    return false;
+  } catch {
+    return false;
   }
 }
