@@ -3301,7 +3301,7 @@ index 79c7c0b256581a768c42a0291bf84bdff4c4b142..ca13e59c53a7f9a3a5fc49d94b266c62
  
      let asset = AVURLAsset(url: finalUrl, options: options)
 diff --git a/ios/MediaController.swift b/ios/MediaController.swift
-index e977f577cd2e16b194b56537ad76b423f40d2496..a1b190056d64e4a3c0fbfbc06b2666f6bb7af33a 100644
+index e977f577cd2e16b194b56537ad76b423f40d2496..5e489c0599f0af58783fe3cb48c566ec268da064 100644
 --- a/ios/MediaController.swift
 +++ b/ios/MediaController.swift
 @@ -11,9 +11,20 @@ class MediaController {
@@ -3455,7 +3455,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..a1b190056d64e4a3c0fbfbc06b2666f6
      activePlayer = nil
      isLiveStream = false
      resetArtworkState()
-@@ -204,34 +283,170 @@ class MediaController {
+@@ -204,34 +283,179 @@ class MediaController {
    private func resetArtworkState() {
      currentArtworkUrl = nil
      cachedArtwork = nil
@@ -3548,14 +3548,18 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..a1b190056d64e4a3c0fbfbc06b2666f6
 +   * this artwork: a slow export landing after a skip is dropped, and its file
 +   * stays cached for the album either way. The static cover stays for every
 +   * surface that asks square.
++   *
++   * The published info is rewritten ONLY when the export lands — the same
++   * moment the GIF path publishes. A bare rewrite at track-change time races
++   * the player's own metadata write and can publish an empty "now playing",
++   * which takes the lock screen and the Dynamic Island away until the next
++   * play/pause beat re-writes them (#260): with it, backgrounding a track
++   * showed no media controls at all.
 +   */
 +  func setStreamClip(tallUrl: URL?, for artworkUrl: URL?) {
 +    performOnMain {
 +      self.streamTallArtworkUrl = tallUrl == nil ? nil : artworkUrl
 +      self.streamTallClip = nil
-+      var info = self.nowPlayingInfoCenter.nowPlayingInfo ?? [String: Any]()
-+      self.applyAnimatedArtwork(&info)
-+      self.nowPlayingInfoCenter.nowPlayingInfo = info
 +      guard let tallUrl, let artworkUrl else {
 +        return
 +      }
@@ -3572,12 +3576,17 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..a1b190056d64e4a3c0fbfbc06b2666f6
 +            guard self.streamTallArtworkUrl == artworkUrl,
 +                  self.currentArtworkUrl == artworkUrl,
 +                  self.currentArtworkItemIdentifier == item,
-+                  self.activePlayer?.id == playerId
++                  self.activePlayer?.id == playerId,
++                  let published = self.nowPlayingInfoCenter.nowPlayingInfo,
++                  !published.isEmpty
 +            else {
++              // Nothing published yet: the metadata write that follows picks
++              // the clip up through `applyAnimatedArtwork` — publishing an
++              // empty info here is what took the controls away.
 +              return
 +            }
 +            self.streamTallClip = clip
-+            var latest = self.nowPlayingInfoCenter.nowPlayingInfo ?? [String: Any]()
++            var latest = published
 +            self.applyAnimatedArtwork(&latest)
 +            self.nowPlayingInfoCenter.nowPlayingInfo = latest
 +          }
@@ -3638,7 +3647,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..a1b190056d64e4a3c0fbfbc06b2666f6
      remoteCommandCenter.playCommand.addTarget { [weak self] _ in
        guard let player = self?.activePlayer else {
          return .commandFailed
-@@ -270,7 +485,7 @@ class MediaController {
+@@ -270,7 +494,7 @@ class MediaController {
        }
  
        let seekTime = CMTime(seconds: event.positionTime, preferredTimescale: 1)
@@ -3647,7 +3656,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..a1b190056d64e4a3c0fbfbc06b2666f6
  
        return .success
      }
-@@ -303,12 +518,34 @@ class MediaController {
+@@ -303,12 +527,34 @@ class MediaController {
        return .success
      }
  
@@ -3682,7 +3691,7 @@ index e977f577cd2e16b194b56537ad76b423f40d2496..a1b190056d64e4a3c0fbfbc06b2666f6
    }
  
    private func disableRemoteCommands() {
-@@ -318,6 +555,8 @@ class MediaController {
+@@ -318,6 +564,8 @@ class MediaController {
      remoteCommandCenter.changePlaybackPositionCommand.isEnabled = false
      remoteCommandCenter.skipForwardCommand.isEnabled = false
      remoteCommandCenter.skipBackwardCommand.isEnabled = false
