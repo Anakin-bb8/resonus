@@ -2957,10 +2957,10 @@ index 0000000000000000000000000000000000000000..3f23f0177668f354b005580174b2a30b
 +  }
 +}
 diff --git a/ios/AudioModule.swift b/ios/AudioModule.swift
-index d26560627c2dfa97370440ad28304617f3f9f0f7..89c4250c4237f837445497230c2e70238a6f1d55 100644
+index d26560627c2dfa97370440ad28304617f3f9f0f7..40c2c9618a3c0fa06de784722b8884114981c494 100644
 --- a/ios/AudioModule.swift
 +++ b/ios/AudioModule.swift
-@@ -32,6 +32,46 @@ public class AudioModule: Module {
+@@ -32,6 +32,49 @@ public class AudioModule: Module {
        try setAudioMode(mode: mode)
      }
  
@@ -2998,16 +2998,19 @@ index d26560627c2dfa97370440ad28304617f3f9f0f7..89c4250c4237f837445497230c2e7023
 +    /// What the last stream-clip export did, for the diagnostics screen.
 +    Function("animatedClipState") { () -> [String: String] in
 +#if compiler(>=6.2)
-+      StreamArtworkClip.state()
++      if #available(iOS 26.0, tvOS 26.0, *) {
++        return StreamArtworkClip.state()
++      }
++      return [:]
 +#else
-+      [:]
++      return [:]
 +#endif
 +    }
 +
      AsyncFunction("setIsAudioActiveAsync") { (isActive: Bool)  in
        try setIsAudioActive(isActive)
      }
-@@ -241,6 +281,18 @@ public class AudioModule: Module {
+@@ -241,6 +284,18 @@ public class AudioModule: Module {
          }
        }
  
