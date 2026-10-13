@@ -1,0 +1,42 @@
+diff --git a/ios/NowPlayingManager.swift b/ios/NowPlayingManager.swift
+index c276c5c918c8f8d1921f3507dc3cd42e172e5493..028d708d86ff283b934fea8018d26fa67a692d38 100644
+--- a/ios/NowPlayingManager.swift
++++ b/ios/NowPlayingManager.swift
+@@ -36,9 +36,11 @@ class NowPlayingManager: VideoPlayerObserverDelegate {
+     players.add(player)
+     player.observer?.registerDelegate(delegate: self)
+ 
+-    if mostRecentInteractionPlayer == nil {
+-      setMostRecentInteractionPlayer(player: player.ref)
+-    }
++    // Resonus: cover clips are purely visual — the audio session belongs to
++    // expo-audio, whose metadata (title, artist, artwork, progress) already
++    // advertises playback. Letting a clip become the most-recent player would
++    // publish its empty metadata over the song and steal the remote commands.
++    // Most-recent stays nil, so every publish path below guards out.
+   }
+ 
+   func unregisterPlayer(_ player: VideoPlayer) {
+@@ -54,7 +56,9 @@ class NowPlayingManager: VideoPlayerObserverDelegate {
+       let commandCenter = MPRemoteCommandCenter.shared()
+ 
+       removeNowPlayingTargets(commandCenter: commandCenter)
+-      MPNowPlayingInfoCenter.default().nowPlayingInfo = [:]
++      // Resonus: never wipe the center here. The wipe erased expo-audio's
++      // song info when a cover clip unmounted, taking lock screen, Dynamic
++      // Island and headphone controls away while the song kept playing.
+     }
+   }
+ 
+@@ -257,9 +261,9 @@ class NowPlayingManager: VideoPlayerObserverDelegate {
+       if let newPlayer = players.allObjects.first(where: { $0.ref.rate != 0 }) {
+         setMostRecentInteractionPlayer(player: newPlayer.ref)
+       }
+-    } else if newRate != 0 && mostRecentInteractionPlayer != player {
+-      setMostRecentInteractionPlayer(player: player)
+     }
++    // Resonus: no else-branch — a starting clip must never become the
++    // most-recent player (see registerPlayer).
+   }
+ 
+   func onPlayerItemStatusChanged(player: AVPlayer, oldStatus: AVPlayerItem.Status?, newStatus: AVPlayerItem.Status) {

@@ -4,4 +4,5 @@ allowBuilds:
 patchedDependencies:
   expo-audio: patches/expo-audio.patch
   expo-network: patches/expo-network.patch
+  expo-video: patches/expo-video.patch
   react-native-image-colors: patches/react-native-image-colors.patch
