@@ -694,6 +694,20 @@ function publishAnimatedClip(song: Song) {
     } catch {
       // A build without the patched module: static covers as always.
     }
+    note(`clip ${clips?.tall ? 'tall ok' : 'none'} for ${album}`);
+    // The export lands seconds later, if at all: ask the native side what
+    // became of it, while this track is still the one playing.
+    for (const afterMs of [4000, 12000]) {
+      setTimeout(() => {
+        if (currentSong(usePlayerStore.getState())?.id !== song.id) return;
+        try {
+          const state = audioModule.animatedClipState();
+          note(`clip state ${state.stage}${state.detail ? ` ${state.detail}` : ''} for ${album}`);
+        } catch {
+          // A build without the patched module: nothing to ask.
+        }
+      }, afterMs);
+    }
   });
 }
 

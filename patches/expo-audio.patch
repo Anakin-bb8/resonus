@@ -1864,10 +1864,10 @@ index cfd92ad0ff5765254c4e6db974fe44bce34aad06..d16fb49bb630dd95f26abfb6260ade9c
  //# sourceMappingURL=AudioConstants.d.ts.map
 \ No newline at end of file
 diff --git a/build/AudioModule.types.d.ts b/build/AudioModule.types.d.ts
-index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..69b12731c4fe0f401656f362a548e6ff78129889 100644
+index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..3dc08a6973d38362c1f1100623134acb1f4933b5 100644
 --- a/build/AudioModule.types.d.ts
 +++ b/build/AudioModule.types.d.ts
-@@ -16,6 +16,25 @@ export declare class NativeAudioModule extends NativeModule {
+@@ -16,6 +16,30 @@ export declare class NativeAudioModule extends NativeModule {
      clearPreloadedSource(source: AudioSource): Promise<void>;
      clearAllPreloadedSources(): Promise<void>;
      getPreloadedSources(): Promise<string[]>;
@@ -1890,10 +1890,15 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..69b12731c4fe0f401656f362a548e6ff
 +     * @param tallUrl The tall `.m3u8`, or null when there is none.
 +     */
 +    setAnimatedClipUrls(artworkUrl: string, tallUrl: string | null): void;
++    /**
++     * What the last stream-clip export did (`stage` and one line of
++     * `detail`), for the diagnostics screen.
++     */
++    animatedClipState(): { stage: string; detail: string };
      readonly AudioPlayer: typeof AudioPlayer;
      readonly AudioRecorder: typeof AudioRecorder;
      readonly AudioPlaylist: typeof AudioPlaylist;
-@@ -31,6 +50,11 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
+@@ -31,6 +55,11 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
       * Unique identifier for the player object.
       */
      id: string;
@@ -1905,7 +1910,7 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..69b12731c4fe0f401656f362a548e6ff
      /**
       * Boolean value indicating whether the player is currently playing.
       */
-@@ -141,6 +165,14 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
+@@ -141,6 +170,14 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
       * Replaces the current audio source with a new one.
       */
      replace(source: AudioSource): void;
@@ -1920,7 +1925,7 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..69b12731c4fe0f401656f362a548e6ff
      /**
       * Seeks the playback by the given number of seconds.
       * @param seconds The number of seconds to seek by.
-@@ -183,6 +215,24 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
+@@ -183,6 +220,24 @@ export declare class AudioPlayer extends SharedObject<AudioEvents> {
       * This will clear the lock screen's now playing info.
       */
      clearLockScreenControls(): void;
@@ -1945,7 +1950,7 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..69b12731c4fe0f401656f362a548e6ff
      /**
       * Remove the player from memory to free up resources.
       */
-@@ -222,6 +272,29 @@ export type AudioEvents = {
+@@ -222,6 +277,29 @@ export type AudioEvents = {
      playbackStatusUpdate(status: AudioStatus): void;
      /** Fired when audio sampling is enabled and new sample data is available. */
      audioSampleUpdate(data: AudioSample): void;
@@ -1977,10 +1982,10 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..69b12731c4fe0f401656f362a548e6ff
      /**
 diff --git a/ios/AnimatedArtwork.swift b/ios/AnimatedArtwork.swift
 new file mode 100644
-index 0000000000000000000000000000000000000000..9855ddddf18cd7f0318079a0b48f6ca215d72c40
+index 0000000000000000000000000000000000000000..8b439b7303d64fb60e1ec641dcab183d70c90a93
 --- /dev/null
 +++ b/ios/AnimatedArtwork.swift
-@@ -0,0 +1,809 @@
+@@ -0,0 +1,861 @@
 +import AVFoundation
 +import CoreGraphics
 +import CoreImage
@@ -2692,6 +2697,24 @@ index 0000000000000000000000000000000000000000..9855ddddf18cd7f0318079a0b48f6ca2
 +  private static let lock = NSLock()
 +  private static var inflight: [String: Task<MPMediaItemAnimatedArtwork?, Never>] = [:]
 +
++  /// What the last export did, for the diagnostics screen: the stage and one
++  /// line of detail. Written from background tasks, read from anywhere.
++  private static var lastStage = "idle"
++  private static var lastDetail = ""
++
++  static func state() -> [String: String] {
++    lock.lock()
++    defer { lock.unlock() }
++    return ["stage": lastStage, "detail": lastDetail]
++  }
++
++  private static func setStage(_ stage: String, _ detail: String = "") {
++    lock.lock()
++    lastStage = stage
++    lastDetail = detail
++    lock.unlock()
++  }
++
 +  private static func identifier(for url: URL) -> String {
 +    SHA256.hash(data: Data(url.absoluteString.utf8))
 +      .map { String(format: "%02x", $0) }
@@ -2720,24 +2743,51 @@ index 0000000000000000000000000000000000000000..9855ddddf18cd7f0318079a0b48f6ca2
 +        inflight.removeValue(forKey: id)
 +        lock.unlock()
 +      }
-+      return await export(m3u8: m3u8, id: id)
++      return await exportWithTimeout(m3u8: m3u8, id: id)
 +    }
 +    inflight[id] = task
 +    lock.unlock()
 +    return task
 +  }
 +
++  /// The export, bounded: a hanging HLS load must turn into a diagnosed
++  /// timeout, not a task that never answers and a lock screen that never
++  /// animates.
++  private static func exportWithTimeout(m3u8: URL, id: String) async -> MPMediaItemAnimatedArtwork? {
++    await withTaskGroup(
++      of: MPMediaItemAnimatedArtwork?.self,
++      returning: MPMediaItemAnimatedArtwork?.self
++    ) { group in
++      group.addTask { await Self.export(m3u8: m3u8, id: id) }
++      group.addTask {
++        try? await Task.sleep(nanoseconds: 45_000_000_000)
++        // Cancelled because the export already answered: leave its stage.
++        if Task.isCancelled { return nil }
++        Self.setStage("timeout", m3u8.host ?? "")
++        return nil
++      }
++      for await result in group {
++        group.cancelAll()
++        return result
++      }
++      return nil
++    }
++  }
++
 +  private static func export(m3u8: URL, id: String) async -> MPMediaItemAnimatedArtwork? {
 +    guard let destination = destination(id: id) else {
++      setStage("failed", "no-cache-dir")
 +      return nil
 +    }
 +    if !FileManager.default.fileExists(atPath: destination.path) {
++      setStage("loading", m3u8.host ?? "")
 +      try? FileManager.default.createDirectory(
 +        at: destination.deletingLastPathComponent(),
 +        withIntermediateDirectories: true
 +      )
 +      let asset = AVURLAsset(url: m3u8)
 +      guard let duration = try? await asset.load(.duration), duration.seconds > 0 else {
++        setStage("failed", "duration")
 +        return nil
 +      }
 +      // The system prefers a clip of less than 30 seconds.
@@ -2747,8 +2797,10 @@ index 0000000000000000000000000000000000000000..9855ddddf18cd7f0318079a0b48f6ca2
 +      )
 +      try? FileManager.default.removeItem(at: destination)
 +      guard let session = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetHighestQuality) else {
++        setStage("failed", "session")
 +        return nil
 +      }
++      setStage("exporting", m3u8.host ?? "")
 +      session.outputURL = destination
 +      session.outputFileType = .mp4
 +      session.timeRange = range
@@ -2759,15 +2811,20 @@ index 0000000000000000000000000000000000000000..9855ddddf18cd7f0318079a0b48f6ca2
 +      }
 +      guard session.status == .completed else {
 +        try? FileManager.default.removeItem(at: destination)
++        setStage("failed", "export")
 +        return nil
 +      }
++    } else {
++      setStage("cached", "")
 +    }
 +    // The preview is cut from the exported file, not the stream: local, fast,
 +    // and the exact frames the clip plays, so the two cannot drift apart. A
 +    // preview that does not match makes the system drop the animated artwork.
 +    guard let preview = previewFirstFrame(file: destination) else {
++      setStage("failed", "preview")
 +      return nil
 +    }
++    setStage("ready", "")
 +    return MPMediaItemAnimatedArtwork(
 +      artworkID: id + "-stream-3x4",
 +      previewImageRequestHandler: { _ in preview },
@@ -2900,10 +2957,10 @@ index 0000000000000000000000000000000000000000..3f23f0177668f354b005580174b2a30b
 +  }
 +}
 diff --git a/ios/AudioModule.swift b/ios/AudioModule.swift
-index d26560627c2dfa97370440ad28304617f3f9f0f7..c34df955b7c4370a022a962a57fe430175fcba83 100644
+index d26560627c2dfa97370440ad28304617f3f9f0f7..89c4250c4237f837445497230c2e70238a6f1d55 100644
 --- a/ios/AudioModule.swift
 +++ b/ios/AudioModule.swift
-@@ -32,6 +32,37 @@ public class AudioModule: Module {
+@@ -32,6 +32,46 @@ public class AudioModule: Module {
        try setAudioMode(mode: mode)
      }
  
@@ -2938,10 +2995,19 @@ index d26560627c2dfa97370440ad28304617f3f9f0f7..c34df955b7c4370a022a962a57fe4301
 +      MediaController.shared.setStreamClip(tallUrl: tallUrl, for: artworkUrl)
 +    }
 +
++    /// What the last stream-clip export did, for the diagnostics screen.
++    Function("animatedClipState") { () -> [String: String] in
++#if compiler(>=6.2)
++      StreamArtworkClip.state()
++#else
++      [:]
++#endif
++    }
++
      AsyncFunction("setIsAudioActiveAsync") { (isActive: Bool)  in
        try setIsAudioActive(isActive)
      }
-@@ -241,6 +272,18 @@ public class AudioModule: Module {
+@@ -241,6 +281,18 @@ public class AudioModule: Module {
          }
        }
  
