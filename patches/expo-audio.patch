@@ -1982,10 +1982,10 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..3dc08a6973d38362c1f1100623134acb
      /**
 diff --git a/ios/AnimatedArtwork.swift b/ios/AnimatedArtwork.swift
 new file mode 100644
-index 0000000000000000000000000000000000000000..2dc39a86aa280801d5db4431b9d634d083bfb0aa
+index 0000000000000000000000000000000000000000..12a91373c6e24c66c2de685d3914d0d624cf3c3a
 --- /dev/null
 +++ b/ios/AnimatedArtwork.swift
-@@ -0,0 +1,933 @@
+@@ -0,0 +1,989 @@
 +import AVFoundation
 +import CoreGraphics
 +import CoreImage
@@ -2728,86 +2728,107 @@ index 0000000000000000000000000000000000000000..2dc39a86aa280801d5db4431b9d634d0
 +    }
 +    return base
 +      .appendingPathComponent("animated-artwork", isDirectory: true)
-+      .appendingPathComponent(id + "-stream-3x4.movpkg")
++      .appendingPathComponent(id + "-stream-3x4.mp4")
 +  }
 +
-+  /// The offline HLS download, one per artwork URL: the system fetches the
-+  /// segments itself, which an export session refuses for some of these
-+  /// streams ("operation not supported for this media").
-+  private final class StreamDownloadDelegate: NSObject, AVAssetDownloadDelegate {
-+    var location: URL?
-+    var onDone: (() -> Void)?
-+    var onFailure: ((String) -> Void)?
++  /// A cover stream is one file behind two playlists: the master lists the
++  /// variants, the media one the file. Anything else (segments per scene) is
++  /// a real stream, not a cover clip, and is left alone.
++  private static let widestStream = 1100
 +
-+    func urlSession(
-+      _ session: URLSession,
-+      assetDownloadTask: AVAssetDownloadTask,
-+      didFinishDownloadingTo location: URL
-+    ) {
-+      self.location = location
++  private static func playlistLines(_ text: String) -> [String] {
++    text.components(separatedBy: .newlines)
++      .map { $0.trimmingCharacters(in: .whitespaces) }
++      .filter { !$0.isEmpty }
++  }
++
++  private static func streamAttributes(_ tag: String) -> [String: String] {
++    var out: [String: String] = [:]
++    guard let regex = try? NSRegularExpression(pattern: "([A-Z0-9-]+)=(\"[^\"]*\"|[^,]*)") else {
++      return out
 +    }
++    let range = NSRange(tag.startIndex..., in: tag)
++    for match in regex.matches(in: tag, range: range) {
++      if let key = Range(match.range(at: 1), in: tag),
++         let value = Range(match.range(at: 2), in: tag) {
++        out[String(tag[key])] = String(tag[value]).trimmingCharacters(in: CharacterSet(charactersIn: "\""))
++      }
++    }
++    return out
++  }
 +
-+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-+      if let error {
-+        var reason = String(describing: error).replacingOccurrences(of: "\n", with: " ")
-+        reason = String(reason.prefix(160))
-+        onFailure?(reason.isEmpty ? "download" : reason)
++  private static func pickStream(master: String, base: URL) -> URL? {
++    let lines = playlistLines(master)
++    var best: URL?
++    var bestHEVC = false
++    var bestArea = 0
++    var bestRate = 0
++    var index = 0
++    while index + 1 < lines.count {
++      defer { index += 1 }
++      let tag = lines[index]
++      let uri = lines[index + 1]
++      guard tag.hasPrefix("#EXT-X-STREAM-INF:"), !uri.hasPrefix("#") else { continue }
++      let attributes = streamAttributes(tag)
++      let size = (attributes["RESOLUTION"] ?? "").split(separator: "x").compactMap { Int($0) }
++      guard size.count == 2, size[0] <= widestStream else { continue }
++      let codecs = attributes["CODECS"] ?? ""
++      let hevc = codecs.hasPrefix("hvc1") || codecs.hasPrefix("hev1")
++      let area = size[0] * size[1]
++      let rate = Int(attributes["AVERAGE-BANDWIDTH"] ?? attributes["BANDWIDTH"] ?? "") ?? 0
++      let better = best == nil || (hevc && !bestHEVC) ||
++        (hevc == bestHEVC && (area > bestArea || (area == bestArea && rate < bestRate)))
++      if !better { continue }
++      guard let url = URL(string: uri, relativeTo: base)?.absoluteURL else { continue }
++      best = url
++      bestHEVC = hevc
++      bestArea = area
++      bestRate = rate
++    }
++    return best
++  }
++
++  private static func singleFile(media: String, base: URL) -> URL? {
++    var file: String?
++    for line in playlistLines(media) {
++      let uri: String?
++      if line.hasPrefix("#EXT-X-MAP:") {
++        uri = streamAttributes(line)["URI"]
++      } else if line.hasPrefix("#") {
++        uri = nil
 +      } else {
-+        onDone?()
++        uri = line
 +      }
-+      onDone = nil
-+      onFailure = nil
++      guard let uri else { continue }
++      if let file, file != uri { return nil }
++      file = uri
 +    }
++    guard let file else { return nil }
++    return URL(string: file, relativeTo: base)?.absoluteURL
 +  }
 +
-+  private static func download(m3u8: URL, id: String) async -> URL? {
-+    await withCheckedContinuation { continuation in
-+      let delegate = StreamDownloadDelegate()
-+      let session: AVAssetDownloadURLSession? = AVAssetDownloadURLSession(
-+        configuration: .default,
-+        assetDownloadDelegate: delegate,
-+        delegateQueue: nil
-+      )
-+      guard let session else {
-+        setStage("failed", "session")
-+        continuation.resume(returning: nil)
-+        return
-+      }
-+      delegate.onDone = {
-+        session.finishTasksAndInvalidate()
-+        continuation.resume(returning: delegate.location)
-+      }
-+      delegate.onFailure = { message in
-+        session.finishTasksAndInvalidate()
-+        setStage("failed", message)
-+        continuation.resume(returning: nil)
-+      }
-+      guard let task = session.makeAssetDownloadTask(
-+        asset: AVURLAsset(url: m3u8),
-+        assetTitle: id,
-+        assetArtworkData: nil,
-+        options: nil
-+      ) else {
-+        session.invalidateAndCancel()
-+        setStage("failed", "task")
-+        continuation.resume(returning: nil)
-+        return
-+      }
-+      task.resume()
-+    }
-+  }
-+
-+  /// The downloaded package's own playlist: what the system plays and what
-+  /// the preview is cut from, both local files as required.
-+  private static func localPlaylist(in package: URL) -> URL? {
-+    guard let items = try? FileManager.default.contentsOfDirectory(
-+      at: package,
-+      includingPropertiesForKeys: nil,
-+      options: [.skipsHiddenFiles]
-+    ) else {
++  private static func downloadText(_ url: URL) async -> String? {
++    guard let (data, response) = try? await URLSession.shared.data(from: url),
++          (response as? HTTPURLResponse)?.statusCode == 200,
++          let text = String(data: data, encoding: .utf8) else {
 +      return nil
 +    }
-+    return items.first(where: { $0.pathExtension.lowercased() == "m3u8" })
++    return text
++  }
++
++  private static func downloadFile(_ url: URL, to destination: URL) async -> Bool {
++    guard let (data, response) = try? await URLSession.shared.data(from: url),
++          (response as? HTTPURLResponse)?.statusCode == 200,
++          !data.isEmpty else {
++      return false
++    }
++    do {
++      try? FileManager.default.removeItem(at: destination)
++      try data.write(to: destination, options: .atomic)
++      return true
++    } catch {
++      return false
++    }
 +  }
 +
 +  static func item(m3u8: URL) -> Task<MPMediaItemAnimatedArtwork?, Never> {
@@ -2874,25 +2895,31 @@ index 0000000000000000000000000000000000000000..2dc39a86aa280801d5db4431b9d634d0
 +          UIApplication.shared.endBackgroundTask(backgroundTask)
 +        }
 +      }
-+      guard let package = await download(m3u8: m3u8, id: id) else {
++      guard let master = await downloadText(m3u8) else {
++        setStage("failed", "master")
 +        return nil
 +      }
-+      do {
-+        try? FileManager.default.removeItem(at: destination)
-+        try FileManager.default.moveItem(at: package, to: destination)
-+      } catch {
-+        setStage("failed", "move")
++      guard let stream = pickStream(master: master, base: m3u8) else {
++        setStage("failed", "stream")
++        return nil
++      }
++      guard let media = await downloadText(stream) else {
++        setStage("failed", "media")
++        return nil
++      }
++      guard let file = singleFile(media: media, base: stream),
++            await downloadFile(file, to: destination) else {
++        setStage("failed", "file")
 +        return nil
 +      }
 +    } else {
 +      setStage("cached", "")
 +    }
-+    // The preview is cut from the downloaded package, not the stream: local,
-+    // fast, and the exact frames the clip plays, so the two cannot drift
-+    // apart. A preview that does not match makes the system drop the
-+    // animated artwork.
-+    guard let playlist = localPlaylist(in: destination),
-+          let preview = previewFirstFrame(file: playlist) else {
++    // The preview is cut from the downloaded clip itself: local, fast, and
++    // the exact frames the lock screen plays, so the two cannot drift apart.
++    // It is composed to the tall shape exactly: a still more than a hair off
++    // makes the system drop the animated artwork.
++    guard let preview = previewComposed(file: destination) else {
 +      setStage("failed", "preview")
 +      return nil
 +    }
@@ -2900,8 +2927,37 @@ index 0000000000000000000000000000000000000000..2dc39a86aa280801d5db4431b9d634d0
 +    return MPMediaItemAnimatedArtwork(
 +      artworkID: id + "-stream-3x4",
 +      previewImageRequestHandler: { _ in preview },
-+      videoAssetFileURLRequestHandler: { _ in playlist }
++      videoAssetFileURLRequestHandler: { _ in destination }
 +    )
++  }
++
++  private static func previewComposed(file: URL) -> UIImage? {
++    let generator = AVAssetImageGenerator(asset: AVURLAsset(url: file))
++    generator.appliesPreferredTrackTransform = true
++    guard let frame = try? generator.copyCGImage(
++      at: CMTime(seconds: 0.5, preferredTimescale: 600),
++      actualTime: nil
++    ) else {
++      return nil
++    }
++    let image = UIImage(cgImage: frame)
++    guard image.size.width > 0, image.size.height > 0 else {
++      return nil
++    }
++    let size = CGSize(width: 900, height: 1200)
++    let format = UIGraphicsImageRendererFormat.preferred()
++    format.scale = 1
++    format.opaque = true
++    return UIGraphicsImageRenderer(size: size, format: format).image { _ in
++      let scale = max(size.width / image.size.width, size.height / image.size.height)
++      let drawn = CGSize(width: image.size.width * scale, height: image.size.height * scale)
++      image.draw(in: CGRect(
++        x: (size.width - drawn.width) / 2,
++        y: (size.height - drawn.height) / 2,
++        width: drawn.width,
++        height: drawn.height
++      ))
++    }
 +  }
 +
 +  private static func previewFirstFrame(file: URL) -> UIImage? {
