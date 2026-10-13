@@ -1982,10 +1982,10 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..3dc08a6973d38362c1f1100623134acb
      /**
 diff --git a/ios/AnimatedArtwork.swift b/ios/AnimatedArtwork.swift
 new file mode 100644
-index 0000000000000000000000000000000000000000..8b439b7303d64fb60e1ec641dcab183d70c90a93
+index 0000000000000000000000000000000000000000..f478bae4e0d19c6afcf337abc9689bf687646224
 --- /dev/null
 +++ b/ios/AnimatedArtwork.swift
-@@ -0,0 +1,861 @@
+@@ -0,0 +1,881 @@
 +import AVFoundation
 +import CoreGraphics
 +import CoreImage
@@ -2790,20 +2790,33 @@ index 0000000000000000000000000000000000000000..8b439b7303d64fb60e1ec641dcab183d
 +        setStage("failed", "duration")
 +        return nil
 +      }
-+      // The system prefers a clip of less than 30 seconds.
-+      let range = CMTimeRange(
-+        start: .zero,
-+        duration: CMTime(seconds: min(29, duration.seconds), preferredTimescale: 600)
++      // The export keeps running after the app backgrounds: without time the
++      // system suspends it mid-file and the clip never lands.
++      var backgroundTask: UIBackgroundTaskIdentifier = .invalid
++      backgroundTask = UIApplication.shared.beginBackgroundTask(withName: "stream-clip-export") {}
++      defer {
++        if backgroundTask != .invalid {
++          UIApplication.shared.endBackgroundTask(backgroundTask)
++        }
++      }
++      // Not every HLS asset takes the top preset: fall down the compatible
++      // ones instead of failing outright.
++      let compatible = AVAssetExportSession.exportPresets(compatibleWith: asset)
++      let preset = [AVAssetExportPresetHighestQuality, AVAssetExportPresetMediumQuality].first(
++        where: { compatible.contains($0) }
 +      )
-+      try? FileManager.default.removeItem(at: destination)
-+      guard let session = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetHighestQuality) else {
++      guard let preset, let session = AVAssetExportSession(asset: asset, presetName: preset) else {
 +        setStage("failed", "session")
 +        return nil
 +      }
 +      setStage("exporting", m3u8.host ?? "")
 +      session.outputURL = destination
 +      session.outputFileType = .mp4
-+      session.timeRange = range
++      // The system prefers a clip of less than 30 seconds.
++      session.timeRange = CMTimeRange(
++        start: .zero,
++        duration: CMTime(seconds: min(29, duration.seconds), preferredTimescale: 600)
++      )
 +      await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
 +        session.exportAsynchronously {
 +          continuation.resume()
@@ -2811,7 +2824,14 @@ index 0000000000000000000000000000000000000000..8b439b7303d64fb60e1ec641dcab183d
 +      }
 +      guard session.status == .completed else {
 +        try? FileManager.default.removeItem(at: destination)
-+        setStage("failed", "export")
++        // The bare status never says why: the error does, one line of it.
++        var reason = "export"
++        if let text = session.error.map({ String(describing: $0) }) {
++          let flat = text.replacingOccurrences(of: "\n", with: " ")
++          reason = String(flat.prefix(160))
++          if reason.isEmpty { reason = "export" }
++        }
++        setStage("failed", reason)
 +        return nil
 +      }
 +    } else {
