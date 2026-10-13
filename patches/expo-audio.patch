@@ -1982,10 +1982,10 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..3dc08a6973d38362c1f1100623134acb
      /**
 diff --git a/ios/AnimatedArtwork.swift b/ios/AnimatedArtwork.swift
 new file mode 100644
-index 0000000000000000000000000000000000000000..f478bae4e0d19c6afcf337abc9689bf687646224
+index 0000000000000000000000000000000000000000..2dc39a86aa280801d5db4431b9d634d083bfb0aa
 --- /dev/null
 +++ b/ios/AnimatedArtwork.swift
-@@ -0,0 +1,881 @@
+@@ -0,0 +1,933 @@
 +import AVFoundation
 +import CoreGraphics
 +import CoreImage
@@ -2687,11 +2687,12 @@ index 0000000000000000000000000000000000000000..f478bae4e0d19c6afcf337abc9689bf6
 +  }
 +}
 +
-+/// Tall HLS clip from the animated-artwork endpoint: exported once to a local
-+/// file — the system only plays local video — then handed out like an
-+/// encoded clip. One export per artwork URL, shared by whoever asks while it
-+/// runs, and reused from disk after. Nil when the stream cannot be read: the
-+/// caller falls back to the static artwork, which is always there.
++/// Tall HLS clip from the animated-artwork endpoint: downloaded once for
++/// offline playback — the system only plays local video — then handed out
++/// like an encoded clip. One download per artwork URL, shared by whoever
++/// asks while it runs, and reused from disk after. Nil when the stream
++/// cannot be read: the caller falls back to the static artwork, which is
++/// always there.
 +@available(iOS 26.0, tvOS 26.0, *)
 +final class StreamArtworkClip {
 +  private static let lock = NSLock()
@@ -2727,7 +2728,86 @@ index 0000000000000000000000000000000000000000..f478bae4e0d19c6afcf337abc9689bf6
 +    }
 +    return base
 +      .appendingPathComponent("animated-artwork", isDirectory: true)
-+      .appendingPathComponent(id + "-stream-3x4.mp4")
++      .appendingPathComponent(id + "-stream-3x4.movpkg")
++  }
++
++  /// The offline HLS download, one per artwork URL: the system fetches the
++  /// segments itself, which an export session refuses for some of these
++  /// streams ("operation not supported for this media").
++  private final class StreamDownloadDelegate: NSObject, AVAssetDownloadDelegate {
++    var location: URL?
++    var onDone: (() -> Void)?
++    var onFailure: ((String) -> Void)?
++
++    func urlSession(
++      _ session: URLSession,
++      assetDownloadTask: AVAssetDownloadTask,
++      didFinishDownloadingTo location: URL
++    ) {
++      self.location = location
++    }
++
++    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
++      if let error {
++        var reason = String(describing: error).replacingOccurrences(of: "\n", with: " ")
++        reason = String(reason.prefix(160))
++        onFailure?(reason.isEmpty ? "download" : reason)
++      } else {
++        onDone?()
++      }
++      onDone = nil
++      onFailure = nil
++    }
++  }
++
++  private static func download(m3u8: URL, id: String) async -> URL? {
++    await withCheckedContinuation { continuation in
++      let delegate = StreamDownloadDelegate()
++      let session: AVAssetDownloadURLSession? = AVAssetDownloadURLSession(
++        configuration: .default,
++        assetDownloadDelegate: delegate,
++        delegateQueue: nil
++      )
++      guard let session else {
++        setStage("failed", "session")
++        continuation.resume(returning: nil)
++        return
++      }
++      delegate.onDone = {
++        session.finishTasksAndInvalidate()
++        continuation.resume(returning: delegate.location)
++      }
++      delegate.onFailure = { message in
++        session.finishTasksAndInvalidate()
++        setStage("failed", message)
++        continuation.resume(returning: nil)
++      }
++      guard let task = session.makeAssetDownloadTask(
++        asset: AVURLAsset(url: m3u8),
++        assetTitle: id,
++        assetArtworkData: nil,
++        options: nil
++      ) else {
++        session.invalidateAndCancel()
++        setStage("failed", "task")
++        continuation.resume(returning: nil)
++        return
++      }
++      task.resume()
++    }
++  }
++
++  /// The downloaded package's own playlist: what the system plays and what
++  /// the preview is cut from, both local files as required.
++  private static func localPlaylist(in package: URL) -> URL? {
++    guard let items = try? FileManager.default.contentsOfDirectory(
++      at: package,
++      includingPropertiesForKeys: nil,
++      options: [.skipsHiddenFiles]
++    ) else {
++      return nil
++    }
++    return items.first(where: { $0.pathExtension.lowercased() == "m3u8" })
 +  }
 +
 +  static func item(m3u8: URL) -> Task<MPMediaItemAnimatedArtwork?, Never> {
@@ -2780,67 +2860,39 @@ index 0000000000000000000000000000000000000000..f478bae4e0d19c6afcf337abc9689bf6
 +      return nil
 +    }
 +    if !FileManager.default.fileExists(atPath: destination.path) {
-+      setStage("loading", m3u8.host ?? "")
++      setStage("downloading", m3u8.host ?? "")
 +      try? FileManager.default.createDirectory(
 +        at: destination.deletingLastPathComponent(),
 +        withIntermediateDirectories: true
 +      )
-+      let asset = AVURLAsset(url: m3u8)
-+      guard let duration = try? await asset.load(.duration), duration.seconds > 0 else {
-+        setStage("failed", "duration")
-+        return nil
-+      }
-+      // The export keeps running after the app backgrounds: without time the
-+      // system suspends it mid-file and the clip never lands.
++      // The download keeps running after the app backgrounds: without time
++      // the system suspends it mid-file and the clip never lands.
 +      var backgroundTask: UIBackgroundTaskIdentifier = .invalid
-+      backgroundTask = UIApplication.shared.beginBackgroundTask(withName: "stream-clip-export") {}
++      backgroundTask = UIApplication.shared.beginBackgroundTask(withName: "stream-clip-download") {}
 +      defer {
 +        if backgroundTask != .invalid {
 +          UIApplication.shared.endBackgroundTask(backgroundTask)
 +        }
 +      }
-+      // Not every HLS asset takes the top preset: fall down the compatible
-+      // ones instead of failing outright.
-+      let compatible = AVAssetExportSession.exportPresets(compatibleWith: asset)
-+      let preset = [AVAssetExportPresetHighestQuality, AVAssetExportPresetMediumQuality].first(
-+        where: { compatible.contains($0) }
-+      )
-+      guard let preset, let session = AVAssetExportSession(asset: asset, presetName: preset) else {
-+        setStage("failed", "session")
++      guard let package = await download(m3u8: m3u8, id: id) else {
 +        return nil
 +      }
-+      setStage("exporting", m3u8.host ?? "")
-+      session.outputURL = destination
-+      session.outputFileType = .mp4
-+      // The system prefers a clip of less than 30 seconds.
-+      session.timeRange = CMTimeRange(
-+        start: .zero,
-+        duration: CMTime(seconds: min(29, duration.seconds), preferredTimescale: 600)
-+      )
-+      await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-+        session.exportAsynchronously {
-+          continuation.resume()
-+        }
-+      }
-+      guard session.status == .completed else {
++      do {
 +        try? FileManager.default.removeItem(at: destination)
-+        // The bare status never says why: the error does, one line of it.
-+        var reason = "export"
-+        if let text = session.error.map({ String(describing: $0) }) {
-+          let flat = text.replacingOccurrences(of: "\n", with: " ")
-+          reason = String(flat.prefix(160))
-+          if reason.isEmpty { reason = "export" }
-+        }
-+        setStage("failed", reason)
++        try FileManager.default.moveItem(at: package, to: destination)
++      } catch {
++        setStage("failed", "move")
 +        return nil
 +      }
 +    } else {
 +      setStage("cached", "")
 +    }
-+    // The preview is cut from the exported file, not the stream: local, fast,
-+    // and the exact frames the clip plays, so the two cannot drift apart. A
-+    // preview that does not match makes the system drop the animated artwork.
-+    guard let preview = previewFirstFrame(file: destination) else {
++    // The preview is cut from the downloaded package, not the stream: local,
++    // fast, and the exact frames the clip plays, so the two cannot drift
++    // apart. A preview that does not match makes the system drop the
++    // animated artwork.
++    guard let playlist = localPlaylist(in: destination),
++          let preview = previewFirstFrame(file: playlist) else {
 +      setStage("failed", "preview")
 +      return nil
 +    }
@@ -2848,7 +2900,7 @@ index 0000000000000000000000000000000000000000..f478bae4e0d19c6afcf337abc9689bf6
 +    return MPMediaItemAnimatedArtwork(
 +      artworkID: id + "-stream-3x4",
 +      previewImageRequestHandler: { _ in preview },
-+      videoAssetFileURLRequestHandler: { _ in destination }
++      videoAssetFileURLRequestHandler: { _ in playlist }
 +    )
 +  }
 +
