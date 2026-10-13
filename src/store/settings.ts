@@ -1063,6 +1063,12 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
    */
   animatedArtworkEndpoint: string;
   /**
+   * Play endpoint clips as in-app video (cover square and background).
+   * Kills the video players without touching the lock-screen tall clips:
+   * the escape hatch if a cover ever misbehaves.
+   */
+  animatedCoverVideo: boolean;
+  /**
    * Hand-picked Apple Music URLs per album (artist + album key), asked
    * before the search and trusted as chosen. Album menus write these.
    */
@@ -1357,6 +1363,8 @@ const DEFAULTS = {
   animatedArtworkFps: 30,
   // Empty: no server, still covers.
   animatedArtworkEndpoint: '',
+  // On: endpoint clips play over the still covers.
+  animatedCoverVideo: true,
   // Empty: search decides everything.
   animatedArtworkUrls: {},
   fitCoverArt: false,

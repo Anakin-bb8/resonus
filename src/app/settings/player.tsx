@@ -76,6 +76,8 @@ export default function PlayerSettings() {
   const setFitCoverArt = useSettings((s) => s.setFitCoverArt);
   const animatedCoverBackground = useSettings((s) => s.animatedCoverBackground);
   const setAnimatedCoverBackground = useSettings((s) => s.setAnimatedCoverBackground);
+  const animatedCoverVideo = useSettings((s) => s.animatedCoverVideo);
+  const setAnimatedCoverVideo = useSettings((s) => s.setAnimatedCoverVideo);
   const animatedArtworkFps = useSettings((s) => s.animatedArtworkFps);
   const setAnimatedArtworkFps = useSettings((s) => s.setAnimatedArtworkFps);
   const animatedArtworkEndpoint = useSettings((s) => s.animatedArtworkEndpoint);
@@ -187,6 +189,12 @@ export default function PlayerSettings() {
                 label: t('Animated cover background'),
                 value: animatedCoverBackground,
                 onChange: setAnimatedCoverBackground,
+              },
+              {
+                label: t('Animated cover videos'),
+                description: t('Play endpoint clips over the still covers. Off keeps every cover still.'),
+                value: animatedCoverVideo,
+                onChange: setAnimatedCoverVideo,
               },
             ]}
           />

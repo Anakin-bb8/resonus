@@ -215,6 +215,8 @@
   "With device info on, the row holds at most {n} buttons, spread across the width.": "Con le info dispositivo attive, la riga contiene al massimo {n} pulsanti, distribuiti su tutta la larghezza.",
   "Animated artwork endpoint": "Endpoint copertine animate",
   "Animated covers server: square and tall clips stream from it instead of still covers.": "Server copertine animate: clip quadrate e verticali in streaming al posto delle copertine fisse.",
+  "Animated cover videos": "Video copertine animate",
+  "Play endpoint clips over the still covers. Off keeps every cover still.": "Riproduce le clip dell'endpoint sopra le copertine fisse. Spento lascia tutto fermo.",
   "Animated artwork": "Copertina animata",
   "Apple Music URL": "URL Apple Music",
   "The album page on Apple Music whose animated cover plays for this album.": "La pagina album su Apple Music la cui copertina animata va in play per questo album.",

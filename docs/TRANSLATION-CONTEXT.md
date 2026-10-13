@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 822 of them.
+Every string the app can show, under the screen it shows up on. 824 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -1004,6 +1004,7 @@ you are actually typing into, which is easier than reading it here.
 | `Animated artwork endpoint` |  |
 | `Animated cover background` | A setting: an animated cover (GIF, animated WebP) is shown full screen behind the player instead of inside the square |
 | `Animated cover frame rate` |  |
+| `Animated cover videos` |  |
 | `Animated covers server: square and tall clips stream from it instead of still covers.` |  |
 | `Background` | Section header over what is drawn behind the player. Its two values are `Plain` and `Blurred cover` |
 | `Blur inactive lyrics` | A switch in the Lyrics section: progressively softens synchronized lyric rows away from the current line |
@@ -1042,6 +1043,7 @@ you are actually typing into, which is easier than reading it here.
 | `On cover tap` | What tapping the cover art in the player does. One tap and two share the same values, listed below |
 | `Open lyrics screen` | A value of `On cover tap` |
 | `Plain` | A value of `Background`: a flat colour behind the player, no picture |
+| `Play endpoint clips over the still covers. Off keeps every cover still.` | The line under “Animated cover videos”, explaining it |
 | `Play or pause` | One of its options: the same as the play button |
 | `Player` |  |
 | `Player background` | What is drawn behind the player: the blurred artwork, or a flat tint |

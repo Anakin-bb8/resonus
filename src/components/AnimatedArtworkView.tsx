@@ -7,6 +7,8 @@
 import { useEffect } from 'react';
 import { AppState, StyleSheet, View } from 'react-native';
 
+import { useSettings } from '@/store/settings';
+
 let VideoView: React.ComponentType<any> | null = null;
 let useVideoPlayer: ((source: string, setup?: (player: any) => void) => any) | null = null;
 try {
@@ -84,7 +86,8 @@ export function AnimatedArtworkView({
   size: number;
   corner: number;
 }) {
-  if (!square || !VideoView || !useVideoPlayer) return null;
+  const videoOn = useSettings((s) => s.animatedCoverVideo);
+  if (!videoOn || !square || !VideoView || !useVideoPlayer) return null;
   return (
     <View pointerEvents="none" style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]}>
       <ClipVideo uri={square} size={size} corner={corner} />
@@ -94,7 +97,8 @@ export function AnimatedArtworkView({
 
 /** Full-screen clip behind everything, like the animated image background. */
 export function AnimatedArtworkBackground({ square }: { square: string | null | undefined }) {
-  if (!square || !VideoView || !useVideoPlayer) return null;
+  const videoOn = useSettings((s) => s.animatedCoverVideo);
+  if (!videoOn || !square || !VideoView || !useVideoPlayer) return null;
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <BackgroundClip uri={square} />
