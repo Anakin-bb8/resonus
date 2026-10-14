@@ -30,8 +30,13 @@ try {
 let CoverClipNativeView: React.ComponentType<any> | null = null;
 if (Platform.OS === 'ios') {
   try {
-    const { requireNativeViewManager } = require('expo-modules-core');
-    CoverClipNativeView = requireNativeViewManager('CoverClip', 'CoverClipView');
+    const { requireNativeViewManager, requireOptionalNativeModule } = require('expo-modules-core');
+    // The view manager never throws for a missing module - it renders an
+    // "Unimplemented component" stub instead. The module itself is the real
+    // capability check: null on runtimes without it (Expo Go).
+    if (requireOptionalNativeModule('CoverClip')) {
+      CoverClipNativeView = requireNativeViewManager('CoverClip', 'CoverClipView');
+    }
   } catch {
     CoverClipNativeView = null;
   }

@@ -878,6 +878,22 @@ function clearLockScreen() {
   lockOwner = null;
 }
 
+/**
+ * Re-publishes whatever is currently playing to the lock screen, if this app
+ * owns it. Never clears, never switches players, never touches remote output.
+ */
+function assertLockScreen() {
+  if (remoteKind()) return;
+  const p = activePlayer();
+  const song = currentSong(usePlayerStore.getState());
+  if (!p || !song || lockOwner !== p) return;
+  try {
+    applyLockScreen(p, song);
+  } catch {
+    // A stale native player can throw on write; the next update recovers.
+  }
+}
+
 // ── Salida remota (renderer UPnP/DLNA) ─────────────────────────────────────
 
 /** Active remote output, if any. */
@@ -3504,6 +3520,11 @@ function attachAppState() {
       // the last moment anything of ours is certain to run, so it is closed out
       // here rather than left hanging (#140).
       settleFade();
+      // Leaving with a cover clip on screen: say again what is playing, now,
+      // synchronously - background timers cannot be relied on. A plain
+      // re-publish of whatever is current; where the clip never takes
+      // anything it changes nothing.
+      assertLockScreen();
       // Leaving the foreground is the last chance to write down where playback
       // was, so this one is not up for skipping. For remote playback this must
       // not force a queue rewrite: minimizing the app should not touch the
