@@ -4,8 +4,8 @@
  * cover as before. Mounted only when a clip URL is known.
  */
 /* eslint-disable @typescript-eslint/no-require-imports */
-import { useEffect } from 'react';
-import { AppState, StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { AppState, Platform, StyleSheet, View } from 'react-native';
 
 import { useSettings } from '@/store/settings';
 
@@ -20,9 +20,49 @@ try {
   useVideoPlayer = null;
 }
 
-/** True on builds that can play HLS covers (absent from bare runtimes). */
+/**
+ * The layer-backed clip view (CoverClip module, device builds only): an
+ * AVPlayer behind an AVPlayerLayer, never an AVPlayerViewController. The
+ * controller is what breaks the song's lock screen once it has presented
+ * video - muted or not - while the bare layer leaves the audio session,
+ * Now Playing and the remote commands alone.
+ */
+let CoverClipNativeView: React.ComponentType<any> | null = null;
+if (Platform.OS === 'ios') {
+  try {
+    const { requireNativeViewManager } = require('expo-modules-core');
+    CoverClipNativeView = requireNativeViewManager('CoverClip', 'CoverClipView');
+  } catch {
+    CoverClipNativeView = null;
+  }
+}
+
+/**
+ * True on builds that can play HLS covers: the layer view on iOS device
+ * builds, expo-video on Android, nothing on runtimes without them (Expo Go).
+ */
 export function canPlayAnimatedCovers(): boolean {
+  if (Platform.OS === 'ios') return !!CoverClipNativeView;
   return !!VideoView && !!useVideoPlayer;
+}
+
+/**
+ * Whether the app is truly in the background (locked or minimized - not just
+ * Control Center pulled over it). Cover clips only exist while there is
+ * something to watch: behind the lock screen the song's session must stand
+ * alone, or the system keeps preferring the video surface and the audio
+ * controls never show. Inactive (Control Center, switcher peek) keeps the
+ * video mounted, so pulling those down no longer stutters and restarts it.
+ */
+function useIsBackground(): boolean {
+  const [bg, setBg] = useState(AppState.currentState === 'background');
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      setBg(state === 'background');
+    });
+    return () => sub.remove();
+  }, []);
+  return bg;
 }
 
 /**
@@ -87,7 +127,18 @@ export function AnimatedArtworkView({
   corner: number;
 }) {
   const videoOn = useSettings((s) => s.animatedCoverVideo);
-  if (!videoOn || !square || !VideoView || !useVideoPlayer) return null;
+  const bg = useIsBackground();
+  if (!videoOn || !square || bg) return null;
+  if (Platform.OS === 'ios') {
+    if (!CoverClipNativeView) return null;
+    const CCV = CoverClipNativeView;
+    return (
+      <View pointerEvents="none" style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]}>
+        <CCV style={{ width: size, height: size, borderRadius: corner }} uri={square} />
+      </View>
+    );
+  }
+  if (!VideoView || !useVideoPlayer) return null;
   return (
     <View pointerEvents="none" style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]}>
       <ClipVideo uri={square} size={size} corner={corner} />
@@ -98,7 +149,18 @@ export function AnimatedArtworkView({
 /** Full-screen clip behind everything, like the animated image background. */
 export function AnimatedArtworkBackground({ square }: { square: string | null | undefined }) {
   const videoOn = useSettings((s) => s.animatedCoverVideo);
-  if (!videoOn || !square || !VideoView || !useVideoPlayer) return null;
+  const bg = useIsBackground();
+  if (!videoOn || !square || bg) return null;
+  if (Platform.OS === 'ios') {
+    if (!CoverClipNativeView) return null;
+    const CCV = CoverClipNativeView;
+    return (
+      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+        <CCV style={StyleSheet.absoluteFill} uri={square} />
+      </View>
+    );
+  }
+  if (!VideoView || !useVideoPlayer) return null;
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <BackgroundClip uri={square} />
