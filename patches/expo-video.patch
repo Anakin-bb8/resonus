@@ -1,8 +1,24 @@
 diff --git a/ios/NowPlayingManager.swift b/ios/NowPlayingManager.swift
-index c276c5c918c8f8d1921f3507dc3cd42e172e5493..028d708d86ff283b934fea8018d26fa67a692d38 100644
+index c276c5c918c8f8d1921f3507dc3cd42e172e5493..c6a2b0f384a66fe73434e82d6fd5a9fba5bee26d 100644
 --- a/ios/NowPlayingManager.swift
 +++ b/ios/NowPlayingManager.swift
-@@ -36,9 +36,11 @@ class NowPlayingManager: VideoPlayerObserverDelegate {
+@@ -25,6 +25,15 @@ class NowPlayingManager: VideoPlayerObserverDelegate {
+   private var playbackPositionTarget: Any?
+   private var updateNowPlayingTask: Task<(), Never>?
+ 
++  // Resonus: expo-video only ever removes the targets it added itself. The
++  // tokens above stay nil (nothing is ever added: most-recent stays nil, see
++  // registerPlayer), and `removeTarget(nil)` removes *every* target on the
++  // command - including expo-audio's. That single call is what took the lock
++  // screen, the Island and the headphone controls away while the song kept
++  // playing (upstream expo/expo#48068). Tracked below; removal without a
++  // prior add is a no-op.
++  private var didAddNowPlayingTargets = false
++
+   init() {
+     let commandCenter = MPRemoteCommandCenter.shared()
+ 
+@@ -36,12 +45,20 @@ class NowPlayingManager: VideoPlayerObserverDelegate {
      players.add(player)
      player.observer?.registerDelegate(delegate: self)
  
@@ -17,7 +33,16 @@ index c276c5c918c8f8d1921f3507dc3cd42e172e5493..028d708d86ff283b934fea8018d26fa6
    }
  
    func unregisterPlayer(_ player: VideoPlayer) {
-@@ -54,7 +56,9 @@ class NowPlayingManager: VideoPlayerObserverDelegate {
++    // Resonus/upstream expo/expo#48068: a player that was never registered
++    // for Now Playing must not trigger any shared-state cleanup.
++    guard players.contains(player) else {
++      player.observer?.unregisterDelegate(delegate: self)
++      return
++    }
+     players.remove(player)
+     player.observer?.unregisterDelegate(delegate: self)
+ 
+@@ -54,7 +71,9 @@ class NowPlayingManager: VideoPlayerObserverDelegate {
        let commandCenter = MPRemoteCommandCenter.shared()
  
        removeNowPlayingTargets(commandCenter: commandCenter)
@@ -28,7 +53,26 @@ index c276c5c918c8f8d1921f3507dc3cd42e172e5493..028d708d86ff283b934fea8018d26fa6
      }
    }
  
-@@ -257,9 +261,9 @@ class NowPlayingManager: VideoPlayerObserverDelegate {
+@@ -234,10 +253,18 @@ class NowPlayingManager: VideoPlayerObserverDelegate {
+       commandCenter.skipForwardCommand.isEnabled = true
+       commandCenter.skipBackwardCommand.isEnabled = true
+       commandCenter.changePlaybackPositionCommand.isEnabled = true
++      self?.didAddNowPlayingTargets = true
+     }
+   }
+ 
+   private func removeNowPlayingTargets(commandCenter: MPRemoteCommandCenter) {
++    // Resonus: without a prior add the tokens below are nil, and
++    // `removeTarget(nil)` removes every target on the command - including the
++    // audio module's (upstream expo/expo#48068).
++    guard didAddNowPlayingTargets else {
++      return
++    }
++    didAddNowPlayingTargets = false
+     // Use the main queue to avoid race conditions with adding the targets (see comment in `addNowPlayingTargets`)
+     DispatchQueue.main.async { [weak self] in
+       commandCenter.playCommand.removeTarget(self?.playTarget)
+@@ -257,9 +284,9 @@ class NowPlayingManager: VideoPlayerObserverDelegate {
        if let newPlayer = players.allObjects.first(where: { $0.ref.rate != 0 }) {
          setMostRecentInteractionPlayer(player: newPlayer.ref)
        }
