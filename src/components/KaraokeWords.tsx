@@ -116,7 +116,7 @@ export const KaraokeWords = memo(function KaraokeWords({
 });
 
 /** How far a letter rises at the peak of its wave. */
-const CHAR_RISE_PX = 3;
+const CHAR_RISE_PX = 2;
 /** Hold after a word is sung before its letters fall back, and over what span. */
 const CHAR_FALL_DELAY_MS = 200;
 const CHAR_FALL_MS = 350;
@@ -137,19 +137,18 @@ function splitChars(value: string): string[] | null {
 }
 
 /**
- * One letter, rising as the sung frontier reaches it and falling back in
- * reverse once its word is out: the wave travels left to right through the
- * word instead of lifting it all at once.
+ * One letter, rising as the sung frontier reaches it and staying up until the
+ * whole row is sung: the wave travels left to right, then the row falls back
+ * all at once instead of bobbing word by word.
  */
-const WordChar = memo(function WordChar({ ch, textStyle, color, glow, clockMs, start, durationMs, end, index, count, animated }: { ch: string; textStyle: StyleProp<TextStyle>; color: string; glow?: object; clockMs: SharedValue<number>; start: number; durationMs: number; end: number; index: number; count: number; animated: boolean }) {
+const WordChar = memo(function WordChar({ ch, textStyle, color, glow, clockMs, start, durationMs, lineEndMs, index, count, animated }: { ch: string; textStyle: StyleProp<TextStyle>; color: string; glow?: object; clockMs: SharedValue<number>; start: number; durationMs: number; lineEndMs: number; index: number; count: number; animated: boolean }) {
   const lift = useAnimatedStyle(() => {
     if (!animated) return { transform: [{ translateY: 0 }] };
     const duration = Math.max(MIN_WORD_TRANSITION_MS, durationMs);
     const fill = clamp01((clockMs.value - start) / duration);
     const rise = clamp01(fill * count - index);
-    const after = clamp01((clockMs.value - (end + CHAR_FALL_DELAY_MS)) / CHAR_FALL_MS);
-    const fall = clamp01(after * count - (count - 1 - index));
-    return { transform: [{ translateY: -CHAR_RISE_PX * rise * (1 - fall) }] };
+    const release = clamp01((clockMs.value - (lineEndMs + CHAR_FALL_DELAY_MS)) / CHAR_FALL_MS);
+    return { transform: [{ translateY: -CHAR_RISE_PX * rise * (1 - release) }] };
   });
   return (
     <Animated.Text
@@ -189,11 +188,18 @@ function ActiveWordFlow({
     }
   }, [clockMs, isPlaying, positionSec, speed]);
 
+  // The row lets go all at once: the latest word end in the line.
+  const lineEndMs = words.reduce((latest, word, index) => {
+    const end = word.end ?? word.start + lyricWordDurationMs(words, index);
+    return Math.max(latest, end);
+  }, 0);
+
   return words.map((word, index) => (
     <TimedWord
       key={index}
       word={word}
       durationMs={lyricWordDurationMs(words, index)}
+      lineEndMs={lineEndMs}
       clockMs={clockMs}
       animateBounce={isPlaying && !reduceMotion}
       textStyle={textStyle}
@@ -206,6 +212,7 @@ function ActiveWordFlow({
 const TimedWord = memo(function TimedWord({
   word,
   durationMs,
+  lineEndMs,
   clockMs,
   animateBounce,
   textStyle,
@@ -214,6 +221,7 @@ const TimedWord = memo(function TimedWord({
 }: {
   word: LyricWord;
   durationMs: number;
+  lineEndMs: number;
   clockMs: SharedValue<number>;
   animateBounce: boolean;
   textStyle: StyleProp<TextStyle>;
@@ -223,22 +231,24 @@ const TimedWord = memo(function TimedWord({
   const width = useSharedValue(0);
   const height = useSharedValue(0);
   const chars = splitChars(word.value);
-  const end = word.end ?? word.start + durationMs;
 
   // The word-level bounce under the letter wave: a small bottom-anchored
-  // swell while the word is sung. iOS only lifts (magnifying rasterized
-  // masked text turns the glyphs soft); shifting stays sharp.
+  // swell riding the whole sung word - landing exactly as the word ends -
+  // then held up like the letters until the row lets go at once. iOS only
+  // lifts (magnifying rasterized masked text turns the glyphs soft);
+  // shifting stays sharp.
   const motionStyle = useAnimatedStyle(() => {
     if (!animateBounce) return { transform: [{ scale: 1 }] };
     const duration = Math.max(MIN_WORD_TRANSITION_MS, durationMs);
     const raw = Math.max(0, Math.min(1, (clockMs.value - word.start) / duration));
-    const bounce = Math.sin(raw * Math.PI);
+    const lift = Math.sin(raw * Math.PI * 0.5);
+    const release = clamp01((clockMs.value - (lineEndMs + CHAR_FALL_DELAY_MS)) / CHAR_FALL_MS);
     if (Platform.OS === 'ios') {
-      return { transform: [{ translateY: -height.value * 0.05 * bounce }] };
+      return { transform: [{ translateY: -height.value * 0.04 * lift * (1 - release) }] };
     }
-    const scale = 1 + WORD_BOUNCE_SCALE * bounce;
+    const scale = 1 + WORD_BOUNCE_SCALE * lift;
     return {
-      transform: [{ translateY: -height.value * (scale - 1) * 0.5 }, { scale }],
+      transform: [{ translateY: -height.value * (scale - 1) * 0.5 * (1 - release) }, { scale: 1 + (scale - 1) * (1 - release) }],
     };
   });
 
@@ -298,7 +308,7 @@ const TimedWord = memo(function TimedWord({
           clockMs={clockMs}
           start={word.start}
           durationMs={durationMs}
-          end={end}
+          lineEndMs={lineEndMs}
           index={i}
           count={chars.length}
           animated={animateBounce}
@@ -324,7 +334,7 @@ const TimedWord = memo(function TimedWord({
           clockMs={clockMs}
           start={word.start}
           durationMs={durationMs}
-          end={end}
+          lineEndMs={lineEndMs}
           index={i}
           count={chars.length}
           animated={animateBounce}

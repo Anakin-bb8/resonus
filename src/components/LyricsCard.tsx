@@ -182,7 +182,7 @@ export function SyncedLyricsView({
   // Hand-tapped line LRC keeps a little more compensation for human reaction.
   const wordTimed = lines.some((line) => line.words && line.words.length > 0);
   const lead = wordTimed ? WORD_SWEEP_LEAD_MS : 250;
-  const current = usePlayerStore((s) => {
+  const tickCurrent = usePlayerStore((s) => {
     const posMs = s.positionSec * 1000 + lead;
     let at = -1;
     for (let i = 0; i < lines.length && (lines[i].start ?? 0) <= posMs; i++) at = i;
@@ -193,6 +193,30 @@ export function SyncedLyricsView({
   // karaoke words (re-anchored on every store beat, gliding between them),
   // one per list instead of one per row.
   const gapClock = useGapClock();
+  // The store beats twice a second: a line whose first word is shorter than
+  // the wait mounts already sung, and the sweep jumps straight past it. The
+  // list clock glides on the UI thread instead, so the flip is derived from
+  // it exactly at the boundary (same rule as the store pass, same lead). It
+  // fires once per line, like before - only on time.
+  const [liveCurrent, setLiveCurrent] = useState(-1);
+  const startsRef = useSharedValue<number[]>([]);
+  useEffect(() => {
+    startsRef.value = lines.map((line) => line.start ?? 0);
+    setLiveCurrent(-1);
+  }, [lines, startsRef]);
+  useAnimatedReaction(
+    () => {
+      const posMs = gapClock.value + lead;
+      const starts = startsRef.value;
+      let at = -1;
+      for (let i = 0; i < starts.length && starts[i] <= posMs; i++) at = i;
+      return at;
+    },
+    (at, prev) => {
+      if (at !== prev) scheduleOnRN(setLiveCurrent, at);
+    },
+  );
+  const current = liveCurrent >= 0 ? liveCurrent : tickCurrent;
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   // Real scroll position (regardless of who moved it: user or auto-scroll).
   const liveY = useScrollViewOffset(scrollRef);

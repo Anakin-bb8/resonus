@@ -1276,7 +1276,10 @@ export default function PlayerScreen() {
                           size={coverSize}
                           contentFit={fitCoverArt ? 'contain' : 'cover'}
                           transition={0}
-                          autoplay={rel === 0}
+                          // An endpoint clip provides the motion: a webp
+                          // underneath stays a still poster instead of playing
+                          // a second animation behind (or through) it.
+                          autoplay={rel === 0 && !animatedClips?.square}
                           onAnimatedDetected={rel === 0 ? onCoverLoad : undefined}
                           placeholderIcon={paneSong.url ? 'radio' : 'musical-notes'}
                         />
