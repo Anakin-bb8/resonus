@@ -829,21 +829,47 @@ export const spacing = {
  * be a capsule or a circle (a large radius on a square box is one, which is
  * why there is no separate `circle`).
  *
- * The whole ladder went up a step in August 2026: it used to top out at 16 and
- * almost everything in the app sat on 8, which reads flat next to anything
- * drawn in the last few years. The alternative branch puts it back where it
- * was, then a touch lower on the big surfaces: small controls keep their
- * steps, and cards, panels and sheets all sit on 12.
+ * Which ladder is drawn is a setting (Appearance > Border radius): `round`
+ * climbs all the way (6 to 32), `pointier` steps down and goes flat on the
+ * big surfaces (4/8/12, then 12). The object below is rewritten in place when
+ * it changes, the way `colors` is: anything reading `radius.md` while
+ * rendering gets the current step, and `themed()` styles rebuild with it.
  */
-export const radius = {
-  sm: 4,
-  md: 8,
-  lg: 12,
-  xl: 12,
+/**
+ * Which corner ladder the app draws: the mainstream one or the fork's.
+ * `round` is upstream's look (borders, covers and everything else),
+ * `pointier` the alternative branch's (a step down everywhere, then flat on
+ * the big surfaces).
+ */
+export type BorderStyle = 'round' | 'pointier';
+
+/** Upstream's ladder: sm 6, md 10, lg 16, xl 24, sheets 32. */
+const RADIUS_ROUND = { sm: 6, md: 10, lg: 16, xl: 24, xxl: 32, pill: 999 };
+/** The alternative branch's ladder: 4/8/12, then 12 everywhere but pills. */
+const RADIUS_POINTIER = { sm: 4, md: 8, lg: 12, xl: 12, xxl: 12, pill: 999 };
+
+export interface RadiusScale {
+  sm: number;
+  md: number;
+  lg: number;
+  xl: number;
   /** A sheet rising from the bottom, and anything else that owns the screen. */
-  xxl: 12,
-  pill: 999,
-} as const;
+  xxl: number;
+  pill: number;
+}
+
+/** The corner ladder in force. Rewritten in place by `applyBorderStyle`. */
+export const radius: RadiusScale = { ...RADIUS_POINTIER };
+
+/**
+ * Swaps the corner ladder for the whole app and repaints everyone reading
+ * it (same wake-up as a theme change: `themed()` styles rebuild, subscribed
+ * components paint again).
+ */
+export function applyBorderStyle(style: BorderStyle): void {
+  Object.assign(radius, style === 'round' ? RADIUS_ROUND : RADIUS_POINTIER);
+  rebuild();
+}
 
 /**
  * The type scale, from the smallest label to the biggest heading.
