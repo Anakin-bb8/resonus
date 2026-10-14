@@ -13,6 +13,7 @@ import { getItem, setItem } from '@/lib/storage';
 import {
   applyAccents,
   applyBackgroundTint,
+  applyBorderStyle,
   applyPureBlack,
   BACKGROUND_TINTS,
   applyThemePreference,
@@ -20,6 +21,7 @@ import {
   DEFAULT_ACCENT,
   isThemePreference,
   type BackgroundTint,
+  type BorderStyle,
   type ThemeMode,
   type ThemePreference,
 } from '@/theme';
@@ -1019,6 +1021,8 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   /** The time right of the seek bar counts down what is left, not the length. */
   showRemainingTime: boolean;
   coverCorners: CoverCorners;
+  /** Which corner ladder the app draws: this one or the flatter one. */
+  borderStyle: BorderStyle;
   /** When a downloaded song plays from disk instead of being streamed. */
   preferDownloads: PreferDownloads;
   /** Circular artist photo next to the name on the album screen. */
@@ -1221,6 +1225,7 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   setThemeDarkFrom: (hour: number) => void;
   setPureBlack: (value: boolean) => void;
   setBackgroundTint: (value: BackgroundTint) => void;
+  setBorderStyle: (value: BorderStyle) => void;
   setCustomFont: (fontFamily: string | null, uri: string | null) => void;
   /** Resets to factory defaults (language is preserved). */
   resetToDefaults: () => void;
@@ -1322,6 +1327,7 @@ const DEFAULTS = {
   miniPlayerProgress: true,
   showRemainingTime: false,
   coverCorners: 'rounded' as CoverCorners,
+  borderStyle: 'round' as BorderStyle,
   preferDownloads: 'always' as PreferDownloads,
   showArtistPhoto: true,
   showDiscHeaders: true,
@@ -1449,6 +1455,7 @@ function applyFactoryLook() {
   applyThemePreference(DEFAULTS.themeMode);
   applyPureBlack(DEFAULTS.pureBlack);
   applyBackgroundTint(DEFAULTS.backgroundTint);
+  applyBorderStyle(DEFAULTS.borderStyle);
 }
 
 /**
@@ -1612,6 +1619,10 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
   }
   if (oneOf(parsed.coverCorners, ['square', 'rounded', 'round'] as const)) {
     set({ coverCorners: parsed.coverCorners });
+  }
+  if (oneOf(parsed.borderStyle, ['round', 'pointier'] as const)) {
+    set({ borderStyle: parsed.borderStyle });
+    applyBorderStyle(parsed.borderStyle);
   }
   if (
     parsed.preferDownloads === 'always' ||
@@ -1969,6 +1980,12 @@ export const useSettings = create<SettingsState>((set, get) => ({
   setBackgroundTint: (backgroundTint) => {
     applyBackgroundTint(backgroundTint);
     set({ backgroundTint });
+    persist(snapshot(get));
+  },
+
+  setBorderStyle: (borderStyle) => {
+    applyBorderStyle(borderStyle);
+    set({ borderStyle });
     persist(snapshot(get));
   },
 
