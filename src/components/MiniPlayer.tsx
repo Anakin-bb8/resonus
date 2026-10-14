@@ -28,7 +28,7 @@ import { currentSong, useLiveInfo, usePlayerStore } from '@/store/player';
 import { CONTENT_MAX_WIDTH, useScreenSize } from '@/hooks/useScreenSize';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, radius, spacing, themed } from '@/theme';
+import { colors, fontSize, radius, restyled, spacing, themed } from '@/theme';
 import { motion } from '@/theme/motion';
 import { BarBlur, useBarBlur } from './BarBlur';
 import { Cover } from './Cover';
@@ -300,7 +300,8 @@ export function MiniPlayer() {
 const styles = themed((colors) => ({
   card: {
     marginHorizontal: spacing.sm,
-    borderRadius: radius.md,
+    // Stepped down by the fork (lg upstream): round draws it back.
+    borderRadius: restyled(radius.lg, radius.md),
     boxShadow: '0px 6px 16px rgba(0, 0, 0, 0.3)',
   },
   container: {
@@ -311,7 +312,8 @@ const styles = themed((colors) => ({
     padding: spacing.sm,
     // A step in from the edge: the buttons sit further left, clear of it.
     paddingRight: spacing.md,
-    borderRadius: radius.md,
+    // Stepped down by the fork (lg upstream): round draws it back.
+    borderRadius: restyled(radius.lg, radius.md),
     overflow: 'hidden',
   },
   /** Centred and no wider than a wide screen wants it. */

@@ -1355,7 +1355,7 @@ const DEFAULTS = {
   miniPlayerProgress: true,
   showRemainingTime: false,
   coverCorners: 'rounded' as CoverCorners,
-  borderStyle: 'pointier' as BorderStyle,
+  borderStyle: 'round' as BorderStyle,
   preferDownloads: 'always' as PreferDownloads,
   showArtistPhoto: true,
   showDiscHeaders: true,

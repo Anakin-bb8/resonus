@@ -859,7 +859,10 @@ export interface RadiusScale {
 }
 
 /** The corner ladder in force. Rewritten in place by `applyBorderStyle`. */
-export const radius: RadiusScale = { ...RADIUS_POINTIER };
+export const radius: RadiusScale = { ...RADIUS_ROUND };
+
+/** The ladder `radius` currently draws. Read live by the helpers below. */
+let borderStyle: BorderStyle = 'round';
 
 /**
  * Swaps the corner ladder for the whole app and repaints everyone reading
@@ -867,8 +870,19 @@ export const radius: RadiusScale = { ...RADIUS_POINTIER };
  * components paint again).
  */
 export function applyBorderStyle(style: BorderStyle): void {
+  borderStyle = style;
   Object.assign(radius, style === 'round' ? RADIUS_ROUND : RADIUS_POINTIER);
   rebuild();
+}
+
+/**
+ * A corner the fork restyled: draws `round` upstream and `pointy` here.
+ * Reads the live style, so `themed()` styles (rebuilt on every theme
+ * wake-up, which a style switch triggers) follow it with no subscription.
+ * Pass ladder steps, not numbers, so both stay in scale.
+ */
+export function restyled(round: number, pointy: number): number {
+  return borderStyle === 'round' ? round : pointy;
 }
 
 /**
