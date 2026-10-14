@@ -10,6 +10,7 @@ import {
   SettingsPage,
   settingsStyles,
   SwitchList,
+  TextRow,
 } from '@/components/SettingsUI';
 import { useLocalProfile } from '@/hooks/useLocalProfile';
 import { useT } from '@/i18n';
@@ -75,8 +76,12 @@ export default function PlayerSettings() {
   const setFitCoverArt = useSettings((s) => s.setFitCoverArt);
   const animatedCoverBackground = useSettings((s) => s.animatedCoverBackground);
   const setAnimatedCoverBackground = useSettings((s) => s.setAnimatedCoverBackground);
+  const animatedCoverVideo = useSettings((s) => s.animatedCoverVideo);
+  const setAnimatedCoverVideo = useSettings((s) => s.setAnimatedCoverVideo);
   const animatedArtworkFps = useSettings((s) => s.animatedArtworkFps);
   const setAnimatedArtworkFps = useSettings((s) => s.setAnimatedArtworkFps);
+  const animatedArtworkEndpoint = useSettings((s) => s.animatedArtworkEndpoint);
+  const setAnimatedArtworkEndpoint = useSettings((s) => s.setAnimatedArtworkEndpoint);
   const miniPlayerColorBackground = useSettings((s) => s.miniPlayerColorBackground);
   const blurMiniPlayer = useSettings((s) => s.blurMiniPlayer);
   const miniPlayerProgress = useSettings((s) => s.miniPlayerProgress);
@@ -185,6 +190,12 @@ export default function PlayerSettings() {
                 value: animatedCoverBackground,
                 onChange: setAnimatedCoverBackground,
               },
+              {
+                label: t('Animated cover videos'),
+                description: t('Play endpoint clips over the still covers. Off keeps every cover still.'),
+                value: animatedCoverVideo,
+                onChange: setAnimatedCoverVideo,
+              },
             ]}
           />
           <SelectList<CoverTapAction>
@@ -211,6 +222,20 @@ export default function PlayerSettings() {
               onChange={setAnimatedArtworkFps}
             />
           ) : null}
+          <TextRow
+            label={t('Animated artwork endpoint')}
+            description={t(
+              'Animated covers server: square and tall clips stream from it instead of still covers.',
+            )}
+            value={animatedArtworkEndpoint}
+            placeholder="https://artwork.example.com"
+            maxLength={200}
+            keyboardType="url"
+            autoCapitalize="none"
+            // Stored raw: trimming trailing slashes here would eat the `//`
+            // of `https://` while typing. The fetch normalizes before asking.
+            onChange={setAnimatedArtworkEndpoint}
+          />
         </SettingsGroup>
 
         <Text style={settingsStyles.sectionTitle}>{t('Elements')}</Text>

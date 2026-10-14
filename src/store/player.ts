@@ -54,6 +54,11 @@ import { CLIENT_NAME } from '@/api/subsonic';
 // disk when the album is downloaded instead of an address on the server.
 import { CACHED_COVER, COVER, coverArtUrl, getRandomSongs } from '@/api/data';
 import { prefetchLyrics } from '@/hooks/useLyrics';
+import {
+  animatedArtworkKey,
+  fetchAnimatedArtwork,
+  prefetchAnimatedArtwork,
+} from '@/lib/animatedArtwork';
 import { tg } from '@/i18n';
 import { transcodeTarget } from '@/lib/audioQuality';
 import { favoriteLabel, favoriteState, onFavoritesChange, toggleFavorite } from '@/lib/remoteFavorite';
@@ -680,6 +685,55 @@ function warmArtwork(song: Song) {
   } catch {
     // A build without the patched module: covers load the old way.
   }
+}
+
+/**
+ * Hands the lock screen the tall HLS clip from the animated-artwork
+ * endpoint for this track — or clears it when there is none. Keyed by the
+ * static cover, so a clip arriving late still lands on the track it was
+ * fetched for, never on the next one. iOS only, like the preloader: the
+ * patched module answers, anything else throws into the catch.
+ */
+function publishAnimatedClip(song: Song) {
+  if (Platform.OS !== 'ios') return;
+  const artworkUrl = artworkUrlFor(song);
+  // Nothing to key a clearing by — and a stale key never matches a new
+  // cover anyway, so nothing leaks across tracks.
+  if (!artworkUrl) return;
+  const endpoint = useSettings.getState().animatedArtworkEndpoint;
+  const customs = useSettings.getState().animatedArtworkUrls;
+  const customUrl = customs[animatedArtworkKey(song.artist ?? '', song.album ?? '')];
+  const artist = song.artist;
+  const album = song.album ?? '';
+  if (!endpoint || !artist || !album) {
+    try {
+      audioModule.setAnimatedClipUrls(artworkUrl, null);
+    } catch {
+      // A build without the patched module: static covers as always.
+    }
+    return;
+  }
+  void fetchAnimatedArtwork(endpoint, artist, album, customUrl).then((clips) => {
+    try {
+      audioModule.setAnimatedClipUrls(artworkUrl, clips?.tall ?? null);
+    } catch {
+      // A build without the patched module: static covers as always.
+    }
+    note(`clip ${clips?.tall ? 'tall ok' : 'none'} for ${album}`);
+    // The export lands seconds later, if at all: ask the native side what
+    // became of it, while this track is still the one playing.
+    for (const afterMs of [4000, 12000]) {
+      setTimeout(() => {
+        if (currentSong(usePlayerStore.getState())?.id !== song.id) return;
+        try {
+          const state = audioModule.animatedClipState();
+          note(`clip state ${state.stage}${state.detail ? ` ${state.detail}` : ''} for ${album}`);
+        } catch {
+          // A build without the patched module: nothing to ask.
+        }
+      }, afterMs);
+    }
+  });
 }
 
 /**
@@ -1331,6 +1385,7 @@ function onTrackChanged(song: Song) {
   // backgrounded nobody swipes at all: the card fetches on demand when it is
   // shown, so nothing is lost by skipping the warm-up.
   if (!bootQuiet && AppState.currentState === 'active') prefetchLyrics(song);
+  publishAnimatedClip(song);
   if (nextLyricsTimer) clearTimeout(nextLyricsTimer);
   nextLyricsTimer = setTimeout(() => {
     if (AppState.currentState !== 'active') return;
@@ -1871,6 +1926,27 @@ function scheduleNextSource(force = false) {
         ? st.queue[(st.index + k) % st.queue.length]
         : st.queue[st.index + k];
     if (ahead && !ahead.url) warmArtwork(ahead);
+  }
+  // Same window for the endpoint clips: the lock screen's tall one is already
+  // streaming while the track it belongs to is still the next one.
+  {
+    const endpoint = useSettings.getState().animatedArtworkEndpoint;
+    if (endpoint) {
+      const customs = useSettings.getState().animatedArtworkUrls;
+      for (let k = 0; k <= ARTWORK_LOOKAHEAD; k += 1) {
+        const ahead =
+          st.repeat === 'all' && st.queue.length > 0
+            ? st.queue[(st.index + k) % st.queue.length]
+            : st.queue[st.index + k];
+        if (ahead && !ahead.url) {
+          prefetchAnimatedArtwork(
+            endpoint,
+            ahead,
+            customs[animatedArtworkKey(ahead.artist ?? '', ahead.album ?? '')],
+          );
+        }
+      }
+    }
   }
   const p = activePlayer();
   if (!p) return;

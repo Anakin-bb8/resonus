@@ -34,7 +34,8 @@ import { CACHED_COVER, COVER, songCoverUrl, star, unstar, type Song } from '@/ap
 import { ArtistPlayerCard } from '@/components/ArtistPlayerCard';
 import { AudioQualityBadge } from '@/components/AudioQualityBadge';
 import { SeekBar } from '@/components/SeekBar';
-import { Cover, useRedrawOnReturn, useSettledSource } from '@/components/Cover';
+import { Cover, coverRadius, useRedrawOnReturn, useSettledSource } from '@/components/Cover';
+import { AnimatedArtworkBackground, AnimatedArtworkView } from '@/components/AnimatedArtworkView';
 import { ExplicitBadge } from '@/components/ExplicitBadge';
 import { FavoriteButton } from '@/components/FavoriteButton';
 import { CoverLyrics, LyricsCard } from '@/components/LyricsCard';
@@ -43,6 +44,7 @@ import { OutputSheet } from '@/components/OutputSheet';
 import { SpeedSheet } from '@/components/SpeedSheet';
 import { StarRating } from '@/components/StarRating';
 import { useAnimatedCover } from '@/hooks/useAnimatedCover';
+import { useAnimatedArtwork } from '@/hooks/useAnimatedArtwork';
 import { toneOf, useDominantColor } from '@/hooks/useDominantColor';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { useLocalProfile } from '@/hooks/useLocalProfile';
@@ -291,6 +293,7 @@ export default function PlayerScreen() {
   const coverDoubleTapAction = useSettings((s) => s.coverDoubleTapAction);
   const marqueeTitles = useSettings((s) => s.marqueeTitles);
   const playerButtons = useSettings((s) => s.playerButtons);
+  const coverCorners = useSettings((s) => s.coverCorners);
   const spreadButtons = useSettings((s) => s.playerButtonsLayout === 'spread');
   const local = useLocalProfile();
   // The local profile can cast now that the phone serves its own files
@@ -380,6 +383,14 @@ export default function PlayerScreen() {
   const { isAnimated: isAnimatedDetected, onCoverLoad } = useAnimatedCover(cover);
   const isAnimatedCover =
     animatedCoverBg && isAnimatedDetected && !!cover && !cover.startsWith(CACHED_COVER);
+  // HLS cover clips from the animated-artwork endpoint win over sniffed
+  // GIF/WebP: they were asked for, so they are the animated cover when the
+  // background option is on — fullscreen video with a still copy by the
+  // title, same as the GIF path. With the option off the clip plays inside
+  // the square instead.
+  const animatedClips = useAnimatedArtwork(song);
+  const animatedVideoSquare =
+    animatedCoverBg && animatedClips?.square ? animatedClips.square : null;
   // The backdrop holds the previous artwork on purpose while the next decodes,
   // so on its own it cannot tell "not decoded yet" from "never will be". Coming
   // back from the background is the second case (see `useRedrawOnReturn`), and
@@ -935,6 +946,7 @@ export default function PlayerScreen() {
   const coverSize = coverBoxH
     ? Math.max(COVER_MIN, Math.min(coverBoxW || coverMax, coverBoxH - (canRate ? starsH : 0)))
     : coverMax;
+  const coverCorner = coverRadius(coverCorners, coverSize);
   // Left-over height once the cover and the stars have taken their share, split
   // between the two sides. Padding doesn't feed back into the measurement: the
   // slot's height comes from `flex: 1`, not from its contents.
@@ -971,7 +983,20 @@ export default function PlayerScreen() {
     <GestureDetector gesture={dismissPan}>
       <Animated.View style={[styles.root, rootStyle]}>
         <Animated.View style={[StyleSheet.absoluteFill, bgStyle]} />
-        {isAnimatedCover && cover ? (
+        {animatedVideoSquare && cover ? (
+          /* The endpoint clip itself, unblurred, over the whole screen. */
+          <Animated.View style={[StyleSheet.absoluteFill, animatedBgStyle]}>
+            <AnimatedArtworkBackground key={animatedVideoSquare} square={animatedVideoSquare} />
+            {/* Its bottom edge fades into the cover's own colour, so the
+                picture ends somewhere instead of being cut off. Inside the
+                same wrapper: it has to travel with it. */}
+            <LinearGradient
+              colors={[transparentOf(dominant), dominant]}
+              style={StyleSheet.absoluteFill}
+              locations={[0.7, 1]}
+            />
+          </Animated.View>
+        ) : isAnimatedCover && cover ? (
           /* The animated cover itself, unblurred, over the whole screen. */
           <Animated.View style={[StyleSheet.absoluteFill, animatedBgStyle]}>
             <Image
@@ -1172,7 +1197,7 @@ export default function PlayerScreen() {
                 here. An animated cover is not here at all: it is the background,
                 and the empty slot it leaves is what the picture shows through. */}
             <Animated.View style={[{ width: coverSize, height: coverSize }, coverAppearStyle]}>
-              {!isAnimatedCover ? (
+              {!isAnimatedCover && !animatedVideoSquare ? (
                 paneStyles.map((paneStyle, k) => {
                   const rel = paneRel(k);
                   const paneSong = rel === 0 ? song : rel === 1 ? nextSong : prevSong;
@@ -1182,15 +1207,27 @@ export default function PlayerScreen() {
                       {/* With lyrics in place the cover is hidden: the lyrics
                           (transparent background) sit on top of the player background. */}
                       {paneSong && !inlineLyrics ? (
+                        <>
                         <Cover
                           uri={paneCover}
                           size={coverSize}
                           contentFit={fitCoverArt ? 'contain' : 'cover'}
                           transition={0}
-                          autoplay={rel === 0}
+                          // An endpoint clip provides the motion: a webp
+                          // underneath stays a still poster instead of playing
+                          // a second animation behind (or through) it.
+                          autoplay={rel === 0 && !animatedClips?.square}
                           onAnimatedDetected={rel === 0 ? onCoverLoad : undefined}
                           placeholderIcon={paneSong.url ? 'radio' : 'musical-notes'}
                         />
+                        {rel === 0 && animatedClips?.square ? (
+                          <AnimatedArtworkView
+                            square={animatedClips.square}
+                            size={coverSize}
+                            corner={coverCorner}
+                          />
+                        ) : null}
+                        </>
                       ) : null}
                     </Animated.View>
                   );
@@ -1245,7 +1282,7 @@ export default function PlayerScreen() {
           <View style={styles.meta}>
             {/* With the cover on the wall behind, a still copy of it sits by
                 the title, the height of the two lines of text. */}
-            {isAnimatedCover && cover ? (
+            {(isAnimatedCover || animatedVideoSquare) && cover ? (
               <Cover
                 uri={cover}
                 size={MINI_COVER}

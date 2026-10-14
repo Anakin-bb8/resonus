@@ -838,6 +838,7 @@ type CustomSetter =
   | 'setThemeDarkFrom'
   | 'setPureBlack'
   | 'setAnimatedArtworkFps'
+  | 'setAnimatedArtworkUrls'
   | 'setBackgroundTint';
 
 interface SettingsState extends Omit<AutoSetters, CustomSetter> {
@@ -1057,6 +1058,23 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
    */
   animatedArtworkFps: number;
   /**
+   * Animated-artwork server: base URL whose `/api/v1/artwork/search`
+   * answers the square and tall HLS covers for an artist and album. Empty
+   * means off: covers stay still images.
+   */
+  animatedArtworkEndpoint: string;
+  /**
+   * Play endpoint clips as in-app video (cover square and background).
+   * Kills the video players without touching the lock-screen tall clips:
+   * the escape hatch if a cover ever misbehaves.
+   */
+  animatedCoverVideo: boolean;
+  /**
+   * Hand-picked artwork URLs per album (artist + album key), asked before
+   * the search and trusted as chosen. Album menus write these.
+   */
+  animatedArtworkUrls: Record<string, string>;
+  /**
    * Show non-square artwork whole in the player instead of cropping it to a
    * square. Off by default: cropping is what it has always done, and every
    * other place in the app (lists, cards, grids) keeps cropping regardless.
@@ -1214,6 +1232,8 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   setBottomTab: (key: TabSegment, value: boolean) => void;
   setHomeButton: (key: HomeButtonKey, value: boolean) => void;
   setPlayerButton: (key: PlayerButtonKey, value: boolean) => void;
+  /** A hand-picked artwork URL for one album key, or null to forget it. */
+  setAnimatedArtworkUrl: (key: string, url: string | null) => void;
   setGridColumns: (key: GridSizeKey, value: number) => void;
   setAccentColor: (value: string, appearance: ThemeMode) => void;
   setThemeMode: (value: ThemePreference) => void;
@@ -1332,6 +1352,12 @@ const DEFAULTS = {
   // 30: half the frames of 60 for a cover that reads the same; see
   // `ANIMATED_ARTWORK_FPS_OPTIONS`.
   animatedArtworkFps: 30,
+  // Empty: no server, still covers.
+  animatedArtworkEndpoint: '',
+  // On: endpoint clips play over the still covers.
+  animatedCoverVideo: true,
+  // Empty: search decides everything.
+  animatedArtworkUrls: {},
   fitCoverArt: false,
   miniPlayerColorBackground: true,
   // Off by default: the card pushes the controls up on shorter screens, and
@@ -1512,6 +1538,27 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
   }
   if ((ANIMATED_ARTWORK_FPS_OPTIONS as readonly number[]).includes(parsed.animatedArtworkFps as number)) {
     set({ animatedArtworkFps: parsed.animatedArtworkFps as number });
+  }
+  {
+    // Hand-picked artwork URLs: string keys to string URLs, anything else
+    // dropped, capped so a corrupt file cannot grow the profile forever.
+    const raw = (parsed as { animatedArtworkUrls?: unknown }).animatedArtworkUrls;
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+      const urls: Record<string, string> = {};
+      for (const [key, value] of Object.entries(raw)) {
+        if (typeof key === 'string' && typeof value === 'string' && key && value) {
+          urls[key] = value;
+          if (Object.keys(urls).length >= 500) break;
+        }
+      }
+      set({ animatedArtworkUrls: urls });
+    }
+    // An endpoint is a base URL or nothing: anything else never worked, so it
+    // hydrates as off rather than as a broken address.
+    if (typeof parsed.animatedArtworkEndpoint === 'string') {
+      const endpoint = parsed.animatedArtworkEndpoint.trim().replace(/\/+$/, '');
+      set({ animatedArtworkEndpoint: endpoint.startsWith('http') ? endpoint : '' });
+    }
   }
   if ((RADIO_COUNT_OPTIONS as readonly number[]).includes(parsed.radioCount as number)) {
     set({ radioCount: parsed.radioCount as number });
@@ -1852,6 +1899,14 @@ export const useSettings = create<SettingsState>((set, get) => ({
     // The encoder reads this the next time a clip is built; one already on
     // disk keeps the rate it was written at, which is the rate it holds.
     pushArtworkEncodeFps(animatedArtworkFps);
+  },
+
+  setAnimatedArtworkUrl: (key, url) => {
+    const next = { ...get().animatedArtworkUrls };
+    if (url) next[key] = url;
+    else delete next[key];
+    set({ animatedArtworkUrls: next });
+    persist(snapshot(get));
   },
 
   // Both at once, and one write: put back separately, the first of the two
