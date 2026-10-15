@@ -168,11 +168,24 @@ struct TrackWidgetView: View {
     private var playButton: some View {
         ZStack {
             Circle().fill(Color.white)
-            Image(systemName: (state?.playing ?? false) ? "pause.fill" : "play.fill")
-                .font(.system(size: 16, weight: .bold))
-                .foregroundColor(.black)
+            playGlyph
         }
         .frame(width: 40, height: 40)
+    }
+
+    /// The glyph keeps its own colour in accented mode (glass, tinted): the
+    /// system would otherwise flatten it to white like everything else and
+    /// it would vanish on the white disc.
+    @ViewBuilder
+    private var playGlyph: some View {
+        let glyph = Image(systemName: (state?.playing ?? false) ? "pause.fill" : "play.fill")
+            .font(.system(size: 16, weight: .bold))
+            .foregroundColor(.black)
+        if #available(iOS 18.0, *) {
+            glyph.widgetAccentedRenderingMode(.fullColor)
+        } else {
+            glyph
+        }
     }
 
     /// The press itself: an intent from iOS 17 on, which toggles the player
@@ -209,13 +222,25 @@ struct TrackWidgetView: View {
     private func artwork(side: CGFloat) -> some View {
         ZStack {
             if let cover {
-                Image(uiImage: cover).resizable().scaledToFill()
+                coverImage(cover)
             } else {
                 Color.white.opacity(0.15)
             }
         }
         .frame(width: side, height: side)
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    /// The cover desaturates (never flattens) in accented mode: black and
+    /// white, blending into the glass instead of a white slab.
+    @ViewBuilder
+    private func coverImage(_ cover: UIImage) -> some View {
+        let image = Image(uiImage: cover).resizable().scaledToFill()
+        if #available(iOS 18.0, *) {
+            image.widgetAccentedRenderingMode(.desaturated)
+        } else {
+            image
+        }
     }
 
     /// The app's own mark, white and on nothing: the top right corner, the way
