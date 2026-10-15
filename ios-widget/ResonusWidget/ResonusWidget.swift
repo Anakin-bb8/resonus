@@ -179,18 +179,24 @@ struct TrackWidgetView: View {
     /// (guarded: older toolchains keep the plain glyph).
     @ViewBuilder
     private var playGlyph: some View {
-        let glyph = Image(systemName: (state?.playing ?? false) ? "pause.fill" : "play.fill")
-            .font(.system(size: 16, weight: .bold))
-            .foregroundColor(.black)
         #if compiler(>=6.0)
         if #available(iOS 18.0, *) {
-            glyph.widgetAccentedRenderingMode(.fullColor)
+            Image(systemName: (state?.playing ?? false) ? "pause.fill" : "play.fill")
+                .widgetAccentedRenderingMode(.fullColor)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundColor(.black)
         } else {
-            glyph
+            plainGlyph
         }
         #else
-        glyph
+        plainGlyph
         #endif
+    }
+
+    private var plainGlyph: some View {
+        Image(systemName: (state?.playing ?? false) ? "pause.fill" : "play.fill")
+            .font(.system(size: 16, weight: .bold))
+            .foregroundColor(.black)
     }
 
     /// The press itself: an intent from iOS 17 on, which toggles the player
@@ -241,16 +247,22 @@ struct TrackWidgetView: View {
     /// guard as the glyph above.
     @ViewBuilder
     private func coverImage(_ cover: UIImage) -> some View {
-        let image = Image(uiImage: cover).resizable().scaledToFill()
         #if compiler(>=6.0)
         if #available(iOS 18.0, *) {
-            image.widgetAccentedRenderingMode(.desaturated)
+            Image(uiImage: cover)
+                .widgetAccentedRenderingMode(.desaturated)
+                .resizable()
+                .scaledToFill()
         } else {
-            image
+            plainCoverImage(cover)
         }
         #else
-        image
+        plainCoverImage(cover)
         #endif
+    }
+
+    private func plainCoverImage(_ cover: UIImage) -> some View {
+        Image(uiImage: cover).resizable().scaledToFill()
     }
 
     /// The app's own mark, white and on nothing: the top right corner, the way
