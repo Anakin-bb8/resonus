@@ -1,0 +1,22 @@
+// The plugin, not the old `ExpoModulesCorePlugin.gradle` helpers: since SDK 56
+// it also applies the Kotlin compiler plugin that resolves the reified types
+// the module DSL relies on. (Copied from the audio-eq module.)
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.audioroute'
+version = '0.0.1'
+
+android {
+  namespace "expo.modules.audioroute"
+  defaultConfig {
+    versionCode 1
+    versionName "0.0.1"
+  }
+}
+
+dependencies {
+  // The route comes from the framework's own AudioManager: nothing else.
+}

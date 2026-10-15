@@ -43,14 +43,17 @@ import { OutputSheet } from '@/components/OutputSheet';
 import { SpeedSheet } from '@/components/SpeedSheet';
 import { StarRating } from '@/components/StarRating';
 import { useAnimatedCover } from '@/hooks/useAnimatedCover';
+import { useAudioRoute } from '@/hooks/useAudioRoute';
 import { toneOf, useDominantColor } from '@/hooks/useDominantColor';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { useLocalProfile } from '@/hooks/useLocalProfile';
+import { useLosslessTag } from '@/hooks/useLosslessTag';
 import { useLyrics } from '@/hooks/useLyrics';
 import { useScreenSize } from '@/hooks/useScreenSize';
 import { useT } from '@/i18n';
 import { revealOffset } from '@/lib/playerReveal';
 import { artistTargets } from '@/lib/artistNav';
+import { routeIcon, type AudioRouteKind } from '@/lib/audioRouteTypes';
 import { formatGroupedDeviceLabel } from '@/lib/format';
 import { applyStarChange, resyncFavorites } from '@/lib/favoritesCache';
 import { haptic } from '@/lib/haptics';
@@ -229,6 +232,18 @@ function SleepButton({ onPress, color }: { onPress: () => void; color: string })
   );
 }
 
+/** Generic label for a route kind whose system withheld the real name. */
+function routeFallbackKey(kind: AudioRouteKind, deviceClass?: 'headphones' | 'speaker' | 'car' | null): string {
+  if (kind === 'bluetooth' && deviceClass === 'headphones') return 'Headphones';
+  if (kind === 'bluetooth' && deviceClass === 'speaker') return 'Speaker';
+  if (kind === 'bluetooth' && deviceClass === 'car') return 'Car';
+  if (kind === 'bluetooth') return 'Bluetooth';
+  if (kind === 'wired') return 'Wired headphones';
+  if (kind === 'car') return 'Car';
+  if (kind === 'airplay') return 'AirPlay';
+  return 'This device';
+}
+
 function usePaneStyle(offset: SharedValue<number>, k: number, step: SharedValue<number>) {
   return useAnimatedStyle(() => {
     // A screen's width, and it is a shared value rather than a constant
@@ -252,6 +267,10 @@ export default function PlayerScreen() {
   const router = useRouter();
   const isFocused = useIsFocused();
   const song = usePlayerStore(currentSong);
+  const showDeviceName = useSettings((s) => s.showDeviceName);
+  const showLosslessTag = useSettings((s) => s.showLosslessTag);
+  const route = useAudioRoute();
+  const losslessTag = useLosslessTag(song ?? null);
   const live = useLiveInfo(song);
   const source = usePlayerStore((s) => s.source);
   const sourceHref = usePlayerStore((s) => s.sourceHref);
@@ -1486,33 +1505,63 @@ export default function PlayerScreen() {
           >
             {playerButtons.map(({ key, enabled }) => {
               switch (key) {
-                case 'devices':
-                  // Connected to a remote device it's always shown: it's the
-                  // only way to disconnect the cast. Never disabled any more:
-                  // downloads cast from the phone, so offline there is
-                  // something to send, and going offline mid-cast used to
-                  // leave the way out barred.
-                  return (enabled && canDevices) || remoteDevice ? (
-                    <Pressable
-                      key={key}
-                      hitSlop={10}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('Devices')}
-                      onPress={() => setOutputOpen(true)}
-                      style={styles.deviceRow}
-                    >
-                      <Icon
-                        name="laptop-outline"
-                        size={26}
-                        color={remoteDevice ? colors.accent : ink}
-                      />
-                      {remoteDevice ? (
-                        <Text style={[styles.deviceName, { color: colors.accent }]} numberOfLines={1}>
-                          {remoteDevice}
+                  case 'devices':
+                    // Connected to a remote device it's always shown: it's the
+                    // only way to disconnect the cast. Never disabled any more:
+                    // downloads cast from the phone, so offline there is
+                    // something to send, and going offline mid-cast used to
+                    // leave the way out barred.
+                    if (!((enabled && canDevices) || remoteDevice)) return null;
+                    // A local route worth naming: headphones, Bluetooth, the car
+                    // or AirPlay. The speaker and the unknown read as no device.
+                    const local =
+                      !remoteDevice &&
+                      route &&
+                      route.kind !== 'builtin' &&
+                      route.kind !== 'other'
+                        ? route
+                        : null;
+                    const icon =
+                      (local && routeIcon(local.kind, local.deviceClass)) || 'laptop-outline';
+                    const lit = !!remoteDevice || !!local;
+                    const name = showDeviceName
+                      ? (remoteDevice ??
+                        (local ? local.name || t(routeFallbackKey(local.kind, local.deviceClass)) : null))
+                      : null;
+                    const tag = showLosslessTag && losslessTag ? (
+                      // The lossless mark rides with the devices button: a dot
+                      // and a word, in the accent like the device.
+                      <View style={styles.losslessTag}>
+                        <View style={styles.losslessDot} />
+                        <Text style={styles.losslessText} numberOfLines={1}>
+                          {losslessTag === 'high-res' ? t('High-Res Lossless') : t('Lossless')}
                         </Text>
-                      ) : null}
-                    </Pressable>
-                  ) : null;
+                      </View>
+                    ) : null;
+                    return (
+                      <>
+                        <Pressable
+                          key={key}
+                          hitSlop={10}
+                          accessibilityRole="button"
+                          accessibilityLabel={t('Devices')}
+                          onPress={() => setOutputOpen(true)}
+                          style={styles.deviceRow}
+                        >
+                          <Icon
+                            name={icon}
+                            size={26}
+                            color={lit ? colors.accent : ink}
+                          />
+                          {name ? (
+                            <Text style={[styles.deviceName, { color: colors.accent }]} numberOfLines={1}>
+                              {name}
+                            </Text>
+                          ) : null}
+                        </Pressable>
+                        {tag}
+                      </>
+                    );
                 case 'lyrics':
                   return enabled ? (
                     <Pressable
@@ -1761,6 +1810,26 @@ const styles = themed((colors) => ({
     fontSize: fontSize.xs,
     fontWeight: '500',
     flexShrink: 1,
+  },
+  // The lossless mark after the devices button: a dot and a word in the
+  // accent, the same step from the button as between dot and word.
+  losslessTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    height: 40,
+    marginLeft: spacing.sm,
+  },
+  losslessDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
+    backgroundColor: colors.accent,
+  },
+  losslessText: {
+    color: colors.accent,
+    fontSize: fontSize.sm,
+    fontWeight: '600',
   },
   bottomButton: {
     flexDirection: 'row',

@@ -1019,6 +1019,10 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   /** The time right of the seek bar counts down what is left, not the length. */
   showRemainingTime: boolean;
   coverCorners: CoverCorners;
+  /** Output name beside the devices button (headphones, cast target, …). */
+  showDeviceName: boolean;
+  /** Lossless tag beside the output when the stream is bit-perfect. */
+  showLosslessTag: boolean;
   /** When a downloaded song plays from disk instead of being streamed. */
   preferDownloads: PreferDownloads;
   /** Circular artist photo next to the name on the album screen. */
@@ -1322,6 +1326,9 @@ const DEFAULTS = {
   miniPlayerProgress: true,
   showRemainingTime: false,
   coverCorners: 'rounded' as CoverCorners,
+  // Both on: the devices button carries the output, so they read as one.
+  showDeviceName: true,
+  showLosslessTag: true,
   preferDownloads: 'always' as PreferDownloads,
   showArtistPhoto: true,
   showDiscHeaders: true,

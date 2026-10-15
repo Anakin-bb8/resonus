@@ -10,7 +10,7 @@ import ReorderableList, {
   type ReorderableListReorderEvent,
 } from 'react-native-reorderable-list';
 
-import { ScreenHeader, SelectList, SettingsSafeArea } from '@/components/SettingsUI';
+import { ScreenHeader, SelectList, SettingsSafeArea, SwitchList } from '@/components/SettingsUI';
 import { useAccent } from '@/hooks/useAccent';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { centredPadding, useScreenSize } from '@/hooks/useScreenSize';
@@ -40,6 +40,7 @@ function ButtonRow({ button }: { button: PlayerButton }) {
   const t = useT();
   const drag = useReorderableDrag();
   const setPlayerButton = useSettings((s) => s.setPlayerButton);
+  const setShowDeviceName = useSettings((s) => s.setShowDeviceName);
   const accent = useAccent();
   const { label, icon } = BUTTONS[button.key];
   return (
@@ -61,7 +62,12 @@ function ButtonRow({ button }: { button: PlayerButton }) {
       </View>
       <Switch
         value={button.enabled}
-        onValueChange={(v) => setPlayerButton(button.key, v)}
+        onValueChange={(v) => {
+          setPlayerButton(button.key, v);
+          // The name hangs off the devices button: with it gone the toggle
+          // has nothing to name, so it goes off too instead of freezing on.
+          if (button.key === 'devices' && !v) setShowDeviceName(false);
+        }}
         trackColor={{ false: colors.control, true: accent }}
         thumbColor={colors.knob}
       />
@@ -80,6 +86,13 @@ export default function PlayerButtonsSettings() {
   const setPlayerButtons = useSettings((s) => s.setPlayerButtons);
   const layout = useSettings((s) => s.playerButtonsLayout);
   const setLayout = useSettings((s) => s.setPlayerButtonsLayout);
+  const showDeviceName = useSettings((s) => s.showDeviceName);
+  const setShowDeviceName = useSettings((s) => s.setShowDeviceName);
+  const showLosslessTag = useSettings((s) => s.showLosslessTag);
+  const setShowLosslessTag = useSettings((s) => s.setShowLosslessTag);
+  // The device name hangs off the devices button: without it the toggle has
+  // nothing to name and stays greyed out.
+  const devicesEnabled = playerButtons.some((b) => b.key === 'devices' && b.enabled);
   return (
     <SettingsSafeArea>
       <ScreenHeader title={t('Bottom row')} />
@@ -91,6 +104,23 @@ export default function PlayerButtonsSettings() {
           options={[
             { value: 'centered', label: t('Grouped in the middle') },
             { value: 'spread', label: t('Spread across the width') },
+          ]}
+        />
+        <SwitchList
+          options={[
+            {
+              label: t('Show device name'),
+              description: t('Show the output name beside the devices button.'),
+              value: showDeviceName,
+              disabled: !devicesEnabled,
+              onChange: setShowDeviceName,
+            },
+            {
+              label: t('Show lossless tag'),
+              description: t('Show a lossless badge beside the output when the stream is bit-perfect.'),
+              value: showLosslessTag,
+              onChange: setShowLosslessTag,
+            },
           ]}
         />
       </View>

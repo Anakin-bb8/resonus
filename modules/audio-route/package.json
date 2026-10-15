@@ -1,0 +1,7 @@
+{
+  "name": "audio-route",
+  "version": "0.0.1",
+  "description": "Audio output route bridge for Resonus (local Expo module)",
+  "main": "index.ts",
+  "private": true
+}

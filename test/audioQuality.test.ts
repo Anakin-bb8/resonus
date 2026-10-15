@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { isLossless, transcodeTarget } from '@/lib/audioQuality';
+import { isHighRes, isLossless, playbackLossless, transcodeTarget } from '@/lib/audioQuality';
 
 describe('isLossless', () => {
   it('goes by the extension when it can only be one thing', () => {
@@ -42,5 +42,28 @@ describe('transcodeTarget', () => {
 
   it('never names a codec without a bitrate', () => {
     assert.deepEqual(transcodeTarget(flac, 0, 'opus', false), { bitRate: 0, format: '' });
+  });
+});
+
+describe('playbackLossless', () => {
+  const flac = { suffix: 'flac', bitRate: 900, bitDepth: 16, samplingRate: 44100 };
+  const hires = { suffix: 'flac', bitRate: 4600, bitDepth: 24, samplingRate: 96000 };
+  const mp3 = { suffix: 'mp3', bitRate: 320 };
+
+  it('hides transcodes and lossy files', () => {
+    assert.equal(playbackLossless(flac, true), null);
+    assert.equal(playbackLossless(mp3, false), null);
+  });
+
+  it('tells CD-grade from high-res', () => {
+    assert.equal(playbackLossless(flac, false), 'lossless');
+    assert.equal(playbackLossless(hires, false), 'high-res');
+  });
+
+  it('calls high-res on depth or rate alone', () => {
+    assert.ok(isHighRes({ bitDepth: 24 }));
+    assert.ok(isHighRes({ samplingRate: 192000 }));
+    assert.ok(!isHighRes({ bitDepth: 16, samplingRate: 44100 }));
+    assert.ok(!isHighRes({}));
   });
 });
