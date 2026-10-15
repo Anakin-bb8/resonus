@@ -250,8 +250,8 @@ struct TrackWidgetView: View {
         #if compiler(>=6.0)
         if #available(iOS 18.0, *) {
             Image(uiImage: cover)
-                .widgetAccentedRenderingMode(.desaturated)
                 .resizable()
+                .widgetAccentedRenderingMode(.desaturated)
                 .scaledToFill()
         } else {
             plainCoverImage(cover)
