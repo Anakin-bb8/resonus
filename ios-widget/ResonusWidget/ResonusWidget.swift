@@ -175,17 +175,22 @@ struct TrackWidgetView: View {
 
     /// The glyph keeps its own colour in accented mode (glass, tinted): the
     /// system would otherwise flatten it to white like everything else and
-    /// it would vanish on the white disc.
+    /// it would vanish on the white disc. Needs the iOS 18 SDK to compile
+    /// (guarded: older toolchains keep the plain glyph).
     @ViewBuilder
     private var playGlyph: some View {
         let glyph = Image(systemName: (state?.playing ?? false) ? "pause.fill" : "play.fill")
             .font(.system(size: 16, weight: .bold))
             .foregroundColor(.black)
+        #if compiler(>=6.0)
         if #available(iOS 18.0, *) {
             glyph.widgetAccentedRenderingMode(.fullColor)
         } else {
             glyph
         }
+        #else
+        glyph
+        #endif
     }
 
     /// The press itself: an intent from iOS 17 on, which toggles the player
@@ -232,15 +237,20 @@ struct TrackWidgetView: View {
     }
 
     /// The cover desaturates (never flattens) in accented mode: black and
-    /// white, blending into the glass instead of a white slab.
+    /// white, blending into the glass instead of a white slab. Same compile
+    /// guard as the glyph above.
     @ViewBuilder
     private func coverImage(_ cover: UIImage) -> some View {
         let image = Image(uiImage: cover).resizable().scaledToFill()
+        #if compiler(>=6.0)
         if #available(iOS 18.0, *) {
             image.widgetAccentedRenderingMode(.desaturated)
         } else {
             image
         }
+        #else
+        image
+        #endif
     }
 
     /// The app's own mark, white and on nothing: the top right corner, the way

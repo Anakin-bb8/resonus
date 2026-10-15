@@ -20,7 +20,7 @@ public class CoverClipModule: Module {
     Name("CoverClip")
 
     View(CoverClipView.self) {
-      Prop("uri") { (view: CoverClipView, uri: URL?) in
+      Prop("uri") { (view: CoverClipView, uri: String?) in
         view.setUri(uri)
       }
     }
@@ -43,9 +43,9 @@ public final class CoverClipView: ExpoView {
     playerLayer.frame = bounds
   }
 
-  func setUri(_ uri: URL?) {
+  func setUri(_ raw: String?) {
     teardown()
-    guard let uri else { return }
+    guard let raw, let uri = URL(string: raw) else { return }
     let player = AVPlayer(url: uri)
     player.isMuted = true
     player.preventsDisplaySleepDuringVideoPlayback = false
