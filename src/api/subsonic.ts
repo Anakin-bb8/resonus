@@ -114,6 +114,8 @@ export interface Song {
   url?: string;
   /** `url` is a file (a podcast episode), not a live station: speed applies. */
   vod?: boolean;
+  /** Set on a podcast episode: the show it belongs to, for "Go to Podcast". */
+  podcastChannelId?: string;
   /** Song genre (sent by Subsonic and Jellyfin). Used by radio so it doesn't
    *  die when similar artist tracks run out. */
   genre?: string;

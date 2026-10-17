@@ -26,9 +26,8 @@ import {
   refreshAll,
   refreshChannel,
   search as searchPodcasts,
-  subscribe,
   toggleFavoriteChannel,
-  unsubscribe,
+  removePodcast,
   type PodcastChannel,
   type PodcastSearchResult,
 } from '@/api/podcasts';
@@ -126,7 +125,9 @@ export function PodcastsBrowser({ embedded, actionRef, searchOpen }: BrowserProp
     queryKey: ['podcastDiscover', term],
     queryFn: () => (term.length > 1 ? searchPodcasts(term) : charts(undefined, 100)),
     enabled: !!embedded,
-    staleTime: 1000 * 60 * 10,
+    // iTunes answers are stable enough to hold for three days: the Store is not
+    // asked again on every visit, and a search you already ran stays put.
+    staleTime: 1000 * 60 * 60 * 72,
   });
 
   async function refresh() {
@@ -176,9 +177,9 @@ export function PodcastsBrowser({ embedded, actionRef, searchOpen }: BrowserProp
     setRemoving(null);
     if (!channel) return;
     try {
-      await unsubscribe(channel.id);
+      await removePodcast(channel.id);
       await reload();
-      toast(t('Unsubscribed from “{name}”', { name: channel.title }));
+      toast(t('Removed “{name}”', { name: channel.title }));
     } catch {
       toast(t("Couldn't complete the action"));
     }
@@ -238,15 +239,9 @@ export function PodcastsBrowser({ embedded, actionRef, searchOpen }: BrowserProp
               return (
                 <Pressable
                   style={styles.row}
-                  disabled={taken}
-                  onPress={() => {
-                    void subscribe(item.feedUrl)
-                      .then(() => {
-                        reload();
-                        toast(t('Subscribed to “{name}”', { name: item.title }));
-                      })
-                      .catch(() => toast(t("Couldn't read that feed.")));
-                  }}
+                  onPress={() =>
+                    router.push(`/podcast/${encodeURIComponent(item.feedUrl)}`)
+                  }
                 >
                   <Cover
                     uri={coverArtUrl(item.imageUrl, COVER.thumb)}
@@ -264,11 +259,7 @@ export function PodcastsBrowser({ embedded, actionRef, searchOpen }: BrowserProp
                       </Text>
                     ) : null}
                   </View>
-                  {taken ? (
-                    <Icon name="checkmark-circle" size={22} color={colors.accent} />
-                  ) : (
-                    <Icon name="add-circle-outline" size={22} color={colors.textSecondary} />
-                  )}
+                  {taken ? <Icon name="checkmark-circle" size={22} color={colors.accent} /> : null}
                 </Pressable>
               );
             }}
@@ -343,6 +334,7 @@ export function PodcastsBrowser({ embedded, actionRef, searchOpen }: BrowserProp
                     .then((on) => {
                       void queryClient.invalidateQueries({ queryKey: ['podcastFavorites'] });
                       void queryClient.invalidateQueries({ queryKey: ['podcastChannels'] });
+                      void queryClient.invalidateQueries({ queryKey: ['podcastFavoriteChannels'] });
                       toast(on ? t('Added to favorites') : t('Removed from favorites'));
                     })
                     .catch(() => toast(t("Couldn't complete the action")));
@@ -370,7 +362,7 @@ export function PodcastsBrowser({ embedded, actionRef, searchOpen }: BrowserProp
             <EmptyState
               icon="headset-outline"
               title={t('No podcasts')}
-              subtitle={t('Tap + to subscribe to a show.')}
+              subtitle={t('Tap + to add a show.')}
             />
           }
         />
@@ -431,7 +423,7 @@ export function PodcastsBrowser({ embedded, actionRef, searchOpen }: BrowserProp
           >
             <Icon name="trash-outline" size={24} color={colors.danger} />
             <Text style={[styles.actionText, { color: colors.danger }]}>
-              {t('Unsubscribe')}
+              {t('Remove')}
             </Text>
           </Pressable>
         </View>
@@ -439,11 +431,11 @@ export function PodcastsBrowser({ embedded, actionRef, searchOpen }: BrowserProp
 
       <Dialog
         visible={!!removing}
-        title={t('Unsubscribe')}
+        title={t('Remove')}
         message={t('Remove “{name}” and its episodes from this device?', {
           name: removing?.title ?? '',
         })}
-        confirmLabel={t('Unsubscribe')}
+        confirmLabel={t('Remove')}
         destructive
         onCancel={() => setRemoving(null)}
         onConfirm={() => void confirmRemove()}

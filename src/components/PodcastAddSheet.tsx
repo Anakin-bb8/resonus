@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { search as searchPodcasts, subscribe, type PodcastSearchResult } from '@/api/podcasts';
+import { refreshChannel, search as searchPodcasts, type PodcastSearchResult } from '@/api/podcasts';
 import { Cover } from '@/components/Cover';
 import { Message } from '@/components/Message';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -53,7 +53,7 @@ export function PodcastAddSheet({ visible, subscribed, onCancel, onSubscribed }:
     queryKey: ['podcastSearch', debounced],
     queryFn: () => searchPodcasts(debounced),
     enabled: visible && debounced.trim().length > 1,
-    staleTime: 1000 * 60 * 10,
+    staleTime: 1000 * 60 * 60 * 72,
   });
 
   // Errors go on the sheet: a toast would be hidden under the modal.
@@ -61,7 +61,7 @@ export function PodcastAddSheet({ visible, subscribed, onCancel, onSubscribed }:
     setBusy(what);
     setError(null);
     try {
-      await subscribe(subscribeTo);
+      await refreshChannel(subscribeTo);
       onSubscribed();
       onCancel();
     } catch {
@@ -193,7 +193,7 @@ export function PodcastAddSheet({ visible, subscribed, onCancel, onSubscribed }:
               disabled={!canPaste}
               onPress={() => void run(pasted, pasted)}
               accessibilityRole="button"
-              accessibilityLabel={t('Subscribe')}
+              accessibilityLabel={t('Add')}
               style={({ pressed }) => [
                 styles.subscribe,
                 !canPaste && styles.subscribeOff,
@@ -203,7 +203,7 @@ export function PodcastAddSheet({ visible, subscribed, onCancel, onSubscribed }:
               {busy === pasted ? (
                 <ActivityIndicator color={colors.onAccent} />
               ) : (
-                <Text style={styles.subscribeText}>{t('Subscribe')}</Text>
+                <Text style={styles.subscribeText}>{t('Add')}</Text>
               )}
             </Pressable>
           </View>

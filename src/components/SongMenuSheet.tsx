@@ -37,6 +37,7 @@ import {
 import { useCanShare } from '@/hooks/useCanShare';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { applyStarChange, resyncFavorites } from '@/lib/favoritesCache';
+import { favoriteIds, toggleFavoritePodcast } from '@/api/podcasts';
 import { artistTargets } from '@/lib/artistNav';
 import { pushOrReplace } from '@/lib/pushOrReplace';
 import { exportToFolder, shareSongFile } from '@/lib/exportSong';
@@ -168,7 +169,17 @@ export function SongMenuSheet() {
   const deleteDownloads = useDownloads((s) => s.deleteSongs);
   const openArtistPicker = useArtistPicker((s) => s.open);
   const favIds = useFavoriteIds(!!song);
-  const favorited = song ? (favIds ? favIds.has(song.id) : !!song.starred) : false;
+  // A podcast episode's heart is the device's own, filed in SQLite.
+  const podcastFav = useQuery({
+    queryKey: ['podcastFavorites'],
+    queryFn: () => favoriteIds(),
+    enabled: !!song?.podcastChannelId,
+  });
+  const favorited = song
+    ? song.podcastChannelId
+      ? (podcastFav.data?.has(song.id) ?? false)
+      : favIds ? favIds.has(song.id) : !!song.starred
+    : false;
 
   const [mode, setMode] = useState<'actions' | 'playlists' | 'sleep' | 'rating' | 'export'>(
     'actions',
@@ -575,6 +586,19 @@ export function SongMenuSheet() {
                     icon={favorited ? 'heart' : 'heart-outline'}
                     label={favorited ? t('Remove from favorites') : t('Add to favorites')}
                     onPress={() => {
+                      if (song.podcastChannelId) {
+                        // The device's own SQLite favorite, not the server's.
+                        void toggleFavoritePodcast(song.id, 'episode', song.podcastChannelId)
+                          .then(() => {
+                            void queryClient.invalidateQueries({ queryKey: ['podcastFavorites'] });
+                            void queryClient.invalidateQueries({ queryKey: ['podcastFavoriteChannels'] });
+                            void queryClient.invalidateQueries({ queryKey: ['podcastFavoriteEpisodes'] });
+                          })
+                          .catch(() => toast(t("Couldn't complete the action")));
+                        toast(favorited ? t('Removed from favorites') : t('Added to favorites'));
+                        close();
+                        return;
+                      }
                       (favorited ? unstar(song.id) : star(song.id))
                         .then(() => applyStarChange('song', song.id, !favorited, song))
                         .catch(resyncFavorites);
@@ -582,7 +606,16 @@ export function SongMenuSheet() {
                       close();
                     }}
                   />
-                  {song.albumId || song.album ? (
+                  {/* A podcast episode has no album or artist of its own — the
+                      show is both — so the two collapse into one "Go to Podcast". */}
+                  {song.podcastChannelId ? (
+                    <Action
+                      icon="headset-outline"
+                      label={t('Go to Podcast')}
+                      onPress={() => goDetail(`/podcast/${song.podcastChannelId}`)}
+                    />
+                  ) : null}
+                  {!song.podcastChannelId && (song.albumId || song.album) ? (
                     <Action
                       icon="disc-outline"
                       label={t('Go to album')}
@@ -595,7 +628,7 @@ export function SongMenuSheet() {
                       }}
                     />
                   ) : null}
-                  {song.artistId || song.artist ? (
+                  {!song.podcastChannelId && (song.artistId || song.artist) ? (
                     <Action
                       icon="person-outline"
                       label={t('Go to artist')}

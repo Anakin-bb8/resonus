@@ -1,334 +1,178 @@
-/** One podcast and its episodes, played straight from the publisher's files. */
+/**
+ * One podcast and its episodes — a first-class entity, drawn by the album's
+ * renderer so it behaves like an album: big cover that scrolls away, a sticky
+ * bar with the name, the action row, the ⋯ menu.
+ *
+ * SQLite is the store, iTunes is the refresh. Opening a show reads it from
+ * SQLite; if it was never opened it is read from the publisher and filed there.
+ * A show whose last write is older than three days is re-read in the background
+ * and the surface updated once it lands. Nothing is subscribed: opening lands it.
+ */
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Linking,
-  Pressable,
-  RefreshControl,
-  Text,
-  View,
-} from 'react-native';
+import { useState } from 'react';
+import { Linking, View } from 'react-native';
 
 import {
+  episodeToSong,
   favoriteIds,
   getChannel,
+  getStoredChannel,
   listEpisodes,
-  episodeToSong,
   refreshChannel,
-  toggleFavoriteChannel,
-  toggleFavoriteEpisode,
-  type PodcastEpisode,
+  type PodcastChannel,
 } from '@/api/podcasts';
 import { COVER, coverArtUrl } from '@/api/data';
 import { BackButton } from '@/components/BackButton';
-import { Cover } from '@/components/Cover';
 import { EmptyState } from '@/components/EmptyState';
-import Icon from '@/components/Icon';
 import { Message } from '@/components/Message';
-import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
-import { useT } from '@/i18n';
-import { formatDuration } from '@/lib/format';
-import { listPerf } from '@/lib/listPerf';
+import { TrackListSkeleton } from '@/components/TrackListSkeleton';
+import { TrackListView } from '@/components/TrackListView';
+import { PodcastMenuSheet } from '@/components/PodcastMenuSheet';
+import { episodesLabel, useT } from '@/i18n';
+import { formatTotalDuration } from '@/lib/format';
 import { queryClient } from '@/lib/query';
 import { useSettings } from '@/store/settings';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, radius, spacing, themed, tracking, useTheme } from '@/theme';
+import { colors, useTheme } from '@/theme';
 
-/** The date an episode was published, in the app's language. */
-function dayLabel(at: number, lang: string): string {
-  const d = new Date(at);
-  const now = new Date();
-  return d.toLocaleDateString(lang, {
-    day: 'numeric',
-    month: 'short',
-    year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
-  });
+/** A show older than this is quietly re-read from the publisher on opening. */
+const STALE_MS = 1000 * 60 * 60 * 72;
+
+/** The route id is either a stored channel id or a percent-encoded feed URL. */
+function isFeedUrl(id: string): boolean {
+  return /^https?:\/\//i.test(decodeURIComponent(id));
 }
 
 export default function PodcastScreen() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
   useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const t = useT();
   const lang = useSettings((s) => s.language);
-  const bottomPad = useScreenBottomPadding();
   const toast = useToast((s) => s.show);
   const playQueue = usePlayerStore((s) => s.playQueue);
   const playingId = usePlayerStore((s) => currentSong(s)?.id);
-  const [refreshing, setRefreshing] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  const channel = useQuery({
-    queryKey: ['podcastChannel', id],
-    queryFn: () => getChannel(id),
+  // SQLite first. A show never opened is read from the publisher and filed; a
+  // show written more than three days ago is served from SQLite now and re-read
+  // in the background, which invalidates this query once the new data lands.
+  const data = useQuery({
+    queryKey: ['podcast', id],
+    queryFn: async () => {
+      let ch: PodcastChannel | undefined;
+      let feedUrl: string | undefined;
+      if (isFeedUrl(id)) {
+        feedUrl = decodeURIComponent(id);
+        ch = await getStoredChannel(feedUrl);
+        if (!ch) ch = await refreshChannel(feedUrl);
+      } else {
+        ch = await getChannel(id);
+        feedUrl = ch?.feedUrl;
+      }
+      if (!ch) return null;
+      if (feedUrl && Date.now() - (ch.refreshedAt ?? 0) > STALE_MS) {
+        void refreshChannel(feedUrl)
+          .then(() => queryClient.invalidateQueries({ queryKey: ['podcast', id] }))
+          .catch(() => {});
+      }
+      const episodes = await listEpisodes(ch.id);
+      return { channel: ch, episodes };
+    },
     enabled: !!id,
+    staleTime: Infinity,
   });
 
-  const episodes = useQuery({
-    queryKey: ['podcastEpisodes', id],
-    queryFn: () => listEpisodes(id),
-    enabled: !!id,
-  });
-
-  const favorites = useQuery({
-    queryKey: ['podcastFavorites'],
-    queryFn: favoriteIds,
-  });
+  // The hearts, so the favorite pill can show whether this show is hearted.
+  const favorites = useQuery({ queryKey: ['podcastFavorites'], queryFn: favoriteIds });
   const favSet = favorites.data ?? new Set<string>();
 
-  const reload = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: ['podcastChannel', id] });
-    void queryClient.invalidateQueries({ queryKey: ['podcastEpisodes', id] });
-    void queryClient.invalidateQueries({ queryKey: ['podcastRecentEpisodes'] });
-  }, [id]);
-
-  const refresh = useCallback(async () => {
-    const feedUrl = channel.data?.feedUrl;
-    if (!feedUrl) return;
-    setRefreshing(true);
-    try {
-      await refreshChannel(feedUrl);
-      reload();
-    } catch {
-      toast(t("Couldn't read this feed"));
-    } finally {
-      setRefreshing(false);
-    }
-  }, [channel.data?.feedUrl, reload, t, toast]);
-
-  /** The whole playable list, starting at the one tapped. */
-  const play = useCallback(
-    (list: PodcastEpisode[], from: number) => {
-      const ch = channel.data;
-      if (!ch) return;
-      const playable = list.filter((e) => !!e.url);
-      const start = playable.findIndex((e) => e.id === list[from]?.id);
-      void playQueue(
-        playable.map((e) => episodeToSong(e, ch)),
-        start < 0 ? 0 : start,
-        ch.title,
-        `/podcast/${ch.id}`,
-      );
-    },
-    [channel.data, playQueue],
-  );
-
-  if (channel.isLoading || episodes.isLoading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator color={colors.accent} />
-      </View>
-    );
+  if (data.isLoading) {
+    return <TrackListSkeleton />;
   }
 
-  if (channel.isError || !channel.data) {
+  if (data.isError || !data.data) {
     return (
-      <View style={styles.center}>
+      <View style={{ flex: 1, justifyContent: 'center', backgroundColor: colors.background }}>
         <BackButton />
-        <Message text={t("Couldn't load this podcast.")} onRetry={reload} />
+        <Message text={t("Couldn't load this podcast.")} onRetry={() => data.refetch()} />
       </View>
     );
   }
 
-  const ch = channel.data;
-  const list = episodes.data ?? [];
+  const ch = data.data.channel;
+  const list = data.data.episodes;
   const siteUrl = ch.siteUrl;
 
+  // The episodes, bridged to songs so the album renderer can list and play them.
+  const songs = list.map((e) => episodeToSong(e, ch));
+
+  const play = (start: number) => {
+    void playQueue(songs, start, ch.title, `/podcast/${id}`);
+  };
+
+  // The metadata line, built the way an album's reads: what it is, how many
+  // episodes, and how long they add up to.
+  const totalSec = list.reduce((acc, e) => acc + (e.duration ?? 0), 0);
+  const meta = [
+    t('Podcast'),
+    episodesLabel(ch.episodeCount ?? list.length, lang),
+    totalSec > 0 ? formatTotalDuration(totalSec) : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
   return (
-    <FlatList
-      {...listPerf}
-      data={list}
-      keyExtractor={(item) => item.id}
-      contentContainerStyle={[styles.list, { paddingBottom: bottomPad }]}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.accent} />
-      }
-      ListHeaderComponent={
-        <View style={styles.header}>
-          <Cover
-            uri={coverArtUrl(ch.imageUrl, COVER.card)}
-            size={160}
-            rounded
-            placeholderIcon="headset-outline"
+    <>
+      <TrackListView
+        title={ch.title}
+        subtitle={ch.author}
+        description={ch.description}
+        meta={meta}
+        coverUri={coverArtUrl(ch.imageUrl, COVER.card)}
+        songs={songs}
+        currentId={playingId}
+        // The heart marks the show as a favorite — the user's own heart, kept on
+        // the device (SQLite), which is what puts it in the Library's shelf.
+        favorite={{ id: ch.id, type: 'song', starred: favSet.has(ch.id), podcast: true }}
+        // The episodes' hearts read from the same SQLite favorites.
+        podcastFavIds={favSet}
+        // The download button sits in the album's action row, exactly as an
+        // album wires it. It is a placeholder for now: podcast downloading gets
+        // its real logic later.
+        download={{ status: 'none', progress: 0, onPress: () => {} }}
+        // The ⋯ opens the show's own sheet: refresh and website.
+        onMenu={() => setMenuOpen(true)}
+        emptyState={
+          <EmptyState
+            icon="headset-outline"
+            title={t('No episodes')}
+            subtitle={t('This show has nothing to play yet.')}
           />
-          <Text style={styles.title}>{ch.title}</Text>
-          {ch.author ? <Text style={styles.author}>{ch.author}</Text> : null}
-          {ch.description ? (
-            <Text style={styles.description} numberOfLines={6}>
-              {ch.description}
-            </Text>
-          ) : null}
-          {ch.error ? (
-            <Text style={styles.error}>
-              {t("This podcast's feed could not be read, so these episodes may be out of date.")}
-            </Text>
-          ) : null}
-          <View style={styles.actions}>
-            {list.length > 0 ? (
-              <Pressable
-                style={({ pressed }) => [styles.primary, pressed && { opacity: 0.7 }]}
-                onPress={() => play(list, 0)}
-              >
-                <Icon name="play" size={18} color={colors.onAccent} />
-                <Text style={styles.primaryText}>{t('Play latest')}</Text>
-              </Pressable>
-            ) : null}
-            {siteUrl ? (
-              <Pressable
-                style={({ pressed }) => [styles.secondary, pressed && { opacity: 0.7 }]}
-                onPress={() => void Linking.openURL(siteUrl).catch(() => {})}
-              >
-                <Icon name="link-outline" size={18} color={colors.text} />
-                <Text style={styles.secondaryText}>{t('Website')}</Text>
-              </Pressable>
-            ) : null}
-          </View>
-          <Pressable
-            hitSlop={8}
-            onPress={() => {
-              void toggleFavoriteChannel(ch.id)
-                .then((on) => {
-                  void queryClient.invalidateQueries({ queryKey: ['podcastFavorites'] });
-                  toast(on ? t('Added to favorites') : t('Removed from favorites'));
-                })
-                .catch(() => toast(t("Couldn't complete the action")));
-            }}
-            accessibilityLabel={
-              favSet.has(ch.id) ? t('Remove from favorites') : t('Add to favorites')
-            }
-          >
-            <Icon
-              name={favSet.has(ch.id) ? 'heart' : 'heart-outline'}
-              size={22}
-              color={favSet.has(ch.id) ? colors.accent : colors.textSecondary}
-            />
-          </Pressable>
-          {list.length > 0 ? <Text style={styles.sectionTitle}>{t('Episodes')}</Text> : null}
-        </View>
-      }
-      renderItem={({ item, index }: { item: PodcastEpisode; index: number }) => {
-        const playing = playingId === item.id;
-        return (
-          <Pressable
-            style={({ pressed }) => [styles.episode, pressed && { opacity: 0.6 }]}
-            disabled={!item.url}
-            onPress={() => play(list, index)}
-          >
-            <View style={{ flex: 1 }}>
-              <Text
-                style={[styles.episodeTitle, playing && { color: colors.accent }]}
-                numberOfLines={2}
-              >
-                {item.title || t('Untitled episode')}
-              </Text>
-              <Text style={styles.episodeSub} numberOfLines={1}>
-                {[item.publishedAt ? dayLabel(item.publishedAt, lang) : null, formatDuration(item.duration)]
-                  .filter(Boolean)
-                  .join(' · ')}
-              </Text>
-            </View>
-            <Pressable
-              hitSlop={8}
-              onPress={() => {
-                void toggleFavoriteEpisode(item)
-                  .then((on) => {
-                    void queryClient.invalidateQueries({ queryKey: ['podcastFavorites'] });
-                    toast(on ? t('Added to favorites') : t('Removed from favorites'));
-                  })
-                  .catch(() => toast(t("Couldn't complete the action")));
-              }}
-              accessibilityLabel={
-                favSet.has(item.id) ? t('Remove from favorites') : t('Add to favorites')
-              }
-            >
-              <Icon
-                name={favSet.has(item.id) ? 'heart' : 'heart-outline'}
-                size={18}
-                color={favSet.has(item.id) ? colors.accent : colors.textSecondary}
-              />
-            </Pressable>
-            {item.url ? (
-              <Icon name="play" size={18} color={playing ? colors.accent : colors.textSecondary} />
-            ) : (
-              <Text style={styles.unplayable}>{t('No audio available')}</Text>
-            )}
-          </Pressable>
-        );
-      }}
-      ListEmptyComponent={
-        <EmptyState
-          icon="headset-outline"
-          title={t('No episodes')}
-          subtitle={t('Pull down to read the feed again.')}
-        />
-      }
-    />
+        }
+        onPlay={play}
+      />
+      <PodcastMenuSheet
+        visible={menuOpen}
+        title={ch.title}
+        subtitle={ch.author}
+        coverUri={coverArtUrl(ch.imageUrl, COVER.thumb)}
+        siteUrl={siteUrl}
+        // Refresh re-reads the feed and updates SQLite, then the surface.
+        onRefresh={() => {
+          if (!ch.feedUrl) return;
+          void refreshChannel(ch.feedUrl)
+            .then(() => queryClient.invalidateQueries({ queryKey: ['podcast', id] }))
+            .catch(() => toast(t("Couldn't read this feed.")));
+        }}
+        onWebsite={() => {
+          if (siteUrl) void Linking.openURL(siteUrl).catch(() => {});
+        }}
+        onClose={() => setMenuOpen(false)}
+      />
+    </>
   );
 }
-
-const styles = themed((colors) => ({
-  center: { flex: 1, justifyContent: 'center', backgroundColor: colors.background },
-  list: { padding: spacing.lg, gap: spacing.xs },
-  header: { alignItems: 'center', gap: spacing.sm, marginBottom: spacing.lg },
-  title: {
-    color: colors.text,
-    fontSize: fontSize.lg,
-    letterSpacing: tracking.heading,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginTop: spacing.sm,
-  },
-  author: { color: colors.textSecondary, fontSize: fontSize.sm, textAlign: 'center' },
-  description: {
-    color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    lineHeight: 20,
-    textAlign: 'center',
-    marginTop: spacing.xs,
-  },
-  error: {
-    color: colors.danger,
-    fontSize: fontSize.xs,
-    textAlign: 'center',
-    marginTop: spacing.xs,
-  },
-  actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
-  primary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
-    backgroundColor: colors.accent,
-  },
-  primaryText: { color: colors.onAccent, fontSize: fontSize.sm, fontWeight: '600' },
-  secondary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surfaceHighlight,
-  },
-  secondaryText: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
-  sectionTitle: {
-    alignSelf: 'flex-start',
-    color: colors.text,
-    fontSize: fontSize.md,
-    fontWeight: '600',
-    marginTop: spacing.lg,
-  },
-  episode: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  episodeTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
-  episodeSub: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2 },
-  unplayable: { color: colors.textMuted, fontSize: fontSize.xs },
-}));

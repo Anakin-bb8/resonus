@@ -119,11 +119,13 @@ function toEpisode(channelId: string, item: ParsedItem): PodcastEpisode {
 }
 
 /**
- * Reads one feed and stores it, episodes replaced by what it lists now.
+ * Reads one feed and stores it, episodes replaced by what it lists now. This is
+ * how a show is opened: the first read files it in SQLite, a later read only
+ * updates it. There is no subscribe — opening a show lands it.
  *
- * A new subscription is only kept once its feed has been read. An existing one
- * that fails stays, with the error on its channel row, so it can still be seen
- * and cancelled.
+ * A new show is only kept once its feed has been read. An existing one that
+ * fails stays, with the error on its channel row, so it can still be seen and
+ * removed.
  */
 export async function refreshChannel(input: string): Promise<PodcastChannel> {
   const url = normalized(input);
@@ -176,23 +178,23 @@ export async function refreshChannel(input: string): Promise<PodcastChannel> {
   return channel;
 }
 
-/** Subscribes to a feed, given its address or the show's page. */
-export async function subscribe(input: string): Promise<PodcastChannel> {
-  return refreshChannel(input);
+/** The stored channel by its feed address, before it is opened. */
+export async function getStoredChannel(feedUrl: string): Promise<PodcastChannel | undefined> {
+  return Db.getChannel(scope(), feedId(feedUrl));
 }
 
-/** Unsubscribes: the channel, its episodes and its feed. */
-export async function unsubscribe(id: string): Promise<void> {
+export async function getChannel(id: string): Promise<PodcastChannel | undefined> {
+  return Db.getChannel(scope(), id);
+}
+
+/** Removes a show: its channel row, its episodes and its feed. */
+export async function removePodcast(id: string): Promise<void> {
   await Db.removeChannel(scope(), id);
 }
 
 /** Every subscribed channel, most recently published first. */
 export async function listChannels(): Promise<PodcastChannel[]> {
   return Db.listChannels(scope());
-}
-
-export async function getChannel(id: string): Promise<PodcastChannel | undefined> {
-  return Db.getChannel(scope(), id);
 }
 
 export async function listEpisodes(channelId: string): Promise<PodcastEpisode[]> {
@@ -211,6 +213,15 @@ export async function toggleFavoriteChannel(id: string): Promise<boolean> {
 
 export async function toggleFavoriteEpisode(episode: PodcastEpisode): Promise<boolean> {
   return Db.toggleFavorite(scope(), episode.id, 'episode', episode.channelId);
+}
+
+/** The heart's one entry point: a show (`channel`) or one of its episodes. */
+export async function toggleFavoritePodcast(
+  id: string,
+  kind: 'channel' | 'episode',
+  channelId: string,
+): Promise<boolean> {
+  return Db.toggleFavorite(scope(), id, kind, channelId);
 }
 
 /** The hearted ids, so a row can light its heart without asking per row. */
@@ -268,6 +279,8 @@ export function episodeToSong(episode: PodcastEpisode, channel: PodcastChannel):
     url: episode.url,
     // A file, not a station: it can play at another speed.
     vod: true,
+    // The show it belongs to: the episode's menu offers "Go to Podcast".
+    podcastChannelId: channel.id,
   };
   if (channel.imageUrl) song.coverArt = channel.imageUrl;
   if (episode.duration !== undefined) song.duration = episode.duration;

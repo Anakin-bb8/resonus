@@ -10,10 +10,12 @@ import ReanimatedSwipeable, {
 import Reanimated, { useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
 
 import { COVER, songCoverUrl, star } from '@/api/data';
+import { toggleFavoritePodcast } from '@/api/podcasts';
 import { type Song } from '@/api/subsonic';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { formatDuration } from '@/lib/format';
 import { applyStarChange, resyncFavorites, unstarWithUndo } from '@/lib/favoritesCache';
+import { queryClient } from '@/lib/query';
 import { useAuthStore } from '@/store/auth';
 import { useDownloads } from '@/store/downloads';
 import { usePlayerStore } from '@/store/player';
@@ -46,6 +48,12 @@ interface Props {
    * (no server favorites).
    */
   showFavorite?: boolean;
+  /**
+   * Podcast episodes: the ids the user has hearted in SQLite. When the song is
+   * an episode (`song.podcastChannelId`), its heart reads from here instead of
+   * the server's favorites list.
+   */
+  podcastFavIds?: Set<string>;
   /** Shows the ⋯ menu button (default true; works offline too). */
   showMenu?: boolean;
   /** Shows the mini album cover on the left (Spotify style). */
@@ -119,6 +127,7 @@ function TrackRowBase({
   onLongPress,
   onPress,
   onPressIn,
+  podcastFavIds,
 }: Props) {
   bump('render · TrackRow');
   const openMenu = useSongMenu((s) => s.open);
@@ -142,7 +151,11 @@ function TrackRowBase({
   // list is still loading; otherwise, unmarking on an album would keep the heart
   // visible (the OR with `song.starred` never became false).
   const favIds = useFavoriteIds(showFavorite);
-  const favorited = showFavorite && (favIds ? favIds.has(song.id) : !!song.starred);
+  const favorited =
+    showFavorite &&
+    (song.podcastChannelId
+      ? (podcastFavIds?.has(song.id) ?? false)
+      : favIds ? favIds.has(song.id) : !!song.starred);
   const downloaded = useDownloads((s) => !!s.files[song.id]);
   const offline = useAuthStore((s) => s.offline);
   /**
@@ -165,6 +178,18 @@ function TrackRowBase({
   // NOTE: the gesture only coexists well with scroll if the parent list uses
   // react-native-gesture-handler (FlatList/ScrollView from that library).
   async function toggleFavoriteSwipe() {
+    // A podcast episode: the device's own SQLite favorite, not the server's.
+    if (song.podcastChannelId) {
+      void toggleFavoritePodcast(song.id, 'episode', song.podcastChannelId)
+        .then((on) => {
+          void queryClient.invalidateQueries({ queryKey: ['podcastFavorites'] });
+          void queryClient.invalidateQueries({ queryKey: ['podcastFavoriteChannels'] });
+          void queryClient.invalidateQueries({ queryKey: ['podcastFavoriteEpisodes'] });
+          toast(on ? t('Added to favorites') : t('Removed from favorites'));
+        })
+        .catch(() => toast(t("Couldn't complete the action")));
+      return;
+    }
     // Removing is deferred behind «Undo»; the heart here reads from the cached
     // list, so there is no state of its own to put back.
     if (favorited) {
@@ -286,7 +311,13 @@ function TrackRowBase({
       </View>
 
       {favorited && !selecting && !unavailable ? (
-        <FavoriteButton id={song.id} starred undo size={20} />
+        <FavoriteButton
+          id={song.id}
+          starred
+          undo
+          size={20}
+          podcast={song.podcastChannelId ? { kind: 'episode', channelId: song.podcastChannelId } : undefined}
+        />
       ) : null}
       {showRating && song.userRating ? (
         <View style={styles.rating} accessibilityLabel={t('Rate {n} stars', { n: song.userRating })}>
@@ -381,6 +412,7 @@ function propsEqual(a: Props, b: Props): boolean {
     a.selecting === b.selecting &&
     a.swipeable === b.swipeable &&
     a.selected === b.selected &&
+    a.podcastFavIds === b.podcastFavIds &&
     !!a.onLongPress === !!b.onLongPress &&
     sameMenuContext(a.menuContext, b.menuContext)
   );
