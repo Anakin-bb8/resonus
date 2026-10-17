@@ -1,4 +1,6 @@
-import AudioToolbox
+// AVFoundation (AVFAudio), not AudioToolbox: that is where the Swift overlay
+// declares `UnsafeMutableAudioBufferListPointer`, the same import the engine uses.
+import AVFoundation
 import CoreML
 import Foundation
 
