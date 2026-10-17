@@ -388,14 +388,20 @@ export default function PlayerSettings() {
           />
           <SwitchList
             options={[
-              {
-                label: t('Blur inactive lyrics'),
-                description: t(
-                  'Slightly blur synchronized lyrics other than the current line to emphasize what is playing.',
-                ),
-                value: blurInactiveLyrics,
-                onChange: setBlurInactiveLyrics,
-              },
+              // The depth blur is an Android-only effect (Reanimated's
+              // `filter`), so the option is not offered on iOS.
+              ...(Platform.OS === 'ios'
+                ? []
+                : [
+                    {
+                      label: t('Blur inactive lyrics'),
+                      description: t(
+                        'Slightly blur synchronized lyrics other than the current line to emphasize what is playing.',
+                      ),
+                      value: blurInactiveLyrics,
+                      onChange: setBlurInactiveLyrics,
+                    },
+                  ]),
               {
                 label: t('Show lyrics card'),
                 value: showLyricsCard,

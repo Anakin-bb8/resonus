@@ -3158,7 +3158,7 @@ index d26560627c2dfa97370440ad28304617f3f9f0f7..40c2c9618a3c0fa06de784722b888411
          player.ref.pause()
          if !player.keepAudioSessionActive {
 diff --git a/ios/AudioPlayer.swift b/ios/AudioPlayer.swift
-index 074294321e872bb53c0b2d41044dac3c612f14f0..1a44724736482ba08f7a1ccab694123548c3543e 100644
+index 074294321e872bb53c0b2d41044dac3c612f14f0..ab6fb814647ae91a216ec994fe413c7c2167427f 100644
 --- a/ios/AudioPlayer.swift
 +++ b/ios/AudioPlayer.swift
 @@ -4,6 +4,7 @@ import Combine
@@ -3268,7 +3268,22 @@ index 074294321e872bb53c0b2d41044dac3c612f14f0..1a44724736482ba08f7a1ccab6941235
  
      await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
        ref.seek(to: time, toleranceBefore: toleranceBefore, toleranceAfter: toleranceAfter) { [weak self] _ in
-@@ -224,10 +269,26 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+@@ -214,6 +259,14 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+             installTap()
+             shouldInstallAudioTap = false
+           }
++          // Vocal removal: its module watches for this to attach its own
++          // processing tap to the player holding the item that is ready now,
++          // and again after every gapless move or media-services reset, when
++          // this fires with the item that took over. The player rides along
++          // as `object`.
++          NotificationCenter.default.post(
++            name: Notification.Name("resonus.vocalRemoval.playerReady"),
++            object: self.ref)
+         }
+         if status == .failed {
+           self.updateStatus(with: [
+@@ -224,10 +277,26 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
        .store(in: &cancellables)
  
      ref.publisher(for: \.currentItem)
@@ -3296,7 +3311,7 @@ index 074294321e872bb53c0b2d41044dac3c612f14f0..1a44724736482ba08f7a1ccab6941235
          if self.isLooping {
            self.enqueueNextLoopItem()
            self.addPlaybackEndNotification()
-@@ -262,6 +323,10 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+@@ -262,6 +331,10 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
  
    func replaceCurrentSource(source: AudioSource) {
      self.source = source
@@ -3307,7 +3322,7 @@ index 074294321e872bb53c0b2d41044dac3c612f14f0..1a44724736482ba08f7a1ccab6941235
      let wasPlaying = ref.timeControlStatus == .playing
      let wasSamplingEnabled = samplingEnabled
      removeQueuedLoopItems()
-@@ -319,6 +384,7 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+@@ -319,6 +392,7 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
    }
  
    private func teardownPlayer() {
@@ -3315,7 +3330,7 @@ index 074294321e872bb53c0b2d41044dac3c612f14f0..1a44724736482ba08f7a1ccab6941235
      removeQueuedLoopItems()
      if samplingEnabled {
        uninstallTap()
-@@ -346,7 +412,7 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+@@ -346,7 +420,7 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
  
    private func restorePlaybackState(time: Double, shouldResume: Bool, rate: Float) {
      let cmTime = CMTime(seconds: time, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
@@ -3324,7 +3339,7 @@ index 074294321e872bb53c0b2d41044dac3c612f14f0..1a44724736482ba08f7a1ccab6941235
        guard let self, shouldResume else { return }
        self.play(at: rate)
      }
-@@ -405,6 +471,11 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+@@ -405,6 +479,11 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
    }
  
    private func replacePlayerItem(with item: AVPlayerItem?) {
@@ -3336,7 +3351,7 @@ index 074294321e872bb53c0b2d41044dac3c612f14f0..1a44724736482ba08f7a1ccab6941235
      if let queuePlayer = ref as? AVQueuePlayer {
        queuePlayer.removeAllItems()
        if let item {
-@@ -429,12 +500,67 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+@@ -429,12 +508,67 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
      queuePlayer.insert(nextItem, after: currentItem)
    }
  
@@ -3405,7 +3420,7 @@ index 074294321e872bb53c0b2d41044dac3c612f14f0..1a44724736482ba08f7a1ccab6941235
        queuePlayer.remove(item)
      }
    }
-@@ -459,7 +585,21 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+@@ -459,7 +593,21 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
          return
        }
  
@@ -3427,6 +3442,18 @@ index 074294321e872bb53c0b2d41044dac3c612f14f0..1a44724736482ba08f7a1ccab6941235
          let currentTime = finishedItem.duration.seconds
          self.updateStatus(with: [
            "playing": false,
+@@ -515,5 +663,11 @@ public class AudioPlayer: SharedRef<AVPlayer>, Playable {
+ 
+     audioProcessor?.invalidate()
+     audioProcessor = nil
++
++    // The vocal separator lets go of this player here (see `playerReady`):
++    // it is about to be torn down and a tap on it would keep it alive.
++    NotificationCenter.default.post(
++      name: Notification.Name("resonus.vocalRemoval.playerGone"),
++      object: self.ref)
+   }
+ }
 diff --git a/ios/AudioRecords.swift b/ios/AudioRecords.swift
 index 33db27c3b8fb40fa9db6659a0787c6b2b503d1ab..ae00508e44a1632dafe1bedc2d326c31acc2a45c 100644
 --- a/ios/AudioRecords.swift
@@ -3498,7 +3525,7 @@ index 79c7c0b256581a768c42a0291bf84bdff4c4b142..ca13e59c53a7f9a3a5fc49d94b266c62
  
      let asset = AVURLAsset(url: finalUrl, options: options)
 diff --git a/ios/MediaController.swift b/ios/MediaController.swift
-index e977f577cd2e16b194b56537ad76b423f40d2496..5e489c0599f0af58783fe3cb48c566ec268da064 100644
+index e977f577cd2e16b194b56537ad76b423f40d2496..aec5bf2a256e41101a9354d5ed8ee548435ae21f 100644
 --- a/ios/MediaController.swift
 +++ b/ios/MediaController.swift
 @@ -11,9 +11,20 @@ class MediaController {

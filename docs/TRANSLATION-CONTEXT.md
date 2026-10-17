@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 828 of them.
+Every string the app can show, under the screen it shows up on. 844 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -430,11 +430,14 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
+| `Instrumental` |  |
 | `No lyrics available for this song.` | Empty state on the lyrics screen |
 | `Previous` | Player control: the previous track (accessibility label) |
 | `Show cover` | Lyrics screen: the button that goes back to the cover art |
 | `Show remaining time` |  |
 | `Show total time` |  |
+| `Vocal removal` |  |
+| `Vocals` |  |
 
 ## Offline
 
@@ -824,6 +827,27 @@ you are actually typing into, which is easier than reading it here.
 | `Most played albums` | A section of Home: the records played most |
 | `New releases` | Home shelf and album sort: albums by the year they came out, newest first. Not "Recently added", which is when the server got hold of them |
 | `Random albums` | A section of Home: albums picked at random, to happen upon something |
+
+## Settings › Karaoke
+
+| String | What it is |
+| --- | --- |
+| `Background on the left, the full voice on the right.` | The line under “Voice”, explaining it |
+| `Best quality` | One of the values of “Voice model” |
+| `Cancel download` |  |
+| `Download a voice model first.` |  |
+| `Download voice model` |  |
+| `Instrumental` |  |
+| `Lighter` | One of the values of “Voice model” |
+| `Mix` |  |
+| `Remove voice model` |  |
+| `The download failed:` |  |
+| `Vocal removal` |  |
+| `Vocal removal needs an iPhone with iOS 18 or later.` |  |
+| `Vocal removal separates the voice from the music while a song plays, so the lyrics page can turn it down. The voice model is downloaded once and never leaves your phone.` |  |
+| `Vocals` |  |
+| `Voice` |  |
+| `Voice model` |  |
 
 ## Settings › Language
 

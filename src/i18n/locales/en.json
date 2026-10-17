@@ -826,5 +826,22 @@
   "With the settings icon off, your picture stays on so settings are one tap away.": "With the settings icon off, your picture stays on so settings are one tap away.",
   "Choose photo": "Choose photo",
   "Remove photo": "Remove photo",
-  "Tap the plus button on songs to see them here.": "Tap the plus button on songs to see them here."
+  "Tap the plus button on songs to see them here.": "Tap the plus button on songs to see them here.",
+  "Vocal removal": "Vocal removal",
+  "Vocal removal needs an iPhone with iOS 18 or later.": "Vocal removal needs an iPhone with iOS 18 or later.",
+  "Vocal removal separates the voice from the music while a song plays, so the lyrics page can turn it down. The voice model is downloaded once and never leaves your phone.": "Vocal removal separates the voice from the music while a song plays, so the lyrics page can turn it down. The voice model is downloaded once and never leaves your phone.",
+  "Download a voice model first.": "Download a voice model first.",
+  "Voice model": "Voice model",
+  "Best quality": "Best quality",
+  "Downloading…": "Downloading…",
+  "Download voice model": "Download voice model",
+  "Remove voice model": "Remove voice model",
+  "Cancel download": "Cancel download",
+  "The download failed:": "The download failed:",
+  "Mix": "Mix",
+  "Voice": "Voice",
+  "Background on the left, the full voice on the right.": "Background on the left, the full voice on the right.",
+  "Vocals": "Vocals",
+  "Instrumental": "Instrumental",
+  "Lighter": "Lighter"
 }

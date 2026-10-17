@@ -1,0 +1,7 @@
+{
+  "name": "vocal-separator",
+  "version": "0.0.1",
+  "description": "Voice removal (Karaoke) bridge for Resonus (local Expo module)",
+  "main": "index.ts",
+  "private": true
+}

@@ -835,5 +835,22 @@
   "With the settings icon off, your picture stays on so settings are one tap away.": "Con icona impostazioni disattivata, la tua immagine resta visibile e le impostazioni restano a un tocco.",
   "Choose photo": "Scegli foto",
   "Remove photo": "Rimuovi foto",
-  "Tap the plus button on songs to see them here.": "Tocca il pulsante più sui brani per vederli qui."
+  "Tap the plus button on songs to see them here.": "Tocca il pulsante più sui brani per vederli qui.",
+  "Vocal removal": "Rimozione voce",
+  "Vocal removal needs an iPhone with iOS 18 or later.": "La rimozione voce richiede un iPhone con iOS 18 o successivo.",
+  "Vocal removal separates the voice from the music while a song plays, so the lyrics page can turn it down. The voice model is downloaded once and never leaves your phone.": "La rimozione voce separa la voce dalla musica mentre un brano suona, così la pagina dei testi può abbassarla. Il modello vocale viene scaricato una volta e non lascia mai il tuo telefono.",
+  "Download a voice model first.": "Scarica prima un modello vocale.",
+  "Voice model": "Modello vocale",
+  "Best quality": "Qualità migliore",
+  "Downloading…": "Download in corso…",
+  "Download voice model": "Scarica modello vocale",
+  "Remove voice model": "Rimuovi modello vocale",
+  "Cancel download": "Annulla download",
+  "The download failed:": "Download non riuscito:",
+  "Mix": "Mix",
+  "Voice": "Voce",
+  "Background on the left, the full voice on the right.": "La base musicale a sinistra, la voce piena a destra.",
+  "Vocals": "Voce",
+  "Instrumental": "Base musicale",
+  "Lighter": "Più leggero"
 }

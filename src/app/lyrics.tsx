@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COVER, songCoverUrl } from '@/api/data';
 import { SyncedLyricsView, useLyricsLineStyle } from '@/components/LyricsCard';
 import { SeekBar } from '@/components/SeekBar';
+import { VocalRemovalSlider } from '@/components/VocalRemovalControl';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useLyrics } from '@/hooks/useLyrics';
 import { useT } from '@/i18n';
@@ -134,6 +135,7 @@ export default function LyricsScreen() {
       )}
 
       <View style={styles.controls}>
+        <VocalRemovalSlider />
         <SeekBar duration={duration} />
         <View style={styles.buttons}>
           <Pressable

@@ -73,6 +73,9 @@ export default function SettingsScreen({ asTab = false }: { asTab?: boolean }) {
   }[] = [
     { key: 'playback', title: 'Quality & playback', icon: 'musical-notes-outline' as const },
     { key: 'player', title: 'Player', icon: 'play-circle-outline' as const },
+    // Karaoke: the voice model and how much of the voice to keep. The screen
+    // itself greys out to a "needs iOS 18" note where the module is missing.
+    { key: 'karaoke', title: 'Vocal removal', icon: 'mic-off-outline' as const },
     // Downloads: in server-offline it reduces to used space and delete (no
     // server means no downloading, but freeing space is still useful). In the
     // local profile (no account) there are NO server downloads, so it's skipped.

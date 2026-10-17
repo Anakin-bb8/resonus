@@ -794,5 +794,22 @@
   "Radios built from the artists you play most. Off, there are none on Home or in the menus, and nothing is fetched for them.": "Radios hechas con los artistas que más escuchas. Desactivadas, no aparecen en Inicio ni en los menús y no se descarga nada para ellas.",
   "Radios on Home": "Radios en Inicio",
   "Keep playing when a radio ends": "Seguir sonando cuando acaba una radio",
-  "When its songs run out, another round from the same artists.": "Cuando se acaban sus canciones, otra tanda de los mismos artistas."
+  "When its songs run out, another round from the same artists.": "Cuando se acaban sus canciones, otra tanda de los mismos artistas.",
+  "Vocal removal": "Eliminación de voz",
+  "Vocal removal needs an iPhone with iOS 18 or later.": "La eliminación de voz necesita un iPhone con iOS 18 o posterior.",
+  "Vocal removal separates the voice from the music while a song plays, so the lyrics page can turn it down. The voice model is downloaded once and never leaves your phone.": "La eliminación de voz separa la voz de la música mientras suena una canción, para que la página de letras pueda bajarla. El modelo de voz se descarga una vez y nunca sale de tu teléfono.",
+  "Download a voice model first.": "Descarga primero un modelo de voz.",
+  "Voice model": "Modelo de voz",
+  "Best quality": "Mejor calidad",
+  "Downloading…": "Descargando…",
+  "Download voice model": "Descargar modelo de voz",
+  "Remove voice model": "Eliminar modelo de voz",
+  "Cancel download": "Cancelar descarga",
+  "The download failed:": "La descarga falló:",
+  "Mix": "Mezcla",
+  "Voice": "Voz",
+  "Background on the left, the full voice on the right.": "El fondo a la izquierda, la voz completa a la derecha.",
+  "Vocals": "Voz",
+  "Instrumental": "Instrumental",
+  "Lighter": "Más ligero"
 }

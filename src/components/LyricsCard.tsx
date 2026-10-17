@@ -38,6 +38,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { COVER, songCoverUrl } from '@/api/data';
 import { useCoverRadius } from '@/components/Cover';
 import { KaraokeWords } from '@/components/KaraokeWords';
+import { VocalRemovalButton } from '@/components/VocalRemovalControl';
 import { type LyricLine, type LyricWord } from '@/api/subsonic';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useLyrics } from '@/hooks/useLyrics';
@@ -77,7 +78,10 @@ export function LyricsCard() {
 
   return (
     <View style={[styles.card, { backgroundColor: bg }]}>
-      <Text style={styles.title}>{t('Lyrics')}</Text>
+      <View style={styles.titleRow}>
+        <Text style={[styles.title, styles.titleInRow]}>{t('Lyrics')}</Text>
+        <VocalRemovalButton tint={colors.text} />
+      </View>
       <View style={styles.body}>
         {data.synced ? (
           <SyncedLyricsView lines={data.lines} nested fadeColor={bg} />
@@ -256,7 +260,9 @@ export function SyncedLyricsView({
   const weight = useSettings((s) => s.lyricsWeight);
   const centered = useSettings((s) => s.lyricsAlign) === 'center';
   const blurInactiveLyrics = useSettings((s) => s.blurInactiveLyrics);
-  const blurEnabled = blurInactiveLyrics && !browsing;
+  // The depth blur is an Android-only effect (Reanimated's `filter`); iOS keeps
+  // the plain dim, so the setting is not offered there (see settings › Player).
+  const blurEnabled = blurInactiveLyrics && !browsing && Platform.OS !== 'ios';
 
   const onMeasure = useCallback((index: number, y: number, h: number) => {
     const previous = offsets.current[index];
@@ -500,9 +506,10 @@ const LyricRow = memo(({
     return {
       opacity: dim.value,
       transform: Platform.OS === 'ios' ? [] : [{ scale: 1 + focus.value * 0.08 }],
-      // RN's Android filter clips descendants. Omitting it entirely at zero
-      // keeps the active word bounce free to rise outside its glyph box.
-      filter: radius > 0.01 ? [{ blur: radius }] : undefined,
+      // Reanimated's `filter` is Android-only, and RN's own Android filter
+      // clips descendants: omitting it entirely at zero keeps the active word
+      // bounce free to rise outside its glyph box.
+      filter: Platform.OS === 'android' && radius > 0.01 ? [{ blur: radius }] : undefined,
     };
   });
   const lineStyle = lyricsLineStyle(large, size, weight, centered, customFont);
@@ -724,6 +731,14 @@ const styles = themed((colors) => ({
     padding: spacing.lg,
   },
   title: { color: colors.text, fontSize: fontSize.md, fontWeight: '500', marginBottom: spacing.sm },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  // The row carries the gap under the header; the title keeps its own style.
+  titleInRow: { flex: 1, marginBottom: 0 },
   body: { height: CARD_BODY_H, overflow: 'hidden' },
   // Lyrics in place of the cover: box exactly the size of the cover.
   coverBox: { overflow: 'hidden', padding: spacing.lg },
