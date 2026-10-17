@@ -56,6 +56,7 @@ import { useRecentSearches } from '@/store/recentSearches';
 import { APP_FONT_FAMILY, useSettings } from '@/store/settings';
 import { useSongCache } from '@/store/songCache';
 import { useSortPrefs } from '@/store/sortPrefs';
+import { useVocalRemoval } from '@/store/vocalRemoval';
 import { colors, themeMode, useTheme } from '@/theme';
 
 // Patches Text/TextInput once, before the first render.
@@ -195,6 +196,11 @@ export default function RootLayout() {
     // Equalizer: reads device capabilities and applies saved settings. Not the
     // profile's: it belongs to the phone and its output.
     void useEqualizer.getState().hydrate();
+    // Vocal removal (Karaoke): the module and the downloaded voice model belong
+    // to the phone, not the profile, so it hydrates here with the equalizer.
+    // Without this `supported` stays false and the screen always reads as
+    // "needs iOS 18", even on a device that can do it.
+    void useVocalRemoval.getState().hydrate();
     initNetworkType();
     // Server URL switching on network change (profiles with multiple URLs).
     initAutoUrl();
