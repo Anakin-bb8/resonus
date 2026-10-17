@@ -25,8 +25,14 @@ class NotAFeedError extends Error {}
 /** A feed that could not be reached at all. */
 class FeedUnreachableError extends Error {}
 
-/** The only third-party host involved; a pasted feed URL needs nothing. */
+/** The iTunes directory: search returns each show's feed URL. */
 const ITUNES_SEARCH = 'https://itunes.apple.com/search';
+
+/** Same store, looked up by id: the charts give ids, this turns them into feeds. */
+const ITUNES_LOOKUP = 'https://itunes.apple.com/lookup';
+
+/** The iTunes Store's own top-podcasts chart; a starting point for discovery. */
+const ITUNES_CHARTS = 'https://itunes.apple.com/us/rss/toppodcasts/limit=100/json';
 
 /** Wide on purpose: a pasted address is often the show's HTML page. */
 const FEED_ACCEPT = 'application/rss+xml, application/atom+xml, text/xml, */*';
@@ -198,6 +204,28 @@ export async function listRecentEpisodes(limit = 20): Promise<RecentEpisode[]> {
   return Db.listRecentEpisodes(scope(), limit);
 }
 
+/** Hearts. The user's own, kept on the device like the subscriptions themselves. */
+export async function toggleFavoriteChannel(id: string): Promise<boolean> {
+  return Db.toggleFavorite(scope(), id, 'channel', id);
+}
+
+export async function toggleFavoriteEpisode(episode: PodcastEpisode): Promise<boolean> {
+  return Db.toggleFavorite(scope(), episode.id, 'episode', episode.channelId);
+}
+
+/** The hearted ids, so a row can light its heart without asking per row. */
+export async function favoriteIds(): Promise<Set<string>> {
+  return Db.favoriteIds(scope());
+}
+
+export async function listFavoriteChannels(): Promise<PodcastChannel[]> {
+  return Db.listFavoriteChannels(scope());
+}
+
+export async function listFavoriteEpisodes(limit = 100): Promise<RecentEpisode[]> {
+  return Db.listFavoriteEpisodes(scope(), limit);
+}
+
 /**
  * Reads every subscription again, one at a time so no host sees a burst.
  * Failures are counted, not thrown: one dead feed must not stall the rest.
@@ -269,9 +297,27 @@ export async function search(term: string): Promise<PodcastSearchResult[]> {
   } catch {
     throw new Error('search');
   }
+  const out = iTunesResults(parsed.results ?? []);
+  return out;
+}
+
+/**
+ * iTunes search/lookup rows as search results. Both endpoints answer with the
+ * same fields; a show with no `feedUrl` cannot be subscribed to, so it is left
+ * out, and the same feed twice (search lists a show more than once) is kept once.
+ */
+interface iTunesRow {
+  feedUrl?: string;
+  collectionName?: string;
+  artistName?: string;
+  artworkUrl100?: string;
+  collectionViewUrl?: string;
+}
+
+function iTunesResults(results: iTunesRow[]): PodcastSearchResult[] {
   const out: PodcastSearchResult[] = [];
   const seen = new Set<string>();
-  for (const r of parsed.results ?? []) {
+  for (const r of results) {
     if (!r.feedUrl || seen.has(r.feedUrl)) continue;
     seen.add(r.feedUrl);
     const result: PodcastSearchResult = {
@@ -284,4 +330,51 @@ export async function search(term: string): Promise<PodcastSearchResult[]> {
     out.push(result);
   }
   return out;
+}
+
+/**
+ * Discovery: the iTunes Store's top-podcasts chart, as subscribable shows.
+ *
+ * The chart lists each show's store id and its primary genre, not its feed, so
+ * the ids go to the lookup endpoint to get the feed back. `genreId` narrows the
+ * chart to one category (iTunes' own genre numbers), which is how Explore drills
+ * into a category without a second endpoint.
+ */
+export async function charts(genreId?: string, limit = 25): Promise<PodcastSearchResult[]> {
+  const body = await get(ITUNES_CHARTS, 'application/json');
+  let parsed: {
+    feed?: {
+      entry?: {
+        id?: { attributes?: { 'im:id'?: string } };
+        category?: { attributes?: { 'im:id'?: string } };
+      }[];
+    };
+  };
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    throw new Error('charts');
+  }
+  const ids: string[] = [];
+  const seen = new Set<string>();
+  for (const e of parsed.feed?.entry ?? []) {
+    const id = e.id?.attributes?.['im:id'];
+    if (!id || seen.has(id)) continue;
+    if (genreId && (e.category?.attributes?.['im:id'] ?? '') !== genreId) continue;
+    seen.add(id);
+    ids.push(id);
+    if (ids.length >= limit) break;
+  }
+  if (ids.length === 0) return [];
+  const lookupBody = await get(
+    `${ITUNES_LOOKUP}?id=${ids.join(',')}&entity=podcast`,
+    'application/json',
+  );
+  let lk: { results?: iTunesRow[] };
+  try {
+    lk = JSON.parse(lookupBody);
+  } catch {
+    throw new Error('charts');
+  }
+  return iTunesResults(lk.results ?? []);
 }

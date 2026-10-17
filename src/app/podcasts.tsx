@@ -20,11 +20,17 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
+  charts,
+  favoriteIds,
   listChannels,
   refreshAll,
   refreshChannel,
+  search as searchPodcasts,
+  subscribe,
+  toggleFavoriteChannel,
   unsubscribe,
   type PodcastChannel,
+  type PodcastSearchResult,
 } from '@/api/podcasts';
 import { COVER, coverArtUrl } from '@/api/data';
 import { BackChevron } from '@/components/BackChevron';
@@ -37,6 +43,7 @@ import { Message } from '@/components/Message';
 import { PodcastAddSheet } from '@/components/PodcastAddSheet';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { useListPadding } from '@/hooks/useScreenSize';
+import { useDebounce } from '@/hooks/useDebounce';
 import { episodesLabel, useT } from '@/i18n';
 import type { Language } from '@/i18n/languages';
 import { listPerf } from '@/lib/listPerf';
@@ -56,6 +63,9 @@ import {
 
 /** Channels from which the list stops being read at a glance. */
 const SEARCH_FROM = 8;
+
+/** A stable empty so a row's heart lookup never re-keys the memo each render. */
+const NO_FAVORITES = new Set<string>();
 
 export default function PodcastsScreen() {
   return <PodcastsBrowser />;
@@ -100,6 +110,25 @@ export function PodcastsBrowser({ embedded, actionRef, searchOpen }: BrowserProp
       queryClient.invalidateQueries({ queryKey: ['podcastRecentEpisodes'] }),
     );
 
+  // The hearts, so a row can light its own without asking per row. Invalidated
+  // when a heart goes on or off, which is what re-lights the row and the filter.
+  const favorites = useQuery({
+    queryKey: ['podcastFavorites'],
+    queryFn: favoriteIds,
+  });
+  const favSet = favorites.data ?? NO_FAVORITES;
+
+  // Explore's Podcasts section is the Store: the top 100 chart until you type,
+  // then a live iTunes search for that term. Debounced so typing one letter
+  // does not fire a fresh search at the Store each keystroke.
+  const term = useDebounce(query.trim(), 400);
+  const discover = useQuery({
+    queryKey: ['podcastDiscover', term],
+    queryFn: () => (term.length > 1 ? searchPodcasts(term) : charts(undefined, 100)),
+    enabled: !!embedded,
+    staleTime: 1000 * 60 * 10,
+  });
+
   async function refresh() {
     setRefreshing(true);
     const { failed, total } = await refreshAll().finally(() => setRefreshing(false));
@@ -124,6 +153,12 @@ export function PodcastsBrowser({ embedded, actionRef, searchOpen }: BrowserProp
 
   const showSearch = (data?.length ?? 0) > SEARCH_FROM;
   const boxOpen = useSearchBox(embedded, searchOpen, () => setQuery(''));
+
+  // Chart rows the user has already subscribed to, so the Store can mark them.
+  const subscribedFeeds = new Set(
+    (data ?? []).map((c) => c.feedUrl).filter((u): u is string => !!u),
+  );
+  const discoverList = discover.data ?? [];
 
   // Embedded, Explore's header button opens the sheet.
   useEffect(() => {
@@ -180,7 +215,81 @@ export function PodcastsBrowser({ embedded, actionRef, searchOpen }: BrowserProp
         </View>
       ) : null}
 
-      {isLoading ? (
+      {embedded ? (
+        discover.isLoading ? (
+          <ActivityIndicator style={{ marginTop: spacing.xl }} color={colors.accent} />
+        ) : discover.isError ? (
+          <Message
+            text={t("Couldn't reach the podcast charts.")}
+            onRetry={() => discover.refetch()}
+          />
+        ) : (
+          <FlatList
+            {...listPerf}
+            keyboardShouldPersistTaps="handled"
+            data={discoverList}
+            keyExtractor={(item) => item.feedUrl}
+            contentContainerStyle={[
+              styles.list,
+              { paddingBottom: bottomPad, paddingHorizontal: listPad },
+            ]}
+            renderItem={({ item }: { item: PodcastSearchResult }) => {
+              const taken = subscribedFeeds.has(item.feedUrl);
+              return (
+                <Pressable
+                  style={styles.row}
+                  disabled={taken}
+                  onPress={() => {
+                    void subscribe(item.feedUrl)
+                      .then(() => {
+                        reload();
+                        toast(t('Subscribed to “{name}”', { name: item.title }));
+                      })
+                      .catch(() => toast(t("Couldn't read that feed.")));
+                  }}
+                >
+                  <Cover
+                    uri={coverArtUrl(item.imageUrl, COVER.thumb)}
+                    size={56}
+                    rounded
+                    placeholderIcon="headset-outline"
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.rowTitle} numberOfLines={1}>
+                      {item.title}
+                    </Text>
+                    {item.author ? (
+                      <Text style={styles.rowSub} numberOfLines={1}>
+                        {item.author}
+                      </Text>
+                    ) : null}
+                  </View>
+                  {taken ? (
+                    <Icon name="checkmark-circle" size={22} color={colors.accent} />
+                  ) : (
+                    <Icon name="add-circle-outline" size={22} color={colors.textSecondary} />
+                  )}
+                </Pressable>
+              );
+            }}
+            ListEmptyComponent={
+              term.length > 1 ? (
+                <EmptyState
+                  icon="search-outline"
+                  title={t('No results')}
+                  subtitle={t('No results for “{q}”', { q: term })}
+                />
+              ) : (
+                <EmptyState
+                  icon="headset-outline"
+                  title={t('Nothing to discover')}
+                  subtitle={t('No shows in the chart right now.')}
+                />
+              )
+            }
+          />
+        )
+      ) : isLoading ? (
         <ActivityIndicator style={{ marginTop: spacing.xl }} color={colors.accent} />
       ) : isError ? (
         <Message text={t("Couldn't load your podcasts.")} onRetry={() => refetch()} />
@@ -227,6 +336,27 @@ export function PodcastsBrowser({ embedded, actionRef, searchOpen }: BrowserProp
                   </Text>
                 )}
               </View>
+              <Pressable
+                hitSlop={8}
+                onPress={() => {
+                  void toggleFavoriteChannel(item.id)
+                    .then((on) => {
+                      void queryClient.invalidateQueries({ queryKey: ['podcastFavorites'] });
+                      void queryClient.invalidateQueries({ queryKey: ['podcastChannels'] });
+                      toast(on ? t('Added to favorites') : t('Removed from favorites'));
+                    })
+                    .catch(() => toast(t("Couldn't complete the action")));
+                }}
+                accessibilityLabel={
+                  favSet.has(item.id) ? t('Remove from favorites') : t('Add to favorites')
+                }
+              >
+                <Icon
+                  name={favSet.has(item.id) ? 'heart' : 'heart-outline'}
+                  size={20}
+                  color={favSet.has(item.id) ? colors.accent : colors.textSecondary}
+                />
+              </Pressable>
               <Pressable
                 hitSlop={8}
                 onPress={() => setMenu(item)}

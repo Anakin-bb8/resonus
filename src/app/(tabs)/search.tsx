@@ -25,7 +25,8 @@ import { Message } from '@/components/Message';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { TrackRow } from '@/components/TrackRow';
 import { useDebounce } from '@/hooks/useDebounce';
-import { songsLabel, useT } from '@/i18n';
+import { songsLabel, episodesLabel, useT } from '@/i18n';
+import { listChannels } from '@/api/podcasts';
 import { haptic } from '@/lib/haptics';
 import { onTabReselect, takeSearchFocus } from '@/lib/tabOrigin';
 import { bump } from '@/lib/perfLog';
@@ -47,7 +48,7 @@ import { centredPadding, useScreenSize } from '@/hooks/useScreenSize';
  * always there: a Jellyfin account does not manage them and offline there is
  * nothing to stream (see the query).
  */
-type SearchFilter = 'all' | 'songs' | 'artists' | 'albums' | 'playlists' | 'radio';
+type SearchFilter = 'all' | 'songs' | 'artists' | 'albums' | 'playlists' | 'radio' | 'podcasts';
 
 /** In the order the chips read, which is the order the results come in. */
 const FILTERS: { key: SearchFilter; label: string }[] = [
@@ -56,6 +57,7 @@ const FILTERS: { key: SearchFilter; label: string }[] = [
   { key: 'artists', label: 'Artists' },
   { key: 'albums', label: 'Albums' },
   { key: 'playlists', label: 'Playlists' },
+  { key: 'podcasts', label: 'Podcasts' },
   { key: 'radio', label: 'Radio' },
 ];
 
@@ -194,6 +196,19 @@ export default function SearchScreen() {
         )
       : [];
 
+  // Subscriptions are the phone's own: searched with no server and no gate.
+  const { data: podcastChannels } = useQuery({
+    queryKey: ['podcastChannels'],
+    queryFn: () => listChannels(),
+  });
+  const podcastMatches =
+    debouncedQuery.length > 1
+      ? (podcastChannels ?? []).filter((c) =>
+          c.title.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
+          (c.author ?? '').toLowerCase().includes(debouncedQuery.toLowerCase()),
+        )
+      : [];
+
   /**
    * Which kind of result the screen is showing, and `all` to start with.
    *
@@ -215,6 +230,7 @@ export default function SearchScreen() {
     (shows('albums') ? (data?.albums.length ?? 0) : 0) +
     (shows('songs') ? (data?.songs.length ?? 0) : 0) +
     (shows('playlists') ? playlistMatches.length : 0) +
+    (shows('podcasts') ? podcastMatches.length : 0) +
     (shows('radio') ? stationMatches.length : 0);
 
   const isEmpty = query.trim().length === 0;
@@ -225,6 +241,7 @@ export default function SearchScreen() {
   /** Recent item subtitle: type (+ artist for albums/songs). */
   const recentLabel = (item: RecentItem): string => {
     if (item.kind === 'artist') return t('Artist');
+    if (item.kind === 'podcast') return t('Podcast');
     const type = item.kind === 'album' ? t('Album') : t('Song');
     return item.artist ? `${type} · ${item.artist}` : type;
   };
@@ -305,7 +322,7 @@ export default function SearchScreen() {
                     <Cover
                       uri={coverArtUrl(item.coverArt ?? item.id, COVER.thumb)}
                       size={48}
-                      rounded={item.kind === 'artist'}
+                      rounded={item.kind === 'artist' || item.kind === 'podcast'}
                     />
                     <View style={styles.recentInfo}>
                       <Text style={styles.recentTitle} numberOfLines={1}>
@@ -475,6 +492,44 @@ export default function SearchScreen() {
                         {songsLabel(p.songCount, lang)}
                       </Text>
                     ) : null}
+                  </View>
+                </Pressable>
+              </Link>
+            ))}
+          </View>
+        ) : null}
+
+        {shows('podcasts') && podcastMatches.length > 0 ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{t('Podcasts')}</Text>
+            {podcastMatches.map((c) => (
+              <Link key={c.id} href={`/podcast/${c.id}`} asChild>
+                <Pressable
+                  style={styles.recentRow}
+                  onPress={() =>
+                    addRecent({
+                      kind: 'podcast',
+                      id: c.id,
+                      title: c.title,
+                      artist: c.author,
+                      coverArt: c.imageUrl ?? c.id,
+                      href: `/podcast/${c.id}`,
+                    })
+                  }
+                >
+                  <Cover
+                    uri={coverArtUrl(c.imageUrl ?? c.id, COVER.thumb)}
+                    size={48}
+                    rounded
+                    placeholderIcon="headset-outline"
+                  />
+                  <View style={styles.recentInfo}>
+                    <Text style={styles.recentTitle} numberOfLines={1}>
+                      {c.title}
+                    </Text>
+                    <Text style={styles.recentSub} numberOfLines={1}>
+                      {episodesLabel(c.episodeCount ?? 0, lang)}
+                    </Text>
                   </View>
                 </Pressable>
               </Link>

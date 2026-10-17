@@ -12,7 +12,16 @@ import {
   View,
 } from 'react-native';
 
-import { getChannel, listEpisodes, episodeToSong, refreshChannel, type PodcastEpisode } from '@/api/podcasts';
+import {
+  favoriteIds,
+  getChannel,
+  listEpisodes,
+  episodeToSong,
+  refreshChannel,
+  toggleFavoriteChannel,
+  toggleFavoriteEpisode,
+  type PodcastEpisode,
+} from '@/api/podcasts';
 import { COVER, coverArtUrl } from '@/api/data';
 import { BackButton } from '@/components/BackButton';
 import { Cover } from '@/components/Cover';
@@ -62,6 +71,12 @@ export default function PodcastScreen() {
     queryFn: () => listEpisodes(id),
     enabled: !!id,
   });
+
+  const favorites = useQuery({
+    queryKey: ['podcastFavorites'],
+    queryFn: favoriteIds,
+  });
+  const favSet = favorites.data ?? new Set<string>();
 
   const reload = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ['podcastChannel', id] });
@@ -170,6 +185,26 @@ export default function PodcastScreen() {
               </Pressable>
             ) : null}
           </View>
+          <Pressable
+            hitSlop={8}
+            onPress={() => {
+              void toggleFavoriteChannel(ch.id)
+                .then((on) => {
+                  void queryClient.invalidateQueries({ queryKey: ['podcastFavorites'] });
+                  toast(on ? t('Added to favorites') : t('Removed from favorites'));
+                })
+                .catch(() => toast(t("Couldn't complete the action")));
+            }}
+            accessibilityLabel={
+              favSet.has(ch.id) ? t('Remove from favorites') : t('Add to favorites')
+            }
+          >
+            <Icon
+              name={favSet.has(ch.id) ? 'heart' : 'heart-outline'}
+              size={22}
+              color={favSet.has(ch.id) ? colors.accent : colors.textSecondary}
+            />
+          </Pressable>
           {list.length > 0 ? <Text style={styles.sectionTitle}>{t('Episodes')}</Text> : null}
         </View>
       }
@@ -194,6 +229,26 @@ export default function PodcastScreen() {
                   .join(' · ')}
               </Text>
             </View>
+            <Pressable
+              hitSlop={8}
+              onPress={() => {
+                void toggleFavoriteEpisode(item)
+                  .then((on) => {
+                    void queryClient.invalidateQueries({ queryKey: ['podcastFavorites'] });
+                    toast(on ? t('Added to favorites') : t('Removed from favorites'));
+                  })
+                  .catch(() => toast(t("Couldn't complete the action")));
+              }}
+              accessibilityLabel={
+                favSet.has(item.id) ? t('Remove from favorites') : t('Add to favorites')
+              }
+            >
+              <Icon
+                name={favSet.has(item.id) ? 'heart' : 'heart-outline'}
+                size={18}
+                color={favSet.has(item.id) ? colors.accent : colors.textSecondary}
+              />
+            </Pressable>
             {item.url ? (
               <Icon name="play" size={18} color={playing ? colors.accent : colors.textSecondary} />
             ) : (

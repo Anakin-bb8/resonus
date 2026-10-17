@@ -40,7 +40,8 @@ import { FavoritesArt } from '@/components/FavoritesArt';
 import { Message } from '@/components/Message';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { useBottomSheetAnim } from '@/hooks/useBottomSheetAnim';
-import { albumsLabel, songsLabel, useT } from '@/i18n';
+import { albumsLabel, episodesLabel, songsLabel, useT } from '@/i18n';
+import { listChannels, type PodcastChannel } from '@/api/podcasts';
 import { useAuthStore } from '@/store/auth';
 import { useLastPlayed } from '@/store/lastPlayed';
 import { useMediaMenu } from '@/store/mediaMenu';
@@ -59,12 +60,13 @@ import { haptic } from '@/lib/haptics';
 // Folders used to be a fourth segment here. It browses the server's own
 // directory tree, which is the catalogue rather than your own shelf, so it
 // went to the Explore tab with the rest of it (`FoldersBrowser`).
-type Segment = 'playlists' | 'albums' | 'artists';
+type Segment = 'playlists' | 'albums' | 'artists' | 'podcasts';
 
 const SEGMENTS: { key: Segment; label: string }[] = [
   { key: 'playlists', label: 'Playlists' },
   { key: 'albums', label: 'Albums' },
   { key: 'artists', label: 'Artists' },
+  { key: 'podcasts', label: 'Podcasts' },
 ];
 
 /**
@@ -439,6 +441,103 @@ function ArtistsTab({ query }: { query: string }) {
   );
 }
 
+/**
+ * Your subscriptions, which are the phone's own: unlike the other tabs nothing
+ * here is gated on a server, so the tab works with no account and offline.
+ */
+function PodcastsTab({ query }: { query: string }) {
+  const t = useT();
+  const lang = useSettings((s) => s.language);
+  const sort = useSettings((s) => s.librarySort);
+  const pins = usePins((s) => s.pins);
+  const grid = useSettings((s) => s.libraryLayout) === 'grid';
+  const bottomPad = useScreenBottomPadding();
+  const { columns } = useGridMetrics();
+  const listPad = useListPadding(spacing.lg);
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({
+    queryKey: ['podcastChannels'],
+    queryFn: () => listChannels(),
+  });
+  const podcasts = useMemo(
+    () =>
+      withPins(
+        sortItems(
+          (data ?? []).filter((c) => matches(query, c.title, c.author)),
+          sort,
+          (c) => c.title,
+          sort === 'recent'
+            ? (c) => c.lastPublishedAt ?? 0
+            : (c) => c.refreshedAt ?? 0,
+        ),
+        (c) => `podcast:${c.id}`,
+        pins,
+      ),
+    [data, query, sort, pins],
+  );
+  if (isLoading) return <Loader />;
+  if (isError) return <Message text={t("Couldn't load your podcasts.")} onRetry={() => refetch()} />;
+  return (
+    <FlatList
+      key={grid ? `grid-${columns}` : 'list'}
+      {...listPerf}
+      keyboardShouldPersistTaps="handled"
+      {...gridListProps(grid, bottomPad, columns, listPad)}
+      data={podcasts}
+      keyExtractor={(item) => item.id}
+      refreshControl={
+        <RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.accent} />
+      }
+      renderItem={({ item }: { item: PodcastChannel }) =>
+        grid ? (
+          <GridCard
+            href={`/podcast/${item.id}`}
+            uri={coverArtUrl(item.imageUrl, COVER.card)}
+            rounded
+            title={item.title}
+            subtitle={episodesLabel(item.episodeCount ?? 0, lang)}
+            pinned={!!pins[`podcast:${item.id}`]}
+          />
+        ) : (
+          <Link href={`/podcast/${item.id}`} asChild>
+            <Pressable style={styles.row}>
+              <Cover
+                uri={coverArtUrl(item.imageUrl, COVER.thumb)}
+                size={56}
+                rounded
+                placeholderIcon="headset-outline"
+              />
+              <View style={styles.rowInfo}>
+                <Text style={styles.rowTitle} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                <View style={styles.rowSubLine}>
+                  {pins[`podcast:${item.id}`] ? (
+                    <Icon name="pin" size={13} color={colors.accent} />
+                  ) : null}
+                  <Text style={styles.rowSub} numberOfLines={1}>
+                    {episodesLabel(item.episodeCount ?? 0, lang)}
+                  </Text>
+                </View>
+              </View>
+            </Pressable>
+          </Link>
+        )
+      }
+      ListEmptyComponent={
+        query ? (
+          <NoResults query={query} />
+        ) : (
+          <EmptyState
+            icon="headset-outline"
+            title={t('No podcasts')}
+            subtitle={t('Subscribe to a show to keep it here.')}
+          />
+        )
+      }
+    />
+  );
+}
+
 /** Nothing matched the filter (as opposed to "you have none yet"). */
 function NoResults({ query }: { query: string }) {
   const t = useT();
@@ -542,7 +641,7 @@ function AlbumsTab({ query }: { query: string }) {
  * from.
  */
 interface LibItem {
-  kind: 'playlist' | 'album' | 'artist';
+  kind: 'playlist' | 'album' | 'artist' | 'podcast';
   id: string;
   name: string;
   coverArt?: string;
@@ -585,9 +684,24 @@ function AllTab({ query, onNew }: { query: string; onNew?: () => void }) {
     queryFn: () => getStarred(),
     enabled: canFetch,
   });
+  // Subscriptions are the phone's own, so they are not gated on a server.
+  const podcastsQ = useQuery({
+    queryKey: ['podcastChannels'],
+    queryFn: () => listChannels(),
+  });
 
   const items = useMemo(() => {
     const all: LibItem[] = [
+      ...(podcastsQ.data ?? []).map((c) => ({
+        kind: 'podcast' as const,
+        id: c.id,
+        name: c.title,
+        coverArt: c.imageUrl,
+        by: c.author,
+        href: `/podcast/${c.id}`,
+        recent: c.lastPublishedAt ?? 0,
+        added: c.refreshedAt ?? 0,
+      })),
       ...(lists.data ?? []).map((p) => ({
         kind: 'playlist' as const,
         id: p.id,
@@ -622,8 +736,11 @@ function AllTab({ query, onNew }: { query: string; onNew?: () => void }) {
     ];
     return withPins(
       sortItems(
-        // Albums match by artist too, as they do under their own chip.
-        all.filter((i) => matches(query, i.name, i.kind === 'album' ? i.by : undefined)),
+        // Albums and podcasts match by who made them too, as they do under their
+        // own chip: looking for a name should find the shows behind it.
+        all.filter(
+          (i) => matches(query, i.name, i.kind === 'album' || i.kind === 'podcast' ? i.by : undefined),
+        ),
         sort,
         (i) => i.name,
         (i) => (sort === 'recent' ? i.recent : i.added),
@@ -631,11 +748,18 @@ function AllTab({ query, onNew }: { query: string; onNew?: () => void }) {
       (i) => `${i.kind}:${i.id}`,
       pins,
     );
-  }, [lists.data, starred.data, query, sort, times, byAlbum, byArtist, pins]);
+  }, [lists.data, starred.data, podcastsQ.data, query, sort, times, byAlbum, byArtist, pins]);
 
-  /** "Playlist · juan", "Album · Rojuu", "Artist". */
+  /** "Playlist · juan", "Album · Rojuu", "Podcast · Ada", "Artist". */
   const label = (i: LibItem): string => {
-    const kind = i.kind === 'playlist' ? t('Playlist') : i.kind === 'album' ? t('Album') : t('Artist');
+    const kind =
+      i.kind === 'playlist'
+        ? t('Playlist')
+        : i.kind === 'album'
+          ? t('Album')
+          : i.kind === 'podcast'
+            ? t('Podcast')
+            : t('Artist');
     return i.by ? `${kind} · ${i.by}` : kind;
   };
 
@@ -695,7 +819,7 @@ function AllTab({ query, onNew }: { query: string; onNew?: () => void }) {
           <GridCard
             href={item.href}
             uri={coverArtUrl(item.coverArt ?? item.id, COVER.card)}
-            rounded={item.kind === 'artist'}
+            rounded={item.kind === 'artist' || item.kind === 'podcast'}
             title={item.name}
             subtitle={label(item)}
             pinned={!!pins[`${item.kind}:${item.id}`]}
@@ -707,7 +831,7 @@ function AllTab({ query, onNew }: { query: string; onNew?: () => void }) {
               <Cover
                 uri={coverArtUrl(item.coverArt ?? item.id, COVER.thumb)}
                 size={56}
-                rounded={item.kind === 'artist'}
+                rounded={item.kind === 'artist' || item.kind === 'podcast'}
               />
               <View style={styles.rowInfo}>
                 <Text style={styles.rowTitle} numberOfLines={1}>
@@ -1134,6 +1258,8 @@ export default function LibraryScreen() {
           <PlaylistsTab onNew={() => setCreating(true)} query={filter} owner={shownOwner} />
         ) : segment === 'albums' ? (
           <AlbumsTab query={filter} />
+        ) : segment === 'podcasts' ? (
+          <PodcastsTab query={filter} />
         ) : (
           <ArtistsTab query={filter} />
         )}
