@@ -120,11 +120,15 @@ final class StemEngine {
     }
     worker.push(bufferList: UnsafePointer(bufferList), frames: frames, nonInterleaved: nonInterleaved)
     let buffers = UnsafeMutableAudioBufferListPointer(bufferList)
+    // The gains are spelled out first: inlined, `min(1, 2 * mix)` on both sides
+    // of one call is more than the type-checker will chew in reasonable time.
+    let voiceGain: Float = min(1, 2 * mix)
+    let backgroundGain: Float = min(1, 2 * (1 - mix))
     worker.pull(
       into: buffers,
       frames: frames,
       nonInterleaved: nonInterleaved,
-      voiceGain: min(1, 2 * mix),
-      backgroundGain: min(1, 2 * (1 - mix)))
+      voiceGain: voiceGain,
+      backgroundGain: backgroundGain)
   }
 }

@@ -71,7 +71,8 @@ final class StemTapInstaller {
 // MARK: - The tap's C callbacks
 
 private func context(of tap: MTAudioProcessingTap) -> StemTapContext? {
-  guard let storage = MTAudioProcessingTapGetStorage(tap) else { return nil }
+  // `GetStorage` is a non-optional pointer in Swift; it is live from `init` on.
+  let storage = MTAudioProcessingTapGetStorage(tap)
   return Unmanaged<StemTapContext>.fromOpaque(storage).takeUnretainedValue()
 }
 
@@ -86,9 +87,8 @@ private func stemTapInit(
 }
 
 private func stemTapFinalize(_ tap: MTAudioProcessingTap) {
-  if let storage = MTAudioProcessingTapGetStorage(tap) {
-    Unmanaged<StemTapContext>.fromOpaque(storage).release()
-  }
+  let storage = MTAudioProcessingTapGetStorage(tap)
+  Unmanaged<StemTapContext>.fromOpaque(storage).release()
 }
 
 private func stemTapPrepare(
