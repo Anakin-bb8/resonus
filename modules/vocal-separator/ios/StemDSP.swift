@@ -59,14 +59,15 @@ final class RealFFT {
           vDSP_ctoz(asComplex, 2, &split, 1, vDSP_Length(StemGrid.nFFT / 2))
           vDSP_fft_zrip(setup, &split, 1, StemGrid.log2n, FFTDirection(FFT_FORWARD))
           // Unpack. DC and Nyquist share re[0]/im[0]; the rest are halved as
-          // vDSP leaves the forward transform scaled by two.
-          outReal[0] = re[0]
+          // vDSP leaves the forward transform scaled by two. Read through the
+          // borrowed buffers, never the arrays they came from.
+          outReal[0] = rp[0]
           outImag[0] = 0
-          outReal[StemGrid.bins - 1] = im[0]
+          outReal[StemGrid.bins - 1] = ip[0]
           outImag[StemGrid.bins - 1] = 0
           for i in 1..<(StemGrid.nFFT / 2) {
-            outReal[i] = re[i] * 0.5
-            outImag[i] = im[i] * 0.5
+            outReal[i] = rp[i] * 0.5
+            outImag[i] = ip[i] * 0.5
           }
         }
       }
