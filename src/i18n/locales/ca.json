@@ -810,5 +810,7 @@
   "Round corners everywhere, or flatter ones": "Cantonades arrodonides a tota l'app, o més rectes",
   "Round": "Arrodonides",
   "Pointier": "Més rectes",
-  "Devices on the left": "Dispositius a l'esquerra"
+  "Devices on the left": "Dispositius a l'esquerra",
+  "Use the system colors": "Fer servir els colors del sistema",
+  "The accent Android takes from the wallpaper": "L'accent que Android pren del fons de pantalla"
 }

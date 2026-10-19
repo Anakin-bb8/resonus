@@ -810,5 +810,7 @@
   "Round corners everywhere, or flatter ones": "Esquinas redondeadas en toda la app, o más rectas",
   "Round": "Redondeadas",
   "Pointier": "Más rectas",
-  "Devices on the left": "Dispositivos a la izquierda"
+  "Devices on the left": "Dispositivos a la izquierda",
+  "Use the system colors": "Usar los colores del sistema",
+  "The accent Android takes from the wallpaper": "El acento que Android toma del fondo de pantalla"
 }

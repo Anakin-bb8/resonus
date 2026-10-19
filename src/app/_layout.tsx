@@ -36,6 +36,7 @@ import { initAppLocale } from '@/lib/appLocale';
 import { initHomeWidget } from '@/lib/homeWidget';
 import { loadCustomFont } from '@/lib/customFont';
 import { removeLegacyRadioCovers } from '@/lib/legacyRadioCovers';
+import { systemAccentAvailable } from '@/lib/materialYou';
 import { loadPastEvents, startPerfLog } from '@/lib/perfLog';
 import { queryClient } from '@/lib/query';
 import { primaryUrl } from '@/lib/serverUrls';
@@ -312,6 +313,17 @@ export default function RootLayout() {
   // Keep screen awake (setting). The native flag only acts with the app in
   // the foreground, so it doesn't waste extra battery in the background.
   const away = useAway();
+
+  // The wallpaper's accent can only have changed while somebody was away
+  // choosing a new wallpaper, so it is read again on the way back.
+  const systemAccent = useSettings((s) => s.systemAccent);
+  useEffect(() => {
+    if (!systemAccentAvailable || !systemAccent) return;
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') useSettings.getState().refreshSystemAccent();
+    });
+    return () => sub.remove();
+  }, [systemAccent]);
 
   const keepScreenAwake = useSettings((s) => s.keepScreenAwake);
   useEffect(() => {
