@@ -5,7 +5,7 @@
  * TTML and enhanced LRC a timestamp in the middle of the text. What they all
  * come down to is where in the line each word starts, and when.
  */
-import type { LyricWord } from '@/api/subsonic';
+import type { LyricBacking, LyricLine, LyricWord, SongLyrics } from '@/api/subsonic';
 
 /** Where a word starts in its line (a string index) and when it is sung. */
 export interface WordMark {
@@ -142,4 +142,109 @@ export function wordsFromCues(
       return { at, ...time(c) };
     }),
   );
+}
+
+/** One voice of a server `structuredLyrics` entry (OpenSubsonic `songLyrics`). */
+export interface ServerCue {
+  start: number;
+  end?: number;
+  value?: string;
+  byteStart?: number;
+}
+
+/** A timed line of a server `structuredLyrics` entry. */
+export interface ServerCueLine {
+  /** The `line` it times; backing voices share their lead line's index. */
+  index?: number;
+  value?: string;
+  cue?: ServerCue[];
+}
+
+/** A server `structuredLyrics` entry, as `getLyricsBySongId` answers it. */
+export interface ServerStructuredLyrics {
+  kind?: string;
+  synced?: boolean;
+  /** Global offset in ms; positive = lyrics should appear earlier. */
+  offset?: number;
+  line?: { start?: number; value?: string }[];
+  cueLine?: ServerCueLine[];
+}
+
+/**
+ * A backing vocal from a server cue line that shares its lead line's index.
+ *
+ * The spec puts the main voice first and the backing ones after it. Without
+ * word timings the segment still shows, timed at line level from its cues.
+ */
+function backingFromCue(cl: ServerCueLine, offset: number): LyricBacking | null {
+  const value = cl.value;
+  if (!value || !cl.cue?.length) return null;
+  const words = wordsFromCues(value, cl.cue, offset);
+  if (words?.length) {
+    const last = words[words.length - 1];
+    return {
+      start: words[0].start,
+      ...(last.end !== undefined ? { end: last.end } : {}),
+      value,
+      words,
+    };
+  }
+  let start = Infinity;
+  let end = -Infinity;
+  for (const c of cl.cue) {
+    if (Number.isFinite(c.start)) start = Math.min(start, c.start);
+    if (c.end !== undefined && Number.isFinite(c.end)) end = Math.max(end, c.end);
+  }
+  if (!Number.isFinite(start)) return null;
+  return {
+    start: Math.max(0, start - offset),
+    ...(end > start ? { end: Math.max(0, end - offset) } : {}),
+    value,
+  };
+}
+
+/**
+ * A server `structuredLyrics` entry cut into singable lines, backing vocals
+ * included. Pure (no network) so the mapping is testable: `getLyricsBySongId`
+ * only picks the entry and hands it over.
+ */
+export function structuredSongLyrics(pick: ServerStructuredLyrics): SongLyrics | null {
+  if (!pick.line?.length) return null;
+  const synced = !!pick.synced;
+  const offset = pick.offset ?? 0;
+  // Every cue line of each index, in order: the first is the lead voice, the
+  // rest are the backing ones sharing its line.
+  const cues = new Map<number, ServerCueLine[]>();
+  if (synced) {
+    pick.cueLine?.forEach((cl, i) => {
+      const at = cl.index ?? i;
+      const list = cues.get(at);
+      if (list) list.push(cl);
+      else cues.set(at, [cl]);
+    });
+  }
+  return {
+    synced,
+    lines: pick.line.map((ln, i): LyricLine => {
+      const all = cues.get(i) ?? [];
+      const text = all[0]?.value;
+      const cue = all[0]?.cue;
+      const words = text && cue?.length ? wordsFromCues(text, cue, offset) : undefined;
+      const backing: LyricBacking[] = [];
+      for (const extra of all.slice(1)) {
+        const seg = backingFromCue(extra, offset);
+        if (seg) backing.push(seg);
+      }
+      return {
+        // The cue line's own text when it has words, since they are cut out of
+        // it, and `line` may carry the backing vocals alongside.
+        value: words && text ? text : (ln.value ?? ''),
+        ...(synced && ln.start !== undefined
+          ? { start: Math.max(0, ln.start - offset) }
+          : {}),
+        ...(words ? { words } : {}),
+        ...(backing.length > 0 ? { backing } : {}),
+      };
+    }),
+  };
 }

@@ -6,6 +6,7 @@
 import Icon from '@/components/Icon';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { Image } from 'expo-image';
+import * as Font from 'expo-font';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -37,6 +38,11 @@ export default function LyricsScreen() {
   const next = usePlayerStore((s) => s.next);
   const { data, isLoading } = useLyrics(song ?? undefined);
   const plainLineStyle = useLyricsLineStyle(true);
+  // Same iOS rule as the lyrics rows: a custom font file and an explicit
+  // weight do not mix, so the title drops its weight with one set.
+  const appFont = useSettings((s) => s.appFont);
+  const customFontFamily = useSettings((s) => s.customFontFamily);
+  const customFont = appFont === 'custom' && !!customFontFamily;
   const background = useSettings((s) => s.lyricsBackground);
   const cover = song ? songCoverUrl(song, COVER.card) : undefined;
   // Only extract the palette when it's actually going to be used.
@@ -94,7 +100,7 @@ export default function LyricsScreen() {
           <Icon name="close" size={26} color={colors.text} />
         </Pressable>
         <View style={styles.titleBox}>
-          <Text style={styles.title} numberOfLines={1}>
+          <Text style={[styles.title, customFont && styles.titleCustomFont]} numberOfLines={1}>
             {song?.title ?? t('Lyrics')}
           </Text>
           {song?.artist ? (
@@ -179,6 +185,10 @@ const styles = themed((colors) => ({
   },
   titleBox: { flex: 1, alignItems: 'center' },
   title: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
+  // With a custom font the weight is left out entirely (see above): an
+  // `undefined` would lose against the base style, so this is the whole
+  // style without the key. The family comes from the global injection.
+  titleCustomFont: { color: colors.text, fontSize: fontSize.md },
   artist: { color: colors.textSecondary, fontSize: fontSize.xs },
   body: { flex: 1 },
   bodyContent: { flex: 1 },
