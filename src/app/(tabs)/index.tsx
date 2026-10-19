@@ -486,7 +486,7 @@ function PlaylistsSection({ title }: { title: string }) {
   );
 }
 
-/** The newest podcast episodes. Local, and nothing at all without a subscription. */
+/** The newest podcast episodes. Local, and nothing at all until a show is kept. */
 function PodcastEpisodesSection({ title }: { title: string }) {
   const card = useShelfCard();
   const { data, isLoading } = useQuery({

@@ -8,7 +8,7 @@
  */
 import { fetch } from 'expo/fetch';
 
-import { assertCanRequest } from './netGate';
+import { assertCanRequest, OfflineError } from './netGate';
 import { profileScopeId } from '@/store/auth';
 
 import { hashKey } from '@/lib/localLibrary';
@@ -25,6 +25,18 @@ class NotAFeedError extends Error {}
 
 /** A feed that could not be reached at all. */
 class FeedUnreachableError extends Error {}
+
+/**
+ * Why a feed read failed, as a stable code rather than a message. It is what
+ * gets filed on the channel row, so the reason survives to be read back offline,
+ * and so the surfaces that show it can split "you're offline" from "the feed
+ * itself was bad" without sniffing at somebody's error text.
+ */
+export function feedErrorCode(e: unknown): 'offline' | 'notFeed' | 'http' {
+  if (e instanceof OfflineError) return 'offline';
+  if (e instanceof NotAFeedError) return 'notFeed';
+  return 'http';
+}
 
 /** The iTunes directory: search returns each show's feed URL. */
 const ITUNES_SEARCH = 'https://itunes.apple.com/search';
@@ -148,7 +160,7 @@ export async function refreshChannel(input: string): Promise<PodcastChannel> {
     await Db.saveChannel(s, {
       ...existing,
       feedUrl: resolved,
-      error: e instanceof Error ? e.message : String(e),
+      error: feedErrorCode(e),
       refreshedAt: Date.now(),
     });
     throw e;
@@ -190,11 +202,6 @@ export async function getChannel(id: string): Promise<PodcastChannel | undefined
   return Db.getChannel(scope(), id);
 }
 
-/** Removes a show: its channel row, its episodes and its feed. */
-export async function removePodcast(id: string): Promise<void> {
-  await Db.removeChannel(scope(), id);
-}
-
 /** Every channel kept on the device, most recently published first. */
 export async function listChannels(): Promise<PodcastChannel[]> {
   return Db.listChannels(scope());
@@ -204,20 +211,12 @@ export async function listEpisodes(channelId: string): Promise<PodcastEpisode[]>
   return Db.listEpisodes(scope(), channelId);
 }
 
-/** The newest playable episodes across every subscription, for Home. */
+/** The newest playable episodes across every show you keep, for Home. */
 export async function listRecentEpisodes(limit = 20): Promise<RecentEpisode[]> {
   return Db.listRecentEpisodes(scope(), limit);
 }
 
-/** Hearts. The user's own, kept on the device like the subscriptions themselves. */
-export async function toggleFavoriteChannel(id: string): Promise<boolean> {
-  return Db.toggleFavorite(scope(), id, 'channel', id);
-}
-
-export async function toggleFavoriteEpisode(episode: PodcastEpisode): Promise<boolean> {
-  return Db.toggleFavorite(scope(), episode.id, 'episode', episode.channelId);
-}
-
+/** Hearts. The user's own, kept on the device like the shows themselves. */
 /** The heart's one entry point: a show (`channel`) or one of its episodes. */
 export async function toggleFavoritePodcast(
   id: string,
@@ -232,6 +231,10 @@ export async function favoriteIds(): Promise<Set<string>> {
   return Db.favoriteIds(scope());
 }
 
+/** Stand-in for a heart set that hasn't loaded yet. One instance, so a row's
+ * `favSet` prop keeps its identity across renders instead of churning. */
+export const NO_FAVORITES: Set<string> = new Set();
+
 export async function listFavoriteChannels(): Promise<PodcastChannel[]> {
   return Db.listFavoriteChannels(scope());
 }
@@ -241,21 +244,26 @@ export async function listFavoriteEpisodes(limit = 100): Promise<RecentEpisode[]
 }
 
 /**
- * Reads every subscription again, one at a time so no host sees a burst.
+ * Reads every show you keep again, one at a time so no host sees a burst.
  * Failures are counted, not thrown: one dead feed must not stall the rest.
+ * `shouldCancel` is checked before each feed, so a Stop part way through
+ * leaves the feeds already read in place and returns without touching the rest.
  */
-export async function refreshAll(): Promise<{ failed: number; total: number }> {
+export async function refreshAll(
+  shouldCancel?: () => boolean,
+): Promise<{ failed: number; total: number; stopped: boolean }> {
   const s = scope();
   const feeds = await Db.listFeeds(s);
   let failed = 0;
   for (const feed of feeds) {
+    if (shouldCancel?.()) return { failed, total: feeds.length, stopped: true };
     try {
       await refreshChannel(feed);
     } catch {
       failed++;
     }
   }
-  return { failed, total: feeds.length };
+  return { failed, total: feeds.length, stopped: false };
 }
 
 const SUFFIXES: Record<string, string> = {
@@ -277,6 +285,10 @@ export function episodeToSong(episode: PodcastEpisode, channel: PodcastChannel):
   const song: Song = {
     id: episode.id,
     title: episode.title,
+    // The show stands in for both, so an episode reads like a track off a record
+    // named after the show. Nothing navigates these as a real artist/album: every
+    // consumer (rows, player, the song menu) gates on `podcastChannelId` first, and
+    // the album/artist nav and "More from artist" are unreachable from an episode.
     artist: channel.title,
     album: channel.title,
     url: episode.url,
@@ -311,7 +323,7 @@ export async function search(term: string): Promise<PodcastSearchResult[]> {
   try {
     parsed = JSON.parse(body);
   } catch {
-    throw new Error('search');
+    throw new Error('iTunes search returned no JSON');
   }
   const out = iTunesResults(parsed.results ?? []);
   return out;
@@ -351,32 +363,28 @@ function iTunesResults(results: iTunesRow[]): PodcastSearchResult[] {
 /**
  * Discovery: the iTunes Store's top-podcasts chart, as addable shows.
  *
- * The chart lists each show's store id and its primary genre, not its feed, so
- * the ids go to the lookup endpoint to get the feed back. `genreId` narrows the
- * chart to one category (iTunes' own genre numbers), which is how Explore drills
- * into a category without a second endpoint.
+ * The chart lists each show's store id, not its feed, so the ids go to the
+ * lookup endpoint to get the feed back.
  */
-export async function charts(genreId?: string, limit = 25): Promise<PodcastSearchResult[]> {
+export async function charts(limit = 25): Promise<PodcastSearchResult[]> {
   const body = await get(ITUNES_CHARTS, 'application/json');
   let parsed: {
     feed?: {
       entry?: {
         id?: { attributes?: { 'im:id'?: string } };
-        category?: { attributes?: { 'im:id'?: string } };
       }[];
     };
   };
   try {
     parsed = JSON.parse(body);
   } catch {
-    throw new Error('charts');
+    throw new Error('iTunes charts returned no JSON');
   }
   const ids: string[] = [];
   const seen = new Set<string>();
   for (const e of parsed.feed?.entry ?? []) {
     const id = e.id?.attributes?.['im:id'];
     if (!id || seen.has(id)) continue;
-    if (genreId && (e.category?.attributes?.['im:id'] ?? '') !== genreId) continue;
     seen.add(id);
     ids.push(id);
     if (ids.length >= limit) break;
@@ -390,7 +398,7 @@ export async function charts(genreId?: string, limit = 25): Promise<PodcastSearc
   try {
     lk = JSON.parse(lookupBody);
   } catch {
-    throw new Error('charts');
+    throw new Error('iTunes lookup returned no JSON');
   }
   return iTunesResults(lk.results ?? []);
 }

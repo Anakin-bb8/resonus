@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { refreshChannel } from '@/api/podcasts';
+import { feedErrorCode, refreshChannel } from '@/api/podcasts';
 import { useT } from '@/i18n';
 import { colors, fontSize, radius, spacing, themed } from '@/theme';
 
@@ -47,8 +47,8 @@ export function PodcastAddSheet({ visible, onCancel, onAdded }: Props) {
       await refreshChannel(feed);
       onAdded();
       onCancel();
-    } catch {
-      setError(t("Couldn't read that feed."));
+    } catch (e) {
+      setError(feedErrorCode(e) === 'offline' ? t("You're offline") : t("Couldn't read that feed."));
     } finally {
       setBusy(null);
     }

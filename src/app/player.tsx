@@ -32,7 +32,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { CACHED_COVER, COVER, songCoverUrl, star, unstar, type Song } from '@/api/data';
-import { favoriteIds, toggleFavoritePodcast } from '@/api/podcasts';
+import { toggleFavoritePodcast } from '@/api/podcasts';
 import { ArtistPlayerCard } from '@/components/ArtistPlayerCard';
 import { AudioQualityBadge } from '@/components/AudioQualityBadge';
 import { SeekBar } from '@/components/SeekBar';
@@ -59,7 +59,8 @@ import { haptic } from '@/lib/haptics';
 import { localHttpAvailable } from '@/lib/localHttp';
 import { pushOnce } from '@/lib/pushOnce';
 import { pushOrReplace } from '@/lib/pushOrReplace';
-import { queryClient } from '@/lib/query';
+import { invalidatePodcastFavorites } from '@/lib/query';
+import { usePodcastFavoriteIds } from '@/lib/podcastFavorites';
 import { getItem, setItem } from '@/lib/storage';
 import { useArtistPicker } from '@/store/artistPicker';
 import { useAuthStore } from '@/store/auth';
@@ -362,11 +363,7 @@ export default function PlayerScreen() {
   const favIds = useFavoriteIds(!!song);
   // A podcast episode's heart is the device's own, filed in SQLite, so it reads
   // from the podcast favorites rather than the server's starred list.
-  const podcastFav = useQuery({
-    queryKey: ['podcastFavorites'],
-    queryFn: () => favoriteIds(),
-    enabled: !!song?.podcastChannelId,
-  });
+  const podcastFav = usePodcastFavoriteIds(!!song?.podcastChannelId);
 
   // The data layer resolves the cover: from the server (online) or from the
   // local index by album (offline). Base64 is no longer stored per song.
@@ -752,13 +749,11 @@ export default function PlayerScreen() {
     if (!track) return;
     // A podcast episode: the device's own SQLite favorite, no server starring.
     if (track.podcastChannelId) {
-      const next = !(podcastFav.data?.has(track.id) ?? false);
+      const next = !podcastFav.has(track.id);
       haptic('medium');
       try {
         await toggleFavoritePodcast(track.id, 'episode', track.podcastChannelId);
-        void queryClient.invalidateQueries({ queryKey: ['podcastFavorites'] });
-        void queryClient.invalidateQueries({ queryKey: ['podcastFavoriteChannels'] });
-        void queryClient.invalidateQueries({ queryKey: ['podcastFavoriteEpisodes'] });
+        invalidatePodcastFavorites();
         useToast.getState().show(next ? t('Added to favorites') : t('Removed from favorites'));
       } catch {
         useToast.getState().show(t("Couldn't complete the action"));
@@ -911,7 +906,7 @@ export default function PlayerScreen() {
   // screen); `song.starred` from the queue becomes stale, so it only serves
   // as a fallback for local songs or while loading.
   const favorited = song.podcastChannelId
-    ? (podcastFav.data?.has(song.id) ?? false)
+    ? podcastFav.has(song.id)
     : favIds ? favIds.has(song.id) : !!song.starred;
   // The heart writes the device's own SQLite favorite for an episode, so the
   // button is told which show it belongs to.

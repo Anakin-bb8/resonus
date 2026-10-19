@@ -15,7 +15,7 @@ import { type Song } from '@/api/subsonic';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { formatDuration } from '@/lib/format';
 import { applyStarChange, resyncFavorites, unstarWithUndo } from '@/lib/favoritesCache';
-import { queryClient } from '@/lib/query';
+import { invalidatePodcastFavorites } from '@/lib/query';
 import { useAuthStore } from '@/store/auth';
 import { useDownloads } from '@/store/downloads';
 import { usePlayerStore } from '@/store/player';
@@ -182,9 +182,7 @@ function TrackRowBase({
     if (song.podcastChannelId) {
       void toggleFavoritePodcast(song.id, 'episode', song.podcastChannelId)
         .then((on) => {
-          void queryClient.invalidateQueries({ queryKey: ['podcastFavorites'] });
-          void queryClient.invalidateQueries({ queryKey: ['podcastFavoriteChannels'] });
-          void queryClient.invalidateQueries({ queryKey: ['podcastFavoriteEpisodes'] });
+          invalidatePodcastFavorites();
           toast(on ? t('Added to favorites') : t('Removed from favorites'));
         })
         .catch(() => toast(t("Couldn't complete the action")));

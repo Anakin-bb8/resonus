@@ -14,7 +14,6 @@ import { View } from 'react-native';
 
 import {
   episodeToSong,
-  favoriteIds,
   getChannel,
   getStoredChannel,
   listEpisodes,
@@ -30,7 +29,8 @@ import { TrackListView } from '@/components/TrackListView';
 import { usePodcastMenu } from '@/store/podcastMenu';
 import { episodesLabel, useT } from '@/i18n';
 import { formatTotalDuration } from '@/lib/format';
-import { queryClient } from '@/lib/query';
+import { usePodcastFavoriteIds } from '@/lib/podcastFavorites';
+import { invalidatePodcastCaches } from '@/lib/query';
 import { useSettings } from '@/store/settings';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { groupDownloadState, useDownloads } from '@/store/downloads';
@@ -76,7 +76,7 @@ export default function PodcastScreen() {
       if (!ch) return null;
       if (!offline && feedUrl && Date.now() - (ch.refreshedAt ?? 0) > STALE_MS) {
         void refreshChannel(feedUrl)
-          .then(() => queryClient.invalidateQueries({ queryKey: ['podcast', id] }))
+          .then(() => invalidatePodcastCaches())
           .catch(() => {});
       }
       const episodes = await listEpisodes(ch.id);
@@ -87,8 +87,7 @@ export default function PodcastScreen() {
   });
 
   // The hearts, so the favorite pill can show whether this show is hearted.
-  const favorites = useQuery({ queryKey: ['podcastFavorites'], queryFn: favoriteIds });
-  const favSet = favorites.data ?? new Set<string>();
+  const favSet = usePodcastFavoriteIds();
 
   // The show's download, read the way an album's is: the same `files` map the
   // player uses, keyed by episode id, so "done" means every episode is on disk.
@@ -170,11 +169,7 @@ export default function PodcastScreen() {
         // The ⋯ opens the show's own sheet (store-driven, mounted globally).
         onMenu={() => usePodcastMenu.getState().open(ch)}
         emptyState={
-          <EmptyState
-            icon="headset-outline"
-            title={t('No episodes')}
-            subtitle={t('This show has nothing to play yet.')}
-          />
+          <EmptyState icon="headset-outline" title={t('No episodes')} />
         }
         onPlay={play}
       />

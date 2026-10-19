@@ -7,7 +7,7 @@
  * from each feed, including the error when the last read failed. `podcast_favorites`
  * is the user's own hearts: a row is a favorited channel (`kind = 'channel'`,
  * `channel_id` its own id) or a favorited episode (`kind = 'episode'`, `channel_id`
- * the show it belongs to), so removing a show can drop both at once.
+ * the show it belongs to) — `channel_id` names the show either way.
  */
 import * as FileSystem from 'expo-file-system/legacy';
 import * as SQLite from 'expo-sqlite';
@@ -211,20 +211,6 @@ export async function listRecentEpisodes(scope: string, limit = 20): Promise<Rec
   }));
 }
 
-/** Removes a show from the device. The feed goes too, or a refresh would bring it back. */
-export async function removeChannel(scope: string, id: string): Promise<void> {
-  const channel = await getChannel(scope, id);
-  const db = await podcastDb(scope);
-  await db.runAsync('DELETE FROM podcast_channels WHERE id = ?', [id]);
-  await db.runAsync('DELETE FROM podcast_episodes WHERE channel_id = ?', [id]);
-  if (channel?.feedUrl) {
-    await db.runAsync('DELETE FROM podcast_feeds WHERE feed_url = ?', [channel.feedUrl]);
-  }
-  // The show's own heart and its episodes' hearts: a favorite to something gone
-  // is one nobody can see to undo (same rule as pins).
-  await db.runAsync('DELETE FROM podcast_favorites WHERE channel_id = ?', [id]);
-}
-
 /** Remembers a feed; one already there keeps its place in the order. */
 export async function addFeed(scope: string, feedUrl: string): Promise<void> {
   const db = await podcastDb(scope);
@@ -247,8 +233,8 @@ export async function listFeeds(scope: string): Promise<string[]> {
  * Hearts on/off. A favorite is the user's own, so it lives here and not in the
  * server's starring: `kind` says whether the id is a show or one of its episodes,
  * and `channel_id` is the show either way — the id for a channel, its show for an
- * episode — so removing a show can drop its heart and its episodes' hearts
- * together. Returns whether the item is favorited now.
+ * episode — so one row can find the show an episode belongs to. Returns whether
+ * the item is favorited now.
  */
 export async function toggleFavorite(
   scope: string,

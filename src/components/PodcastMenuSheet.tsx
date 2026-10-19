@@ -11,9 +11,9 @@ import { Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Cover } from '@/components/Cover';
-import { refreshChannel, listEpisodes } from '@/api/podcasts';
+import { feedErrorCode, refreshChannel, listEpisodes } from '@/api/podcasts';
 import { useT } from '@/i18n';
-import { queryClient } from '@/lib/query';
+import { invalidatePodcastCaches } from '@/lib/query';
 import { useDownloads } from '@/store/downloads';
 import { usePodcastMenu } from '@/store/podcastMenu';
 import { useToast } from '@/store/toast';
@@ -63,7 +63,7 @@ export function PodcastMenuSheet() {
                 try {
                   await useDownloads.getState().downloadPodcast(ch.id, await listEpisodes(ch.id));
                 } catch {
-                  toast(t("Couldn't download this show."));
+                  toast(t("Couldn't complete the action"));
                 }
               })();
             }}
@@ -78,8 +78,8 @@ export function PodcastMenuSheet() {
               onClose();
               if (!ch.feedUrl) return;
               void refreshChannel(ch.feedUrl)
-                .then(() => queryClient.invalidateQueries({ queryKey: ['podcast'] }))
-                .catch(() => toast(t("Couldn't read this feed.")));
+                .then(() => invalidatePodcastCaches())
+                .catch((e) => toast(feedErrorCode(e) === 'offline' ? t("You're offline") : t("Couldn't read this feed")));
             }}
           >
             <Icon name="refresh" size={24} color={colors.text} />

@@ -7,7 +7,7 @@ import { star, unstar, type StarType } from '@/api/data';
 import { toggleFavoritePodcast } from '@/api/podcasts';
 import { applyStarChange, resyncFavorites, unstarWithUndo } from '@/lib/favoritesCache';
 import { haptic } from '@/lib/haptics';
-import { queryClient } from '@/lib/query';
+import { invalidatePodcastFavorites } from '@/lib/query';
 import { useAuthStore } from '@/store/auth';
 import { usePins } from '@/store/pins';
 import { useToast } from '@/store/toast';
@@ -59,9 +59,7 @@ export function FavoriteButton({ id, type = 'song', starred, size = 22, undo, po
       setBusy(true);
       try {
         await toggleFavoritePodcast(id, podcast.kind, podcast.channelId);
-        void queryClient.invalidateQueries({ queryKey: ['podcastFavorites'] });
-        void queryClient.invalidateQueries({ queryKey: ['podcastFavoriteChannels'] });
-        void queryClient.invalidateQueries({ queryKey: ['podcastFavoriteEpisodes'] });
+        invalidatePodcastFavorites();
         toast(nextFav ? t('Added to favorites') : t('Removed from favorites'));
       } catch {
         setFav(!nextFav); // revert on failure

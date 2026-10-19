@@ -20,6 +20,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useBottomSheetAnim } from '@/hooks/useBottomSheetAnim';
 import { useScreenSize } from '@/hooks/useScreenSize';
+import { invalidatePodcastFavorites } from '@/lib/query';
+import { usePodcastFavoriteIds } from '@/lib/podcastFavorites';
 import {
   addToPlaylist,
   coverArtUrl,
@@ -37,7 +39,7 @@ import {
 import { useCanShare } from '@/hooks/useCanShare';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { applyStarChange, resyncFavorites } from '@/lib/favoritesCache';
-import { favoriteIds, toggleFavoritePodcast } from '@/api/podcasts';
+import { toggleFavoritePodcast } from '@/api/podcasts';
 import { artistTargets } from '@/lib/artistNav';
 import { pushOrReplace } from '@/lib/pushOrReplace';
 import { exportToFolder, shareSongFile } from '@/lib/exportSong';
@@ -174,14 +176,10 @@ export function SongMenuSheet() {
   const openArtistPicker = useArtistPicker((s) => s.open);
   const favIds = useFavoriteIds(!!song);
   // A podcast episode's heart is the device's own, filed in SQLite.
-  const podcastFav = useQuery({
-    queryKey: ['podcastFavorites'],
-    queryFn: () => favoriteIds(),
-    enabled: !!song?.podcastChannelId,
-  });
+  const podcastFav = usePodcastFavoriteIds(!!song?.podcastChannelId);
   const favorited = song
     ? song.podcastChannelId
-      ? (podcastFav.data?.has(song.id) ?? false)
+      ? podcastFav.has(song.id)
       : favIds ? favIds.has(song.id) : !!song.starred
     : false;
 
@@ -594,9 +592,7 @@ export function SongMenuSheet() {
                         // The device's own SQLite favorite, not the server's.
                         void toggleFavoritePodcast(song.id, 'episode', song.podcastChannelId)
                           .then(() => {
-                            void queryClient.invalidateQueries({ queryKey: ['podcastFavorites'] });
-                            void queryClient.invalidateQueries({ queryKey: ['podcastFavoriteChannels'] });
-                            void queryClient.invalidateQueries({ queryKey: ['podcastFavoriteEpisodes'] });
+                            invalidatePodcastFavorites();
                           })
                           .catch(() => toast(t("Couldn't complete the action")));
                         toast(favorited ? t('Removed from favorites') : t('Added to favorites'));
