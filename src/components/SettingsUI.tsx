@@ -712,6 +712,8 @@ export function TextRow({
   placeholder,
   maxLength,
   onChange,
+  keyboardType,
+  autoCapitalize,
 }: {
   label: string;
   description?: string;
@@ -719,6 +721,8 @@ export function TextRow({
   placeholder?: string;
   maxLength: number;
   onChange: (v: string) => void;
+  keyboardType?: 'default' | 'url' | 'email-address' | 'numeric';
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
 }) {
   const accent = useAccent();
   const near = value.length >= maxLength - 3;
@@ -744,6 +748,8 @@ export function TextRow({
         placeholderTextColor={colors.textMuted}
         maxLength={maxLength}
         autoCorrect={false}
+        autoCapitalize={autoCapitalize ?? 'sentences'}
+        keyboardType={keyboardType ?? 'default'}
         returnKeyType="done"
       />
     </View>
