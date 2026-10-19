@@ -64,7 +64,7 @@ import {
   type HomeSectionKey,
 } from '@/store/settings';
 import { useSongMenu } from '@/store/songMenu';
-import { colors, fontSize, radius, spacing, themed, useTheme, tracking } from '@/theme';
+import { colors, fontSize, radius, restyled, spacing, themed, useTheme, tracking } from '@/theme';
 
 /**
  * How wide a quick tile wants to be, in dp.
@@ -1167,12 +1167,13 @@ const styles = themed((colors) => ({
     alignItems: 'center',
     gap: spacing.sm,
     backgroundColor: colors.surface,
-    borderRadius: radius.md,
+    // md with Round; with Pointier a little over its small step.
+    borderRadius: restyled(radius.md, radius.sm + 1),
     overflow: 'hidden',
     paddingRight: spacing.sm,
   },
-  /** Square: the tile's own corners round it on the outside. */
-  tileCover: { borderRadius: 0 },
+  /** Square with Round (the tile's own corners round it); Pointier rounds it a little. */
+  tileCover: { borderRadius: restyled(0, radius.sm + 1) },
   tileText: {
     flex: 1,
     color: colors.text,

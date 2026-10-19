@@ -795,5 +795,19 @@
   "Radios built from the artists you play most. Off, there are none on Home or in the menus, and nothing is fetched for them.": "Radios hechas con los artistas que más escuchas. Desactivadas, no aparecen en Inicio ni en los menús y no se descarga nada para ellas.",
   "Radios on Home": "Radios en Inicio",
   "Keep playing when a radio ends": "Seguir sonando cuando acaba una radio",
-  "When its songs run out, another round from the same artists.": "Cuando se acaban sus canciones, otra tanda de los mismos artistas."
+  "When its songs run out, another round from the same artists.": "Cuando se acaban sus canciones, otra tanda de los mismos artistas.",
+  "Animated cover videos": "Vídeos en las carátulas",
+  "Play endpoint clips over the still covers. Off keeps every cover still.": "Reproduce los clips del servidor sobre las carátulas fijas. Desactivado, todas las carátulas quedan fijas.",
+  "Animated artwork endpoint": "Servidor de carátulas animadas",
+  "Animated covers server: square and tall clips stream from it instead of still covers.": "Servidor de carátulas animadas: los clips cuadrados y verticales llegan de él en lugar de las carátulas fijas.",
+  "Animated artwork": "Carátula animada",
+  "Apple Music URL": "URL de Apple Music",
+  "The album page on Apple Music whose animated cover plays for this album.": "La página del álbum en Apple Music cuya carátula animada suena con este álbum.",
+  "That does not look like an Apple Music URL.": "Eso no parece una URL de Apple Music.",
+  "Animated artwork URL saved.": "URL de la carátula animada guardada.",
+  "Animated artwork URL removed.": "URL de la carátula animada quitada.",
+  "Border radius": "Esquinas",
+  "Round corners everywhere, or flatter ones": "Esquinas redondeadas en toda la app, o más rectas",
+  "Round": "Redondeadas",
+  "Pointier": "Más rectas"
 }

@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 795 of them.
+Every string the app can show, under the screen it shows up on. 809 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -23,6 +23,17 @@ you are actually typing into, which is easier than reading it here.
 | `Disc {n}` | Heading over the songs of one disc of a multi-disc album. `{n}` is its number |
 | `More from {artist}` | Heading under an album: their other records. `{artist}` is the name |
 
+## Animated artwork url
+
+| String | What it is |
+| --- | --- |
+| `Animated artwork` |  |
+| `Animated artwork URL removed.` |  |
+| `Animated artwork URL saved.` |  |
+| `Apple Music URL` |  |
+| `That does not look like an Apple Music URL.` |  |
+| `The album page on Apple Music whose animated cover plays for this album.` | The line under “Apple Music URL”, explaining it |
+
 ## Anywhere in the app
 
 | String | What it is |
@@ -37,6 +48,7 @@ you are actually typing into, which is easier than reading it here.
 | `1 week` | How long a shared link lasts, counted from the moment it is made |
 | `Allow downloads` | Whether whoever gets the link can download the music, not only listen to it |
 | `Android may stop playback in the background, interrupt downloads or delay the sleep timer. Allowing unrestricted battery use fixes it.` |  |
+| `Animated artwork` |  |
 | `Artist` | In search results, the little word under a result saying what kind of thing it is |
 | `Artists` | A heading over a list of them, never a count |
 | `Back online` | The toast shown when the server answers again and the app comes out of offline mode |
@@ -886,6 +898,7 @@ you are actually typing into, which is easier than reading it here.
 | `Appearance` |  |
 | `At the top of Home, what is playing in your other apps and devices, ready to carry on here.` |  |
 | `Blur` | One of the values of “Navigation bar style” |
+| `Border radius` |  |
 | `Cover corners` |  |
 | `Dark` | The appearance the app has always had, and what it uses unless the other is chosen. |
 | `Explore` | The tab holding everything the server has: all albums, artists, songs, genres, stations and folders |
@@ -910,8 +923,11 @@ you are actually typing into, which is easier than reading it here.
 | `Off` | A setting value meaning disabled (crossfade, normalization…) |
 | `Open the app on` | Which tab the app opens on, and comes back to after a while away |
 | `Playing on other devices` |  |
+| `Pointier` | One of the values of “Border radius” |
 | `Quick grid` | The grid of shortcut tiles on Home |
 | `Radios` |  |
+| `Round` | One of the values of “Border radius” |
+| `Round corners everywhere, or flatter ones` | The line under “Border radius”, explaining it |
 | `Rounded` | One of the values of “Cover corners” |
 | `Scheduled` |  |
 | `Show tab names` |  |
@@ -980,8 +996,11 @@ you are actually typing into, which is easier than reading it here.
 | `30 fps` | One of the values of “Animated cover frame rate” |
 | `60 fps` | One of the values of “Animated cover frame rate” |
 | `Always previous track` | A value of `Previous button`: never restarts, always goes back a song |
+| `Animated artwork endpoint` |  |
 | `Animated cover background` | A setting: an animated cover (GIF, animated WebP) is shown full screen behind the player instead of inside the square |
 | `Animated cover frame rate` |  |
+| `Animated cover videos` |  |
+| `Animated covers server: square and tall clips stream from it instead of still covers.` |  |
 | `Background` | Section header over what is drawn behind the player. Its two values are `Plain` and `Blurred cover` |
 | `Blur inactive lyrics` | A switch in the Lyrics section: progressively softens synchronized lyric rows away from the current line |
 | `Blurred cover` | A value of `Background`: the album art, blurred, behind the player |
@@ -1019,6 +1038,7 @@ you are actually typing into, which is easier than reading it here.
 | `On cover tap` | What tapping the cover art in the player does. One tap and two share the same values, listed below |
 | `Open lyrics screen` | A value of `On cover tap` |
 | `Plain` | A value of `Background`: a flat colour behind the player, no picture |
+| `Play endpoint clips over the still covers. Off keeps every cover still.` | The line under “Animated cover videos”, explaining it |
 | `Play or pause` | One of its options: the same as the play button |
 | `Player` |  |
 | `Player background` | What is drawn behind the player: the blurred artwork, or a flat tint |
