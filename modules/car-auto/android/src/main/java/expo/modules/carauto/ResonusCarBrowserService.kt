@@ -158,7 +158,12 @@ class ResonusCarBrowserService : MediaLibraryService() {
       // for a root asked for as "recent": that is the system's own media
       // resumption (SystemUI on boot, say), not somebody in a car, and taking
       // it for one filled the whole tree on phones that never saw a car (#221).
-      if (params?.isRecent != true) CarAutoModule.instance?.emitConnected()
+      // `projection` is Android Auto itself, as opposed to any other browser
+      // (a watch, the assistant): the car plays what the phone plays, so
+      // whatever was on a speaker comes back to the phone (#272).
+      if (params?.isRecent != true) {
+        CarAutoModule.instance?.emitConnected(browser.packageName == ANDROID_AUTO_PACKAGE)
+      }
       val rootExtras = Bundle().apply {
         // Hints for Android Auto: the root's children are drawn as tabs
         // (category list items), and anything browsable below that as a list.
@@ -417,6 +422,9 @@ class ResonusCarBrowserService : MediaLibraryService() {
 
     /** The heart on the car's playback screen. */
     const val FAVORITE_COMMAND = "expo.modules.carauto.FAVORITE"
+
+    /** Android Auto's own package, the one browsing the library from a car. */
+    private const val ANDROID_AUTO_PACKAGE = "com.google.android.projection.gearhead"
 
     /**
      * How much cover art one page of browse results may carry. Below the

@@ -848,6 +848,22 @@ function remoteSeek(sec: number) {
   else void upnpSeek(sec);
 }
 
+/** Set by `bringPlaybackToPhone`: the phone picks up playing, not paused. */
+let resumeOnPhone = false;
+
+/**
+ * Takes what a renderer or the jukebox is playing back to the phone, at the
+ * same second and still playing if it was (#272).
+ */
+export async function bringPlaybackToPhone(): Promise<void> {
+  const kind = remoteKind();
+  if (!kind) return;
+  resumeOnPhone = usePlayerStore.getState().isPlaying;
+  note(`output back to the phone from ${kind}`);
+  if (kind === 'upnp') await upnpDisconnect();
+  else await jukeboxDisconnect();
+}
+
 function remoteSetVolume(volume: number) {
   if (isJukeboxActive()) jukeboxSetVolume(volume);
   else upnpSetVolume(volume);
@@ -3519,12 +3535,15 @@ export function initRemoteIntegration() {
       // The casting media session is already closed by `upnpDisconnect` (covers
       // silent disconnects too). Here we just return to the local player.
       const { queue, index } = usePlayerStore.getState();
+      const resume = resumeOnPhone;
+      resumeOnPhone = false;
       resetUpnpRemoteSyncState();
       if (!queue[index]) return;
       void (async () => {
         await loadIndex(index, false);
         if (lastPositionSec > 0) seekActive(lastPositionSec);
         usePlayerStore.setState({ positionSec: lastPositionSec, isPlaying: false });
+        if (resume) usePlayerStore.getState().toggle();
       })();
     },
     onProgress: (positionSec, durationSec) => {

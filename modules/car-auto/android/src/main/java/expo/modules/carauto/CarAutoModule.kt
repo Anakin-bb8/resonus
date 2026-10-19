@@ -94,8 +94,8 @@ class CarAutoModule : Module() {
   /** A browser asked for the root, which is a car opening the app. JS answers
    *  by filling the tree in, so what it holds is not whatever was left there
    *  the last time somebody had the phone in their hand. */
-  fun emitConnected() {
-    sendEvent("connect", emptyMap<String, Any>())
+  fun emitConnected(projection: Boolean) {
+    sendEvent("connect", mapOf("projection" to projection))
   }
 
   fun emitTransport(action: String, value: Double?) {
