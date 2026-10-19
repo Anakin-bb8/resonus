@@ -43,7 +43,7 @@ import { haptic } from '@/lib/haptics';
 import { listPerf } from '@/lib/listPerf';
 import { useArtistPicker } from '@/store/artistPicker';
 import { usePlayerStore } from '@/store/player';
-import { colors, fontSize, radius, spacing, themed, tracking } from '@/theme';
+import { colors, fontSize, radius, restyled, spacing, themed, tracking } from '@/theme';
 import { motion } from '@/theme/motion';
 import { BackChevron } from './BackChevron';
 import { TopBarBackground } from './BarBlur';
@@ -1305,7 +1305,8 @@ const styles = themed((colors) => ({
     gap: spacing.sm,
     // Translucent to let the header's dominant color through (Spotify).
     backgroundColor: colors.highlight,
-    borderRadius: radius.pill,
+    // De-pilled by the fork (a capsule upstream): round draws it back.
+    borderRadius: restyled(radius.pill, radius.md),
     paddingHorizontal: spacing.lg,
     height: 44,
   },

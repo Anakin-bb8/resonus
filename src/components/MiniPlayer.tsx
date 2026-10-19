@@ -28,7 +28,7 @@ import { currentSong, useLiveInfo, usePlayerStore } from '@/store/player';
 import { CONTENT_MAX_WIDTH, useScreenSize } from '@/hooks/useScreenSize';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, radius, spacing, themed } from '@/theme';
+import { colors, fontSize, radius, restyled, spacing, themed } from '@/theme';
 import { motion } from '@/theme/motion';
 import { BarBlur, useBarBlur } from './BarBlur';
 import { Cover } from './Cover';
@@ -300,7 +300,8 @@ export function MiniPlayer() {
 const styles = themed((colors) => ({
   card: {
     marginHorizontal: spacing.sm,
-    borderRadius: radius.lg,
+    // Stepped down by the fork (lg upstream): round draws it back.
+    borderRadius: restyled(radius.lg, radius.md),
     boxShadow: '0px 6px 16px rgba(0, 0, 0, 0.3)',
   },
   container: {
@@ -309,15 +310,18 @@ const styles = themed((colors) => ({
     gap: spacing.md,
     backgroundColor: colors.surfaceHighlight,
     padding: spacing.sm,
-    borderRadius: radius.lg,
+    // Stepped down by the fork (lg upstream): round draws it back.
+    borderRadius: restyled(radius.lg, radius.md),
     overflow: 'hidden',
   },
   /** Centred and no wider than a wide screen wants it. */
   narrow: { maxWidth: CONTENT_MAX_WIDTH, width: '100%', alignSelf: 'center' },
   progressTrack: {
     position: 'absolute',
-    left: 14,
-    right: 14,
+    // Shorter on both sides upstream (14): the fork lines it up with the
+    // cover's own edges instead. Round draws that back.
+    left: restyled(14, spacing.sm),
+    right: restyled(14, spacing.sm),
     bottom: 0,
     height: 3,
     borderRadius: radius.pill,

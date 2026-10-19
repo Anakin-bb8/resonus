@@ -57,6 +57,7 @@ import {
   colors,
   fontSize,
   radius,
+  restyled,
   spacing,
   SCREEN_BOTTOM_PADDING,
   themed,
@@ -569,7 +570,8 @@ const styles = themed((colors) => ({
     height: 44,
     backgroundColor: colors.surfaceHighlight,
     paddingHorizontal: spacing.lg,
-    borderRadius: radius.pill,
+    // De-pilled by the fork (a capsule upstream): round draws it back.
+    borderRadius: restyled(radius.pill, radius.md),
   },
   input: {
     flex: 1,

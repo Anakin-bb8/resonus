@@ -832,16 +832,59 @@ export const spacing = {
  * The whole ladder went up a step in August 2026: it used to top out at 16 and
  * almost everything in the app sat on 8, which reads flat next to anything
  * drawn in the last few years.
+ *
+ * Which ladder is drawn is a setting (Appearance > Border radius): `round`
+ * keeps this one, `pointier` steps down and goes flat on the big surfaces
+ * (4/8/12, then 12). The object below is rewritten in place when it changes,
+ * the way `colors` is: anything reading `radius.md` while rendering gets the
+ * current step, and `themed()` styles rebuild with it.
  */
-export const radius = {
-  sm: 6,
-  md: 10,
-  lg: 16,
-  xl: 24,
+/**
+ * Which corner ladder the app draws.
+ */
+export type BorderStyle = 'round' | 'pointier';
+
+/** This ladder: sm 6, md 10, lg 16, xl 24, sheets 32. */
+const RADIUS_ROUND = { sm: 6, md: 10, lg: 16, xl: 24, xxl: 32, pill: 999 };
+/** The flatter ladder: 4/8/12, then 12 everywhere but pills. */
+const RADIUS_POINTIER = { sm: 4, md: 8, lg: 12, xl: 12, xxl: 12, pill: 999 };
+
+export interface RadiusScale {
+  sm: number;
+  md: number;
+  lg: number;
+  xl: number;
   /** A sheet rising from the bottom, and anything else that owns the screen. */
-  xxl: 32,
-  pill: 999,
-} as const;
+  xxl: number;
+  pill: number;
+}
+
+/** The corner ladder in force. Rewritten in place by `applyBorderStyle`. */
+export const radius: RadiusScale = { ...RADIUS_ROUND };
+
+/** The ladder `radius` currently draws. Read live by the helpers below. */
+let borderStyle: BorderStyle = 'round';
+
+/**
+ * Swaps the corner ladder for the whole app and repaints everyone reading
+ * it (same wake-up as a theme change: `themed()` styles rebuild, subscribed
+ * components paint again).
+ */
+export function applyBorderStyle(style: BorderStyle): void {
+  borderStyle = style;
+  Object.assign(radius, style === 'round' ? RADIUS_ROUND : RADIUS_POINTIER);
+  rebuild();
+}
+
+/**
+ * A corner restyled by the fork: draws `round` upstream and `pointy` with the
+ * flatter ladder. Reads the live style, so `themed()` styles (rebuilt on
+ * every theme wake-up, which a style switch triggers) follow it with no
+ * subscription. Pass ladder steps, not numbers, so both stay in scale.
+ */
+export function restyled(round: number, pointy: number): number {
+  return borderStyle === 'round' ? round : pointy;
+}
 
 /**
  * The type scale, from the smallest label to the biggest heading.

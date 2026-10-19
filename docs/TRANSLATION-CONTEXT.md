@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 805 of them.
+Every string the app can show, under the screen it shows up on. 809 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -898,6 +898,7 @@ you are actually typing into, which is easier than reading it here.
 | `Appearance` |  |
 | `At the top of Home, what is playing in your other apps and devices, ready to carry on here.` |  |
 | `Blur` | One of the values of “Navigation bar style” |
+| `Border radius` |  |
 | `Cover corners` |  |
 | `Dark` | The appearance the app has always had, and what it uses unless the other is chosen. |
 | `Explore` | The tab holding everything the server has: all albums, artists, songs, genres, stations and folders |
@@ -922,8 +923,11 @@ you are actually typing into, which is easier than reading it here.
 | `Off` | A setting value meaning disabled (crossfade, normalization…) |
 | `Open the app on` | Which tab the app opens on, and comes back to after a while away |
 | `Playing on other devices` |  |
+| `Pointier` | One of the values of “Border radius” |
 | `Quick grid` | The grid of shortcut tiles on Home |
 | `Radios` |  |
+| `Round` | One of the values of “Border radius” |
+| `Round corners everywhere, or flatter ones` | The line under “Border radius”, explaining it |
 | `Rounded` | One of the values of “Cover corners” |
 | `Scheduled` |  |
 | `Show tab names` |  |
