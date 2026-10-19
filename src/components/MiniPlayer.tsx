@@ -4,6 +4,7 @@
  */
 import Icon from '@/components/Icon';
 import { useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -17,6 +18,7 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { COVER, songCoverUrl, type Song } from '@/api/data';
+import { favoriteIds } from '@/api/podcasts';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { useT } from '@/i18n';
@@ -194,12 +196,24 @@ export function MiniPlayer() {
   // Not "unless the file is on the phone": see the player screen, which had the
   // same test in the same two places and the same hole under it.
   const favIds = useFavoriteIds(!!song && buttons === 'favorite');
+  // A podcast episode's heart is the device's own, filed in SQLite.
+  const podcastFav = useQuery({
+    queryKey: ['podcastFavorites'],
+    queryFn: () => favoriteIds(),
+    enabled: !!song?.podcastChannelId && buttons === 'favorite',
+  });
 
   if (!song) return null;
 
   // The central list wins when loaded; `song.starred` from the queue becomes
   // stale (only kept as backup for local files or while loading).
-  const favorited = favIds ? favIds.has(song.id) : !!song.starred;
+  const favorited = song.podcastChannelId
+    ? (podcastFav.data?.has(song.id) ?? false)
+    : favIds ? favIds.has(song.id) : !!song.starred;
+  // The heart writes the device's own SQLite favorite for an episode.
+  const podcastHeart = song.podcastChannelId
+    ? { kind: 'episode' as const, channelId: song.podcastChannelId }
+    : undefined;
 
   return (
     <GestureDetector gesture={pan}>
@@ -230,7 +244,9 @@ export function MiniPlayer() {
           ) : null}
         </View>
       </Animated.View>
-      {buttons === 'favorite' ? <FavoriteButton id={song.id} starred={favorited} size={24} /> : null}
+      {buttons === 'favorite' ? (
+        <FavoriteButton id={song.id} starred={favorited} podcast={podcastHeart} size={24} />
+      ) : null}
       {buttons === 'previousNext' ? (
         <Pressable
           hitSlop={12}

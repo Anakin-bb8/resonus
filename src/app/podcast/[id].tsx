@@ -10,8 +10,7 @@
  */
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { Linking, View } from 'react-native';
+import { View } from 'react-native';
 
 import {
   episodeToSong,
@@ -28,14 +27,16 @@ import { EmptyState } from '@/components/EmptyState';
 import { Message } from '@/components/Message';
 import { TrackListSkeleton } from '@/components/TrackListSkeleton';
 import { TrackListView } from '@/components/TrackListView';
-import { PodcastMenuSheet } from '@/components/PodcastMenuSheet';
+import { usePodcastMenu } from '@/store/podcastMenu';
 import { episodesLabel, useT } from '@/i18n';
 import { formatTotalDuration } from '@/lib/format';
 import { queryClient } from '@/lib/query';
 import { useSettings } from '@/store/settings';
 import { currentSong, usePlayerStore } from '@/store/player';
-import { useToast } from '@/store/toast';
+import { groupDownloadState, useDownloads } from '@/store/downloads';
+import { useAuthStore } from '@/store/auth';
 import { colors, useTheme } from '@/theme';
+import { useShallow } from 'zustand/react/shallow';
 
 /** A show older than this is quietly re-read from the publisher on opening. */
 const STALE_MS = 1000 * 60 * 60 * 72;
@@ -52,10 +53,9 @@ export default function PodcastScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const t = useT();
   const lang = useSettings((s) => s.language);
-  const toast = useToast((s) => s.show);
   const playQueue = usePlayerStore((s) => s.playQueue);
   const playingId = usePlayerStore((s) => currentSong(s)?.id);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const offline = useAuthStore((s) => s.offline);
 
   // SQLite first. A show never opened is read from the publisher and filed; a
   // show written more than three days ago is served from SQLite now and re-read
@@ -74,7 +74,7 @@ export default function PodcastScreen() {
         feedUrl = ch?.feedUrl;
       }
       if (!ch) return null;
-      if (feedUrl && Date.now() - (ch.refreshedAt ?? 0) > STALE_MS) {
+      if (!offline && feedUrl && Date.now() - (ch.refreshedAt ?? 0) > STALE_MS) {
         void refreshChannel(feedUrl)
           .then(() => queryClient.invalidateQueries({ queryKey: ['podcast', id] }))
           .catch(() => {});
@@ -89,6 +89,16 @@ export default function PodcastScreen() {
   // The hearts, so the favorite pill can show whether this show is hearted.
   const favorites = useQuery({ queryKey: ['podcastFavorites'], queryFn: favoriteIds });
   const favSet = favorites.data ?? new Set<string>();
+
+  // The show's download, read the way an album's is: the same `files` map the
+  // player uses, keyed by episode id, so "done" means every episode is on disk.
+  const episodeIds = data.data?.episodes.map((e) => e.id) ?? [];
+  const download = useDownloads(
+    useShallow((s) => groupDownloadState(s, `podcast:${data.data?.channel?.id ?? id}`, episodeIds)),
+  );
+  const downloadPodcast = useDownloads((s) => s.downloadPodcast);
+  const cancelDownload = useDownloads((s) => s.cancelDownload);
+  const deletePodcastDownloads = useDownloads((s) => s.deletePodcastDownloads);
 
   if (data.isLoading) {
     return <TrackListSkeleton />;
@@ -105,13 +115,15 @@ export default function PodcastScreen() {
 
   const ch = data.data.channel;
   const list = data.data.episodes;
-  const siteUrl = ch.siteUrl;
 
   // The episodes, bridged to songs so the album renderer can list and play them.
   const songs = list.map((e) => episodeToSong(e, ch));
 
-  const play = (start: number) => {
-    void playQueue(songs, start, ch.title, `/podcast/${id}`);
+  // The play button hands the show over in feed order (newest first); the
+  // shuffle button asks for the same list dealt (`shuffled`), which playQueue
+  // honors without turning the shuffle mode on.
+  const play = (start: number, opts?: { shuffled?: boolean }) => {
+    void playQueue(songs, start, ch.title, `/podcast/${id}`, opts);
   };
 
   // The metadata line, built the way an album's reads: what it is, how many
@@ -126,8 +138,7 @@ export default function PodcastScreen() {
     .join(' · ');
 
   return (
-    <>
-      <TrackListView
+    <TrackListView
         title={ch.title}
         subtitle={ch.author}
         description={ch.description}
@@ -141,11 +152,23 @@ export default function PodcastScreen() {
         // The episodes' hearts read from the same SQLite favorites.
         podcastFavIds={favSet}
         // The download button sits in the album's action row, exactly as an
-        // album wires it. It is a placeholder for now: podcast downloading gets
-        // its real logic later.
-        download={{ status: 'none', progress: 0, onPress: () => {} }}
-        // The ⋯ opens the show's own sheet: refresh and website.
-        onMenu={() => setMenuOpen(true)}
+        // album wires it: tapping downloads every episode of the show, tapping
+        // again removes them, and while it runs a stop cancels it. Hidden when
+        // offline, since a download is a transfer and offline makes none.
+        download={
+          !offline
+            ? {
+                ...download,
+                onPress: () => {
+                  if (download.status === 'done') void deletePodcastDownloads(episodeIds);
+                  else if (download.status === 'active') cancelDownload(`podcast:${ch.id}`);
+                  else void downloadPodcast(ch.id, list);
+                },
+              }
+            : undefined
+        }
+        // The ⋯ opens the show's own sheet (store-driven, mounted globally).
+        onMenu={() => usePodcastMenu.getState().open(ch)}
         emptyState={
           <EmptyState
             icon="headset-outline"
@@ -155,24 +178,5 @@ export default function PodcastScreen() {
         }
         onPlay={play}
       />
-      <PodcastMenuSheet
-        visible={menuOpen}
-        title={ch.title}
-        subtitle={ch.author}
-        coverUri={coverArtUrl(ch.imageUrl, COVER.thumb)}
-        siteUrl={siteUrl}
-        // Refresh re-reads the feed and updates SQLite, then the surface.
-        onRefresh={() => {
-          if (!ch.feedUrl) return;
-          void refreshChannel(ch.feedUrl)
-            .then(() => queryClient.invalidateQueries({ queryKey: ['podcast', id] }))
-            .catch(() => toast(t("Couldn't read this feed.")));
-        }}
-        onWebsite={() => {
-          if (siteUrl) void Linking.openURL(siteUrl).catch(() => {});
-        }}
-        onClose={() => setMenuOpen(false)}
-      />
-    </>
   );
 }

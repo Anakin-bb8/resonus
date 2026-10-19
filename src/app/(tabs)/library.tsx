@@ -41,7 +41,16 @@ import { Message } from '@/components/Message';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { useBottomSheetAnim } from '@/hooks/useBottomSheetAnim';
 import { albumsLabel, episodesLabel, songsLabel, useT } from '@/i18n';
-import { listFavoriteChannels, listFavoriteEpisodes } from '@/api/podcasts';
+import {
+  episodeToSong,
+  listFavoriteChannels,
+  listFavoriteEpisodes,
+  type PodcastChannel,
+  type PodcastEpisode,
+} from '@/api/podcasts';
+import { usePlayerStore } from '@/store/player';
+import { useSongMenu } from '@/store/songMenu';
+import { usePodcastMenu } from '@/store/podcastMenu';
 import { useAuthStore } from '@/store/auth';
 import { useLastPlayed } from '@/store/lastPlayed';
 import { useMediaMenu } from '@/store/mediaMenu';
@@ -449,7 +458,6 @@ function PodcastsTab({ query }: { query: string }) {
   const t = useT();
   const lang = useSettings((s) => s.language);
   const sort = useSettings((s) => s.librarySort);
-  const pins = usePins((s) => s.pins);
   const grid = useSettings((s) => s.libraryLayout) === 'grid';
   const bottomPad = useScreenBottomPadding();
   const { columns } = useGridMetrics();
@@ -477,6 +485,9 @@ function PodcastsTab({ query }: { query: string }) {
     added: number;
     episodeCount?: number;
     error?: string;
+    /** The objects the long-press menu and an episode's tap need. */
+    channel?: PodcastChannel;
+    episode?: PodcastEpisode;
   };
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -492,6 +503,7 @@ function PodcastsTab({ query }: { query: string }) {
         added: c.refreshedAt ?? 0,
         episodeCount: c.episodeCount,
         error: c.error,
+        channel: c,
       })),
       ...(episodesQ.data ?? []).map((r) => ({
         kind: 'episode' as const,
@@ -502,27 +514,44 @@ function PodcastsTab({ query }: { query: string }) {
         href: `/podcast/${r.channel.id}`,
         recent: r.episode.publishedAt ?? 0,
         added: r.episode.publishedAt ?? 0,
+        episode: r.episode,
+        channel: r.channel,
       })),
     ];
     const filtered = q
       ? all.filter((r) => r.title.toLowerCase().includes(q) || (r.by ?? '').toLowerCase().includes(q))
       : all;
-    return withPins(
-      sortItems(
-        filtered,
-        sort,
-        (r) => r.title,
-        sort === 'recent' ? (r) => r.recent : (r) => r.added,
-      ),
-      (r) => `podcast:${r.id}`,
-      pins,
+    return sortItems(
+      filtered,
+      sort,
+      (r) => r.title,
+      sort === 'recent' ? (r) => r.recent : (r) => r.added,
     );
-  }, [channelsQ.data, episodesQ.data, query, sort, pins]);
+  }, [channelsQ.data, episodesQ.data, query, sort]);
 
   if (channelsQ.isLoading || episodesQ.isLoading) return <Loader />;
   if (channelsQ.isError && episodesQ.isError) {
     return <Message text={t("Couldn't load your podcasts.")} onRetry={() => { channelsQ.refetch(); episodesQ.refetch(); }} />;
   }
+  // Tapping an episode plays just that episode (like Home's shelf); long-press
+  // opens its menu. A show taps to its screen and long-press opens the show's
+  // menu — the same sheets the show's own screen and a song row open.
+  const playEpisode = (r: Row) => {
+    if (!r.episode || !r.channel) return;
+    void usePlayerStore.getState().playQueue(
+      [episodeToSong(r.episode, r.channel)],
+      0,
+      r.channel.title,
+      `/podcast/${r.channel.id}`,
+    );
+  };
+  const openEpisodeMenu = (r: Row) => {
+    if (!r.episode || !r.channel) return;
+    useSongMenu.getState().open(episodeToSong(r.episode, r.channel));
+  };
+  const openShowMenu = (r: Row) => {
+    if (r.channel) usePodcastMenu.getState().open(r.channel);
+  };
   return (
     <FlatList
       key={grid ? `grid-${columns}` : 'list'}
@@ -536,21 +565,49 @@ function PodcastsTab({ query }: { query: string }) {
       }
       renderItem={({ item }: { item: Row }) =>
         grid ? (
-          <GridCard
-            href={item.href}
-            uri={coverArtUrl(item.coverArt, COVER.card)}
-            rounded
-            title={item.title}
-            subtitle={item.kind === 'channel' ? episodesLabel(item.episodeCount ?? 0, lang) : item.by}
-            pinned={!!pins[`podcast:${item.id}`]}
-          />
+          item.kind === 'episode' ? (
+            <GridCard
+              href=""
+              onPress={() => {
+                haptic('light');
+                playEpisode(item);
+              }}
+              onLongPress={() => {
+                haptic('light');
+                openEpisodeMenu(item);
+              }}
+              uri={coverArtUrl(item.coverArt, COVER.card)}
+              title={item.title}
+              subtitle={item.by}
+            />
+          ) : (
+            <GridCard
+              href={item.href}
+              onLongPress={() => {
+                haptic('light');
+                openShowMenu(item);
+              }}
+              uri={coverArtUrl(item.coverArt, COVER.card)}
+              title={item.title}
+              subtitle={episodesLabel(item.episodeCount ?? 0, lang)}
+            />
+          )
         ) : (
-          <Link href={item.href} asChild>
-            <Pressable style={styles.row}>
+          item.kind === 'episode' ? (
+            <Pressable
+              style={styles.row}
+              onPress={() => {
+                haptic('light');
+                playEpisode(item);
+              }}
+              onLongPress={() => {
+                haptic('light');
+                openEpisodeMenu(item);
+              }}
+            >
               <Cover
                 uri={coverArtUrl(item.coverArt, COVER.thumb)}
                 size={56}
-                rounded
                 placeholderIcon="headset-outline"
               />
               <View style={styles.rowInfo}>
@@ -558,16 +615,39 @@ function PodcastsTab({ query }: { query: string }) {
                   {item.title}
                 </Text>
                 <View style={styles.rowSubLine}>
-                  {pins[`podcast:${item.id}`] ? (
-                    <Icon name="pin" size={13} color={colors.accent} />
-                  ) : null}
                   <Text style={styles.rowSub} numberOfLines={1}>
-                    {item.error ? t("Couldn't read this feed") : item.kind === 'channel' ? episodesLabel(item.episodeCount ?? 0, lang) : item.by}
+                    {item.by}
                   </Text>
                 </View>
               </View>
             </Pressable>
-          </Link>
+          ) : (
+            <Link href={item.href} asChild>
+              <Pressable
+                style={styles.row}
+                onLongPress={() => {
+                  haptic('light');
+                  openShowMenu(item);
+                }}
+              >
+                <Cover
+                  uri={coverArtUrl(item.coverArt, COVER.thumb)}
+                  size={56}
+                  placeholderIcon="headset-outline"
+                />
+                <View style={styles.rowInfo}>
+                  <Text style={styles.rowTitle} numberOfLines={1}>
+                    {item.title}
+                  </Text>
+                  <View style={styles.rowSubLine}>
+                    <Text style={styles.rowSub} numberOfLines={1}>
+                      {item.error ? t("Couldn't read this feed") : episodesLabel(item.episodeCount ?? 0, lang)}
+                    </Text>
+                  </View>
+                </View>
+              </Pressable>
+            </Link>
+          )
         )
       }
       ListEmptyComponent={
@@ -700,6 +780,9 @@ interface LibItem {
   added: number;
   playlist?: Playlist;
   album?: Album;
+  /** The objects a podcast row's tap/menu need. */
+  channel?: PodcastChannel;
+  episode?: PodcastEpisode;
 }
 
 /**
@@ -753,6 +836,7 @@ function AllTab({ query, onNew }: { query: string; onNew?: () => void }) {
         href: `/podcast/${c.id}`,
         recent: c.lastPublishedAt ?? 0,
         added: c.refreshedAt ?? 0,
+        channel: c,
       })),
       ...(episodesQ.data ?? []).map((r) => ({
         kind: 'episode' as const,
@@ -763,6 +847,8 @@ function AllTab({ query, onNew }: { query: string; onNew?: () => void }) {
         href: `/podcast/${r.channel.id}`,
         recent: r.episode.publishedAt ?? 0,
         added: r.episode.publishedAt ?? 0,
+        episode: r.episode,
+        channel: r.channel,
       })),
       ...(lists.data ?? []).map((p) => ({
         kind: 'playlist' as const,
@@ -830,8 +916,21 @@ function AllTab({ query, onNew }: { query: string; onNew?: () => void }) {
   const onLongPress = (i: LibItem) => {
     if (i.playlist) openMenu({ kind: 'playlist', playlist: i.playlist });
     else if (i.album) openMenu({ kind: 'album', album: i.album });
+    else if (i.kind === 'episode' && i.episode && i.channel)
+      useSongMenu.getState().open(episodeToSong(i.episode, i.channel));
+    else if (i.channel) usePodcastMenu.getState().open(i.channel);
     else return;
     haptic('light');
+  };
+  // Tapping an episode plays just that episode; a show still taps to its screen.
+  const playEpisode = (i: LibItem) => {
+    if (!i.episode || !i.channel) return;
+    void usePlayerStore.getState().playQueue(
+      [episodeToSong(i.episode, i.channel)],
+      0,
+      i.channel.title,
+      `/podcast/${i.channel.id}`,
+    );
   };
 
   const loading = lists.isLoading || starred.isLoading;
@@ -881,21 +980,35 @@ function AllTab({ query, onNew }: { query: string; onNew?: () => void }) {
           <FavoritesEntry grid />
         ) : grid ? (
           <GridCard
-            href={item.href}
+            href={item.kind === 'episode' ? '' : item.href}
+            onPress={
+              item.kind === 'episode'
+                ? () => {
+                    haptic('light');
+                    playEpisode(item);
+                  }
+                : undefined
+            }
             uri={coverArtUrl(item.coverArt ?? item.id, COVER.card)}
-            rounded={item.kind === 'artist' || item.kind === 'podcast' || item.kind === 'episode'}
+            rounded={item.kind === 'artist'}
             title={item.name}
             subtitle={label(item)}
             pinned={!!pins[`${item.kind}:${item.id}`]}
             onLongPress={() => onLongPress(item)}
           />
         ) : (
-          <Link href={item.href} asChild>
-            <Pressable style={styles.row} onLongPress={() => onLongPress(item)}>
+          item.kind === 'episode' ? (
+            <Pressable
+              style={styles.row}
+              onPress={() => {
+                haptic('light');
+                playEpisode(item);
+              }}
+              onLongPress={() => onLongPress(item)}
+            >
               <Cover
                 uri={coverArtUrl(item.coverArt ?? item.id, COVER.thumb)}
                 size={56}
-                rounded={item.kind === 'artist' || item.kind === 'podcast' || item.kind === 'episode'}
               />
               <View style={styles.rowInfo}>
                 <Text style={styles.rowTitle} numberOfLines={1}>
@@ -903,11 +1016,7 @@ function AllTab({ query, onNew }: { query: string; onNew?: () => void }) {
                 </Text>
                 <View style={styles.rowSubLine}>
                   {pins[`${item.kind}:${item.id}`] ? (
-                    <Icon
-                      name="pin"
-                      size={13}
-                      color={colors.accent}
-                    />
+                    <Icon name="pin" size={13} color={colors.accent} />
                   ) : null}
                   <Text style={styles.rowSub} numberOfLines={1}>
                     {label(item)}
@@ -915,7 +1024,34 @@ function AllTab({ query, onNew }: { query: string; onNew?: () => void }) {
                 </View>
               </View>
             </Pressable>
-          </Link>
+          ) : (
+            <Link href={item.href} asChild>
+              <Pressable style={styles.row} onLongPress={() => onLongPress(item)}>
+                <Cover
+                  uri={coverArtUrl(item.coverArt ?? item.id, COVER.thumb)}
+                  size={56}
+                  rounded={item.kind === 'artist'}
+                />
+                <View style={styles.rowInfo}>
+                  <Text style={styles.rowTitle} numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                  <View style={styles.rowSubLine}>
+                    {pins[`${item.kind}:${item.id}`] ? (
+                      <Icon
+                        name="pin"
+                        size={13}
+                        color={colors.accent}
+                      />
+                    ) : null}
+                    <Text style={styles.rowSub} numberOfLines={1}>
+                      {label(item)}
+                    </Text>
+                  </View>
+                </View>
+              </Pressable>
+            </Link>
+          )
         )
       }
     />
@@ -954,6 +1090,7 @@ function GridCard({
   subtitle,
   pinned,
   onLongPress,
+  onPress,
 }: {
   href: string;
   uri?: string;
@@ -964,31 +1101,36 @@ function GridCard({
   subtitle?: string;
   pinned?: boolean;
   onLongPress?: () => void;
+  /**
+   * A card that does something on tap instead of navigating (a podcast episode
+   * plays itself). With it, the card is not a link: the tap runs this.
+   */
+  onPress?: () => void;
 }) {
   const { card } = useGridMetrics();
-  return (
-    <Link href={href} asChild>
-      <Pressable
-        style={StyleSheet.flatten([styles.card, { width: card }, rounded && styles.cardCentered])}
-        onLongPress={onLongPress}
-      >
-        {art ?? <Cover uri={uri} size={card} rounded={rounded} />}
-        <Text style={[styles.cardTitle, rounded && styles.centerText]} numberOfLines={1}>
-          {title}
-        </Text>
-        {subtitle ? (
-          <View style={styles.cardSubLine}>
-            {pinned ? (
-              <Icon name="pin" size={12} color={colors.accent} />
-            ) : null}
-            <Text style={styles.cardSub} numberOfLines={1}>
-              {subtitle}
-            </Text>
-          </View>
-        ) : null}
-      </Pressable>
-    </Link>
+  const pressable = (
+    <Pressable
+      style={StyleSheet.flatten([styles.card, { width: card }, rounded && styles.cardCentered])}
+      onPress={onPress}
+      onLongPress={onLongPress}
+    >
+      {art ?? <Cover uri={uri} size={card} rounded={rounded} />}
+      <Text style={[styles.cardTitle, rounded && styles.centerText]} numberOfLines={1}>
+        {title}
+      </Text>
+      {subtitle ? (
+        <View style={styles.cardSubLine}>
+          {pinned ? <Icon name="pin" size={12} color={colors.accent} /> : null}
+          <Text style={styles.cardSub} numberOfLines={1}>
+            {subtitle}
+          </Text>
+        </View>
+      ) : null}
+    </Pressable>
   );
+  // A card that acts on tap (an episode plays itself) is not a link; otherwise
+  // the tap navigates to `href`.
+  return onPress ? pressable : <Link href={href} asChild>{pressable}</Link>;
 }
 
 /**

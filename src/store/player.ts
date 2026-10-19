@@ -776,7 +776,9 @@ function applyLockScreenFavorite(p: AudioPlayer, song: Song) {
 
 /** What the stream playing `song` says is on, or null if it says nothing. */
 function liveInfo(song: Song | null | undefined): StreamInfo | null {
-  return song?.url ? usePlayerStore.getState().streamInfo : null;
+  // A podcast episode is a file with its own tags (vod), not a station that
+  // announces what it plays: it never has live info.
+  return song?.url && !song.vod ? usePlayerStore.getState().streamInfo : null;
 }
 
 /**
@@ -798,12 +800,14 @@ function parseStreamInfo(info: { title?: string; artist?: string }): StreamInfo 
  * Reads what the source announced. Only radio uses it: everything else comes
  * with the server's tags, which beat whatever the decoder scrapes out of a
  * file, and a download would suddenly rename itself to whatever is inside it.
+ * A podcast episode is the same as a download — a file with its own tags, not a
+ * station announcing itself — so it is excluded here too.
  */
 function onStreamMetadata(info: { title?: string; artist?: string }) {
   const song = currentSong(usePlayerStore.getState());
   // Between two tracks a stream can go quiet, and that is not a reason to keep
   // showing the one before, so an empty announcement is applied like any other.
-  const next = song?.url ? parseStreamInfo(info) : null;
+  const next = song?.url && !song.vod ? parseStreamInfo(info) : null;
   const prev = usePlayerStore.getState().streamInfo;
   if (prev?.title === next?.title && prev?.artist === next?.artist) return;
   usePlayerStore.setState({ streamInfo: next });
@@ -3847,7 +3851,9 @@ export function playingQueued(state: Pick<PlayerState, 'queue' | 'index'>): bool
  */
 export function useLiveInfo(song: Song | null | undefined): StreamInfo | null {
   const info = usePlayerStore((s) => s.streamInfo);
-  return song?.url ? info : null;
+  // A podcast episode (vod) is a file, not a broadcasting station: its own
+  // title and artist are the whole story.
+  return song?.url && !song.vod ? info : null;
 }
 
 export const usePlayerStore = create<PlayerState>((set, get) => ({

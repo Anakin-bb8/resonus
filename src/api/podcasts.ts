@@ -1,5 +1,5 @@
 /**
- * Podcasts, subscribed to on the phone and read from their own feeds.
+ * Podcasts, kept on the phone and read from their own feeds.
  *
  * Navidrome answers the Subsonic podcast endpoints with 501, and Jellyfin and
  * Ampache have none, so no server is asked. Subscriptions are filed per
@@ -8,6 +8,7 @@
  */
 import { fetch } from 'expo/fetch';
 
+import { assertCanRequest } from './netGate';
 import { profileScopeId } from '@/store/auth';
 
 import { hashKey } from '@/lib/localLibrary';
@@ -52,6 +53,8 @@ function scope(): string {
 }
 
 async function get(url: string, accept: string): Promise<string> {
+  // Offline mode says no before the socket, like every server request does.
+  assertCanRequest();
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), TIMEOUT_MS);
   try {
@@ -192,7 +195,7 @@ export async function removePodcast(id: string): Promise<void> {
   await Db.removeChannel(scope(), id);
 }
 
-/** Every subscribed channel, most recently published first. */
+/** Every channel kept on the device, most recently published first. */
 export async function listChannels(): Promise<PodcastChannel[]> {
   return Db.listChannels(scope());
 }
@@ -316,7 +319,7 @@ export async function search(term: string): Promise<PodcastSearchResult[]> {
 
 /**
  * iTunes search/lookup rows as search results. Both endpoints answer with the
- * same fields; a show with no `feedUrl` cannot be subscribed to, so it is left
+ * same fields; a show with no `feedUrl` cannot be added, so it is left
  * out, and the same feed twice (search lists a show more than once) is kept once.
  */
 interface iTunesRow {
@@ -346,7 +349,7 @@ function iTunesResults(results: iTunesRow[]): PodcastSearchResult[] {
 }
 
 /**
- * Discovery: the iTunes Store's top-podcasts chart, as subscribable shows.
+ * Discovery: the iTunes Store's top-podcasts chart, as addable shows.
  *
  * The chart lists each show's store id and its primary genre, not its feed, so
  * the ids go to the lookup endpoint to get the feed back. `genreId` narrows the

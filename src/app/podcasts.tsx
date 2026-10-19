@@ -1,6 +1,6 @@
 /**
- * The podcasts subscribed to on this phone: a screen, and `embedded`, the
- * Podcasts section of Explore. All local, so nothing is gated on a server.
+ * The podcasts kept on this phone: a screen, and `embedded`, the Podcasts
+ * section of Explore. All local (SQLite), so nothing is gated on a server.
  */
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
@@ -155,10 +155,6 @@ export function PodcastsBrowser({ embedded, actionRef, searchOpen }: BrowserProp
   const showSearch = (data?.length ?? 0) > SEARCH_FROM;
   const boxOpen = useSearchBox(embedded, searchOpen, () => setQuery(''));
 
-  // Chart rows the user has already subscribed to, so the Store can mark them.
-  const subscribedFeeds = new Set(
-    (data ?? []).map((c) => c.feedUrl).filter((u): u is string => !!u),
-  );
   const discoverList = discover.data ?? [];
 
   // Embedded, Explore's header button opens the sheet.
@@ -234,35 +230,30 @@ export function PodcastsBrowser({ embedded, actionRef, searchOpen }: BrowserProp
               styles.list,
               { paddingBottom: bottomPad, paddingHorizontal: listPad },
             ]}
-            renderItem={({ item }: { item: PodcastSearchResult }) => {
-              const taken = subscribedFeeds.has(item.feedUrl);
-              return (
-                <Pressable
-                  style={styles.row}
-                  onPress={() =>
-                    router.push(`/podcast/${encodeURIComponent(item.feedUrl)}`)
-                  }
-                >
-                  <Cover
-                    uri={coverArtUrl(item.imageUrl, COVER.thumb)}
-                    size={56}
-                    rounded
-                    placeholderIcon="headset-outline"
-                  />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.rowTitle} numberOfLines={1}>
-                      {item.title}
+            renderItem={({ item }: { item: PodcastSearchResult }) => (
+              <Pressable
+                style={styles.row}
+                onPress={() =>
+                  router.push(`/podcast/${encodeURIComponent(item.feedUrl)}`)
+                }
+              >
+                <Cover
+                  uri={coverArtUrl(item.imageUrl, COVER.thumb)}
+                  size={56}
+                  placeholderIcon="headset-outline"
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.rowTitle} numberOfLines={1}>
+                    {item.title}
+                  </Text>
+                  {item.author ? (
+                    <Text style={styles.rowSub} numberOfLines={1}>
+                      {item.author}
                     </Text>
-                    {item.author ? (
-                      <Text style={styles.rowSub} numberOfLines={1}>
-                        {item.author}
-                      </Text>
-                    ) : null}
-                  </View>
-                  {taken ? <Icon name="checkmark-circle" size={22} color={colors.accent} /> : null}
-                </Pressable>
-              );
-            }}
+                  ) : null}
+                </View>
+              </Pressable>
+            )}
             ListEmptyComponent={
               term.length > 1 ? (
                 <EmptyState
@@ -310,7 +301,6 @@ export function PodcastsBrowser({ embedded, actionRef, searchOpen }: BrowserProp
               <Cover
                 uri={coverArtUrl(item.imageUrl, COVER.thumb)}
                 size={56}
-                rounded
                 placeholderIcon="headset-outline"
               />
               <View style={{ flex: 1 }}>
@@ -370,9 +360,8 @@ export function PodcastsBrowser({ embedded, actionRef, searchOpen }: BrowserProp
 
       <PodcastAddSheet
         visible={adding}
-        subscribed={(data ?? []).map((c) => c.feedUrl ?? '').filter(Boolean)}
         onCancel={() => setAdding(false)}
-        onSubscribed={() => void reload()}
+        onAdded={() => void reload()}
       />
 
       <Modal

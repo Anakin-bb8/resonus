@@ -167,6 +167,10 @@ export function SongMenuSheet() {
   const dlBitRate = useDownloads((s) => (song ? s.dlBitRates[song.id] : undefined));
   const downloadSong = useDownloads((s) => s.downloadSong);
   const deleteDownloads = useDownloads((s) => s.deleteSongs);
+  // A podcast episode downloads straight from its enclosure, and its file is
+  // cleared from the podcast record rather than a server catalog.
+  const downloadPodcastEpisode = useDownloads((s) => s.downloadPodcastEpisode);
+  const deletePodcastDownloads = useDownloads((s) => s.deletePodcastDownloads);
   const openArtistPicker = useArtistPicker((s) => s.open);
   const favIds = useFavoriteIds(!!song);
   // A podcast episode's heart is the device's own, filed in SQLite.
@@ -663,12 +667,20 @@ export function SongMenuSheet() {
                       // to delete on the spot (#48).
                       onPress={() => setConfirmDelete(true)}
                     />
-                  ) : !offline && !song.url ? (
+                  ) : !offline && (song.podcastChannelId ? song.url : !song.url) ? (
                     <Action
                       icon="download-outline"
                       label={t('Download')}
                       onPress={() => {
-                        void downloadSong(song);
+                        // An episode pulls from its own address; a server song
+                        // goes through the server's download.
+                        if (song.podcastChannelId)
+                          void downloadPodcastEpisode({
+                            id: song.id,
+                            url: song.url!,
+                            channelId: song.podcastChannelId!,
+                          });
+                        else void downloadSong(song);
                         toast(t('Downloading…'));
                         close();
                       }}
@@ -805,6 +817,27 @@ export function SongMenuSheet() {
         onCancel={() => setConfirmDelete(false)}
         onConfirm={() => {
           setConfirmDelete(false);
+          if (song.podcastChannelId) {
+            // The episode's file goes from the podcast record, not a server
+            // catalog, and its undo re-pulls the same enclosure.
+            void deletePodcastDownloads([song.id]);
+            toast(
+              t('Download removed'),
+              offline
+                ? undefined
+                : {
+                    label: t('Undo'),
+                    run: () =>
+                      void downloadPodcastEpisode({
+                        id: song.id,
+                        url: song.url!,
+                        channelId: song.podcastChannelId!,
+                      }),
+                  },
+            );
+            close();
+            return;
+          }
           void deleteDownloads([song.id]);
           // «Undo» still there: confirming by mistake is a tap away from
           // getting it back (offline there'd be nowhere to download from).

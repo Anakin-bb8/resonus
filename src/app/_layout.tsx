@@ -24,6 +24,7 @@ import { FrameMeter } from '@/components/FrameMeter';
 import { GlobalMiniPlayer } from '@/components/GlobalMiniPlayer';
 import { GlobalTabBar } from '@/components/GlobalTabBar';
 import { MediaMenuSheet } from '@/components/MediaMenuSheet';
+import { PodcastMenuSheet } from '@/components/PodcastMenuSheet';
 import { GlobalPlaylistPicker } from '@/components/PlaylistPickerSheet';
 import { GlobalShareSheet } from '@/components/ShareSheet';
 import { SongInfoSheet } from '@/components/SongInfoSheet';
@@ -428,6 +429,9 @@ export default function RootLayout() {
             {auth || offline ? <ArtistPickerSheet /> : null}
             {auth || offline ? <RadioMenuSheet /> : null}
             {auth || offline ? <MediaMenuSheet /> : null}
+            {/* Not behind the profile guard: a show has no server, so its menu
+                opens with no account and offline too, like the Library's shelf. */}
+            <PodcastMenuSheet />
             {auth || offline ? <GlobalPlaylistPicker /> : null}
             {auth || offline ? <GlobalShareSheet /> : null}
             {auth || offline ? <CarAutoSync /> : null}

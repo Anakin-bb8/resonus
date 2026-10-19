@@ -1,70 +1,85 @@
 /**
- * The ⋯ menu for a podcast preview: a bottom sheet with the two things worth
- * doing to a show from here — read it fresh from the publisher, and open its
- * website. It mirrors the album's ⋯ sheet, kept small because a preview has
- * only these two actions.
+ * The ⋯ menu for a podcast show: a bottom sheet with the things worth doing to
+ * a show from wherever it was opened — read it fresh from the publisher, open
+ * its website, and download every episode. It mirrors the album's ⋯ sheet, kept
+ * small because a show has only these. It is store-driven (see `usePodcastMenu`),
+ * so the same sheet opens from the show's own screen and from a long-press on a
+ * show in the Library.
  */
 import Icon from '@/components/Icon';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Cover } from '@/components/Cover';
+import { refreshChannel, listEpisodes } from '@/api/podcasts';
 import { useT } from '@/i18n';
+import { queryClient } from '@/lib/query';
+import { useDownloads } from '@/store/downloads';
+import { usePodcastMenu } from '@/store/podcastMenu';
+import { useToast } from '@/store/toast';
 import { colors, fontSize, radius, SHEET_MAX_WIDTH, spacing, themed } from '@/theme';
 
-interface Props {
-  visible: boolean;
-  title: string;
-  subtitle?: string;
-  coverUri?: string;
-  siteUrl?: string;
-  onRefresh: () => void;
-  onWebsite: () => void;
-  onClose: () => void;
-}
-
-export function PodcastMenuSheet({
-  visible,
-  title,
-  subtitle,
-  coverUri,
-  siteUrl,
-  onRefresh,
-  onWebsite,
-  onClose,
-}: Props) {
+export function PodcastMenuSheet() {
   const insets = useSafeAreaInsets();
   const t = useT();
+  const toast = useToast((s) => s.show);
+  const ch = usePodcastMenu((s) => s.channel);
+  const close = usePodcastMenu((s) => s.close);
 
-  if (!visible) return null;
+  if (!ch) return null;
+
+  const onClose = () => close();
+  const siteUrl = ch.siteUrl;
 
   return (
-    <Modal transparent visible={visible} animationType="slide" onRequestClose={onClose}>
+    <Modal transparent visible animationType="slide" onRequestClose={onClose}>
       <View style={styles.root}>
         {/* Tapping anywhere off the sheet closes it, like the album's. */}
         <Pressable style={styles.backdrop} onPress={onClose} />
         <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.md }]}>
           <View style={styles.grabber} />
           <View style={styles.headerRow}>
-            {coverUri ? <Cover uri={coverUri} size={48} rounded /> : null}
+            {ch.imageUrl ? <Cover uri={ch.imageUrl} size={48} /> : null}
             <View style={{ flex: 1 }}>
               <Text style={styles.title} numberOfLines={1}>
-                {title}
+                {ch.title}
               </Text>
-              {subtitle ? (
+              {ch.author ? (
                 <Text style={styles.subtitle} numberOfLines={1}>
-                  {subtitle}
+                  {ch.author}
                 </Text>
               ) : null}
             </View>
           </View>
           <View style={styles.divider} />
 
+          {/* Download every episode of the show. The episodes are read from
+              SQLite on the tap, so the sheet needs nothing carried to it. */}
           <Pressable
             style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
             onPress={() => {
               onClose();
-              onRefresh();
+              void (async () => {
+                try {
+                  await useDownloads.getState().downloadPodcast(ch.id, await listEpisodes(ch.id));
+                } catch {
+                  toast(t("Couldn't download this show."));
+                }
+              })();
+            }}
+          >
+            <Icon name="download-outline" size={24} color={colors.text} />
+            <Text style={styles.actionText}>{t('Download')}</Text>
+          </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+            onPress={() => {
+              onClose();
+              if (!ch.feedUrl) return;
+              void refreshChannel(ch.feedUrl)
+                .then(() => queryClient.invalidateQueries({ queryKey: ['podcast'] }))
+                .catch(() => toast(t("Couldn't read this feed.")));
             }}
           >
             <Icon name="refresh" size={24} color={colors.text} />
@@ -76,7 +91,7 @@ export function PodcastMenuSheet({
               style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
               onPress={() => {
                 onClose();
-                onWebsite();
+                void Linking.openURL(siteUrl).catch(() => {});
               }}
             >
               <Icon name="link-outline" size={24} color={colors.text} />

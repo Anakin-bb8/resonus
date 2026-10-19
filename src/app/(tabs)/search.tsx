@@ -322,7 +322,7 @@ export default function SearchScreen() {
                     <Cover
                       uri={coverArtUrl(item.coverArt ?? item.id, COVER.thumb)}
                       size={48}
-                      rounded={item.kind === 'artist' || item.kind === 'podcast'}
+                      rounded={item.kind === 'artist'}
                     />
                     <View style={styles.recentInfo}>
                       <Text style={styles.recentTitle} numberOfLines={1}>
@@ -520,7 +520,6 @@ export default function SearchScreen() {
                   <Cover
                     uri={coverArtUrl(c.imageUrl ?? c.id, COVER.thumb)}
                     size={48}
-                    rounded
                     placeholderIcon="headset-outline"
                   />
                   <View style={styles.recentInfo}>

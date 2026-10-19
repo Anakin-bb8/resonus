@@ -1,12 +1,13 @@
 /**
- * Podcast subscriptions, one SQLite database per profile. Not in the download
- * catalog, which can be emptied for space; a subscription is the user's.
+ * Podcasts kept on the device, one SQLite database per profile. Not in the
+ * download catalog, which can be emptied for space; a show the user opened is
+ * theirs, so it lives here and not in a disposable cache.
  *
  * `podcast_feeds` is what gets refreshed; `podcast_channels` is what was read
  * from each feed, including the error when the last read failed. `podcast_favorites`
  * is the user's own hearts: a row is a favorited channel (`kind = 'channel'`,
  * `channel_id` its own id) or a favorited episode (`kind = 'episode'`, `channel_id`
- * the show it belongs to), so unsubscribing a show can drop both at once.
+ * the show it belongs to), so removing a show can drop both at once.
  */
 import * as FileSystem from 'expo-file-system/legacy';
 import * as SQLite from 'expo-sqlite';
@@ -50,6 +51,15 @@ CREATE TABLE IF NOT EXISTS podcast_favorites (
 );
 CREATE INDEX IF NOT EXISTS podcast_favorites_order
   ON podcast_favorites(kind, favorited_at DESC);
+CREATE TABLE IF NOT EXISTS podcast_downloads (
+  episode_id TEXT PRIMARY KEY NOT NULL,
+  channel_id TEXT NOT NULL,
+  file TEXT NOT NULL,
+  bytes INTEGER,
+  downloaded_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS podcast_downloads_channel
+  ON podcast_downloads(channel_id, downloaded_at DESC);
 `;
 
 const ROOT = `${FileSystem.documentDirectory}podcasts/`;
@@ -201,7 +211,7 @@ export async function listRecentEpisodes(scope: string, limit = 20): Promise<Rec
   }));
 }
 
-/** Unsubscribes. The feed goes too, or the next refresh would bring it back. */
+/** Removes a show from the device. The feed goes too, or a refresh would bring it back. */
 export async function removeChannel(scope: string, id: string): Promise<void> {
   const channel = await getChannel(scope, id);
   const db = await podcastDb(scope);
@@ -224,7 +234,7 @@ export async function addFeed(scope: string, feedUrl: string): Promise<void> {
   ]);
 }
 
-/** Every feed subscribed to, oldest first. */
+/** Every feed kept on the device, oldest first. */
 export async function listFeeds(scope: string): Promise<string[]> {
   const db = await podcastDb(scope);
   const rows = await db.getAllAsync<{ feed_url: string }>(
@@ -237,7 +247,7 @@ export async function listFeeds(scope: string): Promise<string[]> {
  * Hearts on/off. A favorite is the user's own, so it lives here and not in the
  * server's starring: `kind` says whether the id is a show or one of its episodes,
  * and `channel_id` is the show either way — the id for a channel, its show for an
- * episode — so unsubscribing can drop a show's heart and its episodes' hearts
+ * episode — so removing a show can drop its heart and its episodes' hearts
  * together. Returns whether the item is favorited now.
  */
 export async function toggleFavorite(
@@ -301,4 +311,59 @@ export async function listFavoriteEpisodes(scope: string, limit = 100): Promise<
     episode: JSON.parse(r.episode) as PodcastEpisode,
     channel: JSON.parse(r.channel) as PodcastChannel,
   }));
+}
+
+/**
+ * A downloaded episode: its file on disk, remembered so a cold start can hand
+ * the same path back to the player. `channel_id` lets a whole show's downloads
+ * be counted and cleared together.
+ */
+export async function saveDownload(
+  scope: string,
+  episode: { id: string; channelId: string },
+  fileUri: string,
+  bytes: number | undefined,
+): Promise<void> {
+  const db = await podcastDb(scope);
+  await db.runAsync(
+    `INSERT OR REPLACE INTO podcast_downloads
+       (episode_id, channel_id, file, bytes, downloaded_at)
+     VALUES (?, ?, ?, ?, ?)`,
+    [episode.id, episode.channelId, fileUri, bytes ?? null, Date.now()],
+  );
+}
+
+/** Drops downloads from the record (the file itself is unlinked by the caller). */
+export async function dropDownloads(scope: string, ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  const db = await podcastDb(scope);
+  for (const id of ids) {
+    await db.runAsync('DELETE FROM podcast_downloads WHERE episode_id = ?', [id]);
+  }
+}
+
+/** Every downloaded episode's file, keyed by episode id, for the player's map. */
+export async function listDownloads(scope: string): Promise<Record<string, string>> {
+  const db = await podcastDb(scope);
+  const rows = await db.getAllAsync<{ id: string; file: string }>(
+    'SELECT episode_id AS id, file FROM podcast_downloads',
+    [],
+  );
+  const out: Record<string, string> = {};
+  for (const r of rows) out[r.id] = r.file;
+  return out;
+}
+
+/** How many of a show's episodes are downloaded, and their ids. */
+export async function downloadedForChannel(
+  scope: string,
+  channelId: string,
+): Promise<{ ids: string[]; count: number }> {
+  const db = await podcastDb(scope);
+  const rows = await db.getAllAsync<{ id: string }>(
+    'SELECT episode_id AS id FROM podcast_downloads WHERE channel_id = ?',
+    [channelId],
+  );
+  const ids = rows.map((r) => r.id);
+  return { ids, count: ids.length };
 }
