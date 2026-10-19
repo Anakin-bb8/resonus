@@ -6,7 +6,12 @@ import assert from 'node:assert/strict';
 import { createServer, type Server } from 'node:http';
 import { after, describe, it } from 'node:test';
 
-import { fetchAnimatedArtwork, stripEditionSuffix, titlesMatch } from '@/lib/animatedArtwork';
+import {
+  fetchAnimatedArtwork,
+  setAnimatedArtworkFetch,
+  stripEditionSuffix,
+  titlesMatch,
+} from '@/lib/animatedArtwork';
 
 describe('fetchAnimatedArtwork', () => {
   let server: Server;
@@ -94,6 +99,42 @@ describe('fetchAnimatedArtwork', () => {
     assert.equal(await fetchAnimatedArtwork(base, '', 'An Album'), null);
     assert.equal(await fetchAnimatedArtwork(base, 'An Artist', ''), null);
     assert.equal(hits, 4);
+  });
+});
+
+describe('unanswered asks', () => {
+  it('are not remembered as albums with no clip', async () => {
+    let calls = 0;
+    let down = true;
+    let now = 1_000_000;
+    const realNow = Date.now;
+    Date.now = () => now;
+    setAnimatedArtworkFetch(async () => {
+      calls += 1;
+      if (down) throw new Error('no network');
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ url: 'https://cdn/s.m3u8', url_tall: 'https://cdn/t.m3u8', artist: 'Some One', album: 'Late' }),
+      };
+    });
+    try {
+      assert.equal(await fetchAnimatedArtwork('http://art', 'Some One', 'Late'), null);
+      // Within the back-off nobody asks again.
+      assert.equal(await fetchAnimatedArtwork('http://art', 'Some One', 'Late'), null);
+      assert.equal(calls, 1);
+      // Past it, with the network back, the album gets its clips.
+      down = false;
+      now += 3 * 60 * 1000;
+      assert.deepEqual(await fetchAnimatedArtwork('http://art', 'Some One', 'Late'), {
+        square: 'https://cdn/s.m3u8',
+        tall: 'https://cdn/t.m3u8',
+      });
+      assert.equal(calls, 2);
+    } finally {
+      Date.now = realNow;
+      setAnimatedArtworkFetch((url, init) => fetch(url, init));
+    }
   });
 });
 

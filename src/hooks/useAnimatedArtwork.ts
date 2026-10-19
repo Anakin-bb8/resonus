@@ -28,6 +28,8 @@ export function useAnimatedArtwork(song: Song | null | undefined): AnimatedArtwo
     return () => {
       live = false;
     };
-  }, [endpoint, customUrl, song?.artist, song?.album, song?.id]);
+    // Not the song id: the next track of the same album has the same clips,
+    // and starting over for it flashed the still cover between them.
+  }, [endpoint, customUrl, song?.artist, song?.album]);
   return urls;
 }

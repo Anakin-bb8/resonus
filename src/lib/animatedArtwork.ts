@@ -8,9 +8,10 @@
  * Session cache only: the server already keeps its own, and a stale clip
  * here would outlive a corrected one there.
  *
- * Plain global fetch, so the mapping stays testable in node: artwork asks
- * happen in the foreground with the track change, never from a suspended
- * background fetch.
+ * The global fetch by default, so the mapping stays testable in node. The app
+ * hands in `expo/fetch` (see `setAnimatedArtworkFetch`): the lock screen asks
+ * for its clip on a track change, which is mostly with the app in the
+ * background, and React Native's own fetch does not answer there.
  */
 
 export interface AnimatedArtworkUrls {
@@ -20,6 +21,25 @@ export interface AnimatedArtworkUrls {
 
 const cache = new Map<string, AnimatedArtworkUrls | null>();
 const inflight = new Map<string, Promise<AnimatedArtworkUrls | null>>();
+
+type Fetch = (
+  url: string,
+  init: { signal: AbortSignal },
+) => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>;
+let fetchImpl: Fetch = (url, init) => fetch(url, init);
+
+/** The fetch the asks go through; the app passes `expo/fetch`. */
+export function setAnimatedArtworkFetch(f: Fetch): void {
+  fetchImpl = f;
+}
+
+/** A request that never got an answer: nothing learnt about the album. */
+class Unanswered extends Error {}
+
+/** When an album's ask last went unanswered, so a server that is down is not
+ *  asked again for the whole look-ahead on every track change. */
+const unansweredAt = new Map<string, number>();
+const RETRY_AFTER_MS = 2 * 60 * 1000;
 
 function keyOf(artist: string, album: string): string {
   return `${artist.trim().toLowerCase()}\n${album.trim().toLowerCase()}`;
@@ -93,11 +113,16 @@ function accepts(
 }
 
 async function askOnce(base: string, artist: string, album: string, signal: AbortSignal) {
-  const res = await fetch(
+  const res = await fetchImpl(
     `${base}/api/v1/artwork/search?artist=${encodeURIComponent(artist.trim())}&album=${encodeURIComponent(album.trim())}`,
     { signal },
   );
-  if (!res.ok) return null;
+  if (!res.ok) {
+    // A 404 is the server saying it has nothing for this album, an answer. A
+    // 5xx says nothing about the album, like no network.
+    if (res.status >= 500) throw new Unanswered();
+    return null;
+  }
   return (await res.json()) as ArtworkAnswer;
 }
 
@@ -108,7 +133,7 @@ async function askByUrl(
   appleUrl: string,
   signal: AbortSignal,
 ): Promise<AnimatedArtworkUrls | null> {
-  const res = await fetch(
+  const res = await fetchImpl(
     `${base}/api/v1/artwork/url?url=${encodeURIComponent(appleUrl.trim())}`,
     { signal },
   );
@@ -136,6 +161,12 @@ export function fetchAnimatedArtwork(
   if (hit !== undefined) return Promise.resolve(hit);
   const flying = inflight.get(key);
   if (flying) return flying;
+  const failed = unansweredAt.get(key);
+  if (failed !== undefined && Date.now() - failed < RETRY_AFTER_MS) return Promise.resolve(null);
+  // Only an answer is remembered. A timeout or no network said nothing about
+  // the album, and caching it as "no clip" kept the album still for the rest
+  // of the session.
+  let answered = true;
   const task = (async (): Promise<AnimatedArtworkUrls | null> => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
@@ -163,12 +194,18 @@ export function fetchAnimatedArtwork(
       }
       return null;
     } catch {
+      answered = false;
       return null;
     } finally {
       clearTimeout(timeout);
     }
   })().then((out) => {
-    cache.set(key, out);
+    if (answered) {
+      cache.set(key, out);
+      unansweredAt.delete(key);
+    } else {
+      unansweredAt.set(key, Date.now());
+    }
     inflight.delete(key);
     return out;
   });

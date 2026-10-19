@@ -58,6 +58,7 @@ import {
   animatedArtworkKey,
   fetchAnimatedArtwork,
   prefetchAnimatedArtwork,
+  setAnimatedArtworkFetch,
 } from '@/lib/animatedArtwork';
 import { tg } from '@/i18n';
 import { transcodeTarget } from '@/lib/audioQuality';
@@ -694,6 +695,10 @@ function warmArtwork(song: Song) {
  * fetched for, never on the next one. iOS only, like the preloader: the
  * patched module answers, anything else throws into the catch.
  */
+// The clips are mostly asked for on a track change with the app in the
+// background, where React Native's fetch does not answer.
+setAnimatedArtworkFetch((url, init) => expoFetch(url, init));
+
 function publishAnimatedClip(song: Song) {
   if (Platform.OS !== 'ios') return;
   const artworkUrl = artworkUrlFor(song);

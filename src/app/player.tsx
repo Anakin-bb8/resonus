@@ -35,7 +35,11 @@ import { ArtistPlayerCard } from '@/components/ArtistPlayerCard';
 import { AudioQualityBadge } from '@/components/AudioQualityBadge';
 import { SeekBar } from '@/components/SeekBar';
 import { Cover, coverRadius, useRedrawOnReturn, useSettledSource } from '@/components/Cover';
-import { AnimatedArtworkBackground, AnimatedArtworkView } from '@/components/AnimatedArtworkView';
+import {
+  AnimatedArtworkBackground,
+  AnimatedArtworkView,
+  canPlayAnimatedCovers,
+} from '@/components/AnimatedArtworkView';
 import { ExplicitBadge } from '@/components/ExplicitBadge';
 import { FavoriteButton } from '@/components/FavoriteButton';
 import { CoverLyrics, LyricsCard } from '@/components/LyricsCard';
@@ -388,7 +392,12 @@ export default function PlayerScreen() {
   // background option is on — fullscreen video with a still copy by the
   // title, same as the GIF path. With the option off the clip plays inside
   // the square instead.
-  const animatedClips = useAnimatedArtwork(song);
+  // Only a clip this build can play, with clip videos on: otherwise the
+  // background drew nothing while the still cover stood aside for it, and
+  // the player had no cover at all.
+  const animatedCoverVideo = useSettings((s) => s.animatedCoverVideo);
+  const fetchedClips = useAnimatedArtwork(song);
+  const animatedClips = animatedCoverVideo && canPlayAnimatedCovers() ? fetchedClips : null;
   const animatedVideoSquare =
     animatedCoverBg && animatedClips?.square ? animatedClips.square : null;
   // The backdrop holds the previous artwork on purpose while the next decodes,

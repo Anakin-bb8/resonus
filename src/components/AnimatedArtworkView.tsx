@@ -89,6 +89,9 @@ function useClipPlayer(uri: string): any {
   const player = useVideoPlayer!(uri, (p) => {
     p.loop = true;
     p.muted = true;
+    // Never the music's audio focus: a clip that took it would pause the song
+    // it decorates. Said outright rather than left to the muted default.
+    p.audioMixingMode = 'mixWithOthers';
     callPlayer(() => p.play());
   });
   useEffect(() => {
