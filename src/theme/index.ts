@@ -877,8 +877,8 @@ export function applyBorderStyle(style: BorderStyle): void {
 }
 
 /**
- * A corner restyled by the fork: draws `round` upstream and `pointy` with the
- * flatter ladder. Reads the live style, so `themed()` styles (rebuilt on
+ * A value that differs between the two ladders by more than the ladder step:
+ * `round` with Round, `pointy` with Pointier. Reads the live style, so `themed()` styles (rebuilt on
  * every theme wake-up, which a style switch triggers) follow it with no
  * subscription. Pass ladder steps, not numbers, so both stay in scale.
  */

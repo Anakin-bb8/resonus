@@ -795,5 +795,19 @@
   "Radios built from the artists you play most. Off, there are none on Home or in the menus, and nothing is fetched for them.": "Ràdios fetes amb els artistes que més escoltes. Desactivades, no apareixen a Inici ni als menús i no es descarrega res per a elles.",
   "Radios on Home": "Ràdios a Inici",
   "Keep playing when a radio ends": "Continua sonant quan s'acaba una ràdio",
-  "When its songs run out, another round from the same artists.": "Quan s'acaben les cançons, una altra tanda dels mateixos artistes."
+  "When its songs run out, another round from the same artists.": "Quan s'acaben les cançons, una altra tanda dels mateixos artistes.",
+  "Animated cover videos": "Vídeos a les caràtules",
+  "Play endpoint clips over the still covers. Off keeps every cover still.": "Reprodueix els clips del servidor sobre les caràtules fixes. Desactivat, totes les caràtules queden fixes.",
+  "Animated artwork endpoint": "Servidor de caràtules animades",
+  "Animated covers server: square and tall clips stream from it instead of still covers.": "Servidor de caràtules animades: els clips quadrats i verticals arriben d'ell en lloc de les caràtules fixes.",
+  "Animated artwork": "Caràtula animada",
+  "Apple Music URL": "URL d'Apple Music",
+  "The album page on Apple Music whose animated cover plays for this album.": "La pàgina de l'àlbum a Apple Music la caràtula animada de la qual surt amb aquest àlbum.",
+  "That does not look like an Apple Music URL.": "Això no sembla una URL d'Apple Music.",
+  "Animated artwork URL saved.": "URL de la caràtula animada desada.",
+  "Animated artwork URL removed.": "URL de la caràtula animada eliminada.",
+  "Border radius": "Cantonades",
+  "Round corners everywhere, or flatter ones": "Cantonades arrodonides a tota l'app, o més rectes",
+  "Round": "Arrodonides",
+  "Pointier": "Més rectes"
 }

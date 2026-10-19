@@ -1305,7 +1305,7 @@ const styles = themed((colors) => ({
     gap: spacing.sm,
     // Translucent to let the header's dominant color through (Spotify).
     backgroundColor: colors.highlight,
-    // De-pilled by the fork (a capsule upstream): round draws it back.
+    // A capsule with Round, a rounded rectangle with Pointier.
     borderRadius: restyled(radius.pill, radius.md),
     paddingHorizontal: spacing.lg,
     height: 44,

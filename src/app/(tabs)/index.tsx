@@ -1167,12 +1167,12 @@ const styles = themed((colors) => ({
     alignItems: 'center',
     gap: spacing.sm,
     backgroundColor: colors.surface,
-    // A step down from md upstream: round draws that back.
+    // md with Round; with Pointier a little over its small step.
     borderRadius: restyled(radius.md, radius.sm + 1),
     overflow: 'hidden',
     paddingRight: spacing.sm,
   },
-  /** Square upstream, a touch rounder than the small step with pointier. */
+  /** Square with Round (the tile's own corners round it); Pointier rounds it a little. */
   tileCover: { borderRadius: restyled(0, radius.sm + 1) },
   tileText: {
     flex: 1,

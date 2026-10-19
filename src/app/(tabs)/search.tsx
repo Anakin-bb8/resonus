@@ -546,7 +546,7 @@ const styles = themed((colors) => ({
     backgroundColor: colors.surfaceHighlight,
     margin: spacing.lg,
     paddingHorizontal: spacing.lg,
-    // De-pilled by the fork (a capsule upstream): round draws it back.
+    // A capsule with Round, a rounded rectangle with Pointier.
     borderRadius: restyled(radius.pill, radius.md),
   },
   input: {

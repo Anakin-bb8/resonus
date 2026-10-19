@@ -232,7 +232,7 @@ const styles = themed((colors) => ({
     height: 44,
     backgroundColor: colors.surfaceHighlight,
     paddingHorizontal: spacing.lg,
-    // De-pilled by the fork (a capsule upstream): round draws it back.
+    // A capsule with Round, a rounded rectangle with Pointier.
     borderRadius: restyled(radius.pill, radius.md),
   },
   input: { flex: 1, color: colors.text, fontSize: fontSize.md, paddingVertical: 0 },

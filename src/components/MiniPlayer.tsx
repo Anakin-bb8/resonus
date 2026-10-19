@@ -300,7 +300,7 @@ export function MiniPlayer() {
 const styles = themed((colors) => ({
   card: {
     marginHorizontal: spacing.sm,
-    // Stepped down by the fork (lg upstream): round draws it back.
+    // lg with Round, a step down with Pointier.
     borderRadius: restyled(radius.lg, radius.md),
     boxShadow: '0px 6px 16px rgba(0, 0, 0, 0.3)',
   },
@@ -310,7 +310,7 @@ const styles = themed((colors) => ({
     gap: spacing.md,
     backgroundColor: colors.surfaceHighlight,
     padding: spacing.sm,
-    // Stepped down by the fork (lg upstream): round draws it back.
+    // lg with Round, a step down with Pointier.
     borderRadius: restyled(radius.lg, radius.md),
     overflow: 'hidden',
   },
@@ -318,8 +318,8 @@ const styles = themed((colors) => ({
   narrow: { maxWidth: CONTENT_MAX_WIDTH, width: '100%', alignSelf: 'center' },
   progressTrack: {
     position: 'absolute',
-    // Shorter on both sides upstream (14): the fork lines it up with the
-    // cover's own edges instead. Round draws that back.
+    // 14 in from both sides with Round; with Pointier it lines up with the
+    // cover's own edges instead.
     left: restyled(14, spacing.sm),
     right: restyled(14, spacing.sm),
     bottom: 0,
