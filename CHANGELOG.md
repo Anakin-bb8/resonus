@@ -9,6 +9,8 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.8.3] - 2026-10-19
+
 ### Added
 
 - Animated album covers from an animated-artwork server you set in Settings > Player, in the player and, on iOS, on the lock screen; an album's ⋯ menu can pin it to an Apple Music album (#263).
@@ -37,6 +39,7 @@ Releases before 0.2.1 are only listed on the
 - Android: connecting to Android Auto brings playback from a DLNA/UPnP renderer or the jukebox back to the phone, still playing (#272).
 - Android: coming back to the app after a long while in the background shows the song playing at once, instead of freezing on an earlier one and walking through every song played since.
 - Android Auto: a very long queue, such as a big favourites list played shuffled, no longer closes the app; the car's queue shows the songs around the one playing.
+- The play button in Explore, on an artist's songs and on a genre sits in the middle of its circle.
 
 ## [0.8.2] - 2026-10-10
 
