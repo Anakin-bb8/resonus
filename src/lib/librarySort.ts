@@ -71,13 +71,14 @@ export function normQ(str: string): string {
 
 /**
  * How many edits a query word forgives: two letters or less none (they match
- * half the library), then more rope the longer the word — a missing letter,
- * a swap, a couple of slips, and then some.
+ * half the library), then one slip up to five letters, two up to nine and
+ * three past that. Two slips in a five-letter word is a different word
+ * ("drake" and "brave", "queen" and "green"), not a typo.
  */
 function allowedEdits(len: number): number {
   if (len <= 2) return 0;
-  if (len <= 4) return 1;
-  if (len <= 7) return 2;
+  if (len <= 5) return 1;
+  if (len <= 9) return 2;
   return 3;
 }
 
@@ -136,12 +137,13 @@ function matchWord(qw: string, words: string[]): boolean {
 }
 
 /**
- * Does any of the fields match the query? Every query word has to land
- * somewhere (in any order, so "rojo nino" finds "Niño Rojo"), each as a
- * substring or a typo away. One- and two-letter words ("of", "di", "y") only
- * count when they sit inside a field word: requiring them whole would make
- * every query carrying a stopword fail. Fields are normalized here; the query
- * is too, so callers can hand over what the box holds.
+ * Does any of the fields match the query? The whole query as it was typed
+ * first; failing that, every query word has to land somewhere (in any order,
+ * so "rojo nino" finds "Niño Rojo"), each as a substring or a typo away.
+ * One- and two-letter words ("of", "di", "y") are left out of that second
+ * pass: requiring them would make every query carrying a stopword fail.
+ * Fields are normalized here; the query is too, so callers can hand over what
+ * the box holds.
  */
 export function matches(query: string, ...fields: (string | undefined)[]): boolean {
   const q = normQ(query.trim());

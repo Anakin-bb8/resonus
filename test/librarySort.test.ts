@@ -120,6 +120,12 @@ describe('matches', () => {
   });
 
   it('forgives three edits in a long word', () => {
-    assert.equal(matches('abXdeYgZ', 'Abcdefgh'), true);
+    assert.equal(matches('abXdeYghiZ', 'Abcdefghij'), true);
+  });
+
+  it('takes one slip in a short word, not two', () => {
+    assert.equal(matches('qeen', 'Queen'), true);
+    assert.equal(matches('drake', 'Brave'), false);
+    assert.equal(matches('queen', 'Green'), false);
   });
 });
