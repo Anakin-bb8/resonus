@@ -213,6 +213,11 @@ export interface Song {
 export interface Album {
   id: string;
   name: string;
+  /**
+   * 1-5, absent if never rated. Navidrome keeps a rating per album as it does
+   * per song and per artist, and `setRating` takes the album's id (#261).
+   */
+  userRating?: number;
   artist?: string;
   artistId?: string;
   /** Album description from the comment tag (OpenSubsonic; Navidrome sends it). */

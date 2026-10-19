@@ -6,7 +6,7 @@
  */
 import Icon from '@/components/Icon';
 import { useSegments } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated from 'react-native-reanimated';
@@ -37,6 +37,7 @@ import { useToast } from '@/store/toast';
 import { colors, fontSize, radius, SHEET_MAX_WIDTH, spacing, themed } from '@/theme';
 import { Cover } from './Cover';
 import { Dialog } from './Dialog';
+import { StarRating } from './StarRating';
 
 function Action({
   icon,
@@ -95,6 +96,16 @@ export function MediaMenuSheet() {
   const top = useSegments()[0];
   const openArtistPicker = useArtistPicker((s) => s.open);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // The stars take over the sheet instead of sitting among the actions, as in
+  // the song and artist menus: five targets in a row need the width, and a
+  // rating is set, not fired and dismissed. Every opening starts on the actions.
+  const [mode, setMode] = useState<'actions' | 'rating'>('actions');
+  // By what was opened, not the object: rating it rewrites the item.
+  const openedKey = item ? (item.kind === 'album' ? `a:${item.album.id}` : `p:${item.playlist.id}`) : null;
+  useEffect(() => setMode('actions'), [openedKey]);
+  // Subsonic's `setRating`, which Jellyfin has no answer for. Offline it is
+  // recorded and sent on reconnect; a local profile has no account.
+  const canRate = useAuthStore((s) => !!s.auth && s.auth.serverType !== 'jellyfin');
   /** Songs gathered for the download dialog (its size needs them). */
   const [pending, setPending] = useState<Song[] | null>(null);
   /** The downloaded songs and what they weigh, for the export question. */
@@ -243,6 +254,38 @@ export function MediaMenuSheet() {
             </View>
             <View style={styles.divider} />
 
+            {mode === 'rating' && album ? (
+              <View>
+                <Pressable style={styles.action} onPress={() => setMode('actions')}>
+                  <Icon name="chevron-back" size={24} color={colors.text} />
+                  <Text style={styles.actionText}>{t('Rate')}</Text>
+                </Pressable>
+                <View style={styles.ratingRow}>
+                  <StarRating
+                    id={album.id}
+                    rating={
+                      queryClient.getQueryData<{ album: { userRating?: number } }>(['album', album.id])
+                        ?.album.userRating ?? album.userRating
+                    }
+                    size={34}
+                    // Written back where the album screen and the next opening
+                    // read it, so the stars keep what was just set.
+                    onRated={(r) => {
+                      queryClient.setQueryData<{ album: typeof album; songs: Song[] }>(
+                        ['album', album.id],
+                        (old) => (old ? { ...old, album: { ...old.album, userRating: r } } : old),
+                      );
+                      useMediaMenu.setState((s) =>
+                        s.item?.kind === 'album' && s.item.album.id === album.id
+                          ? { item: { ...s.item, album: { ...s.item.album, userRating: r } } }
+                          : s,
+                      );
+                    }}
+                  />
+                </View>
+              </View>
+            ) : (
+            <>
             <Action
               icon="play-outline"
               label={t('Play')}
@@ -377,6 +420,15 @@ export function MediaMenuSheet() {
                 onPress={() => void toggleFavorite()}
               />
             ) : null}
+            {album && canRate ? (
+              <Pressable
+                style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+                onPress={() => setMode('rating')}
+              >
+                <Icon name="star-outline" size={24} color={colors.text} />
+                <Text style={styles.actionText}>{t('Rate')}</Text>
+              </Pressable>
+            ) : null}
             {/* Only makes sense if the item can
                 appear in the Library: playlists always do, but albums only if
                 favorited (the list comes from getStarred). */}
@@ -414,6 +466,8 @@ export function MediaMenuSheet() {
                 onPress={() => setConfirmDelete(true)}
               />
             ) : null}
+            </>
+            )}
           </Animated.View>
         </GestureDetector>
       </GestureHandlerRootView>
@@ -527,5 +581,6 @@ const styles = themed((colors) => ({
     paddingVertical: spacing.md,
   },
   actionText: { color: colors.text, fontSize: fontSize.md },
+  ratingRow: { alignItems: 'center', paddingVertical: spacing.sm, marginBottom: spacing.sm },
   // The MCI pin comes vertical; rotated 45° it looks like Spotify's.
 }));

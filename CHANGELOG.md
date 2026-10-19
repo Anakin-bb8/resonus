@@ -14,6 +14,7 @@ Releases before 0.2.1 are only listed on the
 - Animated album covers from an animated-artwork server you set in Settings > Player, in the player and, on iOS, on the lock screen; an album's ⋯ menu can pin it to an Apple Music album (#263).
 - Appearance > Border radius: the round corners as before, or flatter ones (#262).
 - French, thanks to @Willyflam (#257).
+- Rate an album from its ⋯ menu, as songs and artists already could (#261).
 
 ### Fixed
 
