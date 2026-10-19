@@ -134,7 +134,8 @@ export function AnimatedArtworkView({
   size: number;
   corner: number;
 }) {
-  const videoOn = useSettings((s) => s.animatedCoverVideo);
+  // Only iOS offers the switch (see the Player settings).
+  const videoOn = useSettings((s) => s.animatedCoverVideo || Platform.OS !== 'ios');
   const bg = useIsBackground();
   if (!videoOn || !square || bg) return null;
   if (Platform.OS === 'ios') {
@@ -156,7 +157,8 @@ export function AnimatedArtworkView({
 
 /** Full-screen clip behind everything, like the animated image background. */
 export function AnimatedArtworkBackground({ square }: { square: string | null | undefined }) {
-  const videoOn = useSettings((s) => s.animatedCoverVideo);
+  // Only iOS offers the switch (see the Player settings).
+  const videoOn = useSettings((s) => s.animatedCoverVideo || Platform.OS !== 'ios');
   const bg = useIsBackground();
   if (!videoOn || !square || bg) return null;
   if (Platform.OS === 'ios') {

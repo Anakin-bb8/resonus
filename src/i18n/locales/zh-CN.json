@@ -577,7 +577,6 @@
   "Remove from the group": "移出群组",
   "Show explicit tag": "显示限制级标记",
   "Show description": "显示说明",
-  "Animated cover background": "动态封面背景",
   "{n} of {songs} are already in “{name}”.": "{songs} 中有 {n} 首已在“{name}”中。",
   "All {songs} are already in “{name}”.": "{songs} 已全部在“{name}”中。",
   "Add only the new ones": "只添加尚未加入的",

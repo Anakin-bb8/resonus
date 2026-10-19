@@ -185,17 +185,6 @@ export default function PlayerSettings() {
                 value: fitCoverArt,
                 onChange: setFitCoverArt,
               },
-              {
-                label: t('Animated cover background'),
-                value: animatedCoverBackground,
-                onChange: setAnimatedCoverBackground,
-              },
-              {
-                label: t('Animated cover videos'),
-                description: t('Play endpoint clips over the still covers. Off keeps every cover still.'),
-                value: animatedCoverVideo,
-                onChange: setAnimatedCoverVideo,
-              },
             ]}
           />
           <SelectList<CoverTapAction>
@@ -210,23 +199,15 @@ export default function PlayerSettings() {
             value={coverDoubleTapAction}
             onChange={setCoverDoubleTapAction}
           />
-          {/* The lock screen clip is an iOS thing; Android has none to encode. */}
-          {Platform.OS === 'ios' ? (
-            <SelectList<number>
-              label={t('Animated cover frame rate')}
-              options={[
-                { value: 30, label: t('30 fps') },
-                { value: 60, label: t('60 fps') },
-              ]}
-              value={animatedArtworkFps}
-              onChange={setAnimatedArtworkFps}
-            />
-          ) : null}
+        </SettingsGroup>
+
+        {/* Their own section, the source first: what decides whether there is
+            a clip at all comes before where it is shown (#263). */}
+        <Text style={settingsStyles.sectionTitle}>{t('Animated covers')}</Text>
+        <SettingsGroup>
           <TextRow
             label={t('Animated artwork endpoint')}
-            description={t(
-              'Animated covers server: square and tall clips stream from it instead of still covers.',
-            )}
+            description={t('Where the square and tall clips come from. Empty, every cover stays still.')}
             value={animatedArtworkEndpoint}
             placeholder="https://artwork.example.com"
             maxLength={200}
@@ -236,6 +217,44 @@ export default function PlayerSettings() {
             // of `https://` while typing. The fetch normalizes before asking.
             onChange={setAnimatedArtworkEndpoint}
           />
+          {/* Where, not whether: it also places a GIF or WebP cover from the
+              server, with no endpoint at all. */}
+          <SelectList<'cover' | 'background'>
+            label={t('Animated artwork')}
+            description={t('GIF and WebP covers from your server too.')}
+            options={[
+              { value: 'cover', label: t('In the cover') },
+              { value: 'background', label: t('As the background') },
+            ]}
+            value={animatedCoverBackground ? 'background' : 'cover'}
+            onChange={(v) => setAnimatedCoverBackground(v === 'background')}
+          />
+          {/* iOS only: there the lock screen has a clip of its own, so the one
+              in the app can go while that one stays. On Android an empty
+              server is the same thing. */}
+          {Platform.OS === 'ios' && animatedArtworkEndpoint ? (
+            <>
+              <SwitchList
+                options={[
+                  {
+                    label: t('Clips in the app too'),
+                    description: t('Off, the clip only plays on the lock screen.'),
+                    value: animatedCoverVideo,
+                    onChange: setAnimatedCoverVideo,
+                  },
+                ]}
+              />
+              <SelectList<number>
+                label={t('Animated cover frame rate')}
+                options={[
+                  { value: 30, label: t('30 fps') },
+                  { value: 60, label: t('60 fps') },
+                ]}
+                value={animatedArtworkFps}
+                onChange={setAnimatedArtworkFps}
+              />
+            </>
+          ) : null}
         </SettingsGroup>
 
         <Text style={settingsStyles.sectionTitle}>{t('Elements')}</Text>

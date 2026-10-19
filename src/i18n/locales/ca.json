@@ -358,7 +358,6 @@
   "Show quality label": "Mostra l'etiqueta de qualitat",
   "Show album & year": "Mostra àlbum i any",
   "Fit cover art": "Ajusta la caràtula",
-  "Animated cover background": "Fons de caràtula animada",
   "Swap favorite and menu": "Intercanvia preferit i menú",
   "Show quick grid": "Mostra la quadrícula ràpida",
   "Show rating": "Mostra la valoració",
@@ -796,10 +795,7 @@
   "Radios on Home": "Ràdios a Inici",
   "Keep playing when a radio ends": "Continua sonant quan s'acaba una ràdio",
   "When its songs run out, another round from the same artists.": "Quan s'acaben les cançons, una altra tanda dels mateixos artistes.",
-  "Animated cover videos": "Vídeos a les caràtules",
-  "Play endpoint clips over the still covers. Off keeps every cover still.": "Reprodueix els clips del servidor sobre les caràtules fixes. Desactivat, totes les caràtules queden fixes.",
   "Animated artwork endpoint": "Servidor de caràtules animades",
-  "Animated covers server: square and tall clips stream from it instead of still covers.": "Servidor de caràtules animades: els clips quadrats i verticals arriben d'ell en lloc de les caràtules fixes.",
   "Animated artwork": "Caràtula animada",
   "Apple Music URL": "URL d'Apple Music",
   "The album page on Apple Music whose animated cover plays for this album.": "La pàgina de l'àlbum a Apple Music la caràtula animada de la qual surt amb aquest àlbum.",
@@ -812,5 +808,12 @@
   "Pointier": "Més rectes",
   "Devices on the left": "Dispositius a l'esquerra",
   "Use the system colors": "Fer servir els colors del sistema",
-  "The accent Android takes from the wallpaper": "L'accent que Android pren del fons de pantalla"
+  "The accent Android takes from the wallpaper": "L'accent que Android pren del fons de pantalla",
+  "Animated covers": "Caràtules animades",
+  "GIF and WebP covers from your server too.": "També les caràtules GIF i WebP del teu servidor.",
+  "In the cover": "A la caràtula",
+  "As the background": "Com a fons",
+  "Where the square and tall clips come from. Empty, every cover stays still.": "D'on surten els clips quadrats i verticals. Buit, totes les caràtules queden fixes.",
+  "Clips in the app too": "Clips també a l'app",
+  "Off, the clip only plays on the lock screen.": "Desactivat, el clip només es veu a la pantalla de bloqueig."
 }

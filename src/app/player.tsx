@@ -409,7 +409,9 @@ export default function PlayerScreen() {
   // Only a clip this build can play, with clip videos on: otherwise the
   // background drew nothing while the still cover stood aside for it, and
   // the player had no cover at all.
-  const animatedCoverVideo = useSettings((s) => s.animatedCoverVideo);
+  // Android has no switch for it (an empty server is the same thing), so a
+  // value left off there by an older build is not obeyed.
+  const animatedCoverVideo = useSettings((s) => s.animatedCoverVideo || Platform.OS !== 'ios');
   const fetchedClips = useAnimatedArtwork(song);
   const animatedClips = animatedCoverVideo && canPlayAnimatedCovers() ? fetchedClips : null;
   const animatedVideoSquare =
