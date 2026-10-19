@@ -701,8 +701,12 @@ export const DEFAULT_PLAYER_BUTTONS: PlayerButton[] = [
   { key: 'queue', enabled: true },
 ];
 
-/** Grouped in the middle, or spread across the width with equal gaps. */
-export type PlayerButtonsLayout = 'centered' | 'spread';
+/**
+ * Grouped in the middle, spread across the width with equal gaps, or split:
+ * devices (and the name of what it casts to) on the left, the rest together on
+ * the right (#259).
+ */
+export type PlayerButtonsLayout = 'centered' | 'spread' | 'split';
 
 /** Saved order kept, unknown keys dropped, new ones added at the end. */
 function normalizePlayerButtons(raw: unknown): PlayerButton[] {
@@ -1772,7 +1776,11 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
       ),
     });
   }
-  if (parsed.playerButtonsLayout === 'centered' || parsed.playerButtonsLayout === 'spread') {
+  if (
+    parsed.playerButtonsLayout === 'centered' ||
+    parsed.playerButtonsLayout === 'spread' ||
+    parsed.playerButtonsLayout === 'split'
+  ) {
     set({ playerButtonsLayout: parsed.playerButtonsLayout });
   }
   if (Array.isArray(parsed.playerButtons)) {

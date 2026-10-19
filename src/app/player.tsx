@@ -104,6 +104,14 @@ const COVER_MIN = 200;
  * cover sits a touch high, which reads better than dead centre.
  */
 const COVER_TOP_SHARE = 0.4;
+/**
+ * The least room between the cover and the rating under it. Above that floor
+ * the spare height is shared out evenly between the three gaps the rating
+ * makes (over the cover, cover to stars, stars to title), so the stars sit in
+ * the middle of what is left instead of hanging off the artwork with a hole
+ * under them (#259).
+ */
+const STARS_GAP_MIN = spacing.md;
 /** How far a finger has to travel across the cover to count as a skip. */
 const SWIPE_SHARE = 0.25;
 const DISMISS_THRESHOLD = 120;
@@ -298,7 +306,8 @@ export default function PlayerScreen() {
   const marqueeTitles = useSettings((s) => s.marqueeTitles);
   const playerButtons = useSettings((s) => s.playerButtons);
   const coverCorners = useSettings((s) => s.coverCorners);
-  const spreadButtons = useSettings((s) => s.playerButtonsLayout === 'spread');
+  const buttonsLayout = useSettings((s) => s.playerButtonsLayout);
+  const spreadButtons = buttonsLayout === 'spread';
   const local = useLocalProfile();
   // The local profile can cast now that the phone serves its own files
   // (`lib/localHttp`), so the only reason left to hide the button there is a
@@ -348,6 +357,11 @@ export default function PlayerScreen() {
   // Whether it draws anything is the card's own question (it needs a
   // biography), and the room below is kept either way, as for the lyrics.
   const wantsArtistCard = !!song?.artistId && showArtistCard;
+  // The room below the first page goes by the settings, not by the song: a
+  // track with no artist to ask about moved the controls and the bottom row
+  // up a peek's worth, for that one track (#259). A station still gets the
+  // room back, as it always has: it has neither card.
+  const cardRoom = wantsLyricsCard || (showArtistCard && !song?.url);
   /**
    * The heart's state, and it does not ask whether the file is on the phone.
    *
@@ -952,15 +966,25 @@ export default function PlayerScreen() {
   // the top first. Side by side the slot is half the screen, which is why the
   // cap is measured rather than taken from the screen (#131).
   const coverMax = (landscape ? screenW / 2 : screenW) - spacing.xl * 2;
+  const starsBlock = canRate ? starsH + STARS_GAP_MIN : 0;
   const coverSize = coverBoxH
-    ? Math.max(COVER_MIN, Math.min(coverBoxW || coverMax, coverBoxH - (canRate ? starsH : 0)))
+    ? Math.max(COVER_MIN, Math.min(coverBoxW || coverMax, coverBoxH - starsBlock))
     : coverMax;
   const coverCorner = coverRadius(coverCorners, coverSize);
   // Left-over height once the cover and the stars have taken their share, split
   // between the two sides. Padding doesn't feed back into the measurement: the
   // slot's height comes from `flex: 1`, not from its contents.
-  const coverSlack = Math.max(0, coverBoxH - coverSize - (canRate ? starsH : 0));
-  const coverTopPad = Math.round(coverSlack * COVER_TOP_SHARE);
+  const coverSlack = Math.max(0, coverBoxH - coverSize - starsBlock);
+  // With the rating the spare height goes in three equal parts, so what the
+  // eye sees above the cover, under it and under the stars is the same. The
+  // first already has the top bar's padding and the slot's own margin in it,
+  // and the second the stars' floor. Without the rating, the old split.
+  const aboveCover = spacing.md + spacing.lg;
+  const evenGap = (coverSlack + aboveCover + STARS_GAP_MIN) / 3;
+  const coverTopPad = canRate
+    ? Math.round(Math.max(0, evenGap - aboveCover))
+    : Math.round(coverSlack * COVER_TOP_SHARE);
+  const starsGap = canRate ? Math.round(Math.max(STARS_GAP_MIN, evenGap)) : 0;
   const duration = durationSec || song.duration || 0;
   const repeatActive = repeat !== 'off';
   /**
@@ -987,6 +1011,102 @@ export default function PlayerScreen() {
     devices: !buttonOn('devices') && canDevices && !remoteDevice ? () => setOutputOpen(true) : undefined,
     speed: !buttonOn('speed') && canSpeed && speed === 1 ? () => openSpeedSheet.current() : undefined,
   });
+
+  /** One button of the bottom row, or nothing when it is hidden. */
+  const bottomButton = ({ key, enabled }: { key: string; enabled: boolean }) => {
+    switch (key) {
+      case 'devices':
+        // Connected to a remote device it's always shown: it's the
+        // only way to disconnect the cast. Never disabled any more:
+        // downloads cast from the phone, so offline there is
+        // something to send, and going offline mid-cast used to
+        // leave the way out barred.
+        return (enabled && canDevices) || remoteDevice ? (
+          <Pressable
+            key={key}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={t('Devices')}
+            onPress={() => setOutputOpen(true)}
+            style={styles.deviceRow}
+          >
+            <Icon
+              name="laptop-outline"
+              size={26}
+              color={remoteDevice ? colors.accent : ink}
+            />
+            {remoteDevice ? (
+              <Text style={[styles.deviceName, { color: colors.accent }]} numberOfLines={1}>
+                {remoteDevice}
+              </Text>
+            ) : null}
+          </Pressable>
+        ) : null;
+      case 'lyrics':
+        return enabled ? (
+          <Pressable
+            key={key}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={t('Lyrics')}
+            disabled={!canOpenLyrics}
+            onPress={() => pushOnce('/lyrics')}
+            style={[styles.bottomButton, !canOpenLyrics && styles.bottomButtonOff]}
+          >
+            <Icon name="mic-outline" size={26} color={ink} />
+          </Pressable>
+        ) : null;
+      case 'speed':
+        // Also while hidden, as long as the speed is not 1×: a mode
+        // that is on has to be seen to be turned off.
+        return enabled || speed !== 1 ? (
+          <Pressable
+            key={key}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={t('Playback speed')}
+            disabled={!canSpeed}
+            onPress={() => openSpeedSheet.current()}
+            style={[styles.bottomButton, !canSpeed && styles.bottomButtonOff]}
+          >
+            <Icon
+              name="speedometer-outline"
+              size={26}
+              color={speed === 1 ? ink : colors.accent}
+            />
+            {/* The number only once it says something, in the accent
+                like the device name beside its own icon. */}
+            {speed === 1 ? null : <Text style={styles.speedText}>{`${speed}×`}</Text>}
+          </Pressable>
+        ) : null;
+      case 'sleep':
+        return enabled ? (
+          <SleepButton
+            key={key}
+            color={ink}
+            onPress={() => openMenu(song, undefined, { ...menuOptions(), sleep: true })}
+          />
+        ) : null;
+      case 'queue':
+        return enabled ? (
+          <Pressable
+            key={key}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={t('View queue')}
+            onPress={() => pushOnce('/queue')}
+            style={styles.bottomButton}
+          >
+            <Icon name="layers-outline" size={26} color={ink} />
+          </Pressable>
+        ) : null;
+    }
+    return null;
+  };
+  // Devices on the left and the rest on the right (#259), when there is a
+  // devices button to put there: without one the row is grouped as before.
+  const devicesShown = buttonOn('devices') && canDevices ? true : !!remoteDevice;
+  const splitRow = buttonsLayout === 'split' && devicesShown;
 
   return (
     <GestureDetector gesture={dismissPan}>
@@ -1111,7 +1231,7 @@ export default function PlayerScreen() {
             // gap is quiet, the layout jumping on every skip is not. Only a radio
             // (no lyrics ever, `wantsLyricsCard` false) gets the room back.
             height:
-              (pageH || approxPageH) - (wantsLyricsCard || wantsArtistCard ? LYRICS_PEEK : 0),
+              (pageH || approxPageH) - (cardRoom ? LYRICS_PEEK : 0),
           }}
         >
         <View style={styles.topBar}>
@@ -1259,13 +1379,13 @@ export default function PlayerScreen() {
             // above it is still resolving is what put the stars on screen at
             // one height and then moved them.
             <Animated.View
-              style={[styles.belowCover, coverAppearStyle]}
+              style={[styles.belowCover, { marginTop: starsGap }, coverAppearStyle]}
               onLayout={(e) => setStarsH(e.nativeEvent.layout.height)}
             >
               <StarRating
                 id={song.id}
                 rating={song.userRating}
-                size={20}
+                size={24}
                 onRated={(r) => rateSong(song.id, r)}
               />
             </Animated.View>
@@ -1282,9 +1402,11 @@ export default function PlayerScreen() {
             landscape && styles.bottomColumn,
             // With no card peeking below, the row of buttons would sit on the
             // navigation bar; the room comes out of the spare height above.
+            // Over a card it sits close to it and a little further from the
+            // controls, which is what reads as one row belonging to the card's
+            // edge rather than to the controls (#259).
             {
-              paddingBottom:
-                insets.bottom + (wantsLyricsCard || wantsArtistCard ? spacing.md : spacing.xl),
+              paddingBottom: insets.bottom + (cardRoom ? 0 : spacing.xl),
             },
           ]}
         >
@@ -1524,101 +1646,22 @@ export default function PlayerScreen() {
           <View
             style={[
               styles.bottomRow,
-              spreadButtons && styles.bottomRowSpread,
+              (spreadButtons || splitRow) && styles.bottomRowSpread,
               // Set a little apart from the controls, in the room the padding
               // below gave up.
-              !(wantsLyricsCard || wantsArtistCard) && { marginTop: spacing.xl },
+              { marginTop: cardRoom ? spacing.lg : spacing.xl },
             ]}
           >
-            {playerButtons.map(({ key, enabled }) => {
-              switch (key) {
-                case 'devices':
-                  // Connected to a remote device it's always shown: it's the
-                  // only way to disconnect the cast. Never disabled any more:
-                  // downloads cast from the phone, so offline there is
-                  // something to send, and going offline mid-cast used to
-                  // leave the way out barred.
-                  return (enabled && canDevices) || remoteDevice ? (
-                    <Pressable
-                      key={key}
-                      hitSlop={10}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('Devices')}
-                      onPress={() => setOutputOpen(true)}
-                      style={styles.deviceRow}
-                    >
-                      <Icon
-                        name="laptop-outline"
-                        size={26}
-                        color={remoteDevice ? colors.accent : ink}
-                      />
-                      {remoteDevice ? (
-                        <Text style={[styles.deviceName, { color: colors.accent }]} numberOfLines={1}>
-                          {remoteDevice}
-                        </Text>
-                      ) : null}
-                    </Pressable>
-                  ) : null;
-                case 'lyrics':
-                  return enabled ? (
-                    <Pressable
-                      key={key}
-                      hitSlop={10}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('Lyrics')}
-                      disabled={!canOpenLyrics}
-                      onPress={() => pushOnce('/lyrics')}
-                      style={[styles.bottomButton, !canOpenLyrics && styles.bottomButtonOff]}
-                    >
-                      <Icon name="mic-outline" size={26} color={ink} />
-                    </Pressable>
-                  ) : null;
-                case 'speed':
-                  // Also while hidden, as long as the speed is not 1×: a mode
-                  // that is on has to be seen to be turned off.
-                  return enabled || speed !== 1 ? (
-                    <Pressable
-                      key={key}
-                      hitSlop={10}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('Playback speed')}
-                      disabled={!canSpeed}
-                      onPress={() => openSpeedSheet.current()}
-                      style={[styles.bottomButton, !canSpeed && styles.bottomButtonOff]}
-                    >
-                      <Icon
-                        name="speedometer-outline"
-                        size={26}
-                        color={speed === 1 ? ink : colors.accent}
-                      />
-                      {/* The number only once it says something, in the accent
-                          like the device name beside its own icon. */}
-                      {speed === 1 ? null : <Text style={styles.speedText}>{`${speed}×`}</Text>}
-                    </Pressable>
-                  ) : null;
-                case 'sleep':
-                  return enabled ? (
-                    <SleepButton
-                      key={key}
-                      color={ink}
-                      onPress={() => openMenu(song, undefined, { ...menuOptions(), sleep: true })}
-                    />
-                  ) : null;
-                case 'queue':
-                  return enabled ? (
-                    <Pressable
-                      key={key}
-                      hitSlop={10}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('View queue')}
-                      onPress={() => pushOnce('/queue')}
-                      style={styles.bottomButton}
-                    >
-                      <Icon name="layers-outline" size={26} color={ink} />
-                    </Pressable>
-                  ) : null;
-              }
-            })}
+            {splitRow ? (
+              <>
+                {bottomButton({ key: 'devices', enabled: true })}
+                <View style={styles.bottomRight}>
+                  {playerButtons.filter((b) => b.key !== 'devices').map(bottomButton)}
+                </View>
+              </>
+            ) : (
+              playerButtons.map(bottomButton)
+            )}
           </View>
         </View>
         </View>
@@ -1778,7 +1821,8 @@ const styles = themed((colors) => ({
     justifyContent: 'center',
   },
   // Stars centered below the cover (optional element).
-  belowCover: { alignItems: 'center', marginTop: spacing.md },
+  // Its top margin is the even share worked out with `coverTopPad`.
+  belowCover: { alignItems: 'center' },
   // Same footprint as the CircleButton it replaces when swapped, so the
   // centered title doesn't shift.
   topFavorite: { width: 40, alignItems: 'center', justifyContent: 'center' },
@@ -1792,6 +1836,8 @@ const styles = themed((colors) => ({
     marginTop: spacing.xs,
   },
   bottomRowSpread: { justifyContent: 'space-between', gap: 0 },
+  /** The right-hand group of the split row: devices alone on the left. */
+  bottomRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.xl },
   // Like Spotify Connect: icon + device name in accent when casting.
   // The same box as the other buttons in the row; only the device name, while
   // casting, makes it wider, and it is capped so the row stays centred.

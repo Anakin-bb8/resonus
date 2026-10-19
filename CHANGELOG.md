@@ -15,6 +15,13 @@ Releases before 0.2.1 are only listed on the
 - Appearance > Border radius: the round corners as before, or flatter ones (#262).
 - French, thanks to @Willyflam (#257).
 - Rate an album from its ⋯ menu, as songs and artists already could (#261).
+- Player > Bottom row > Arrangement > Devices on the left: the devices button, with the name of what it casts to, on the left and the rest of the row together on the right (#259).
+
+### Changed
+
+- The player's rating sits halfway between the cover and the title, with the same room above the cover, and the stars are a little bigger (#259).
+- With the lyrics or artist card on, the player's bottom row sits a little lower, closer to the card, and stays put for a song with no artist (#259).
+- With pure black on, the player's plain background is black (#259).
 
 ### Fixed
 

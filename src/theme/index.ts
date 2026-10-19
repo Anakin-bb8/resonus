@@ -429,6 +429,9 @@ const BLACK: BasePalette = {
   snackbar: '#222222',
   veil: 'rgba(0,0,0,0.6)',
   control: '#222222',
+  // Pure black is chosen for the screen to be off where nothing is drawn, and
+  // the player's plain backdrop is the biggest such surface in the app (#259).
+  playerPlain: '#000000',
 };
 
 /**
