@@ -14,6 +14,8 @@ Releases before 0.2.1 are only listed on the
 - Android: in jukebox mode the volume buttons change the jukebox volume, and the notification and lock screen controls show what it plays (#270).
 - Android: casting to a DLNA/UPnP renderer moves on to the next track with the screen off, instead of stopping at the end of a track when loading the next one fails (#271).
 - Android: connecting to Android Auto brings playback from a DLNA/UPnP renderer or the jukebox back to the phone, still playing (#272).
+- Android: coming back to the app after a long while in the background shows the song playing at once, instead of freezing on an earlier one and walking through every song played since.
+- Android Auto: a very long queue, such as a big favourites list played shuffled, no longer closes the app; the car's queue shows the songs around the one playing.
 
 ## [0.8.2] - 2026-10-10
 
