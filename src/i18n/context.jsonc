@@ -86,6 +86,8 @@
 
     // ── Player, output & queue ───────────────────────────────────────────────
     "Devices": "The audio output devices to cast to",
+    "Headphones": "Fallback label for wired headphones the phone is playing through, beside the devices button, when the system gives no name",
+    "Car": "Fallback label for the car stereo the phone is playing through, beside the devices button, when the system gives no name",
     "Currently playing on": "Heading above the output the music is coming out of right now, at the top of the output sheet",
     "Colored mini player": "Tint the mini player with the colour of the cover art",
     "Cover color": "The colour taken from the cover art",

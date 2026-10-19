@@ -19,6 +19,7 @@ Releases before 0.2.1 are only listed on the
 - Lyrics: three dots hop through the instrumental gaps, verses get a little air between them, and the karaoke sweep moves more calmly, with the line changing exactly when it starts (#265).
 - Android 12 and up: Appearance > Theme > Use the system colors takes the accent from the wallpaper (Material You), for the stars, the heart and everything else in the accent (#259).
 - Player > Bottom row > Arrangement > Devices on the left: the devices button, with the name of what it casts to, on the left and the rest of the row together on the right (#259).
+- The player's devices button shows where the phone itself is playing: headphones, a Bluetooth speaker or the car get their own icon and their name beside it, the way a cast target does. No new permission is asked for (#264).
 
 ### Changed
 

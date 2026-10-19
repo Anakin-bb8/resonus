@@ -1,0 +1,7 @@
+{
+  "name": "audio-route",
+  "version": "0.0.1",
+  "description": "Where the phone's sound is going, for Resonus (local Expo module)",
+  "main": "index.ts",
+  "private": true
+}

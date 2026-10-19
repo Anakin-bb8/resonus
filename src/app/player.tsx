@@ -49,6 +49,7 @@ import { SpeedSheet } from '@/components/SpeedSheet';
 import { StarRating } from '@/components/StarRating';
 import { useAnimatedCover } from '@/hooks/useAnimatedCover';
 import { useAnimatedArtwork } from '@/hooks/useAnimatedArtwork';
+import { useAudioRoute } from '@/hooks/useAudioRoute';
 import { toneOf, useDominantColor } from '@/hooks/useDominantColor';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { useLocalProfile } from '@/hooks/useLocalProfile';
@@ -57,6 +58,7 @@ import { useScreenSize } from '@/hooks/useScreenSize';
 import { useT } from '@/i18n';
 import { revealOffset } from '@/lib/playerReveal';
 import { artistTargets } from '@/lib/artistNav';
+import { routeLook } from '@/lib/audioRouteTypes';
 import { formatGroupedDeviceLabel } from '@/lib/format';
 import { applyStarChange, resyncFavorites } from '@/lib/favoritesCache';
 import { haptic } from '@/lib/haptics';
@@ -334,6 +336,13 @@ export default function PlayerScreen() {
   }, [upnpConnectedDevice, upnpDevices]);
   const jukeboxActive = useJukebox((s) => s.active);
   const remoteDevice = upnpDevice ?? (jukeboxActive ? t('Server speakers (Jukebox)') : null);
+  // Not casting, the phone's own output when it is worth naming (headphones,
+  // the car): its icon on the devices button and its name beside it, the
+  // way a cast target shows. The speaker keeps the plain button.
+  const audioRoute = useAudioRoute();
+  const routeShown = remoteDevice || !audioRoute ? null : routeLook(audioRoute.kind);
+  const localDevice = routeShown ? audioRoute?.name || t(routeShown.fallback) : null;
+  const deviceLabel = remoteDevice ?? localDevice;
   const [outputOpen, setOutputOpen] = useState(false);
   // The speed sheet holds its own visibility (see `SheetModal`): opening it
   // repaints the modal and not this screen, which is the whole reason the
@@ -1038,13 +1047,13 @@ export default function PlayerScreen() {
             style={styles.deviceRow}
           >
             <Icon
-              name="laptop-outline"
+              name={routeShown?.icon ?? 'laptop-outline'}
               size={26}
-              color={remoteDevice ? colors.accent : ink}
+              color={deviceLabel ? colors.accent : ink}
             />
-            {remoteDevice ? (
+            {deviceLabel ? (
               <Text style={[styles.deviceName, { color: colors.accent }]} numberOfLines={1}>
-                {remoteDevice}
+                {deviceLabel}
               </Text>
             ) : null}
           </Pressable>
