@@ -67,9 +67,21 @@ jobs:
       - name: Rename APK
         run: cp android/app/build/outputs/apk/release/app-release.apk "resonus-${{ github.ref_name }}.apk"
 
+      # The notes are this version's section of the changelog, with the
+      # Discord server under it instead of GitHub's compare link.
+      - name: Release notes
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v v="$version" '
+            index($0, "## [" v "]") == 1 { f = 1; next }
+            /^## \[/ { f = 0 }
+            f
+          ' CHANGELOG.md | sed '/./,$!d' > release-notes.md
+          printf '\n**Discord**: https://discord.gg/pecE8MTPVr\n' >> release-notes.md
+
       - name: Publish draft Release
         uses: softprops/action-gh-release@v2
         with:
           files: resonus-${{ github.ref_name }}.apk
           draft: true
-          generate_release_notes: true
+          body_path: release-notes.md
