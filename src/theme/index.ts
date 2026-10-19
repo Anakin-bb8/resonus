@@ -133,9 +133,11 @@ export interface Palette {
    */
   coverWash: string;
   /**
-   * Flat backdrop of the player with no cover colour ("None"). Not
-   * `background`: it is deliberately a step away from the page, so the screen
-   * that covers the app looks like a different room.
+   * Flat backdrop of the player with no cover colour ("Plain"). Under the dark
+   * appearances it is the page's own background, set in `rebuild` so it follows
+   * the shade picked and pure black (#259): it used to be a fixed grey a step
+   * away from the page, which stayed bluish over every other shade. The light
+   * appearance keeps its own.
    */
   playerPlain: string;
   /** The unfilled part of the player's and the lyrics screen's slider, which
@@ -183,6 +185,7 @@ const DARK: BasePalette = {
   veil: 'rgba(20,22,25,0.6)',
   highlight: 'rgba(255,255,255,0.14)',
   coverWash: 'rgba(0,0,0,0.42)',
+  // Replaced by the background of the shade in force (see `rebuild`).
   playerPlain: '#3a4042',
   mediaTrack: 'rgba(255,255,255,0.35)',
   control: '#2B2D34',
@@ -429,9 +432,6 @@ const BLACK: BasePalette = {
   snackbar: '#222222',
   veil: 'rgba(0,0,0,0.6)',
   control: '#222222',
-  // Pure black is chosen for the screen to be off where nothing is drawn, and
-  // the player's plain backdrop is the biggest such surface in the app (#259).
-  playerPlain: '#000000',
 };
 
 /**
@@ -607,6 +607,8 @@ function rebuild(): void {
   // the darkened one.
   const accent = readableOn(picked, light ? LIGHT.background : base.background);
   Object.assign(colors, base, {
+    // See `playerPlain`: the page itself under the dark appearances.
+    playerPlain: light ? base.playerPlain : base.background,
     accent,
     accentPressed: darken(accent),
     accentVivid: picked,

@@ -22,7 +22,7 @@ Releases before 0.2.1 are only listed on the
 
 - The player's rating sits halfway between the cover and the title, with the same room above the cover, and the stars are a little bigger (#259).
 - With the lyrics or artist card on, the player's bottom row sits a little lower, closer to the card, and stays put for a song with no artist (#259).
-- With pure black on, the player's plain background is black (#259).
+- The player's plain background is the app's own background colour, so it follows the background shade and pure black instead of staying a bluish grey (#259).
 
 ### Fixed
 
