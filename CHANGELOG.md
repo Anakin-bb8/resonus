@@ -9,6 +9,12 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Fixed
+
+- Android: in jukebox mode the volume buttons change the jukebox volume, and the notification and lock screen controls show what it plays (#270).
+- Android: casting to a DLNA/UPnP renderer moves on to the next track with the screen off, instead of stopping at the end of a track when loading the next one fails (#271).
+- Android: connecting to Android Auto brings playback from a DLNA/UPnP renderer or the jukebox back to the phone, still playing (#272).
+
 ## [0.8.2] - 2026-10-10
 
 ### Added
