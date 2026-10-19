@@ -32,6 +32,7 @@ import {
 } from '@/api/data';
 import { AlbumRow } from '@/components/AlbumRow';
 import { ArtistRow } from '@/components/ArtistRow';
+import { PodcastRow } from '@/components/PodcastRow';
 import { Cover } from '@/components/Cover';
 import { useHistoryTimes } from '@/hooks/useHistoryTimes';
 import { Dialog } from '@/components/Dialog';
@@ -486,7 +487,7 @@ function PodcastsTab({ query }: { query: string }) {
     episodeCount?: number;
     error?: string;
     /** The objects the long-press menu and an episode's tap need. */
-    channel?: PodcastChannel;
+    channel: PodcastChannel;
     episode?: PodcastEpisode;
   };
   const rows = useMemo(() => {
@@ -594,59 +595,12 @@ function PodcastsTab({ query }: { query: string }) {
           )
         ) : (
           item.kind === 'episode' ? (
-            <Pressable
-              style={styles.row}
-              onPress={() => {
-                haptic('light');
-                playEpisode(item);
-              }}
-              onLongPress={() => {
-                haptic('light');
-                openEpisodeMenu(item);
-              }}
-            >
-              <Cover
-                uri={coverArtUrl(item.coverArt, COVER.thumb)}
-                size={56}
-                placeholderIcon="headset-outline"
-              />
-              <View style={styles.rowInfo}>
-                <Text style={styles.rowTitle} numberOfLines={1}>
-                  {item.title}
-                </Text>
-                <View style={styles.rowSubLine}>
-                  <Text style={styles.rowSub} numberOfLines={1}>
-                    {item.by}
-                  </Text>
-                </View>
-              </View>
-            </Pressable>
+            <PodcastRow channel={item.channel} episode={item.episode} sub={item.by} />
           ) : (
-            <Link href={item.href} asChild>
-              <Pressable
-                style={styles.row}
-                onLongPress={() => {
-                  haptic('light');
-                  openShowMenu(item);
-                }}
-              >
-                <Cover
-                  uri={coverArtUrl(item.coverArt, COVER.thumb)}
-                  size={56}
-                  placeholderIcon="headset-outline"
-                />
-                <View style={styles.rowInfo}>
-                  <Text style={styles.rowTitle} numberOfLines={1}>
-                    {item.title}
-                  </Text>
-                  <View style={styles.rowSubLine}>
-                    <Text style={styles.rowSub} numberOfLines={1}>
-                      {item.error ? t("Couldn't read this feed") : episodesLabel(item.episodeCount ?? 0, lang)}
-                    </Text>
-                  </View>
-                </View>
-              </Pressable>
-            </Link>
+            <PodcastRow
+              channel={item.channel}
+              sub={item.error ? t("Couldn't read this feed") : episodesLabel(item.episodeCount ?? 0, lang)}
+            />
           )
         )
       }
@@ -998,32 +952,18 @@ function AllTab({ query, onNew }: { query: string; onNew?: () => void }) {
           />
         ) : (
           item.kind === 'episode' ? (
-            <Pressable
-              style={styles.row}
-              onPress={() => {
-                haptic('light');
-                playEpisode(item);
-              }}
-              onLongPress={() => onLongPress(item)}
-            >
-              <Cover
-                uri={coverArtUrl(item.coverArt ?? item.id, COVER.thumb)}
-                size={56}
-              />
-              <View style={styles.rowInfo}>
-                <Text style={styles.rowTitle} numberOfLines={1}>
-                  {item.name}
-                </Text>
-                <View style={styles.rowSubLine}>
-                  {pins[`${item.kind}:${item.id}`] ? (
-                    <Icon name="pin" size={13} color={colors.accent} />
-                  ) : null}
-                  <Text style={styles.rowSub} numberOfLines={1}>
-                    {label(item)}
-                  </Text>
-                </View>
-              </View>
-            </Pressable>
+            <PodcastRow
+              channel={item.channel}
+              episode={item.episode}
+              pinned={!!pins[`${item.kind}:${item.id}`]}
+              sub={label(item)}
+            />
+          ) : item.kind === 'podcast' ? (
+            <PodcastRow
+              channel={item.channel}
+              pinned={!!pins[`${item.kind}:${item.id}`]}
+              sub={label(item)}
+            />
           ) : (
             <Link href={item.href} asChild>
               <Pressable style={styles.row} onLongPress={() => onLongPress(item)}>
