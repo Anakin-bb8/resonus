@@ -11,10 +11,10 @@ import {
   fetchAnimatedArtwork,
   type AnimatedArtworkUrls,
 } from '@/lib/animatedArtwork';
-import { useSettings } from '@/store/settings';
+import { activeArtworkEndpoint, useSettings } from '@/store/settings';
 
 export function useAnimatedArtwork(song: Song | null | undefined): AnimatedArtworkUrls | null {
-  const endpoint = useSettings((s) => s.animatedArtworkEndpoint);
+  const endpoint = useSettings(activeArtworkEndpoint);
   const customs = useSettings((s) => s.animatedArtworkUrls);
   const [urls, setUrls] = useState<AnimatedArtworkUrls | null>(null);
   const customUrl = song ? customs[animatedArtworkKey(song.artist ?? '', song.album ?? '')] : undefined;

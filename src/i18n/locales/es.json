@@ -815,5 +815,7 @@
   "As the background": "Como fondo",
   "Where the square and tall clips come from. Empty, every cover stays still.": "De dónde salen los clips cuadrados y verticales. Vacío, todas las carátulas quedan fijas.",
   "Clips in the app too": "Clips también en la app",
-  "Off, the clip only plays on the lock screen.": "Desactivado, el clip solo se ve en la pantalla de bloqueo."
+  "Off, the clip only plays on the lock screen.": "Desactivado, el clip solo se ve en la pantalla de bloqueo.",
+  "Show animated covers": "Mostrar carátulas animadas",
+  "Off, every cover stays still, GIF and WebP ones too.": "Desactivado, todas las carátulas quedan fijas, también las GIF y WebP."
 }

@@ -81,6 +81,8 @@ export default function PlayerSettings() {
   const animatedArtworkFps = useSettings((s) => s.animatedArtworkFps);
   const setAnimatedArtworkFps = useSettings((s) => s.setAnimatedArtworkFps);
   const animatedArtworkEndpoint = useSettings((s) => s.animatedArtworkEndpoint);
+  const animatedCovers = useSettings((s) => s.animatedCovers);
+  const setAnimatedCovers = useSettings((s) => s.setAnimatedCovers);
   const setAnimatedArtworkEndpoint = useSettings((s) => s.setAnimatedArtworkEndpoint);
   const miniPlayerColorBackground = useSettings((s) => s.miniPlayerColorBackground);
   const blurMiniPlayer = useSettings((s) => s.blurMiniPlayer);
@@ -205,6 +207,20 @@ export default function PlayerSettings() {
             a clip at all comes before where it is shown (#263). */}
         <Text style={settingsStyles.sectionTitle}>{t('Animated covers')}</Text>
         <SettingsGroup>
+          {/* The one switch for all of it. Off, the rest is hidden and kept: the
+              server's address is not something to type again. */}
+          <SwitchList
+            options={[
+              {
+                label: t('Show animated covers'),
+                description: t('Off, every cover stays still, GIF and WebP ones too.'),
+                value: animatedCovers,
+                onChange: setAnimatedCovers,
+              },
+            ]}
+          />
+          {animatedCovers ? (
+          <>
           <TextRow
             label={t('Animated artwork endpoint')}
             description={t('Where the square and tall clips come from. Empty, every cover stays still.')}
@@ -254,6 +270,8 @@ export default function PlayerSettings() {
                 onChange={setAnimatedArtworkFps}
               />
             </>
+          ) : null}
+          </>
           ) : null}
         </SettingsGroup>
 

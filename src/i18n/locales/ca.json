@@ -815,5 +815,7 @@
   "As the background": "Com a fons",
   "Where the square and tall clips come from. Empty, every cover stays still.": "D'on surten els clips quadrats i verticals. Buit, totes les caràtules queden fixes.",
   "Clips in the app too": "Clips també a l'app",
-  "Off, the clip only plays on the lock screen.": "Desactivat, el clip només es veu a la pantalla de bloqueig."
+  "Off, the clip only plays on the lock screen.": "Desactivat, el clip només es veu a la pantalla de bloqueig.",
+  "Show animated covers": "Mostrar caràtules animades",
+  "Off, every cover stays still, GIF and WebP ones too.": "Desactivat, totes les caràtules queden fixes, també les GIF i WebP."
 }

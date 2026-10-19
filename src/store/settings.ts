@@ -1074,6 +1074,12 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
    */
   animatedArtworkEndpoint: string;
   /**
+   * Covers that move at all: the endpoint's clips, in the app and on the lock
+   * screen, and GIF or WebP covers anywhere in the app. Off, every cover is
+   * its first frame, and the endpoint is kept but not asked.
+   */
+  animatedCovers: boolean;
+  /**
    * Play endpoint clips as in-app video (cover square and background).
    * Kills the video players without touching the lock-screen tall clips:
    * the escape hatch if a cover ever misbehaves.
@@ -1378,6 +1384,8 @@ const DEFAULTS = {
   animatedArtworkEndpoint: '',
   // On: endpoint clips play over the still covers.
   animatedCoverVideo: true,
+  // On: what the app always did with an animated cover.
+  animatedCovers: true,
   // Empty: search decides everything.
   animatedArtworkUrls: {},
   fitCoverArt: false,
@@ -2220,4 +2228,9 @@ export function exportedSettings(): Record<string, unknown> {
   delete out.customFontFamily;
   delete out.customFontUri;
   return out;
+}
+
+/** The animated-artwork server in force: none while animated covers are off. */
+export function activeArtworkEndpoint(s: { animatedCovers: boolean; animatedArtworkEndpoint: string }): string {
+  return s.animatedCovers ? s.animatedArtworkEndpoint : '';
 }

@@ -399,8 +399,13 @@ export default function PlayerScreen() {
   // (`CACHED_COVER`, offline) is not a URL and would leave the background
   // empty, so it keeps the ordinary layout, where `Cover` knows how to read it.
   const { isAnimated: isAnimatedDetected, onCoverLoad } = useAnimatedCover(cover);
+  const animatedCovers = useSettings((s) => s.animatedCovers);
   const isAnimatedCover =
-    animatedCoverBg && isAnimatedDetected && !!cover && !cover.startsWith(CACHED_COVER);
+    animatedCovers &&
+    animatedCoverBg &&
+    isAnimatedDetected &&
+    !!cover &&
+    !cover.startsWith(CACHED_COVER);
   // HLS cover clips from the animated-artwork endpoint win over sniffed
   // GIF/WebP: they were asked for, so they are the animated cover when the
   // background option is on — fullscreen video with a still copy by the

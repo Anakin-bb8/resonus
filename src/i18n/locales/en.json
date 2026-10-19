@@ -813,5 +813,7 @@
   "Animated covers": "Animated covers",
   "GIF and WebP covers from your server too.": "GIF and WebP covers from your server too.",
   "In the cover": "In the cover",
-  "As the background": "As the background"
+  "As the background": "As the background",
+  "Show animated covers": "Show animated covers",
+  "Off, every cover stays still, GIF and WebP ones too.": "Off, every cover stays still, GIF and WebP ones too."
 }

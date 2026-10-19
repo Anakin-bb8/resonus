@@ -104,7 +104,7 @@ import { offLocalNetwork, useNetworkType } from './networkType';
 import { useOfflineQueue } from './offlineQueue';
 import { usePlayCounts } from './playCounts';
 import { usePlayHistory } from './playHistory';
-import { scrobbleThresholdSec, useSettings, type TranscodeFormat } from './settings';
+import { activeArtworkEndpoint, scrobbleThresholdSec, useSettings, type TranscodeFormat } from './settings';
 import { cachedUri, useSongCache } from './songCache';
 import { useToast } from './toast';
 import {
@@ -705,7 +705,7 @@ function publishAnimatedClip(song: Song) {
   // Nothing to key a clearing by — and a stale key never matches a new
   // cover anyway, so nothing leaks across tracks.
   if (!artworkUrl) return;
-  const endpoint = useSettings.getState().animatedArtworkEndpoint;
+  const endpoint = activeArtworkEndpoint(useSettings.getState());
   const customs = useSettings.getState().animatedArtworkUrls;
   const customUrl = customs[animatedArtworkKey(song.artist ?? '', song.album ?? '')];
   const artist = song.artist;
@@ -1950,7 +1950,7 @@ function scheduleNextSource(force = false) {
   // Same window for the endpoint clips: the lock screen's tall one is already
   // streaming while the track it belongs to is still the next one.
   {
-    const endpoint = useSettings.getState().animatedArtworkEndpoint;
+    const endpoint = activeArtworkEndpoint(useSettings.getState());
     if (endpoint) {
       const customs = useSettings.getState().animatedArtworkUrls;
       for (let k = 0; k <= ARTWORK_LOOKAHEAD; k += 1) {

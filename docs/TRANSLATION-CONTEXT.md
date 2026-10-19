@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 815 of them.
+Every string the app can show, under the screen it shows up on. 817 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -1037,6 +1037,7 @@ you are actually typing into, which is easier than reading it here.
 | `None` | One of the values of “Buttons next to play” |
 | `Normal` | One of the values of “Lyrics size” |
 | `Nothing` | A value of `On cover tap`: tapping the cover does nothing |
+| `Off, every cover stays still, GIF and WebP ones too.` | The line under “Show animated covers”, explaining it |
 | `Off, the clip only plays on the lock screen.` | Under `Clips in the app too`: what turning it off leaves |
 | `On cover double tap` | Settings > Player: what tapping the album artwork twice does |
 | `On cover tap` | What tapping the cover art in the player does. One tap and two share the same values, listed below |
@@ -1055,6 +1056,7 @@ you are actually typing into, which is easier than reading it here.
 | `Scroll long titles` | A title too long to fit slides sideways, over and over, instead of being cut off |
 | `Semi-bold font weight` | One of the values of “Lyrics weight” |
 | `Show album & year` |  |
+| `Show animated covers` | The switch for all of them: off, no cover moves anywhere in the app |
 | `Show artist card` |  |
 | `Show lyrics card` |  |
 | `Show lyrics on the cover` | A value of `On cover tap`: the lyrics take the cover's place, without leaving the player |

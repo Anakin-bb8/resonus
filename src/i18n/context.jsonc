@@ -598,6 +598,7 @@
     "No": "A setting value meaning none or zero, not the answer to a question: no crossfade, no seek buttons",
     "Fit cover art": "Show the whole cover even if it is not square, instead of cropping it to fill",
     "Animated covers": "Section header of the player settings: covers that move, video clips from a server or animated GIF and WebP files",
+    "Show animated covers": "The switch for all of them: off, no cover moves anywhere in the app",
     "In the cover": "A value of `Animated artwork`: the animated cover plays inside the square where the cover is",
     "As the background": "A value of `Animated artwork`: the animated cover fills the whole player screen behind everything, instead of the square",
     "GIF and WebP covers from your server too.": "Under `Animated artwork`: the choice also applies to animated image covers the music server already has, not only to the video clips",
