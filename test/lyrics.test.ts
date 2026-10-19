@@ -359,3 +359,17 @@ describe('Server structured lyrics', () => {
     assert.equal(lyrics!.lines[0].backing?.[0].end, 2500);
   });
 });
+
+describe('parseLrc blank lines in plain text', () => {
+  it('keeps one gap per stanza break, none at either end', () => {
+    const lyrics = parseLrc('\n\nFirst\n\n\n\nSecond\nThird\n\n')!;
+    assert.deepEqual(
+      lyrics.lines.map((l) => l.value),
+      ['First', '', 'Second', 'Third'],
+    );
+  });
+
+  it('is no lyrics when there are only blank lines', () => {
+    assert.equal(parseLrc('\n\n  \n'), null);
+  });
+});

@@ -16,6 +16,7 @@ Releases before 0.2.1 are only listed on the
 - French, thanks to @Willyflam (#257).
 - Rate an album from its ⋯ menu, as songs and artists already could (#261).
 - The library's search forgives typos and takes the words in any order (#268).
+- Lyrics: three dots hop through the instrumental gaps, verses get a little air between them, and the karaoke sweep moves more calmly, with the line changing exactly when it starts (#265).
 - Android 12 and up: Appearance > Theme > Use the system colors takes the accent from the wallpaper (Material You), for the stars, the heart and everything else in the accent (#259).
 - Player > Bottom row > Arrangement > Devices on the left: the devices button, with the name of what it casts to, on the left and the rest of the row together on the right (#259).
 

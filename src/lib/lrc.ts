@@ -65,7 +65,9 @@ export function parseLrc(text: string): SongLyrics | null {
     const line = raw.trim();
     if (!line) {
       stanza = true;
-      plain.push({ value: '' });
+      // One gap however many blank lines made it, and none before the first
+      // line of text.
+      if (plain.length > 0 && plain[plain.length - 1].value) plain.push({ value: '' });
       continue;
     }
     if (META_RE.test(line)) continue;
@@ -108,8 +110,9 @@ export function parseLrc(text: string): SongLyrics | null {
     timed.sort((a, b) => a.start! - b.start!);
     return { synced: true, lines: timed.map((l) => shift(l, offset)) };
   }
-  // A file of nothing but blank lines is no lyrics at all.
-  if (plain.some((l) => l.value)) return { synced: false, lines: plain };
+  // Nor one after the last.
+  while (plain.length > 0 && !plain[plain.length - 1].value) plain.pop();
+  if (plain.length > 0) return { synced: false, lines: plain };
   return null;
 }
 
