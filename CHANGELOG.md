@@ -9,6 +9,12 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Added
+
+- Animated album covers from an animated-artwork server you set in Settings > Player, in the player and, on iOS, on the lock screen; an album's ⋯ menu can pin it to an Apple Music album (#263).
+- Appearance > Border radius: the round corners as before, or flatter ones (#262).
+- French, thanks to @Willyflam (#257).
+
 ### Fixed
 
 - Android: in jukebox mode the volume buttons change the jukebox volume, and the notification and lock screen controls show what it plays (#270).
