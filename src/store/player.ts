@@ -850,21 +850,20 @@ function remoteSeek(sec: number) {
 
 function remoteSetVolume(volume: number) {
   if (isJukeboxActive()) jukeboxSetVolume(volume);
-  else {
-    upnpSetVolume(volume);
-    // Reflect the exact value back in the system volume overlay (UPnP casts
-    // through the CastMedia session; Jukebox plays on the server, no overlay).
-    castSetVolumeLevel(volume);
-  }
+  else upnpSetVolume(volume);
+  // Reflect the exact value back in the system volume overlay, which both
+  // outputs show through the CastMedia session.
+  castSetVolumeLevel(volume);
 }
 
 /**
  * Syncs the casting media session (lock screen notification + volume buttons)
- * with the current track/state. Only for UPnP: Jukebox plays on the server
- * itself and doesn't need a local session on the phone.
+ * with the current track/state. For the jukebox too: nothing plays on the
+ * phone there either, so without this session the volume buttons moved the
+ * phone's own volume and never reached the server (#270).
  */
 function syncCastMedia(): void {
-  if (!isUpnpConnected()) return;
+  if (!remoteKind()) return;
   const st = usePlayerStore.getState();
   const song = currentSong(st);
   if (!song) return;
@@ -3536,7 +3535,7 @@ export function initRemoteIntegration() {
       const st = usePlayerStore.getState();
       maybeScrobbleThreshold(positionSec);
       // Updates the casting notification/lock screen scrubber.
-      if (isUpnpConnected()) castSetState(st.isPlaying, positionSec * 1000);
+      if (remoteKind()) castSetState(st.isPlaying, positionSec * 1000);
     },
     onPlayingChanged: (isPlaying, isBuffering) => {
       usePlayerStore.setState({ isPlaying, isBuffering });
@@ -3546,7 +3545,7 @@ export function initRemoteIntegration() {
         scheduleSync();
       }
       // Reflects play/pause in the casting media session.
-      if (isUpnpConnected()) castSetState(isPlaying, usePlayerStore.getState().positionSec * 1000);
+      if (remoteKind()) castSetState(isPlaying, usePlayerStore.getState().positionSec * 1000);
     },
     onRepeatChanged: (repeat) => {
       const current = usePlayerStore.getState().repeat;
@@ -3606,7 +3605,7 @@ export function initRemoteIntegration() {
   // Controls pressed in the notification/lock screen or volume buttons during
   // casting: the store actions are already routed to the renderer (remoteKind()).
   initCastMedia((action, value) => {
-    if (!isUpnpConnected()) return;
+    if (!remoteKind()) return;
     const st = usePlayerStore.getState();
     switch (action) {
       case 'play':

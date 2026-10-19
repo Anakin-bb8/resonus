@@ -31,6 +31,7 @@ import {
   type SubsonicAuth,
 } from '@/api/subsonic';
 import { useAuthStore } from './auth';
+import { castStop } from './castMedia';
 import type { RemoteEvents } from './upnp';
 
 interface JukeboxStoreState {
@@ -153,6 +154,9 @@ export async function jukeboxDisconnect(silent = false): Promise<void> {
     pollTimer = null;
   }
   useJukebox.setState({ active: false });
+  // The media session the volume buttons and the notification go through,
+  // on every way out (see `syncCastMedia` in the player).
+  castStop();
   const a = auth();
   try {
     if (a) await jukeboxStop(a);
