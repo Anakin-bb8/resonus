@@ -169,7 +169,7 @@ function TrackRowBase({
    * what the player will refuse.
    */
   const unavailable = offline
-    ? !song.url && !song.localUri && !downloaded
+    ? !song.localUri && !downloaded && !(song.url && !song.podcastChannelId)
     : !!song.unavailable;
   const explicit = useExplicitBadge(song.explicitStatus);
 

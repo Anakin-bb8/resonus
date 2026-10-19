@@ -12,16 +12,19 @@
  * is optional because it belongs to the Library, as it does in `AlbumRow`.
  */
 import { Link } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import Icon from '@/components/Icon';
 import { COVER, coverArtUrl } from '@/api/data';
 import { episodeToSong, type PodcastChannel, type PodcastEpisode } from '@/api/podcasts';
+import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { bump } from '@/lib/perfLog';
+import { useEpisodeUnavailable } from '@/hooks/useEpisodeUnavailable';
 import { usePlayerStore } from '@/store/player';
 import { useSongMenu } from '@/store/songMenu';
 import { usePodcastMenu } from '@/store/podcastMenu';
+import { useToast } from '@/store/toast';
 import { fontSize, spacing, themed, useTheme } from '@/theme';
 import { Cover } from './Cover';
 
@@ -44,27 +47,40 @@ export function PodcastRow({ channel, episode, sub, pinned }: Props) {
   const playQueue = usePlayerStore((s) => s.playQueue);
   const openSongMenu = useSongMenu((s) => s.open);
   const openShowMenu = usePodcastMenu((s) => s.open);
+  const t = useT();
+  const toast = useToast((s) => s.show);
+  // Offline and not on disk: dimmed, and a tap says so instead of pretending
+  // it can stream the publisher's address (as `TrackRow` does for songs).
+  const unavailable = useEpisodeUnavailable(episode?.id);
   if (!channel) return null;
   const href = `/podcast/${channel.id}`;
   // An episode row plays itself; a show row taps to its screen.
   const song = episode ? episodeToSong(episode, channel) : undefined;
 
+  // The style is flattened, not an array: on a show this row is a `Link`'s
+  // child, and a `Slot` refuses an array of styles (as `AlbumRow` found out).
   const row = (
     <Pressable
-      style={styles.row}
+      style={StyleSheet.flatten([styles.row, unavailable && styles.dimmed])}
       onPress={
-        song
-          ? () => {
-              haptic('light');
-              void playQueue([song], 0, channel.title, href);
-            }
-          : undefined
+        unavailable
+          ? () => toast(t('Not available offline'))
+          : song
+            ? () => {
+                haptic('light');
+                void playQueue([song], 0, channel.title, href);
+              }
+            : undefined
       }
-      onLongPress={() => {
-        haptic('light');
-        if (song) openSongMenu(song);
-        else openShowMenu(channel);
-      }}
+      onLongPress={
+        unavailable
+          ? undefined
+          : () => {
+              haptic('light');
+              if (song) openSongMenu(song);
+              else openShowMenu(channel);
+            }
+      }
     >
       <Cover
         uri={coverArtUrl(channel.imageUrl, COVER.thumb)}
@@ -99,4 +115,6 @@ const styles = themed((colors) => ({
   name: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
   subLine: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   sub: { color: colors.textSecondary, fontSize: fontSize.xs, flexShrink: 1 },
+  // Offline and not downloaded: same dim as `TrackRow`'s.
+  dimmed: { opacity: 0.4 },
 }));

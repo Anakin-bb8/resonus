@@ -50,6 +50,7 @@ import type { DlAlbum } from '@/lib/downloadsDb';
 import { netTally, timed } from '@/lib/perfLog';
 import { queryClient } from '@/lib/query';
 import { primaryUrl } from '@/lib/serverUrls';
+import { isManualOffline } from '@/api/netGate';
 import { profileScopeId, useAuthStore } from './auth';
 import { useLibraryMirror } from './libraryMirror';
 import { useSettings } from './settings';
@@ -1207,11 +1208,11 @@ export const useDownloads = create<DownloadsState>((set, get) => {
    * record of them lives in that profile's SQLite rather than a server catalog.
    */
   async function downloadPodcastGroup(groupKey: string, episodes: EpisodeSource[]): Promise<void> {
-    const { offline } = useAuthStore.getState();
-    // A download is a transfer, and offline mode makes none. It goes through
-    // expo-file-system rather than the API, so the gate under the API layer
-    // cannot see it: this is that same rule, said here.
-    if (offline) return;
+    // A podcast download never touches the server: the bytes come from the
+    // publisher. Automatic offline (server down) may still download; only a
+    // manual "use no network" says no. The rule lives here because the
+    // transfer goes through expo-file-system, under the API gate's nose.
+    if (isManualOffline()) return;
     if (get().active[groupKey]) return; // already in progress
     // No duplicates, nothing already on disk, nothing without an address.
     const seen = new Set<string>();

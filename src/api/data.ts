@@ -249,7 +249,10 @@ export function markUnplayableOffline(songs: Song[]): Song[] {
   const files = useDownloads.getState().files;
   return songs.map((s) => {
     const uri = s.localUri ?? files[s.id] ?? cachedUri(s.id);
-    if (s.url) return { ...s, unavailable: false };
+    // A podcast episode's `url` is the publisher's address, not a stream the
+    // phone may reach while offline mode says no to: only a downloaded file
+    // plays it. Radios keep their own rule (a station is what it is).
+    if (s.url && !s.podcastChannelId) return { ...s, unavailable: false };
     return uri ? { ...s, localUri: uri, unavailable: false } : { ...s, unavailable: true };
   });
 }

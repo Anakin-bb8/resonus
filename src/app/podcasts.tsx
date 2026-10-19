@@ -24,6 +24,7 @@ import {
   type PodcastChannel,
   type PodcastSearchResult,
 } from '@/api/podcasts';
+import { isManualOffline } from '@/api/netGate';
 import { COVER, coverArtUrl } from '@/api/data';
 import { BackChevron } from '@/components/BackChevron';
 import { BrowseFrame, useSearchBox, type BrowserProps } from '@/components/BrowseFrame';
@@ -122,6 +123,12 @@ export function PodcastsBrowser({ embedded, actionRef, searchOpen }: BrowserProp
   const cancelRefresh = useRef(false);
 
   async function refresh() {
+    // Manual offline says no to the whole internet, so there is nothing to
+    // re-read; say it instead of failing every feed and reporting a blackout.
+    if (isManualOffline()) {
+      toast(t("You're offline"));
+      return;
+    }
     cancelRefresh.current = false;
     setRefreshing(true);
     const { failed, total, stopped } =

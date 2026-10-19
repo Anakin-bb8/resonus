@@ -55,6 +55,7 @@ import { useAuthStore } from '@/store/auth';
 import { checkAutoUrlNow } from '@/store/autoUrl';
 import { useLastPlayed } from '@/store/lastPlayed';
 import { usePlayerStore } from '@/store/player';
+import { useDownloads } from '@/store/downloads';
 import { useRadios } from '@/store/radios';
 import { useScanProgress } from '@/store/scanProgress';
 import {
@@ -489,6 +490,11 @@ function PlaylistsSection({ title }: { title: string }) {
 /** The newest podcast episodes. Local, and nothing at all until a show is kept. */
 function PodcastEpisodesSection({ title }: { title: string }) {
   const card = useShelfCard();
+  // Hide mode, offline: cards of episodes that are not on disk are not drawn
+  // (the cards themselves dim by the same rule, inside `PodcastEpisodeCard`).
+  const offline = useAuthStore((s) => s.offline);
+  const files = useDownloads((s) => s.files);
+  const hideUnavailable = useSettings((s) => s.hideUnavailableOffline);
   const { data, isLoading } = useQuery({
     // Invalidated by the podcast screens.
     queryKey: ['podcastRecentEpisodes'],
@@ -503,7 +509,11 @@ function PodcastEpisodesSection({ title }: { title: string }) {
       </View>
     );
   }
-  if (!data || data.length === 0) return null;
+  const shown =
+    data && hideUnavailable && offline
+      ? data.filter((r: RecentEpisode) => files[r.episode.id])
+      : data;
+  if (!shown || shown.length === 0) return null;
 
   return (
     <View style={styles.section}>
@@ -511,7 +521,7 @@ function PodcastEpisodesSection({ title }: { title: string }) {
       <FlatList
         {...listPerf}
         horizontal
-        data={data}
+        data={shown}
         keyExtractor={(item: RecentEpisode) => item.episode.id}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.rowContent}

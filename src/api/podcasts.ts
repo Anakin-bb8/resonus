@@ -8,7 +8,7 @@
  */
 import { fetch } from 'expo/fetch';
 
-import { assertCanRequest, OfflineError } from './netGate';
+import { assertCanRequest, isManualOffline, OfflineError } from './netGate';
 import { profileScopeId } from '@/store/auth';
 
 import { hashKey } from '@/lib/localLibrary';
@@ -65,8 +65,11 @@ function scope(): string {
 }
 
 async function get(url: string, accept: string): Promise<string> {
-  // Offline mode says no before the socket, like every server request does.
-  assertCanRequest();
+  // Podcast hosts are nobody's server: the publisher's feed and the iTunes
+  // directory are as reachable when the app fell offline because the server
+  // stopped answering as when it did not. Only a manual "use no network" says
+  // no — the same split `netGate` draws for LRCLIB.
+  assertCanRequest(!isManualOffline());
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), TIMEOUT_MS);
   try {

@@ -20,7 +20,8 @@ import {
   refreshChannel,
   type PodcastChannel,
 } from '@/api/podcasts';
-import { COVER, coverArtUrl } from '@/api/data';
+import { COVER, coverArtUrl, markUnplayableOffline } from '@/api/data';
+import { isManualOffline } from '@/api/netGate';
 import { BackButton } from '@/components/BackButton';
 import { EmptyState } from '@/components/EmptyState';
 import { Message } from '@/components/Message';
@@ -34,7 +35,6 @@ import { invalidatePodcastCaches } from '@/lib/query';
 import { useSettings } from '@/store/settings';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { groupDownloadState, useDownloads } from '@/store/downloads';
-import { useAuthStore } from '@/store/auth';
 import { colors, useTheme } from '@/theme';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -53,9 +53,9 @@ export default function PodcastScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const t = useT();
   const lang = useSettings((s) => s.language);
+  const hideUnavailable = useSettings((s) => s.hideUnavailableOffline);
   const playQueue = usePlayerStore((s) => s.playQueue);
   const playingId = usePlayerStore((s) => currentSong(s)?.id);
-  const offline = useAuthStore((s) => s.offline);
 
   // SQLite first. A show never opened is read from the publisher and filed; a
   // show written more than three days ago is served from SQLite now and re-read
@@ -74,7 +74,9 @@ export default function PodcastScreen() {
         feedUrl = ch?.feedUrl;
       }
       if (!ch) return null;
-      if (!offline && feedUrl && Date.now() - (ch.refreshedAt ?? 0) > STALE_MS) {
+      // Automatic offline (the server not answering) leaves the publisher
+      // reachable; only a manual "use no network" stops this background re-read.
+      if (!isManualOffline() && feedUrl && Date.now() - (ch.refreshedAt ?? 0) > STALE_MS) {
         void refreshChannel(feedUrl)
           .then(() => invalidatePodcastCaches())
           .catch(() => {});
@@ -115,8 +117,12 @@ export default function PodcastScreen() {
   const ch = data.data.channel;
   const list = data.data.episodes;
 
-  // The episodes, bridged to songs so the album renderer can list and play them.
-  const songs = list.map((e) => episodeToSong(e, ch));
+  // The episodes, bridged to songs so the album renderer can list and play
+  // them, and marked like the offline song lists: offline, only a downloaded
+  // episode stays playable (dim rows, and `playQueue` drops the rest); hide
+  // mode drops the unplayable rows altogether, as `annotate` does for songs.
+  const marked = markUnplayableOffline(list.map((e) => episodeToSong(e, ch)));
+  const songs = hideUnavailable ? marked.filter((s) => !s.unavailable) : marked;
 
   // The play button hands the show over in feed order (newest first); the
   // shuffle button asks for the same list dealt (`shuffled`), which playQueue
@@ -152,10 +158,11 @@ export default function PodcastScreen() {
         podcastFavIds={favSet}
         // The download button sits in the album's action row, exactly as an
         // album wires it: tapping downloads every episode of the show, tapping
-        // again removes them, and while it runs a stop cancels it. Hidden when
-        // offline, since a download is a transfer and offline makes none.
+        // again removes them, and while it runs a stop cancels it. Hidden only
+        // when offline was asked for: automatic offline (server down) leaves
+        // the publishers reachable, and a podcast download never asks the server.
         download={
-          !offline
+          !isManualOffline()
             ? {
                 ...download,
                 onPress: () => {

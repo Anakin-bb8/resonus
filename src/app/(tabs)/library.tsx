@@ -52,6 +52,7 @@ import {
 import { usePlayerStore } from '@/store/player';
 import { useSongMenu } from '@/store/songMenu';
 import { usePodcastMenu } from '@/store/podcastMenu';
+import { useDownloads } from '@/store/downloads';
 import { useAuthStore } from '@/store/auth';
 import { useLastPlayed } from '@/store/lastPlayed';
 import { useMediaMenu } from '@/store/mediaMenu';
@@ -463,6 +464,13 @@ function PodcastsTab({ query }: { query: string }) {
   const bottomPad = useScreenBottomPadding();
   const { columns } = useGridMetrics();
   const listPad = useListPadding(spacing.lg);
+  // Offline, an episode only plays from disk; with the hide setting its rows
+  // are not even built (as `annotate` does for songs).
+  const offline = useAuthStore((s) => s.offline);
+  const files = useDownloads((s) => s.files);
+  const hideUnavailable = useSettings((s) => s.hideUnavailableOffline);
+  const toast = useToast((s) => s.show);
+  const unavailable = (id: string) => offline && !files[id];
   const channelsQ = useQuery({
     queryKey: ['podcastFavoriteChannels'],
     queryFn: () => listFavoriteChannels(),
@@ -522,13 +530,17 @@ function PodcastsTab({ query }: { query: string }) {
     const filtered = q
       ? all.filter((r) => r.title.toLowerCase().includes(q) || (r.by ?? '').toLowerCase().includes(q))
       : all;
+    // Hide mode, offline: an episode that is not on disk gets no row at all.
+    const kept = hideUnavailable && offline
+      ? filtered.filter((r) => r.kind === 'channel' || files[r.id])
+      : filtered;
     return sortItems(
-      filtered,
+      kept,
       sort,
       (r) => r.title,
       sort === 'recent' ? (r) => r.recent : (r) => r.added,
     );
-  }, [channelsQ.data, episodesQ.data, query, sort]);
+  }, [channelsQ.data, episodesQ.data, query, sort, offline, files, hideUnavailable]);
 
   if (channelsQ.isLoading || episodesQ.isLoading) return <Loader />;
   if (channelsQ.isError && episodesQ.isError) {
@@ -570,13 +582,21 @@ function PodcastsTab({ query }: { query: string }) {
             <GridCard
               href=""
               onPress={() => {
-                haptic('light');
-                playEpisode(item);
+                if (unavailable(item.id)) toast(t('Not available offline'));
+                else {
+                  haptic('light');
+                  playEpisode(item);
+                }
               }}
-              onLongPress={() => {
-                haptic('light');
-                openEpisodeMenu(item);
-              }}
+              onLongPress={
+                unavailable(item.id)
+                  ? undefined
+                  : () => {
+                      haptic('light');
+                      openEpisodeMenu(item);
+                    }
+              }
+              dimmed={unavailable(item.id)}
               uri={coverArtUrl(item.coverArt, COVER.card)}
               title={item.title}
               subtitle={item.by}
@@ -758,6 +778,13 @@ function AllTab({ query, onNew }: { query: string; onNew?: () => void }) {
   const bottomPad = useScreenBottomPadding();
   const { columns } = useGridMetrics();
   const listPad = useListPadding(spacing.lg);
+  // Offline, an episode only plays from disk; hide mode drops its row (as the
+  // song lists do via `annotate`).
+  const offline = useAuthStore((s) => s.offline);
+  const files = useDownloads((s) => s.files);
+  const hideUnavailable = useSettings((s) => s.hideUnavailableOffline);
+  const toast = useToast((s) => s.show);
+  const unavailable = (id: string) => offline && !files[id];
   const lists = useQuery({
     queryKey: ['playlists'],
     queryFn: () => getPlaylists(),
@@ -841,7 +868,9 @@ function AllTab({ query, onNew }: { query: string; onNew?: () => void }) {
         // Albums and podcasts match by who made them too, as they do under their
         // own chip: looking for a name should find the shows behind it.
         all.filter(
-          (i) => matches(query, i.name, i.kind === 'album' || i.kind === 'podcast' || i.kind === 'episode' ? i.by : undefined),
+          (i) =>
+            !(hideUnavailable && offline && i.kind === 'episode' && !files[i.id]) &&
+            matches(query, i.name, i.kind === 'album' || i.kind === 'podcast' || i.kind === 'episode' ? i.by : undefined),
         ),
         sort,
         (i) => i.name,
@@ -850,7 +879,7 @@ function AllTab({ query, onNew }: { query: string; onNew?: () => void }) {
       (i) => `${i.kind}:${i.id}`,
       pins,
     );
-  }, [lists.data, starred.data, podcastsQ.data, episodesQ.data, query, sort, times, byAlbum, byArtist, pins]);
+  }, [lists.data, starred.data, podcastsQ.data, episodesQ.data, query, sort, times, byAlbum, byArtist, pins, offline, files, hideUnavailable]);
 
   /** "Playlist · juan", "Album · Rojuu", "Podcast · Ada", "Artist". */
   const label = (i: LibItem): string => {
@@ -938,8 +967,11 @@ function AllTab({ query, onNew }: { query: string; onNew?: () => void }) {
             onPress={
               item.kind === 'episode'
                 ? () => {
-                    haptic('light');
-                    playEpisode(item);
+                    if (unavailable(item.id)) toast(t('Not available offline'));
+                    else {
+                      haptic('light');
+                      playEpisode(item);
+                    }
                   }
                 : undefined
             }
@@ -948,7 +980,12 @@ function AllTab({ query, onNew }: { query: string; onNew?: () => void }) {
             title={item.name}
             subtitle={label(item)}
             pinned={!!pins[`${item.kind}:${item.id}`]}
-            onLongPress={() => onLongPress(item)}
+            dimmed={item.kind === 'episode' && unavailable(item.id)}
+            onLongPress={
+              item.kind === 'episode' && unavailable(item.id)
+                ? undefined
+                : () => onLongPress(item)
+            }
           />
         ) : (
           item.kind === 'episode' ? (
@@ -1029,6 +1066,7 @@ function GridCard({
   title,
   subtitle,
   pinned,
+  dimmed,
   onLongPress,
   onPress,
 }: {
@@ -1040,6 +1078,8 @@ function GridCard({
   title: string;
   subtitle?: string;
   pinned?: boolean;
+  /** Offline and not downloaded (a podcast episode): dim like a song row. */
+  dimmed?: boolean;
   onLongPress?: () => void;
   /**
    * A card that does something on tap instead of navigating (a podcast episode
@@ -1050,7 +1090,7 @@ function GridCard({
   const { card } = useGridMetrics();
   const pressable = (
     <Pressable
-      style={StyleSheet.flatten([styles.card, { width: card }, rounded && styles.cardCentered])}
+      style={StyleSheet.flatten([styles.card, dimmed && styles.dimmed, { width: card }, rounded && styles.cardCentered])}
       onPress={onPress}
       onLongPress={onLongPress}
     >
@@ -1504,6 +1544,8 @@ const styles = themed((colors) => ({
   },
   card: { gap: spacing.xs },
   cardCentered: { alignItems: 'center' },
+  // Offline and not downloaded (a podcast episode): dim like a song row.
+  dimmed: { opacity: 0.4 },
   cardTitle: { color: colors.text, fontSize: fontSize.xs, lineHeight: lineHeight.xs, fontWeight: '500', marginTop: spacing.xs },
   centerText: { textAlign: 'center' },
   cardSub: { color: colors.textSecondary, fontSize: fontSize.xs, lineHeight: lineHeight.xs },
