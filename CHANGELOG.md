@@ -27,6 +27,7 @@ Releases before 0.2.1 are only listed on the
 - Player settings > Show animated covers turns every animated cover off at once, the server's clips and GIF or WebP covers alike, and keeps the server's address for when it goes back on.
 - The player's rating sits halfway between the cover and the title, with the same room above the cover, and the stars are a little bigger (#259).
 - With the lyrics or artist card on, the player's bottom row sits a little lower, closer to the card, and stays put for a song with no artist (#259).
+- With the lyrics or artist card on, a radio station gets the same player layout as a song, instead of the controls sitting lower (#258).
 - The player's plain background is the app's own background colour, so it follows the background shade and pure black instead of staying a bluish grey (#259).
 
 ### Fixed

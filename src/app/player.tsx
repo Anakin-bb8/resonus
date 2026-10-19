@@ -368,9 +368,10 @@ export default function PlayerScreen() {
   const wantsArtistCard = !!song?.artistId && showArtistCard;
   // The room below the first page goes by the settings, not by the song: a
   // track with no artist to ask about moved the controls and the bottom row
-  // up a peek's worth, for that one track (#259). A station still gets the
-  // room back, as it always has: it has neither card.
-  const cardRoom = wantsLyricsCard || (showArtistCard && !song?.url);
+  // up a peek's worth, for that one track (#259). A station keeps it too,
+  // although it has neither card: going from songs to the radio and back
+  // moved the whole player the same way (#258).
+  const cardRoom = showLyricsCard || showArtistCard;
   /**
    * The heart's state, and it does not ask whether the file is on the phone.
    *
@@ -1244,8 +1245,8 @@ export default function PlayerScreen() {
             //
             // The cost is the strip of empty background under a song with no
             // lyrics. That is the same trade as before, taken the other way: the
-            // gap is quiet, the layout jumping on every skip is not. Only a radio
-            // (no lyrics ever, `wantsLyricsCard` false) gets the room back.
+            // gap is quiet, the layout jumping on every skip is not. A radio,
+            // with no lyrics ever, keeps the room as well (`cardRoom`).
             height:
               (pageH || approxPageH) - (cardRoom ? LYRICS_PEEK : 0),
           }}
