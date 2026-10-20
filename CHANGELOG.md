@@ -9,6 +9,28 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.8.4] - 2026-10-20
+
+### Added
+
+- Lyrics from [lrc.red](https://lrc.red), found by the song's ISRC and often timed word by word. Off by default: Settings > Player > Lyrics > Providers turns each service on or off and sorts them, the one on top asked first. Thanks to ricce on Discord for the suggestion.
+- Jellyfin: radio. Jellyfin keeps internet radio as an M3U tuner under Live TV, and its radio channels now show up in Radio, search and Explore, ready to play; they are added and edited on the server.
+
+### Changed
+
+- Pulling Home to get new radios dims the ones on screen and shows a spinner beside the title until the new set is ready, instead of looking like nothing happened.
+- A phone on its side gets a shorter navigation bar, each name beside its icon, so the screens keep more room for the list (#131).
+- The devices button only names the headphones or Bluetooth speaker the phone plays through if Settings > Player > Bottom row > Name the headphones or speaker is on. It is off by default, so the row stays evenly spread; a cast target is still always named (#274).
+
+### Fixed
+
+- A song the server converts while it plays no longer shows 0:00 as its length with the bar full, and seeking in it no longer jumps back to the start: when the player's own length is far below the song's, the song's is used.
+- Spread across the width and Devices on the left line the bottom row up with the controls above it: the outer buttons sit right under the shuffle and the repeat (#259).
+- With every bottom-row button on, a long device name (a DLNA renderer, Bluetooth headphones) is cut short instead of pushing the row past the edges of the screen.
+- Synced lyrics from the server follow the song again when the server sends their lines out of order, such as a chorus written once with several timestamps, instead of staying on the first line.
+- Artists A-Z follows the server's sort names, so "The Knife" is under K and an artist tagged with a sort name is filed by it (#275).
+- Navidrome: with only some libraries turned on in Settings > Libraries, a playlist leaves out the songs from the others (#275).
+
 ## [0.8.3] - 2026-10-19
 
 ### Added

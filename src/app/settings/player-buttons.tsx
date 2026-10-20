@@ -10,7 +10,7 @@ import ReorderableList, {
   type ReorderableListReorderEvent,
 } from 'react-native-reorderable-list';
 
-import { ScreenHeader, SelectList, SettingsSafeArea } from '@/components/SettingsUI';
+import { ScreenHeader, SelectList, SettingsSafeArea, SwitchList } from '@/components/SettingsUI';
 import { useAccent } from '@/hooks/useAccent';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { centredPadding, useScreenSize } from '@/hooks/useScreenSize';
@@ -80,6 +80,8 @@ export default function PlayerButtonsSettings() {
   const setPlayerButtons = useSettings((s) => s.setPlayerButtons);
   const layout = useSettings((s) => s.playerButtonsLayout);
   const setLayout = useSettings((s) => s.setPlayerButtonsLayout);
+  const showLocalOutput = useSettings((s) => s.showLocalOutput);
+  const setShowLocalOutput = useSettings((s) => s.setShowLocalOutput);
   return (
     <SettingsSafeArea>
       <ScreenHeader title={t('Bottom row')} />
@@ -92,6 +94,20 @@ export default function PlayerButtonsSettings() {
             { value: 'centered', label: t('Grouped in the middle') },
             { value: 'spread', label: t('Spread across the width') },
             { value: 'split', label: t('Devices on the left') },
+          ]}
+        />
+        {/* A cast target is always named: it is the way back to the phone.
+            The phone's own output only if asked for (#274). */}
+        <SwitchList
+          options={[
+            {
+              label: t('Name the headphones or speaker'),
+              description: t(
+                'The devices button shows the Bluetooth or wired device the phone is playing through.',
+              ),
+              value: showLocalOutput,
+              onChange: setShowLocalOutput,
+            },
           ]}
         />
       </View>
@@ -116,7 +132,7 @@ export default function PlayerButtonsSettings() {
 }
 
 const styles = themed((colors) => ({
-  layout: { marginBottom: spacing.md },
+  layout: { marginBottom: spacing.md, gap: spacing.sm },
   hint: {
     color: colors.textMuted,
     fontSize: fontSize.xs,

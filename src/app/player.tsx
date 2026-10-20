@@ -338,11 +338,14 @@ export default function PlayerScreen() {
   }, [upnpConnectedDevice, upnpDevices]);
   const jukeboxActive = useJukebox((s) => s.active);
   const remoteDevice = upnpDevice ?? (jukeboxActive ? t('Server speakers (Jukebox)') : null);
-  // Not casting, the phone's own output when it is worth naming (headphones,
-  // the car): its icon on the devices button and its name beside it, the
-  // way a cast target shows. The speaker keeps the plain button.
+  // Not casting, and only if asked for (#274), the phone's own output when it
+  // is worth naming (headphones, the car): its icon on the devices button and
+  // its name beside it, the way a cast target shows. The speaker keeps the
+  // plain button.
+  const showLocalOutput = useSettings((s) => s.showLocalOutput);
   const audioRoute = useAudioRoute();
-  const routeShown = remoteDevice || !audioRoute ? null : routeLook(audioRoute.kind);
+  const routeShown =
+    remoteDevice || !showLocalOutput || !audioRoute ? null : routeLook(audioRoute.kind);
   const localDevice = routeShown ? audioRoute?.name || t(routeShown.fallback) : null;
   const deviceLabel = remoteDevice ?? localDevice;
   const [outputOpen, setOutputOpen] = useState(false);
@@ -1883,18 +1886,24 @@ const styles = themed((colors) => ({
     paddingHorizontal: spacing.sm,
     marginTop: spacing.xs,
   },
-  bottomRowSpread: { justifyContent: 'space-between', gap: 0 },
+  // Edge to edge like the controls above, so the outer icons sit under the
+  // shuffle and the repeat instead of a step further in (#259).
+  bottomRowSpread: { justifyContent: 'space-between', gap: 0, paddingHorizontal: 0 },
   /** The right-hand group of the split row: devices alone on the left. */
-  bottomRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.xl },
+  bottomRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.xl, flexShrink: 0 },
   // Like Spotify Connect: icon + device name in accent when casting.
   // The same box as the other buttons in the row; only the device name, while
-  // casting, makes it wider, and it is capped so the row stays centred.
+  // casting, makes it wider, and it is capped so the row stays centred. With
+  // every button on and a long name it is the one that gives way, the name
+  // cut short, instead of pushing the row past both edges of the screen.
   deviceRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
     height: 40,
     maxWidth: 160,
+    flexShrink: 1,
+    minWidth: 0,
   },
   deviceName: {
     color: colors.accent,

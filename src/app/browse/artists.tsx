@@ -15,6 +15,7 @@ import {
 import { FlatList as GHFlatList } from 'react-native-gesture-handler';
 
 import { getAlbumList, getArtists, type Album, type Artist } from '@/api/data';
+import { byArtistSortName } from '@/lib/librarySort';
 import { ArtistCard } from '@/components/ArtistCard';
 import { ArtistGridSkeleton } from '@/components/ArtistGridSkeleton';
 import { ArtistListSkeleton } from '@/components/ArtistListSkeleton';
@@ -202,7 +203,8 @@ export function ArtistsBrowser({ embedded, actionRef, searchOpen }: BrowserProps
   const artists = useMemo(() => {
     if (sort === 'random') return shuffledArtists ?? [];
     const all = filtered.slice();
-    const byName = (a: Artist, b: Artist) => a.name.localeCompare(b.name);
+    // By what the artist is filed under, "The Knife" with the K (#275).
+    const byName = byArtistSortName;
     if (sort === 'alpha') return all.sort(byName);
     const score =
       sort === 'frequent'

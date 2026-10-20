@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 817 of them.
+Every string the app can show, under the screen it shows up on. 819 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -599,6 +599,7 @@ you are actually typing into, which is easier than reading it here.
 | `Delete station` | Menu action, in red |
 | `Edit station` | Title of the same sheet when changing one |
 | `Find a station` | The search box's placeholder on the radio screen |
+| `In Jellyfin, add your stations as an M3U tuner under Live TV and they will show up here.` |  |
 | `Name` | The Name field when editing a playlist or a station |
 | `No radio stations` | Empty state heading |
 | `Password` | The password field, on the login screen and wherever the server asks again |
@@ -609,6 +610,7 @@ you are actually typing into, which is easier than reading it here.
 | `Stream URL` | Field when adding a radio station |
 | `Tap + to add an internet radio station.` | The line under an empty state, pointing at the + button |
 | `The stream URL must start with http:// or https://` | Validation message under the address field |
+| `This station can't be played right now` |  |
 | `Unpin` | Stop keeping it at the top of its list |
 | `Website (optional)` | Field when adding a radio station |
 | `You can pin up to {n} items.` | Toast: there is no room for another pinned thing. `{n}` is the limit |
@@ -628,6 +630,7 @@ you are actually typing into, which is easier than reading it here.
 | `Search your music` |  |
 | `Song` | In search results, the little word under a result saying what kind of thing it is |
 | `Songs, albums, artists and playlists. What you open from here is kept for next time.` |  |
+| `This station can't be played right now` |  |
 | `What do you want to listen to?` | The placeholder in the search box, worded as a question |
 
 ## Settings
@@ -859,6 +862,15 @@ you are actually typing into, which is easier than reading it here.
 | `We need permission to read your device music.` | Android has not granted access to the phone's files yet |
 | `Where should we get your music?` | Heading when choosing where the phone's own music is read from |
 
+## Settings › Lyrics providers
+
+| String | What it is |
+| --- | --- |
+| `Asked from the top down until one has the lyrics. Drag to change the order.` |  |
+| `Finds the song by its ISRC code. Often timed word by word.` |  |
+| `Providers` |  |
+| `Searches by artist and title.` |  |
+
 ## Settings › Navigation bar
 
 | String | What it is |
@@ -1013,7 +1025,6 @@ you are actually typing into, which is easier than reading it here.
 | `Elements` | Which player elements to show |
 | `Favorite` | One of the choices for the button next to play on the mini player: the heart. Not a verb |
 | `Fit cover art` | Show the whole cover even if it is not square, instead of cropping it to fill |
-| `GIF and WebP covers from your server too.` | Under `Animated artwork`: the choice also applies to animated image covers the music server already has, not only to the video clips |
 | `Go to album` | Leave this sheet and open the album the song is on |
 | `In the cover` | A value of `Animated artwork`: the animated cover plays inside the square where the cover is |
 | `Keep paused when skipping` |  |
@@ -1033,8 +1044,6 @@ you are actually typing into, which is easier than reading it here.
 | `None` | One of the choices for the buttons next to play on the mini player: no button at all |
 | `Normal` | A lyrics size, the default one |
 | `Nothing` | A value of `On cover tap`: tapping the cover does nothing |
-| `Off, every cover stays still, GIF and WebP ones too.` | The line under “Show animated covers”, explaining it |
-| `Off, the clip only plays on the lock screen.` | Under `Clips in the app too`: what turning it off leaves |
 | `On cover double tap` | Settings > Player: what tapping the album artwork twice does |
 | `On cover tap` | What tapping the cover art in the player does. One tap and two share the same values, listed below |
 | `Open lyrics screen` | A value of `On cover tap` |
@@ -1046,6 +1055,7 @@ you are actually typing into, which is easier than reading it here.
 | `Prefer online search` | A value of `Lyrics source`: look them up on the internet first |
 | `Previous and next` | One of the values of “Buttons next to play” |
 | `Previous button` | What the previous button does when a song is already playing. Its values are the two lines below it |
+| `Providers` |  |
 | `Queue` | The list of songs waiting to play. Not a playlist |
 | `Regular font weight` | A lyrics font weight: regular strokes (400) |
 | `Restart, then previous track` | A value of `Previous button`: the first press goes back to the start of this song, the second to the one before |
@@ -1061,11 +1071,8 @@ you are actually typing into, which is easier than reading it here.
 | `Show quality label` |  |
 | `Show rating` |  |
 | `Skip buttons` | The seek forward / back buttons setting |
-| `Slightly blur synchronized lyrics other than the current line to emphasize what is playing.` | Help text under that switch. Only the current synchronized lyric line stays sharp |
 | `Small` | A lyrics size |
 | `Swap favorite and menu` | Exchange the places of those two buttons in the player, for whichever hand you hold the phone in |
-| `Where the square and tall clips come from. Empty, every cover stays still.` | The line under “Animated artwork endpoint”, explaining it |
-| `Where to get lyrics from. Online search uses LRCLIB (sends the artist and title).` |  |
 
 ## Settings › Player buttons
 
@@ -1075,7 +1082,9 @@ you are actually typing into, which is easier than reading it here.
 | `Bottom row` |  |
 | `Devices on the left` | One of the values of “Arrangement” |
 | `Grouped in the middle` | One of the values of “Arrangement” |
+| `Name the headphones or speaker` |  |
 | `Spread across the width` | One of the values of “Arrangement” |
+| `The devices button shows the Bluetooth or wired device the phone is playing through.` |  |
 
 ## Settings › Quick grid
 

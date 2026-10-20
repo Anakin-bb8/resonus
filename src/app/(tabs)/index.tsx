@@ -732,6 +732,9 @@ function RadiosSection({ title, reshuffleKey }: { title: string; reshuffleKey: n
   // Fewer asked for than are saved: the shelf shortens at once, without
   // waiting on the rebuild Settings starts.
   const defs = useRadios((s) => s.defs).slice(0, count);
+  // A new set on its way over the old one: the old one dims and the title
+  // says so, until the new one swaps in whole.
+  const building = useRadios((s) => s.building);
   const { isLoading } = useQuery({
     queryKey: ['radios'],
     queryFn: () => refreshRadios().catch(() => useRadios.getState().defs),
@@ -757,10 +760,14 @@ function RadiosSection({ title, reshuffleKey }: { title: string; reshuffleKey: n
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <View style={styles.sectionTitleRow}>
+        <Text style={[styles.sectionTitle, styles.sectionTitleInRow]}>{title}</Text>
+        {building ? <ActivityIndicator size={16} color={colors.textSecondary} /> : null}
+      </View>
       <FlatList
         {...listPerf}
         horizontal
+        style={building ? styles.rebuilding : undefined}
         data={defs}
         keyExtractor={(item) => item.seed.id}
         showsHorizontalScrollIndicator={false}
@@ -1259,6 +1266,16 @@ const styles = themed((colors) => ({
   },
   sectionHeaderTitle: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '500' },
   showAll: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '500' },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  sectionTitleInRow: { paddingHorizontal: 0, marginBottom: 0 },
+  // The radios on screen while new ones are made over them.
+  rebuilding: { opacity: 0.45 },
   sectionTitle: {
     color: colors.text,
     fontSize: fontSize.lg,

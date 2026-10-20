@@ -18,6 +18,7 @@ import { useAuthStore } from '@/store/auth';
 import { useTheme } from '@/theme';
 import {
   type CardBackground,
+  LYRICS_PROVIDER_NAMES,
   type CoverDoubleTapAction,
   type CoverTapAction,
   type LyricsAlign,
@@ -114,6 +115,7 @@ export default function PlayerSettings() {
   const setCoverTapAction = useSettings((s) => s.setCoverTapAction);
   const lyricsSource = useSettings((s) => s.lyricsSource);
   const setLyricsSource = useSettings((s) => s.setLyricsSource);
+  const lyricsProviders = useSettings((s) => s.lyricsProviders);
   const marqueeTitles = useSettings((s) => s.marqueeTitles);
   const setMarqueeTitles = useSettings((s) => s.setMarqueeTitles);
   const seekButtonsSec = useSettings((s) => s.seekButtonsSec);
@@ -213,7 +215,6 @@ export default function PlayerSettings() {
             options={[
               {
                 label: t('Show animated covers'),
-                description: t('Off, every cover stays still, GIF and WebP ones too.'),
                 value: animatedCovers,
                 onChange: setAnimatedCovers,
               },
@@ -223,7 +224,6 @@ export default function PlayerSettings() {
           <>
           <TextRow
             label={t('Animated artwork endpoint')}
-            description={t('Where the square and tall clips come from. Empty, every cover stays still.')}
             value={animatedArtworkEndpoint}
             placeholder="https://artwork.example.com"
             maxLength={200}
@@ -237,7 +237,6 @@ export default function PlayerSettings() {
               server, with no endpoint at all. */}
           <SelectList<'cover' | 'background'>
             label={t('Animated artwork')}
-            description={t('GIF and WebP covers from your server too.')}
             options={[
               { value: 'cover', label: t('In the cover') },
               { value: 'background', label: t('As the background') },
@@ -254,7 +253,6 @@ export default function PlayerSettings() {
                 options={[
                   {
                     label: t('Clips in the app too'),
-                    description: t('Off, the clip only plays on the lock screen.'),
                     value: animatedCoverVideo,
                     onChange: setAnimatedCoverVideo,
                   },
@@ -381,9 +379,6 @@ export default function PlayerSettings() {
         <SettingsGroup>
           <SelectList<LyricsSource>
             label={t('Lyrics source')}
-            description={t(
-              'Where to get lyrics from. Online search uses LRCLIB (sends the artist and title).',
-            )}
             options={[
               { value: 'local', label: t('Prefer local lyrics') },
               { value: 'online', label: t('Prefer online search') },
@@ -392,6 +387,22 @@ export default function PlayerSettings() {
             value={lyricsSource}
             onChange={setLyricsSource}
           />
+          {/* Which services online search asks and in what order, on a screen
+              of their own like the bottom row's buttons. Hidden with the
+              search off, when there is nobody to ask. */}
+          {lyricsSource !== 'off' ? (
+            <SettingRow
+              label={t('Providers')}
+              right={
+                lyricsProviders
+                  .filter((p) => p.enabled)
+                  .map((p) => LYRICS_PROVIDER_NAMES[p.key])
+                  .join(', ') || t('None')
+              }
+              chevron
+              onPress={() => router.push('/settings/lyrics-providers')}
+            />
+          ) : null}
           <SelectList<LyricsSize>
             label={t('Lyrics size')}
             options={[
@@ -429,9 +440,6 @@ export default function PlayerSettings() {
                 ? [
                     {
                       label: t('Blur inactive lyrics'),
-                      description: t(
-                        'Slightly blur synchronized lyrics other than the current line to emphasize what is playing.',
-                      ),
                       value: blurInactiveLyrics,
                       onChange: setBlurInactiveLyrics,
                     },

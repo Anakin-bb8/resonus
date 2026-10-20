@@ -223,28 +223,45 @@ export function structuredSongLyrics(pick: ServerStructuredLyrics): SongLyrics |
       else cues.set(at, [cl]);
     });
   }
-  return {
-    synced,
-    lines: pick.line.map((ln, i): LyricLine => {
-      const all = cues.get(i) ?? [];
-      const text = all[0]?.value;
-      const cue = all[0]?.cue;
-      const words = text && cue?.length ? wordsFromCues(text, cue, offset) : undefined;
-      const backing: LyricBacking[] = [];
-      for (const extra of all.slice(1)) {
-        const seg = backingFromCue(extra, offset);
-        if (seg) backing.push(seg);
-      }
-      return {
-        // The cue line's own text when it has words, since they are cut out of
-        // it, and `line` may carry the backing vocals alongside.
-        value: words && text ? text : (ln.value ?? ''),
-        ...(synced && ln.start !== undefined
-          ? { start: Math.max(0, ln.start - offset) }
-          : {}),
-        ...(words ? { words } : {}),
-        ...(backing.length > 0 ? { backing } : {}),
-      };
-    }),
-  };
+  const lines = pick.line.map((ln, i): LyricLine => {
+    const all = cues.get(i) ?? [];
+    const text = all[0]?.value;
+    const cue = all[0]?.cue;
+    const words = text && cue?.length ? wordsFromCues(text, cue, offset) : undefined;
+    const backing: LyricBacking[] = [];
+    for (const extra of all.slice(1)) {
+      const seg = backingFromCue(extra, offset);
+      if (seg) backing.push(seg);
+    }
+    return {
+      // The cue line's own text when it has words, since they are cut out of
+      // it, and `line` may carry the backing vocals alongside.
+      value: words && text ? text : (ln.value ?? ''),
+      ...(synced && ln.start !== undefined
+        ? { start: Math.max(0, ln.start - offset) }
+        : {}),
+      ...(words ? { words } : {}),
+      ...(backing.length > 0 ? { backing } : {}),
+    };
+  });
+  return { synced, lines: synced ? inTimeOrder(lines) : lines };
+}
+
+/**
+ * Synced lines in the order they are sung. The server hands them over in the
+ * order it stored them, which for some files is not that: a chorus written
+ * once with several timestamps, or sections moved around. The player looks
+ * for the line being sung by walking forward until a line starts later, so
+ * one late line near the top kept the first line lit for the whole song, while
+ * tapping a line still jumped to the right place. Stable, and a line with no
+ * time stays after the one before it.
+ */
+function inTimeOrder(lines: LyricLine[]): LyricLine[] {
+  let last = 0;
+  const keyed = lines.map((line, i) => {
+    if (line.start !== undefined) last = line.start;
+    return { line, at: line.start ?? last, i };
+  });
+  keyed.sort((a, b) => a.at - b.at || a.i - b.i);
+  return keyed.map((k) => k.line);
 }

@@ -702,6 +702,49 @@ export const DEFAULT_PLAYER_BUTTONS: PlayerButton[] = [
   { key: 'queue', enabled: true },
 ];
 
+/** The online lyrics services, asked in this order, the ones turned on. */
+export type LyricsProviderKey = 'lrcRed' | 'lrclib';
+
+/** Their own names: brands, never translated. */
+export const LYRICS_PROVIDER_NAMES: Record<LyricsProviderKey, string> = {
+  lrcRed: 'lrc.red',
+  lrclib: 'LRCLIB',
+};
+
+export interface LyricsProvider {
+  key: LyricsProviderKey;
+  enabled: boolean;
+}
+
+/**
+ * LRCLIB on, as it always was. lrc.red off, a new service is not sent
+ * anything until somebody turns it on, but first in the list: it matches the
+ * exact recording by ISRC, so once on it is the better first question.
+ */
+export const DEFAULT_LYRICS_PROVIDERS: LyricsProvider[] = [
+  { key: 'lrcRed', enabled: false },
+  { key: 'lrclib', enabled: true },
+];
+
+/** Saved order kept, unknown keys dropped, new ones added at the end, off. */
+function normalizeLyricsProviders(raw: unknown): LyricsProvider[] {
+  if (!Array.isArray(raw)) return DEFAULT_LYRICS_PROVIDERS.map((p) => ({ ...p }));
+  const known = new Set(DEFAULT_LYRICS_PROVIDERS.map((p) => p.key));
+  const seen = new Set<LyricsProviderKey>();
+  const out: LyricsProvider[] = [];
+  for (const item of raw) {
+    const key = item?.key as LyricsProviderKey;
+    if (known.has(key) && !seen.has(key)) {
+      seen.add(key);
+      out.push({ key, enabled: item.enabled === true });
+    }
+  }
+  for (const def of DEFAULT_LYRICS_PROVIDERS) {
+    if (!seen.has(def.key)) out.push({ key: def.key, enabled: false });
+  }
+  return out;
+}
+
 /**
  * Grouped in the middle, spread across the width with equal gaps, or split:
  * devices (and the name of what it casts to) on the left, the rest together on
@@ -821,7 +864,8 @@ type Reshaped =
   | 'exploreSections'
   | 'bottomTabs'
   | 'homeButtons'
-  | 'playerButtons';
+  | 'playerButtons'
+  | 'lyricsProviders';
 
 /**
  * `setX(value)` for every saved setting: stores it and saves the profile.
@@ -1015,6 +1059,12 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
    * disabled. Defaults to 'local' (local first, LRCLIB as fallback).
    */
   lyricsSource: LyricsSource;
+  /**
+   * The online lyrics services, in the order they are asked, each on or off:
+   * lrc.red (the song's ISRC, often timed word by word) and LRCLIB (artist
+   * and title).
+   */
+  lyricsProviders: LyricsProvider[];
   lyricsSize: LyricsSize;
   /** Thickness of lyric glyphs, from light (300) to bold (700). */
   lyricsWeight: LyricsWeight;
@@ -1112,6 +1162,11 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   /** The row under the player's controls: which buttons, in what order. */
   playerButtons: PlayerButton[];
   playerButtonsLayout: PlayerButtonsLayout;
+  /**
+   * The devices button names the phone's own output (headphones, a Bluetooth
+   * speaker, the car) the way it names a cast target (#274).
+   */
+  showLocalOutput: boolean;
   /** Seek ±N seconds buttons next to play (0 = hidden). Only 5/10/30: these are the numbered icons that exist in MaterialIcons. */
   seekButtonsSec: number;
   /** "Previous" button behavior (restart track or always go to previous). */
@@ -1256,6 +1311,7 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   setBottomTab: (key: TabSegment, value: boolean) => void;
   setHomeButton: (key: HomeButtonKey, value: boolean) => void;
   setPlayerButton: (key: PlayerButtonKey, value: boolean) => void;
+  setLyricsProvider: (key: LyricsProviderKey, value: boolean) => void;
   /** A hand-picked artwork URL for one album key, or null to forget it. */
   setAnimatedArtworkUrl: (key: string, url: string | null) => void;
   setGridColumns: (key: GridSizeKey, value: number) => void;
@@ -1361,6 +1417,7 @@ const DEFAULTS = {
   lyricsBackground: 'cover' as ScreenBackground,
   lyricsCardBackground: 'color' as CardBackground,
   lyricsSource: 'local' as LyricsSource,
+  lyricsProviders: DEFAULT_LYRICS_PROVIDERS.map((p) => ({ ...p })),
   lyricsSize: 'normal' as LyricsSize,
   lyricsWeight: '500' as LyricsWeight,
   lyricsAlign: 'left' as LyricsAlign,
@@ -1404,6 +1461,9 @@ const DEFAULTS = {
   marqueeTitles: true,
   playerButtons: DEFAULT_PLAYER_BUTTONS.map((b) => ({ ...b })),
   playerButtonsLayout: 'spread' as PlayerButtonsLayout,
+  // Off: a speaker the phone plays through is not a cast target, and its name
+  // took the room the rest of the row was spread across (#274).
+  showLocalOutput: false,
   seekButtonsSec: 0,
   previousButtonMode: 'restart' as PreviousButtonMode,
   keepPausedOnSkip: false,
@@ -1545,6 +1605,7 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
     bottomTabs?: unknown;
     homeButtons?: unknown;
     playerButtons?: unknown;
+    lyricsProviders?: unknown;
     showQueueButton?: boolean;
     showDevicesButton?: boolean;
     showSpeedButton?: boolean;
@@ -1823,6 +1884,9 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
   ) {
     set({ playerButtonsLayout: parsed.playerButtonsLayout });
   }
+  if (Array.isArray(parsed.lyricsProviders)) {
+    set({ lyricsProviders: normalizeLyricsProviders(parsed.lyricsProviders) });
+  }
   if (Array.isArray(parsed.playerButtons)) {
     set({ playerButtons: normalizePlayerButtons(parsed.playerButtons) });
   } else {
@@ -2054,6 +2118,13 @@ export const useSettings = create<SettingsState>((set, get) => ({
   setPlayerButton: (key, value) => {
     set((s) => ({
       playerButtons: s.playerButtons.map((x) => (x.key === key ? { ...x, enabled: value } : x)),
+    }));
+    persist(snapshot(get));
+  },
+
+  setLyricsProvider: (key, value) => {
+    set((s) => ({
+      lyricsProviders: s.lyricsProviders.map((x) => (x.key === key ? { ...x, enabled: value } : x)),
     }));
     persist(snapshot(get));
   },

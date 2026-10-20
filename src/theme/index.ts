@@ -957,6 +957,9 @@ export const SHEET_MAX_WIDTH = 560;
 /** Height of the tab bar (not including the bottom safe area). */
 export const TAB_BAR_HEIGHT = 60;
 
+/** The same bar on a screen too short for it, names beside the icons (#131). */
+export const TAB_BAR_HEIGHT_COMPACT = 44;
+
 /** Approximate height of the floating MiniPlayer (44px artwork + padding). */
 export const MINI_PLAYER_HEIGHT = 60;
 

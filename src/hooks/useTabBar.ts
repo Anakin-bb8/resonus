@@ -10,9 +10,11 @@
  * cover everything, and the song picker keeps its own search bar down there.
  */
 import { useSegments } from 'expo-router';
+import { useWindowDimensions } from 'react-native';
 
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useSettings } from '@/store/settings';
+import { TAB_BAR_HEIGHT, TAB_BAR_HEIGHT_COMPACT } from '@/theme';
 
 /** Screens that never take the bar, whatever the setting says. */
 const NO_BAR = ['player', 'queue', 'lyrics', 'favorites-add', 'login'];
@@ -40,4 +42,23 @@ export function useMiniPlayerShown(): boolean {
   const segments = useSegments();
   const hasSong = usePlayerStore((s) => currentSong(s) !== null);
   return hasSong && !NO_MINI_PLAYER.includes(segments[0] as string);
+}
+
+/**
+ * A phone on its side has about 400 points of height, and a bar with each
+ * name under its icon took a fifth of it, the MiniPlayer another, and a list
+ * was left one row (#131). Below this height the names go beside the icons
+ * and the bar is shorter; upright phones, tablets and car screens never get
+ * here.
+ */
+const COMPACT_BELOW = 500;
+
+/** Whether the navigation bar is the short one (see `COMPACT_BELOW`). */
+export function useCompactTabBar(): boolean {
+  return useWindowDimensions().height < COMPACT_BELOW;
+}
+
+/** The navigation bar's height, not counting the bottom safe area. */
+export function useTabBarHeight(): number {
+  return useCompactTabBar() ? TAB_BAR_HEIGHT_COMPACT : TAB_BAR_HEIGHT;
 }

@@ -311,6 +311,12 @@ export interface Artist {
   albumCount?: number;
   starred?: string;
   /**
+   * What the artist is filed under (OpenSubsonic): the sort tag if the files
+   * have one, else the name without a leading article, so "The Knife" sorts
+   * as "knife" (#275).
+   */
+  sortName?: string;
+  /**
    * 1-5, absent if never rated. `getArtist` passes the artist element through
    * as it comes, so this only needs declaring to be read: a server that rates
    * artists (Navidrome keeps an annotation per artist, same as for a song)
