@@ -16,6 +16,7 @@ Releases before 0.2.1 are only listed on the
 
 ### Changed
 
+- A phone on its side gets a shorter navigation bar, each name beside its icon, so the screens keep more room for the list (#131).
 - The devices button only names the headphones or Bluetooth speaker the phone plays through if Settings > Player > Bottom row > Name the headphones or speaker is on. It is off by default, so the row stays evenly spread; a cast target is still always named (#274).
 
 ### Fixed

@@ -13,7 +13,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useT } from '@/i18n';
 import { type TabSegment } from '@/lib/tabOrigin';
 import { useSettings } from '@/store/settings';
-import { colors, TAB_BAR_HEIGHT, useTheme } from '@/theme';
+import { useTabBarHeight } from '@/hooks/useTabBar';
+import { colors, useTheme } from '@/theme';
 
 /**
  * The icon each tab wears, beside the name it goes by (`TABS`). Two halves of
@@ -36,6 +37,7 @@ export default function TabsLayout() {
   // mounted while you are on another one, out of reach of anything else.
   useTheme();
   const insets = useSafeAreaInsets();
+  const barHeight = useTabBarHeight();
   const t = useT();
   const bottomTabs = useSettings((s) => s.bottomTabs);
 
@@ -69,7 +71,7 @@ export default function TabsLayout() {
             backgroundColor: colors.background,
             borderTopWidth: 0,
             elevation: 0,
-            height: TAB_BAR_HEIGHT + insets.bottom,
+            height: barHeight + insets.bottom,
             paddingTop: 6,
             paddingBottom: insets.bottom,
           },
