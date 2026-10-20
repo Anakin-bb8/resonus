@@ -247,6 +247,8 @@
   "No lyrics available for this song.": "No hi ha lletra disponible per a aquesta cançó.",
   "No playlists yet": "Encara no hi ha llistes de reproducció",
   "No radio stations": "Cap emissora de ràdio",
+  "In Jellyfin, add your stations as an M3U tuner under Live TV and they will show up here.": "A Jellyfin, afegeix les teves emissores com a sintonitzador M3U a Live TV i apareixeran aquí.",
+  "This station can't be played right now": "Ara mateix no es pot reproduir aquesta emissora",
   "No results": "Cap resultat",
   "No results for “{q}”": "Cap resultat per a «{q}»",
   "Normalize volume": "Normalitza el volum",

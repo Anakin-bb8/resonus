@@ -266,6 +266,8 @@
   "No lyrics available for this song.": "No lyrics available for this song.",
   "No playlists yet": "No playlists yet",
   "No radio stations": "No radio stations",
+  "In Jellyfin, add your stations as an M3U tuner under Live TV and they will show up here.": "In Jellyfin, add your stations as an M3U tuner under Live TV and they will show up here.",
+  "This station can't be played right now": "This station can't be played right now",
   "No results": "No results",
   "No results for “{q}”": "No results for “{q}”",
   "Normalize volume": "Normalize volume",

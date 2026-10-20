@@ -12,6 +12,7 @@ Releases before 0.2.1 are only listed on the
 ### Added
 
 - Lyrics from [lrc.red](https://lrc.red), found by the song's ISRC and often timed word by word. Off by default: Settings > Player > Lyrics > Providers turns each service on or off and sorts them, the one on top asked first. Thanks to ricce on Discord for the suggestion.
+- Jellyfin: radio. Jellyfin keeps internet radio as an M3U tuner under Live TV, and its radio channels now show up in Radio, search and Explore, ready to play; they are added and edited on the server.
 
 ### Changed
 

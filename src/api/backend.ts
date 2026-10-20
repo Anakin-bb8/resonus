@@ -274,6 +274,18 @@ export const reportPlayback = (
 
 export const getRadioStations = (auth: SubsonicAuth) => api(auth).getRadioStations(auth);
 
+/**
+ * A station's stream, at the moment of playing it: its own address where it
+ * has one (every Subsonic station, most Jellyfin ones), else whatever
+ * Jellyfin opens for that channel.
+ */
+export const radioStreamUrl = async (
+  auth: SubsonicAuth,
+  station: Subsonic.RadioStation,
+): Promise<string | null> =>
+  station.streamUrl ||
+  (auth.serverType === 'jellyfin' ? Jellyfin.resolveRadioStream(auth, station.id) : null);
+
 export const createRadioStation = (
   auth: SubsonicAuth,
   name: string,

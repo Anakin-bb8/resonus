@@ -110,7 +110,8 @@ export default function ExploreScreen() {
       case 'genres':
         return !!auth && !offline;
       case 'radio':
-        return subsonic && !offline;
+        // Jellyfin's are its Live TV radio channels (see `getRadioStations`).
+        return !!auth && !offline;
       case 'folders':
         return subsonic && !offline && showFolderBrowser;
       case 'playlists':

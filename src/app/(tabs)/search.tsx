@@ -26,6 +26,7 @@ import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { TrackRow } from '@/components/TrackRow';
 import { useDebounce } from '@/hooks/useDebounce';
 import { songsLabel, useT } from '@/i18n';
+import { playRadio } from '@/lib/playRadio';
 import { haptic } from '@/lib/haptics';
 import { onTabReselect, takeSearchFocus } from '@/lib/tabOrigin';
 import { bump } from '@/lib/perfLog';
@@ -178,10 +179,11 @@ export default function SearchScreen() {
         )
       : [];
   // Stations, filtered the same way and for the same reason. Server only:
-  // Jellyfin doesn't manage them and offline there's nothing to stream.
+  // offline there's nothing to stream. Jellyfin's are its Live TV radio
+  // channels, and a server without them simply has none.
   /** Whether this account has stations at all, which is also whether the chip
    *  for them is worth drawing. */
-  const canSearchStations = !!auth && !offline && auth.serverType !== 'jellyfin';
+  const canSearchStations = !!auth && !offline;
   const { data: stations } = useQuery({
     queryKey: ['radioStations'],
     queryFn: () => getRadioStations(auth!),
@@ -489,22 +491,7 @@ export default function SearchScreen() {
               <Pressable
                 key={r.id}
                 style={styles.recentRow}
-                onPress={() =>
-                  playQueue(
-                    [
-                      {
-                        id: r.id,
-                        title: r.name,
-                        url: r.streamUrl,
-                        artist: t('Radio'),
-                        coverArt: r.coverArt,
-                      },
-                    ],
-                    0,
-                    r.name,
-                    '/radio',
-                  )
-                }
+                onPress={() => void playRadio(r)}
               >
                 <Cover
                   uri={coverArtUrl(r.coverArt, COVER.thumb)}

@@ -265,6 +265,8 @@
   "No lyrics available for this song.": "No hay letra disponible para esta canción.",
   "No playlists yet": "Aún no tienes listas",
   "No radio stations": "No hay emisoras de radio",
+  "In Jellyfin, add your stations as an M3U tuner under Live TV and they will show up here.": "En Jellyfin, añade tus emisoras como sintonizador M3U en Live TV y aparecerán aquí.",
+  "This station can't be played right now": "Ahora mismo no se puede reproducir esta emisora",
   "No results": "Sin resultados",
   "No results for “{q}”": "No hay resultados para «{q}»",
   "Normalize volume": "Normalizar volumen",

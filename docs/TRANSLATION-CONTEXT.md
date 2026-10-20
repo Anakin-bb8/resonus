@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 821 of them.
+Every string the app can show, under the screen it shows up on. 823 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -610,6 +610,7 @@ you are actually typing into, which is easier than reading it here.
 | `Delete station` | Menu action, in red |
 | `Edit station` | Title of the same sheet when changing one |
 | `Find a station` | The search box's placeholder on the radio screen |
+| `In Jellyfin, add your stations as an M3U tuner under Live TV and they will show up here.` |  |
 | `Name` | The Name field when editing a playlist or a station |
 | `No radio stations` | Empty state heading |
 | `Password` | The password field, on the login screen and wherever the server asks again |
@@ -620,6 +621,7 @@ you are actually typing into, which is easier than reading it here.
 | `Stream URL` | Field when adding a radio station |
 | `Tap + to add an internet radio station.` | The line under an empty state, pointing at the + button |
 | `The stream URL must start with http:// or https://` | Validation message under the address field |
+| `This station can't be played right now` |  |
 | `Unpin` | Stop keeping it at the top of its list |
 | `Website (optional)` | Field when adding a radio station |
 | `You can pin up to {n} items.` | Toast: there is no room for another pinned thing. `{n}` is the limit |
@@ -637,6 +639,7 @@ you are actually typing into, which is easier than reading it here.
 | `Search your music` |  |
 | `Song` | In search results, the little word under a result saying what kind of thing it is |
 | `Songs, albums, artists and playlists. What you open from here is kept for next time.` |  |
+| `This station can't be played right now` |  |
 | `What do you want to listen to?` | The placeholder in the search box, worded as a question |
 
 ## Settings
