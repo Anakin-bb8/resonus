@@ -86,7 +86,7 @@ function artExt(url: string): string {
   return 'jpg';
 }
 
-export function podcastArtFile(scope: string, channelId: string, imageUrl: string): string {
+function podcastArtFile(scope: string, channelId: string, imageUrl: string): string {
   return `${podcastDbDir(scope)}art/${hashKey(channelId)}.${artExt(imageUrl)}`;
 }
 
@@ -274,15 +274,15 @@ export async function getChannel(
   return row ? (JSON.parse(row.data) as PodcastChannel) : undefined;
 }
 
-/** The episodes of a channel, newest first, one page at a time: old feeds
- *  list thousands, and a screen pages through them as you scroll. */
+/** One page of a channel's episodes, newest first: old feeds list thousands,
+ *  so a read asks for a page at a time rather than the whole show. */
 const MAX_EPISODES = 200;
 
-export async function listEpisodes(
+async function listEpisodes(
   scope: string,
   channelId: string,
-  limit = MAX_EPISODES,
-  offset = 0,
+  limit: number,
+  offset: number,
 ): Promise<PodcastEpisode[]> {
   const db = await podcastDb(scope);
   const rows = await db.getAllAsync<{ data: string }>(

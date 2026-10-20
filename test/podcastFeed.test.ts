@@ -65,12 +65,12 @@ describe('parseFeed', () => {
     assert.equal(feed.items[0].description, 'Second & last');
   });
 
-  it('reads an enclosure, its type and its length', () => {
+  it('reads an enclosure and its type', () => {
     const [two, one] = parseFeed(RSS, 'c1').items;
     assert.equal(two.url, 'https://example.org/2.mp3');
     assert.equal(two.mimeType, 'audio/mpeg');
-    assert.equal(two.size, 12345);
-    assert.equal(one.size, undefined);
+    assert.equal(one.url, 'https://example.org/1.mp3');
+    assert.equal(one.mimeType, 'audio/mpeg');
   });
 
   it('namespaces ids by channel, so two feeds cannot collide on a guid', () => {
@@ -103,7 +103,6 @@ describe('parseFeed', () => {
     assert.equal(entry.id, 'c1/urn:uuid:abc');
     assert.equal(entry.url, 'https://example.org/a.m4a');
     assert.equal(entry.mimeType, 'audio/mp4');
-    assert.equal(entry.size, 99);
     assert.equal(entry.description, 'Hi & bye');
   });
 

@@ -28,8 +28,6 @@ export interface ParsedItem {
   /** Where the audio is. An episode with none of this cannot be played. */
   url?: string;
   mimeType?: string;
-  size?: number;
-  imageUrl?: string;
 }
 
 const ENTITIES: Record<string, string> = {
@@ -221,24 +219,20 @@ export function parseDuration(value: string | undefined): number | undefined {
 }
 
 /** The enclosure of an item: RSS `<enclosure>`, or Atom's `rel="enclosure"` link. */
-function enclosure(block: string): { url?: string; type?: string; length?: number } {
+function enclosure(block: string): { url?: string; type?: string } {
   const attrs = openTag(block, 'enclosure');
   if (attrs) {
-    const length = Number(attr(attrs, 'length'));
     return {
       url: attr(attrs, 'url'),
       type: attr(attrs, 'type'),
-      length: Number.isFinite(length) && length > 0 ? length : undefined,
     };
   }
   for (const m of block.matchAll(/<link(\s[^>]*?)?\/?>/gi)) {
     const linkAttrs = m[1];
     if ((attr(linkAttrs, 'rel') ?? '').toLowerCase() !== 'enclosure') continue;
-    const length = Number(attr(linkAttrs, 'length'));
     return {
       url: attr(linkAttrs, 'href'),
       type: attr(linkAttrs, 'type'),
-      length: Number.isFinite(length) && length > 0 ? length : undefined,
     };
   }
   return {};
@@ -304,12 +298,9 @@ export function parseFeed(xml: string, channelId: string): ParsedFeed {
       duration: parseDuration(text(block, 'duration')),
       url: enc.url,
       mimeType: enc.type,
-      size: enc.length,
     };
     const description = plain(block, 'description', 'summary', 'content', 'encoded');
     if (description) item.description = description;
-    const image = attr(openTag(block, 'image'), 'href');
-    if (image) item.imageUrl = image;
     items.push(item);
   }
 

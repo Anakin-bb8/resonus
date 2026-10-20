@@ -33,7 +33,7 @@ class FeedUnreachableError extends Error {}
  * and so the surfaces that show it can split "you're offline" from "the feed
  * itself was bad" without sniffing at somebody's error text.
  */
-export function feedErrorCode(e: unknown): 'offline' | 'notFeed' | 'http' {
+function feedErrorCode(e: unknown): 'offline' | 'notFeed' | 'http' {
   if (e instanceof OfflineError) return 'offline';
   if (e instanceof NotAFeedError) return 'notFeed';
   return 'http';
@@ -60,7 +60,6 @@ export interface PodcastSearchResult {
   title: string;
   author?: string;
   imageUrl?: string;
-  siteUrl?: string;
 }
 
 const TIMEOUT_MS = 20_000;
@@ -138,8 +137,6 @@ function toEpisode(channelId: string, item: ParsedItem): PodcastEpisode {
   if (item.duration !== undefined) episode.duration = item.duration;
   if (item.url) episode.url = item.url;
   if (item.mimeType) episode.mimeType = item.mimeType;
-  if (item.size !== undefined) episode.size = item.size;
-  if (item.imageUrl) episode.imageUrl = item.imageUrl;
   return episode;
 }
 
@@ -260,24 +257,15 @@ export async function listRecentEpisodes(limit = 20): Promise<RecentEpisode[]> {
   return Db.listRecentEpisodes(scope(), limit);
 }
 
-/** Hearts. The user's own, kept on the device like the shows themselves. */
-/** The heart's one entry point: a show (`channel`) or one of its episodes. */
-export async function toggleFavoritePodcast(
-  id: string,
-  kind: 'channel' | 'episode',
-  channelId: string,
-): Promise<boolean> {
-  return Db.toggleFavorite(scope(), id, kind, channelId);
-}
-
-/** The heart's one entry point for callers that show hearts: the SQLite row
- *  and the cache answer together, so no surface can forget the pairing. */
+/** Hearts. The user's own, kept on the device like the shows themselves: one
+ *  entry point that files the SQLite row and invalidates the hearted lists
+ *  together, so no surface can forget the pairing. */
 export async function togglePodcastHeart(
   id: string,
   kind: 'channel' | 'episode',
   channelId: string,
 ): Promise<boolean> {
-  const added = await toggleFavoritePodcast(id, kind, channelId);
+  const added = await Db.toggleFavorite(scope(), id, kind, channelId);
   invalidatePodcastFavorites();
   return added;
 }
@@ -375,15 +363,7 @@ export async function search(term: string): Promise<PodcastSearchResult[]> {
   if (!q) return [];
   const url = `${ITUNES_SEARCH}?media=podcast&entity=podcast&limit=${SEARCH_LIMIT}&term=${encodeURIComponent(q)}`;
   const body = await get(url, 'application/json');
-  let parsed: {
-    results?: {
-      feedUrl?: string;
-      collectionName?: string;
-      artistName?: string;
-      artworkUrl100?: string;
-      collectionViewUrl?: string;
-    }[];
-  };
+  let parsed: { results?: iTunesRow[] };
   try {
     parsed = JSON.parse(body);
   } catch {
@@ -403,7 +383,6 @@ interface iTunesRow {
   collectionName?: string;
   artistName?: string;
   artworkUrl100?: string;
-  collectionViewUrl?: string;
 }
 
 function iTunesResults(results: iTunesRow[]): PodcastSearchResult[] {
@@ -418,7 +397,6 @@ function iTunesResults(results: iTunesRow[]): PodcastSearchResult[] {
     };
     if (r.artistName) result.author = r.artistName;
     if (r.artworkUrl100) result.imageUrl = r.artworkUrl100;
-    if (r.collectionViewUrl) result.siteUrl = r.collectionViewUrl;
     out.push(result);
   }
   return out;

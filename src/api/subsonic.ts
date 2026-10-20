@@ -1950,6 +1950,4 @@ export interface PodcastEpisode {
   /** The enclosure, played as `Song.url`. */
   url?: string;
   mimeType?: string;
-  size?: number;
-  imageUrl?: string;
 }
