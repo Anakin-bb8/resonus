@@ -415,6 +415,9 @@ export function refreshRadios(opts: { force?: boolean } = {}): Promise<RadioDef[
     // More candidates than radios: the ones with too few songs of their own
     // are passed over (see `MIN_SEED_SONGS`), and only when that leaves too
     // few does the bar drop to one song.
+    // Only now is there a new set on its way: the cheap paths above return
+    // before this and never show it.
+    useRadios.getState().setBuilding(true);
     const candidates = await pickSeeds(
       count * 3,
       new Set(useRadios.getState().defs.map((d) => d.seed.id)),
@@ -444,6 +447,7 @@ export function refreshRadios(opts: { force?: boolean } = {}): Promise<RadioDef[
     return useRadios.getState().defs;
   })().finally(() => {
     inflight = null;
+    useRadios.getState().setBuilding(false);
   });
   return inflight;
 }
