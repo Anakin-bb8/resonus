@@ -340,6 +340,39 @@ export async function listDownloads(scope: string): Promise<Record<string, strin
   return out;
 }
 
+/**
+ * What the downloaded episodes take, added up by the database: the size was
+ * written down when each file landed, so this is a sum, not a walk.
+ */
+export async function downloadedBytes(scope: string): Promise<number> {
+  const db = await podcastDb(scope);
+  const row = await db.getFirstAsync<{ total: number | null }>(
+    'SELECT SUM(bytes) AS total FROM podcast_downloads',
+  );
+  return row?.total ?? 0;
+}
+
+/**
+ * Forgets every downloaded episode in every profile's database, and closes the
+ * handles: the files under `podcast-downloads/` are about to go, and rows
+ * pointing at them would hand the player a path that no longer exists. The
+ * databases themselves stay — the shows and the hearts are the person's own.
+ */
+export async function clearDownloadRecords(): Promise<void> {
+  const scopes = await FileSystem.readDirectoryAsync(ROOT).catch(() => [] as string[]);
+  for (const scope of scopes) {
+    try {
+      const db = await podcastDb(scope);
+      await db.runAsync('DELETE FROM podcast_downloads', []);
+    } catch {
+      // A database that cannot be opened has no rows anyone can read.
+    }
+    // Closed right after: touching every profile's database must not leave a
+    // handle open for each of them.
+    await closePodcastDb(scope);
+  }
+}
+
 /** How many of a show's episodes are downloaded, and their ids. */
 export async function downloadedForChannel(
   scope: string,

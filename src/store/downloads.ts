@@ -55,7 +55,13 @@ import { profileScopeId, useAuthStore } from './auth';
 import { useLibraryMirror } from './libraryMirror';
 import { useSettings } from './settings';
 import { useToast } from './toast';
-import { dropDownloads, listDownloads, saveDownload } from '@/lib/podcastDb';
+import {
+  clearDownloadRecords,
+  downloadedBytes,
+  dropDownloads,
+  listDownloads,
+  saveDownload,
+} from '@/lib/podcastDb';
 
 // What a podcast download needs from an episode: its address and the show it
 // belongs to. Both a stored `PodcastEpisode` and the episode-as-song the menu
@@ -1568,6 +1574,12 @@ export const useDownloads = create<DownloadsState>((set, get) => {
         // would outlive the files they are pointing at.
         await Db.closeCatalogs();
         await FileSystem.deleteAsync(ROOT_DIR, { idempotent: true }).catch(() => {});
+        // Podcast episodes: their files live under a root of their own, outside
+        // the server folders. The databases stay — the shows and the hearts are
+        // the person's own — but every row pointing at a file that is about to
+        // go goes too, with the handles closed before the folder does.
+        await clearDownloadRecords();
+        await FileSystem.deleteAsync(PODCAST_ROOT, { idempotent: true }).catch(() => {});
       });
       // Local playlists created by downloads no longer resolve songs;
       // they are removed to avoid leaving empty lists.
@@ -1592,6 +1604,14 @@ export const useDownloads = create<DownloadsState>((set, get) => {
         // Downloaded before sizes were recorded: measured once, written down,
         // and never measured again.
         if (missing.length > 0) total += await measureMissing(dir, missing);
+      }
+      // Podcast episodes, whose sizes the podcast database wrote down too. No
+      // server to walk, so the profile's own database answers for all of them.
+      try {
+        total += await downloadedBytes(podcastScope());
+      } catch {
+        // A podcast database that cannot be read leaves its episodes out of
+        // the number, not the screen without one.
       }
       return total;
     }),

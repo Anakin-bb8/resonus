@@ -40,6 +40,7 @@ import { useCanShare } from '@/hooks/useCanShare';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { applyStarChange, resyncFavorites } from '@/lib/favoritesCache';
 import { toggleFavoritePodcast } from '@/api/podcasts';
+import { isManualOffline } from '@/api/netGate';
 import { artistTargets } from '@/lib/artistNav';
 import { pushOrReplace } from '@/lib/pushOrReplace';
 import { exportToFolder, shareSongFile } from '@/lib/exportSong';
@@ -663,13 +664,15 @@ export function SongMenuSheet() {
                       // to delete on the spot (#48).
                       onPress={() => setConfirmDelete(true)}
                     />
-                  ) : !offline && (song.podcastChannelId ? song.url : !song.url) ? (
+                  ) : (song.podcastChannelId ? !isManualOffline() && song.url : !offline && !song.url) ? (
                     <Action
                       icon="download-outline"
                       label={t('Download')}
                       onPress={() => {
                         // An episode pulls from its own address; a server song
-                        // goes through the server's download.
+                        // goes through the server's download. A podcast needs no
+                        // server, so automatic offline (server down) may still
+                        // fetch it — only a manual "use no network" says no.
                         if (song.podcastChannelId)
                           void downloadPodcastEpisode({
                             id: song.id,
@@ -815,11 +818,13 @@ export function SongMenuSheet() {
           setConfirmDelete(false);
           if (song.podcastChannelId) {
             // The episode's file goes from the podcast record, not a server
-            // catalog, and its undo re-pulls the same enclosure.
+            // catalog, and its undo re-pulls the same enclosure — the publisher,
+            // not the server: automatic offline may still undo, only a manual
+            // "use no network" takes the way back away.
             void deletePodcastDownloads([song.id]);
             toast(
               t('Download removed'),
-              offline
+              isManualOffline()
                 ? undefined
                 : {
                     label: t('Undo'),

@@ -54,6 +54,7 @@ export default function PodcastScreen() {
   const t = useT();
   const lang = useSettings((s) => s.language);
   const hideUnavailable = useSettings((s) => s.hideUnavailableOffline);
+  const showDescription = useSettings((s) => s.showPlaylistDescription);
   const playQueue = usePlayerStore((s) => s.playQueue);
   const playingId = usePlayerStore((s) => currentSong(s)?.id);
 
@@ -146,7 +147,7 @@ export default function PodcastScreen() {
     <TrackListView
         title={ch.title}
         subtitle={ch.author}
-        description={ch.description}
+        description={showDescription ? ch.description : undefined}
         meta={meta}
         coverUri={coverArtUrl(ch.imageUrl, COVER.card)}
         songs={songs}

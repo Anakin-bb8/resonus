@@ -348,6 +348,7 @@ export default function DownloadsSettings() {
                 ['playlistCovers', t('Playlist covers')],
                 ['legacyRadioCovers', t('Radio station art')],
                 ['outbox', t('Pending changes')],
+                ['podcasts', t('Podcast subscriptions')],
               ] as [keyof StorageParts, string][]
             )
               .filter(([key]) => parts[key] >= LISTED_MIN)

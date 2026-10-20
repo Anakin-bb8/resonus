@@ -5,7 +5,6 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useIsFocused, useRouter } from 'expo-router';
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import {
   ActivityIndicator,
   AppState,

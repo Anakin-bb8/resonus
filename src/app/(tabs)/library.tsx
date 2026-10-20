@@ -60,6 +60,7 @@ import { usePins } from '@/store/pins';
 import { SORT_LABELS, byCodepoint, matches, normQ, sortItems } from '@/lib/librarySort';
 import { useSettings, type LibrarySort } from '@/store/settings';
 import { useAccent } from '@/hooks/useAccent';
+import { episodeUnavailable } from '@/hooks/useEpisodeUnavailable';
 import { useToast } from '@/store/toast';
 import { colors, fontSize, lineHeight, radius, SHEET_MAX_WIDTH, spacing, themed, useTheme, tracking } from '@/theme';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
@@ -470,7 +471,7 @@ function PodcastsTab({ query }: { query: string }) {
   const files = useDownloads((s) => s.files);
   const hideUnavailable = useSettings((s) => s.hideUnavailableOffline);
   const toast = useToast((s) => s.show);
-  const unavailable = (id: string) => offline && !files[id];
+  const unavailable = (id: string) => episodeUnavailable(offline, files, id);
   const channelsQ = useQuery({
     queryKey: ['podcastFavoriteChannels'],
     queryFn: () => listFavoriteChannels(),
@@ -531,8 +532,8 @@ function PodcastsTab({ query }: { query: string }) {
       ? all.filter((r) => r.title.toLowerCase().includes(q) || (r.by ?? '').toLowerCase().includes(q))
       : all;
     // Hide mode, offline: an episode that is not on disk gets no row at all.
-    const kept = hideUnavailable && offline
-      ? filtered.filter((r) => r.kind === 'channel' || files[r.id])
+    const kept = hideUnavailable
+      ? filtered.filter((r) => r.kind === 'channel' || !episodeUnavailable(offline, files, r.id))
       : filtered;
     return sortItems(
       kept,
@@ -597,6 +598,7 @@ function PodcastsTab({ query }: { query: string }) {
                     }
               }
               dimmed={unavailable(item.id)}
+              badge={!!files[item.id]}
               uri={coverArtUrl(item.coverArt, COVER.card)}
               title={item.title}
               subtitle={item.by}
@@ -784,7 +786,7 @@ function AllTab({ query, onNew }: { query: string; onNew?: () => void }) {
   const files = useDownloads((s) => s.files);
   const hideUnavailable = useSettings((s) => s.hideUnavailableOffline);
   const toast = useToast((s) => s.show);
-  const unavailable = (id: string) => offline && !files[id];
+  const unavailable = (id: string) => episodeUnavailable(offline, files, id);
   const lists = useQuery({
     queryKey: ['playlists'],
     queryFn: () => getPlaylists(),
@@ -869,7 +871,7 @@ function AllTab({ query, onNew }: { query: string; onNew?: () => void }) {
         // own chip: looking for a name should find the shows behind it.
         all.filter(
           (i) =>
-            !(hideUnavailable && offline && i.kind === 'episode' && !files[i.id]) &&
+            !(hideUnavailable && i.kind === 'episode' && episodeUnavailable(offline, files, i.id)) &&
             matches(query, i.name, i.kind === 'album' || i.kind === 'podcast' || i.kind === 'episode' ? i.by : undefined),
         ),
         sort,
@@ -981,6 +983,7 @@ function AllTab({ query, onNew }: { query: string; onNew?: () => void }) {
             subtitle={label(item)}
             pinned={!!pins[`${item.kind}:${item.id}`]}
             dimmed={item.kind === 'episode' && unavailable(item.id)}
+            badge={item.kind === 'episode' && !!files[item.id]}
             onLongPress={
               item.kind === 'episode' && unavailable(item.id)
                 ? undefined
@@ -1067,6 +1070,7 @@ function GridCard({
   subtitle,
   pinned,
   dimmed,
+  badge,
   onLongPress,
   onPress,
 }: {
@@ -1080,6 +1084,8 @@ function GridCard({
   pinned?: boolean;
   /** Offline and not downloaded (a podcast episode): dim like a song row. */
   dimmed?: boolean;
+  /** On disk (a downloaded episode): the ↓ badge, as `TrackRow` gives a song. */
+  badge?: boolean;
   onLongPress?: () => void;
   /**
    * A card that does something on tap instead of navigating (a podcast episode
@@ -1100,6 +1106,7 @@ function GridCard({
       </Text>
       {subtitle ? (
         <View style={styles.cardSubLine}>
+          {badge ? <Icon name="arrow-down-circle" size={12} color={colors.accent} /> : null}
           {pinned ? <Icon name="pin" size={12} color={colors.accent} /> : null}
           <Text style={styles.cardSub} numberOfLines={1}>
             {subtitle}

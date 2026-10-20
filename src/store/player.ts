@@ -319,10 +319,13 @@ function copyOnPhone(song: Song): string | undefined {
 /**
  * Can this track be played offline? Radio (own url), local library track
  * (localUri) or on-disk download or cached copy. Offline, those that only exist
- * as a server stream cannot be played and must be skipped.
+ * as a server stream cannot be played and must be skipped. A podcast episode's
+ * `url` is the publisher's address, not a stream the phone may reach while
+ * offline mode says no to: only a file on the phone plays it (the same rule
+ * `markUnplayableOffline` and the rows work out).
  */
 function playableOffline(song: Song | null | undefined): boolean {
-  return !!song && (!!song.url || !!song.localUri || !!copyOnPhone(song));
+  return !!song && (!!song.url && !song.podcastChannelId || !!song.localUri || !!copyOnPhone(song));
 }
 
 /** Max streaming bitrate according to current network (Wi-Fi or mobile data). */
@@ -423,7 +426,10 @@ function sourceFor(song: Song, timeOffsetSec = 0): AudioSource {
   // files get the same answer for free: reading an index you already hold is
   // not the wait this avoids - the wait is scanning a stream for one.
   const preferPreciseTiming = useSettings.getState().preferPreciseTiming;
-  if (song.url) return { uri: song.url, metadata, mediaId, preferPreciseTiming };
+  // A podcast episode's `url` is the publisher's address: offline mode says no
+  // to it like to any other request, so only the file on the phone plays it —
+  // `localSourceFor` below hands that over. Online, the enclosure streams.
+  if (song.url && !(song.podcastChannelId && useAuthStore.getState().offline)) return { uri: song.url, metadata, mediaId, preferPreciseTiming };
   const local = localSourceFor(song);
   // Counted where the decision is acted on, once per install, and not inside
   // `localSourceFor`, which every render and every heartbeat asks. "Streamed

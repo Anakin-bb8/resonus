@@ -21,6 +21,7 @@ import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { bump } from '@/lib/perfLog';
 import { useEpisodeUnavailable } from '@/hooks/useEpisodeUnavailable';
+import { useDownloads } from '@/store/downloads';
 import { usePlayerStore } from '@/store/player';
 import { useSongMenu } from '@/store/songMenu';
 import { usePodcastMenu } from '@/store/podcastMenu';
@@ -52,6 +53,9 @@ export function PodcastRow({ channel, episode, sub, pinned }: Props) {
   // Offline and not on disk: dimmed, and a tap says so instead of pretending
   // it can stream the publisher's address (as `TrackRow` does for songs).
   const unavailable = useEpisodeUnavailable(episode?.id);
+  // On disk: the ↓ badge, shown online too — the same mark `TrackRow` gives a
+  // downloaded song, so a downloaded episode reads as offline-playable.
+  const downloaded = useDownloads((s) => !!s.files[episode?.id ?? '']);
   if (!channel) return null;
   const href = `/podcast/${channel.id}`;
   // An episode row plays itself; a show row taps to its screen.
@@ -91,8 +95,9 @@ export function PodcastRow({ channel, episode, sub, pinned }: Props) {
         <Text style={styles.name} numberOfLines={1}>
           {episode ? episode.title : channel.title}
         </Text>
-        {sub || pinned ? (
+        {sub || pinned || downloaded ? (
           <View style={styles.subLine}>
+            {downloaded ? <Icon name="arrow-down-circle" size={13} color={accent} /> : null}
             {pinned ? <Icon name="pin" size={13} color={accent} /> : null}
             {sub ? (
               <Text style={styles.sub} numberOfLines={1}>

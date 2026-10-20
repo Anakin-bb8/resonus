@@ -1,20 +1,35 @@
 /**
  * The ⋯ menu for a podcast show: a bottom sheet with the things worth doing to
- * a show from wherever it was opened — read it fresh from the publisher, open
- * its website, and download every episode. It mirrors the album's ⋯ sheet, kept
- * small because a show has only these. It is store-driven (see `usePodcastMenu`),
+ * a show from wherever it was opened — start it, deal it, put it into the queue,
+ * download every episode, read it fresh from the publisher, open its website,
+ * keep it as a favourite, and take the downloaded episodes off the phone. It
+ * mirrors the album's ⋯ sheet in the same order: what you do WITH the show first
+ * (playback, queue), then what it takes to get it (download), then the way
+ * around it (refresh, website), then where it lives (the heart), and the only
+ * thing that takes something away last. It is store-driven (see `usePodcastMenu`),
  * so the same sheet opens from the show's own screen and from a long-press on a
- * show in the Library.
+ * show in the Library — which is why it plays at all: a row in the Library has
+ * no play button, and this sheet is the way into one.
  */
 import Icon from '@/components/Icon';
 import { Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Cover } from '@/components/Cover';
-import { feedErrorCode, refreshChannel, listEpisodes } from '@/api/podcasts';
+import { coverArtUrl, type Song } from '@/api/data';
+import {
+  episodeToSong,
+  feedErrorCode,
+  refreshChannel,
+  listEpisodes,
+  toggleFavoritePodcast,
+} from '@/api/podcasts';
+import { isManualOffline } from '@/api/netGate';
 import { useT } from '@/i18n';
-import { invalidatePodcastCaches } from '@/lib/query';
+import { invalidatePodcastCaches, invalidatePodcastFavorites } from '@/lib/query';
+import { usePodcastFavoriteIds } from '@/lib/podcastFavorites';
 import { useDownloads } from '@/store/downloads';
+import { usePlayerStore } from '@/store/player';
 import { usePodcastMenu } from '@/store/podcastMenu';
 import { useToast } from '@/store/toast';
 import { colors, fontSize, radius, SHEET_MAX_WIDTH, spacing, themed } from '@/theme';
@@ -25,11 +40,32 @@ export function PodcastMenuSheet() {
   const toast = useToast((s) => s.show);
   const ch = usePodcastMenu((s) => s.channel);
   const close = usePodcastMenu((s) => s.close);
+  // The show's heart, read from the same SQLite set every surface asks for.
+  const favIds = usePodcastFavoriteIds();
+  // Playback too: a show in the Library has no play button, and this sheet is
+  // the way into one (as the album's has Play for the same reason).
+  const playQueue = usePlayerStore((s) => s.playQueue);
+  const queueMany = usePlayerStore((s) => s.queueMany);
 
   if (!ch) return null;
 
   const onClose = () => close();
   const siteUrl = ch.siteUrl;
+  const hearted = favIds.has(ch.id);
+  const href = `/podcast/${ch.id}`;
+
+  /** Closes, reads the episodes from SQLite, and runs the action on them. */
+  const withEpisodes = (fn: (songs: Song[]) => void) => {
+    onClose();
+    void (async () => {
+      try {
+        const list = await listEpisodes(ch.id);
+        if (list.length > 0) fn(list.map((e) => episodeToSong(e, ch)));
+      } catch {
+        toast(t("Couldn't complete the action"));
+      }
+    })();
+  };
 
   return (
     <Modal transparent visible animationType="slide" onRequestClose={onClose}>
@@ -39,7 +75,7 @@ export function PodcastMenuSheet() {
         <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.md }]}>
           <View style={styles.grabber} />
           <View style={styles.headerRow}>
-            {ch.imageUrl ? <Cover uri={ch.imageUrl} size={48} /> : null}
+            {ch.imageUrl ? <Cover uri={coverArtUrl(ch.imageUrl, 48)} size={48} /> : null}
             <View style={{ flex: 1 }}>
               <Text style={styles.title} numberOfLines={1}>
                 {ch.title}
@@ -53,12 +89,64 @@ export function PodcastMenuSheet() {
           </View>
           <View style={styles.divider} />
 
+          {/* Playback first, as on the album's sheet: this is the way into a
+              show long-pressed in the Library, which has no play button. The
+              episodes come from SQLite, bridged to songs, and the queue takes
+              them the same way it takes an album's. */}
+          <Pressable
+            style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+            onPress={() => withEpisodes((songs) => void playQueue(songs, 0, ch.title, href))}
+          >
+            <Icon name="play-outline" size={24} color={colors.text} />
+            <Text style={styles.actionText}>{t('Play')}</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+            onPress={() =>
+              withEpisodes((songs) => void playQueue(songs, 0, ch.title, href, { shuffled: true }))
+            }
+          >
+            <Icon name="shuffle-outline" size={24} color={colors.text} />
+            <Text style={styles.actionText}>{t('Shuffle')}</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+            onPress={() =>
+              withEpisodes((songs) => {
+                queueMany(songs, 'next');
+                toast(t('Playing next'));
+              })
+            }
+          >
+            <Icon name="play-forward-outline" size={24} color={colors.text} />
+            <Text style={styles.actionText}>{t('Play next')}</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+            onPress={() =>
+              withEpisodes((songs) => {
+                queueMany(songs, 'end');
+                toast(t('Added to queue'));
+              })
+            }
+          >
+            <Icon name="list-outline" size={24} color={colors.text} />
+            <Text style={styles.actionText}>{t('Add to queue')}</Text>
+          </Pressable>
+
           {/* Download every episode of the show. The episodes are read from
               SQLite on the tap, so the sheet needs nothing carried to it. */}
           <Pressable
             style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
             onPress={() => {
               onClose();
+              // A download is a transfer, and a manual "use no network" makes
+              // none — said here, because the transfer goes through expo-file-
+              // system and the gate under the API layer cannot see it.
+              if (isManualOffline()) {
+                toast(t("You're offline"));
+                return;
+              }
               void (async () => {
                 try {
                   await useDownloads.getState().downloadPodcast(ch.id, await listEpisodes(ch.id));
@@ -98,6 +186,55 @@ export function PodcastMenuSheet() {
               <Text style={styles.actionText}>{t('Website')}</Text>
             </Pressable>
           ) : null}
+
+          {/* Where the show lives: its heart, filed in SQLite — the same heart
+              the show's screen lights, so a show can be kept from wherever it
+              was opened, as the album's sheet does with «Add to favorites». It
+              sits here, not on top: the album side keeps the favorites group
+              next to the thing that takes something away. */}
+          <Pressable
+            style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+            onPress={() => {
+              onClose();
+              void (async () => {
+                try {
+                  await toggleFavoritePodcast(ch.id, 'channel', ch.id);
+                  invalidatePodcastFavorites();
+                } catch {
+                  toast(t("Couldn't complete the action"));
+                }
+              })();
+            }}
+          >
+            <Icon name={hearted ? 'heart' : 'heart-outline'} size={24} color={colors.text} />
+            <Text style={styles.actionText}>
+              {hearted ? t('Remove from favorites') : t('Add to favorites')}
+            </Text>
+          </Pressable>
+
+          {/* Last, because it is the only thing here that takes something away.
+              The show screen's pill hides in a manual "use no network" — this
+              way works exactly then, and clears a whole show at once, which
+              song-by-song undo could not (#47 on the album side). */}
+          <Pressable
+            style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+            onPress={() => {
+              onClose();
+              void (async () => {
+                try {
+                  await useDownloads.getState().deletePodcastDownloads(
+                    (await listEpisodes(ch.id)).map((e) => e.id),
+                  );
+                  toast(t('Downloads deleted'));
+                } catch {
+                  toast(t("Couldn't complete the action"));
+                }
+              })();
+            }}
+          >
+            <Icon name="trash-outline" size={24} color={colors.text} />
+            <Text style={styles.actionText}>{t('Delete downloads')}</Text>
+          </Pressable>
         </View>
       </View>
     </Modal>
