@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { parseLrc, serializeLrc } from '@/lib/lrc';
+import { activeIndex } from '@/lib/lyricSweep';
 import { indexOfByte, structuredSongLyrics, wordEnds, wordsFromCues } from '@/lib/lyricWords';
 import { parseTtml, ttmlTime } from '@/lib/ttml';
 
@@ -313,6 +314,24 @@ describe('Word ends', () => {
 });
 
 describe('Server structured lyrics', () => {
+  it('puts synced lines in the order they are sung', () => {
+    // A chorus stored once with two timestamps comes back after the verses.
+    const lyrics = structuredSongLyrics({
+      synced: true,
+      line: [
+        { start: 1000, value: 'Verse one' },
+        { start: 9000, value: 'Verse two' },
+        { start: 5000, value: 'Chorus' },
+        { start: 13000, value: 'Chorus' },
+      ],
+    });
+    assert.deepEqual(
+      lyrics?.lines.map((l) => l.start),
+      [1000, 5000, 9000, 13000],
+    );
+    assert.equal(activeIndex(lyrics!.lines, 10_000), 2);
+  });
+
   it('reads the lead voice like before, with no backing', () => {
     const lyrics = structuredSongLyrics({
       synced: true,
