@@ -12,6 +12,8 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import * as SQLite from 'expo-sqlite';
 
+import { hashKey } from '@/lib/localLibrary';
+
 import type { PodcastChannel, PodcastEpisode } from '@/api/subsonic';
 
 const SCHEMA = `
@@ -69,10 +71,74 @@ export function podcastDbDir(scope: string): string {
   return `${ROOT}${scope}/`;
 }
 
+/** The file a show's picture is saved to: derived from the show and its
+ *  address, so a reader finds the same path without being told it. It lives
+ *  next to the database, not in the downloads folder — the picture belongs
+ *  to the kept show, and "delete all downloads" must not take it away. */
+function artExt(url: string): string {
+  const path = url.split('?')[0].split('#')[0];
+  const base = path.slice(path.lastIndexOf('/') + 1);
+  const dot = base.lastIndexOf('.');
+  if (dot > 0) {
+    const ext = base.slice(dot + 1).toLowerCase();
+    if (/^[a-z0-9]{1,5}$/.test(ext)) return ext;
+  }
+  return 'jpg';
+}
+
+export function podcastArtFile(scope: string, channelId: string, imageUrl: string): string {
+  return `${podcastDbDir(scope)}art/${hashKey(channelId)}.${artExt(imageUrl)}`;
+}
+
+// The pictures filed for each opened profile, read from the folder once when
+// the database opens: the SDK has no synchronous existence check, and whoever
+// draws a cover asks this while rendering.
+const artFiles = new Map<string, Set<string>>();
+
+/** The saved picture when it is there — synchronous, one Set lookup. */
+export function localPodcastArt(
+  scope: string,
+  channelId: string,
+  imageUrl: string,
+): string | undefined {
+  const dir = podcastDbDir(scope);
+  const file = podcastArtFile(scope, channelId, imageUrl);
+  const seen = artFiles.get(dir);
+  return seen && seen.has(file.slice(dir.length)) ? file : undefined;
+}
+
+/** Files a show's picture, once: the feed read that brought the address
+ *  brings the bytes too, so manual offline has a real file to draw and
+ *  expo-image's evictable cache is no longer a promise. */
+export async function savePodcastArt(
+  scope: string,
+  channelId: string,
+  imageUrl: string,
+): Promise<void> {
+  const dir = podcastDbDir(scope);
+  const file = podcastArtFile(scope, channelId, imageUrl);
+  const seen = artFiles.get(dir);
+  if (seen && seen.has(file.slice(dir.length))) return;
+  await FileSystem.makeDirectoryAsync(`${dir}art/`, { intermediates: true }).catch(() => {});
+  const res = await FileSystem.downloadAsync(imageUrl, file);
+  if (!res || res.status !== 200) {
+    await FileSystem.deleteAsync(file, { idempotent: true }).catch(() => {});
+    return;
+  }
+  seen?.add(file.slice(dir.length));
+}
+
 async function openDb(dir: string): Promise<SQLite.SQLiteDatabase> {
   await FileSystem.makeDirectoryAsync(dir, { intermediates: true }).catch(() => {});
   const db = await SQLite.openDatabaseAsync('podcasts.db', {}, dir.replace(/^file:\/\//, ''));
   await db.execAsync(SCHEMA);
+  // Pictures filed in a previous session, listed once here so a reader can
+  // prefer them without an existence check (the SDK has none).
+  try {
+    artFiles.set(dir, new Set(await FileSystem.readDirectoryAsync(`${dir}art/`)));
+  } catch {
+    artFiles.set(dir, new Set());
+  }
   return db;
 }
 

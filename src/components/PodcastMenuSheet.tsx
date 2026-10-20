@@ -16,13 +16,14 @@ import { Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Cover } from '@/components/Cover';
-import { coverArtUrl, type Song } from '@/api/data';
+import { COVER, coverArtUrl, type Song } from '@/api/data';
 import {
   episodeToSong,
   feedErrorCode,
   refreshChannel,
   listAllEpisodes,
   downloadedForChannel,
+  podcastCover,
   toggleFavoritePodcast,
 } from '@/api/podcasts';
 import { useQuery } from '@tanstack/react-query';
@@ -49,21 +50,22 @@ export function PodcastMenuSheet() {
   const playQueue = usePlayerStore((s) => s.playQueue);
   const queueMany = usePlayerStore((s) => s.queueMany);
 
+  // Whether this show has anything downloaded, from the record and not from
+  // a loaded list: downloads sitting beyond the first page still count. The
+  // download and delete actions invalidate this key when they land.
+  const downloaded = useQuery({
+    queryKey: ['podcastDownloads', ch?.id ?? ''],
+    queryFn: async () => (await downloadedForChannel(ch?.id ?? '')).count,
+    enabled: !!ch,
+    staleTime: Infinity,
+  });
+
   if (!ch) return null;
 
   const onClose = () => close();
   const siteUrl = ch.siteUrl;
   const hearted = favIds.has(ch.id);
   const href = `/podcast/${ch.id}`;
-
-  // Whether this show has anything downloaded, from the record and not from
-  // a loaded list: downloads sitting beyond the first page still count. The
-  // download and delete actions invalidate this key when they land.
-  const downloaded = useQuery({
-    queryKey: ['podcastDownloads', ch.id],
-    queryFn: async () => (await downloadedForChannel(ch.id)).count,
-    staleTime: Infinity,
-  });
 
   /** Closes, reads the episodes from SQLite, and runs the action on them. */
   const withEpisodes = (fn: (songs: Song[]) => void) => {
@@ -86,7 +88,12 @@ export function PodcastMenuSheet() {
         <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.md }]}>
           <View style={styles.grabber} />
           <View style={styles.headerRow}>
-            {ch.imageUrl ? <Cover uri={coverArtUrl(ch.imageUrl, 48)} size={48} /> : null}
+            {ch.imageUrl ? (
+              <Cover
+                uri={coverArtUrl(podcastCover(ch.id, ch.imageUrl), COVER.thumb)}
+                size={48}
+              />
+            ) : null}
             <View style={{ flex: 1 }}>
               <Text style={styles.title} numberOfLines={1}>
                 {ch.title}

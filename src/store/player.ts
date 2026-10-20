@@ -432,10 +432,19 @@ function sourceFor(song: Song, timeOffsetSec = 0): AudioSource {
   // files get the same answer for free: reading an index you already hold is
   // not the wait this avoids - the wait is scanning a stream for one.
   const preferPreciseTiming = useSettings.getState().preferPreciseTiming;
-  // A podcast episode's `url` is the publisher's address: offline mode says no
-  // to it like to any other request, so only the file on the phone plays it —
-  // `localSourceFor` below hands that over. Online, the enclosure streams.
-  if (song.url && !(song.podcastChannelId && useAuthStore.getState().offline)) return { uri: song.url, metadata, mediaId, preferPreciseTiming };
+  // A podcast episode's `url` is the publisher's address. Offline mode says
+  // no to it like to any other request, so only a file on the phone plays it.
+  // Online, a downloaded episode still asks the same question an album song
+  // asks: the ↓ badge promised no data, so the "prefer the file on the phone"
+  // setting decides, and the enclosure is only the stream to fall back to.
+  if (song.url && song.podcastChannelId) {
+    const episodeLocal = localSourceFor(song);
+    if (episodeLocal) return { uri: episodeLocal, metadata, mediaId, preferPreciseTiming };
+    if (!useAuthStore.getState().offline)
+      return { uri: song.url, metadata, mediaId, preferPreciseTiming };
+  } else if (song.url) {
+    return { uri: song.url, metadata, mediaId, preferPreciseTiming };
+  }
   const local = localSourceFor(song);
   // Counted where the decision is acted on, once per install, and not inside
   // `localSourceFor`, which every render and every heartbeat asks. "Streamed
@@ -2784,7 +2793,8 @@ function onPlaybackError(message: string, wasPlaying: boolean): void {
   errorAttempts++;
   // The other copy, and only the first time round: once it is marked, what just
   // failed IS the other copy, and swapping back would be a loop.
-  if (!failedSource.has(song.id) && !song.url) {
+  // Episodes are in too: their two copies are the file and the enclosure.
+  if (!failedSource.has(song.id) && (!song.url || song.podcastChannelId)) {
     const { auth, offline } = useAuthStore.getState();
     if (localSourceFor(song)) {
       // The phone's own library has no stream behind it, and neither has a

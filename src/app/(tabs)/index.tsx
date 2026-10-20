@@ -31,6 +31,8 @@ import {
 import {
   getChannel,
   getStoredChannel,
+  isFeedUrl,
+  podcastCover,
   listRecentEpisodes,
   type RecentEpisode,
 } from '@/api/podcasts';
@@ -175,10 +177,13 @@ function QuickGrid() {
         // straight from its feed carries the feed's address, with its own
         // slashes, as the id.
         const id = href.slice('/podcast/'.length);
-        const ch = /^https?:/i.test(id)
-          ? await getStoredChannel(id)
+        const ch = isFeedUrl(id)
+          ? await getStoredChannel(decodeURIComponent(id))
           : await getChannel(id);
-        if (ch?.imageUrl) out[href] = ch.imageUrl;
+        if (ch?.imageUrl) {
+          const art = podcastCover(ch.id, ch.imageUrl);
+          if (art) out[href] = art;
+        }
       }
       return out;
     },

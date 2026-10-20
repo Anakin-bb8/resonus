@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import Icon from '@/components/Icon';
 import { COVER, coverArtUrl } from '@/api/data';
-import { episodeToSong, type RecentEpisode } from '@/api/podcasts';
+import { episodeToSong, podcastCover, type RecentEpisode } from '@/api/podcasts';
 import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { useEpisodeUnavailable } from '@/hooks/useEpisodeUnavailable';
@@ -30,7 +30,7 @@ export function PodcastEpisodeCard({ item, width = 150 }: Props) {
   // downloaded song, so a downloaded episode reads as offline-playable.
   const downloaded = useDownloads((s) => !!s.files[episode.id]);
   // The show's artwork: episode art is often missing or the same image.
-  const cover = coverArtUrl(channel.imageUrl, COVER.card);
+  const cover = coverArtUrl(podcastCover(channel.id, channel.imageUrl), COVER.card);
 
   return (
     <Pressable

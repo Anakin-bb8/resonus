@@ -16,7 +16,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import Icon from '@/components/Icon';
 import { COVER, coverArtUrl } from '@/api/data';
-import { episodeToSong, type PodcastChannel, type PodcastEpisode } from '@/api/podcasts';
+import { episodeToSong, podcastCover, type PodcastChannel, type PodcastEpisode } from '@/api/podcasts';
 import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { bump } from '@/lib/perfLog';
@@ -87,7 +87,7 @@ export function PodcastRow({ channel, episode, sub, pinned }: Props) {
       }
     >
       <Cover
-        uri={coverArtUrl(channel.imageUrl, COVER.thumb)}
+        uri={coverArtUrl(podcastCover(channel.id, channel.imageUrl), COVER.thumb)}
         size={56}
         placeholderIcon="headset-outline"
       />

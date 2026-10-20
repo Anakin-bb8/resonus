@@ -26,7 +26,7 @@ import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { TrackRow } from '@/components/TrackRow';
 import { useDebounce } from '@/hooks/useDebounce';
 import { songsLabel, episodesLabel, useT } from '@/i18n';
-import { listChannels } from '@/api/podcasts';
+import { listChannels, podcastCover } from '@/api/podcasts';
 import { haptic } from '@/lib/haptics';
 import { onTabReselect, takeSearchFocus } from '@/lib/tabOrigin';
 import { bump } from '@/lib/perfLog';
@@ -518,7 +518,7 @@ export default function SearchScreen() {
                   }
                 >
                   <Cover
-                    uri={coverArtUrl(c.imageUrl ?? c.id, COVER.thumb)}
+                    uri={coverArtUrl(podcastCover(c.id, c.imageUrl) ?? c.id, COVER.thumb)}
                     size={48}
                     placeholderIcon="headset-outline"
                   />

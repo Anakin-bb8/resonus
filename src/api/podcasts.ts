@@ -193,7 +193,20 @@ export async function refreshChannel(input: string): Promise<PodcastChannel> {
   await Db.saveChannel(s, channel);
   await Db.replaceEpisodes(s, id, episodes);
   await Db.addFeed(s, resolved);
+  // The picture belongs to the read that just happened: filing it here is
+  // what keeps a kept show's art drawable when manual offline says no to
+  // fetching and expo-image's cache has evicted the address.
+  if (channel.imageUrl) void Db.savePodcastArt(s, channel.id, channel.imageUrl).catch(() => {});
   return channel;
+}
+
+/** The show's picture: the file on the phone if it is there, the feed's
+ *  address if not. */
+export function podcastCover(
+  channelId: string,
+  imageUrl: string | undefined,
+): string | undefined {
+  return imageUrl ? Db.localPodcastArt(scope(), channelId, imageUrl) ?? imageUrl : undefined;
 }
 
 /** The stored channel by its feed address, before it is opened. */
@@ -210,8 +223,14 @@ export async function listChannels(): Promise<PodcastChannel[]> {
   return Db.listChannels(scope());
 }
 
+/** The episodes of a channel, newest first, one page at a time. */
 export async function listEpisodes(channelId: string): Promise<PodcastEpisode[]> {
   return Db.listEpisodes(scope(), channelId);
+}
+
+/** The route id is either a stored channel id or a percent-encoded feed URL. */
+export function isFeedUrl(id: string): boolean {
+  return /^https?:\/\//i.test(decodeURIComponent(id));
 }
 
 /** Every episode of a channel, pages read to the end. */

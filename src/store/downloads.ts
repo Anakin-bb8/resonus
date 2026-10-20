@@ -1600,6 +1600,13 @@ export const useDownloads = create<DownloadsState>((set, get) => {
       } catch {
         return false;
       }
+      // The file's own address says which record promises it: a podcast
+      // file lives under the podcast root, and its row is in the podcast
+      // database, not in the server catalog `deleteSongs` walks.
+      if (uri.startsWith(PODCAST_ROOT)) {
+        await get().deletePodcastDownloads([songId]);
+        return true;
+      }
       await get().deleteSongs([songId]);
       return true;
     },
@@ -1641,13 +1648,21 @@ export const useDownloads = create<DownloadsState>((set, get) => {
         // and never measured again.
         if (missing.length > 0) total += await measureMissing(dir, missing);
       }
-      // Podcast episodes, whose sizes the podcast database wrote down too. No
-      // server to walk, so the profile's own database answers for all of them.
+      // Podcast episodes, whose sizes the podcast database wrote down too.
+      // Every profile's folder answers for its own episodes — the signed-in
+      // one alone would drop another account's downloads out of the number,
+      // the same shape the album side had fixed for #50.
       try {
-        total += await downloadedBytes(podcastScope());
+        for (const scope of await FileSystem.readDirectoryAsync(PODCAST_ROOT)) {
+          try {
+            total += await downloadedBytes(scope);
+          } catch {
+            // A podcast database that cannot be read leaves its episodes out
+            // of the number, not the screen without one.
+          }
+        }
       } catch {
-        // A podcast database that cannot be read leaves its episodes out of
-        // the number, not the screen without one.
+        // No podcast folder at all: nothing was ever downloaded to count.
       }
       return total;
     }),

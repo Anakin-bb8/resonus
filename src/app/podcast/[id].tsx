@@ -18,6 +18,8 @@ import {
   getStoredChannel,
   listAllEpisodes,
   refreshChannel,
+  isFeedUrl,
+  podcastCover,
   type PodcastChannel,
 } from '@/api/podcasts';
 import { COVER, coverArtUrl, markUnplayableOffline } from '@/api/data';
@@ -40,11 +42,6 @@ import { useShallow } from 'zustand/react/shallow';
 
 /** A show older than this is quietly re-read from the publisher on opening. */
 const STALE_MS = 1000 * 60 * 60 * 72;
-
-/** The route id is either a stored channel id or a percent-encoded feed URL. */
-function isFeedUrl(id: string): boolean {
-  return /^https?:\/\//i.test(decodeURIComponent(id));
-}
 
 export default function PodcastScreen() {
   // Repaints on a change of appearance or accent: a stack keeps this screen
@@ -131,7 +128,10 @@ export default function PodcastScreen() {
   // shuffle button asks for the same list dealt (`shuffled`), which playQueue
   // honors without turning the shuffle mode on.
   const play = (start: number, opts?: { shuffled?: boolean }) => {
-    void playQueue(songs, start, ch.title, `/podcast/${id}`, opts);
+    // The show's own id, never the route param: opened straight from a feed
+    // that param is an address with slashes, and a route id with slashes is
+    // one no `Link` can come back to — the Home tile would be dead.
+    void playQueue(songs, start, ch.title, `/podcast/${ch.id}`, opts);
   };
 
   // The metadata line, built the way an album's reads: what it is, how many
@@ -151,7 +151,7 @@ export default function PodcastScreen() {
         subtitle={ch.author}
         description={showDescription ? ch.description : undefined}
         meta={meta}
-        coverUri={coverArtUrl(ch.imageUrl, COVER.card)}
+        coverUri={coverArtUrl(podcastCover(ch.id, ch.imageUrl), COVER.card)}
         songs={songs}
         currentId={playingId}
         // The heart marks the show as a favorite — the user's own heart, kept on
