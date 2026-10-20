@@ -24,7 +24,7 @@ import { useEpisodeUnavailable } from '@/hooks/useEpisodeUnavailable';
 import { useDownloads } from '@/store/downloads';
 import { usePlayerStore } from '@/store/player';
 import { useSongMenu } from '@/store/songMenu';
-import { usePodcastMenu } from '@/store/podcastMenu';
+import { openPodcastMenu } from './PodcastMenuSheet';
 import { useToast } from '@/store/toast';
 import { fontSize, spacing, themed, useTheme } from '@/theme';
 import { Cover } from './Cover';
@@ -47,7 +47,7 @@ export function PodcastRow({ channel, episode, sub, pinned }: Props) {
   const { accent } = useTheme();
   const playQueue = usePlayerStore((s) => s.playQueue);
   const openSongMenu = useSongMenu((s) => s.open);
-  const openShowMenu = usePodcastMenu((s) => s.open);
+
   const t = useT();
   const toast = useToast((s) => s.show);
   // Offline and not on disk: dimmed, and a tap says so instead of pretending
@@ -82,7 +82,7 @@ export function PodcastRow({ channel, episode, sub, pinned }: Props) {
           : () => {
               haptic('light');
               if (song) openSongMenu(song);
-              else openShowMenu(channel);
+              else openPodcastMenu(channel);
             }
       }
     >

@@ -51,7 +51,7 @@ import {
 } from '@/api/podcasts';
 import { usePlayerStore } from '@/store/player';
 import { useSongMenu } from '@/store/songMenu';
-import { usePodcastMenu } from '@/store/podcastMenu';
+import { openPodcastMenu } from '@/components/PodcastMenuSheet';
 import { useDownloads } from '@/store/downloads';
 import { useAuthStore } from '@/store/auth';
 import { useLastPlayed } from '@/store/lastPlayed';
@@ -564,7 +564,7 @@ function PodcastsTab({ query }: { query: string }) {
     useSongMenu.getState().open(episodeToSong(r.episode, r.channel));
   };
   const openShowMenu = (r: Row) => {
-    if (r.channel) usePodcastMenu.getState().open(r.channel);
+    if (r.channel) openPodcastMenu(r.channel);
   };
   return (
     <FlatList
@@ -903,7 +903,7 @@ function AllTab({ query, onNew }: { query: string; onNew?: () => void }) {
     else if (i.album) openMenu({ kind: 'album', album: i.album });
     else if (i.kind === 'episode' && i.episode && i.channel)
       useSongMenu.getState().open(episodeToSong(i.episode, i.channel));
-    else if (i.channel) usePodcastMenu.getState().open(i.channel);
+    else if (i.channel) openPodcastMenu(i.channel);
     else return;
     haptic('light');
   };

@@ -44,7 +44,7 @@ import { usePodcastFavoriteIds } from '@/lib/podcastFavorites';
 import { invalidatePodcastCaches } from '@/lib/query';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
-import { usePodcastMenu } from '@/store/podcastMenu';
+import { openPodcastMenu } from '@/components/PodcastMenuSheet';
 import {
   colors,
   fontSize,
@@ -302,7 +302,7 @@ export function PodcastsBrowser({ embedded, actionRef, searchOpen }: BrowserProp
             <Pressable
               style={styles.row}
               onPress={() => router.push(`/podcast/${item.id}`)}
-              onLongPress={() => usePodcastMenu.getState().open(item)}
+              onLongPress={() => openPodcastMenu(item)}
             >
               <Cover
                 uri={coverArtUrl(item.imageUrl, COVER.thumb)}
@@ -331,7 +331,7 @@ export function PodcastsBrowser({ embedded, actionRef, searchOpen }: BrowserProp
               />
               <Pressable
                 hitSlop={8}
-                onPress={() => usePodcastMenu.getState().open(item)}
+                onPress={() => openPodcastMenu(item)}
                 accessibilityLabel={t('More')}
               >
                 <Icon name="ellipsis-horizontal" size={22} color={colors.textSecondary} />

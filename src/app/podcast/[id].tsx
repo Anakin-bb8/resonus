@@ -29,7 +29,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { Message } from '@/components/Message';
 import { TrackListSkeleton } from '@/components/TrackListSkeleton';
 import { TrackListView } from '@/components/TrackListView';
-import { usePodcastMenu } from '@/store/podcastMenu';
+import { openPodcastMenu } from '@/components/PodcastMenuSheet';
 import { episodesLabel, useT } from '@/i18n';
 import { formatTotalDuration } from '@/lib/format';
 import { usePodcastFavoriteIds } from '@/lib/podcastFavorites';
@@ -177,7 +177,7 @@ export default function PodcastScreen() {
             : undefined
         }
         // The ⋯ opens the show's own sheet (store-driven, mounted globally).
-        onMenu={() => usePodcastMenu.getState().open(ch)}
+        onMenu={() => openPodcastMenu(ch)}
         emptyState={
           <EmptyState icon="headset-outline" title={t('No episodes')} />
         }
