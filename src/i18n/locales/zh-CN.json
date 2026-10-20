@@ -197,6 +197,7 @@
   "Local profile": "本地模式",
   "Lyrics": "歌词",
   "Lyrics source": "歌词来源",
+  "Where to get lyrics from. Online search uses LRCLIB (sends the artist and title).": "选择歌词来源。在线搜索使用 LRCLIB（会发送艺术家和歌曲标题）。",
   "Prefer local lyrics": "优先使用本地歌词",
   "Prefer online search": "优先在线搜索",
   "Disable online search": "禁用在线搜索",

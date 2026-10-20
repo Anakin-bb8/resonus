@@ -1015,13 +1015,6 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
    * disabled. Defaults to 'local' (local first, LRCLIB as fallback).
    */
   lyricsSource: LyricsSource;
-  /** Online lyrics from LRCLIB, by artist and title. */
-  lyricsLrclib: boolean;
-  /**
-   * Online lyrics from lrc.red, by the song's ISRC, often timed word by word.
-   * Asked before LRCLIB when both are on.
-   */
-  lyricsLrcRed: boolean;
   lyricsSize: LyricsSize;
   /** Thickness of lyric glyphs, from light (300) to bold (700). */
   lyricsWeight: LyricsWeight;
@@ -1366,10 +1359,6 @@ const DEFAULTS = {
   lyricsBackground: 'cover' as ScreenBackground,
   lyricsCardBackground: 'color' as CardBackground,
   lyricsSource: 'local' as LyricsSource,
-  // LRCLIB on, as it always was. lrc.red off: a new service is not sent
-  // anything until somebody turns it on.
-  lyricsLrclib: true,
-  lyricsLrcRed: false,
   lyricsSize: 'normal' as LyricsSize,
   lyricsWeight: '500' as LyricsWeight,
   lyricsAlign: 'left' as LyricsAlign,

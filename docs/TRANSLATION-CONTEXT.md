@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 823 of them.
+Every string the app can show, under the screen it shows up on. 821 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -1028,7 +1028,6 @@ you are actually typing into, which is easier than reading it here.
 | `Large` | One of the values of “Lyrics size” |
 | `Left` | One of the values of “Lyrics alignment” |
 | `Light font weight` | One of the values of “Lyrics weight” |
-| `Looks the song up by its ISRC code, often timed word by word. Asked first.` |  |
 | `Lyrics alignment` |  |
 | `Lyrics background` | What is drawn behind the lyrics screen, the full screen one |
 | `Lyrics card background` | What is drawn behind the small lyrics card that peeks under the player. Not the same thing as `Lyrics background` |
@@ -1059,7 +1058,6 @@ you are actually typing into, which is easier than reading it here.
 | `Regular font weight` | One of the values of “Lyrics weight” |
 | `Restart, then previous track` | A value of `Previous button`: the first press goes back to the start of this song, the second to the one before |
 | `Scroll long titles` | A title too long to fit slides sideways, over and over, instead of being cut off |
-| `Searches by artist and title.` |  |
 | `Semi-bold font weight` | One of the values of “Lyrics weight” |
 | `Show album & year` |  |
 | `Show animated covers` | The switch for all of them: off, no cover moves anywhere in the app |
@@ -1075,7 +1073,7 @@ you are actually typing into, which is easier than reading it here.
 | `Small` | One of the values of “Lyrics size” |
 | `Swap favorite and menu` | Exchange the places of those two buttons in the player, for whichever hand you hold the phone in |
 | `Where the square and tall clips come from. Empty, every cover stays still.` | The line under “Animated artwork endpoint”, explaining it |
-| `Where to get lyrics from. Online search asks the services below.` | The line under “Lyrics source”, explaining it |
+| `Where to get lyrics from. Online search uses LRCLIB (sends the artist and title).` |  |
 
 ## Settings › Player buttons
 

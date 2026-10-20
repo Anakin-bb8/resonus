@@ -9,10 +9,6 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
-### Added
-
-- Lyrics from [lrc.red](https://lrc.red), found by the song's ISRC and often timed word by word. Off by default: turn it on in Settings > Player > Lyrics, next to LRCLIB, which can now be turned off on its own. Thanks to ricce on Discord for the suggestion.
-
 ## [0.8.3] - 2026-10-19
 
 ### Added

@@ -261,8 +261,6 @@ interface NdSong {
   rgTrackPeak?: number;
   rgAlbumGain?: number;
   rgAlbumPeak?: number;
-  /** Every tag the file has, by lower-case name; `isrc` is the one read. */
-  tags?: Record<string, string[] | undefined>;
 }
 
 /**
@@ -300,9 +298,6 @@ function toSong(m: NdSong): Song {
     genre: m.genre,
     comment: m.comment,
     explicitStatus: spellExplicit(m.explicitStatus),
-    // What Subsonic sends as `isrc`, here among the tags. lrc.red finds a
-    // song's lyrics by it.
-    isrc: m.tags?.isrc?.length ? m.tags.isrc : undefined,
     playCount: m.playCount,
     starred: m.starred ? (m.starredAt ?? new Date().toISOString()) : undefined,
     userRating: m.rating || undefined,

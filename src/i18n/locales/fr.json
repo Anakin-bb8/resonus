@@ -226,6 +226,7 @@
   "Local profile": "Profil local",
   "Lyrics": "Paroles",
   "Lyrics source": "Source des paroles",
+  "Where to get lyrics from. Online search uses LRCLIB (sends the artist and title).": "Source des paroles. La recherche en ligne utilise LRCLIB (envoie l'artiste et le titre).",
   "Prefer local lyrics": "Privilégier les paroles locales",
   "Prefer online search": "Privilégier la recherche en ligne",
   "Disable online search": "Désactiver la recherche en ligne",
