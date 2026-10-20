@@ -10,6 +10,7 @@ import {
   SettingsPage,
   settingsStyles,
   SwitchList,
+  TextRow,
 } from '@/components/SettingsUI';
 import { useLocalProfile } from '@/hooks/useLocalProfile';
 import { useT } from '@/i18n';
@@ -75,8 +76,14 @@ export default function PlayerSettings() {
   const setFitCoverArt = useSettings((s) => s.setFitCoverArt);
   const animatedCoverBackground = useSettings((s) => s.animatedCoverBackground);
   const setAnimatedCoverBackground = useSettings((s) => s.setAnimatedCoverBackground);
+  const animatedCoverVideo = useSettings((s) => s.animatedCoverVideo);
+  const setAnimatedCoverVideo = useSettings((s) => s.setAnimatedCoverVideo);
   const animatedArtworkFps = useSettings((s) => s.animatedArtworkFps);
   const setAnimatedArtworkFps = useSettings((s) => s.setAnimatedArtworkFps);
+  const animatedArtworkEndpoint = useSettings((s) => s.animatedArtworkEndpoint);
+  const animatedCovers = useSettings((s) => s.animatedCovers);
+  const setAnimatedCovers = useSettings((s) => s.setAnimatedCovers);
+  const setAnimatedArtworkEndpoint = useSettings((s) => s.setAnimatedArtworkEndpoint);
   const miniPlayerColorBackground = useSettings((s) => s.miniPlayerColorBackground);
   const blurMiniPlayer = useSettings((s) => s.blurMiniPlayer);
   const miniPlayerProgress = useSettings((s) => s.miniPlayerProgress);
@@ -180,11 +187,6 @@ export default function PlayerSettings() {
                 value: fitCoverArt,
                 onChange: setFitCoverArt,
               },
-              {
-                label: t('Animated cover background'),
-                value: animatedCoverBackground,
-                onChange: setAnimatedCoverBackground,
-              },
             ]}
           />
           <SelectList<CoverTapAction>
@@ -199,17 +201,77 @@ export default function PlayerSettings() {
             value={coverDoubleTapAction}
             onChange={setCoverDoubleTapAction}
           />
-          {/* The lock screen clip is an iOS thing; Android has none to encode. */}
-          {Platform.OS === 'ios' ? (
-            <SelectList<number>
-              label={t('Animated cover frame rate')}
-              options={[
-                { value: 30, label: t('30 fps') },
-                { value: 60, label: t('60 fps') },
-              ]}
-              value={animatedArtworkFps}
-              onChange={setAnimatedArtworkFps}
-            />
+        </SettingsGroup>
+
+        {/* Their own section, the source first: what decides whether there is
+            a clip at all comes before where it is shown (#263). */}
+        <Text style={settingsStyles.sectionTitle}>{t('Animated covers')}</Text>
+        <SettingsGroup>
+          {/* The one switch for all of it. Off, the rest is hidden and kept: the
+              server's address is not something to type again. */}
+          <SwitchList
+            options={[
+              {
+                label: t('Show animated covers'),
+                description: t('Off, every cover stays still, GIF and WebP ones too.'),
+                value: animatedCovers,
+                onChange: setAnimatedCovers,
+              },
+            ]}
+          />
+          {animatedCovers ? (
+          <>
+          <TextRow
+            label={t('Animated artwork endpoint')}
+            description={t('Where the square and tall clips come from. Empty, every cover stays still.')}
+            value={animatedArtworkEndpoint}
+            placeholder="https://artwork.example.com"
+            maxLength={200}
+            keyboardType="url"
+            autoCapitalize="none"
+            // Stored raw: trimming trailing slashes here would eat the `//`
+            // of `https://` while typing. The fetch normalizes before asking.
+            onChange={setAnimatedArtworkEndpoint}
+          />
+          {/* Where, not whether: it also places a GIF or WebP cover from the
+              server, with no endpoint at all. */}
+          <SelectList<'cover' | 'background'>
+            label={t('Animated artwork')}
+            description={t('GIF and WebP covers from your server too.')}
+            options={[
+              { value: 'cover', label: t('In the cover') },
+              { value: 'background', label: t('As the background') },
+            ]}
+            value={animatedCoverBackground ? 'background' : 'cover'}
+            onChange={(v) => setAnimatedCoverBackground(v === 'background')}
+          />
+          {/* iOS only: there the lock screen has a clip of its own, so the one
+              in the app can go while that one stays. On Android an empty
+              server is the same thing. */}
+          {Platform.OS === 'ios' && animatedArtworkEndpoint ? (
+            <>
+              <SwitchList
+                options={[
+                  {
+                    label: t('Clips in the app too'),
+                    description: t('Off, the clip only plays on the lock screen.'),
+                    value: animatedCoverVideo,
+                    onChange: setAnimatedCoverVideo,
+                  },
+                ]}
+              />
+              <SelectList<number>
+                label={t('Animated cover frame rate')}
+                options={[
+                  { value: 30, label: t('30 fps') },
+                  { value: 60, label: t('60 fps') },
+                ]}
+                value={animatedArtworkFps}
+                onChange={setAnimatedArtworkFps}
+              />
+            </>
+          ) : null}
+          </>
           ) : null}
         </SettingsGroup>
 

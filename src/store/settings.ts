@@ -9,10 +9,12 @@ import { hashKey } from '@/lib/localLibrary';
 import { setPerfEnabled } from '@/lib/perfLog';
 import { profileScopeGuard } from '@/lib/profileScope';
 import { queryClient } from '@/lib/query';
+import { getSystemAccent } from '@/lib/materialYou';
 import { getItem, setItem } from '@/lib/storage';
 import {
   applyAccents,
   applyBackgroundTint,
+  applyBorderStyle,
   applyPureBlack,
   BACKGROUND_TINTS,
   applyThemePreference,
@@ -20,6 +22,7 @@ import {
   DEFAULT_ACCENT,
   isThemePreference,
   type BackgroundTint,
+  type BorderStyle,
   type ThemeMode,
   type ThemePreference,
 } from '@/theme';
@@ -699,8 +702,12 @@ export const DEFAULT_PLAYER_BUTTONS: PlayerButton[] = [
   { key: 'queue', enabled: true },
 ];
 
-/** Grouped in the middle, or spread across the width with equal gaps. */
-export type PlayerButtonsLayout = 'centered' | 'spread';
+/**
+ * Grouped in the middle, spread across the width with equal gaps, or split:
+ * devices (and the name of what it casts to) on the left, the rest together on
+ * the right (#259).
+ */
+export type PlayerButtonsLayout = 'centered' | 'spread' | 'split';
 
 /** Saved order kept, unknown keys dropped, new ones added at the end. */
 function normalizePlayerButtons(raw: unknown): PlayerButton[] {
@@ -833,11 +840,13 @@ type CustomSetter =
   | 'setCustomGreeting'
   | 'setGridColumns'
   | 'setAccentColor'
+  | 'setSystemAccent'
   | 'setThemeMode'
   | 'setThemeLightFrom'
   | 'setThemeDarkFrom'
   | 'setPureBlack'
   | 'setAnimatedArtworkFps'
+  | 'setAnimatedArtworkUrls'
   | 'setBackgroundTint';
 
 interface SettingsState extends Omit<AutoSetters, CustomSetter> {
@@ -1019,6 +1028,8 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   /** The time right of the seek bar counts down what is left, not the length. */
   showRemainingTime: boolean;
   coverCorners: CoverCorners;
+  /** Which corner ladder the app draws: this one or the flatter one. */
+  borderStyle: BorderStyle;
   /** When a downloaded song plays from disk instead of being streamed. */
   preferDownloads: PreferDownloads;
   /** Circular artist photo next to the name on the album screen. */
@@ -1056,6 +1067,29 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
    * whatever this says.
    */
   animatedArtworkFps: number;
+  /**
+   * Animated-artwork server: base URL whose `/api/v1/artwork/search`
+   * answers the square and tall HLS covers for an artist and album. Empty
+   * means off: covers stay still images.
+   */
+  animatedArtworkEndpoint: string;
+  /**
+   * Covers that move at all: the endpoint's clips, in the app and on the lock
+   * screen, and GIF or WebP covers anywhere in the app. Off, every cover is
+   * its first frame, and the endpoint is kept but not asked.
+   */
+  animatedCovers: boolean;
+  /**
+   * Play endpoint clips as in-app video (cover square and background).
+   * Kills the video players without touching the lock-screen tall clips:
+   * the escape hatch if a cover ever misbehaves.
+   */
+  animatedCoverVideo: boolean;
+  /**
+   * Hand-picked artwork URLs per album (artist + album key), asked before
+   * the search and trusted as chosen. Album menus write these.
+   */
+  animatedArtworkUrls: Record<string, string>;
   /**
    * Show non-square artwork whole in the player instead of cropping it to a
    * square. Off by default: cropping is what it has always done, and every
@@ -1183,6 +1217,12 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   /** The same under the light one, which is a separate choice: a colour picked
    *  for near-black is not always the one wanted on white. */
   accentColorLight: string;
+  /**
+   * Android 12+: the accent is the one the system takes from the wallpaper
+   * (Material You) instead of the two above, which stay as they were for when
+   * it goes back off (#259).
+   */
+  systemAccent: boolean;
   /** The user's own colour (hex), kept apart so picking one from the palette
    *  does not lose it; '' until one is made. */
   customAccentColor: string;
@@ -1216,13 +1256,20 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   setBottomTab: (key: TabSegment, value: boolean) => void;
   setHomeButton: (key: HomeButtonKey, value: boolean) => void;
   setPlayerButton: (key: PlayerButtonKey, value: boolean) => void;
+  /** A hand-picked artwork URL for one album key, or null to forget it. */
+  setAnimatedArtworkUrl: (key: string, url: string | null) => void;
   setGridColumns: (key: GridSizeKey, value: number) => void;
   setAccentColor: (value: string, appearance: ThemeMode) => void;
+  setSystemAccent: (value: boolean) => void;
+  /** Reads the wallpaper's accent again, if it is the one in use: a new
+   *  wallpaper brings a new one, and coming back to the app is when to look. */
+  refreshSystemAccent: () => void;
   setThemeMode: (value: ThemePreference) => void;
   setThemeLightFrom: (hour: number) => void;
   setThemeDarkFrom: (hour: number) => void;
   setPureBlack: (value: boolean) => void;
   setBackgroundTint: (value: BackgroundTint) => void;
+  setBorderStyle: (value: BorderStyle) => void;
   setCustomFont: (fontFamily: string | null, uri: string | null) => void;
   /** Resets to factory defaults (language is preserved). */
   resetToDefaults: () => void;
@@ -1324,6 +1371,7 @@ const DEFAULTS = {
   miniPlayerProgress: true,
   showRemainingTime: false,
   coverCorners: 'rounded' as CoverCorners,
+  borderStyle: 'round' as BorderStyle,
   preferDownloads: 'always' as PreferDownloads,
   showArtistPhoto: true,
   showDiscHeaders: true,
@@ -1334,6 +1382,14 @@ const DEFAULTS = {
   // 30: half the frames of 60 for a cover that reads the same; see
   // `ANIMATED_ARTWORK_FPS_OPTIONS`.
   animatedArtworkFps: 30,
+  // Empty: no server, still covers.
+  animatedArtworkEndpoint: '',
+  // On: endpoint clips play over the still covers.
+  animatedCoverVideo: true,
+  // On: what the app always did with an animated cover.
+  animatedCovers: true,
+  // Empty: search decides everything.
+  animatedArtworkUrls: {},
   fitCoverArt: false,
   miniPlayerColorBackground: true,
   // Off by default: the card pushes the controls up on shorter screens, and
@@ -1414,6 +1470,7 @@ const DEFAULTS = {
   syncQueueFromServer: true,
   accentColor: DEFAULT_ACCENT,
   accentColorLight: DEFAULT_ACCENT,
+  systemAccent: false,
   customAccentColor: '',
   // Dark: the appearance the app was designed in. Light is opt-in.
   themeMode: 'dark' as ThemePreference,
@@ -1444,6 +1501,22 @@ function autoSetters(
   return out as AutoSetters;
 }
 
+/**
+ * Paints the accent the settings ask for: the device's own pair while
+ * `systemAccent` is on and the device has one, the stored pair otherwise.
+ * Everything that applies a chosen accent goes through here, so no path puts
+ * the stored colours back over the system's.
+ */
+function applyChosenAccent(s: {
+  systemAccent: boolean;
+  accentColor: string;
+  accentColorLight: string;
+}): void {
+  const system = s.systemAccent ? getSystemAccent() : null;
+  if (system) applyAccents(system.dark, system.light);
+  else applyAccents(s.accentColor, s.accentColorLight);
+}
+
 /** The appearance side effects of the factory values: they live outside the
  *  store, so putting the store back does not put them back. */
 function applyFactoryLook() {
@@ -1452,6 +1525,7 @@ function applyFactoryLook() {
   applyThemePreference(DEFAULTS.themeMode);
   applyPureBlack(DEFAULTS.pureBlack);
   applyBackgroundTint(DEFAULTS.backgroundTint);
+  applyBorderStyle(DEFAULTS.borderStyle);
 }
 
 /**
@@ -1515,6 +1589,27 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
   }
   if ((ANIMATED_ARTWORK_FPS_OPTIONS as readonly number[]).includes(parsed.animatedArtworkFps as number)) {
     set({ animatedArtworkFps: parsed.animatedArtworkFps as number });
+  }
+  {
+    // Hand-picked artwork URLs: string keys to string URLs, anything else
+    // dropped, capped so a corrupt file cannot grow the profile forever.
+    const raw = (parsed as { animatedArtworkUrls?: unknown }).animatedArtworkUrls;
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+      const urls: Record<string, string> = {};
+      for (const [key, value] of Object.entries(raw)) {
+        if (typeof key === 'string' && typeof value === 'string' && key && value) {
+          urls[key] = value;
+          if (Object.keys(urls).length >= 500) break;
+        }
+      }
+      set({ animatedArtworkUrls: urls });
+    }
+    // An endpoint is a base URL or nothing: anything else never worked, so it
+    // hydrates as off rather than as a broken address.
+    if (typeof parsed.animatedArtworkEndpoint === 'string') {
+      const endpoint = parsed.animatedArtworkEndpoint.trim().replace(/\/+$/, '');
+      set({ animatedArtworkEndpoint: endpoint.startsWith('http') ? endpoint : '' });
+    }
   }
   if ((RADIO_COUNT_OPTIONS as readonly number[]).includes(parsed.radioCount as number)) {
     set({ radioCount: parsed.radioCount as number });
@@ -1615,6 +1710,10 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
   }
   if (oneOf(parsed.coverCorners, ['square', 'rounded', 'round'] as const)) {
     set({ coverCorners: parsed.coverCorners });
+  }
+  if (oneOf(parsed.borderStyle, ['round', 'pointier'] as const)) {
+    set({ borderStyle: parsed.borderStyle });
+    applyBorderStyle(parsed.borderStyle);
   }
   if (
     parsed.preferDownloads === 'always' ||
@@ -1717,7 +1816,11 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
       ),
     });
   }
-  if (parsed.playerButtonsLayout === 'centered' || parsed.playerButtonsLayout === 'spread') {
+  if (
+    parsed.playerButtonsLayout === 'centered' ||
+    parsed.playerButtonsLayout === 'spread' ||
+    parsed.playerButtonsLayout === 'split'
+  ) {
     set({ playerButtonsLayout: parsed.playerButtonsLayout });
   }
   if (Array.isArray(parsed.playerButtons)) {
@@ -1800,6 +1903,19 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
     set({ accentColor: dark, accentColorLight: light });
     applyAccents(dark, light);
   }
+  if (typeof parsed.systemAccent === 'boolean') set({ systemAccent: parsed.systemAccent });
+  // After both: whichever of the two pairs is chosen, painted once.
+  if (parsed.systemAccent === true) {
+    applyChosenAccent({
+      systemAccent: true,
+      accentColor: isHexColor(parsed.accentColor) ? parsed.accentColor : DEFAULT_ACCENT,
+      accentColorLight: isHexColor(parsed.accentColorLight)
+        ? parsed.accentColorLight
+        : isHexColor(parsed.accentColor)
+          ? parsed.accentColor
+          : DEFAULT_ACCENT,
+    });
+  }
   if (isHexColor(parsed.customAccentColor)) {
     set({ customAccentColor: parsed.customAccentColor });
   }
@@ -1855,6 +1971,14 @@ export const useSettings = create<SettingsState>((set, get) => ({
     // The encoder reads this the next time a clip is built; one already on
     // disk keeps the rate it was written at, which is the rate it holds.
     pushArtworkEncodeFps(animatedArtworkFps);
+  },
+
+  setAnimatedArtworkUrl: (key, url) => {
+    const next = { ...get().animatedArtworkUrls };
+    if (url) next[key] = url;
+    else delete next[key];
+    set({ animatedArtworkUrls: next });
+    persist(snapshot(get));
   },
 
   // Both at once, and one write: put back separately, the first of the two
@@ -1941,8 +2065,18 @@ export const useSettings = create<SettingsState>((set, get) => ({
 
   setAccentColor: (value, appearance) => {
     set(appearance === 'light' ? { accentColorLight: value } : { accentColor: value });
-    applyAccents(get().accentColor, get().accentColorLight);
+    applyChosenAccent(get());
     persist(snapshot(get));
+  },
+
+  setSystemAccent: (systemAccent) => {
+    set({ systemAccent });
+    applyChosenAccent(get());
+    persist(snapshot(get));
+  },
+
+  refreshSystemAccent: () => {
+    if (get().systemAccent) applyChosenAccent(get());
   },
 
   setThemeMode: (themeMode) => {
@@ -1972,6 +2106,12 @@ export const useSettings = create<SettingsState>((set, get) => ({
   setBackgroundTint: (backgroundTint) => {
     applyBackgroundTint(backgroundTint);
     set({ backgroundTint });
+    persist(snapshot(get));
+  },
+
+  setBorderStyle: (borderStyle) => {
+    applyBorderStyle(borderStyle);
+    set({ borderStyle });
     persist(snapshot(get));
   },
 
@@ -2091,4 +2231,9 @@ export function exportedSettings(): Record<string, unknown> {
   delete out.customFontFamily;
   delete out.customFontUri;
   return out;
+}
+
+/** The animated-artwork server in force: none while animated covers are off. */
+export function activeArtworkEndpoint(s: { animatedCovers: boolean; animatedArtworkEndpoint: string }): string {
+  return s.animatedCovers ? s.animatedArtworkEndpoint : '';
 }

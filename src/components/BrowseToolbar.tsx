@@ -135,7 +135,7 @@ export function BrowseToolbar<T extends string>({
             {starting ? (
               <ActivityIndicator color={colors.onAccent} />
             ) : (
-              <Icon name="play" size={28} color={colors.onAccent} style={{ marginLeft: 3 }} />
+              <Icon name="play" size={28} color={colors.onAccent} />
             )}
           </Pressable>
         </View>

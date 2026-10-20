@@ -91,6 +91,7 @@ export default function PlayerButtonsSettings() {
           options={[
             { value: 'centered', label: t('Grouped in the middle') },
             { value: 'spread', label: t('Spread across the width') },
+            { value: 'split', label: t('Devices on the left') },
           ]}
         />
       </View>

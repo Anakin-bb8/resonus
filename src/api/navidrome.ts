@@ -418,6 +418,8 @@ interface NdAlbum {
   explicitStatus?: string;
   /** Navidrome 0.64: the album has no artwork. */
   imageAbsent?: boolean;
+  /** This user's rating, 0 when none. */
+  rating?: number;
 }
 
 function toAlbum(a: NdAlbum): Album {
@@ -440,6 +442,7 @@ function toAlbum(a: NdAlbum): Album {
     playCount: a.playCount,
     genre: a.genre,
     explicitStatus: spellExplicit(a.explicitStatus),
+    userRating: a.rating || undefined,
   };
 }
 

@@ -18,7 +18,7 @@ export const MIN_WORD_TRANSITION_MS = 180;
 export const WORD_SWEEP_EDGE_FRACTION = 0.12;
 
 /** Peak scale of the syllable bounce: 1 -> 1.05 -> 1. */
-export const WORD_BOUNCE_SCALE = 0.05;
+export const WORD_BOUNCE_SCALE = 0.04;
 
 /**
  * Primuse's depth model, calibrated for Android's stronger Gaussian filter.

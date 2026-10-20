@@ -54,6 +54,12 @@ import { CLIENT_NAME } from '@/api/subsonic';
 // disk when the album is downloaded instead of an address on the server.
 import { CACHED_COVER, COVER, coverArtUrl, getRandomSongs } from '@/api/data';
 import { prefetchLyrics } from '@/hooks/useLyrics';
+import {
+  animatedArtworkKey,
+  fetchAnimatedArtwork,
+  prefetchAnimatedArtwork,
+  setAnimatedArtworkFetch,
+} from '@/lib/animatedArtwork';
 import { tg } from '@/i18n';
 import { transcodeTarget } from '@/lib/audioQuality';
 import { favoriteLabel, favoriteState, onFavoritesChange, toggleFavorite } from '@/lib/remoteFavorite';
@@ -98,7 +104,7 @@ import { offLocalNetwork, useNetworkType } from './networkType';
 import { useOfflineQueue } from './offlineQueue';
 import { usePlayCounts } from './playCounts';
 import { usePlayHistory } from './playHistory';
-import { scrobbleThresholdSec, useSettings, type TranscodeFormat } from './settings';
+import { activeArtworkEndpoint, scrobbleThresholdSec, useSettings, type TranscodeFormat } from './settings';
 import { cachedUri, useSongCache } from './songCache';
 import { useToast } from './toast';
 import {
@@ -689,6 +695,59 @@ function warmArtwork(song: Song) {
 }
 
 /**
+ * Hands the lock screen the tall HLS clip from the animated-artwork
+ * endpoint for this track — or clears it when there is none. Keyed by the
+ * static cover, so a clip arriving late still lands on the track it was
+ * fetched for, never on the next one. iOS only, like the preloader: the
+ * patched module answers, anything else throws into the catch.
+ */
+// The clips are mostly asked for on a track change with the app in the
+// background, where React Native's fetch does not answer.
+setAnimatedArtworkFetch((url, init) => expoFetch(url, init));
+
+function publishAnimatedClip(song: Song) {
+  if (Platform.OS !== 'ios') return;
+  const artworkUrl = artworkUrlFor(song);
+  // Nothing to key a clearing by — and a stale key never matches a new
+  // cover anyway, so nothing leaks across tracks.
+  if (!artworkUrl) return;
+  const endpoint = activeArtworkEndpoint(useSettings.getState());
+  const customs = useSettings.getState().animatedArtworkUrls;
+  const customUrl = customs[animatedArtworkKey(song.artist ?? '', song.album ?? '')];
+  const artist = song.artist;
+  const album = song.album ?? '';
+  if (!endpoint || !artist || !album) {
+    try {
+      audioModule.setAnimatedClipUrls(artworkUrl, null);
+    } catch {
+      // A build without the patched module: static covers as always.
+    }
+    return;
+  }
+  void fetchAnimatedArtwork(endpoint, artist, album, customUrl).then((clips) => {
+    try {
+      audioModule.setAnimatedClipUrls(artworkUrl, clips?.tall ?? null);
+    } catch {
+      // A build without the patched module: static covers as always.
+    }
+    note(`clip ${clips?.tall ? 'tall ok' : 'none'} for ${album}`);
+    // The export lands seconds later, if at all: ask the native side what
+    // became of it, while this track is still the one playing.
+    for (const afterMs of [4000, 12000]) {
+      setTimeout(() => {
+        if (currentSong(usePlayerStore.getState())?.id !== song.id) return;
+        try {
+          const state = audioModule.animatedClipState();
+          note(`clip state ${state.stage}${state.detail ? ` ${state.detail}` : ''} for ${album}`);
+        } catch {
+          // A build without the patched module: nothing to ask.
+        }
+      }, afterMs);
+    }
+  });
+}
+
+/**
  * What the media session says this track is. Bluetooth, the car and the
  * system's controls read this, not the notification, and it beats the stream's
  * tags, which a transcode strips (#78).
@@ -858,23 +917,38 @@ function remoteSeek(sec: number) {
   else void upnpSeek(sec);
 }
 
+/** Set by `bringPlaybackToPhone`: the phone picks up playing, not paused. */
+let resumeOnPhone = false;
+
+/**
+ * Takes what a renderer or the jukebox is playing back to the phone, at the
+ * same second and still playing if it was (#272).
+ */
+export async function bringPlaybackToPhone(): Promise<void> {
+  const kind = remoteKind();
+  if (!kind) return;
+  resumeOnPhone = usePlayerStore.getState().isPlaying;
+  note(`output back to the phone from ${kind}`);
+  if (kind === 'upnp') await upnpDisconnect();
+  else await jukeboxDisconnect();
+}
+
 function remoteSetVolume(volume: number) {
   if (isJukeboxActive()) jukeboxSetVolume(volume);
-  else {
-    upnpSetVolume(volume);
-    // Reflect the exact value back in the system volume overlay (UPnP casts
-    // through the CastMedia session; Jukebox plays on the server, no overlay).
-    castSetVolumeLevel(volume);
-  }
+  else upnpSetVolume(volume);
+  // Reflect the exact value back in the system volume overlay, which both
+  // outputs show through the CastMedia session.
+  castSetVolumeLevel(volume);
 }
 
 /**
  * Syncs the casting media session (lock screen notification + volume buttons)
- * with the current track/state. Only for UPnP: Jukebox plays on the server
- * itself and doesn't need a local session on the phone.
+ * with the current track/state. For the jukebox too: nothing plays on the
+ * phone there either, so without this session the volume buttons moved the
+ * phone's own volume and never reached the server (#270).
  */
 function syncCastMedia(): void {
-  if (!isUpnpConnected()) return;
+  if (!remoteKind()) return;
   const st = usePlayerStore.getState();
   const song = currentSong(st);
   if (!song) return;
@@ -1341,6 +1415,7 @@ function onTrackChanged(song: Song) {
   // backgrounded nobody swipes at all: the card fetches on demand when it is
   // shown, so nothing is lost by skipping the warm-up.
   if (!bootQuiet && AppState.currentState === 'active') prefetchLyrics(song);
+  publishAnimatedClip(song);
   if (nextLyricsTimer) clearTimeout(nextLyricsTimer);
   nextLyricsTimer = setTimeout(() => {
     if (AppState.currentState !== 'active') return;
@@ -1881,6 +1956,27 @@ function scheduleNextSource(force = false) {
         ? st.queue[(st.index + k) % st.queue.length]
         : st.queue[st.index + k];
     if (ahead && !ahead.url) warmArtwork(ahead);
+  }
+  // Same window for the endpoint clips: the lock screen's tall one is already
+  // streaming while the track it belongs to is still the next one.
+  {
+    const endpoint = activeArtworkEndpoint(useSettings.getState());
+    if (endpoint) {
+      const customs = useSettings.getState().animatedArtworkUrls;
+      for (let k = 0; k <= ARTWORK_LOOKAHEAD; k += 1) {
+        const ahead =
+          st.repeat === 'all' && st.queue.length > 0
+            ? st.queue[(st.index + k) % st.queue.length]
+            : st.queue[st.index + k];
+        if (ahead && !ahead.url) {
+          prefetchAnimatedArtwork(
+            endpoint,
+            ahead,
+            customs[animatedArtworkKey(ahead.artist ?? '', ahead.album ?? '')],
+          );
+        }
+      }
+    }
   }
   const p = activePlayer();
   if (!p) return;
@@ -3530,12 +3626,15 @@ export function initRemoteIntegration() {
       // The casting media session is already closed by `upnpDisconnect` (covers
       // silent disconnects too). Here we just return to the local player.
       const { queue, index } = usePlayerStore.getState();
+      const resume = resumeOnPhone;
+      resumeOnPhone = false;
       resetUpnpRemoteSyncState();
       if (!queue[index]) return;
       void (async () => {
         await loadIndex(index, false);
         if (lastPositionSec > 0) seekActive(lastPositionSec);
         usePlayerStore.setState({ positionSec: lastPositionSec, isPlaying: false });
+        if (resume) usePlayerStore.getState().toggle();
       })();
     },
     onProgress: (positionSec, durationSec) => {
@@ -3546,7 +3645,7 @@ export function initRemoteIntegration() {
       const st = usePlayerStore.getState();
       maybeScrobbleThreshold(positionSec);
       // Updates the casting notification/lock screen scrubber.
-      if (isUpnpConnected()) castSetState(st.isPlaying, positionSec * 1000);
+      if (remoteKind()) castSetState(st.isPlaying, positionSec * 1000);
     },
     onPlayingChanged: (isPlaying, isBuffering) => {
       usePlayerStore.setState({ isPlaying, isBuffering });
@@ -3556,7 +3655,7 @@ export function initRemoteIntegration() {
         scheduleSync();
       }
       // Reflects play/pause in the casting media session.
-      if (isUpnpConnected()) castSetState(isPlaying, usePlayerStore.getState().positionSec * 1000);
+      if (remoteKind()) castSetState(isPlaying, usePlayerStore.getState().positionSec * 1000);
     },
     onRepeatChanged: (repeat) => {
       const current = usePlayerStore.getState().repeat;
@@ -3616,7 +3715,7 @@ export function initRemoteIntegration() {
   // Controls pressed in the notification/lock screen or volume buttons during
   // casting: the store actions are already routed to the renderer (remoteKind()).
   initCastMedia((action, value) => {
-    if (!isUpnpConnected()) return;
+    if (!remoteKind()) return;
     const st = usePlayerStore.getState();
     switch (action) {
       case 'play':

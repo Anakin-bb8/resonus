@@ -9,6 +9,38 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.8.3] - 2026-10-19
+
+### Added
+
+- Animated album covers from an animated-artwork server you set in Settings > Player, in the player and, on iOS, on the lock screen; an album's ⋯ menu can pin it to an Apple Music album (#263).
+- Appearance > Border radius: the round corners as before, or flatter ones (#262).
+- French, thanks to @Willyflam (#257).
+- Rate an album from its ⋯ menu, as songs and artists already could (#261).
+- The library's search forgives typos and takes the words in any order (#268).
+- Lyrics: three dots hop through the instrumental gaps, verses get a little air between them, and the karaoke sweep moves more calmly, with the line changing exactly when it starts (#265).
+- Android 12 and up: Appearance > Theme > Use the system colors takes the accent from the wallpaper (Material You), for the stars, the heart and everything else in the accent (#259).
+- Player > Bottom row > Arrangement > Devices on the left: the devices button, with the name of what it casts to, on the left and the rest of the row together on the right (#259).
+- The player's devices button shows where the phone itself is playing: headphones, a Bluetooth speaker or the car get their own icon and their name beside it, the way a cast target does. No new permission is asked for (#264).
+
+### Changed
+
+- Player settings: the animated covers get a section of their own, with the server first and a choice of where the animated cover plays, in the cover or as the background. The in-app clips switch is only on iOS, where the lock screen has a clip of its own; on Android an empty server already turns them off (#263).
+- Player settings > Show animated covers turns every animated cover off at once, the server's clips and GIF or WebP covers alike, and keeps the server's address for when it goes back on.
+- The player's rating sits halfway between the cover and the title, with the same room above the cover, and the stars are a little bigger (#259).
+- With the lyrics or artist card on, the player's bottom row sits a little lower, closer to the card, and stays put for a song with no artist (#259).
+- With the lyrics or artist card on, a radio station gets the same player layout as a song, instead of the controls sitting lower (#258).
+- The player's plain background is the app's own background colour, so it follows the background shade and pure black instead of staying a bluish grey (#259).
+
+### Fixed
+
+- Android: in jukebox mode the volume buttons change the jukebox volume, and the notification and lock screen controls show what it plays (#270).
+- Android: casting to a DLNA/UPnP renderer moves on to the next track with the screen off, instead of stopping at the end of a track when loading the next one fails (#271).
+- Android: connecting to Android Auto brings playback from a DLNA/UPnP renderer or the jukebox back to the phone, still playing (#272).
+- Android: coming back to the app after a long while in the background shows the song playing at once, instead of freezing on an earlier one and walking through every song played since.
+- Android Auto: a very long queue, such as a big favourites list played shuffled, no longer closes the app; the car's queue shows the songs around the one playing.
+- The play button in Explore, on an artist's songs and on a genre sits in the middle of its circle.
+
 ## [0.8.2] - 2026-10-10
 
 ### Added

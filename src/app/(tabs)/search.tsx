@@ -36,7 +36,7 @@ import { currentSong, usePlayerStore } from '@/store/player';
 import { useRecentSearches, type RecentItem } from '@/store/recentSearches';
 import { useSettings } from '@/store/settings';
 import { useAccent } from '@/hooks/useAccent';
-import { colors, fontSize, radius, spacing, themed, useTheme, tracking } from '@/theme';
+import { colors, fontSize, radius, restyled, spacing, themed, useTheme, tracking } from '@/theme';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { centredPadding, useScreenSize } from '@/hooks/useScreenSize';
 
@@ -600,7 +600,8 @@ const styles = themed((colors) => ({
     backgroundColor: colors.surfaceHighlight,
     margin: spacing.lg,
     paddingHorizontal: spacing.lg,
-    borderRadius: radius.pill,
+    // A capsule with Round, a rounded rectangle with Pointier.
+    borderRadius: restyled(radius.pill, radius.md),
   },
   input: {
     flex: 1,

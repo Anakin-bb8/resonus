@@ -62,7 +62,7 @@ import { useSettings, type LibrarySort } from '@/store/settings';
 import { useAccent } from '@/hooks/useAccent';
 import { episodeUnavailable } from '@/hooks/useEpisodeUnavailable';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, lineHeight, radius, SHEET_MAX_WIDTH, spacing, themed, useTheme, tracking } from '@/theme';
+import { colors, fontSize, lineHeight, radius, restyled, SHEET_MAX_WIDTH, spacing, themed, useTheme, tracking } from '@/theme';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { columnsFor, useListPadding, useScreenSize } from '@/hooks/useScreenSize';
 import { listPerf } from '@/lib/listPerf';
@@ -1538,7 +1538,8 @@ const styles = themed((colors) => ({
     height: 44,
     backgroundColor: colors.surfaceHighlight,
     paddingHorizontal: spacing.lg,
-    borderRadius: radius.pill,
+    // A capsule with Round, a rounded rectangle with Pointier.
+    borderRadius: restyled(radius.pill, radius.md),
   },
   searchInput: { flex: 1, color: colors.text, fontSize: fontSize.md, paddingVertical: 0 },
   list: {

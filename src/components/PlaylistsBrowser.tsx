@@ -47,7 +47,7 @@ import { useAuthStore } from '@/store/auth';
 import { useLastPlayed } from '@/store/lastPlayed';
 import { useMediaMenu } from '@/store/mediaMenu';
 import { useSettings, type LibrarySort } from '@/store/settings';
-import { colors, fontSize, radius, spacing, themed } from '@/theme';
+import { colors, fontSize, radius, restyled, spacing, themed } from '@/theme';
 
 /** The gap between cards, and what a card is left with once they are taken. */
 const GAP = spacing.md;
@@ -232,7 +232,8 @@ const styles = themed((colors) => ({
     height: 44,
     backgroundColor: colors.surfaceHighlight,
     paddingHorizontal: spacing.lg,
-    borderRadius: radius.pill,
+    // A capsule with Round, a rounded rectangle with Pointier.
+    borderRadius: restyled(radius.pill, radius.md),
   },
   input: { flex: 1, color: colors.text, fontSize: fontSize.md, paddingVertical: 0 },
   list: { paddingHorizontal: spacing.lg, gap: spacing.md },

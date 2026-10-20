@@ -57,10 +57,19 @@ export function parseLrc(text: string): SongLyrics | null {
   const timed: LyricLine[] = [];
   const plain: LyricLine[] = [];
   let offset = 0;
+  // A blank line parts stanzas: the next timed line breathes wider above it,
+  // and plain text keeps the gap it stood for.
+  let stanza = false;
 
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.trim();
-    if (!line) continue;
+    if (!line) {
+      stanza = true;
+      // One gap however many blank lines made it, and none before the first
+      // line of text.
+      if (plain.length > 0 && plain[plain.length - 1].value) plain.push({ value: '' });
+      continue;
+    }
     if (META_RE.test(line)) continue;
     const off = line.match(/^\[offset:\s*([+-]?\d+)\s*\]$/i);
     if (off) {
@@ -85,8 +94,14 @@ export function parseLrc(text: string): SongLyrics | null {
     // words: those only have the one time.
     const { value, words } = wordStamps(line.slice(pos));
     for (const start of starts) {
-      timed.push({ start, value, ...(words && starts.length === 1 ? { words } : {}) });
+      timed.push({
+        start,
+        value,
+        ...(words && starts.length === 1 ? { words } : {}),
+        ...(stanza ? { newStanza: true } : {}),
+      });
     }
+    stanza = false;
   }
 
   if (timed.length > 0) {
@@ -95,13 +110,17 @@ export function parseLrc(text: string): SongLyrics | null {
     timed.sort((a, b) => a.start! - b.start!);
     return { synced: true, lines: timed.map((l) => shift(l, offset)) };
   }
+  // Nor one after the last.
+  while (plain.length > 0 && !plain[plain.length - 1].value) plain.pop();
   if (plain.length > 0) return { synced: false, lines: plain };
   return null;
 }
 
 /**
  * Serializes to LRC text (or plain text if lyrics are unsynced), enhanced LRC
- * for the lines that have words.
+ * for the lines that have words. Backing vocals are not serialized: LRC has
+ * nowhere to put them, and what is cached here (server or LRCLIB lyrics)
+ * never carries any.
  */
 export function serializeLrc(lyrics: SongLyrics): string {
   const pad = (n: number) => String(n).padStart(2, '0');

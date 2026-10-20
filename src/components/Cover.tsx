@@ -323,6 +323,9 @@ export function Cover({
   style,
   onAnimatedDetected,
 }: Props) {
+  // Animated covers off (Settings › Player): a GIF or WebP shows its first
+  // frame, wherever it is.
+  const animate = useSettings((s) => s.animatedCovers) && autoplay;
   // If the image fails to load (e.g. offline without cache or download), we fall
   // back to the placeholder instead of leaving a gap. Reset on `uri` change
   // because lists recycle the same instance with a different song.
@@ -396,7 +399,7 @@ export function Cover({
       contentFit={contentFit}
       transition={transition}
       recyclingKey={shown}
-      autoplay={autoplay}
+      autoplay={animate}
       onDisplay={redraw.onDisplay}
       onLoad={(e) => {
         if (onAnimatedDetected && uri) onAnimatedDetected(uri, !!e.source?.isAnimated);

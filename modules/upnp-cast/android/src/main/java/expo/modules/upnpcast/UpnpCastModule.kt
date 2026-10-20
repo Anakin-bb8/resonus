@@ -6,6 +6,7 @@ import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.kotlin.records.Field
 import expo.modules.kotlin.records.Record
 import android.content.Context
+import android.net.wifi.WifiManager
 import android.os.PowerManager
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
@@ -46,6 +47,13 @@ private const val AWAKE_TIMEOUT_MS = 60_000L
 /** How long a stop that may be a track end keeps the phone awake: a minute. */
 private const val AWAKE_STOPPED_POLLS = 60
 
+/**
+ * Loads of the next track tried at one track end before giving up. A load that
+ * fails is mostly the network not being there yet, a phone waking from standby
+ * (#271), and the next poll tries again.
+ */
+private const val MAX_ADVANCE_ATTEMPTS = 5
+
 class UpnpCastModule : Module() {
   private enum class NextUriCapability { UNKNOWN, SUPPORTED, UNSUPPORTED }
 
@@ -77,6 +85,7 @@ class UpnpCastModule : Module() {
   private var stoppedByUs = false
   private var transitionInProgress = false
   private var stoppedPolls = 0
+  private var advanceAttempts = 0
   private var stagedNextIndex: Int? = null
   private var stagedNextUrl: String? = null
   private var nextUriCapability = NextUriCapability.UNKNOWN
@@ -87,6 +96,10 @@ class UpnpCastModule : Module() {
   // only while the renderer plays or is between tracks, with a timeout that
   // every poll renews, so a stalled loop cannot keep the phone awake.
   private var wakeLock: PowerManager.WakeLock? = null
+  // The CPU awake is not the radio awake: in standby the Wi-Fi naps between
+  // beacons, and the SOAP call loading the next track could fail or arrive
+  // late (#271). Held and dropped together with the wake lock.
+  private var wifiLock: WifiManager.WifiLock? = null
 
   private fun parseQueueRequest(payloadJson: String): QueueRequest {
     val payload = JSONObject(payloadJson)
@@ -401,7 +414,7 @@ class UpnpCastModule : Module() {
           }
           keepAwake(
             playbackState == "PLAYING" || playbackState == "BUFFERING" || transitionInProgress ||
-              (playbackState == "STOPPED" && nativeQueueManaged && !stoppedByUs && stoppedPolls < AWAKE_STOPPED_POLLS)
+              ((playbackState == "STOPPED" || playbackState == "IDLE") && nativeQueueManaged && !stoppedByUs && stoppedPolls < AWAKE_STOPPED_POLLS)
           )
           sendEvent(
             "state",
@@ -430,6 +443,7 @@ class UpnpCastModule : Module() {
     stagedNextIndex = null
     stagedNextUrl = null
     stoppedPolls = 0
+    advanceAttempts = 0
   }
 
   private fun clearNativeQueueState() {
@@ -444,6 +458,7 @@ class UpnpCastModule : Module() {
     stoppedByUs = false
     transitionInProgress = false
     stoppedPolls = 0
+    advanceAttempts = 0
     stagedNextIndex = null
     stagedNextUrl = null
     nextUriCapability = NextUriCapability.UNKNOWN
@@ -455,6 +470,7 @@ class UpnpCastModule : Module() {
     lastNonzeroDurationMs = 0
     observedPlaying = false
     stoppedPolls = 0
+    advanceAttempts = 0
   }
 
   private fun nextQueueIndex(): Int? {
@@ -513,7 +529,9 @@ class UpnpCastModule : Module() {
 
   private suspend fun handleGenericStateLocked(current: RendererSession, state: RendererSession.State) {
     if (!nativeQueueManaged) return
-    val playback = state.playbackState.uppercase()
+    // A renderer that unloads the track when it ends reports no media rather
+    // than stopped; for telling a track end apart they are the same thing.
+    val playback = state.playbackState.uppercase().let { if (it == "NO_MEDIA_PRESENT") "STOPPED" else it }
     val stagedIndex = stagedNextIndex
     val stagedTrack = stagedIndex?.let(nativeQueue::getOrNull)
     val uriIdentifiedHandoff = state.currentUri?.isNotBlank() == true && state.currentUri == stagedNextUrl
@@ -567,6 +585,7 @@ class UpnpCastModule : Module() {
       observedPlaying = true
       stoppedByUs = false
       stoppedPolls = 0
+      advanceAttempts = 0
     }
 
     if (playback == "STOPPED" && lastPlaybackState != "STOPPED") {
@@ -612,12 +631,16 @@ class UpnpCastModule : Module() {
     transitionInProgress = true
     stagedNextIndex = null
     stagedNextUrl = null
-    Log.d(Soap.TAG, "Automatic native advancement $nativeQueueIndex -> $nextIndex title=${track.title}")
+    advanceAttempts++
+    Log.d(Soap.TAG, "Automatic native advancement $nativeQueueIndex -> $nextIndex title=${track.title} attempt=$advanceAttempts")
     val loaded = current.load(track)
     val played = loaded && current.play()
     transitionInProgress = false
     if (!played) {
-      Log.w(Soap.TAG, "Automatic native advancement failed targetIndex=$nextIndex")
+      Log.w(Soap.TAG, "Automatic native advancement failed targetIndex=$nextIndex attempt=$advanceAttempts")
+      // Still a track end: the next STOPPED poll tries again. Leaving this
+      // false is what left the bar stuck at the end until a skip by hand (#271).
+      observedPlaying = advanceAttempts < MAX_ADVANCE_ATTEMPTS
       return false
     }
     nativeQueueIndex = nextIndex
@@ -632,6 +655,7 @@ class UpnpCastModule : Module() {
   private fun keepAwake(on: Boolean) {
     if (!on || session == null) {
       wakeLock?.takeIf { it.isHeld }?.release()
+      wifiLock?.takeIf { it.isHeld }?.release()
       return
     }
     val context = appContext.reactContext?.applicationContext ?: return
@@ -644,6 +668,18 @@ class UpnpCastModule : Module() {
       wake.acquire(AWAKE_TIMEOUT_MS)
     } catch (e: Exception) {
       Log.w(Soap.TAG, "Could not keep the phone awake for casting", e)
+    }
+    try {
+      // Has no timeout of its own; `keepAwake(false)` on a pause, a stop or a
+      // disconnect is what lets it go.
+      @Suppress("DEPRECATION")
+      val wifi = wifiLock ?: (context.getSystemService(Context.WIFI_SERVICE) as WifiManager)
+        .createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "resonus:upnp-cast")
+        .apply { setReferenceCounted(false) }
+        .also { wifiLock = it }
+      if (!wifi.isHeld) wifi.acquire()
+    } catch (e: Exception) {
+      Log.w(Soap.TAG, "Could not keep the Wi-Fi awake for casting", e)
     }
   }
 

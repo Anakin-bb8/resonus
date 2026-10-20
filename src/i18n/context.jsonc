@@ -86,6 +86,8 @@
 
     // ── Player, output & queue ───────────────────────────────────────────────
     "Devices": "The audio output devices to cast to",
+    "Headphones": "Fallback label for wired headphones the phone is playing through, beside the devices button, when the system gives no name",
+    "Car": "Fallback label for the car stereo the phone is playing through, beside the devices button, when the system gives no name",
     "Currently playing on": "Heading above the output the music is coming out of right now, at the top of the output sheet",
     "Colored mini player": "Tint the mini player with the colour of the cover art",
     "Cover color": "The colour taken from the cover art",
@@ -597,7 +599,13 @@
     "Always previous track": "A value of `Previous button`: never restarts, always goes back a song",
     "No": "A setting value meaning none or zero, not the answer to a question: no crossfade, no seek buttons",
     "Fit cover art": "Show the whole cover even if it is not square, instead of cropping it to fill",
-    "Animated cover background": "A setting: an animated cover (GIF, animated WebP) is shown full screen behind the player instead of inside the square",
+    "Animated covers": "Section header of the player settings: covers that move, video clips from a server or animated GIF and WebP files",
+    "Show animated covers": "The switch for all of them: off, no cover moves anywhere in the app",
+    "In the cover": "A value of `Animated artwork`: the animated cover plays inside the square where the cover is",
+    "As the background": "A value of `Animated artwork`: the animated cover fills the whole player screen behind everything, instead of the square",
+    "GIF and WebP covers from your server too.": "Under `Animated artwork`: the choice also applies to animated image covers the music server already has, not only to the video clips",
+    "Clips in the app too": "iOS setting: the animated cover clip also plays inside the app, not only on the lock screen",
+    "Off, the clip only plays on the lock screen.": "Under `Clips in the app too`: what turning it off leaves",
     "Scroll long titles": "A title too long to fit slides sideways, over and over, instead of being cut off",
     "Swap favorite and menu": "Exchange the places of those two buttons in the player, for whichever hand you hold the phone in",
 

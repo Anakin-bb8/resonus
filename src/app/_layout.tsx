@@ -10,8 +10,9 @@ import { NavigationBar } from 'expo-navigation-bar';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, View } from 'react-native';
+import { ActivityIndicator, AppState, Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Freeze } from 'react-freeze';
 
 import { AppStartupTab } from '@/components/AppStartupTab';
 import { ArtistPickerSheet } from '@/components/ArtistPickerSheet';
@@ -36,6 +37,7 @@ import { initAppLocale } from '@/lib/appLocale';
 import { initHomeWidget } from '@/lib/homeWidget';
 import { loadCustomFont } from '@/lib/customFont';
 import { removeLegacyRadioCovers } from '@/lib/legacyRadioCovers';
+import { systemAccentAvailable } from '@/lib/materialYou';
 import { loadPastEvents, startPerfLog } from '@/lib/perfLog';
 import { queryClient } from '@/lib/query';
 import { primaryUrl } from '@/lib/serverUrls';
@@ -111,6 +113,29 @@ const FULL_MODAL = {
  * The duplicate screens it was there to prevent are handled by `pushOnce`,
  * which debounces the tap and never touches the stack.
  */
+
+/**
+ * Whether the app is out of sight. While it is, React does not render what is
+ * on screen at all: on Android nothing is drawn in the background, so every
+ * change rendered there waited in line, and coming back after a long while
+ * replayed the whole line, the player walking through every song played
+ * since, frozen until it reached the one playing (the same thing #192 did for
+ * the position, here for everything). Frozen, the screen is rendered once on
+ * the way back, with what is true then.
+ */
+function useAway(): boolean {
+  const [away, setAway] = useState(false);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (st) => {
+      // Not 'inactive': that is a call or the notification shade over the app,
+      // which is still on screen.
+      if (st === 'background') setAway(true);
+      else if (st === 'active') setAway(false);
+    });
+    return () => sub.remove();
+  }, []);
+  return away;
+}
 
 export default function RootLayout() {
   // The selected font is applied on every render (and after hydrating settings):
@@ -288,6 +313,19 @@ export default function RootLayout() {
 
   // Keep screen awake (setting). The native flag only acts with the app in
   // the foreground, so it doesn't waste extra battery in the background.
+  const away = useAway();
+
+  // The wallpaper's accent can only have changed while somebody was away
+  // choosing a new wallpaper, so it is read again on the way back.
+  const systemAccent = useSettings((s) => s.systemAccent);
+  useEffect(() => {
+    if (!systemAccentAvailable || !systemAccent) return;
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') useSettings.getState().refreshSystemAccent();
+    });
+    return () => sub.remove();
+  }, [systemAccent]);
+
   const keepScreenAwake = useSettings((s) => s.keepScreenAwake);
   useEffect(() => {
     if (!keepScreenAwake) return;
@@ -319,6 +357,7 @@ export default function RootLayout() {
         ) : (
           <ErrorBoundary>
           <View style={{ flex: 1 }}>
+            <Freeze freeze={away}>
             <BarBlurTarget>
             <Stack
               screenOptions={{
@@ -434,6 +473,9 @@ export default function RootLayout() {
             <PodcastMenuSheet />
             {auth || offline ? <GlobalPlaylistPicker /> : null}
             {auth || offline ? <GlobalShareSheet /> : null}
+            </Freeze>
+            {/* Outside the freeze: it is what keeps the car up to date, and
+                the car is used with the app in the background. */}
             {auth || offline ? <CarAutoSync /> : null}
             {auth || offline ? <BatteryWarning /> : null}
             {/* Not behind the profile guard on a whim: the check reaches

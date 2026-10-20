@@ -10,6 +10,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { SelectList, SettingsGroup, SettingsPage, settingsStyles, SwitchList } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
+import { systemAccentAvailable } from '@/lib/materialYou';
 import { ACCENT_OPTIONS, useSettings } from '@/store/settings';
 import {
   BACKGROUND_TINTS,
@@ -82,10 +83,23 @@ function TintSwatches({
 
 /** The row of colours. Which appearance it is picking for is the one on screen;
  *  see the note where it is used. */
-function Swatches({ value, onPick }: { value: string; onPick: (hex: string) => void }) {
+function Swatches({
+  value,
+  onPick,
+  disabled,
+}: {
+  value: string;
+  onPick: (hex: string) => void;
+  /** While the wallpaper's accent is in force: the tick still says what comes
+   *  back when it goes off, but nothing here applies. */
+  disabled?: boolean;
+}) {
   const t = useT();
   return (
-    <View style={styles.swatches}>
+    <View
+      style={[styles.swatches, disabled && styles.swatchesOff]}
+      pointerEvents={disabled ? 'none' : 'auto'}
+    >
       {ACCENT_OPTIONS.map((opt) => {
         const active = opt.color.toLowerCase() === value.toLowerCase();
         return (
@@ -177,8 +191,13 @@ export default function ThemeSettings() {
   const setBackgroundTint = useSettings((s) => s.setBackgroundTint);
   const customAccentColor = useSettings((s) => s.customAccentColor);
   const setCustomAccentColor = useSettings((s) => s.setCustomAccentColor);
+  const systemAccent = useSettings((s) => s.systemAccent);
+  const setSystemAccent = useSettings((s) => s.setSystemAccent);
   const [pickerOpen, setPickerOpen] = useState(false);
   const accent = mode === 'light' ? accentColorLight : accentColor;
+  // The swatches go grey rather than away while the wallpaper decides: they
+  // are the choice kept underneath for when the switch goes back off.
+  const usingSystem = systemAccentAvailable && systemAccent;
 
   return (
     <SettingsPage title={t('Theme')}>
@@ -245,15 +264,41 @@ export default function ThemeSettings() {
             there rather than repainting it with the other's. Nothing has to say
             so on screen — the ticked swatch is already the answer. */}
         <Text style={[styles.label, styles.secondLabel]}>{t('Accent color')}</Text>
+        {/* Only where there is a wallpaper accent to take (Android 12 and up):
+            a switch that can do nothing is a question with no answer. */}
+        {systemAccentAvailable ? (
+          <>
+            <SwitchList
+              options={[
+                {
+                  label: t('Use the system colors'),
+                  description: t('The accent Android takes from the wallpaper'),
+                  value: systemAccent,
+                  onChange: setSystemAccent,
+                },
+              ]}
+            />
+            <View style={styles.gap} />
+          </>
+        ) : null}
         <Text style={styles.subLabel}>{t('Palette')}</Text>
-        <Swatches value={accent} onPick={(hex) => setAccentColor(hex, mode)} />
+        <Swatches
+          value={accent}
+          onPick={(hex) => setAccentColor(hex, mode)}
+          disabled={usingSystem}
+        />
         <Text style={[styles.subLabel, styles.secondSubLabel]}>{t('Custom::color')}</Text>
+        <View
+          style={usingSystem && styles.swatchesOff}
+          pointerEvents={usingSystem ? 'none' : 'auto'}
+        >
         <CustomSwatch
           color={customAccentColor}
           active={!!customAccentColor && customAccentColor.toLowerCase() === accent.toLowerCase()}
           onPick={() => setAccentColor(customAccentColor, mode)}
           onEdit={() => setPickerOpen(true)}
         />
+        </View>
         {pickerOpen ? (
           <ColorPickerDialog
             initialColor={customAccentColor || accent}
@@ -282,6 +327,7 @@ const styles = themed((colors) => ({
   secondSubLabel: { marginTop: spacing.lg },
   gap: { height: spacing.md },
   swatches: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg },
+  swatchesOff: { opacity: 0.35 },
   swatch: {
     width: 56,
     height: 56,

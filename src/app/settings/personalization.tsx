@@ -15,7 +15,7 @@ import { useLocalProfile } from '@/hooks/useLocalProfile';
 import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { useAuthStore } from '@/store/auth';
-import { useTheme } from '@/theme';
+import { useTheme, type BorderStyle } from '@/theme';
 import {
   APP_FONT_LABELS,
   LANGUAGE_NAMES,
@@ -77,6 +77,8 @@ export default function AppearanceSettings() {
   const appFont = useSettings((s) => s.appFont);
   const coverCorners = useSettings((s) => s.coverCorners);
   const setCoverCorners = useSettings((s) => s.setCoverCorners);
+  const borderStyle = useSettings((s) => s.borderStyle);
+  const setBorderStyle = useSettings((s) => s.setBorderStyle);
 
   return (
     <SettingsPage title={t('Appearance')}>
@@ -109,6 +111,16 @@ export default function AppearanceSettings() {
             ]}
             value={coverCorners}
             onChange={setCoverCorners}
+          />
+          <SelectList<BorderStyle>
+            label={t('Border radius')}
+            description={t('Round corners everywhere, or flatter ones')}
+            options={[
+              { value: 'round', label: t('Round') },
+              { value: 'pointier', label: t('Pointier') },
+            ]}
+            value={borderStyle}
+            onChange={setBorderStyle}
           />
         </SettingsGroup>
 
