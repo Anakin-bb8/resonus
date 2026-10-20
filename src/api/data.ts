@@ -32,6 +32,7 @@ import { cachedUri } from '@/store/songCache';
 import * as Navidrome from './navidrome';
 import * as Subsonic from './backend';
 import * as Local from '@/lib/localQueries';
+import { streamReachable } from './subsonic';
 import type { Song } from './subsonic';
 
 function isOffline() { return useAuthStore.getState().offline; }
@@ -257,7 +258,7 @@ export function markUnplayableOffline(songs: Song[]): Song[] {
     // A podcast episode's `url` is the publisher's address, not a stream the
     // phone may reach while offline mode says no to: only a downloaded file
     // plays it. Radios keep their own rule (a station is what it is).
-    if (s.url && !s.podcastChannelId) return { ...s, unavailable: false };
+    if (streamReachable(s)) return { ...s, unavailable: false };
     return uri ? { ...s, localUri: uri, unavailable: false } : { ...s, unavailable: true };
   });
 }

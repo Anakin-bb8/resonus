@@ -10,12 +10,11 @@ import ReanimatedSwipeable, {
 import Reanimated, { useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
 
 import { COVER, songCoverUrl, star } from '@/api/data';
-import { toggleFavoritePodcast } from '@/api/podcasts';
-import { type Song } from '@/api/subsonic';
+import { togglePodcastHeart } from '@/api/podcasts';
+import { streamReachable, type Song } from '@/api/subsonic';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { formatDuration } from '@/lib/format';
 import { applyStarChange, resyncFavorites, unstarWithUndo } from '@/lib/favoritesCache';
-import { invalidatePodcastFavorites } from '@/lib/query';
 import { useAuthStore } from '@/store/auth';
 import { useDownloads } from '@/store/downloads';
 import { usePlayerStore } from '@/store/player';
@@ -169,7 +168,7 @@ function TrackRowBase({
    * what the player will refuse.
    */
   const unavailable = offline
-    ? !song.localUri && !downloaded && !(song.url && !song.podcastChannelId)
+    ? !song.localUri && !downloaded && !streamReachable(song)
     : !!song.unavailable;
   const explicit = useExplicitBadge(song.explicitStatus);
 
@@ -180,9 +179,8 @@ function TrackRowBase({
   async function toggleFavoriteSwipe() {
     // A podcast episode: the device's own SQLite favorite, not the server's.
     if (song.podcastChannelId) {
-      void toggleFavoritePodcast(song.id, 'episode', song.podcastChannelId)
+      void togglePodcastHeart(song.id, 'episode', song.podcastChannelId)
         .then((on) => {
-          invalidatePodcastFavorites();
           toast(on ? t('Added to favorites') : t('Removed from favorites'));
         })
         .catch(() => toast(t("Couldn't complete the action")));

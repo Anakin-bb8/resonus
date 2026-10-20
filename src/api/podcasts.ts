@@ -12,6 +12,7 @@ import { assertCanRequest, isManualOffline, OfflineError } from './netGate';
 import { profileScopeId } from '@/store/auth';
 
 import { hashKey } from '@/lib/localLibrary';
+import { invalidatePodcastFavorites } from '@/lib/query';
 import * as Db from '@/lib/podcastDb';
 import type { RecentEpisode } from '@/lib/podcastDb';
 import { parseFeed, sortEpisodes, type ParsedItem } from '@/lib/podcastFeed';
@@ -258,6 +259,26 @@ export async function toggleFavoritePodcast(
   channelId: string,
 ): Promise<boolean> {
   return Db.toggleFavorite(scope(), id, kind, channelId);
+}
+
+/** The heart's one entry point for callers that show hearts: the SQLite row
+ *  and the cache answer together, so no surface can forget the pairing. */
+export async function togglePodcastHeart(
+  id: string,
+  kind: 'channel' | 'episode',
+  channelId: string,
+): Promise<boolean> {
+  const added = await toggleFavoritePodcast(id, kind, channelId);
+  invalidatePodcastFavorites();
+  return added;
+}
+
+/** The one answer to a feed that would not load: offline says so,
+ *  otherwise it is the publisher's side. One message, one locale key. */
+export function feedErrorMessage(translate: (key: string) => string, e: unknown): string {
+  return feedErrorCode(e) === 'offline'
+    ? translate("You're offline")
+    : translate("Couldn't read this feed");
 }
 
 /** The hearted ids, so a row can light its heart without asking per row. */

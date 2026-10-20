@@ -31,7 +31,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { CACHED_COVER, COVER, songCoverUrl, star, unstar, type Song } from '@/api/data';
-import { toggleFavoritePodcast } from '@/api/podcasts';
+import { togglePodcastHeart } from '@/api/podcasts';
 import { ArtistPlayerCard } from '@/components/ArtistPlayerCard';
 import { AudioQualityBadge } from '@/components/AudioQualityBadge';
 import { SeekBar } from '@/components/SeekBar';
@@ -66,7 +66,6 @@ import { haptic } from '@/lib/haptics';
 import { localHttpAvailable } from '@/lib/localHttp';
 import { pushOnce } from '@/lib/pushOnce';
 import { pushOrReplace } from '@/lib/pushOrReplace';
-import { invalidatePodcastFavorites } from '@/lib/query';
 import { usePodcastFavoriteIds } from '@/lib/podcastFavorites';
 import { getItem, setItem } from '@/lib/storage';
 import { useArtistPicker } from '@/store/artistPicker';
@@ -802,8 +801,7 @@ export default function PlayerScreen() {
       const next = !podcastFav.has(track.id);
       haptic('medium');
       try {
-        await toggleFavoritePodcast(track.id, 'episode', track.podcastChannelId);
-        invalidatePodcastFavorites();
+        await togglePodcastHeart(track.id, 'episode', track.podcastChannelId);
         useToast.getState().show(next ? t('Added to favorites') : t('Removed from favorites'));
       } catch {
         useToast.getState().show(t("Couldn't complete the action"));

@@ -20,18 +20,18 @@ import { SheetModal } from './SheetModal';
 import { COVER, coverArtUrl, type Song } from '@/api/data';
 import {
   episodeToSong,
-  feedErrorCode,
+  feedErrorMessage,
   refreshChannel,
   listAllEpisodes,
   downloadedForChannel,
   podcastCover,
-  toggleFavoritePodcast,
+  togglePodcastHeart,
   type PodcastChannel,
 } from '@/api/podcasts';
 import { useQuery } from '@tanstack/react-query';
 import { isManualOffline } from '@/api/netGate';
 import { useT } from '@/i18n';
-import { invalidatePodcastCaches, invalidatePodcastFavorites } from '@/lib/query';
+import { invalidatePodcastCaches } from '@/lib/query';
 import { usePodcastFavoriteIds } from '@/lib/podcastFavorites';
 import { useDownloads } from '@/store/downloads';
 import { usePlayerStore } from '@/store/player';
@@ -194,13 +194,7 @@ export function PodcastMenuSheet() {
               if (!ch.feedUrl) return;
               void refreshChannel(ch.feedUrl)
                 .then(() => invalidatePodcastCaches())
-                .catch((e) =>
-                  toast(
-                    feedErrorCode(e) === 'offline'
-                      ? t("You're offline")
-                      : t("Couldn't read this feed"),
-                  ),
-                );
+                .catch((e) => toast(feedErrorMessage(t, e)));
             })}
 
             {siteUrl
@@ -222,8 +216,7 @@ export function PodcastMenuSheet() {
                 close();
                 void (async () => {
                   try {
-                    await toggleFavoritePodcast(ch.id, 'channel', ch.id);
-                    invalidatePodcastFavorites();
+                    await togglePodcastHeart(ch.id, 'channel', ch.id);
                   } catch {
                     toast(t("Couldn't complete the action"));
                   }

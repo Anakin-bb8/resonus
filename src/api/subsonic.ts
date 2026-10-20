@@ -212,6 +212,14 @@ export interface Song {
   };
 }
 
+/** Whether a song's `url` is a stream the phone may reach: radio yes, a
+ *  podcast episode no — its address belongs to the publisher and offline
+ *  mode says no to it like to any other request. The one rule the rows,
+ *  the queue marking and the player's source decision all read. */
+export function streamReachable(song: Song): boolean {
+  return !!song.url && !song.podcastChannelId;
+}
+
 export interface Album {
   id: string;
   name: string;

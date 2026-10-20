@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 818 of them.
+Every string the app can show, under the screen it shows up on. 817 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -39,7 +39,6 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `{artist} Radio` |  |
-| `{n} episodes deleted` | Toast after clearing a show's downloads: how many files went |
 | `{n} minutes` | A value of the sleep timer, in minutes from now |
 | `{n} more` | Under a heading of the update prompt: how many more lines of that kind the release notes have |
 | `{n} songs, {size}, copied into a folder of their own.` | The line under that title |
@@ -63,7 +62,6 @@ you are actually typing into, which is easier than reading it here.
 | `Continue listening` | Shortcut on the app's launcher icon (long press): resumes the last queue. Short: launchers cut long labels |
 | `Couldn't create the link` | The server would not make a share link |
 | `Couldn't find anything to mix with this song` | Toast: the server had nothing similar to carry on with |
-| `Couldn't read this feed` |  |
 | `Couldn't refresh the radio` |  |
 | `Couldn't save the file` | Toast: writing to the chosen folder failed |
 | `Couldn't send the file` | Toast: handing it to another app failed |
@@ -101,7 +99,6 @@ you are actually typing into, which is easier than reading it here.
 | `Rate` | Verb: give it stars. Used for a song and for an artist. Not "bitrate" |
 | `Rating` | The stars given to the song. Not a bitrate, not a review |
 | `Recents` | Library section and its sort order: recently opened items |
-| `Refresh` | Ask the server for this playlist again, in case it changed elsewhere. Also the button under suggested tracks to regenerate them, and on a podcast show the action that reads its feed again from the publisher |
 | `Refresh this radio` |  |
 | `Remove from playlist` | Menu action: take this song out of the playlist it was opened from |
 | `Removed from playlist` | Toast, with an undo button next to it |
@@ -134,14 +131,12 @@ you are actually typing into, which is easier than reading it here.
 | `Update` | The button that installs a newer version of Resonus. A verb, not a noun: `Update it`, not `An update` |
 | `Update available` |  |
 | `View queue` | Read out by the screen reader for the button that opens the queue |
-| `Website` | A show's ⋯ sheet: opens the publisher's own web page in the browser. Not the feed file |
 | `What's new` | Opens what changed in this version |
 | `When the song ends` | A value of the sleep timer: stop when this song finishes, however long that is |
 | `Will pause in {n} min` | Toast when it is set |
 | `Will pause when the song ends` | Toast when it is set to the end of the song |
 | `Year` | Label of a field in the song information sheet: the year of the release |
 | `You can pin up to {n} items.` | Toast: there is no room for another pinned thing. `{n}` is the limit |
-| `You're offline` | Said when a manual 'use no network' refused an action that needs the network |
 
 ## Artist
 
@@ -221,7 +216,6 @@ you are actually typing into, which is easier than reading it here.
 | `Go to artist` | Leave this sheet and open the artist |
 | `Playlist created` | The toast after making one |
 | `Radio updated` |  |
-| `Refresh` | Ask the server for this playlist again, in case it changed elsewhere. Also the button under suggested tracks to regenerate them, and on a podcast show the action that reads its feed again from the publisher |
 | `Refresh this radio` |  |
 | `Save as playlist` |  |
 | `Suggested tracks` | Section heading at the bottom of a playlist: songs the server recommends based on what is already in the playlist |
@@ -528,7 +522,6 @@ you are actually typing into, which is easier than reading it here.
 | `Playlist updated` | Toast after saving a change |
 | `Playlists are not available in offline mode.` | Shown instead of a playlist when there is no connection |
 | `Public playlist` | Toggle that makes a playlist public on the server |
-| `Refresh` | Ask the server for this playlist again, in case it changed elsewhere. Also the button under suggested tracks to regenerate them, and on a podcast show the action that reads its feed again from the publisher |
 | `Remove cover` | Screen reader label for the small x on a chosen picture |
 | `Removed from playlist` | Toast, with an undo button next to it |
 | `Share` | Make a link on the server that others can open. Getting the file itself out is `Export` |
@@ -560,7 +553,6 @@ you are actually typing into, which is easier than reading it here.
 | `Add podcast` |  |
 | `Couldn't load your podcasts.` |  |
 | `Couldn't reach any of your podcast feeds.` |  |
-| `Couldn't read that feed.` |  |
 | `Couldn't read this feed` |  |
 | `Feed URL` | The field in the add-a-show sheet: the address of the show's feed, pasted in |
 | `Find a podcast` |  |
@@ -568,7 +560,6 @@ you are actually typing into, which is easier than reading it here.
 | `No podcasts` |  |
 | `Podcasts` | Shows kept on this phone, played from the address the publisher gives. Not something the music server stores |
 | `The feed URL must start with http:// or https://` | Said when what was pasted is not an address. The two protocols are the answer, not part of the sentence to translate |
-| `You're offline` | Said when a manual 'use no network' refused an action that needs the network |
 
 ## Queue
 
@@ -1177,6 +1168,7 @@ you are actually typing into, which is easier than reading it here.
 | `{n} added to “{name}”` | Toast when several songs went in at once. `{n}` is a count of songs |
 | `{n} columns` | The other options in that menu: cards, this many across. `{n}` is 2, 3 or 4, so it is always plural |
 | `{n} episodes couldn't be downloaded` | Toast after a show's download: how many the publisher would not give |
+| `{n} episodes deleted` | Toast after clearing a show's downloads: how many files went |
 | `{n} episodes downloaded` | Toast after a show's download: how many episodes landed on the phone |
 | `{n} of {m} songs exported` | Toast when only some of them made it |
 | `{n} of {songs} are already in “{name}”.` | The same warning when adding several at once and only some of them are already there. `{n}` is how many of them are, and `{songs}` already reads as a count ("12 songs"), so the sentence is like "3 of 12 songs are already in “Rock”." |
@@ -1254,6 +1246,7 @@ you are actually typing into, which is easier than reading it here.
 | `Radio` | Internet radio stations. Most languages keep the word |
 | `Rate {n} stars` | Read out by the screen reader for each star. `{n}` is which star it is |
 | `Recently added` | A sort order, and a section: newest first (in Favorites, last favorited first) |
+| `Refresh` | Ask the server for this playlist again, in case it changed elsewhere. Also the button under suggested tracks to regenerate them, and on a podcast show the action that reads its feed again from the publisher |
 | `Remove` | Take something out of a list. Deleting for good is `Delete` |
 | `Remove download` | Delete the downloaded file, keeping the song in the library |
 | `Remove download?` | Dialog title: delete the files of something already downloaded |
@@ -1286,4 +1279,6 @@ you are actually typing into, which is easier than reading it here.
 | `Unknown artist` | Fallback when the file and the server have no artist |
 | `View` | Title of the menu that chooses how a collection is drawn, and the label of the button that opens it. A noun: what you are looking at, not the verb |
 | `View cover` | The same as `View image`, for album and playlist artwork |
+| `Website` | A show's ⋯ sheet: opens the publisher's own web page in the browser. Not the feed file |
 | `Wrong username or password` |  |
+| `You're offline` | Said when a manual 'use no network' refused an action that needs the network |

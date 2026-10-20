@@ -47,7 +47,7 @@ import {
   type Song,
   type SubsonicAuth,
 } from '@/api/backend';
-import { CLIENT_NAME } from '@/api/subsonic';
+import { CLIENT_NAME, streamReachable } from '@/api/subsonic';
 // The data layer's, not the backend's: `getRandomSongs` honours the library
 // filter and asks each library for its share (the rest of the mix cannot be
 // filtered, see `radioCandidates`), and `coverArtUrl` hands back the file on
@@ -331,7 +331,7 @@ function copyOnPhone(song: Song): string | undefined {
  * `markUnplayableOffline` and the rows work out).
  */
 function playableOffline(song: Song | null | undefined): boolean {
-  return !!song && (!!song.url && !song.podcastChannelId || !!song.localUri || !!copyOnPhone(song));
+  return !!song && (streamReachable(song) || !!song.localUri || !!copyOnPhone(song));
 }
 
 /** Max streaming bitrate according to current network (Wi-Fi or mobile data). */
@@ -442,7 +442,7 @@ function sourceFor(song: Song, timeOffsetSec = 0): AudioSource {
     if (episodeLocal) return { uri: episodeLocal, metadata, mediaId, preferPreciseTiming };
     if (!useAuthStore.getState().offline)
       return { uri: song.url, metadata, mediaId, preferPreciseTiming };
-  } else if (song.url) {
+  } else if (streamReachable(song)) {
     return { uri: song.url, metadata, mediaId, preferPreciseTiming };
   }
   const local = localSourceFor(song);

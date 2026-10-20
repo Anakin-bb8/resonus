@@ -4,10 +4,9 @@ import { useEffect, useState } from 'react';
 import { Pressable, type GestureResponderEvent } from 'react-native';
 
 import { star, unstar, type StarType } from '@/api/data';
-import { toggleFavoritePodcast } from '@/api/podcasts';
+import { togglePodcastHeart } from '@/api/podcasts';
 import { applyStarChange, resyncFavorites, unstarWithUndo } from '@/lib/favoritesCache';
 import { haptic } from '@/lib/haptics';
-import { invalidatePodcastFavorites } from '@/lib/query';
 import { useAuthStore } from '@/store/auth';
 import { usePins } from '@/store/pins';
 import { useToast } from '@/store/toast';
@@ -58,8 +57,7 @@ export function FavoriteButton({ id, type = 'song', starred, size = 22, undo, po
       setFav(nextFav); // optimistic update
       setBusy(true);
       try {
-        await toggleFavoritePodcast(id, podcast.kind, podcast.channelId);
-        invalidatePodcastFavorites();
+        await togglePodcastHeart(id, podcast.kind, podcast.channelId);
         toast(nextFav ? t('Added to favorites') : t('Removed from favorites'));
       } catch {
         setFav(!nextFav); // revert on failure

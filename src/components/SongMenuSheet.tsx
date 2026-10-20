@@ -20,7 +20,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useBottomSheetAnim } from '@/hooks/useBottomSheetAnim';
 import { useScreenSize } from '@/hooks/useScreenSize';
-import { invalidatePodcastFavorites } from '@/lib/query';
 import { usePodcastFavoriteIds } from '@/lib/podcastFavorites';
 import {
   addToPlaylist,
@@ -39,7 +38,7 @@ import {
 import { useCanShare } from '@/hooks/useCanShare';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { applyStarChange, resyncFavorites } from '@/lib/favoritesCache';
-import { toggleFavoritePodcast } from '@/api/podcasts';
+import { togglePodcastHeart } from '@/api/podcasts';
 import { isManualOffline } from '@/api/netGate';
 import { artistTargets } from '@/lib/artistNav';
 import { pushOrReplace } from '@/lib/pushOrReplace';
@@ -598,10 +597,7 @@ export function SongMenuSheet() {
                     onPress={() => {
                       if (song.podcastChannelId) {
                         // The device's own SQLite favorite, not the server's.
-                        void toggleFavoritePodcast(song.id, 'episode', song.podcastChannelId)
-                          .then(() => {
-                            invalidatePodcastFavorites();
-                          })
+                        void togglePodcastHeart(song.id, 'episode', song.podcastChannelId)
                           .catch(() => toast(t("Couldn't complete the action")));
                         toast(favorited ? t('Removed from favorites') : t('Added to favorites'));
                         close();
