@@ -22,6 +22,7 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- A song the server converts while it plays no longer shows 0:00 as its length with the bar full, and seeking in it no longer jumps back to the start: when the player's own length is far below the song's, the song's is used.
 - Spread across the width and Devices on the left line the bottom row up with the controls above it: the outer buttons sit right under the shuffle and the repeat (#259).
 - With every bottom-row button on, a long device name (a DLNA renderer, Bluetooth headphones) is cut short instead of pushing the row past the edges of the screen.
 - Synced lyrics from the server follow the song again when the server sends their lines out of order, such as a chorus written once with several timestamps, instead of staying on the first line.

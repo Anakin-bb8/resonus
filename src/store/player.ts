@@ -2864,6 +2864,21 @@ const BG_POSITION_PUSH_MS = 5000;
 let lastBgPositionPush = 0;
 
 /** `live`: read from the player just now, never part of a pile. */
+/**
+ * The length to show and to seek within: the player's own, which is exact to
+ * the millisecond, unless it is clearly wrong. A stream the server transcodes
+ * on the fly starts with an MP3 header written before any frame exists, which
+ * says zero frames, and the player took that for a song a fraction of a
+ * second long: 0:00 at the end of the bar, the bar full, and every seek
+ * clamped back to the start. Less than half of what the server says the song
+ * lasts is that, and the server's figure is kept instead.
+ */
+function plausibleDuration(native: number | undefined, fallback: number, known?: number): number {
+  if (!native || !(native > 0)) return fallback;
+  if (known && known > 0 && native < known * 0.5) return known;
+  return native;
+}
+
 function onStatus(status: AudioStatus, live = false) {
   // Before anything can decide not to use it. This beat is the only clock that
   // survives the app being minimized, so whether it arrives is the first thing
@@ -2957,7 +2972,10 @@ function onStatus(status: AudioStatus, live = false) {
   }
   // With offset active the native reports the duration of the remaining segment,
   // not the song's: the known duration is kept.
-  const nextDurationSec = streamOffsetSec > 0 ? prev.durationSec : status.duration || prev.durationSec;
+  const nextDurationSec =
+    streamOffsetSec > 0
+      ? prev.durationSec
+      : plausibleDuration(status.duration, prev.durationSec, currentSong(prev)?.duration);
   // During pause/resume fade the native player keeps playing for a few ms;
   // we keep the already-set state so the button doesn't flicker.
   const nextIsPlaying = pauseFadeTimer ? prev.isPlaying : status.playing;
@@ -3608,7 +3626,7 @@ export function initRemoteIntegration() {
       usePlayerStore.setState({
         index,
         positionSec,
-        durationSec: durationSec || song.duration || state.durationSec,
+        durationSec: plausibleDuration(durationSec, song.duration || state.durationSec, song.duration),
       });
       onTrackChanged(song);
     },
@@ -3628,9 +3646,11 @@ export function initRemoteIntegration() {
       })();
     },
     onProgress: (positionSec, durationSec) => {
+      const cur = usePlayerStore.getState();
       usePlayerStore.setState({
         positionSec,
-        durationSec: durationSec || usePlayerStore.getState().durationSec,
+        // A renderer can be as wrong about it as the local player.
+        durationSec: plausibleDuration(durationSec, cur.durationSec, currentSong(cur)?.duration),
       });
       const st = usePlayerStore.getState();
       maybeScrobbleThreshold(positionSec);
