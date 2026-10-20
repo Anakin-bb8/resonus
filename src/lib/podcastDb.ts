@@ -27,8 +27,6 @@ CREATE TABLE IF NOT EXISTS podcast_channels (
   refreshed_at INTEGER,
   data TEXT NOT NULL
 );
-CREATE INDEX IF NOT EXISTS podcast_channels_order
-  ON podcast_channels(last_published_at DESC, title);
 CREATE TABLE IF NOT EXISTS podcast_episodes (
   id TEXT PRIMARY KEY NOT NULL,
   channel_id TEXT NOT NULL,
@@ -78,6 +76,18 @@ async function openDb(dir: string): Promise<SQLite.SQLiteDatabase> {
   return db;
 }
 
+// Writes go one at a time. Two transactions at once on one connection is an
+// error, not a wait — "cannot start a transaction within a transaction" is
+// what two screens refreshing the same profile at once would look like. The
+// downloads database keeps the same lock for the same reason.
+let writeQueue: Promise<unknown> = Promise.resolve();
+
+function serialized<T>(fn: () => Promise<T>): Promise<T> {
+  const run = writeQueue.then(fn, fn);
+  writeQueue = run.catch(() => {});
+  return run;
+}
+
 function podcastDb(scope: string): Promise<SQLite.SQLiteDatabase> {
   const dir = podcastDbDir(scope);
   const existing = open.get(dir);
@@ -102,20 +112,22 @@ export async function closePodcastDb(scope: string): Promise<void> {
 
 export async function saveChannel(scope: string, channel: PodcastChannel): Promise<void> {
   const db = await podcastDb(scope);
-  await db.runAsync(
-    `INSERT OR REPLACE INTO podcast_channels
-       (id, feed_url, title, image_url, episode_count, last_published_at, refreshed_at, data)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      channel.id,
-      channel.feedUrl ?? null,
-      channel.title,
-      channel.imageUrl ?? null,
-      channel.episodeCount ?? 0,
-      channel.lastPublishedAt ?? null,
-      channel.refreshedAt ?? null,
-      JSON.stringify(channel),
-    ],
+  await serialized(() =>
+    db.runAsync(
+      `INSERT OR REPLACE INTO podcast_channels
+         (id, feed_url, title, image_url, episode_count, last_published_at, refreshed_at, data)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        channel.id,
+        channel.feedUrl ?? null,
+        channel.title,
+        channel.imageUrl ?? null,
+        channel.episodeCount ?? 0,
+        channel.lastPublishedAt ?? null,
+        channel.refreshedAt ?? null,
+        JSON.stringify(channel),
+      ],
+    ),
   );
 }
 
@@ -129,24 +141,26 @@ export async function replaceEpisodes(
   episodes: PodcastEpisode[],
 ): Promise<void> {
   const db = await podcastDb(scope);
-  await db.withTransactionAsync(async () => {
-    await db.runAsync('DELETE FROM podcast_episodes WHERE channel_id = ?', [channelId]);
-    for (const e of episodes) {
-      await db.runAsync(
-        `INSERT OR REPLACE INTO podcast_episodes
-           (id, channel_id, published_at, duration, url, data)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [
-          e.id,
-          e.channelId,
-          e.publishedAt ?? null,
-          e.duration ?? null,
-          e.url ?? null,
-          JSON.stringify(e),
-        ],
-      );
-    }
-  });
+  await serialized(() =>
+    db.withTransactionAsync(async () => {
+      await db.runAsync('DELETE FROM podcast_episodes WHERE channel_id = ?', [channelId]);
+      for (const e of episodes) {
+        await db.runAsync(
+          `INSERT OR REPLACE INTO podcast_episodes
+             (id, channel_id, published_at, duration, url, data)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [
+            e.id,
+            e.channelId,
+            e.publishedAt ?? null,
+            e.duration ?? null,
+            e.url ?? null,
+            JSON.stringify(e),
+          ],
+        );
+      }
+    }),
+  );
 }
 
 export async function listChannels(scope: string): Promise<PodcastChannel[]> {
@@ -170,19 +184,23 @@ export async function getChannel(
   return row ? (JSON.parse(row.data) as PodcastChannel) : undefined;
 }
 
-/** The episodes of a channel, newest first, capped: old feeds list thousands. */
+/** The episodes of a channel, newest first, one page at a time: old feeds
+ *  list thousands, and a screen pages through them as you scroll. */
+const MAX_EPISODES = 200;
+
 export async function listEpisodes(
   scope: string,
   channelId: string,
-  limit = 200,
+  limit = MAX_EPISODES,
+  offset = 0,
 ): Promise<PodcastEpisode[]> {
   const db = await podcastDb(scope);
   const rows = await db.getAllAsync<{ data: string }>(
     `SELECT data FROM podcast_episodes
      WHERE channel_id = ?
      ORDER BY COALESCE(published_at, 0) DESC, id ASC
-     LIMIT ?`,
-    [channelId, limit],
+     LIMIT ? OFFSET ?`,
+    [channelId, limit, offset],
   );
   return rows.map((r) => JSON.parse(r.data) as PodcastEpisode);
 }
@@ -214,10 +232,12 @@ export async function listRecentEpisodes(scope: string, limit = 20): Promise<Rec
 /** Remembers a feed; one already there keeps its place in the order. */
 export async function addFeed(scope: string, feedUrl: string): Promise<void> {
   const db = await podcastDb(scope);
-  await db.runAsync('INSERT OR IGNORE INTO podcast_feeds (feed_url, added_at) VALUES (?, ?)', [
-    feedUrl,
-    Date.now(),
-  ]);
+  await serialized(() =>
+    db.runAsync('INSERT OR IGNORE INTO podcast_feeds (feed_url, added_at) VALUES (?, ?)', [
+      feedUrl,
+      Date.now(),
+    ]),
+  );
 }
 
 /** Every feed kept on the device, oldest first. */
@@ -243,19 +263,23 @@ export async function toggleFavorite(
   channelId: string,
 ): Promise<boolean> {
   const db = await podcastDb(scope);
-  const existing = await db.getFirstAsync<{ favorited_at: number }>(
-    'SELECT favorited_at FROM podcast_favorites WHERE id = ?',
-    [id],
-  );
-  if (existing) {
-    await db.runAsync('DELETE FROM podcast_favorites WHERE id = ?', [id]);
-    return false;
-  }
-  await db.runAsync(
-    'INSERT INTO podcast_favorites (id, kind, channel_id, favorited_at) VALUES (?, ?, ?, ?)',
-    [id, kind, channelId, Date.now()],
-  );
-  return true;
+  // Read and write as one step: two taps on the same heart must not both see
+  // the old state and write the same answer.
+  return serialized(async () => {
+    const existing = await db.getFirstAsync<{ favorited_at: number }>(
+      'SELECT favorited_at FROM podcast_favorites WHERE id = ?',
+      [id],
+    );
+    if (existing) {
+      await db.runAsync('DELETE FROM podcast_favorites WHERE id = ?', [id]);
+      return false;
+    }
+    await db.runAsync(
+      'INSERT INTO podcast_favorites (id, kind, channel_id, favorited_at) VALUES (?, ?, ?, ?)',
+      [id, kind, channelId, Date.now()],
+    );
+    return true;
+  });
 }
 
 /** The ids the user has hearted, for a row to show its heart without a query each. */
@@ -311,20 +335,32 @@ export async function saveDownload(
   bytes: number | undefined,
 ): Promise<void> {
   const db = await podcastDb(scope);
-  await db.runAsync(
-    `INSERT OR REPLACE INTO podcast_downloads
-       (episode_id, channel_id, file, bytes, downloaded_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    [episode.id, episode.channelId, fileUri, bytes ?? null, Date.now()],
+  await serialized(() =>
+    db.runAsync(
+      `INSERT OR REPLACE INTO podcast_downloads
+         (episode_id, channel_id, file, bytes, downloaded_at)
+       VALUES (?, ?, ?, ?, ?)`,
+      [episode.id, episode.channelId, fileUri, bytes ?? null, Date.now()],
+    ),
   );
 }
 
-/** Drops downloads from the record (the file itself is unlinked by the caller). */
+/** Drops downloads from the record (the file itself is unlinked by the
+ *  caller). Chunked like every other id list: SQLite counts placeholders,
+ *  and a whole show's ids would otherwise pass the parameter limit. */
+const PARAM_CHUNK = 400;
+
 export async function dropDownloads(scope: string, ids: string[]): Promise<void> {
   if (ids.length === 0) return;
   const db = await podcastDb(scope);
-  for (const id of ids) {
-    await db.runAsync('DELETE FROM podcast_downloads WHERE episode_id = ?', [id]);
+  for (let i = 0; i < ids.length; i += PARAM_CHUNK) {
+    const part = ids.slice(i, i + PARAM_CHUNK);
+    await serialized(() =>
+      db.runAsync(
+        `DELETE FROM podcast_downloads WHERE episode_id IN (${part.map(() => '?').join(', ')})`,
+        part,
+      ),
+    );
   }
 }
 
@@ -363,7 +399,7 @@ export async function clearDownloadRecords(): Promise<void> {
   for (const scope of scopes) {
     try {
       const db = await podcastDb(scope);
-      await db.runAsync('DELETE FROM podcast_downloads', []);
+      await serialized(() => db.runAsync('DELETE FROM podcast_downloads', []));
     } catch {
       // A database that cannot be opened has no rows anyone can read.
     }

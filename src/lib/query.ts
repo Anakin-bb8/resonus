@@ -30,15 +30,18 @@ export function clearProfileCache(): void {
 
 /**
  * Everything that shows a podcast: the open show screens (`['podcast', id]`),
- * the list (`podcastChannels`) and Home's shelf (`podcastRecentEpisodes`). Read
- * after a show is added, removed or refreshed, so no surface keeps an answer
- * that the read just changed. The prefix `['podcast']` matches only the show
- * screens — the list, the shelf and the hearts are separate keys, named here.
+ * the quick grid's covers (`['podcast','covers',…]`), the list (`podcastChannels`)
+ * and Home's shelf (`podcastRecentEpisodes`). Read after a show is added,
+ * removed or refreshed, so no surface keeps an answer that the read just
+ * changed. The favorite lists carry what a refresh learned about a show too —
+ * its episode count and its feed error — so they are invalidated here as well.
  */
 export function invalidatePodcastCaches(): void {
   queryClient.invalidateQueries({ queryKey: ['podcast'] });
   queryClient.invalidateQueries({ queryKey: ['podcastChannels'] });
   queryClient.invalidateQueries({ queryKey: ['podcastRecentEpisodes'] });
+  queryClient.invalidateQueries({ queryKey: ['podcastFavoriteChannels'] });
+  queryClient.invalidateQueries({ queryKey: ['podcastFavoriteEpisodes'] });
 }
 
 /** The hearts and the two favorite lists, after a podcast heart goes on or off. */
