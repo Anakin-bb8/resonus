@@ -214,6 +214,18 @@ export async function listEpisodes(channelId: string): Promise<PodcastEpisode[]>
   return Db.listEpisodes(scope(), channelId);
 }
 
+/** Every episode of a channel, pages read to the end. */
+export async function listAllEpisodes(channelId: string): Promise<PodcastEpisode[]> {
+  return Db.listAllEpisodes(scope(), channelId);
+}
+
+/** How many of a show's episodes are downloaded, and their ids. */
+export async function downloadedForChannel(
+  channelId: string,
+): Promise<{ ids: string[]; count: number }> {
+  return Db.downloadedForChannel(scope(), channelId);
+}
+
 /** The newest playable episodes across every show you keep, for Home. */
 export async function listRecentEpisodes(limit = 20): Promise<RecentEpisode[]> {
   return Db.listRecentEpisodes(scope(), limit);

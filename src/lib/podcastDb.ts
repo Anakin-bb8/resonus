@@ -205,6 +205,17 @@ export async function listEpisodes(
   return rows.map((r) => JSON.parse(r.data) as PodcastEpisode);
 }
 
+/** Every episode of a channel, pages read to the end: a screen shows the
+ *  whole show, and old feeds list thousands. */
+export async function listAllEpisodes(scope: string, channelId: string): Promise<PodcastEpisode[]> {
+  const all: PodcastEpisode[] = [];
+  for (let offset = 0; ; offset += MAX_EPISODES) {
+    const page = await listEpisodes(scope, channelId, MAX_EPISODES, offset);
+    all.push(...page);
+    if (page.length < MAX_EPISODES) return all;
+  }
+}
+
 /** One episode together with the show it belongs to, for a row that shows both. */
 export interface RecentEpisode {
   episode: PodcastEpisode;

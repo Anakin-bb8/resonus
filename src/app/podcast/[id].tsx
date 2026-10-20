@@ -16,7 +16,7 @@ import {
   episodeToSong,
   getChannel,
   getStoredChannel,
-  listEpisodes,
+  listAllEpisodes,
   refreshChannel,
   type PodcastChannel,
 } from '@/api/podcasts';
@@ -82,7 +82,7 @@ export default function PodcastScreen() {
           .then(() => invalidatePodcastCaches())
           .catch(() => {});
       }
-      const episodes = await listEpisodes(ch.id);
+      const episodes = await listAllEpisodes(ch.id);
       return { channel: ch, episodes };
     },
     enabled: !!id,
@@ -100,7 +100,9 @@ export default function PodcastScreen() {
   );
   const downloadPodcast = useDownloads((s) => s.downloadPodcast);
   const cancelDownload = useDownloads((s) => s.cancelDownload);
-  const deletePodcastDownloads = useDownloads((s) => s.deletePodcastDownloads);
+  const deletePodcastChannelDownloads = useDownloads(
+    (s) => s.deletePodcastChannelDownloads,
+  );
 
   if (data.isLoading) {
     return <TrackListSkeleton />;
@@ -167,9 +169,9 @@ export default function PodcastScreen() {
             ? {
                 ...download,
                 onPress: () => {
-                  if (download.status === 'done') void deletePodcastDownloads(episodeIds);
+                  if (download.status === 'done') void deletePodcastChannelDownloads(ch.id);
                   else if (download.status === 'active') cancelDownload(`podcast:${ch.id}`);
-                  else void downloadPodcast(ch.id, list);
+                  else void downloadPodcast(ch.id);
                 },
               }
             : undefined

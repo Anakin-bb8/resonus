@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 817 of them.
+Every string the app can show, under the screen it shows up on. 818 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -39,6 +39,7 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `{artist} Radio` |  |
+| `{n} episodes deleted` | Toast after clearing a show's downloads: how many files went |
 | `{n} minutes` | A value of the sleep timer, in minutes from now |
 | `{n} more` | Under a heading of the update prompt: how many more lines of that kind the release notes have |
 | `{n} songs, {size}, copied into a folder of their own.` | The line under that title |
@@ -72,7 +73,6 @@ you are actually typing into, which is easier than reading it here.
 | `Don't remind me` | Its other button: never show this again |
 | `Download removed` | Toast: the file was deleted, the song stays in the library |
 | `Downloading Resonus {version}` |  |
-| `Downloads deleted` |  |
 | `Duration` | Label of a field in the song information sheet: how long the song is |
 | `Explicit` | A value of `Content`: the recording carries a parental advisory (strong language). Also read out for the E badge next to a title |
 | `Export “{name}”?` | Confirms getting the files of an album or playlist out of the app |

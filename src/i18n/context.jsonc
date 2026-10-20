@@ -785,6 +785,7 @@
     "Episode downloaded": "Toast when one episode finished downloading",
     "{n} episodes downloaded": "Toast after a show's download: how many episodes landed on the phone",
     "{n} episodes couldn't be downloaded": "Toast after a show's download: how many the publisher would not give",
+    "{n} episodes deleted": "Toast after clearing a show's downloads: how many files went",
     "Website": "A show's ⋯ sheet: opens the publisher's own web page in the browser. Not the feed file",
     "Favorite a show to keep it here.": "The line under the Library's Podcasts shelf: hearts are how a show is kept. 'Here' means this phone",
     "You're offline": "Said when a manual 'use no network' refused an action that needs the network"

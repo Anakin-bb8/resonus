@@ -21,9 +21,11 @@ import {
   episodeToSong,
   feedErrorCode,
   refreshChannel,
-  listEpisodes,
+  listAllEpisodes,
+  downloadedForChannel,
   toggleFavoritePodcast,
 } from '@/api/podcasts';
+import { useQuery } from '@tanstack/react-query';
 import { isManualOffline } from '@/api/netGate';
 import { useT } from '@/i18n';
 import { invalidatePodcastCaches, invalidatePodcastFavorites } from '@/lib/query';
@@ -54,12 +56,21 @@ export function PodcastMenuSheet() {
   const hearted = favIds.has(ch.id);
   const href = `/podcast/${ch.id}`;
 
+  // Whether this show has anything downloaded, from the record and not from
+  // a loaded list: downloads sitting beyond the first page still count. The
+  // download and delete actions invalidate this key when they land.
+  const downloaded = useQuery({
+    queryKey: ['podcastDownloads', ch.id],
+    queryFn: async () => (await downloadedForChannel(ch.id)).count,
+    staleTime: Infinity,
+  });
+
   /** Closes, reads the episodes from SQLite, and runs the action on them. */
   const withEpisodes = (fn: (songs: Song[]) => void) => {
     onClose();
     void (async () => {
       try {
-        const list = await listEpisodes(ch.id);
+        const list = await listAllEpisodes(ch.id);
         if (list.length > 0) fn(list.map((e) => episodeToSong(e, ch)));
       } catch {
         toast(t("Couldn't complete the action"));
@@ -149,7 +160,7 @@ export function PodcastMenuSheet() {
               }
               void (async () => {
                 try {
-                  await useDownloads.getState().downloadPodcast(ch.id, await listEpisodes(ch.id));
+                  await useDownloads.getState().downloadPodcast(ch.id);
                 } catch {
                   toast(t("Couldn't complete the action"));
                 }
@@ -213,28 +224,35 @@ export function PodcastMenuSheet() {
           </Pressable>
 
           {/* Last, because it is the only thing here that takes something away.
-              The show screen's pill hides in a manual "use no network" — this
-              way works exactly then, and clears a whole show at once, which
-              song-by-song undo could not (#47 on the album side). */}
-          <Pressable
-            style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
-            onPress={() => {
-              onClose();
-              void (async () => {
-                try {
-                  await useDownloads.getState().deletePodcastDownloads(
-                    (await listEpisodes(ch.id)).map((e) => e.id),
-                  );
-                  toast(t('Downloads deleted'));
-                } catch {
-                  toast(t("Couldn't complete the action"));
-                }
-              })();
-            }}
-          >
-            <Icon name="trash-outline" size={24} color={colors.text} />
-            <Text style={styles.actionText}>{t('Delete downloads')}</Text>
-          </Pressable>
+              Offered only while the show has something downloaded — the album
+              sheet hides its trash action exactly the same way — and it clears
+              every episode the record holds, not just the ones a loaded list
+              showed (#47 on the album side). */}
+          {(downloaded.data ?? 0) > 0 ? (
+            <Pressable
+              style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+              onPress={() => {
+                onClose();
+                void (async () => {
+                  try {
+                    const n = await useDownloads
+                      .getState()
+                      .deletePodcastChannelDownloads(ch.id);
+                    toast(
+                      n === 0
+                        ? t('Nothing here is downloaded')
+                        : t('{n} episodes deleted', { n }),
+                    );
+                  } catch {
+                    toast(t("Couldn't complete the action"));
+                  }
+                })();
+              }}
+            >
+              <Icon name="trash-outline" size={24} color={colors.text} />
+              <Text style={styles.actionText}>{t('Delete downloads')}</Text>
+            </Pressable>
+          ) : null}
         </View>
       </View>
     </Modal>

@@ -58,7 +58,9 @@ import { useToast } from './toast';
 import {
   clearDownloadRecords,
   downloadedBytes,
+  downloadedForChannel,
   dropDownloads,
+  listAllEpisodes,
   listDownloads,
   saveDownload,
 } from '@/lib/podcastDb';
@@ -917,10 +919,13 @@ interface DownloadsState {
    * same slots, same progress, same `files` map the player reads, but the bytes
    * come from the episode's own url and land in that profile's podcast folder.
    */
-  downloadPodcast: (channelId: string, episodes: EpisodeSource[]) => Promise<void>;
+  downloadPodcast: (channelId: string) => Promise<void>;
   downloadPodcastEpisode: (episode: EpisodeSource) => Promise<void>;
   /** Deletes downloaded episode files and drops them from the podcast record. */
   deletePodcastDownloads: (episodeIds: string[]) => Promise<void>;
+  /** Deletes every downloaded episode of a show, however many the screen
+   *  never loaded; returns how many went. */
+  deletePodcastChannelDownloads: (channelId: string) => Promise<number>;
   /**
    * Forgets a download whose file is not on the disk any more, and says whether
    * it did.
@@ -1453,13 +1458,18 @@ export const useDownloads = create<DownloadsState>((set, get) => {
       }
     },
 
-    downloadPodcast: async (channelId, episodes) => {
+    downloadPodcast: async (channelId) => {
+      // The database, not the screen: a show only half loaded still
+      // downloads completely.
+      const episodes = await listAllEpisodes(podcastScope(), channelId);
       await downloadPodcastGroup(`podcast:${channelId}`, episodes);
+      queryClient.invalidateQueries({ queryKey: ['podcastDownloads'] });
     },
 
     downloadPodcastEpisode: async (episode) => {
       // Its own group, so a stop on one episode doesn't disturb another.
       await downloadPodcastGroup(`episode:${episode.id}`, [episode]);
+      queryClient.invalidateQueries({ queryKey: ['podcastDownloads'] });
     },
 
     deletePodcastDownloads: async (episodeIds) => {
@@ -1476,6 +1486,27 @@ export const useDownloads = create<DownloadsState>((set, get) => {
         await dropDownloads(podcastScope(), episodeIds);
       });
       invalidate();
+      queryClient.invalidateQueries({ queryKey: ['podcastDownloads'] });
+    },
+
+    deletePodcastChannelDownloads: async (channelId) => {
+      // The record answers, never the screen: whatever is on disk for this
+      // show goes, including episodes no loaded list ever showed.
+      const { ids } = await downloadedForChannel(podcastScope(), channelId);
+      if (ids.length === 0) return 0;
+      const paths = ids.map((id) => get().files[id]).filter(Boolean);
+      set((st) => {
+        const files = { ...st.files };
+        for (const id of ids) delete files[id];
+        return { files };
+      });
+      await locked(async () => {
+        for (const p of paths) await FileSystem.deleteAsync(p, { idempotent: true }).catch(() => {});
+        await dropDownloads(podcastScope(), ids);
+      });
+      invalidate();
+      queryClient.invalidateQueries({ queryKey: ['podcastDownloads'] });
+      return ids.length;
     },
 
     downloadGenre: async (genre, songs) => {
