@@ -9,6 +9,8 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+## [0.8.4] - 2026-10-20
+
 ### Added
 
 - Lyrics from [lrc.red](https://lrc.red), found by the song's ISRC and often timed word by word. Off by default: Settings > Player > Lyrics > Providers turns each service on or off and sorts them, the one on top asked first. Thanks to ricce on Discord for the suggestion.
