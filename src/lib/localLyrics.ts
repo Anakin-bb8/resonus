@@ -5,8 +5,8 @@
  *    as Navidrome reads them. Also covers downloads: when downloading a song
  *    the server lyrics are cached in the `.lrc`.
  * 2. Embedded lyrics in the file itself (ID3 USLT frame).
- * 3. LRCLIB (lrclib.net), only if the user enables the setting: sends artist
- *    and title externally. The result is cached to disk to avoid re-fetching.
+ * 3. Online, only with the providers the user turned on (see
+ *    `OnlineProviders`). The result is cached to disk to avoid re-fetching.
  */
 // Not the global `fetch`: it never resolves in the background. See the note
 // in `src/api/subsonic.ts`.
@@ -20,7 +20,7 @@ import { parseTtml } from './ttml';
 import { isManualOffline } from '@/api/netGate';
 
 const LRCLIB_CACHE_DIR = FileSystem.documentDirectory + 'lyrics-cache/';
-/** Who is asking, for LRCLIB. Sent as both headers: see `fetchLrclib`. */
+/** Who is asking, for LRCLIB and lrc.red. Sent as both headers to LRCLIB: see `fetchLrclib`. */
 const CLIENT_UA = 'Resonus (https://github.com/juananzzz/resonus)';
 const AUDIO_EXT_RE = /\.[a-z0-9]{1,5}$/i;
 
@@ -67,42 +67,114 @@ async function getFileLyrics(song: Song): Promise<SongLyrics | null> {
   return tags?.lyrics ? parseLrc(tags.lyrics) : null;
 }
 
-/**
- * Local/offline lyrics. Normally on-device first with LRCLIB as fallback; with
- * `preferOnline` the order flips (LRCLIB first, on-device as fallback). LRCLIB
- * is only used when `allowOnline` is set.
- */
-export async function getLocalLyrics(
-  song: Song,
-  allowOnline: boolean,
-  preferOnline = false,
-): Promise<SongLyrics | null> {
-  if (allowOnline && preferOnline) {
-    return (await getOnlineLyrics(song)) ?? (await getFileLyrics(song));
-  }
-  const fromFile = await getFileLyrics(song);
-  if (fromFile) return fromFile;
-  if (allowOnline) return getOnlineLyrics(song);
-  return null;
+/** The online lyrics services the user turned on (Settings › Player › Lyrics). */
+export interface OnlineProviders {
+  lrclib: boolean;
+  lrcRed: boolean;
+}
+
+export const NO_ONLINE: OnlineProviders = { lrclib: false, lrcRed: false };
+
+export function anyOnline(p: OnlineProviders): boolean {
+  return p.lrclib || p.lrcRed;
 }
 
 /**
- * Lyrics from LRCLIB with disk cache. Also serves as last resort for server
- * songs whose server doesn't have lyrics.
+ * Local/offline lyrics. Normally on-device first with the online providers as
+ * fallback; with `preferOnline` the order flips (online first, on-device as
+ * fallback). Nothing online is asked unless a provider is on.
  */
-export async function getOnlineLyrics(song: Song): Promise<SongLyrics | null> {
-  const file = `${LRCLIB_CACHE_DIR}${hashKey(song.id)}.lrc`;
-  const cached = await readTextIfExists(file);
-  if (cached) return parseLrc(cached);
-  const text = await fetchLrclib(song);
-  if (!text) return null;
+export async function getLocalLyrics(
+  song: Song,
+  online: OnlineProviders,
+  preferOnline = false,
+): Promise<SongLyrics | null> {
+  if (anyOnline(online) && preferOnline) {
+    return (await getOnlineLyrics(song, online)) ?? (await getFileLyrics(song));
+  }
+  const fromFile = await getFileLyrics(song);
+  if (fromFile) return fromFile;
+  return getOnlineLyrics(song, online);
+}
+
+/** Writes a provider's answer to the disk cache, if it can. */
+async function cache(file: string, text: string): Promise<void> {
   try {
     await FileSystem.makeDirectoryAsync(LRCLIB_CACHE_DIR, { intermediates: true }).catch(() => {});
     await FileSystem.writeAsStringAsync(file, text);
   } catch {
     // Without cache we still work; it would just repeat the request.
   }
-  return parseLrc(text);
+}
+
+/**
+ * Lyrics from the online providers that are on, with disk cache: lrc.red
+ * first, since it matches the exact recording by ISRC and is often timed word
+ * by word, then LRCLIB. Also serves as last resort for server songs whose
+ * server doesn't have lyrics. Each provider caches in its own file, so turning
+ * one off stops its lyrics showing.
+ */
+export async function getOnlineLyrics(
+  song: Song,
+  online: OnlineProviders,
+): Promise<SongLyrics | null> {
+  const key = hashKey(song.id);
+  if (online.lrcRed) {
+    const file = `${LRCLIB_CACHE_DIR}${key}.lrcred.ttml`;
+    const cached = await readTextIfExists(file);
+    const fromCache = cached ? parseTtml(cached) : null;
+    if (fromCache) return fromCache;
+    const text = await fetchLrcRed(song);
+    const parsed = text ? parseTtml(text) : null;
+    if (text && parsed) {
+      await cache(file, text);
+      return parsed;
+    }
+  }
+  if (online.lrclib) {
+    const file = `${LRCLIB_CACHE_DIR}${key}.lrc`;
+    const cached = await readTextIfExists(file);
+    if (cached) return parseLrc(cached);
+    const text = await fetchLrclib(song);
+    if (!text) return null;
+    await cache(file, text);
+    return parseLrc(text);
+  }
+  return null;
+}
+
+/**
+ * lrc.red's TTML for the song, looked up by ISRC: a recording's own code, so
+ * there is no guessing by name. A song without one (no tag, or a server that
+ * does not send it) is not asked.
+ */
+async function fetchLrcRed(song: Song): Promise<string | null> {
+  // An array in OpenSubsonic; a lone string from a server that reads it loosely.
+  const codes: unknown = song.isrc;
+  const isrc = (Array.isArray(codes) ? codes : typeof codes === 'string' ? [codes] : [])
+    .filter((code): code is string => typeof code === 'string')
+    .map((code) => code.replace(/[^A-Za-z0-9]/g, '').toUpperCase())
+    .find((code) => /^[A-Z]{2}[A-Z0-9]{3}\d{7}$/.test(code));
+  if (!isrc) {
+    if (__DEV__) console.log(`[lyrics] lrc.red · not asked: no ISRC · ${song.artist} — ${song.title}`);
+    return null;
+  }
+  // Offline chosen covers every service: see `fetchLrclib`.
+  if (isManualOffline()) return null;
+  try {
+    const res = await fetch(`https://lrc.red/s/${isrc}.ttml`, {
+      headers: { 'User-Agent': CLIENT_UA },
+    });
+    if (__DEV__) console.log(`[lyrics] lrc.red · ${res.status} · ${song.artist} — ${song.title}`);
+    if (!res.ok) return null;
+    const text = await res.text();
+    return text.trim() ? text : null;
+  } catch (e) {
+    if (__DEV__) {
+      console.log(`[lyrics] lrc.red · failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    return null;
+  }
 }
 
 interface LrclibResult {

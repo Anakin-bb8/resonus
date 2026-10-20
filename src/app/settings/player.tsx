@@ -114,6 +114,10 @@ export default function PlayerSettings() {
   const setCoverTapAction = useSettings((s) => s.setCoverTapAction);
   const lyricsSource = useSettings((s) => s.lyricsSource);
   const setLyricsSource = useSettings((s) => s.setLyricsSource);
+  const lyricsLrclib = useSettings((s) => s.lyricsLrclib);
+  const setLyricsLrclib = useSettings((s) => s.setLyricsLrclib);
+  const lyricsLrcRed = useSettings((s) => s.lyricsLrcRed);
+  const setLyricsLrcRed = useSettings((s) => s.setLyricsLrcRed);
   const marqueeTitles = useSettings((s) => s.marqueeTitles);
   const setMarqueeTitles = useSettings((s) => s.setMarqueeTitles);
   const seekButtonsSec = useSettings((s) => s.seekButtonsSec);
@@ -381,9 +385,7 @@ export default function PlayerSettings() {
         <SettingsGroup>
           <SelectList<LyricsSource>
             label={t('Lyrics source')}
-            description={t(
-              'Where to get lyrics from. Online search uses LRCLIB (sends the artist and title).',
-            )}
+            description={t('Where to get lyrics from. Online search asks the services below.')}
             options={[
               { value: 'local', label: t('Prefer local lyrics') },
               { value: 'online', label: t('Prefer online search') },
@@ -392,6 +394,29 @@ export default function PlayerSettings() {
             value={lyricsSource}
             onChange={setLyricsSource}
           />
+          {/* Which services online search asks, hidden when it is off. lrc.red
+              comes first in the search and is off until turned on: a new
+              service is not sent anything unasked. */}
+          {lyricsSource !== 'off' ? (
+            <SwitchList
+              options={[
+                {
+                  label: 'lrc.red',
+                  description: t(
+                    'Looks the song up by its ISRC code, often timed word by word. Asked first.',
+                  ),
+                  value: lyricsLrcRed,
+                  onChange: setLyricsLrcRed,
+                },
+                {
+                  label: 'LRCLIB',
+                  description: t('Searches by artist and title.'),
+                  value: lyricsLrclib,
+                  onChange: setLyricsLrclib,
+                },
+              ]}
+            />
+          ) : null}
           <SelectList<LyricsSize>
             label={t('Lyrics size')}
             options={[
