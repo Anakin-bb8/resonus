@@ -13,6 +13,10 @@ Releases before 0.2.1 are only listed on the
 
 - Lyrics from [lrc.red](https://lrc.red), found by the song's ISRC and often timed word by word. Off by default: Settings > Player > Lyrics > Providers turns each service on or off and sorts them, the one on top asked first. Thanks to ricce on Discord for the suggestion.
 
+### Changed
+
+- The devices button only names the headphones or Bluetooth speaker the phone plays through if Settings > Player > Bottom row > Name the headphones or speaker is on. It is off by default, so the row stays evenly spread; a cast target is still always named (#274).
+
 ## [0.8.3] - 2026-10-19
 
 ### Added

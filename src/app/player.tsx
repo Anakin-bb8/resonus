@@ -336,11 +336,14 @@ export default function PlayerScreen() {
   }, [upnpConnectedDevice, upnpDevices]);
   const jukeboxActive = useJukebox((s) => s.active);
   const remoteDevice = upnpDevice ?? (jukeboxActive ? t('Server speakers (Jukebox)') : null);
-  // Not casting, the phone's own output when it is worth naming (headphones,
-  // the car): its icon on the devices button and its name beside it, the
-  // way a cast target shows. The speaker keeps the plain button.
+  // Not casting, and only if asked for (#274), the phone's own output when it
+  // is worth naming (headphones, the car): its icon on the devices button and
+  // its name beside it, the way a cast target shows. The speaker keeps the
+  // plain button.
+  const showLocalOutput = useSettings((s) => s.showLocalOutput);
   const audioRoute = useAudioRoute();
-  const routeShown = remoteDevice || !audioRoute ? null : routeLook(audioRoute.kind);
+  const routeShown =
+    remoteDevice || !showLocalOutput || !audioRoute ? null : routeLook(audioRoute.kind);
   const localDevice = routeShown ? audioRoute?.name || t(routeShown.fallback) : null;
   const deviceLabel = remoteDevice ?? localDevice;
   const [outputOpen, setOutputOpen] = useState(false);

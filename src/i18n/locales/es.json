@@ -134,6 +134,8 @@
   "Description": "Descripción",
   "Device": "Dispositivo",
   "Devices": "Dispositivos",
+  "Name the headphones or speaker": "Mostrar los auriculares o el altavoz",
+  "The devices button shows the Bluetooth or wired device the phone is playing through.": "El botón de dispositivos muestra el dispositivo Bluetooth o con cable por el que suena el móvil.",
   "Bluetooth": "Bluetooth",
   "Headphones": "Auriculares",
   "Car": "Coche",

@@ -135,6 +135,8 @@
   "Description": "Descripció",
   "Device": "Dispositiu",
   "Devices": "Dispositius",
+  "Name the headphones or speaker": "Mostrar els auriculars o l'altaveu",
+  "The devices button shows the Bluetooth or wired device the phone is playing through.": "El botó de dispositius mostra el dispositiu Bluetooth o amb cable pel qual sona el mòbil.",
   "Bluetooth": "Bluetooth",
   "Headphones": "Auriculars",
   "Car": "Cotxe",

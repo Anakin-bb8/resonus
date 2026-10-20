@@ -1162,6 +1162,11 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   /** The row under the player's controls: which buttons, in what order. */
   playerButtons: PlayerButton[];
   playerButtonsLayout: PlayerButtonsLayout;
+  /**
+   * The devices button names the phone's own output (headphones, a Bluetooth
+   * speaker, the car) the way it names a cast target (#274).
+   */
+  showLocalOutput: boolean;
   /** Seek ±N seconds buttons next to play (0 = hidden). Only 5/10/30: these are the numbered icons that exist in MaterialIcons. */
   seekButtonsSec: number;
   /** "Previous" button behavior (restart track or always go to previous). */
@@ -1454,6 +1459,9 @@ const DEFAULTS = {
   marqueeTitles: true,
   playerButtons: DEFAULT_PLAYER_BUTTONS.map((b) => ({ ...b })),
   playerButtonsLayout: 'spread' as PlayerButtonsLayout,
+  // Off: a speaker the phone plays through is not a cast target, and its name
+  // took the room the rest of the row was spread across (#274).
+  showLocalOutput: false,
   seekButtonsSec: 0,
   previousButtonMode: 'restart' as PreviousButtonMode,
   keepPausedOnSkip: false,
