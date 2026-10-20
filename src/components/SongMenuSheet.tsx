@@ -555,17 +555,24 @@ export function SongMenuSheet() {
                   scrollEventThrottle={16}
                   onScroll={(e) => setAtTop(e.nativeEvent.contentOffset.y <= 0)}
                 >
-                  <Action
-                    icon="add-circle-outline"
-                    label={t('Add to a playlist')}
-                    onPress={() => setMode('playlists')}
-                  />
-                  {context ? (
-                    <Action
-                      icon="remove-circle-outline"
-                      label={t('Remove from playlist')}
-                      onPress={removeFromList}
-                    />
+                  {/* A podcast episode belongs to no playlist: its id means
+                      nothing to the server, so the playlist actions are not
+                      offered at all — an episode has no server behind it. */}
+                  {!song.podcastChannelId ? (
+                    <>
+                      <Action
+                        icon="add-circle-outline"
+                        label={t('Add to a playlist')}
+                        onPress={() => setMode('playlists')}
+                      />
+                      {context ? (
+                        <Action
+                          icon="remove-circle-outline"
+                          label={t('Remove from playlist')}
+                          onPress={removeFromList}
+                        />
+                      ) : null}
+                    </>
                   ) : null}
                   <Action
                     icon="play-forward-outline"

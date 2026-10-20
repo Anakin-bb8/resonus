@@ -1263,6 +1263,11 @@ export const useDownloads = create<DownloadsState>((set, get) => {
           // failure, not a half-written episode.
           if (!res || res.status < 200 || res.status >= 300)
             throw new TransferError(`HTTP ${res?.status}`, res?.status);
+          // A portal or paywall page answers 200 with HTML: the album path
+          // calls the same helper, and without it the page would be saved as
+          // an episode and marked downloaded.
+          if (isErrorBody(res?.headers))
+            throw new TransferError('error body, not audio', 200);
           const bytes = Number(header(res?.headers, 'content-length')) || (await fileSize(file));
           // Persisted on completion: if the app dies mid-show, finished episodes
           // survive a restart.
