@@ -17,18 +17,17 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import Icon from '@/components/Icon';
 import { COVER, coverArtUrl } from '@/api/data';
-import { episodeToSong, podcastCover, type PodcastChannel, type PodcastEpisode } from '@/api/podcasts';
+import { episodeToSong, podcastCover, queueEpisode, type PodcastChannel, type PodcastEpisode } from '@/api/podcasts';
 import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { bump } from '@/lib/perfLog';
 import { useEpisodeUnavailable } from '@/hooks/useEpisodeUnavailable';
 import { usePressFeedback } from '@/hooks/usePressFeedback';
 import { useDownloads } from '@/store/downloads';
-import { usePlayerStore } from '@/store/player';
 import { useSongMenu } from '@/store/songMenu';
 import { openPodcastMenu } from './PodcastMenuSheet';
 import { useToast } from '@/store/toast';
-import { fontSize, spacing, themed, useTheme } from '@/theme';
+import { DIM_OPACITY, fontSize, spacing, themed, useTheme } from '@/theme';
 import { Cover } from './Cover';
 
 interface Props {
@@ -47,7 +46,6 @@ export function PodcastRow({ channel, episode, sub, pinned }: Props) {
   // Subscribed, not read straight off `colors`: the pin keeps the current
   // accent while the screen stays mounted (as in `AlbumRow`).
   const { accent } = useTheme();
-  const playQueue = usePlayerStore((s) => s.playQueue);
   const openSongMenu = useSongMenu((s) => s.open);
 
   const t = useT();
@@ -76,10 +74,10 @@ export function PodcastRow({ channel, episode, sub, pinned }: Props) {
       onPress={
         unavailable
           ? () => toast(t('Not available offline'))
-          : song
+          : episode
             ? () => {
                 haptic('light');
-                void playQueue([song], 0, channel.title, href);
+                queueEpisode(episode, channel);
               }
             : undefined
       }
@@ -132,5 +130,5 @@ const styles = themed((colors) => ({
   subLine: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   sub: { color: colors.textSecondary, fontSize: fontSize.xs, flexShrink: 1 },
   // Offline and not downloaded: same dim as `TrackRow`'s.
-  dimmed: { opacity: 0.4 },
+  dimmed: { opacity: DIM_OPACITY },
 }));

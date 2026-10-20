@@ -12,7 +12,7 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import * as SQLite from 'expo-sqlite';
 
-import { hashKey } from '@/lib/localLibrary';
+import { hashKey, urlExtension } from '@/lib/localLibrary';
 
 import type { PodcastChannel, PodcastEpisode } from '@/api/subsonic';
 
@@ -75,19 +75,8 @@ export function podcastDbDir(scope: string): string {
  *  address, so a reader finds the same path without being told it. It lives
  *  next to the database, not in the downloads folder — the picture belongs
  *  to the kept show, and "delete all downloads" must not take it away. */
-function artExt(url: string): string {
-  const path = url.split('?')[0].split('#')[0];
-  const base = path.slice(path.lastIndexOf('/') + 1);
-  const dot = base.lastIndexOf('.');
-  if (dot > 0) {
-    const ext = base.slice(dot + 1).toLowerCase();
-    if (/^[a-z0-9]{1,5}$/.test(ext)) return ext;
-  }
-  return 'jpg';
-}
-
 function podcastArtFile(scope: string, channelId: string, imageUrl: string): string {
-  return `${podcastDbDir(scope)}art/${hashKey(channelId)}.${artExt(imageUrl)}`;
+  return `${podcastDbDir(scope)}art/${hashKey(channelId)}.${urlExtension(imageUrl, 'jpg')}`;
 }
 
 // The pictures filed for each opened profile, read from the folder once when

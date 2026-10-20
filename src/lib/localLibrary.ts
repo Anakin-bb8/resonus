@@ -356,6 +356,21 @@ export function hashKey(s: string): string {
   return (h >>> 0).toString(36);
 }
 
+/** The extension a URL's file names itself — an enclosure serving .m4a stays
+ *  .m4a, a picture serving .png stays .png — or the caller's fallback when the
+ *  address says nothing. */
+export function urlExtension(url: string | undefined, fallback: string): string {
+  if (!url) return fallback;
+  const path = url.split('?')[0].split('#')[0];
+  const base = path.slice(path.lastIndexOf('/') + 1);
+  const dot = base.lastIndexOf('.');
+  if (dot > 0) {
+    const ext = base.slice(dot + 1).toLowerCase();
+    if (/^[a-z0-9]{1,5}$/.test(ext)) return ext;
+  }
+  return fallback;
+}
+
 /** A readable folder name out of its SAF URI, without the [year] prefix. */
 export function folderNameFromUri(dirUri: string): string {
   const decoded = decodeURIComponent(dirUri);

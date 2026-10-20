@@ -10,7 +10,7 @@ import ReanimatedSwipeable, {
 import Reanimated, { useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
 
 import { COVER, songCoverUrl, star } from '@/api/data';
-import { togglePodcastHeart } from '@/api/podcasts';
+import { episodeHeart, heartedSong, NO_FAVORITES, togglePodcastHeart } from '@/api/podcasts';
 import { streamReachable, type Song } from '@/api/subsonic';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { formatDuration } from '@/lib/format';
@@ -23,7 +23,7 @@ import { useSettings, type SwipeAction } from '@/store/settings';
 import { haptic } from '@/lib/haptics';
 import { useToast } from '@/store/toast';
 import { useT } from '@/i18n';
-import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
+import { colors, DIM_OPACITY, fontSize, spacing, themed, useTheme } from '@/theme';
 import { Cover, useCoverRadius } from './Cover';
 import { usePressFeedback } from '@/hooks/usePressFeedback';
 import { bump } from '@/lib/perfLog';
@@ -151,10 +151,7 @@ function TrackRowBase({
   // visible (the OR with `song.starred` never became false).
   const favIds = useFavoriteIds(showFavorite);
   const favorited =
-    showFavorite &&
-    (song.podcastChannelId
-      ? (podcastFavIds?.has(song.id) ?? false)
-      : favIds ? favIds.has(song.id) : !!song.starred);
+    showFavorite && heartedSong(song, podcastFavIds ?? NO_FAVORITES, favIds);
   const downloaded = useDownloads((s) => !!s.files[song.id]);
   const offline = useAuthStore((s) => s.offline);
   /**
@@ -312,7 +309,7 @@ function TrackRowBase({
           starred
           undo
           size={20}
-          podcast={song.podcastChannelId ? { kind: 'episode', channelId: song.podcastChannelId } : undefined}
+          podcast={episodeHeart(song)}
         />
       ) : null}
       {showRating && song.userRating ? (
@@ -506,6 +503,6 @@ const styles = themed((colors) => ({
   },
   // Song not available offline (mirror): dimmed and not tappable.
   dimmed: {
-    opacity: 0.4,
+    opacity: DIM_OPACITY,
   },
 }));

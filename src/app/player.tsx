@@ -31,7 +31,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { CACHED_COVER, COVER, songCoverUrl, star, unstar, type Song } from '@/api/data';
-import { togglePodcastHeart } from '@/api/podcasts';
+import { episodeHeart, heartedSong, togglePodcastHeart } from '@/api/podcasts';
 import { ArtistPlayerCard } from '@/components/ArtistPlayerCard';
 import { AudioQualityBadge } from '@/components/AudioQualityBadge';
 import { SeekBar } from '@/components/SeekBar';
@@ -953,14 +953,10 @@ export default function PlayerScreen() {
   // The central list wins when loaded (refreshes when starred from any
   // screen); `song.starred` from the queue becomes stale, so it only serves
   // as a fallback for local songs or while loading.
-  const favorited = song.podcastChannelId
-    ? podcastFav.has(song.id)
-    : favIds ? favIds.has(song.id) : !!song.starred;
+  const favorited = heartedSong(song, podcastFav, favIds);
   // The heart writes the device's own SQLite favorite for an episode, so the
   // button is told which show it belongs to.
-  const podcastHeart = song.podcastChannelId
-    ? { kind: 'episode' as const, channelId: song.podcastChannelId }
-    : undefined;
+  const podcastHeart = episodeHeart(song);
   // What the header announces, most specific first (#65). A song added by hand
   // is the queue's own, so the queue is what it says, and only for as long as
   // that song plays. A mix that autoplay grew takes over next, since by then

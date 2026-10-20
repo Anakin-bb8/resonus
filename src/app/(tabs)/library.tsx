@@ -46,10 +46,10 @@ import {
   episodeToSong,
   listFavoriteChannels,
   listFavoriteEpisodes,
+  queueEpisode,
   type PodcastChannel,
   type PodcastEpisode,
 } from '@/api/podcasts';
-import { usePlayerStore } from '@/store/player';
 import { useSongMenu } from '@/store/songMenu';
 import { openPodcastMenu } from '@/components/PodcastMenuSheet';
 import { useDownloads } from '@/store/downloads';
@@ -62,7 +62,7 @@ import { useSettings, type LibrarySort } from '@/store/settings';
 import { useAccent } from '@/hooks/useAccent';
 import { episodeUnavailable } from '@/hooks/useEpisodeUnavailable';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, lineHeight, radius, restyled, SHEET_MAX_WIDTH, spacing, themed, useTheme, tracking } from '@/theme';
+import { colors, DIM_OPACITY, fontSize, lineHeight, radius, restyled, SHEET_MAX_WIDTH, spacing, themed, useTheme, tracking } from '@/theme';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { columnsFor, useListPadding, useScreenSize } from '@/hooks/useScreenSize';
 import { listPerf } from '@/lib/listPerf';
@@ -552,12 +552,7 @@ function PodcastsTab({ query }: { query: string }) {
   // menu — the same sheets the show's own screen and a song row open.
   const playEpisode = (r: Row) => {
     if (!r.episode || !r.channel) return;
-    void usePlayerStore.getState().playQueue(
-      [episodeToSong(r.episode, r.channel)],
-      0,
-      r.channel.title,
-      `/podcast/${r.channel.id}`,
-    );
+    queueEpisode(r.episode, r.channel);
   };
   const openEpisodeMenu = (r: Row) => {
     if (!r.episode || !r.channel) return;
@@ -910,12 +905,7 @@ function AllTab({ query, onNew }: { query: string; onNew?: () => void }) {
   // Tapping an episode plays just that episode; a show still taps to its screen.
   const playEpisode = (i: LibItem) => {
     if (!i.episode || !i.channel) return;
-    void usePlayerStore.getState().playQueue(
-      [episodeToSong(i.episode, i.channel)],
-      0,
-      i.channel.title,
-      `/podcast/${i.channel.id}`,
-    );
+    queueEpisode(i.episode, i.channel);
   };
 
   const loading = lists.isLoading || starred.isLoading;
@@ -1553,7 +1543,7 @@ const styles = themed((colors) => ({
   card: { gap: spacing.xs },
   cardCentered: { alignItems: 'center' },
   // Offline and not downloaded (a podcast episode): dim like a song row.
-  dimmed: { opacity: 0.4 },
+  dimmed: { opacity: DIM_OPACITY },
   cardTitle: { color: colors.text, fontSize: fontSize.xs, lineHeight: lineHeight.xs, fontWeight: '500', marginTop: spacing.xs },
   centerText: { textAlign: 'center' },
   cardSub: { color: colors.textSecondary, fontSize: fontSize.xs, lineHeight: lineHeight.xs },

@@ -41,6 +41,7 @@ import {
   normKey,
   registerCover,
   replaceCover,
+  urlExtension,
   UNKNOWN_ARTIST,
 } from '@/lib/localLibrary';
 import { serializeLrc } from '@/lib/lrc';
@@ -87,21 +88,6 @@ function podcastScope(): string {
 
 function podcastFileDir(): string {
   return `${PODCAST_ROOT}${podcastScope()}/files/`;
-}
-
-// The container an enclosure's address names, so the saved file keeps its real
-// extension (a show serving .m4a stays .m4a, and expo-audio reads it by content
-// anyway). Falls back to mp3, the common case, when the address says nothing.
-function episodeExt(url: string | undefined): string {
-  if (!url) return 'mp3';
-  const path = url.split('?')[0].split('#')[0];
-  const base = path.slice(path.lastIndexOf('/') + 1);
-  const dot = base.lastIndexOf('.');
-  if (dot > 0) {
-    const ext = base.slice(dot + 1).toLowerCase();
-    if (/^[a-z0-9]{1,5}$/.test(ext)) return ext;
-  }
-  return 'mp3';
 }
 
 // ── How much of the server we take at once ──────────────────────────────────
@@ -1251,7 +1237,10 @@ export const useDownloads = create<DownloadsState>((set, get) => {
 
       /** One attempt at one episode. Throws, so the worker decides about retrying. */
       const fetchEpisode = async (ep: EpisodeSource): Promise<void> => {
-        const file = `${dir}${hashKey(ep.id)}.${episodeExt(ep.url)}`;
+        // The container the enclosure's address names, so a show serving .m4a
+        // stays .m4a (expo-audio reads it by content anyway); mp3 when the
+        // address says nothing.
+        const file = `${dir}${hashKey(ep.id)}.${urlExtension(ep.url, 'mp3')}`;
         const task = FileSystem.createDownloadResumable(ep.url!, file, {}, (p) => {
           if (p.totalBytesExpectedToWrite > 0) {
             const fraction = p.totalBytesWritten / p.totalBytesExpectedToWrite;
@@ -1343,6 +1332,26 @@ export const useDownloads = create<DownloadsState>((set, get) => {
         return { active };
       });
     }
+  }
+
+  /** Takes the given episode downloads off the phone: the files, the map and
+   *  the podcast record. The two delete actions differ only in where the ids
+   *  come from — one from a screen, one from the record itself. */
+  async function removeEpisodeDownloads(ids: string[]): Promise<number> {
+    if (ids.length === 0) return 0;
+    const paths = ids.map((id) => get().files[id]).filter(Boolean);
+    set((st) => {
+      const files = { ...st.files };
+      for (const id of ids) delete files[id];
+      return { files };
+    });
+    await locked(async () => {
+      for (const p of paths) await FileSystem.deleteAsync(p, { idempotent: true }).catch(() => {});
+      await dropDownloads(podcastScope(), ids);
+    });
+    invalidate();
+    queryClient.invalidateQueries({ queryKey: ['podcastDownloads'] });
+    return ids.length;
   }
 
   return {
@@ -1473,40 +1482,16 @@ export const useDownloads = create<DownloadsState>((set, get) => {
     },
 
     deletePodcastDownloads: async (episodeIds) => {
-      if (episodeIds.length === 0) return;
-      // The paths first: the map goes below, and after that they are gone.
-      const paths = episodeIds.map((id) => get().files[id]).filter(Boolean);
-      set((st) => {
-        const files = { ...st.files };
-        for (const id of episodeIds) delete files[id];
-        return { files };
-      });
-      await locked(async () => {
-        for (const p of paths) await FileSystem.deleteAsync(p, { idempotent: true }).catch(() => {});
-        await dropDownloads(podcastScope(), episodeIds);
-      });
-      invalidate();
-      queryClient.invalidateQueries({ queryKey: ['podcastDownloads'] });
+      // The ids a screen holds: one episode's undo hands its own id over.
+      await removeEpisodeDownloads(episodeIds);
     },
 
     deletePodcastChannelDownloads: async (channelId) => {
       // The record answers, never the screen: whatever is on disk for this
-      // show goes, including episodes no loaded list ever showed.
+      // show goes, including episodes no loaded list ever showed. Returns
+      // how many went, for the toast.
       const { ids } = await downloadedForChannel(podcastScope(), channelId);
-      if (ids.length === 0) return 0;
-      const paths = ids.map((id) => get().files[id]).filter(Boolean);
-      set((st) => {
-        const files = { ...st.files };
-        for (const id of ids) delete files[id];
-        return { files };
-      });
-      await locked(async () => {
-        for (const p of paths) await FileSystem.deleteAsync(p, { idempotent: true }).catch(() => {});
-        await dropDownloads(podcastScope(), ids);
-      });
-      invalidate();
-      queryClient.invalidateQueries({ queryKey: ['podcastDownloads'] });
-      return ids.length;
+      return await removeEpisodeDownloads(ids);
     },
 
     downloadGenre: async (genre, songs) => {

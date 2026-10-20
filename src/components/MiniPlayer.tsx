@@ -17,6 +17,7 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { COVER, songCoverUrl, type Song } from '@/api/data';
+import { episodeHeart, heartedSong } from '@/api/podcasts';
 import { usePodcastFavoriteIds } from '@/lib/podcastFavorites';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
@@ -202,13 +203,9 @@ export function MiniPlayer() {
 
   // The central list wins when loaded; `song.starred` from the queue becomes
   // stale (only kept as backup for local files or while loading).
-  const favorited = song.podcastChannelId
-    ? podcastFav.has(song.id)
-    : favIds ? favIds.has(song.id) : !!song.starred;
+  const favorited = heartedSong(song, podcastFav, favIds);
   // The heart writes the device's own SQLite favorite for an episode.
-  const podcastHeart = song.podcastChannelId
-    ? { kind: 'episode' as const, channelId: song.podcastChannelId }
-    : undefined;
+  const podcastHeart = episodeHeart(song);
 
   return (
     <GestureDetector gesture={pan}>

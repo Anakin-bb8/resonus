@@ -10,6 +10,7 @@ import { fetch } from 'expo/fetch';
 
 import { assertCanRequest, isManualOffline, OfflineError } from './netGate';
 import { profileScopeId } from '@/store/auth';
+import { usePlayerStore } from '@/store/player';
 
 import { hashKey } from '@/lib/localLibrary';
 import { invalidatePodcastFavorites, invalidatePodcastLists } from '@/lib/query';
@@ -355,6 +356,40 @@ export function episodeToSong(episode: PodcastEpisode, channel: PodcastChannel):
   const suffix = episode.mimeType ? SUFFIXES[episode.mimeType.toLowerCase()] : undefined;
   if (suffix) song.suffix = suffix;
   return song;
+}
+
+/** Plays one episode as its show's, from wherever it was reached: the queue
+ *  gets the song, the show's name as its source, and the show's own address
+ *  as where it came from — that address is what makes "Go to Podcast" from
+ *  the now-playing header land on this show instead of a search. One call,
+ *  so a card, a list row and the Library's two tabs queue it the same way. */
+export function queueEpisode(episode: PodcastEpisode, channel: PodcastChannel): void {
+  void usePlayerStore.getState().playQueue(
+    [episodeToSong(episode, channel)],
+    0,
+    channel.title,
+    `/podcast/${channel.id}`,
+  );
+}
+
+/** The heart a FavoriteButton writes for an episode: the device's own SQLite
+ *  favorite, filed under the show it belongs to. */
+export function episodeHeart(song: Song): { kind: 'episode'; channelId: string } | undefined {
+  return song.podcastChannelId ? { kind: 'episode', channelId: song.podcastChannelId } : undefined;
+}
+
+/** Which heart is lit: an episode's is the device's own SQLite set, a server
+ *  song's is the server's list, and what the song carries is the fallback
+ *  while that list is still loading. One rule, so the rows, the mini player
+ *  and the now-playing header cannot drift apart. */
+export function heartedSong(
+  song: Song,
+  podcastFavIds: Set<string>,
+  favIds: Set<string> | undefined,
+): boolean {
+  return song.podcastChannelId
+    ? podcastFavIds.has(song.id)
+    : favIds ? favIds.has(song.id) : !!song.starred;
 }
 
 /** Searches the iTunes directory, which returns each show's feed URL. */

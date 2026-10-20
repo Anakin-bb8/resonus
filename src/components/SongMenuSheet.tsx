@@ -38,7 +38,7 @@ import {
 import { useCanShare } from '@/hooks/useCanShare';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { applyStarChange, resyncFavorites } from '@/lib/favoritesCache';
-import { togglePodcastHeart } from '@/api/podcasts';
+import { heartedSong, togglePodcastHeart } from '@/api/podcasts';
 import { isManualOffline } from '@/api/netGate';
 import { artistTargets } from '@/lib/artistNav';
 import { pushOrReplace } from '@/lib/pushOrReplace';
@@ -177,11 +177,7 @@ export function SongMenuSheet() {
   const favIds = useFavoriteIds(!!song);
   // A podcast episode's heart is the device's own, filed in SQLite.
   const podcastFav = usePodcastFavoriteIds(!!song?.podcastChannelId);
-  const favorited = song
-    ? song.podcastChannelId
-      ? podcastFav.has(song.id)
-      : favIds ? favIds.has(song.id) : !!song.starred
-    : false;
+  const favorited = song ? heartedSong(song, podcastFav, favIds) : false;
 
   const [mode, setMode] = useState<'actions' | 'playlists' | 'sleep' | 'rating' | 'export'>(
     'actions',

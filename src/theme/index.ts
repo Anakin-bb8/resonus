@@ -936,6 +936,15 @@ export const tracking = {
 } as const;
 
 /**
+ * How dim a row is that you can see but cannot play: an offline song whose
+ * download was deleted, an episode whose file went. One value, so a song
+ * row, an episode card, a shelf row and a settings row dim alike — and a
+ * surface that dims something else (a disabled action, a swatch) says so
+ * itself rather than borrowing this.
+ */
+export const DIM_OPACITY = 0.4;
+
+/**
  * How wide a bottom sheet is allowed to get.
  *
  * A phone never reaches it, so nothing moves there. On a tablet it is what
