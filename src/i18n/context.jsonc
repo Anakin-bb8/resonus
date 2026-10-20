@@ -586,7 +586,6 @@
     "Lyrics card background": "What is drawn behind the small lyrics card that peeks under the player. Not the same thing as `Lyrics background`",
     "Lyrics source": "Where lyrics are looked for. Its values are the three `Prefer…`/`Disable…` lines",
     "Blur inactive lyrics": "A switch in the Lyrics section: progressively softens synchronized lyric rows away from the current line",
-    "Slightly blur synchronized lyrics other than the current line to emphasize what is playing.": "Help text under that switch. Only the current synchronized lyric line stays sharp",
     "Prefer local lyrics": "A value of `Lyrics source`: use the ones that came with the file first",
     "Prefer online search": "A value of `Lyrics source`: look them up on the internet first",
     "Disable online search": "A value of `Lyrics source`: only ever use the ones that came with the file",
@@ -603,9 +602,7 @@
     "Show animated covers": "The switch for all of them: off, no cover moves anywhere in the app",
     "In the cover": "A value of `Animated artwork`: the animated cover plays inside the square where the cover is",
     "As the background": "A value of `Animated artwork`: the animated cover fills the whole player screen behind everything, instead of the square",
-    "GIF and WebP covers from your server too.": "Under `Animated artwork`: the choice also applies to animated image covers the music server already has, not only to the video clips",
     "Clips in the app too": "iOS setting: the animated cover clip also plays inside the app, not only on the lock screen",
-    "Off, the clip only plays on the lock screen.": "Under `Clips in the app too`: what turning it off leaves",
     "Scroll long titles": "A title too long to fit slides sideways, over and over, instead of being cut off",
     "Swap favorite and menu": "Exchange the places of those two buttons in the player, for whichever hand you hold the phone in",
 

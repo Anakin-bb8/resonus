@@ -97,7 +97,6 @@
   "Cover color": "Cover color",
   "Blurred cover": "Blurred cover",
   "Blur inactive lyrics": "Blur inactive lyrics",
-  "Slightly blur synchronized lyrics other than the current line to emphasize what is playing.": "Slightly blur synchronized lyrics other than the current line to emphasize what is playing.",
   "Confirm your password": "Confirm your password",
   "Connect to Wi-Fi to download": "Connect to Wi-Fi to download",
   "Couldn't add to the playlist": "Couldn't add to the playlist",
@@ -234,7 +233,6 @@
   "Local profile": "Local profile",
   "Lyrics": "Lyrics",
   "Lyrics source": "Lyrics source",
-  "Where to get lyrics from. Online search asks the providers below.": "Where to get lyrics from. Online search asks the providers below.",
   "Providers": "Providers",
   "Asked from the top down until one has the lyrics. Drag to change the order.": "Asked from the top down until one has the lyrics. Drag to change the order.",
   "Finds the song by its ISRC code. Often timed word by word.": "Finds the song by its ISRC code. Often timed word by word.",
@@ -397,9 +395,7 @@
   "Fit cover art": "Fit cover art",
   "Animated cover frame rate": "Animated cover frame rate",
   "Clips in the app too": "Clips in the app too",
-  "Off, the clip only plays on the lock screen.": "Off, the clip only plays on the lock screen.",
   "Animated artwork endpoint": "Animated artwork endpoint",
-  "Where the square and tall clips come from. Empty, every cover stays still.": "Where the square and tall clips come from. Empty, every cover stays still.",
   "Animated artwork": "Animated artwork",
   "Apple Music URL": "Apple Music URL",
   "The album page on Apple Music whose animated cover plays for this album.": "The album page on Apple Music whose animated cover plays for this album.",
@@ -821,9 +817,7 @@
   "Use the system colors": "Use the system colors",
   "The accent Android takes from the wallpaper": "The accent Android takes from the wallpaper",
   "Animated covers": "Animated covers",
-  "GIF and WebP covers from your server too.": "GIF and WebP covers from your server too.",
   "In the cover": "In the cover",
   "As the background": "As the background",
-  "Show animated covers": "Show animated covers",
-  "Off, every cover stays still, GIF and WebP ones too.": "Off, every cover stays still, GIF and WebP ones too."
+  "Show animated covers": "Show animated covers"
 }

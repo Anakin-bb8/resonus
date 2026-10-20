@@ -97,7 +97,6 @@
   "Cover color": "Color de la carátula",
   "Blurred cover": "Carátula difuminada",
   "Blur inactive lyrics": "Desenfocar las otras líneas",
-  "Slightly blur synchronized lyrics other than the current line to emphasize what is playing.": "Desenfoca un poco las líneas sincronizadas que no suenan, para resaltar la actual.",
   "Confirm your password": "Confirma tu contraseña",
   "Connect to Wi-Fi to download": "Conéctate al Wi-Fi para descargar",
   "Couldn't add to the playlist": "No se pudo añadir a la lista",
@@ -232,7 +231,6 @@
   "Local profile": "Perfil local",
   "Lyrics": "Letra",
   "Lyrics source": "Origen de las letras",
-  "Where to get lyrics from. Online search asks the providers below.": "De dónde sacar las letras. La búsqueda en internet pregunta a los proveedores de abajo.",
   "Providers": "Proveedores",
   "Asked from the top down until one has the lyrics. Drag to change the order.": "Se consultan de arriba abajo hasta que uno tenga la letra. Arrastra para cambiar el orden.",
   "Finds the song by its ISRC code. Often timed word by word.": "Busca la canción por su código ISRC. A menudo, sincronizada palabra a palabra.",
@@ -820,12 +818,8 @@
   "Use the system colors": "Usar los colores del sistema",
   "The accent Android takes from the wallpaper": "El acento que Android toma del fondo de pantalla",
   "Animated covers": "Carátulas animadas",
-  "GIF and WebP covers from your server too.": "También las carátulas GIF y WebP de tu servidor.",
   "In the cover": "En la carátula",
   "As the background": "Como fondo",
-  "Where the square and tall clips come from. Empty, every cover stays still.": "De dónde salen los clips cuadrados y verticales. Vacío, todas las carátulas quedan fijas.",
   "Clips in the app too": "Clips también en la app",
-  "Off, the clip only plays on the lock screen.": "Desactivado, el clip solo se ve en la pantalla de bloqueo.",
-  "Show animated covers": "Mostrar carátulas animadas",
-  "Off, every cover stays still, GIF and WebP ones too.": "Desactivado, todas las carátulas quedan fijas, también las GIF y WebP."
+  "Show animated covers": "Mostrar carátulas animadas"
 }

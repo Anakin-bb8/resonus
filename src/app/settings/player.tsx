@@ -215,7 +215,6 @@ export default function PlayerSettings() {
             options={[
               {
                 label: t('Show animated covers'),
-                description: t('Off, every cover stays still, GIF and WebP ones too.'),
                 value: animatedCovers,
                 onChange: setAnimatedCovers,
               },
@@ -225,7 +224,6 @@ export default function PlayerSettings() {
           <>
           <TextRow
             label={t('Animated artwork endpoint')}
-            description={t('Where the square and tall clips come from. Empty, every cover stays still.')}
             value={animatedArtworkEndpoint}
             placeholder="https://artwork.example.com"
             maxLength={200}
@@ -239,7 +237,6 @@ export default function PlayerSettings() {
               server, with no endpoint at all. */}
           <SelectList<'cover' | 'background'>
             label={t('Animated artwork')}
-            description={t('GIF and WebP covers from your server too.')}
             options={[
               { value: 'cover', label: t('In the cover') },
               { value: 'background', label: t('As the background') },
@@ -256,7 +253,6 @@ export default function PlayerSettings() {
                 options={[
                   {
                     label: t('Clips in the app too'),
-                    description: t('Off, the clip only plays on the lock screen.'),
                     value: animatedCoverVideo,
                     onChange: setAnimatedCoverVideo,
                   },
@@ -383,7 +379,6 @@ export default function PlayerSettings() {
         <SettingsGroup>
           <SelectList<LyricsSource>
             label={t('Lyrics source')}
-            description={t('Where to get lyrics from. Online search asks the providers below.')}
             options={[
               { value: 'local', label: t('Prefer local lyrics') },
               { value: 'online', label: t('Prefer online search') },
@@ -445,9 +440,6 @@ export default function PlayerSettings() {
                 ? [
                     {
                       label: t('Blur inactive lyrics'),
-                      description: t(
-                        'Slightly blur synchronized lyrics other than the current line to emphasize what is playing.',
-                      ),
                       value: blurInactiveLyrics,
                       onChange: setBlurInactiveLyrics,
                     },

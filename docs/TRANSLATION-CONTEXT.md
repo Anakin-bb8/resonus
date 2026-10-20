@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 827 of them.
+Every string the app can show, under the screen it shows up on. 821 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -1030,7 +1030,6 @@ you are actually typing into, which is easier than reading it here.
 | `Elements` | Which player elements to show |
 | `Favorite` | One of the values of “Buttons next to play” |
 | `Fit cover art` | Show the whole cover even if it is not square, instead of cropping it to fill |
-| `GIF and WebP covers from your server too.` | Under `Animated artwork`: the choice also applies to animated image covers the music server already has, not only to the video clips |
 | `Go to album` | Leave this sheet and open the album the song is on |
 | `In the cover` | A value of `Animated artwork`: the animated cover plays inside the square where the cover is |
 | `Keep paused when skipping` |  |
@@ -1050,8 +1049,6 @@ you are actually typing into, which is easier than reading it here.
 | `None` | One of the values of “Buttons next to play” |
 | `Normal` | One of the values of “Lyrics size” |
 | `Nothing` | A value of `On cover tap`: tapping the cover does nothing |
-| `Off, every cover stays still, GIF and WebP ones too.` | The line under “Show animated covers”, explaining it |
-| `Off, the clip only plays on the lock screen.` | Under `Clips in the app too`: what turning it off leaves |
 | `On cover double tap` | Settings > Player: what tapping the album artwork twice does |
 | `On cover tap` | What tapping the cover art in the player does. One tap and two share the same values, listed below |
 | `Open lyrics screen` | A value of `On cover tap` |
@@ -1079,11 +1076,8 @@ you are actually typing into, which is easier than reading it here.
 | `Show quality label` |  |
 | `Show rating` |  |
 | `Skip buttons` | The seek forward / back buttons setting |
-| `Slightly blur synchronized lyrics other than the current line to emphasize what is playing.` | Help text under that switch. Only the current synchronized lyric line stays sharp |
 | `Small` | One of the values of “Lyrics size” |
 | `Swap favorite and menu` | Exchange the places of those two buttons in the player, for whichever hand you hold the phone in |
-| `Where the square and tall clips come from. Empty, every cover stays still.` | The line under “Animated artwork endpoint”, explaining it |
-| `Where to get lyrics from. Online search asks the providers below.` | The line under “Lyrics source”, explaining it |
 
 ## Settings › Player buttons
 
