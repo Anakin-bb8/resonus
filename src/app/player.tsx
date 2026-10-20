@@ -1855,7 +1855,9 @@ const styles = themed((colors) => ({
     paddingHorizontal: spacing.sm,
     marginTop: spacing.xs,
   },
-  bottomRowSpread: { justifyContent: 'space-between', gap: 0 },
+  // Edge to edge like the controls above, so the outer icons sit under the
+  // shuffle and the repeat instead of a step further in (#259).
+  bottomRowSpread: { justifyContent: 'space-between', gap: 0, paddingHorizontal: 0 },
   /** The right-hand group of the split row: devices alone on the left. */
   bottomRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.xl, flexShrink: 0 },
   // Like Spotify Connect: icon + device name in accent when casting.
