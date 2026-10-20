@@ -230,11 +230,6 @@ export async function listChannels(): Promise<PodcastChannel[]> {
   return Db.listChannels(scope());
 }
 
-/** The episodes of a channel, newest first, one page at a time. */
-export async function listEpisodes(channelId: string): Promise<PodcastEpisode[]> {
-  return Db.listEpisodes(scope(), channelId);
-}
-
 /** The route id is either a stored channel id or a percent-encoded feed URL. */
 export function isFeedUrl(id: string): boolean {
   return /^https?:\/\//i.test(decodeURIComponent(id));
