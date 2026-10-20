@@ -20,6 +20,7 @@ Releases before 0.2.1 are only listed on the
 
 ### Fixed
 
+- With every bottom-row button on, a long device name (a DLNA renderer, Bluetooth headphones) is cut short instead of pushing the row past the edges of the screen.
 - Synced lyrics from the server follow the song again when the server sends their lines out of order, such as a chorus written once with several timestamps, instead of staying on the first line.
 - Artists A-Z follows the server's sort names, so "The Knife" is under K and an artist tagged with a sort name is filed by it (#275).
 - Navidrome: with only some libraries turned on in Settings > Libraries, a playlist leaves out the songs from the others (#275).

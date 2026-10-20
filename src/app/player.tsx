@@ -1857,16 +1857,20 @@ const styles = themed((colors) => ({
   },
   bottomRowSpread: { justifyContent: 'space-between', gap: 0 },
   /** The right-hand group of the split row: devices alone on the left. */
-  bottomRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.xl },
+  bottomRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.xl, flexShrink: 0 },
   // Like Spotify Connect: icon + device name in accent when casting.
   // The same box as the other buttons in the row; only the device name, while
-  // casting, makes it wider, and it is capped so the row stays centred.
+  // casting, makes it wider, and it is capped so the row stays centred. With
+  // every button on and a long name it is the one that gives way, the name
+  // cut short, instead of pushing the row past both edges of the screen.
   deviceRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
     height: 40,
     maxWidth: 160,
+    flexShrink: 1,
+    minWidth: 0,
   },
   deviceName: {
     color: colors.accent,
