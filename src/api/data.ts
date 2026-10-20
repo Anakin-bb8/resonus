@@ -26,7 +26,7 @@ import { useLibraryMirror } from '@/store/libraryMirror';
 import { outboxFileFor, useOfflineQueue, type PlayOp, type QueuePlaylist } from '@/store/offlineQueue';
 import { usePlayHistory } from '@/store/playHistory';
 import { isManualOffline } from './netGate';
-import { getLocalLyrics, getOnlineLyrics } from '@/lib/localLyrics';
+import { anyOnline, getLocalLyrics, getOnlineLyrics, NO_ONLINE, type OnlineProviders } from '@/lib/localLyrics';
 import { useSettings, type LyricsSource } from '@/store/settings';
 import { cachedUri } from '@/store/songCache';
 import * as Navidrome from './navidrome';
@@ -1560,42 +1560,45 @@ export function search(query: string): Promise<Subsonic.SearchResult> {
  *
  * Three places have them, and they are not interchangeable. A downloaded song
  * kept its `.lrc` beside the file, and a track from the phone's own library can
- * carry them inside (USLT). The server has whatever it was given. LRCLIB is a
- * public database, and whether it is asked at all is the person's choice
- * (Settings › Lyrics): as a fallback, as the first place to look, or never.
+ * carry them inside (USLT). The server has whatever it was given. LRCLIB and
+ * lrc.red are public databases, and whether they are asked at all is the
+ * person's choice (Settings › Lyrics): which of them, as a fallback, as the
+ * first place to look, or never.
  */
 export async function getSongLyrics(
   song: Song,
   source: LyricsSource,
+  providers: OnlineProviders,
 ): Promise<Subsonic.SongLyrics | null> {
-  const allowOnline = source !== 'off';
+  const allowOnline = source !== 'off' && anyOnline(providers);
+  const online = allowOnline ? providers : NO_ONLINE;
   const preferOnline = source === 'online';
   const downloaded = () =>
     song.localUri ?? useDownloads.getState().files[song.id] ?? cachedUri(song.id);
   // Offline: the phone first, and the question is whether anything else is
-  // allowed at all. LRCLIB is not this server: an offline the app fell into
+  // allowed at all. LRCLIB and lrc.red are not this server: an offline the app fell into
   // means one server stopped answering, and the phone's connection is very
   // probably fine, so the lyrics are still there to be found. An offline
-  // somebody chose means use no network, and that covers LRCLIB too (#89).
+  // somebody chose means use no network, and that covers them too (#89).
   if (isOffline()) {
-    const online = allowOnline && !isManualOffline();
+    const reachable = isManualOffline() ? NO_ONLINE : online;
     const uri = downloaded();
-    if (uri) return getLocalLyrics({ ...song, localUri: uri }, online, preferOnline);
-    return online ? getOnlineLyrics(song) : null;
+    if (uri) return getLocalLyrics({ ...song, localUri: uri }, reachable, preferOnline);
+    return getOnlineLyrics(song, reachable);
   }
   // A file already on the phone is read first even online: it is right there,
   // and it is what the person chose to carry.
-  if (song.localUri) return getLocalLyrics(song, allowOnline, preferOnline);
+  if (song.localUri) return getLocalLyrics(song, online, preferOnline);
   if (!useAuthStore.getState().auth) return null;
   if (__DEV__) {
     console.log(`[lyrics] asking · source=${source} · ${song.artist} — ${song.title}`);
   }
   try {
-    // 'online': LRCLIB first (it absorbs its own network errors and answers
+    // 'online': the online providers first (they absorb its own network errors and answers
     // null), then the server.
     if (preferOnline) {
-      const online = await getOnlineLyrics(song);
-      if (online) return online;
+      const found = await getOnlineLyrics(song, online);
+      if (found) return found;
     }
     try {
       const structured = await Subsonic.getLyricsBySongId(auth(), song.id);
@@ -1605,14 +1608,14 @@ export async function getSongLyrics(
       // already given: seventy of them in a twenty three minute session, queued
       // in front of what the screens were waiting for (#50). Only a server that
       // rejects the modern one, which throws, gets the old question.
-      return allowOnline && !preferOnline ? getOnlineLyrics(song) : null;
+      return !preferOnline ? getOnlineLyrics(song, online) : null;
     } catch {
       // Server without the songLyrics extension: try the classic endpoint.
     }
     const plain = await Subsonic.getLyrics(auth(), song.artist ?? '', song.title ?? '');
     if (plain) return { synced: false, lines: plain.split('\n').map((value) => ({ value })) };
-    // The server has none: LRCLIB if allowed and not already tried above.
-    if (allowOnline && !preferOnline) return getOnlineLyrics(song);
+    // The server has none: online if allowed and not already tried above.
+    if (!preferOnline) return getOnlineLyrics(song, online);
     return null;
   } catch (e) {
     if (__DEV__) console.log('[lyrics] the server path threw', e);
@@ -1620,7 +1623,7 @@ export async function getSongLyrics(
     // absorbed a server without the extension. A downloaded song still has the
     // `.lrc` saved next to it when it was downloaded.
     const dl = downloaded();
-    if (dl) return getLocalLyrics({ ...song, localUri: dl }, allowOnline, preferOnline);
+    if (dl) return getLocalLyrics({ ...song, localUri: dl }, online, preferOnline);
     throw e;
   }
 }

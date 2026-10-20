@@ -18,6 +18,7 @@ import { useAuthStore } from '@/store/auth';
 import { useTheme } from '@/theme';
 import {
   type CardBackground,
+  LYRICS_PROVIDER_NAMES,
   type CoverDoubleTapAction,
   type CoverTapAction,
   type LyricsAlign,
@@ -114,6 +115,7 @@ export default function PlayerSettings() {
   const setCoverTapAction = useSettings((s) => s.setCoverTapAction);
   const lyricsSource = useSettings((s) => s.lyricsSource);
   const setLyricsSource = useSettings((s) => s.setLyricsSource);
+  const lyricsProviders = useSettings((s) => s.lyricsProviders);
   const marqueeTitles = useSettings((s) => s.marqueeTitles);
   const setMarqueeTitles = useSettings((s) => s.setMarqueeTitles);
   const seekButtonsSec = useSettings((s) => s.seekButtonsSec);
@@ -381,9 +383,7 @@ export default function PlayerSettings() {
         <SettingsGroup>
           <SelectList<LyricsSource>
             label={t('Lyrics source')}
-            description={t(
-              'Where to get lyrics from. Online search uses LRCLIB (sends the artist and title).',
-            )}
+            description={t('Where to get lyrics from. Online search asks the providers below.')}
             options={[
               { value: 'local', label: t('Prefer local lyrics') },
               { value: 'online', label: t('Prefer online search') },
@@ -392,6 +392,22 @@ export default function PlayerSettings() {
             value={lyricsSource}
             onChange={setLyricsSource}
           />
+          {/* Which services online search asks and in what order, on a screen
+              of their own like the bottom row's buttons. Hidden with the
+              search off, when there is nobody to ask. */}
+          {lyricsSource !== 'off' ? (
+            <SettingRow
+              label={t('Providers')}
+              right={
+                lyricsProviders
+                  .filter((p) => p.enabled)
+                  .map((p) => LYRICS_PROVIDER_NAMES[p.key])
+                  .join(', ') || t('None')
+              }
+              chevron
+              onPress={() => router.push('/settings/lyrics-providers')}
+            />
+          ) : null}
           <SelectList<LyricsSize>
             label={t('Lyrics size')}
             options={[

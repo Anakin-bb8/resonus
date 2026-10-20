@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 821 of them.
+Every string the app can show, under the screen it shows up on. 825 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -867,6 +867,15 @@ you are actually typing into, which is easier than reading it here.
 | `We need permission to read your device music.` | Android has not granted access to the phone's files yet |
 | `Where should we get your music?` | Heading when choosing where the phone's own music is read from |
 
+## Settings › Lyrics providers
+
+| String | What it is |
+| --- | --- |
+| `Asked from the top down until one has the lyrics. Drag to change the order.` |  |
+| `Finds the song by its ISRC code. Often timed word by word.` |  |
+| `Providers` |  |
+| `Searches by artist and title.` |  |
+
 ## Settings › Navigation bar
 
 | String | What it is |
@@ -1054,6 +1063,7 @@ you are actually typing into, which is easier than reading it here.
 | `Prefer online search` | A value of `Lyrics source`: look them up on the internet first |
 | `Previous and next` | One of the values of “Buttons next to play” |
 | `Previous button` | What the previous button does when a song is already playing. Its values are the two lines below it |
+| `Providers` |  |
 | `Queue` | The list of songs waiting to play. Not a playlist |
 | `Regular font weight` | One of the values of “Lyrics weight” |
 | `Restart, then previous track` | A value of `Previous button`: the first press goes back to the start of this song, the second to the one before |
@@ -1073,7 +1083,7 @@ you are actually typing into, which is easier than reading it here.
 | `Small` | One of the values of “Lyrics size” |
 | `Swap favorite and menu` | Exchange the places of those two buttons in the player, for whichever hand you hold the phone in |
 | `Where the square and tall clips come from. Empty, every cover stays still.` | The line under “Animated artwork endpoint”, explaining it |
-| `Where to get lyrics from. Online search uses LRCLIB (sends the artist and title).` |  |
+| `Where to get lyrics from. Online search asks the providers below.` | The line under “Lyrics source”, explaining it |
 
 ## Settings › Player buttons
 
