@@ -20,10 +20,10 @@ import {
   settingsStyles,
   SwitchList,
 } from '@/components/SettingsUI';
-import { albumsLabel, playlistsLabel, songsLabel, useT } from '@/i18n';
+import { albumsLabel, playlistsLabel, songsLabel, downloadsLabel, useT } from '@/i18n';
 import { appStorageParts, appStorageTotal, type StorageParts } from '@/lib/appStorage';
 import { formatBytes } from '@/lib/format';
-import { useAuthStore } from '@/store/auth';
+import { isManualOffline } from '@/api/netGate';
 import { useDownloads } from '@/store/downloads';
 import { useLibraryMirror, type MirrorStats } from '@/store/libraryMirror';
 import {
@@ -79,7 +79,10 @@ export default function DownloadsSettings() {
   const t = useT();
   const router = useRouter();
   const toast = useToast((s) => s.show);
-  const offline = useAuthStore((s) => s.offline);
+  // The Downloading group stays alive in automatic offline: a podcast
+  // download never asks the server, so its concurrency and Wi-Fi rules
+  // still steer transfers while the server is merely not answering.
+  const downloadsLive = !isManualOffline();
   const lang = useSettings((s) => s.language);
   // From the store, not `colors.accent`: without subscription the space bar
   // would keep the previous accent while the screen stays mounted.
@@ -152,12 +155,12 @@ export default function DownloadsSettings() {
       <ScrollView contentContainerStyle={settingsStyles.content}>
         {/* The first title sticks to the header (no section margin). */}
         <Text style={[settingsStyles.sectionTitle, { marginTop: 0 }]}>{t('Downloading')}</Text>
-        {/* Nothing can be downloaded without a server, so offline these are
-            greyed out rather than taken away: what they say still holds for the
-            next download, and a setting that moves house is one you hunt for
-            through every other screen (#114). A line saying as much used to
-            stand here; a whole section in grey already says it, and being told
-            twice reads like being talked down to (raised by @ztx-lyghters). */}
+        {/* Nothing can be downloaded without a server, so a manual "use no
+            network" greys these out rather than taking them away: what they
+            say still holds for the next download, and a setting that moves
+            house is one you hunt for through every other screen (#114).
+            Automatic offline leaves them alive: a podcast download never
+            asks the server, and these rules steer that transfer too. */}
         {/* Quality first and the codec under it, as in Quality & playback:
             at "Original" the original file is downloaded and the codec has
             nothing to do, so it reads as a pair and is greyed out (#72). */}
@@ -172,7 +175,7 @@ export default function DownloadsSettings() {
             }))}
             value={downloadBitRate}
             onChange={setDownloadBitRate}
-            disabled={offline}
+            disabled={!downloadsLive}
           />
           <SelectList
             label={t('Download codec')}
@@ -187,7 +190,7 @@ export default function DownloadsSettings() {
             }))}
             value={downloadFormat}
             onChange={setDownloadFormat}
-            disabled={offline || downloadBitRate === 0}
+            disabled={!downloadsLive || downloadBitRate === 0}
             disabledLabel={downloadBitRate === 0 ? t('Not used') : undefined}
           />
           <SwitchList
@@ -199,7 +202,7 @@ export default function DownloadsSettings() {
                 ),
                 value: downloadLosslessOnly,
                 onChange: setDownloadLosslessOnly,
-                disabled: offline || downloadBitRate === 0,
+                disabled: !downloadsLive || downloadBitRate === 0,
               },
             ]}
           />
@@ -208,7 +211,7 @@ export default function DownloadsSettings() {
             options={DOWNLOAD_CONCURRENCY_OPTIONS.map((n) => ({ value: n, label: String(n) }))}
             value={downloadConcurrency}
             onChange={setDownloadConcurrency}
-            disabled={offline}
+            disabled={!downloadsLive}
           />
           <SwitchList
             options={[
@@ -216,7 +219,7 @@ export default function DownloadsSettings() {
                 label: t('Download over Wi-Fi only'),
                 value: downloadWifiOnly,
                 onChange: setDownloadWifiOnly,
-                disabled: offline,
+                disabled: !downloadsLive,
               },
             ]}
           />
@@ -275,7 +278,7 @@ export default function DownloadsSettings() {
         {(() => {
           const disk = diskSpace();
           if (!disk || usage == null) {
-            return <Text style={styles.legendText}>{usage == null ? '…' : `${formatBytes(usage)} · ${songsLabel(count, lang)}`}</Text>;
+            return <Text style={styles.legendText}>{usage == null ? '…' : `${formatBytes(usage)} · ${downloadsLabel(count, lang)}`}</Text>;
           }
           // What the app keeps to work without a connection, which is not the
           // music: the copy of the library and the covers saved with it. It has
@@ -302,7 +305,7 @@ export default function DownloadsSettings() {
                 <LegendItem
                   color={accent}
                   label={t('Downloads')}
-                  value={`${formatBytes(usage)} (${songsLabel(count, lang)})`}
+                  value={`${formatBytes(usage)} (${downloadsLabel(count, lang)})`}
                 />
                 {cacheUsed > 0 ? (
                   <LegendItem

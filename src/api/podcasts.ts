@@ -46,7 +46,11 @@ const ITUNES_SEARCH = 'https://itunes.apple.com/search';
 const ITUNES_LOOKUP = 'https://itunes.apple.com/lookup';
 
 /** The iTunes Store's own top-podcasts chart; a starting point for discovery. */
-const ITUNES_CHARTS = 'https://itunes.apple.com/us/rss/toppodcasts/limit=100/json';
+// What iTunes is asked for: one screen's worth of search answers, and the
+// charts at a full Explore page — nobody scrolls past these either way.
+const SEARCH_LIMIT = 25;
+const CHART_LIMIT = 100;
+const ITUNES_CHARTS = `https://itunes.apple.com/us/rss/toppodcasts/limit=${CHART_LIMIT}/json`;
 
 /** Wide on purpose: a pasted address is often the show's HTML page. */
 const FEED_ACCEPT = 'application/rss+xml, application/atom+xml, text/xml, */*';
@@ -103,9 +107,11 @@ function normalized(feedUrl: string): string {
  * The feed at a URL: the URL itself, or the `rel="alternate"` RSS/Atom link
  * of the page it points at. Capped at two hops so pages linking pages end.
  */
+const MAX_FEED_HOPS = 2;
+
 async function resolveFeed(url: string, body: string, hops = 0): Promise<string> {
   if (looksLikeFeed(body)) return url;
-  if (hops >= 2) throw new NotAFeedError(url);
+  if (hops >= MAX_FEED_HOPS) throw new NotAFeedError(url);
 
   for (const m of body.matchAll(/<link\b([^>]*)>/gi)) {
     const attrs = m[1];
@@ -364,7 +370,7 @@ export function episodeToSong(episode: PodcastEpisode, channel: PodcastChannel):
 export async function search(term: string): Promise<PodcastSearchResult[]> {
   const q = term.trim();
   if (!q) return [];
-  const url = `${ITUNES_SEARCH}?media=podcast&entity=podcast&limit=25&term=${encodeURIComponent(q)}`;
+  const url = `${ITUNES_SEARCH}?media=podcast&entity=podcast&limit=${SEARCH_LIMIT}&term=${encodeURIComponent(q)}`;
   const body = await get(url, 'application/json');
   let parsed: {
     results?: {
@@ -421,7 +427,7 @@ function iTunesResults(results: iTunesRow[]): PodcastSearchResult[] {
  * The chart lists each show's store id, not its feed, so the ids go to the
  * lookup endpoint to get the feed back.
  */
-export async function charts(limit = 25): Promise<PodcastSearchResult[]> {
+export async function charts(): Promise<PodcastSearchResult[]> {
   const body = await get(ITUNES_CHARTS, 'application/json');
   let parsed: {
     feed?: {
@@ -442,7 +448,7 @@ export async function charts(limit = 25): Promise<PodcastSearchResult[]> {
     if (!id || seen.has(id)) continue;
     seen.add(id);
     ids.push(id);
-    if (ids.length >= limit) break;
+    if (ids.length >= CHART_LIMIT) break;
   }
   if (ids.length === 0) return [];
   const lookupBody = await get(

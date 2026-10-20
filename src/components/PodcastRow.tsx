@@ -12,6 +12,7 @@
  * is optional because it belongs to the Library, as it does in `AlbumRow`.
  */
 import { Link } from 'expo-router';
+import Animated from 'react-native-reanimated';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import Icon from '@/components/Icon';
@@ -21,6 +22,7 @@ import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { bump } from '@/lib/perfLog';
 import { useEpisodeUnavailable } from '@/hooks/useEpisodeUnavailable';
+import { usePressFeedback } from '@/hooks/usePressFeedback';
 import { useDownloads } from '@/store/downloads';
 import { usePlayerStore } from '@/store/player';
 import { useSongMenu } from '@/store/songMenu';
@@ -56,6 +58,9 @@ export function PodcastRow({ channel, episode, sub, pinned }: Props) {
   // On disk: the ↓ badge, shown online too — the same mark `TrackRow` gives a
   // downloaded song, so a downloaded episode reads as offline-playable.
   const downloaded = useDownloads((s) => !!s.files[episode?.id ?? '']);
+  // Every list row answers a tap with a small visual response — the row
+  // `AlbumRow` sits beside is the same list mode, and it has it.
+  const press = usePressFeedback();
   if (!channel) return null;
   const href = `/podcast/${channel.id}`;
   // An episode row plays itself; a show row taps to its screen.
@@ -66,6 +71,8 @@ export function PodcastRow({ channel, episode, sub, pinned }: Props) {
   const row = (
     <Pressable
       style={StyleSheet.flatten([styles.row, unavailable && styles.dimmed])}
+      onPressIn={press.onPressIn}
+      onPressOut={press.onPressOut}
       onPress={
         unavailable
           ? () => toast(t('Not available offline'))
@@ -111,7 +118,11 @@ export function PodcastRow({ channel, episode, sub, pinned }: Props) {
   );
   // A row that acts on tap (an episode plays itself) is not a link; otherwise
   // the tap navigates to the show's screen.
-  return song ? row : <Link href={href} asChild>{row}</Link>;
+  return (
+    <Animated.View style={press.style}>
+      {song ? row : <Link href={href} asChild>{row}</Link>}
+    </Animated.View>
+  );
 }
 
 const styles = themed((colors) => ({

@@ -1,9 +1,11 @@
 /** Episode card for the «Recent episodes» shelf on Home. */
+import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import Icon from '@/components/Icon';
 import { COVER, coverArtUrl } from '@/api/data';
 import { episodeToSong, podcastCover, type RecentEpisode } from '@/api/podcasts';
+import { openPodcastMenu } from '@/components/PodcastMenuSheet';
 import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { useEpisodeUnavailable } from '@/hooks/useEpisodeUnavailable';
@@ -18,7 +20,7 @@ interface Props {
   width?: number;
 }
 
-export function PodcastEpisodeCard({ item, width = 150 }: Props) {
+export const PodcastEpisodeCard = memo(function PodcastEpisodeCard({ item, width = 150 }: Props) {
   const { accent } = useTheme();
   const playQueue = usePlayerStore((s) => s.playQueue);
   const t = useT();
@@ -36,6 +38,12 @@ export function PodcastEpisodeCard({ item, width = 150 }: Props) {
     <Pressable
       style={StyleSheet.flatten([styles.container, unavailable && styles.dimmed, { width }])}
       accessibilityRole="button"
+      onLongPress={() => {
+        // The shelf was built for these episodes; the sheet is how one of
+        // them gets hearted or queued whole, as the other shelf cards do.
+        haptic('light');
+        openPodcastMenu(channel);
+      }}
       onPress={
         unavailable
           ? () => toast(t('Not available offline'))
@@ -64,7 +72,7 @@ export function PodcastEpisodeCard({ item, width = 150 }: Props) {
       </View>
     </Pressable>
   );
-}
+});
 
 const styles = themed((colors) => ({
   container: { gap: spacing.xs },

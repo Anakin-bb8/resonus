@@ -108,7 +108,7 @@ export function PodcastsBrowser({ embedded, actionRef, searchOpen }: BrowserProp
   const term = useDebounce(query.trim());
   const discover = useQuery({
     queryKey: ['podcastDiscover', term],
-    queryFn: () => (term.length > 1 ? searchPodcasts(term) : charts(100)),
+    queryFn: () => (term.length > 1 ? searchPodcasts(term) : charts()),
     enabled: !!embedded,
     // iTunes answers are stable enough to hold for three days: the Store is not
     // asked again on every visit, and a search you already ran stays put.

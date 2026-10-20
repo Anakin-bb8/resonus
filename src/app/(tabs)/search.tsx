@@ -27,6 +27,7 @@ import { TrackRow } from '@/components/TrackRow';
 import { useDebounce } from '@/hooks/useDebounce';
 import { songsLabel, episodesLabel, useT } from '@/i18n';
 import { listChannels, podcastCover } from '@/api/podcasts';
+import { openPodcastMenu } from '@/components/PodcastMenuSheet';
 import { haptic } from '@/lib/haptics';
 import { onTabReselect, takeSearchFocus } from '@/lib/tabOrigin';
 import { bump } from '@/lib/perfLog';
@@ -506,6 +507,10 @@ export default function SearchScreen() {
               <Link key={c.id} href={`/podcast/${c.id}`} asChild>
                 <Pressable
                   style={styles.recentRow}
+                  onLongPress={() => {
+                    haptic('light');
+                    openPodcastMenu(c);
+                  }}
                   onPress={() =>
                     addRecent({
                       kind: 'podcast',

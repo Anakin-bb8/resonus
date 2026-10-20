@@ -8,6 +8,7 @@
  * A show whose last write is older than three days is re-read in the background
  * and the surface updated once it lands. Nothing is subscribed: opening lands it.
  */
+import { useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
 import { View } from 'react-native';
@@ -22,7 +23,7 @@ import {
   podcastCover,
   type PodcastChannel,
 } from '@/api/podcasts';
-import { COVER, coverArtUrl, markUnplayableOffline } from '@/api/data';
+import { COVER, coverArtUrl, markUnplayableOffline, type Song } from '@/api/data';
 import { isManualOffline } from '@/api/netGate';
 import { BackButton } from '@/components/BackButton';
 import { EmptyState } from '@/components/EmptyState';
@@ -101,6 +102,39 @@ export default function PodcastScreen() {
     (s) => s.deletePodcastChannelDownloads,
   );
 
+  // The episodes, bridged to songs so the album renderer can list and play
+  // them, and marked like the offline song lists: offline, only a downloaded
+  // episode stays playable (dim rows, and `playQueue` drops the rest); hide
+  // mode drops the unplayable rows altogether, as `annotate` does for songs.
+  // Memoized on the query's answer: TrackListView memoizes its own filtering
+  // on the list's identity, and a fresh array every render would bust both.
+  const { songs, meta } = useMemo(() => {
+    if (!data.data) return { songs: [] as Song[], meta: '' };
+    const { channel, episodes: list } = data.data;
+    const marked = markUnplayableOffline(list.map((e) => episodeToSong(e, channel)));
+    const shown = hideUnavailable ? marked.filter((s) => !s.unavailable) : marked;
+    const totalSec = list.reduce((acc, e) => acc + (e.duration ?? 0), 0);
+    const line = [
+      t('Podcast'),
+      episodesLabel(channel.episodeCount ?? list.length, lang),
+      totalSec > 0 ? formatTotalDuration(totalSec) : null,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+    return { songs: shown, meta: line };
+  }, [data.data, hideUnavailable, lang]);
+
+  // Stable between progress ticks (only changes with status): if its identity
+  // changed on every % update, the Pressable would lose its touch and you'd
+  // have to press multiple times — the album screen answers the same way.
+  const onDownloadPress = useCallback(() => {
+    const ch = data.data?.channel;
+    if (!ch) return;
+    if (download.status === 'done') void deletePodcastChannelDownloads(ch.id);
+    else if (download.status === 'active') cancelDownload(`podcast:${ch.id}`);
+    else void downloadPodcast(ch.id);
+  }, [download.status, data.data]);
+
   if (data.isLoading) {
     return <TrackListSkeleton />;
   }
@@ -115,14 +149,6 @@ export default function PodcastScreen() {
   }
 
   const ch = data.data.channel;
-  const list = data.data.episodes;
-
-  // The episodes, bridged to songs so the album renderer can list and play
-  // them, and marked like the offline song lists: offline, only a downloaded
-  // episode stays playable (dim rows, and `playQueue` drops the rest); hide
-  // mode drops the unplayable rows altogether, as `annotate` does for songs.
-  const marked = markUnplayableOffline(list.map((e) => episodeToSong(e, ch)));
-  const songs = hideUnavailable ? marked.filter((s) => !s.unavailable) : marked;
 
   // The play button hands the show over in feed order (newest first); the
   // shuffle button asks for the same list dealt (`shuffled`), which playQueue
@@ -133,17 +159,6 @@ export default function PodcastScreen() {
     // one no `Link` can come back to — the Home tile would be dead.
     void playQueue(songs, start, ch.title, `/podcast/${ch.id}`, opts);
   };
-
-  // The metadata line, built the way an album's reads: what it is, how many
-  // episodes, and how long they add up to.
-  const totalSec = list.reduce((acc, e) => acc + (e.duration ?? 0), 0);
-  const meta = [
-    t('Podcast'),
-    episodesLabel(ch.episodeCount ?? list.length, lang),
-    totalSec > 0 ? formatTotalDuration(totalSec) : null,
-  ]
-    .filter(Boolean)
-    .join(' · ');
 
   return (
     <TrackListView
@@ -168,11 +183,7 @@ export default function PodcastScreen() {
           !isManualOffline()
             ? {
                 ...download,
-                onPress: () => {
-                  if (download.status === 'done') void deletePodcastChannelDownloads(ch.id);
-                  else if (download.status === 'active') cancelDownload(`podcast:${ch.id}`);
-                  else void downloadPodcast(ch.id);
-                },
+                onPress: onDownloadPress,
               }
             : undefined
         }
