@@ -4,12 +4,12 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import Icon from '@/components/Icon';
 import { COVER, coverArtUrl } from '@/api/data';
-import { podcastCover, queueEpisode, type RecentEpisode } from '@/api/podcasts';
-import { openPodcastMenu } from '@/components/PodcastMenuSheet';
+import { episodeToSong, podcastCover, queueEpisode, type RecentEpisode } from '@/api/podcasts';
 import { useT } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { useEpisodeUnavailable } from '@/hooks/useEpisodeUnavailable';
 import { useDownloads } from '@/store/downloads';
+import { useSongMenu } from '@/store/songMenu';
 import { useToast } from '@/store/toast';
 import { DIM_OPACITY, fontSize, spacing, themed, useTheme } from '@/theme';
 import { Cover } from './Cover';
@@ -23,6 +23,7 @@ export const PodcastEpisodeCard = memo(function PodcastEpisodeCard({ item, width
   const { accent } = useTheme();
   const t = useT();
   const toast = useToast((s) => s.show);
+  const openSongMenu = useSongMenu((s) => s.open);
   const { episode, channel } = item;
   // Offline and not downloaded: dimmed, tap says so (as `TrackRow` does).
   const unavailable = useEpisodeUnavailable(episode.id);
@@ -37,10 +38,13 @@ export const PodcastEpisodeCard = memo(function PodcastEpisodeCard({ item, width
       style={StyleSheet.flatten([styles.container, unavailable && styles.dimmed, { width }])}
       accessibilityRole="button"
       onLongPress={() => {
-        // The shelf was built for these episodes; the sheet is how one of
-        // them gets hearted or queued whole, as the other shelf cards do.
+        // A long press opens the menu of the entity the card is: an episode,
+        // so the episode's own sheet — the same target `PodcastRow` gives an
+        // episode row, so hearting or downloading THIS episode works from
+        // Home too. The show is one tap further, at this sheet's "Go to
+        // Podcast".
         haptic('light');
-        openPodcastMenu(channel);
+        openSongMenu(episodeToSong(episode, channel));
       }}
       onPress={
         unavailable
