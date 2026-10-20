@@ -156,3 +156,12 @@ export function matches(query: string, ...fields: (string | undefined)[]): boole
   return words.every((qw) => split.some((ws) => matchWord(qw, ws)));
 }
 
+/** An artist's place in A-Z order: its sort name where the server sent one. */
+export function byArtistSortName(
+  a: { name?: string; sortName?: string },
+  b: { name?: string; sortName?: string },
+): number {
+  const ka = a.sortName || a.name || '';
+  const kb = b.sortName || b.name || '';
+  return ka.localeCompare(kb, undefined, { sensitivity: 'base' }) || (a.name ?? '').localeCompare(b.name ?? '');
+}

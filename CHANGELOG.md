@@ -17,6 +17,11 @@ Releases before 0.2.1 are only listed on the
 
 - The devices button only names the headphones or Bluetooth speaker the phone plays through if Settings > Player > Bottom row > Name the headphones or speaker is on. It is off by default, so the row stays evenly spread; a cast target is still always named (#274).
 
+### Fixed
+
+- Artists A-Z follows the server's sort names, so "The Knife" is under K and an artist tagged with a sort name is filed by it (#275).
+- Navidrome: with only some libraries turned on in Settings > Libraries, a playlist leaves out the songs from the others (#275).
+
 ## [0.8.3] - 2026-10-19
 
 ### Added

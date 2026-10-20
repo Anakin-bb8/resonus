@@ -538,3 +538,25 @@ export async function listStarredPlaylistIds(auth: SubsonicAuth): Promise<string
   // filter hands back nothing rather than everything.
   return rows.filter((p) => p?.id && p.starred).map((p) => p.id as string);
 }
+
+/**
+ * The library each track of a playlist lives in, by song id. The Subsonic
+ * playlist says nothing about libraries, so with only some of them turned on
+ * in the app it listed songs from all of them (#275); the native listing of
+ * the same tracks carries `libraryId`, which is the Subsonic music folder id.
+ */
+export async function playlistTrackLibraries(
+  auth: SubsonicAuth,
+  playlistId: string,
+): Promise<Map<string, string>> {
+  const rows = await ndJson<{ mediaFileId?: string; libraryId?: number | string }[]>(
+    auth,
+    `/api/playlist/${encodeURIComponent(playlistId)}/tracks?_start=0&_end=100000`,
+  );
+  const out = new Map<string, string>();
+  if (!Array.isArray(rows)) return out;
+  for (const r of rows) {
+    if (r?.mediaFileId && r.libraryId != null) out.set(r.mediaFileId, String(r.libraryId));
+  }
+  return out;
+}

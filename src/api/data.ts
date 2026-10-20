@@ -17,6 +17,7 @@ import {
   readAlbumCache,
   writeAlbumCache,
 } from '@/store/libraries';
+import { byArtistSortName } from '@/lib/librarySort';
 import { hashKey } from '@/lib/localLibrary';
 import { bump } from '@/lib/perfLog';
 import { queryClient } from '@/lib/query';
@@ -365,7 +366,7 @@ export function getArtists(): Promise<Subsonic.Artist[]> {
   if (ids.length === 1) return Subsonic.getArtists(a, ids[0]);
   return Promise.all(ids.map((id) => Subsonic.getArtists(a, id))).then((lists) => {
     const merged = dedupeById(lists.flat());
-    merged.sort((x, y) => (x.name ?? '').localeCompare(y.name ?? ''));
+    merged.sort(byArtistSortName);
     return merged;
   });
 }
@@ -1679,10 +1680,38 @@ export function getPlaylist(id: string): Promise<{ playlist: Subsonic.Playlist; 
     if (serverOffline()) return mirrorPlaylist(id);
     return Local.getPlaylist(id);
   }
-  return Subsonic.getPlaylist(auth(), id).then((res) => {
+  const a = auth();
+  return Subsonic.getPlaylist(a, id).then(async (res) => {
     useLibraryMirror.getState().savePlaylistDetail(id, res.playlist, res.songs);
-    return res;
+    return { ...res, songs: await keepToLibraries(a, id, res.songs) };
   });
+}
+
+/**
+ * A playlist's songs without the ones from libraries turned off in the app
+ * (#275). Only Navidrome says which library a playlist track is in; anywhere
+ * else, or if asking fails, the playlist stays whole: better every song than
+ * an empty list.
+ */
+async function keepToLibraries(
+  a: Subsonic.SubsonicAuth,
+  playlistId: string,
+  songs: Subsonic.Song[],
+): Promise<Subsonic.Song[]> {
+  const ids = enabledFolderIds(a);
+  if (!ids || !canListNative(a) || songs.length === 0) return songs;
+  try {
+    const libraries = await Navidrome.playlistTrackLibraries(a, playlistId);
+    const keep = new Set(ids);
+    // A song the native listing did not mention is kept: not knowing is not
+    // a reason to hide it.
+    return songs.filter((s) => {
+      const library = libraries.get(s.id);
+      return library === undefined || keep.has(library);
+    });
+  } catch {
+    return songs;
+  }
 }
 
 async function mirrorPlaylist(
