@@ -12,7 +12,7 @@ import { assertCanRequest, isManualOffline, OfflineError } from './netGate';
 import { profileScopeId } from '@/store/auth';
 
 import { hashKey } from '@/lib/localLibrary';
-import { invalidatePodcastFavorites } from '@/lib/query';
+import { invalidatePodcastFavorites, invalidatePodcastLists } from '@/lib/query';
 import * as Db from '@/lib/podcastDb';
 import type { RecentEpisode } from '@/lib/podcastDb';
 import { parseFeed, sortEpisodes, type ParsedItem } from '@/lib/podcastFeed';
@@ -173,6 +173,9 @@ export async function refreshChannel(input: string): Promise<PodcastChannel> {
       error: feedErrorCode(e),
       refreshedAt: Date.now(),
     });
+    // The lists show the error a feed read wrote down, so they ask again —
+    // the show's own screen is the query that is running and answers itself.
+    invalidatePodcastLists();
     throw e;
   }
 
@@ -204,6 +207,11 @@ export async function refreshChannel(input: string): Promise<PodcastChannel> {
   // what keeps a kept show's art drawable when manual offline says no to
   // fetching and expo-image's cache has evicted the address.
   if (channel.imageUrl) void Db.savePodcastArt(s, channel.id, channel.imageUrl).catch(() => {});
+  // A show that was never on the device is in the lists now, and one that was
+  // may have a new episode count or a new picture: the browser, Home's shelf
+  // and the favorite lists ask again. The show's own screen is the query that
+  // called this, and it answers itself.
+  invalidatePodcastLists();
   return channel;
 }
 

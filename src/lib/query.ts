@@ -29,24 +29,32 @@ export function clearProfileCache(): void {
 }
 
 /**
- * Everything that shows a podcast: the open show screens (`['podcast', id]`),
- * the quick grid's covers (`['podcast','covers',…]`), the list (`podcastChannels`)
- * and Home's shelf (`podcastRecentEpisodes`). Read after a show is added,
- * removed or refreshed, so no surface keeps an answer that the read just
- * changed. The favorite lists carry what a refresh learned about a show too —
- * its episode count and its feed error — so they are invalidated here as well.
+ * The lists that show whole shows and single episodes: the browser
+ * (`podcastChannels`), Home's shelf (`podcastRecentEpisodes`) and the two
+ * favorite lists. A feed read changes what these hold even when the show's
+ * own screen is the query doing the reading — that one answers itself, so it
+ * is deliberately not touched here.
  */
-export function invalidatePodcastCaches(): void {
-  queryClient.invalidateQueries({ queryKey: ['podcast'] });
+export function invalidatePodcastLists(): void {
   queryClient.invalidateQueries({ queryKey: ['podcastChannels'] });
   queryClient.invalidateQueries({ queryKey: ['podcastRecentEpisodes'] });
   queryClient.invalidateQueries({ queryKey: ['podcastFavoriteChannels'] });
   queryClient.invalidateQueries({ queryKey: ['podcastFavoriteEpisodes'] });
 }
 
+/**
+ * Everything that shows a podcast: the open show screens (`['podcast', id]`)
+ * and the quick grid's covers (`['podcast','covers',…]` — the prefix matches
+ * them too), plus every list. Read after a show is added, removed or
+ * refreshed, so no surface keeps an answer that the read just changed.
+ */
+export function invalidatePodcastCaches(): void {
+  queryClient.invalidateQueries({ queryKey: ['podcast'] });
+  invalidatePodcastLists();
+}
+
 /** The hearts and the two favorite lists, after a podcast heart goes on or off. */
 export function invalidatePodcastFavorites(): void {
   queryClient.invalidateQueries({ queryKey: ['podcastFavorites'] });
-  queryClient.invalidateQueries({ queryKey: ['podcastFavoriteChannels'] });
-  queryClient.invalidateQueries({ queryKey: ['podcastFavoriteEpisodes'] });
+  invalidatePodcastLists();
 }

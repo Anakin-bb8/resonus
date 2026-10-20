@@ -200,6 +200,11 @@ export async function saveChannel(scope: string, channel: PodcastChannel): Promi
 /**
  * A channel's episodes, replaced by what its feed lists now: an episode the
  * publisher pulled goes too.
+ *
+ * A download whose episode the publisher renamed or pulled points at a file
+ * nothing can reach any more: the row goes with it, and the file goes with
+ * the row — left alone, those bytes would sit in „Storage used" under a badge
+ * and a row no surface shows.
  */
 export async function replaceEpisodes(
   scope: string,
@@ -207,6 +212,7 @@ export async function replaceEpisodes(
   episodes: PodcastEpisode[],
 ): Promise<void> {
   const db = await podcastDb(scope);
+  const orphans: string[] = [];
   await serialized(() =>
     db.withTransactionAsync(async () => {
       await db.runAsync('DELETE FROM podcast_episodes WHERE channel_id = ?', [channelId]);
@@ -225,8 +231,26 @@ export async function replaceEpisodes(
           ],
         );
       }
+      // Read once the new episodes are in: these are the downloads this very
+      // read orphaned. The file's own address is in the row, so the file can
+      // go with it.
+      const rows = await db.getAllAsync<{ file: string }>(
+        `SELECT d.file FROM podcast_downloads AS d
+         WHERE d.channel_id = ?
+         AND NOT EXISTS (SELECT 1 FROM podcast_episodes AS e WHERE e.id = d.episode_id)`,
+        [channelId],
+      );
+      for (const r of rows) orphans.push(r.file);
+      await db.runAsync(
+        `DELETE FROM podcast_downloads
+         WHERE channel_id = ?
+         AND NOT EXISTS (SELECT 1 FROM podcast_episodes AS e WHERE e.id = episode_id)`,
+        [channelId],
+      );
     }),
   );
+  // Outside the transaction: the rows are gone, the files follow them.
+  for (const file of orphans) await FileSystem.deleteAsync(file, { idempotent: true }).catch(() => {});
 }
 
 export async function listChannels(scope: string): Promise<PodcastChannel[]> {
@@ -445,7 +469,8 @@ export async function dropDownloads(scope: string, ids: string[]): Promise<void>
 export async function listDownloads(scope: string): Promise<Record<string, string>> {
   const db = await podcastDb(scope);
   const rows = await db.getAllAsync<{ id: string; file: string }>(
-    'SELECT episode_id AS id, file FROM podcast_downloads',
+    `SELECT episode_id AS id, file FROM podcast_downloads
+     WHERE EXISTS (SELECT 1 FROM podcast_episodes AS e WHERE e.id = episode_id)`,
     [],
   );
   const out: Record<string, string> = {};
@@ -460,7 +485,11 @@ export async function listDownloads(scope: string): Promise<Record<string, strin
 export async function downloadedBytes(scope: string): Promise<number> {
   const db = await podcastDb(scope);
   const row = await db.getFirstAsync<{ total: number | null }>(
-    'SELECT SUM(bytes) AS total FROM podcast_downloads',
+    // Only what an episode still reaches counts: a row whose episode the
+    // publisher pulled is cleaned by the read that pulled it, and this is the
+    // belt that keeps such a row from sitting in the number anyway.
+    `SELECT SUM(bytes) AS total FROM podcast_downloads
+     WHERE EXISTS (SELECT 1 FROM podcast_episodes AS e WHERE e.id = episode_id)`,
   );
   return row?.total ?? 0;
 }

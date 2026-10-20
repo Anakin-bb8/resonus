@@ -394,7 +394,10 @@ export function localSourceFor(song: Song): string | undefined {
     case 'never':
       return undefined;
     case 'cellular':
-      return useNetworkType.getState().cellular ? file : undefined;
+      // An episode file is never transcoded — it IS the publisher's copy — so
+      // on Wi-Fi there is nothing better to stream: the ↓ badge promised no
+      // data, and re-fetching byte-identical bytes breaks that promise.
+      return (song.podcastChannelId || useNetworkType.getState().cellular) ? file : undefined;
     case 'original':
       // Downloaded without transcoding, so the file IS the server's copy.
       // Downloads made before the app recorded this are taken as original,

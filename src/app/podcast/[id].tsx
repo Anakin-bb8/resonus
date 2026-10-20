@@ -92,7 +92,10 @@ export default function PodcastScreen() {
 
   // The show's download, read the way an album's is: the same `files` map the
   // player uses, keyed by episode id, so "done" means every episode is on disk.
-  const episodeIds = data.data?.episodes.map((e) => e.id) ?? [];
+  // Only episodes that have an enclosure can go on disk: a publisher that
+  // lists an item without a file would keep "done" out of reach forever, and
+  // the pill would turn into another whole-show download on every tap.
+  const episodeIds = data.data?.episodes.filter((e) => e.url).map((e) => e.id) ?? [];
   const download = useDownloads(
     useShallow((s) => groupDownloadState(s, `podcast:${data.data?.channel?.id ?? id}`, episodeIds)),
   );

@@ -1630,6 +1630,10 @@ export const useDownloads = create<DownloadsState>((set, get) => {
       await require('@/lib/localQueries').deleteLocalPlaylistsByPrefix('dl_');
       set({ files: {}, dlBitRates: {}, active: {} });
       invalidate();
+      // The sheet caches a show's download count with no expiry, and online
+      // `invalidate` leaves the lists alone: without this, „Delete downloads"
+      // is still offered for a show whose episodes just went.
+      queryClient.invalidateQueries({ queryKey: ['podcastDownloads'] });
     },
 
     usageBytes: async () => timed('storage used', async () => {
