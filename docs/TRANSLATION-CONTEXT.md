@@ -274,7 +274,7 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `Add podcast` |  |
+| `Add podcast` | The Explore chip, the add-a-show sheet's title and the button that opens it: keeps a show on this phone from its feed. Not adding a song to a list |
 | `Add station` | Title of the sheet for adding an internet radio station |
 | `Couldn't load folders.` | Error on the screen, with a Retry button |
 | `Couldn't load playlists.` | Error on the screen, with a Retry button |
@@ -366,7 +366,7 @@ you are actually typing into, which is easier than reading it here.
 | `Random albums` | A section of Home: albums picked at random, to happen upon something |
 | `Random artists` | A section of Home: artists picked at random |
 | `Random songs` | A section of Home: songs picked at random from the library |
-| `Recent episodes` |  |
+| `Recent episodes` | A section of Home, and its switch in settings: the newest episodes of the shows you keep, by the date the publisher gave them. Not episodes you listened to |
 | `Scanning your music…` | Going through the phone's own files |
 
 ## Library
@@ -377,8 +377,8 @@ you are actually typing into, which is easier than reading it here.
 | `Couldn't load artists.` | Error on the screen, with a Retry button |
 | `Couldn't load playlists.` | Error on the screen, with a Retry button |
 | `Couldn't load your library.` |  |
-| `Couldn't load your podcasts.` |  |
-| `Couldn't read this feed` |  |
+| `Couldn't load your podcasts.` | The list of kept shows would not read — the phone's own index, not a server. The Retry button reads it again |
+| `Couldn't read this feed` | Filed under a show whose feed would not load, so the reason is still there offline. One show, not the whole list |
 | `Create your first playlist to get started.` | The line under an empty state |
 | `Episode` | The kind word for one episode, singular, where a row says what it is |
 | `Favorite a show to keep it here.` | The line under the Library's Podcasts shelf: hearts are how a show is kept. 'Here' means this phone |
@@ -387,7 +387,7 @@ you are actually typing into, which is easier than reading it here.
 | `No favorite albums` | Empty state heading on the favourites tab |
 | `No favorite artists` | Empty state heading on the favourites tab |
 | `No playlists yet` | Empty state heading |
-| `No podcasts` |  |
+| `No podcasts` | Nothing kept on this phone yet: no show subscribed |
 | `Nothing here yet` |  |
 | `Playlist` | A list saved on the server. Not the queue |
 | `Playlist created` | The toast after making one |
@@ -540,24 +540,24 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `Couldn't load this podcast.` |  |
-| `No episodes` |  |
+| `Couldn't load this podcast.` | One show's own screen: its episodes would not read. The Retry button reads its feed again |
+| `No episodes` | A show whose feed lists no items at all: the publisher has nothing published |
 | `Podcast` | The kind word: a search result's type and a show's metadata line. A noun, not the verb 'to broadcast' |
 
 ## Podcasts
 
 | String | What it is |
 | --- | --- |
-| `{n} podcast feeds could not be read.` |  |
+| `{n} podcast feeds could not be read.` | After asking every kept show: how many feeds failed. The rest answered and still show |
 | `Add` | Podcasts › the add sheet's confirm button: keeps a show on this phone. Not adding a song to a list |
-| `Add podcast` |  |
-| `Couldn't load your podcasts.` |  |
-| `Couldn't reach any of your podcast feeds.` |  |
-| `Couldn't read this feed` |  |
+| `Add podcast` | The Explore chip, the add-a-show sheet's title and the button that opens it: keeps a show on this phone from its feed. Not adding a song to a list |
+| `Couldn't load your podcasts.` | The list of kept shows would not read — the phone's own index, not a server. The Retry button reads it again |
+| `Couldn't reach any of your podcast feeds.` | Said after asking every kept show for new episodes: none of the feeds answered, so nothing new could be read |
+| `Couldn't read this feed` | Filed under a show whose feed would not load, so the reason is still there offline. One show, not the whole list |
 | `Feed URL` | The field in the add-a-show sheet: the address of the show's feed, pasted in |
-| `Find a podcast` |  |
-| `No episodes yet` |  |
-| `No podcasts` |  |
+| `Find a podcast` | The placeholder in the search box on the shows you keep: searches the iTunes directory, which answers with a show's feed address |
+| `No episodes yet` | Where a show's episode count would be on the list of shows: nothing published yet |
+| `No podcasts` | Nothing kept on this phone yet: no show subscribed |
 | `Podcasts` | Shows kept on this phone, played from the address the publisher gives. Not something the music server stores |
 | `The feed URL must start with http:// or https://` | Said when what was pasted is not an address. The two protocols are the answer, not part of the sentence to translate |
 
