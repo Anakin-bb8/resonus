@@ -85,7 +85,12 @@
       "buildFromSource": [
         "expo-audio",
         "expo-network"
-      ]
+      ],
+      "android": {
+        "buildFromSource": [
+          ".*"
+        ]
+      }
     }
   }
 }
