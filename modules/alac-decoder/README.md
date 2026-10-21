@@ -14,19 +14,24 @@ Source provenance:
   omitted; the included audio sources are otherwise unchanged.
 - FFmpeg: [n6.0.1][ffmpeg-source], commit
   `c41ff724ede7da657762d61097e26fac296c53bf`.
-- Native targets: `armeabi-v7a` and `arm64-v8a`, Android API 21, NDK
-  26.1.10909125.
+- Native targets: `armeabi-v7a`, `arm64-v8a` and `x86_64`, Android API 21,
+  NDK 27.1.12297006.
 - Enabled FFmpeg decoder: `alac` only.
 - `libffmpegJNI.so` SHA-256:
   - `armeabi-v7a`:
-    `d25836985c6d7542ccda1bb467f15e1bffb1bab3a1fabf120bda851fb18bf3b3`
+    `a2ea8ad4a2975f6567d9af1b8e7e66bbb64f3d35d7088260a1f3e983f15fcb48`
   - `arm64-v8a`:
-    `13289a6d804122a74de59c40f2e9d4705d75849073a2b716155c1977d18a4b3e`
+    `30f625082d650287145612a7d2afb7f7354680935012dcf117f73891f05caa12`
+  - `x86_64`:
+    `d8dfe6ff879a310b37c856606e5c0661e05856d9903a90da685869699c78e48d`
 
-The native libraries were built with Media3's upstream `build_ffmpeg.sh` flags
-(`--disable-everything`, `--enable-swresample`, and
-`--enable-decoder=alac`) and its upstream `CMakeLists.txt`. The JNI libraries
-are stripped and use 16 KB ELF load-segment alignment.
+The libraries are built by
+[`scripts/build-alac-ffmpeg.sh`](../../scripts/build-alac-ffmpeg.sh), which
+fetches both sources at the commits above and runs Media3's own
+`build_ffmpeg.sh` (`--disable-everything`, `--enable-swresample` and
+`--enable-decoder=alac`) and its own `CMakeLists.txt`, unchanged. The JNI
+libraries are stripped and use 16 KB ELF load-segment alignment. The F-Droid
+build deletes the copies in this folder and runs the same script.
 
 The Java renderer sources retain their upstream Apache-2.0 headers. FFmpeg's
 license for this configuration is LGPL-2.1-or-later; its license text is in
