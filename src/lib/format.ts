@@ -54,6 +54,22 @@ export function normalizeOutputDisplayName(name: string): string {
 }
 
 
+/**
+ * An episode's publish date, short and in the app's language ("Jun 12, 2024").
+ * The language code doubles as the locale (they are all valid BCP-47 tags:
+ * `en`, `de`, `zh-CN`, `pt-BR`…), so the date reads the way the rest of the
+ * screen does. The year is always shown: an episode can be years old, and
+ * unlike a play history there is no "this year" default to lean on.
+ */
+export function formatEpisodeDate(ts: number | undefined, lang: string): string {
+  if (!ts) return '';
+  return new Date(ts).toLocaleDateString(lang, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
 /** Bytes in the appropriate unit ("1.2 GB", "340 MB"). */
 export function formatBytes(n: number): string {
   if (n >= 1024 ** 3) return `${(n / 1024 ** 3).toFixed(1)} GB`;

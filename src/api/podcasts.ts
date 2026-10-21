@@ -174,6 +174,7 @@ function toEpisode(channelId: string, item: ParsedItem): PodcastEpisode {
   const episode: PodcastEpisode = { id: item.id, channelId, title: item.title };
   if (item.description) episode.description = item.description;
   if (item.publishedAt !== undefined) episode.publishedAt = item.publishedAt;
+  if (item.episode !== undefined) episode.episode = item.episode;
   if (item.duration !== undefined) episode.duration = item.duration;
   if (item.url) episode.url = item.url;
   if (item.mimeType) episode.mimeType = item.mimeType;
@@ -419,6 +420,10 @@ export function episodeToSong(episode: PodcastEpisode, channel: PodcastChannel):
   if (cover) song.coverArt = cover;
   if (episode.duration !== undefined) song.duration = episode.duration;
   if (episode.publishedAt !== undefined) song.addedAt = episode.publishedAt;
+  // The feed's own episode number, kept for the song's info sheet: the show's
+  // screen leaves its rows unnumbered, since a place in the list is not something
+  // a feed promises, but a number the publisher did give is still worth having.
+  if (episode.episode !== undefined) song.track = episode.episode;
   const suffix = episode.mimeType ? SUFFIXES[episode.mimeType.toLowerCase()] : undefined;
   if (suffix) song.suffix = suffix;
   return song;

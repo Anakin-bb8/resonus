@@ -1960,6 +1960,8 @@ export interface PodcastEpisode {
   description?: string;
   /** Publication date, in ms since the epoch. */
   publishedAt?: number;
+  /** The feed's own episode number (`itunes:episode`), when it gave one. */
+  episode?: number;
   /** Seconds. */
   duration?: number;
   /** The enclosure, played as `Song.url`. */

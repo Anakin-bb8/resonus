@@ -23,6 +23,8 @@ export interface ParsedItem {
   description?: string;
   /** Publication date in ms since the epoch. */
   publishedAt?: number;
+  /** The feed's own episode number (`itunes:episode`), when it gave one. */
+  episode?: number;
   /** Seconds. */
   duration?: number;
   /** Where the audio is. An episode with none of this cannot be played. */
@@ -291,10 +293,15 @@ export function parseFeed(xml: string, channelId: string): ParsedFeed {
     const title = text(block, 'title') ?? '';
     const publishedAt = parseFeedDate(text(block, 'pubDate', 'published', 'updated', 'date'));
     const enc = enclosure(block);
+    // `itunes:episode` is a plain count; a feed that numbers none gives NaN, and
+    // a zero-padded or non-positive one is no number worth showing, so it stays
+    // out rather than filing a 0 the song's info would then read as a track.
+    const epNum = Number(text(block, 'episode'));
     const item: ParsedItem = {
       id: `${channelId}/${itemKey(block, title, publishedAt)}`,
       title,
       publishedAt,
+      ...(Number.isFinite(epNum) && epNum > 0 ? { episode: Math.round(epNum) } : {}),
       duration: parseDuration(text(block, 'duration')),
       url: enc.url,
       mimeType: enc.type,
