@@ -1,0 +1,1 @@
+Reproductor para servidores Navidrome, Jellyfin y Subsonic, y para tu música

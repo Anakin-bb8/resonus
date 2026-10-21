@@ -38,19 +38,23 @@ de Release con el APK adjunto, para que lo revises antes de publicarlo.
 1. Sube la versión en `app.json`: `expo.version` (nombre visible) y
    `expo.android.versionCode` (entero, debe **incrementarse** en cada release).
    Cuadra también el texto de la pantalla About si hace falta.
-2. Commitea, crea el tag y empújalo:
+2. Genera las notas para F-Droid con `pnpm fastlane:changelog`: salen de la
+   sección de esa versión en `CHANGELOG.md` y van a
+   `fastlane/metadata/android/en-US/changelogs/`. F-Droid las lee del commit
+   del tag, así que tienen que entrar antes de crearlo.
+3. Commitea, crea el tag y empújalo:
 
    ```sh
    git tag v0.1.0-beta
    git push origin v0.1.0-beta
    ```
 
-3. El workflow construye el APK y crea un **borrador** de Release con
+4. El workflow construye el APK y crea un **borrador** de Release con
    `resonus-v0.1.0-beta.apk`. El mismo tag dispara
    `.github/workflows/unsignedipa.yaml`, que adjunta `resonus-v0.1.0-beta.ipa`
    a ese mismo borrador. Ábrelo en la pestaña Releases, revisa las notas y
    pulsa **Publish**.
-4. Añade la versión a `Source.json` (ver abajo).
+5. Añade la versión a `Source.json` (ver abajo).
 
 ## `Source.json`: la fuente de iOS
 
