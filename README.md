@@ -41,6 +41,16 @@ Get the latest APK from the [Releases](https://github.com/juananzzz/resonus/rele
 
 Also available on [Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/juananzzz/resonus) for automatic updates.
 
+### F-Droid
+
+Resonus is not on F-Droid yet. Once it is, keep in mind that F-Droid builds
+the app itself and signs it with its own key, so the APK from GitHub (or
+Obtainium) and the one from F-Droid cannot update each other. Moving from one
+to the other means uninstalling first; Settings › About › Export settings
+keeps your settings to import afterwards. The F-Droid build is updated by
+F-Droid, a few days after each release here, so it has no update check of its
+own.
+
 ### iOS (experimental)
 
 Download the `.ipa` from the [Releases](https://github.com/juananzzz/resonus/releases/latest)
