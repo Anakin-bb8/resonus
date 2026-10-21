@@ -43,6 +43,7 @@
     "plugins": [
       "./plugins/withReleaseSigning",
       "./plugins/withAbiVersionCode",
+      "./plugins/withGradleMemory",
       "./plugins/withoutFontWeightAdjustment",
       "./plugins/withTrimmedPermissions",
       "./plugins/withAppLocales",
