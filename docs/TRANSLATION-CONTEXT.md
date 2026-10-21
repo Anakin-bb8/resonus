@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 819 of them.
+Every string the app can show, under the screen it shows up on. 821 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -1257,9 +1257,11 @@ you are actually typing into, which is easier than reading it here.
 | `Recently added` | A sort order, and a section: newest first (in Favorites, last favorited first) |
 | `Refresh` | Ask the server for this playlist again, in case it changed elsewhere. Also the button under suggested tracks to regenerate them, and on a podcast show the action that reads its feed again from the publisher |
 | `Remove` | Take something out of a list. Deleting for good is `Delete` |
+| `Remove “{name}” and its episodes from this device?` |  |
 | `Remove download` | Delete the downloaded file, keeping the song in the library |
 | `Remove download?` | Dialog title: delete the files of something already downloaded |
 | `Remove from favorites` | The same button when it is already a favourite, and the menu entry that takes a whole selection out |
+| `Remove from this device` | A show's ⋯ menu and the dialog it opens: takes the show, its episodes and its downloads off this phone. Nothing on any server |
 | `Removed from favorites` | Toast |
 | `Reorder` | Enter drag-to-reorder mode |
 | `Retry` | The button on an error message: try again. A verb |

@@ -289,6 +289,11 @@ export async function getChannel(id: string): Promise<PodcastChannel | undefined
   return Db.getChannel(scope(), id);
 }
 
+/** Takes a show off the device, with its episodes and hearts. */
+export async function removeChannel(id: string): Promise<void> {
+  await Db.removeChannel(scope(), id);
+}
+
 /** Every channel kept on the device, most recently published first. */
 export async function listChannels(): Promise<PodcastChannel[]> {
   return Db.listChannels(scope());

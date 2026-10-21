@@ -781,6 +781,8 @@
   "{n} episodes downloaded": "{n} episodes downloaded",
   "{n} episodes couldn't be downloaded": "{n} episodes couldn't be downloaded",
   "{n} episodes deleted": "{n} episodes deleted",
+  "Remove from this device": "Remove from this device",
+  "Remove “{name}” and its episodes from this device?": "Remove “{name}” and its episodes from this device?",
   "No episodes": "No episodes",
   "No episodes yet": "No episodes yet",
   "Couldn't reach any of your podcast feeds.": "Couldn't reach any of your podcast feeds.",

@@ -2,26 +2,30 @@
  * The ⋯ menu for a podcast show: a bottom sheet with the things worth doing to
  * a show from wherever it was opened — start it, deal it, put it into the queue,
  * download every episode, read it fresh from the publisher, open its website,
- * keep it as a favourite, and take the downloaded episodes off the phone. It
+ * keep it as a favourite, take the downloaded episodes off the phone, and take
+ * the show itself off it. It
  * mirrors the album's ⋯ sheet in the same order: what you do WITH the show first
  * (playback, queue), then what it takes to get it (download), then the way
- * around it (refresh, website), then where it lives (the heart), and the only
- * thing that takes something away last. It opens through `openPodcastMenu`, so
+ * around it (refresh, website), then where it lives (the heart), and the
+ * things that take something away last. It opens through `openPodcastMenu`, so
  * the same sheet opens from the show's own screen and from a long-press on a
  * show in the Library — which is why it plays at all: a row in the Library has
  * no play button, and this sheet is the way into one.
  */
 import { useEffect, useRef, useState } from 'react';
 import { Linking, Pressable, Text, View } from 'react-native';
+import { router, usePathname } from 'expo-router';
 
 import Icon from '@/components/Icon';
 import { Cover } from '@/components/Cover';
+import { Dialog } from './Dialog';
 import { SheetModal } from './SheetModal';
 import { COVER, coverArtUrl, type Song } from '@/api/data';
 import {
   episodeToSong,
   feedErrorMessage,
   refreshChannel,
+  removeChannel,
   listAllEpisodes,
   downloadedForChannel,
   podcastCover,
@@ -31,7 +35,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { isManualOffline } from '@/api/netGate';
 import { useT } from '@/i18n';
-import { invalidatePodcastCaches } from '@/lib/query';
+import { invalidatePodcastCaches, invalidatePodcastFavorites } from '@/lib/query';
 import { usePodcastFavoriteIds } from '@/lib/podcastFavorites';
 import { useDownloads } from '@/store/downloads';
 import { usePlayerStore } from '@/store/player';
@@ -61,6 +65,8 @@ export function PodcastMenuSheet() {
 
   const openRef = useRef<() => void>(() => {});
   const [target, setTarget] = useState<PodcastChannel | null>(null);
+  const [removing, setRemoving] = useState<PodcastChannel | null>(null);
+  const pathname = usePathname();
 
   useEffect(() => {
     openMenu = (channel) => {
@@ -98,7 +104,8 @@ export function PodcastMenuSheet() {
   );
 
   return (
-    <SheetModal openRef={openRef}>
+    <>
+      <SheetModal openRef={openRef}>
       {(close) => {
         if (!target) return null;
         const ch = target;
@@ -223,7 +230,7 @@ export function PodcastMenuSheet() {
               },
             )}
 
-            {/* Last, because it is the only thing here that takes something away.
+            {/* Near the end, because it takes something away.
                 Offered only while the show has something downloaded — the album
                 sheet hides its trash action exactly the same way — and it clears
                 every episode the record holds, not just the ones a loaded list
@@ -245,10 +252,50 @@ export function PodcastMenuSheet() {
                   })();
                 })
               : null}
+
+            {/* The show itself, with its episodes, hearts and files. Without
+                it a show opened once to have a look would stay, and be read
+                again on every refresh, for good. */}
+            {row('trash-outline', t('Remove from this device'), () => {
+              close();
+              setRemoving(ch);
+            })}
           </>
         );
       }}
-    </SheetModal>
+      </SheetModal>
+      <Dialog
+        visible={!!removing}
+        title={t('Remove from this device')}
+        message={t('Remove “{name}” and its episodes from this device?', {
+          name: removing?.title ?? '',
+        })}
+        confirmLabel={t('Remove')}
+        destructive
+        onCancel={() => setRemoving(null)}
+        onConfirm={() => {
+          const ch = removing;
+          setRemoving(null);
+          if (!ch) return;
+          // Off the show's own screen first: one opened from a feed address
+          // would otherwise read the feed again and file the show right back.
+          if (pathname.startsWith('/podcast/')) {
+            if (router.canGoBack()) router.back();
+            else router.replace('/podcasts');
+          }
+          void (async () => {
+            try {
+              await deletePodcastChannelDownloads(ch.id);
+              await removeChannel(ch.id);
+              invalidatePodcastCaches();
+              invalidatePodcastFavorites();
+            } catch {
+              toast(t("Couldn't complete the action"));
+            }
+          })();
+        }}
+      />
+    </>
   );
 }
 

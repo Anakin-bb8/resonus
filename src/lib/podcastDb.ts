@@ -381,6 +381,29 @@ export async function listFavoriteEpisodes(scope: string, limit = 100): Promise<
 }
 
 /**
+ * Takes a show off the device: its row, its episodes, its hearts, its download
+ * records and its picture. The downloaded files are unlinked by the caller
+ * first, from the same records this clears.
+ */
+export async function removeChannel(scope: string, id: string): Promise<void> {
+  const channel = await getChannel(scope, id);
+  const db = await podcastDb(scope);
+  await serialized(() =>
+    db.withTransactionAsync(async () => {
+      await db.runAsync('DELETE FROM podcast_channels WHERE id = ?', [id]);
+      await db.runAsync('DELETE FROM podcast_episodes WHERE channel_id = ?', [id]);
+      await db.runAsync('DELETE FROM podcast_favorites WHERE channel_id = ?', [id]);
+      await db.runAsync('DELETE FROM podcast_downloads WHERE channel_id = ?', [id]);
+    }),
+  );
+  if (channel?.imageUrl) {
+    await FileSystem.deleteAsync(podcastArtFile(scope, id, channel.imageUrl), {
+      idempotent: true,
+    }).catch(() => {});
+  }
+}
+
+/**
  * A downloaded episode: its file on disk, remembered so a cold start can hand
  * the same path back to the player. `channel_id` lets a whole show's downloads
  * be counted and cleared together.
