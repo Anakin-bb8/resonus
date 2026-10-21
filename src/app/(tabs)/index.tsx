@@ -181,7 +181,7 @@ function QuickGrid() {
           ? await getStoredChannel(decodeURIComponent(id))
           : await getChannel(id);
         if (ch?.imageUrl) {
-          const art = podcastCover(ch.id, ch.imageUrl);
+          const art = podcastCover(ch);
           if (art) out[href] = art;
         }
       }

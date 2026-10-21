@@ -123,7 +123,7 @@ export function PodcastMenuSheet() {
             <View style={styles.headerRow}>
               {ch.imageUrl ? (
                 <Cover
-                  uri={coverArtUrl(podcastCover(ch.id, ch.imageUrl), COVER.thumb)}
+                  uri={coverArtUrl(podcastCover(ch), COVER.thumb)}
                   size={48}
                 />
               ) : null}
@@ -191,7 +191,6 @@ export function PodcastMenuSheet() {
 
             {row('refresh', t('Refresh'), () => {
               close();
-              if (!ch.feedUrl) return;
               void refreshChannel(ch.feedUrl)
                 .then(() => invalidatePodcastCaches())
                 .catch((e) => toast(feedErrorMessage(t, e)));

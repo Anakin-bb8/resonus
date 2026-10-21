@@ -22,22 +22,20 @@ import type { PodcastChannel, PodcastEpisode, Song } from './subsonic';
 export type { PodcastChannel, PodcastEpisode } from './subsonic';
 export type { RecentEpisode } from '@/lib/podcastDb';
 
-/** A URL that answers, but not with a feed. */
-class NotAFeedError extends Error {}
-
-/** A feed that could not be reached at all. */
-class FeedUnreachableError extends Error {}
-
 /**
  * Why a feed read failed, as a stable code rather than a message. It is what
  * gets filed on the channel row, so the reason survives to be read back offline,
  * and so the surfaces that show it can split "you're offline" from "the feed
  * itself was bad" without sniffing at somebody's error text.
  */
-function feedErrorCode(e: unknown): 'offline' | 'notFeed' | 'http' {
-  if (e instanceof OfflineError) return 'offline';
-  if (e instanceof NotAFeedError) return 'notFeed';
-  return 'http';
+type FeedCode = 'offline' | 'notFeed' | 'http';
+
+class FeedError extends Error {
+  code: FeedCode;
+  constructor(code: FeedCode) {
+    super();
+    this.code = code;
+  }
 }
 
 /** The iTunes directory: search returns each show's feed URL. */
@@ -69,24 +67,62 @@ function scope(): string {
   return hashKey(profileScopeId());
 }
 
-async function get(url: string, accept: string): Promise<string> {
+/**
+ * A read of one address: the text that landed, the address it landed on (a page
+ * hops), and the validators the publisher offered to make the next read cheap.
+ * `notModified` says the publisher answered "unchanged" — there is no body, and
+ * what is stored is still what it lists.
+ */
+interface FeedRead {
+  url: string;
+  body: string;
+  etag?: string;
+  lastModified?: string;
+  notModified?: boolean;
+}
+
+/** The validators of the row under this exact address, sent back as they came. */
+interface FeedValidators {
+  etag?: string;
+  lastModified?: string;
+}
+
+async function get(url: string, accept: string, since?: FeedValidators): Promise<FeedRead> {
   // Podcast hosts are nobody's server: the publisher's feed and the iTunes
   // directory are as reachable when the app fell offline because the server
   // stopped answering as when it did not. Only a manual "use no network" says
   // no — the same split `netGate` draws for LRCLIB.
-  assertCanRequest(!isManualOffline());
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), TIMEOUT_MS);
   try {
+    assertCanRequest(!isManualOffline());
     const res = await fetch(url, {
-      headers: { accept, 'user-agent': 'Resonus' },
+      headers: {
+        accept,
+        'user-agent': 'Resonus',
+        // One validator only: a server handed both would answer 412 to a feed
+        // whose etag moved but whose date did not, and that is a lost show.
+        ...(since?.etag ? { 'if-none-match': since.etag } : {}),
+        ...(since && !since.etag && since.lastModified ? { 'if-modified-since': since.lastModified } : {}),
+      },
       signal: ctl.signal,
     });
-    if (!res.ok) throw new FeedUnreachableError(String(res.status));
-    return await res.text();
+    // Before `ok`: 304 is not a success code, and it is exactly the cheap
+    // answer a conditional read exists to get — no body, nothing to parse.
+    if (res.status === 304) return { url, body: '', notModified: true };
+    if (!res.ok) throw new FeedError('http');
+    const etag = res.headers.get('etag');
+    const modified = res.headers.get('last-modified');
+    return {
+      url,
+      body: await res.text(),
+      ...(etag ? { etag } : {}),
+      ...(modified ? { lastModified: modified } : {}),
+    };
   } catch (e) {
-    if (e instanceof NotAFeedError || e instanceof FeedUnreachableError) throw e;
-    throw new FeedUnreachableError(e instanceof Error ? e.message : String(e));
+    if (e instanceof OfflineError) throw new FeedError('offline');
+    if (e instanceof FeedError) throw e;
+    throw new FeedError('http');
   } finally {
     clearTimeout(timer);
   }
@@ -99,32 +135,35 @@ function feedId(feedUrl: string): string {
 
 function normalized(feedUrl: string): string {
   const trimmed = feedUrl.trim();
-  if (!trimmed) throw new NotAFeedError('empty');
+  if (!trimmed) throw new FeedError('notFeed');
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 }
 
 /**
- * The feed at a URL: the URL itself, or the `rel="alternate"` RSS/Atom link
- * of the page it points at. Capped at two hops so pages linking pages end.
+ * The feed behind a read: the read itself when its text is a feed, otherwise the
+ * `rel="alternate"` RSS/Atom link of the page it points at, followed up to two
+ * times so pages linking pages end. The text comes back with the address it was
+ * read from: the read that found the feed already holds it, and fetching that
+ * address again would ask a publisher for its whole feed twice.
  */
 const MAX_FEED_HOPS = 2;
 
-async function resolveFeed(url: string, body: string, hops = 0): Promise<string> {
-  if (looksLikeFeed(body)) return url;
-  if (hops >= MAX_FEED_HOPS) throw new NotAFeedError(url);
+async function resolveFeed(read: FeedRead, hops = 0): Promise<FeedRead> {
+  if (read.notModified || looksLikeFeed(read.body)) return read;
+  if (hops >= MAX_FEED_HOPS) throw new FeedError('notFeed');
 
-  for (const m of body.matchAll(/<link\b([^>]*)>/gi)) {
+  for (const m of read.body.matchAll(/<link\b([^>]*)>/gi)) {
     const attrs = m[1];
     const type = attrs.match(/type\s*=\s*["']?([^"'\s>]+)/i)?.[1] ?? '';
     if (!/rss|atom|xml/i.test(type)) continue;
     if (!/(^|\s)rel\s*=\s*["']?alternate/i.test(attrs)) continue;
     const href = attrs.match(/href\s*=\s*["']([^"']+)["']/i)?.[1];
     if (!href) continue;
-    const next = new URL(href, url).toString();
-    return resolveFeed(next, await get(next, FEED_ACCEPT), hops + 1);
+    const next = new URL(href, read.url).toString();
+    return resolveFeed(await get(next, FEED_ACCEPT), hops + 1);
   }
 
-  throw new NotAFeedError(url);
+  throw new FeedError('notFeed');
 }
 
 function looksLikeFeed(body: string): boolean {
@@ -149,26 +188,33 @@ function toEpisode(channelId: string, item: ParsedItem): PodcastEpisode {
  * A new show is only kept once its feed has been read. An existing one that
  * fails stays, with the error on its channel row, so it can still be seen and
  * removed.
+ *
+ * A read carries the validators the last one got back, so a publisher answering
+ * "unchanged" costs a header instead of its whole feed — an old feed body is
+ * 5 MB for a show like Radiolab, and it is re-read on opening past three days.
  */
 export async function refreshChannel(input: string): Promise<PodcastChannel> {
   const url = normalized(input);
   const s = scope();
 
-  let body: string;
-  let resolved = url;
+  // The row under this exact address. Its validators are the only ones safe to
+  // send back — a row whose feed moved answers another address — and its title
+  // is the fallback when the feed has none.
+  const stored = await Db.getChannel(s, feedId(url));
+  const since = stored && stored.feedUrl === url
+    ? { etag: stored.etag, lastModified: stored.lastModified }
+    : undefined;
+
+  let read: FeedRead;
   try {
-    body = await get(url, FEED_ACCEPT);
-    resolved = await resolveFeed(url, body);
-    // The feed found is what gets stored, so the next refresh skips the page.
-    if (resolved !== url) body = await get(resolved, FEED_ACCEPT);
+    read = await resolveFeed(await get(url, FEED_ACCEPT, since));
   } catch (e) {
     // Keyed by the stored feed, or a refresh would file the show twice.
-    const existing = await Db.getChannel(s, feedId(resolved));
-    if (!existing) throw e;
+    if (!stored) throw e;
     await Db.saveChannel(s, {
-      ...existing,
-      feedUrl: resolved,
-      error: feedErrorCode(e),
+      ...stored,
+      feedUrl: url,
+      error: e instanceof FeedError ? e.code : 'http',
       refreshedAt: Date.now(),
     });
     // The lists show the error a feed read wrote down, so they ask again —
@@ -177,9 +223,20 @@ export async function refreshChannel(input: string): Promise<PodcastChannel> {
     throw e;
   }
 
-  const id = feedId(resolved);
-  const existing = await Db.getChannel(s, id);
-  const feed = parseFeed(body, id);
+  // The publisher answered "unchanged": what is stored is what it lists now, so
+  // the episodes, the downloads and the picture stay and only the clock moves.
+  // Only reachable when a row under this address was read conditionally.
+  if (read.notModified && stored) {
+    const kept: PodcastChannel = { ...stored, refreshedAt: Date.now() };
+    await Db.saveChannel(s, kept);
+    invalidatePodcastLists();
+    return kept;
+  }
+
+  // The feed found is what gets stored, so the next refresh skips the page.
+  const id = feedId(read.url);
+  const existing = read.url === url ? stored : await Db.getChannel(s, id);
+  const feed = parseFeed(read.body, id);
   const episodes = sortEpisodes(feed.items).map((item) => toEpisode(id, item));
   const dates = episodes
     .map((e) => e.publishedAt)
@@ -187,8 +244,8 @@ export async function refreshChannel(input: string): Promise<PodcastChannel> {
 
   const channel: PodcastChannel = {
     id,
-    title: feed.title?.trim() || existing?.title || url,
-    feedUrl: resolved,
+    title: feed.title?.trim() || existing?.title || read.url,
+    feedUrl: read.url,
     refreshedAt: Date.now(),
     episodeCount: episodes.length,
     lastPublishedAt: dates.length > 0 ? Math.max(...dates) : existing?.lastPublishedAt,
@@ -197,14 +254,18 @@ export async function refreshChannel(input: string): Promise<PodcastChannel> {
   if (feed.author) channel.author = feed.author;
   if (feed.imageUrl) channel.imageUrl = feed.imageUrl;
   if (feed.siteUrl) channel.siteUrl = feed.siteUrl;
+  // The next read asks with these, and gets a header back instead of the body.
+  if (read.etag) channel.etag = read.etag;
+  if (read.lastModified) channel.lastModified = read.lastModified;
+
+  // The picture belongs to the read that just happened: filing it here is what
+  // keeps a kept show's art drawable when manual offline says no to fetching and
+  // expo-image's cache has evicted the address. An earlier read that already
+  // filed this one is not asked for its bytes again.
+  if (channel.imageUrl) channel.artFile = await Db.savePodcastArt(s, id, channel.imageUrl, existing?.artFile);
 
   await Db.saveChannel(s, channel);
   await Db.replaceEpisodes(s, id, episodes);
-  await Db.addFeed(s, resolved);
-  // The picture belongs to the read that just happened: filing it here is
-  // what keeps a kept show's art drawable when manual offline says no to
-  // fetching and expo-image's cache has evicted the address.
-  if (channel.imageUrl) void Db.savePodcastArt(s, channel.id, channel.imageUrl).catch(() => {});
   // A show that was never on the device is in the lists now, and one that was
   // may have a new episode count or a new picture: the browser, Home's shelf
   // and the favorite lists ask again. The show's own screen is the query that
@@ -213,13 +274,10 @@ export async function refreshChannel(input: string): Promise<PodcastChannel> {
   return channel;
 }
 
-/** The show's picture: the file on the phone if it is there, the feed's
- *  address if not. */
-export function podcastCover(
-  channelId: string,
-  imageUrl: string | undefined,
-): string | undefined {
-  return imageUrl ? Db.localPodcastArt(scope(), channelId, imageUrl) ?? imageUrl : undefined;
+/** The show's picture: the file the read filed for it, else the feed's address.
+ * Synchronous because whoever draws a cover asks while rendering. */
+export function podcastCover(channel: PodcastChannel): string | undefined {
+  return channel.artFile ?? channel.imageUrl;
 }
 
 /** The stored channel by its feed address, before it is opened. */
@@ -274,7 +332,7 @@ export async function togglePodcastHeart(
 /** The one answer to a feed that would not load: offline says so,
  *  otherwise it is the publisher's side. One message, one locale key. */
 export function feedErrorMessage(translate: (key: string) => string, e: unknown): string {
-  return feedErrorCode(e) === 'offline'
+  return e instanceof FeedError && e.code === 'offline'
     ? translate("You're offline")
     : translate("Couldn't read this feed");
 }
@@ -350,7 +408,10 @@ export function episodeToSong(episode: PodcastEpisode, channel: PodcastChannel):
     // The show it belongs to: the episode's menu offers "Go to Podcast".
     podcastChannelId: channel.id,
   };
-  if (channel.imageUrl) song.coverArt = channel.imageUrl;
+  // The picture the read filed, when it filed one: the player draws this
+  // address, and offline only the file is still there.
+  const cover = podcastCover(channel);
+  if (cover) song.coverArt = cover;
   if (episode.duration !== undefined) song.duration = episode.duration;
   if (episode.publishedAt !== undefined) song.addedAt = episode.publishedAt;
   const suffix = episode.mimeType ? SUFFIXES[episode.mimeType.toLowerCase()] : undefined;
@@ -397,7 +458,7 @@ export async function search(term: string): Promise<PodcastSearchResult[]> {
   const q = term.trim();
   if (!q) return [];
   const url = `${ITUNES_SEARCH}?media=podcast&entity=podcast&limit=${SEARCH_LIMIT}&term=${encodeURIComponent(q)}`;
-  const body = await get(url, 'application/json');
+  const { body } = await get(url, 'application/json');
   let parsed: { results?: iTunesRow[] };
   try {
     parsed = JSON.parse(body);
@@ -444,7 +505,7 @@ function iTunesResults(results: iTunesRow[]): PodcastSearchResult[] {
  * lookup endpoint to get the feed back.
  */
 export async function charts(): Promise<PodcastSearchResult[]> {
-  const body = await get(ITUNES_CHARTS, 'application/json');
+  const { body } = await get(ITUNES_CHARTS, 'application/json');
   let parsed: {
     feed?: {
       entry?: {
@@ -467,7 +528,7 @@ export async function charts(): Promise<PodcastSearchResult[]> {
     if (ids.length >= CHART_LIMIT) break;
   }
   if (ids.length === 0) return [];
-  const lookupBody = await get(
+  const { body: lookupBody } = await get(
     `${ITUNES_LOOKUP}?id=${ids.join(',')}&entity=podcast`,
     'application/json',
   );

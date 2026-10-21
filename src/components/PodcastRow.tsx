@@ -92,7 +92,7 @@ export function PodcastRow({ channel, episode, sub, pinned }: Props) {
       }
     >
       <Cover
-        uri={coverArtUrl(podcastCover(channel.id, channel.imageUrl), COVER.thumb)}
+        uri={coverArtUrl(podcastCover(channel), COVER.thumb)}
         size={56}
         placeholderIcon="headset-outline"
       />

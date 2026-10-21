@@ -169,7 +169,7 @@ export default function PodcastScreen() {
         subtitle={ch.author}
         description={showDescription ? ch.description : undefined}
         meta={meta}
-        coverUri={coverArtUrl(podcastCover(ch.id, ch.imageUrl), COVER.card)}
+        coverUri={coverArtUrl(podcastCover(ch), COVER.card)}
         songs={songs}
         currentId={playingId}
         // The heart marks the show as a favorite — the user's own heart, kept on

@@ -1930,14 +1930,23 @@ export interface PodcastChannel {
   imageUrl?: string;
   /** The channel's own web page, not the feed file. */
   siteUrl?: string;
-  /** The feed this was read from. Absent for a channel read another way. */
-  feedUrl?: string;
+  /** The feed this was read from, and the identity of the show: the id is a
+   *  hash of it. A show is only ever opened through that address. */
+  feedUrl: string;
   /** How many episodes are stored. */
   episodeCount?: number;
   /** When the newest stored episode was published. */
   lastPublishedAt?: number;
-  /** When the feed was last read. */
+  /** When the feed was last read — a re-read is asked for past three days. */
   refreshedAt?: number;
+  /** What the last read got back to re-ask for it: sent again as
+   *  `if-none-match`/`if-modified-since`, so a feed that answers "unchanged"
+   *  costs a header, not its whole body. */
+  etag?: string;
+  lastModified?: string;
+  /** The show's picture on disk, filed by the read that brought the address.
+   *  Drawn instead of `imageUrl`, so manual offline still has a file. */
+  artFile?: string;
   /** Why the last read failed, if it did. */
   error?: string;
 }

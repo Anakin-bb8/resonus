@@ -31,7 +31,7 @@ export const PodcastEpisodeCard = memo(function PodcastEpisodeCard({ item, width
   // downloaded song, so a downloaded episode reads as offline-playable.
   const downloaded = useDownloads((s) => !!s.files[episode.id]);
   // The show's artwork: episode art is often missing or the same image.
-  const cover = coverArtUrl(podcastCover(channel.id, channel.imageUrl), COVER.card);
+  const cover = coverArtUrl(podcastCover(channel), COVER.card);
 
   return (
     <Pressable

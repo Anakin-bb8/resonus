@@ -3,11 +3,14 @@
  * download catalog, which can be emptied for space; a show the user opened is
  * theirs, so it lives here and not in a disposable cache.
  *
- * `podcast_feeds` is what gets refreshed; `podcast_channels` is what was read
- * from each feed, including the error when the last read failed. `podcast_favorites`
- * is the user's own hearts: a row is a favorited channel (`kind = 'channel'`,
- * `channel_id` its own id) or a favorited episode (`kind = 'episode'`, `channel_id`
- * the show it belongs to) — `channel_id` names the show either way.
+ * `podcast_channels` is both what gets refreshed and what was read from each
+ * feed, including the error when the last read failed and the validators that
+ * make the next read cheap. `podcast_episodes` is what the last read listed,
+ * `podcast_favorites` the user's own hearts: a row is a favorited channel
+ * (`kind = 'channel'`, `channel_id` its own id) or a favorited episode
+ * (`kind = 'episode'`, `channel_id` the show it belongs to) — `channel_id`
+ * names the show either way. A column only earns existing when SQL reads it;
+ * everything else is the `data` blob, which is what the getters hand back.
  */
 import * as FileSystem from 'expo-file-system/legacy';
 import * as SQLite from 'expo-sqlite';
@@ -21,10 +24,8 @@ PRAGMA journal_mode = WAL;
 PRAGMA journal_size_limit = 524288;
 CREATE TABLE IF NOT EXISTS podcast_channels (
   id TEXT PRIMARY KEY NOT NULL,
-  feed_url TEXT,
+  feed_url TEXT NOT NULL,
   title TEXT NOT NULL,
-  image_url TEXT,
-  episode_count INTEGER NOT NULL DEFAULT 0,
   last_published_at INTEGER,
   refreshed_at INTEGER,
   data TEXT NOT NULL
@@ -33,16 +34,11 @@ CREATE TABLE IF NOT EXISTS podcast_episodes (
   id TEXT PRIMARY KEY NOT NULL,
   channel_id TEXT NOT NULL,
   published_at INTEGER,
-  duration INTEGER,
   url TEXT,
   data TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS podcast_episodes_channel
   ON podcast_episodes(channel_id, published_at DESC);
-CREATE TABLE IF NOT EXISTS podcast_feeds (
-  feed_url TEXT PRIMARY KEY NOT NULL,
-  added_at INTEGER NOT NULL
-);
 CREATE TABLE IF NOT EXISTS podcast_favorites (
   id TEXT PRIMARY KEY NOT NULL,
   kind TEXT NOT NULL,
@@ -79,55 +75,36 @@ function podcastArtFile(scope: string, channelId: string, imageUrl: string): str
   return `${podcastDbDir(scope)}art/${hashKey(channelId)}.${urlExtension(imageUrl, 'jpg')}`;
 }
 
-// The pictures filed for each opened profile, read from the folder once when
-// the database opens: the SDK has no synchronous existence check, and whoever
-// draws a cover asks this while rendering.
-const artFiles = new Map<string, Set<string>>();
-
-/** The saved picture when it is there — synchronous, one Set lookup. */
-export function localPodcastArt(
-  scope: string,
-  channelId: string,
-  imageUrl: string,
-): string | undefined {
-  const dir = podcastDbDir(scope);
-  const file = podcastArtFile(scope, channelId, imageUrl);
-  const seen = artFiles.get(dir);
-  return seen && seen.has(file.slice(dir.length)) ? file : undefined;
-}
-
-/** Files a show's picture, once: the feed read that brought the address
- *  brings the bytes too, so manual offline has a real file to draw and
- *  expo-image's evictable cache is no longer a promise. */
+/** Files a show's picture, once: the feed read that brought the address brings
+ * the bytes too, so manual offline has a real file to draw and expo-image's
+ * evictable cache is no longer a promise. `known` is what an earlier read filed
+ * for the same show, remembered on its row: one stat says whether those bytes
+ * are still on disk, which is why the folder no longer has to be listed every
+ * time the database opens. The path is what the row remembers, so drawing the
+ * cover stays synchronous. A picture that will not land is not a failed read:
+ * the show is already on the device, so this answers nothing. */
 export async function savePodcastArt(
   scope: string,
   channelId: string,
   imageUrl: string,
-): Promise<void> {
+  known?: string,
+): Promise<string | undefined> {
   const dir = podcastDbDir(scope);
   const file = podcastArtFile(scope, channelId, imageUrl);
-  const seen = artFiles.get(dir);
-  if (seen && seen.has(file.slice(dir.length))) return;
+  if (known === file && (await FileSystem.getInfoAsync(file)).exists) return file;
   await FileSystem.makeDirectoryAsync(`${dir}art/`, { intermediates: true }).catch(() => {});
-  const res = await FileSystem.downloadAsync(imageUrl, file);
+  const res = await FileSystem.downloadAsync(imageUrl, file).catch(() => undefined);
   if (!res || res.status !== 200) {
     await FileSystem.deleteAsync(file, { idempotent: true }).catch(() => {});
-    return;
+    return undefined;
   }
-  seen?.add(file.slice(dir.length));
+  return file;
 }
 
 async function openDb(dir: string): Promise<SQLite.SQLiteDatabase> {
   await FileSystem.makeDirectoryAsync(dir, { intermediates: true }).catch(() => {});
   const db = await SQLite.openDatabaseAsync('podcasts.db', {}, dir.replace(/^file:\/\//, ''));
   await db.execAsync(SCHEMA);
-  // Pictures filed in a previous session, listed once here so a reader can
-  // prefer them without an existence check (the SDK has none).
-  try {
-    artFiles.set(dir, new Set(await FileSystem.readDirectoryAsync(`${dir}art/`)));
-  } catch {
-    artFiles.set(dir, new Set());
-  }
   return db;
 }
 
@@ -170,14 +147,12 @@ export async function saveChannel(scope: string, channel: PodcastChannel): Promi
   await serialized(() =>
     db.runAsync(
       `INSERT OR REPLACE INTO podcast_channels
-         (id, feed_url, title, image_url, episode_count, last_published_at, refreshed_at, data)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+         (id, feed_url, title, last_published_at, refreshed_at, data)
+       VALUES (?, ?, ?, ?, ?, ?)`,
       [
         channel.id,
-        channel.feedUrl ?? null,
+        channel.feedUrl,
         channel.title,
-        channel.imageUrl ?? null,
-        channel.episodeCount ?? 0,
         channel.lastPublishedAt ?? null,
         channel.refreshedAt ?? null,
         JSON.stringify(channel),
@@ -208,13 +183,12 @@ export async function replaceEpisodes(
       for (const e of episodes) {
         await db.runAsync(
           `INSERT OR REPLACE INTO podcast_episodes
-             (id, channel_id, published_at, duration, url, data)
-           VALUES (?, ?, ?, ?, ?, ?)`,
+             (id, channel_id, published_at, url, data)
+           VALUES (?, ?, ?, ?, ?)`,
           [
             e.id,
             e.channelId,
             e.publishedAt ?? null,
-            e.duration ?? null,
             e.url ?? null,
             JSON.stringify(e),
           ],
@@ -319,22 +293,15 @@ export async function listRecentEpisodes(scope: string, limit = 20): Promise<Rec
   }));
 }
 
-/** Remembers a feed; one already there keeps its place in the order. */
-export async function addFeed(scope: string, feedUrl: string): Promise<void> {
-  const db = await podcastDb(scope);
-  await serialized(() =>
-    db.runAsync('INSERT OR IGNORE INTO podcast_feeds (feed_url, added_at) VALUES (?, ?)', [
-      feedUrl,
-      Date.now(),
-    ]),
-  );
-}
-
-/** Every feed kept on the device, oldest first. */
+/** Every feed kept on the device, the one least recently read first. The
+ * channels are the feeds — a show is only filed once its feed has been read, and
+ * a read that failed keeps the address it tried — so a refresh-all has nothing
+ * else to ask for. A row written before this change can have no address, and
+ * there is nothing to read for it. */
 export async function listFeeds(scope: string): Promise<string[]> {
   const db = await podcastDb(scope);
   const rows = await db.getAllAsync<{ feed_url: string }>(
-    'SELECT feed_url FROM podcast_feeds ORDER BY added_at ASC',
+    'SELECT feed_url FROM podcast_channels WHERE feed_url IS NOT NULL ORDER BY COALESCE(refreshed_at, 0) ASC',
   );
   return rows.map((r) => r.feed_url);
 }

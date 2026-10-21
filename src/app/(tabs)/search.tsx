@@ -525,7 +525,7 @@ export default function SearchScreen() {
                   }
                 >
                   <Cover
-                    uri={coverArtUrl(podcastCover(c.id, c.imageUrl) ?? c.id, COVER.thumb)}
+                    uri={coverArtUrl(podcastCover(c) ?? c.id, COVER.thumb)}
                     size={48}
                     placeholderIcon="headset-outline"
                   />
