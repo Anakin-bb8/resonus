@@ -35,6 +35,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { isManualOffline } from '@/api/netGate';
 import { useT } from '@/i18n';
+import { formatAge } from '@/lib/format';
 import { invalidatePodcastCaches, invalidatePodcastFavorites } from '@/lib/query';
 import { usePodcastFavoriteIds } from '@/lib/podcastFavorites';
 import { useDownloads } from '@/store/downloads';
@@ -196,12 +197,24 @@ export function PodcastMenuSheet() {
               })();
             })}
 
-            {row('refresh', t('Refresh'), () => {
-              close();
-              void refreshChannel(ch.feedUrl)
-                .then(() => invalidatePodcastCaches())
-                .catch((e) => toast(feedErrorMessage(t, e)));
-            })}
+            {row(
+              'refresh',
+              // The label answers before the tap: the last read is filed with the
+              // episodes, so the sheet can say what is behind it and let the eye
+              // decide whether it is worth pressing at all. The clock is the
+              // moment the writes happened, and one coarse step is enough — the
+              // sheet has the tap, it has no use for a stopwatch. A show whose
+              // clock is missing (never written) keeps the plain word.
+              ch.refreshedAt === undefined
+                ? t('Refresh')
+                : t('Refresh ({when} ago)', { when: formatAge(ch.refreshedAt) }),
+              () => {
+                close();
+                void refreshChannel(ch.feedUrl)
+                  .then(() => invalidatePodcastCaches())
+                  .catch((e) => toast(feedErrorMessage(t, e)));
+              },
+            )}
 
             {siteUrl
               ? row('link-outline', t('Website'), () => {

@@ -31,6 +31,27 @@ export function formatTotalDuration(totalSeconds: number | undefined): string {
   return parts.join(' ');
 }
 
+/**
+ * How long ago a moment was, in the one unit that still says something: "42 min",
+ *  "2 h", "5 d". A coarse step rather than a real one because the place it is
+ *  read in is a choice: the ⋯ sheet puts it in the refresh action's label, so it
+ *  says what is behind the tap, and nobody decides that from "5 h 12 min 3 s".
+ *  The unit words are the ones `formatTotalDuration` already draws, so nothing
+ *  here needs translating, and past a month it keeps counting days — a bigger
+ *  unit would need a word no language has been given. A moment in the future
+ *  (a clock that went backwards) reads 0.
+ */
+export function formatAge(ts: number | undefined): string {
+  if (ts === undefined || !Number.isFinite(ts)) return '';
+  const ms = Date.now() - ts;
+  if (ms < 60_000) return ms > 0 ? '< 1 min' : '0 min';
+  const minutes = Math.floor(ms / 60_000);
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} h`;
+  return `${Math.floor(hours / 24)} d`;
+}
+
 export function formatGroupedDeviceLabel(names: string[]): string {
   const unique = Array.from(
     new Set(

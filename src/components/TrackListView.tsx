@@ -173,12 +173,13 @@ interface Props {
    */
   podcastFavIds?: Set<string>;
   /**
-   * Podcast episodes on the show's screen: per-episode description and publish
-   *  date, keyed by episode id, so each row can show them (see `TrackRow`'s
-   *  `episode`). The screen builds it once from the episodes it already holds;
-   *  absent for albums and playlists, whose rows keep the artist line.
+   * Podcast episodes on the show's screen: per-episode description, publish
+   *  date and whether the episode arrived with the show's last sync, keyed by
+   *  episode id, so each row can show them (see `TrackRow`'s `episode`). The
+   *  screen builds it once from the episodes it already holds; absent for
+   *  albums and playlists, whose rows keep the artist line.
    */
-  episodeInfo?: Map<string, { description?: string; publishedAt?: number }>;
+  episodeInfo?: Map<string, { description?: string; publishedAt?: number; fresh: boolean }>;
   /** Offline download button (album/playlist header). */
   download?: {
     status: 'none' | 'active' | 'done';

@@ -23,7 +23,7 @@ import { useSettings, type SwipeAction } from '@/store/settings';
 import { haptic } from '@/lib/haptics';
 import { useToast } from '@/store/toast';
 import { useT } from '@/i18n';
-import { colors, DIM_OPACITY, fontSize, spacing, themed, useTheme } from '@/theme';
+import { colors, DIM_OPACITY, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 import { Cover, useCoverRadius } from './Cover';
 import { usePressFeedback } from '@/hooks/usePressFeedback';
 import { bump } from '@/lib/perfLog';
@@ -54,14 +54,16 @@ interface Props {
    */
   podcastFavIds?: Set<string>;
   /**
-   * Podcast episode on the show's screen: its description and publish date.
-   * When present the row drops the artist line — the show is already the
-   * screen's title, so repeating it under every episode says nothing — and
-   * instead shows the title over two lines, the full description, and a line
-   * with the duration and the date: the words a listener needs to pick an
-   * episode out of a feed. Absent for albums, playlists and search.
+   * Podcast episode on the show's screen: its description, its publish date and
+   *  whether it came over with the show's last sync. When present the row drops
+   *  the artist line — the show is already the screen's title, so repeating it
+   *  under every episode says nothing — and instead shows the title over two
+   *  lines, the full description, and a line with the duration and the date,
+   *  wearing the dot and the word "new" behind that date when the episode is
+   *  one of the new arrivals: the words a listener needs to pick an episode out
+   *  of a feed. Absent for albums, playlists and search.
    */
-  episode?: { description?: string; publishedAt?: number };
+  episode?: { description?: string; publishedAt?: number; fresh?: boolean };
   /** Shows the ⋯ menu button (default true; works offline too). */
   showMenu?: boolean;
   /** Shows the mini album cover on the left (Spotify style). */
@@ -373,7 +375,7 @@ function TrackRowBase({
                 ) : null}
               </View>
             ) : null}
-            {downloaded || episodeMeta ? (
+            {downloaded || episodeMeta || episode.fresh ? (
               <View style={styles.subRow}>
                 {downloaded ? (
                   <Icon name="arrow-down-circle" size={13} color={colors.accent} />
@@ -382,6 +384,22 @@ function TrackRowBase({
                   <Text style={styles.episodeMeta} numberOfLines={1}>
                     {episodeMeta}
                   </Text>
+                ) : null}
+                {episode.fresh ? (
+                  <>
+                    {/* The mark an episode wears when it came over with the show's
+                        last sync — read from the device's own first sighting, not
+                        from the date beside it, which a publisher can rewrite. The
+                        dot is drawn rather than an icon: it is a dot of the app's
+                        own accent, and an icon would have to be cut into the font
+                        for it. The word a step brighter than the metadata behind
+                        it, so the mark reads as the row's own and not as more
+                        furniture on it. */}
+                    <View style={styles.episodeNewMark} />
+                    <Text style={styles.episodeNew} numberOfLines={1}>
+                      {t('New')}
+                    </Text>
+                  </>
                 ) : null}
               </View>
             ) : null}
@@ -638,6 +656,24 @@ const styles = themed((colors) => ({
     color: colors.textMuted,
     fontSize: fontSize.xs,
     flexShrink: 1,
+  },
+  // The word behind the dot that marks an episode as a new arrival: a step
+  // above the metadata line it follows, so the mark reads as the row's own and
+  // not as more of its furniture. The dot carries the accent; this only has to
+  // say what the dot means.
+  episodeNew: {
+    color: colors.textSecondary,
+    fontSize: fontSize.xs,
+    flexShrink: 1,
+  },
+  // The dot itself: the app's accent, drawn as a circle rather than an icon, so
+  // a name the icon font was never cut for cannot answer blank. One gap step
+  // across, which is what the row's own gap puts between it and the word.
+  episodeNewMark: {
+    width: spacing.sm,
+    height: spacing.sm,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accent,
   },
   duration: {
     color: colors.textMuted,

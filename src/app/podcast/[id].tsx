@@ -124,12 +124,22 @@ export default function PodcastScreen() {
     ]
       .filter(Boolean)
       .join(' · ');
-    // What each episode row shows under its title: the show notes and the
-    // publish date. Built here from the episodes the screen already holds, so
-    // the row never has to ask per row, and its identity is stable across
-    // repaints (the row's memo keys on it).
-    const info = new Map<string, { description?: string; publishedAt?: number }>(
-      list.map((e) => [e.id, { description: e.description, publishedAt: e.publishedAt }]),
+    // What each episode row shows under its title: the show notes, the publish
+    // date, and whether the episode came over with the show's last sync that
+    // landed something — the mark a row wears, read from the device's own
+    // first sighting rather than from the date. Built here from the episodes the
+    // screen already holds, so the row never has to ask per row, and its
+    // identity is stable across repaints (the row's memo keys on it).
+    const since = channel.newSinceAt;
+    const info = new Map<string, { description?: string; publishedAt?: number; fresh: boolean }>(
+      list.map((e) => [
+        e.id,
+        {
+          description: e.description,
+          publishedAt: e.publishedAt,
+          fresh: since !== undefined && (e.firstSeenAt ?? 0) >= since,
+        },
+      ]),
     );
     return { songs: shown, meta: line, episodeInfo: info };
   }, [data.data, hideUnavailable, lang]);

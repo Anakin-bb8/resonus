@@ -1939,6 +1939,13 @@ export interface PodcastChannel {
   lastPublishedAt?: number;
   /** When the feed was last read — a re-read is asked for past three days. */
   refreshedAt?: number;
+  /** When a read first landed an episode of this show. The episodes whose own
+   *  `firstSeenAt` reaches this are the ones the row marks as new: the moments
+   *  belong to the same read, so "new" means "came over with the last sync that
+   *  landed something". Deliberately not set by the read that files the show
+   *  for the first time — a whole feed arriving at once would wear a badge
+   *  under every title and say nothing. */
+  newSinceAt?: number;
   /** What the last read got back to re-ask for it: sent again as
    *  `if-none-match`/`if-modified-since`, so a feed that answers "unchanged"
    *  costs a header, not its whole body. */
@@ -1962,6 +1969,12 @@ export interface PodcastEpisode {
   publishedAt?: number;
   /** The feed's own episode number (`itunes:episode`), when it gave one. */
   episode?: number;
+  /** When a read first landed this episode, in ms since the epoch — the
+   *  device's own first sighting, which is not the same moment as `publishedAt`:
+   *  a publisher re-dates an old item, back-catalogs a season, or ships no date,
+   *  and the row then prints a date that says nothing about when the episode
+   *  appeared. The row that wears the "new" mark reads this, not the date. */
+  firstSeenAt?: number;
   /** Seconds. */
   duration?: number;
   /** The enclosure, played as `Song.url`. */
