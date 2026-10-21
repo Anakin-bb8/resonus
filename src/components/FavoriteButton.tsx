@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, type GestureResponderEvent } from 'react-native';
 
 import { star, unstar, type StarType } from '@/api/data';
+import { togglePodcastHeart } from '@/api/podcasts';
 import { applyStarChange, resyncFavorites, unstarWithUndo } from '@/lib/favoritesCache';
 import { haptic } from '@/lib/haptics';
 import { useAuthStore } from '@/store/auth';
@@ -19,9 +20,17 @@ interface Props {
   size?: number;
   /** Song lists only: take the favourite off behind an «Undo» toast (#98). */
   undo?: boolean;
+  /**
+   * Podcasts keep their hearts in SQLite, not the server's starring. The heart
+   * behaves the same — it lights, it is guarded against a double tap, it toasts
+   * — but the tap writes the device's own favorite and refreshes the podcast
+   * lists instead of asking a server. `kind` says whether the id is a show or
+   * one of its episodes; `channelId` is the show either way.
+   */
+  podcast?: { kind: 'channel' | 'episode'; channelId: string };
 }
 
-export function FavoriteButton({ id, type = 'song', starred, size = 22, undo }: Props) {
+export function FavoriteButton({ id, type = 'song', starred, size = 22, undo, podcast }: Props) {
   const auth = useAuthStore((s) => s.auth);
   const offline = useAuthStore((s) => s.offline);
   const t = useT();
@@ -38,7 +47,27 @@ export function FavoriteButton({ id, type = 'song', starred, size = 22, undo }: 
 
   async function toggle(e?: GestureResponderEvent) {
     e?.stopPropagation();
-    if ((!auth && !offline) || busy) return;
+    if (busy) return;
+    // Podcasts: the heart is the device's own, filed in SQLite. Same feel —
+    // optimistic light, a guard against a double tap, a toast — but the tap
+    // writes the SQLite favorite and refreshes the podcast lists, no server.
+    if (podcast) {
+      haptic('medium');
+      const nextFav = !fav;
+      setFav(nextFav); // optimistic update
+      setBusy(true);
+      try {
+        await togglePodcastHeart(id, podcast.kind, podcast.channelId);
+        toast(nextFav ? t('Added to favorites') : t('Removed from favorites'));
+      } catch {
+        setFav(!nextFav); // revert on failure
+        toast(t("Couldn't complete the action"));
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    if (!auth && !offline) return;
     haptic('medium');
     // In a song list the heart is small and sits where a finger scrolls, so
     // taking a favourite off waits behind «Undo» and nothing is asked of the

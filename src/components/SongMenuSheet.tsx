@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useBottomSheetAnim } from '@/hooks/useBottomSheetAnim';
 import { useScreenSize } from '@/hooks/useScreenSize';
+import { usePodcastFavoriteIds } from '@/lib/podcastFavorites';
 import {
   addToPlaylist,
   coverArtUrl,
@@ -37,6 +38,8 @@ import {
 import { useCanShare } from '@/hooks/useCanShare';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { applyStarChange, resyncFavorites } from '@/lib/favoritesCache';
+import { heartedSong, togglePodcastHeart } from '@/api/podcasts';
+import { isManualOffline } from '@/api/netGate';
 import { artistTargets } from '@/lib/artistNav';
 import { pushOrReplace } from '@/lib/pushOrReplace';
 import { exportToFolder, shareSongFile } from '@/lib/exportSong';
@@ -166,9 +169,15 @@ export function SongMenuSheet() {
   const dlBitRate = useDownloads((s) => (song ? s.dlBitRates[song.id] : undefined));
   const downloadSong = useDownloads((s) => s.downloadSong);
   const deleteDownloads = useDownloads((s) => s.deleteSongs);
+  // A podcast episode downloads straight from its enclosure, and its file is
+  // cleared from the podcast record rather than a server catalog.
+  const downloadPodcastEpisode = useDownloads((s) => s.downloadPodcastEpisode);
+  const deletePodcastDownloads = useDownloads((s) => s.deletePodcastDownloads);
   const openArtistPicker = useArtistPicker((s) => s.open);
   const favIds = useFavoriteIds(!!song);
-  const favorited = song ? (favIds ? favIds.has(song.id) : !!song.starred) : false;
+  // A podcast episode's heart is the device's own, filed in SQLite.
+  const podcastFav = usePodcastFavoriteIds(!!song?.podcastChannelId);
+  const favorited = song ? heartedSong(song, podcastFav, favIds) : false;
 
   const [mode, setMode] = useState<'actions' | 'playlists' | 'sleep' | 'rating' | 'export'>(
     'actions',
@@ -541,17 +550,24 @@ export function SongMenuSheet() {
                   scrollEventThrottle={16}
                   onScroll={(e) => setAtTop(e.nativeEvent.contentOffset.y <= 0)}
                 >
-                  <Action
-                    icon="add-circle-outline"
-                    label={t('Add to a playlist')}
-                    onPress={() => setMode('playlists')}
-                  />
-                  {context ? (
-                    <Action
-                      icon="remove-circle-outline"
-                      label={t('Remove from playlist')}
-                      onPress={removeFromList}
-                    />
+                  {/* A podcast episode belongs to no playlist: its id means
+                      nothing to the server, so the playlist actions are not
+                      offered at all — an episode has no server behind it. */}
+                  {!song.podcastChannelId ? (
+                    <>
+                      <Action
+                        icon="add-circle-outline"
+                        label={t('Add to a playlist')}
+                        onPress={() => setMode('playlists')}
+                      />
+                      {context ? (
+                        <Action
+                          icon="remove-circle-outline"
+                          label={t('Remove from playlist')}
+                          onPress={removeFromList}
+                        />
+                      ) : null}
+                    </>
                   ) : null}
                   <Action
                     icon="play-forward-outline"
@@ -575,6 +591,14 @@ export function SongMenuSheet() {
                     icon={favorited ? 'heart' : 'heart-outline'}
                     label={favorited ? t('Remove from favorites') : t('Add to favorites')}
                     onPress={() => {
+                      if (song.podcastChannelId) {
+                        // The device's own SQLite favorite, not the server's.
+                        void togglePodcastHeart(song.id, 'episode', song.podcastChannelId)
+                          .catch(() => toast(t("Couldn't complete the action")));
+                        toast(favorited ? t('Removed from favorites') : t('Added to favorites'));
+                        close();
+                        return;
+                      }
                       (favorited ? unstar(song.id) : star(song.id))
                         .then(() => applyStarChange('song', song.id, !favorited, song))
                         .catch(resyncFavorites);
@@ -582,7 +606,16 @@ export function SongMenuSheet() {
                       close();
                     }}
                   />
-                  {song.albumId || song.album ? (
+                  {/* A podcast episode has no album or artist of its own — the
+                      show is both — so the two collapse into one "Go to Podcast". */}
+                  {song.podcastChannelId ? (
+                    <Action
+                      icon="headset-outline"
+                      label={t('Go to Podcast')}
+                      onPress={() => goDetail(`/podcast/${song.podcastChannelId}`)}
+                    />
+                  ) : null}
+                  {!song.podcastChannelId && (song.albumId || song.album) ? (
                     <Action
                       icon="disc-outline"
                       label={t('Go to album')}
@@ -595,7 +628,7 @@ export function SongMenuSheet() {
                       }}
                     />
                   ) : null}
-                  {song.artistId || song.artist ? (
+                  {!song.podcastChannelId && (song.artistId || song.artist) ? (
                     <Action
                       icon="person-outline"
                       label={t('Go to artist')}
@@ -630,12 +663,22 @@ export function SongMenuSheet() {
                       // to delete on the spot (#48).
                       onPress={() => setConfirmDelete(true)}
                     />
-                  ) : !offline && !song.url ? (
+                  ) : (song.podcastChannelId ? !isManualOffline() && song.url : !offline && !song.url) ? (
                     <Action
                       icon="download-outline"
                       label={t('Download')}
                       onPress={() => {
-                        void downloadSong(song);
+                        // An episode pulls from its own address; a server song
+                        // goes through the server's download. A podcast needs no
+                        // server, so automatic offline (server down) may still
+                        // fetch it — only a manual "use no network" says no.
+                        if (song.podcastChannelId)
+                          void downloadPodcastEpisode({
+                            id: song.id,
+                            url: song.url!,
+                            channelId: song.podcastChannelId!,
+                          });
+                        else void downloadSong(song);
                         toast(t('Downloading…'));
                         close();
                       }}
@@ -772,6 +815,29 @@ export function SongMenuSheet() {
         onCancel={() => setConfirmDelete(false)}
         onConfirm={() => {
           setConfirmDelete(false);
+          if (song.podcastChannelId) {
+            // The episode's file goes from the podcast record, not a server
+            // catalog, and its undo re-pulls the same enclosure — the publisher,
+            // not the server: automatic offline may still undo, only a manual
+            // "use no network" takes the way back away.
+            void deletePodcastDownloads([song.id]);
+            toast(
+              t('Download removed'),
+              isManualOffline()
+                ? undefined
+                : {
+                    label: t('Undo'),
+                    run: () =>
+                      void downloadPodcastEpisode({
+                        id: song.id,
+                        url: song.url!,
+                        channelId: song.podcastChannelId!,
+                      }),
+                  },
+            );
+            close();
+            return;
+          }
           void deleteDownloads([song.id]);
           // «Undo» still there: confirming by mistake is a tap away from
           // getting it back (offline there'd be nowhere to download from).

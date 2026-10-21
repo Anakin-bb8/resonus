@@ -165,7 +165,13 @@ interface Props {
    */
   discHeaders?: Record<number, string>;
   /** If provided, shows a heart to mark the album as a favorite. */
-  favorite?: { id: string; type: StarType; starred: boolean };
+  favorite?: { id: string; type: StarType; starred: boolean; podcast?: true };
+  /**
+   * Podcast episodes: the ids the user has hearted in SQLite, so each row can
+   * light its own heart. Passed in by the podcast screen (which already reads
+   * them); absent for albums/playlists, whose rows use the server's list.
+   */
+  podcastFavIds?: Set<string>;
   /** Offline download button (album/playlist header). */
   download?: {
     status: 'none' | 'active' | 'done';
@@ -241,6 +247,7 @@ export function TrackListView({
   numbered,
   discHeaders,
   favorite,
+  podcastFavIds,
   download,
   onMenu,
   playlistId,
@@ -993,6 +1000,7 @@ export function TrackListView({
                     id={favorite.id}
                     type={favorite.type}
                     starred={favorite.starred}
+                    podcast={favorite.podcast ? { kind: 'channel', channelId: favorite.id } : undefined}
                     size={28}
                   />
                 ) : null}
@@ -1125,6 +1133,7 @@ export function TrackListView({
               position={numbered && !showArtwork ? item.track ?? origIndex + 1 : undefined}
               isCurrent={currentId === item.id}
               showArtwork={showArtwork}
+              podcastFavIds={podcastFavIds}
               menuContext={
                 playlistId
                   ? { playlistId, index: playlistIndices ? playlistIndices[origIndex] : origIndex }

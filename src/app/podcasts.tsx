@@ -1,53 +1,54 @@
 /**
- * The podcasts subscribed to on this phone: a screen, and `embedded`, the
- * Podcasts section of Explore. All local, so nothing is gated on a server.
+ * The podcasts kept on this phone: a screen, and `embedded`, the Podcasts
+ * section of Explore. All local (SQLite), so nothing is gated on a server.
  */
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Linking,
-  Modal,
   Pressable,
   RefreshControl,
-  StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
+  charts,
   listChannels,
   refreshAll,
-  refreshChannel,
-  unsubscribe,
+  search as searchPodcasts,
   type PodcastChannel,
+  type PodcastSearchResult,
 } from '@/api/podcasts';
+import { isManualOffline } from '@/api/netGate';
 import { COVER, coverArtUrl } from '@/api/data';
 import { BackChevron } from '@/components/BackChevron';
 import { BrowseFrame, useSearchBox, type BrowserProps } from '@/components/BrowseFrame';
 import { Cover } from '@/components/Cover';
-import { Dialog } from '@/components/Dialog';
 import { EmptyState } from '@/components/EmptyState';
 import Icon from '@/components/Icon';
 import { Message } from '@/components/Message';
 import { PodcastAddSheet } from '@/components/PodcastAddSheet';
+import { FavoriteButton } from '@/components/FavoriteButton';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { useListPadding } from '@/hooks/useScreenSize';
+import { useDebounce } from '@/hooks/useDebounce';
 import { episodesLabel, useT } from '@/i18n';
 import type { Language } from '@/i18n/languages';
 import { listPerf } from '@/lib/listPerf';
-import { queryClient } from '@/lib/query';
+import { sortItems } from '@/lib/librarySort';
+import { usePodcastFavoriteIds } from '@/lib/podcastFavorites';
+import { invalidatePodcastCaches } from '@/lib/query';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
+import { openPodcastMenu } from '@/components/PodcastMenuSheet';
 import {
   colors,
   fontSize,
   radius,
-  SHEET_MAX_WIDTH,
   spacing,
   themed,
   tracking,
@@ -79,13 +80,13 @@ export function PodcastsBrowser({ embedded, actionRef, searchOpen }: BrowserProp
   const bottomPad = useScreenBottomPadding();
   const listPad = useListPadding(spacing.lg);
   const t = useT();
-  const insets = useSafeAreaInsets();
   const lang = useSettings((s) => s.language);
+  // Sort like the rest of the library, so the tab and the Library › Podcasts
+  // segment order their shows the same way.
+  const sort = useSettings((s) => s.librarySort);
   const toast = useToast((s) => s.show);
 
   const [adding, setAdding] = useState(false);
-  const [menu, setMenu] = useState<PodcastChannel | null>(null);
-  const [removing, setRemoving] = useState<PodcastChannel | null>(null);
   const [query, setQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -95,15 +96,45 @@ export function PodcastsBrowser({ embedded, actionRef, searchOpen }: BrowserProp
   });
 
   // Home's shelf is built from the same rows.
-  const reload = () =>
-    queryClient.invalidateQueries({ queryKey: ['podcastChannels'] }).then(() =>
-      queryClient.invalidateQueries({ queryKey: ['podcastRecentEpisodes'] }),
-    );
+  const reload = () => invalidatePodcastCaches();
+
+  // The hearts, so a row can light its own without asking per row. Invalidated
+  // when a heart goes on or off, which is what re-lights the row and the filter.
+  const favSet = usePodcastFavoriteIds();
+
+  // Explore's Podcasts section is the Store: the top 100 chart until you type,
+  // then a live iTunes search for that term. Debounced so typing one letter
+  // does not fire a fresh search at the Store each keystroke.
+  const term = useDebounce(query.trim());
+  const discover = useQuery({
+    queryKey: ['podcastDiscover', term],
+    queryFn: () => (term.length > 1 ? searchPodcasts(term) : charts()),
+    enabled: !!embedded,
+    // iTunes answers are stable enough to hold for three days: the Store is not
+    // asked again on every visit, and a search you already ran stays put.
+    staleTime: 1000 * 60 * 60 * 72,
+  });
+
+  // A Stop part way through a refresh-all: the header's action button flips to
+  // this while `refreshing`, and it raises the flag `refreshAll` checks before
+  // each feed. A ref, not state, so the running loop sees the flip right away.
+  const cancelRefresh = useRef(false);
 
   async function refresh() {
+    // Manual offline says no to the whole internet, so there is nothing to
+    // re-read; say it instead of failing every feed and reporting a blackout.
+    if (isManualOffline()) {
+      toast(t("You're offline"));
+      return;
+    }
+    cancelRefresh.current = false;
     setRefreshing(true);
-    const { failed, total } = await refreshAll().finally(() => setRefreshing(false));
+    const { failed, total, stopped } =
+      await refreshAll(() => cancelRefresh.current).finally(() => setRefreshing(false));
     await reload();
+    // Stopped by hand: the feeds already read stay put, and there is nothing
+    // to report — the ones left unwritten simply keep their last answer.
+    if (stopped) return;
     if (total > 0 && failed === total) {
       toast(t("Couldn't reach any of your podcast feeds."));
     } else if (failed > 0) {
@@ -114,16 +145,24 @@ export function PodcastsBrowser({ embedded, actionRef, searchOpen }: BrowserProp
   const channels = useMemo(() => {
     const q = query.trim().toLowerCase();
     const all = data ?? [];
-    return q
+    const filtered = q
       ? all.filter(
           (c) =>
             c.title.toLowerCase().includes(q) || (c.author ?? '').toLowerCase().includes(q),
         )
       : all;
-  }, [data, query]);
+    return sortItems(
+      filtered,
+      sort,
+      (c) => c.title,
+      sort === 'recent' ? (c) => c.lastPublishedAt ?? 0 : (c) => c.refreshedAt ?? 0,
+    );
+  }, [data, query, sort]);
 
   const showSearch = (data?.length ?? 0) > SEARCH_FROM;
   const boxOpen = useSearchBox(embedded, searchOpen, () => setQuery(''));
+
+  const discoverList = discover.data ?? [];
 
   // Embedded, Explore's header button opens the sheet.
   useEffect(() => {
@@ -136,26 +175,25 @@ export function PodcastsBrowser({ embedded, actionRef, searchOpen }: BrowserProp
     </Pressable>
   );
 
-  async function confirmRemove() {
-    const channel = removing;
-    setRemoving(null);
-    if (!channel) return;
-    try {
-      await unsubscribe(channel.id);
-      await reload();
-      toast(t('Unsubscribed from “{name}”', { name: channel.title }));
-    } catch {
-      toast(t("Couldn't complete the action"));
-    }
-  }
-
   return (
     <BrowseFrame embedded={embedded}>
       {embedded ? null : (
         <View style={styles.header}>
           <BackChevron />
           <Text style={styles.title}>{t('Podcasts')}</Text>
-          {addButton}
+          {/* While a refresh-all is running its action button becomes a Stop,
+              so the one gesture that started it can also be the one that ends it. */}
+          {refreshing ? (
+            <Pressable
+              hitSlop={10}
+              onPress={() => (cancelRefresh.current = true)}
+              accessibilityLabel={t('Stop')}
+            >
+              <Icon name="stop" size={28} color={colors.danger} />
+            </Pressable>
+          ) : (
+            addButton
+          )}
         </View>
       )}
 
@@ -180,7 +218,66 @@ export function PodcastsBrowser({ embedded, actionRef, searchOpen }: BrowserProp
         </View>
       ) : null}
 
-      {isLoading ? (
+      {embedded ? (
+        discover.isLoading ? (
+          <ActivityIndicator style={{ marginTop: spacing.xl }} color={colors.accent} />
+        ) : discover.isError ? (
+          <Message
+            text={t("Couldn't load your podcasts.")}
+            onRetry={() => discover.refetch()}
+          />
+        ) : (
+          <FlatList
+            {...listPerf}
+            keyboardShouldPersistTaps="handled"
+            data={discoverList}
+            keyExtractor={(item) => item.feedUrl}
+            contentContainerStyle={[
+              styles.list,
+              { paddingBottom: bottomPad, paddingHorizontal: listPad },
+            ]}
+            renderItem={({ item }: { item: PodcastSearchResult }) => (
+              <Pressable
+                style={styles.row}
+                onPress={() =>
+                  router.push(`/podcast/${encodeURIComponent(item.feedUrl)}`)
+                }
+              >
+                <Cover
+                  uri={coverArtUrl(item.imageUrl, COVER.thumb)}
+                  size={56}
+                  placeholderIcon="headset-outline"
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.rowTitle} numberOfLines={1}>
+                    {item.title}
+                  </Text>
+                  {item.author ? (
+                    <Text style={styles.rowSub} numberOfLines={1}>
+                      {item.author}
+                    </Text>
+                  ) : null}
+                </View>
+              </Pressable>
+            )}
+            ListEmptyComponent={
+              term.length > 1 ? (
+                <EmptyState
+                  icon="search-outline"
+                  title={t('No results')}
+                  subtitle={t('No results for “{q}”', { q: term })}
+                />
+              ) : (
+                <EmptyState
+                  icon="headset-outline"
+                  title={t('No results')}
+                  subtitle={t('No podcasts')}
+                />
+              )
+            }
+          />
+        )
+      ) : isLoading ? (
         <ActivityIndicator style={{ marginTop: spacing.xl }} color={colors.accent} />
       ) : isError ? (
         <Message text={t("Couldn't load your podcasts.")} onRetry={() => refetch()} />
@@ -205,12 +302,11 @@ export function PodcastsBrowser({ embedded, actionRef, searchOpen }: BrowserProp
             <Pressable
               style={styles.row}
               onPress={() => router.push(`/podcast/${item.id}`)}
-              onLongPress={() => setMenu(item)}
+              onLongPress={() => openPodcastMenu(item)}
             >
               <Cover
                 uri={coverArtUrl(item.imageUrl, COVER.thumb)}
                 size={56}
-                rounded
                 placeholderIcon="headset-outline"
               />
               <View style={{ flex: 1 }}>
@@ -227,9 +323,15 @@ export function PodcastsBrowser({ embedded, actionRef, searchOpen }: BrowserProp
                   </Text>
                 )}
               </View>
+              <FavoriteButton
+                id={item.id}
+                starred={favSet.has(item.id)}
+                size={20}
+                podcast={{ kind: 'channel', channelId: item.id }}
+              />
               <Pressable
                 hitSlop={8}
-                onPress={() => setMenu(item)}
+                onPress={() => openPodcastMenu(item)}
                 accessibilityLabel={t('More')}
               >
                 <Icon name="ellipsis-horizontal" size={22} color={colors.textSecondary} />
@@ -237,87 +339,17 @@ export function PodcastsBrowser({ embedded, actionRef, searchOpen }: BrowserProp
             </Pressable>
           )}
           ListEmptyComponent={
-            <EmptyState
-              icon="headset-outline"
-              title={t('No podcasts')}
-              subtitle={t('Tap + to subscribe to a show.')}
-            />
+            <EmptyState icon="headset-outline" title={t('No podcasts')} />
           }
         />
       )}
 
       <PodcastAddSheet
         visible={adding}
-        subscribed={(data ?? []).map((c) => c.feedUrl ?? '').filter(Boolean)}
         onCancel={() => setAdding(false)}
-        onSubscribed={() => void reload()}
+        onAdded={() => void reload()}
       />
 
-      <Modal
-        transparent
-        visible={!!menu}
-        animationType="fade"
-        onRequestClose={() => setMenu(null)}
-      >
-        <Pressable style={styles.backdrop} onPress={() => setMenu(null)} />
-        <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.md }]}>
-          <Text style={styles.sheetTitle} numberOfLines={1}>
-            {menu?.title}
-          </Text>
-          <Pressable
-            style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
-            onPress={() => {
-              const channel = menu;
-              setMenu(null);
-              if (!channel?.feedUrl) return;
-              void refreshChannel(channel.feedUrl)
-                .then(() => reload())
-                .catch(() => toast(t("Couldn't read this feed")));
-            }}
-          >
-            <Icon name="refresh" size={24} color={colors.text} />
-            <Text style={styles.actionText}>{t('Refresh')}</Text>
-          </Pressable>
-          {menu?.siteUrl ? (
-            <Pressable
-              style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
-              onPress={() => {
-                const url = menu?.siteUrl;
-                setMenu(null);
-                if (url) void Linking.openURL(url).catch(() => {});
-              }}
-            >
-              <Icon name="link-outline" size={24} color={colors.text} />
-              <Text style={styles.actionText}>{t('Open website')}</Text>
-            </Pressable>
-          ) : null}
-          <Pressable
-            style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
-            onPress={() => {
-              const channel = menu;
-              setMenu(null);
-              setRemoving(channel);
-            }}
-          >
-            <Icon name="trash-outline" size={24} color={colors.danger} />
-            <Text style={[styles.actionText, { color: colors.danger }]}>
-              {t('Unsubscribe')}
-            </Text>
-          </Pressable>
-        </View>
-      </Modal>
-
-      <Dialog
-        visible={!!removing}
-        title={t('Unsubscribe')}
-        message={t('Remove “{name}” and its episodes from this device?', {
-          name: removing?.title ?? '',
-        })}
-        confirmLabel={t('Unsubscribe')}
-        destructive
-        onCancel={() => setRemoving(null)}
-        onConfirm={() => void confirmRemove()}
-      />
     </BrowseFrame>
   );
 }
@@ -352,31 +384,4 @@ const styles = themed((colors) => ({
     backgroundColor: colors.surfaceHighlight,
   },
   searchInput: { flex: 1, color: colors.text, fontSize: fontSize.md, padding: 0 },
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: colors.backdrop },
-  sheet: {
-    position: 'absolute',
-    bottom: 0,
-    // Centred and no wider than a sheet wants to be (#131).
-    alignSelf: 'center',
-    width: '100%',
-    maxWidth: SHEET_MAX_WIDTH,
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.xxl,
-    borderTopRightRadius: radius.xxl,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-  },
-  sheetTitle: {
-    color: colors.text,
-    fontSize: fontSize.md,
-    fontWeight: '500',
-    marginBottom: spacing.sm,
-  },
-  action: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  actionText: { color: colors.text, fontSize: fontSize.md },
 }));

@@ -33,6 +33,7 @@ import { cachedUri } from '@/store/songCache';
 import * as Navidrome from './navidrome';
 import * as Subsonic from './backend';
 import * as Local from '@/lib/localQueries';
+import { streamReachable } from './subsonic';
 import type { Song } from './subsonic';
 
 function isOffline() { return useAuthStore.getState().offline; }
@@ -180,7 +181,12 @@ function isRemoteArt(id: string): boolean {
 export function coverArtUrl(id: string | undefined, _size?: number): string | undefined {
   // Empty is an item the server says has no artwork (see `lib/absentCovers`).
   if (!id) return undefined;
-  if (isRemoteArt(id)) return id;
+  // A remote address (a podcast feed's picture, an iTunes artwork): a URL given
+  // to the image loader is a request like any other, so a manual "use no
+  // network" wears the `cached-cover:` mark and the `Cover` component shows it
+  // only if it is already on the phone. Automatic offline (server down,
+  // connection fine) leaves the publisher's pictures reachable.
+  if (isRemoteArt(id)) return isManualOffline() ? CACHED_COVER + id : id;
   // If the album art is downloaded (album/artist on disk), use it even
   // when in server mode: it works offline and doesn't use data, just
   // like audio plays from the downloaded file.
@@ -250,7 +256,10 @@ export function markUnplayableOffline(songs: Song[]): Song[] {
   const files = useDownloads.getState().files;
   return songs.map((s) => {
     const uri = s.localUri ?? files[s.id] ?? cachedUri(s.id);
-    if (s.url) return { ...s, unavailable: false };
+    // A podcast episode's `url` is the publisher's address, not a stream the
+    // phone may reach while offline mode says no to: only a downloaded file
+    // plays it. Radios keep their own rule (a station is what it is).
+    if (streamReachable(s)) return { ...s, unavailable: false };
     return uri ? { ...s, localUri: uri, unavailable: false } : { ...s, unavailable: true };
   });
 }

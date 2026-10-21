@@ -31,6 +31,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { CACHED_COVER, COVER, songCoverUrl, star, unstar, type Song } from '@/api/data';
+import { episodeHeart, heartedSong, togglePodcastHeart } from '@/api/podcasts';
 import { ArtistPlayerCard } from '@/components/ArtistPlayerCard';
 import { AudioQualityBadge } from '@/components/AudioQualityBadge';
 import { SeekBar } from '@/components/SeekBar';
@@ -65,6 +66,7 @@ import { haptic } from '@/lib/haptics';
 import { localHttpAvailable } from '@/lib/localHttp';
 import { pushOnce } from '@/lib/pushOnce';
 import { pushOrReplace } from '@/lib/pushOrReplace';
+import { usePodcastFavoriteIds } from '@/lib/podcastFavorites';
 import { getItem, setItem } from '@/lib/storage';
 import { useArtistPicker } from '@/store/artistPicker';
 import { useAuthStore } from '@/store/auth';
@@ -391,6 +393,9 @@ export default function PlayerScreen() {
    * there is a song.
    */
   const favIds = useFavoriteIds(!!song);
+  // A podcast episode's heart is the device's own, filed in SQLite, so it reads
+  // from the podcast favorites rather than the server's starred list.
+  const podcastFav = usePodcastFavoriteIds(!!song?.podcastChannelId);
 
   // The data layer resolves the cover: from the server (online) or from the
   // local index by album (offline). Base64 is no longer stored per song.
@@ -794,6 +799,18 @@ export default function PlayerScreen() {
     const current = usePlayerStore.getState();
     const track = currentSong(current);
     if (!track) return;
+    // A podcast episode: the device's own SQLite favorite, no server starring.
+    if (track.podcastChannelId) {
+      const next = !podcastFav.has(track.id);
+      haptic('medium');
+      try {
+        await togglePodcastHeart(track.id, 'episode', track.podcastChannelId);
+        useToast.getState().show(next ? t('Added to favorites') : t('Removed from favorites'));
+      } catch {
+        useToast.getState().show(t("Couldn't complete the action"));
+      }
+      return;
+    }
     const next = !(favIds ? favIds.has(track.id) : !!track.starred);
     haptic('medium');
     applyStarChange('song', track.id, next, track);
@@ -939,21 +956,25 @@ export default function PlayerScreen() {
   // The central list wins when loaded (refreshes when starred from any
   // screen); `song.starred` from the queue becomes stale, so it only serves
   // as a fallback for local songs or while loading.
-  const favorited = favIds ? favIds.has(song.id) : !!song.starred;
+  const favorited = heartedSong(song, podcastFav, favIds);
+  // The heart writes the device's own SQLite favorite for an episode, so the
+  // button is told which show it belongs to.
+  const podcastHeart = episodeHeart(song);
   // What the header announces, most specific first (#65). A song added by hand
   // is the queue's own, so the queue is what it says, and only for as long as
   // that song plays. A mix that autoplay grew takes over next, since by then
   // the source underneath is the album that ran out. Otherwise it is the source
   // as before: a station says "Radio", the two sentinels are translated, and a
   // queue that never had a source (one recovered from the server) leaves
-  // "NOW PLAYING" as it did.
+  // "NOW PLAYING" as it did. A podcast episode is a file, not a station, so it
+  // names its show (the source) exactly as an album names its record.
   const sourceLabel = queuedNow
     ? t('Queue')
     : mixSeed
       ? t('Mix of “{name}”', { name: mixSeed.title })
       : !source
         ? null
-        : song.url
+        : song.url && !song.vod
           ? t('Radio')
           : source === SOURCE_FAVORITES
             ? t('Favorites')
@@ -1306,7 +1327,12 @@ export default function PlayerScreen() {
             // Swapped: the heart takes the corner. It only reports state here —
             // tapping it still works, it's just the awkward spot to reach.
             <View style={styles.topFavorite}>
-              <FavoriteButton id={song.id} starred={favorited} size={24} />
+              <FavoriteButton
+                id={song.id}
+                starred={favorited}
+                podcast={podcastHeart}
+                size={24}
+              />
             </View>
           ) : (
             <CircleButton name="ellipsis-horizontal" label={t('More options')} onPress={() => openMenu(song, undefined, menuOptions())} />
@@ -1524,7 +1550,12 @@ export default function PlayerScreen() {
                 onPress={() => openMenu(song, undefined, menuOptions())}
               />
             ) : (
-              <FavoriteButton id={song.id} starred={favorited} size={26} />
+              <FavoriteButton
+                id={song.id}
+                starred={favorited}
+                podcast={podcastHeart}
+                size={26}
+              />
             )}
           </View>
 

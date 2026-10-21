@@ -1196,6 +1196,8 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   quickGridAlbums: boolean;
   /** Include playlists in the quick grid. */
   quickGridPlaylists: boolean;
+  /** Include the shows you played in the quick grid. */
+  quickGridPodcasts: boolean;
   /** Total number of tiles in the quick grid (4, 6, or 8). */
   quickGridSize: number;
   /** Show the greeting ("Good morning"…) on Home. */
@@ -1475,6 +1477,7 @@ const DEFAULTS = {
   quickGridFavorites: true,
   quickGridAlbums: true,
   quickGridPlaylists: true,
+  quickGridPodcasts: true,
   quickGridSize: 8,
   showGreeting: false,
   customGreeting: '',

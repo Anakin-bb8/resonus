@@ -47,7 +47,7 @@ import {
   type Song,
   type SubsonicAuth,
 } from '@/api/backend';
-import { CLIENT_NAME } from '@/api/subsonic';
+import { CLIENT_NAME, streamReachable } from '@/api/subsonic';
 // The data layer's, not the backend's: `getRandomSongs` honours the library
 // filter and asks each library for its share (the rest of the mix cannot be
 // filtered, see `radioCandidates`), and `coverArtUrl` hands back the file on
@@ -325,10 +325,13 @@ function copyOnPhone(song: Song): string | undefined {
 /**
  * Can this track be played offline? Radio (own url), local library track
  * (localUri) or on-disk download or cached copy. Offline, those that only exist
- * as a server stream cannot be played and must be skipped.
+ * as a server stream cannot be played and must be skipped. A podcast episode's
+ * `url` is the publisher's address, not a stream the phone may reach while
+ * offline mode says no to: only a file on the phone plays it (the same rule
+ * `markUnplayableOffline` and the rows work out).
  */
 function playableOffline(song: Song | null | undefined): boolean {
-  return !!song && (!!song.url || !!song.localUri || !!copyOnPhone(song));
+  return !!song && (streamReachable(song) || !!song.localUri || !!copyOnPhone(song));
 }
 
 /** Max streaming bitrate according to current network (Wi-Fi or mobile data). */
@@ -391,7 +394,10 @@ export function localSourceFor(song: Song): string | undefined {
     case 'never':
       return undefined;
     case 'cellular':
-      return useNetworkType.getState().cellular ? file : undefined;
+      // An episode file is never transcoded — it IS the publisher's copy — so
+      // on Wi-Fi there is nothing better to stream: the ↓ badge promised no
+      // data, and re-fetching byte-identical bytes breaks that promise.
+      return (song.podcastChannelId || useNetworkType.getState().cellular) ? file : undefined;
     case 'original':
       // Downloaded without transcoding, so the file IS the server's copy.
       // Downloads made before the app recorded this are taken as original,
@@ -429,7 +435,19 @@ function sourceFor(song: Song, timeOffsetSec = 0): AudioSource {
   // files get the same answer for free: reading an index you already hold is
   // not the wait this avoids - the wait is scanning a stream for one.
   const preferPreciseTiming = useSettings.getState().preferPreciseTiming;
-  if (song.url) return { uri: song.url, metadata, mediaId, preferPreciseTiming };
+  // A podcast episode's `url` is the publisher's address. Offline mode says
+  // no to it like to any other request, so only a file on the phone plays it.
+  // Online, a downloaded episode still asks the same question an album song
+  // asks: the ↓ badge promised no data, so the "prefer the file on the phone"
+  // setting decides, and the enclosure is only the stream to fall back to.
+  if (song.url && song.podcastChannelId) {
+    const episodeLocal = localSourceFor(song);
+    if (episodeLocal) return { uri: episodeLocal, metadata, mediaId, preferPreciseTiming };
+    if (!useAuthStore.getState().offline)
+      return { uri: song.url, metadata, mediaId, preferPreciseTiming };
+  } else if (streamReachable(song)) {
+    return { uri: song.url, metadata, mediaId, preferPreciseTiming };
+  }
   const local = localSourceFor(song);
   // Counted where the decision is acted on, once per install, and not inside
   // `localSourceFor`, which every render and every heartbeat asks. "Streamed
@@ -835,7 +853,9 @@ function applyLockScreenFavorite(p: AudioPlayer, song: Song) {
 
 /** What the stream playing `song` says is on, or null if it says nothing. */
 function liveInfo(song: Song | null | undefined): StreamInfo | null {
-  return song?.url ? usePlayerStore.getState().streamInfo : null;
+  // A podcast episode is a file with its own tags (vod), not a station that
+  // announces what it plays: it never has live info.
+  return song?.url && !song.vod ? usePlayerStore.getState().streamInfo : null;
 }
 
 /**
@@ -857,12 +877,14 @@ function parseStreamInfo(info: { title?: string; artist?: string }): StreamInfo 
  * Reads what the source announced. Only radio uses it: everything else comes
  * with the server's tags, which beat whatever the decoder scrapes out of a
  * file, and a download would suddenly rename itself to whatever is inside it.
+ * A podcast episode is the same as a download — a file with its own tags, not a
+ * station announcing itself — so it is excluded here too.
  */
 function onStreamMetadata(info: { title?: string; artist?: string }) {
   const song = currentSong(usePlayerStore.getState());
   // Between two tracks a stream can go quiet, and that is not a reason to keep
   // showing the one before, so an empty announcement is applied like any other.
-  const next = song?.url ? parseStreamInfo(info) : null;
+  const next = song?.url && !song.vod ? parseStreamInfo(info) : null;
   const prev = usePlayerStore.getState().streamInfo;
   if (prev?.title === next?.title && prev?.artist === next?.artist) return;
   usePlayerStore.setState({ streamInfo: next });
@@ -2774,7 +2796,8 @@ function onPlaybackError(message: string, wasPlaying: boolean): void {
   errorAttempts++;
   // The other copy, and only the first time round: once it is marked, what just
   // failed IS the other copy, and swapping back would be a loop.
-  if (!failedSource.has(song.id) && !song.url) {
+  // Episodes are in too: their two copies are the file and the enclosure.
+  if (!failedSource.has(song.id) && (!song.url || song.podcastChannelId)) {
     const { auth, offline } = useAuthStore.getState();
     if (localSourceFor(song)) {
       // The phone's own library has no stream behind it, and neither has a
@@ -3966,7 +3989,9 @@ export function playingQueued(state: Pick<PlayerState, 'queue' | 'index'>): bool
  */
 export function useLiveInfo(song: Song | null | undefined): StreamInfo | null {
   const info = usePlayerStore((s) => s.streamInfo);
-  return song?.url ? info : null;
+  // A podcast episode (vod) is a file, not a broadcasting station: its own
+  // title and artist are the whole story.
+  return song?.url && !song.vod ? info : null;
 }
 
 export const usePlayerStore = create<PlayerState>((set, get) => ({

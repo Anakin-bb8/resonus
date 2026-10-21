@@ -114,6 +114,8 @@ export interface Song {
   url?: string;
   /** `url` is a file (a podcast episode), not a live station: speed applies. */
   vod?: boolean;
+  /** Set on a podcast episode: the show it belongs to, for "Go to Podcast". */
+  podcastChannelId?: string;
   /** Song genre (sent by Subsonic and Jellyfin). Used by radio so it doesn't
    *  die when similar artist tracks run out. */
   genre?: string;
@@ -208,6 +210,14 @@ export interface Song {
     trackPeak?: number;
     albumPeak?: number;
   };
+}
+
+/** Whether a song's `url` is a stream the phone may reach: radio yes, a
+ *  podcast episode no — its address belongs to the publisher and offline
+ *  mode says no to it like to any other request. The one rule the rows,
+ *  the queue marking and the player's source decision all read. */
+export function streamReachable(song: Song): boolean {
+  return !!song.url && !song.podcastChannelId;
 }
 
 export interface Album {
@@ -1920,14 +1930,23 @@ export interface PodcastChannel {
   imageUrl?: string;
   /** The channel's own web page, not the feed file. */
   siteUrl?: string;
-  /** The feed this was read from. Absent for a channel read another way. */
-  feedUrl?: string;
+  /** The feed this was read from, and the identity of the show: the id is a
+   *  hash of it. A show is only ever opened through that address. */
+  feedUrl: string;
   /** How many episodes are stored. */
   episodeCount?: number;
   /** When the newest stored episode was published. */
   lastPublishedAt?: number;
-  /** When the feed was last read. */
+  /** When the feed was last read — a re-read is asked for past three days. */
   refreshedAt?: number;
+  /** What the last read got back to re-ask for it: sent again as
+   *  `if-none-match`/`if-modified-since`, so a feed that answers "unchanged"
+   *  costs a header, not its whole body. */
+  etag?: string;
+  lastModified?: string;
+  /** The show's picture on disk, filed by the read that brought the address.
+   *  Drawn instead of `imageUrl`, so manual offline still has a file. */
+  artFile?: string;
   /** Why the last read failed, if it did. */
   error?: string;
 }
@@ -1946,6 +1965,4 @@ export interface PodcastEpisode {
   /** The enclosure, played as `Song.url`. */
   url?: string;
   mimeType?: string;
-  size?: number;
-  imageUrl?: string;
 }

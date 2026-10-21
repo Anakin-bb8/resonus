@@ -32,6 +32,7 @@ import {
 } from '@/api/data';
 import { AlbumRow } from '@/components/AlbumRow';
 import { ArtistRow } from '@/components/ArtistRow';
+import { PodcastRow } from '@/components/PodcastRow';
 import { Cover } from '@/components/Cover';
 import { useHistoryTimes } from '@/hooks/useHistoryTimes';
 import { Dialog } from '@/components/Dialog';
@@ -40,7 +41,18 @@ import { FavoritesArt } from '@/components/FavoritesArt';
 import { Message } from '@/components/Message';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { useBottomSheetAnim } from '@/hooks/useBottomSheetAnim';
-import { albumsLabel, songsLabel, useT } from '@/i18n';
+import { albumsLabel, episodesLabel, songsLabel, useT } from '@/i18n';
+import {
+  episodeToSong,
+  listFavoriteChannels,
+  listFavoriteEpisodes,
+  queueEpisode,
+  type PodcastChannel,
+  type PodcastEpisode,
+} from '@/api/podcasts';
+import { useSongMenu } from '@/store/songMenu';
+import { openPodcastMenu } from '@/components/PodcastMenuSheet';
+import { useDownloads } from '@/store/downloads';
 import { useAuthStore } from '@/store/auth';
 import { useLastPlayed } from '@/store/lastPlayed';
 import { useMediaMenu } from '@/store/mediaMenu';
@@ -48,8 +60,9 @@ import { usePins } from '@/store/pins';
 import { SORT_LABELS, byCodepoint, matches, normQ, sortItems } from '@/lib/librarySort';
 import { useSettings, type LibrarySort } from '@/store/settings';
 import { useAccent } from '@/hooks/useAccent';
+import { episodeUnavailable } from '@/hooks/useEpisodeUnavailable';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, lineHeight, radius, restyled, SHEET_MAX_WIDTH, spacing, themed, useTheme, tracking } from '@/theme';
+import { colors, DIM_OPACITY, fontSize, lineHeight, radius, restyled, SHEET_MAX_WIDTH, spacing, themed, useTheme, tracking } from '@/theme';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
 import { columnsFor, useListPadding, useScreenSize } from '@/hooks/useScreenSize';
 import { listPerf } from '@/lib/listPerf';
@@ -59,12 +72,13 @@ import { haptic } from '@/lib/haptics';
 // Folders used to be a fourth segment here. It browses the server's own
 // directory tree, which is the catalogue rather than your own shelf, so it
 // went to the Explore tab with the rest of it (`FoldersBrowser`).
-type Segment = 'playlists' | 'albums' | 'artists';
+type Segment = 'playlists' | 'albums' | 'artists' | 'podcasts';
 
 const SEGMENTS: { key: Segment; label: string }[] = [
   { key: 'playlists', label: 'Playlists' },
   { key: 'albums', label: 'Albums' },
   { key: 'artists', label: 'Artists' },
+  { key: 'podcasts', label: 'Podcasts' },
 ];
 
 /**
@@ -439,6 +453,189 @@ function ArtistsTab({ query }: { query: string }) {
   );
 }
 
+/**
+ * Your subscriptions, which are the phone's own: unlike the other tabs nothing
+ * here is gated on a server, so the tab works with no account and offline.
+ */
+function PodcastsTab({ query }: { query: string }) {
+  const t = useT();
+  const lang = useSettings((s) => s.language);
+  const sort = useSettings((s) => s.librarySort);
+  const grid = useSettings((s) => s.libraryLayout) === 'grid';
+  const bottomPad = useScreenBottomPadding();
+  const { columns } = useGridMetrics();
+  const listPad = useListPadding(spacing.lg);
+  // Offline, an episode only plays from disk; with the hide setting its rows
+  // are not even built (as `annotate` does for songs).
+  const offline = useAuthStore((s) => s.offline);
+  const files = useDownloads((s) => s.files);
+  const hideUnavailable = useSettings((s) => s.hideUnavailableOffline);
+  const toast = useToast((s) => s.show);
+  const unavailable = (id: string) => episodeUnavailable(offline, files, id);
+  const channelsQ = useQuery({
+    queryKey: ['podcastFavoriteChannels'],
+    queryFn: () => listFavoriteChannels(),
+  });
+  // A hearted single episode shows up too, even when its show is not favorited.
+  const episodesQ = useQuery({
+    queryKey: ['podcastFavoriteEpisodes'],
+    queryFn: () => listFavoriteEpisodes(),
+  });
+
+  // One row per hearted thing: a favorited show, or a single favorited episode
+  // (which then names the show it came from).
+  type Row = {
+    kind: 'channel' | 'episode';
+    id: string;
+    title: string;
+    by?: string;
+    coverArt?: string;
+    href: string;
+    recent: number;
+    added: number;
+    episodeCount?: number;
+    error?: string;
+    /** The objects the long-press menu and an episode's tap need. */
+    channel: PodcastChannel;
+    episode?: PodcastEpisode;
+  };
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const all: Row[] = [
+      ...(channelsQ.data ?? []).map((c) => ({
+        kind: 'channel' as const,
+        id: c.id,
+        title: c.title,
+        by: c.author,
+        coverArt: c.imageUrl,
+        href: `/podcast/${c.id}`,
+        recent: c.lastPublishedAt ?? 0,
+        added: c.refreshedAt ?? 0,
+        episodeCount: c.episodeCount,
+        error: c.error,
+        channel: c,
+      })),
+      ...(episodesQ.data ?? []).map((r) => ({
+        kind: 'episode' as const,
+        id: r.episode.id,
+        title: r.episode.title,
+        by: r.channel.title,
+        coverArt: r.channel.imageUrl,
+        href: `/podcast/${r.channel.id}`,
+        recent: r.episode.publishedAt ?? 0,
+        added: r.episode.publishedAt ?? 0,
+        episode: r.episode,
+        channel: r.channel,
+      })),
+    ];
+    const filtered = q
+      ? all.filter((r) => r.title.toLowerCase().includes(q) || (r.by ?? '').toLowerCase().includes(q))
+      : all;
+    // Hide mode, offline: an episode that is not on disk gets no row at all.
+    const kept = hideUnavailable
+      ? filtered.filter((r) => r.kind === 'channel' || !episodeUnavailable(offline, files, r.id))
+      : filtered;
+    return sortItems(
+      kept,
+      sort,
+      (r) => r.title,
+      sort === 'recent' ? (r) => r.recent : (r) => r.added,
+    );
+  }, [channelsQ.data, episodesQ.data, query, sort, offline, files, hideUnavailable]);
+
+  if (channelsQ.isLoading || episodesQ.isLoading) return <Loader />;
+  if (channelsQ.isError && episodesQ.isError) {
+    return <Message text={t("Couldn't load your podcasts.")} onRetry={() => { channelsQ.refetch(); episodesQ.refetch(); }} />;
+  }
+  // Tapping an episode plays just that episode (like Home's shelf); long-press
+  // opens its menu. A show taps to its screen and long-press opens the show's
+  // menu — the same sheets the show's own screen and a song row open.
+  const playEpisode = (r: Row) => {
+    if (!r.episode || !r.channel) return;
+    queueEpisode(r.episode, r.channel);
+  };
+  const openEpisodeMenu = (r: Row) => {
+    if (!r.episode || !r.channel) return;
+    useSongMenu.getState().open(episodeToSong(r.episode, r.channel));
+  };
+  const openShowMenu = (r: Row) => {
+    if (r.channel) openPodcastMenu(r.channel);
+  };
+  return (
+    <FlatList
+      key={grid ? `grid-${columns}` : 'list'}
+      {...listPerf}
+      keyboardShouldPersistTaps="handled"
+      {...gridListProps(grid, bottomPad, columns, listPad)}
+      data={rows}
+      keyExtractor={(item) => item.id}
+      refreshControl={
+        <RefreshControl refreshing={channelsQ.isFetching || episodesQ.isFetching} onRefresh={() => { channelsQ.refetch(); episodesQ.refetch(); }} tintColor={colors.accent} />
+      }
+      renderItem={({ item }: { item: Row }) =>
+        grid ? (
+          item.kind === 'episode' ? (
+            <GridCard
+              href=""
+              onPress={() => {
+                if (unavailable(item.id)) toast(t('Not available offline'));
+                else {
+                  haptic('light');
+                  playEpisode(item);
+                }
+              }}
+              onLongPress={
+                unavailable(item.id)
+                  ? undefined
+                  : () => {
+                      haptic('light');
+                      openEpisodeMenu(item);
+                    }
+              }
+              dimmed={unavailable(item.id)}
+              badge={!!files[item.id]}
+              uri={coverArtUrl(item.coverArt, COVER.card)}
+              title={item.title}
+              subtitle={item.by}
+            />
+          ) : (
+            <GridCard
+              href={item.href}
+              onLongPress={() => {
+                haptic('light');
+                openShowMenu(item);
+              }}
+              uri={coverArtUrl(item.coverArt, COVER.card)}
+              title={item.title}
+              subtitle={episodesLabel(item.episodeCount ?? 0, lang)}
+            />
+          )
+        ) : (
+          item.kind === 'episode' ? (
+            <PodcastRow channel={item.channel} episode={item.episode} sub={item.by} />
+          ) : (
+            <PodcastRow
+              channel={item.channel}
+              sub={item.error ? t("Couldn't read this feed") : episodesLabel(item.episodeCount ?? 0, lang)}
+            />
+          )
+        )
+      }
+      ListEmptyComponent={
+        query ? (
+          <NoResults query={query} />
+        ) : (
+          <EmptyState
+            icon="headset-outline"
+            title={t('No podcasts')}
+            subtitle={t('Favorite a show to keep it here.')}
+          />
+        )
+      }
+    />
+  );
+}
+
 /** Nothing matched the filter (as opposed to "you have none yet"). */
 function NoResults({ query }: { query: string }) {
   const t = useT();
@@ -542,11 +739,11 @@ function AlbumsTab({ query }: { query: string }) {
  * from.
  */
 interface LibItem {
-  kind: 'playlist' | 'album' | 'artist';
+  kind: 'playlist' | 'album' | 'artist' | 'podcast' | 'episode';
   id: string;
   name: string;
   coverArt?: string;
-  /** Whose it is: the owner of a list, the artist of an album. */
+  /** Whose it is: the owner of a list, the artist of an album, the show of an episode. */
   by?: string;
   href: string;
   /** The two scores the orders ask for, worked out once (see `sortItems`). */
@@ -554,6 +751,9 @@ interface LibItem {
   added: number;
   playlist?: Playlist;
   album?: Album;
+  /** The objects a podcast row's tap/menu need. */
+  channel?: PodcastChannel;
+  episode?: PodcastEpisode;
 }
 
 /**
@@ -575,6 +775,13 @@ function AllTab({ query, onNew }: { query: string; onNew?: () => void }) {
   const bottomPad = useScreenBottomPadding();
   const { columns } = useGridMetrics();
   const listPad = useListPadding(spacing.lg);
+  // Offline, an episode only plays from disk; hide mode drops its row (as the
+  // song lists do via `annotate`).
+  const offline = useAuthStore((s) => s.offline);
+  const files = useDownloads((s) => s.files);
+  const hideUnavailable = useSettings((s) => s.hideUnavailableOffline);
+  const toast = useToast((s) => s.show);
+  const unavailable = (id: string) => episodeUnavailable(offline, files, id);
   const lists = useQuery({
     queryKey: ['playlists'],
     queryFn: () => getPlaylists(),
@@ -585,9 +792,42 @@ function AllTab({ query, onNew }: { query: string; onNew?: () => void }) {
     queryFn: () => getStarred(),
     enabled: canFetch,
   });
+  // Only favorited shows land in the mixed Library, like the Podcasts segment.
+  const podcastsQ = useQuery({
+    queryKey: ['podcastFavoriteChannels'],
+    queryFn: () => listFavoriteChannels(),
+  });
+  // A hearted single episode shows up too, even when its show is not favorited.
+  const episodesQ = useQuery({
+    queryKey: ['podcastFavoriteEpisodes'],
+    queryFn: () => listFavoriteEpisodes(),
+  });
 
   const items = useMemo(() => {
     const all: LibItem[] = [
+      ...(podcastsQ.data ?? []).map((c) => ({
+        kind: 'podcast' as const,
+        id: c.id,
+        name: c.title,
+        coverArt: c.imageUrl,
+        by: c.author,
+        href: `/podcast/${c.id}`,
+        recent: c.lastPublishedAt ?? 0,
+        added: c.refreshedAt ?? 0,
+        channel: c,
+      })),
+      ...(episodesQ.data ?? []).map((r) => ({
+        kind: 'episode' as const,
+        id: r.episode.id,
+        name: r.episode.title,
+        coverArt: r.channel.imageUrl,
+        by: r.channel.title,
+        href: `/podcast/${r.channel.id}`,
+        recent: r.episode.publishedAt ?? 0,
+        added: r.episode.publishedAt ?? 0,
+        episode: r.episode,
+        channel: r.channel,
+      })),
       ...(lists.data ?? []).map((p) => ({
         kind: 'playlist' as const,
         id: p.id,
@@ -622,8 +862,13 @@ function AllTab({ query, onNew }: { query: string; onNew?: () => void }) {
     ];
     return withPins(
       sortItems(
-        // Albums match by artist too, as they do under their own chip.
-        all.filter((i) => matches(query, i.name, i.kind === 'album' ? i.by : undefined)),
+        // Albums and podcasts match by who made them too, as they do under their
+        // own chip: looking for a name should find the shows behind it.
+        all.filter(
+          (i) =>
+            !(hideUnavailable && i.kind === 'episode' && episodeUnavailable(offline, files, i.id)) &&
+            matches(query, i.name, i.kind === 'album' || i.kind === 'podcast' || i.kind === 'episode' ? i.by : undefined),
+        ),
         sort,
         (i) => i.name,
         (i) => (sort === 'recent' ? i.recent : i.added),
@@ -631,19 +876,36 @@ function AllTab({ query, onNew }: { query: string; onNew?: () => void }) {
       (i) => `${i.kind}:${i.id}`,
       pins,
     );
-  }, [lists.data, starred.data, query, sort, times, byAlbum, byArtist, pins]);
+  }, [lists.data, starred.data, podcastsQ.data, episodesQ.data, query, sort, times, byAlbum, byArtist, pins, offline, files, hideUnavailable]);
 
-  /** "Playlist · juan", "Album · Rojuu", "Artist". */
+  /** "Playlist · juan", "Album · Rojuu", "Podcast · Ada", "Artist". */
   const label = (i: LibItem): string => {
-    const kind = i.kind === 'playlist' ? t('Playlist') : i.kind === 'album' ? t('Album') : t('Artist');
+    const kind =
+      i.kind === 'playlist'
+        ? t('Playlist')
+        : i.kind === 'album'
+          ? t('Album')
+          : i.kind === 'podcast'
+            ? t('Podcast')
+            : i.kind === 'episode'
+              ? t('Episode')
+              : t('Artist');
     return i.by ? `${kind} · ${i.by}` : kind;
   };
 
   const onLongPress = (i: LibItem) => {
     if (i.playlist) openMenu({ kind: 'playlist', playlist: i.playlist });
     else if (i.album) openMenu({ kind: 'album', album: i.album });
+    else if (i.kind === 'episode' && i.episode && i.channel)
+      useSongMenu.getState().open(episodeToSong(i.episode, i.channel));
+    else if (i.channel) openPodcastMenu(i.channel);
     else return;
     haptic('light');
+  };
+  // Tapping an episode plays just that episode; a show still taps to its screen.
+  const playEpisode = (i: LibItem) => {
+    if (!i.episode || !i.channel) return;
+    queueEpisode(i.episode, i.channel);
   };
 
   const loading = lists.isLoading || starred.isLoading;
@@ -693,41 +955,73 @@ function AllTab({ query, onNew }: { query: string; onNew?: () => void }) {
           <FavoritesEntry grid />
         ) : grid ? (
           <GridCard
-            href={item.href}
+            href={item.kind === 'episode' ? '' : item.href}
+            onPress={
+              item.kind === 'episode'
+                ? () => {
+                    if (unavailable(item.id)) toast(t('Not available offline'));
+                    else {
+                      haptic('light');
+                      playEpisode(item);
+                    }
+                  }
+                : undefined
+            }
             uri={coverArtUrl(item.coverArt ?? item.id, COVER.card)}
             rounded={item.kind === 'artist'}
             title={item.name}
             subtitle={label(item)}
             pinned={!!pins[`${item.kind}:${item.id}`]}
-            onLongPress={() => onLongPress(item)}
+            dimmed={item.kind === 'episode' && unavailable(item.id)}
+            badge={item.kind === 'episode' && !!files[item.id]}
+            onLongPress={
+              item.kind === 'episode' && unavailable(item.id)
+                ? undefined
+                : () => onLongPress(item)
+            }
           />
         ) : (
-          <Link href={item.href} asChild>
-            <Pressable style={styles.row} onLongPress={() => onLongPress(item)}>
-              <Cover
-                uri={coverArtUrl(item.coverArt ?? item.id, COVER.thumb)}
-                size={56}
-                rounded={item.kind === 'artist'}
-              />
-              <View style={styles.rowInfo}>
-                <Text style={styles.rowTitle} numberOfLines={1}>
-                  {item.name}
-                </Text>
-                <View style={styles.rowSubLine}>
-                  {pins[`${item.kind}:${item.id}`] ? (
-                    <Icon
-                      name="pin"
-                      size={13}
-                      color={colors.accent}
-                    />
-                  ) : null}
-                  <Text style={styles.rowSub} numberOfLines={1}>
-                    {label(item)}
+          item.kind === 'episode' ? (
+            <PodcastRow
+              channel={item.channel}
+              episode={item.episode}
+              pinned={!!pins[`${item.kind}:${item.id}`]}
+              sub={label(item)}
+            />
+          ) : item.kind === 'podcast' ? (
+            <PodcastRow
+              channel={item.channel}
+              pinned={!!pins[`${item.kind}:${item.id}`]}
+              sub={label(item)}
+            />
+          ) : (
+            <Link href={item.href} asChild>
+              <Pressable style={styles.row} onLongPress={() => onLongPress(item)}>
+                <Cover
+                  uri={coverArtUrl(item.coverArt ?? item.id, COVER.thumb)}
+                  size={56}
+                  rounded={item.kind === 'artist'}
+                />
+                <View style={styles.rowInfo}>
+                  <Text style={styles.rowTitle} numberOfLines={1}>
+                    {item.name}
                   </Text>
+                  <View style={styles.rowSubLine}>
+                    {pins[`${item.kind}:${item.id}`] ? (
+                      <Icon
+                        name="pin"
+                        size={13}
+                        color={colors.accent}
+                      />
+                    ) : null}
+                    <Text style={styles.rowSub} numberOfLines={1}>
+                      {label(item)}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            </Pressable>
-          </Link>
+              </Pressable>
+            </Link>
+          )
         )
       }
     />
@@ -765,7 +1059,10 @@ function GridCard({
   title,
   subtitle,
   pinned,
+  dimmed,
+  badge,
   onLongPress,
+  onPress,
 }: {
   href: string;
   uri?: string;
@@ -775,32 +1072,42 @@ function GridCard({
   title: string;
   subtitle?: string;
   pinned?: boolean;
+  /** Offline and not downloaded (a podcast episode): dim like a song row. */
+  dimmed?: boolean;
+  /** On disk (a downloaded episode): the ↓ badge, as `TrackRow` gives a song. */
+  badge?: boolean;
   onLongPress?: () => void;
+  /**
+   * A card that does something on tap instead of navigating (a podcast episode
+   * plays itself). With it, the card is not a link: the tap runs this.
+   */
+  onPress?: () => void;
 }) {
   const { card } = useGridMetrics();
-  return (
-    <Link href={href} asChild>
-      <Pressable
-        style={StyleSheet.flatten([styles.card, { width: card }, rounded && styles.cardCentered])}
-        onLongPress={onLongPress}
-      >
-        {art ?? <Cover uri={uri} size={card} rounded={rounded} />}
-        <Text style={[styles.cardTitle, rounded && styles.centerText]} numberOfLines={1}>
-          {title}
-        </Text>
-        {subtitle ? (
-          <View style={styles.cardSubLine}>
-            {pinned ? (
-              <Icon name="pin" size={12} color={colors.accent} />
-            ) : null}
-            <Text style={styles.cardSub} numberOfLines={1}>
-              {subtitle}
-            </Text>
-          </View>
-        ) : null}
-      </Pressable>
-    </Link>
+  const pressable = (
+    <Pressable
+      style={StyleSheet.flatten([styles.card, dimmed && styles.dimmed, { width: card }, rounded && styles.cardCentered])}
+      onPress={onPress}
+      onLongPress={onLongPress}
+    >
+      {art ?? <Cover uri={uri} size={card} rounded={rounded} />}
+      <Text style={[styles.cardTitle, rounded && styles.centerText]} numberOfLines={1}>
+        {title}
+      </Text>
+      {subtitle ? (
+        <View style={styles.cardSubLine}>
+          {badge ? <Icon name="arrow-down-circle" size={12} color={colors.accent} /> : null}
+          {pinned ? <Icon name="pin" size={12} color={colors.accent} /> : null}
+          <Text style={styles.cardSub} numberOfLines={1}>
+            {subtitle}
+          </Text>
+        </View>
+      ) : null}
+    </Pressable>
   );
+  // A card that acts on tap (an episode plays itself) is not a link; otherwise
+  // the tap navigates to `href`.
+  return onPress ? pressable : <Link href={href} asChild>{pressable}</Link>;
 }
 
 /**
@@ -1134,6 +1441,8 @@ export default function LibraryScreen() {
           <PlaylistsTab onNew={() => setCreating(true)} query={filter} owner={shownOwner} />
         ) : segment === 'albums' ? (
           <AlbumsTab query={filter} />
+        ) : segment === 'podcasts' ? (
+          <PodcastsTab query={filter} />
         ) : (
           <ArtistsTab query={filter} />
         )}
@@ -1233,6 +1542,8 @@ const styles = themed((colors) => ({
   },
   card: { gap: spacing.xs },
   cardCentered: { alignItems: 'center' },
+  // Offline and not downloaded (a podcast episode): dim like a song row.
+  dimmed: { opacity: DIM_OPACITY },
   cardTitle: { color: colors.text, fontSize: fontSize.xs, lineHeight: lineHeight.xs, fontWeight: '500', marginTop: spacing.xs },
   centerText: { textAlign: 'center' },
   cardSub: { color: colors.textSecondary, fontSize: fontSize.xs, lineHeight: lineHeight.xs },

@@ -9,6 +9,10 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Added
+
+- Podcasts are part of the app. Their episodes can be downloaded and play with no connection, take a heart, go in the queue and show up in Library, search and the Home grid. A show has its own ⋯ menu, which also takes it off the device. Thanks to Garrit Schröder.
+
 ## [0.8.4] - 2026-10-20
 
 ### Added

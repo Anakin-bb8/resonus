@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 823 of them.
+Every string the app can show, under the screen it shows up on. 821 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -80,6 +80,7 @@ you are actually typing into, which is easier than reading it here.
 | `Go to album` | Leave this sheet and open the album the song is on |
 | `Go to artist` | Leave this sheet and open the artist |
 | `Go to artist radio` |  |
+| `Go to Podcast` | Song menu: open the show an episode belongs to. Not the act of broadcasting |
 | `Home` | The first tab, and a folder in the car |
 | `Library` | The settings section, and a folder in the car |
 | `Mix of “{name}”` | What the player calls the queue once it has grown past its album into songs the app picked itself. `{name}` is the song it was grown from |
@@ -215,7 +216,6 @@ you are actually typing into, which is easier than reading it here.
 | `Go to artist` | Leave this sheet and open the artist |
 | `Playlist created` | The toast after making one |
 | `Radio updated` |  |
-| `Refresh` | Ask the server for this playlist again, in case it changed elsewhere. Also the button under suggested tracks to regenerate them |
 | `Refresh this radio` |  |
 | `Save as playlist` |  |
 | `Suggested tracks` | Section heading at the bottom of a playlist: songs the server recommends based on what is already in the playlist |
@@ -274,7 +274,7 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `Add podcast` |  |
+| `Add podcast` | The Explore chip, the add-a-show sheet's title and the button that opens it: keeps a show on this phone from its feed. Not adding a song to a list |
 | `Add station` | Title of the sheet for adding an internet radio station |
 | `Couldn't load folders.` | Error on the screen, with a Retry button |
 | `Couldn't load playlists.` | Error on the screen, with a Retry button |
@@ -365,8 +365,8 @@ you are actually typing into, which is easier than reading it here.
 | `Radios` |  |
 | `Random albums` | A section of Home: albums picked at random, to happen upon something |
 | `Random artists` | A section of Home: artists picked at random |
-| `Random songs` |  |
-| `Recent episodes` |  |
+| `Random songs` | A section of Home: songs picked at random from the library |
+| `Recent episodes` | A section of Home, and its switch in settings: the newest episodes of the shows you keep, by the date the publisher gave them. Not episodes you listened to |
 | `Scanning your music…` | Going through the phone's own files |
 
 ## Library
@@ -377,15 +377,21 @@ you are actually typing into, which is easier than reading it here.
 | `Couldn't load artists.` | Error on the screen, with a Retry button |
 | `Couldn't load playlists.` | Error on the screen, with a Retry button |
 | `Couldn't load your library.` |  |
+| `Couldn't load your podcasts.` | The list of kept shows would not read — the phone's own index, not a server. The Retry button reads it again |
+| `Couldn't read this feed` | Filed under a show whose feed would not load, so the reason is still there offline. One show, not the whole list |
 | `Create your first playlist to get started.` | The line under an empty state |
+| `Episode` | The kind word for one episode, singular, where a row says what it is |
+| `Favorite a show to keep it here.` | The line under the Library's Podcasts shelf: hearts are how a show is kept. 'Here' means this phone |
 | `Grid view` | Show the list as cards in a grid |
 | `List view` | Show it as rows, one under the other |
 | `No favorite albums` | Empty state heading on the favourites tab |
 | `No favorite artists` | Empty state heading on the favourites tab |
 | `No playlists yet` | Empty state heading |
+| `No podcasts` | Nothing kept on this phone yet: no show subscribed |
 | `Nothing here yet` |  |
 | `Playlist` | A list saved on the server. Not the queue |
 | `Playlist created` | The toast after making one |
+| `Podcast` | The kind word: a search result's type and a show's metadata line. A noun, not the verb 'to broadcast' |
 | `Public` |  |
 | `Star albums to see them here.` | The line under an empty state, saying how to fill it |
 | `Star artists to see them here.` | The line under an empty state, saying how to fill it |
@@ -516,7 +522,6 @@ you are actually typing into, which is easier than reading it here.
 | `Playlist updated` | Toast after saving a change |
 | `Playlists are not available in offline mode.` | Shown instead of a playlist when there is no connection |
 | `Public playlist` | Toggle that makes a playlist public on the server |
-| `Refresh` | Ask the server for this playlist again, in case it changed elsewhere. Also the button under suggested tracks to regenerate them |
 | `Remove cover` | Screen reader label for the small x on a chosen picture |
 | `Removed from playlist` | Toast, with an undo button next to it |
 | `Share` | Make a link on the server that others can open. Getting the file itself out is `Export` |
@@ -535,42 +540,26 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `Couldn't load this podcast.` |  |
-| `Couldn't read this feed` |  |
-| `Episodes` |  |
-| `No audio available` |  |
-| `No episodes` |  |
-| `Play latest` |  |
-| `Pull down to read the feed again.` |  |
-| `This podcast's feed could not be read, so these episodes may be out of date.` |  |
-| `Untitled episode` |  |
-| `Website` |  |
+| `Couldn't load this podcast.` | One show's own screen: its episodes would not read. The Retry button reads its feed again |
+| `No episodes` | A show whose feed lists no items at all: the publisher has nothing published |
+| `Podcast` | The kind word: a search result's type and a show's metadata line. A noun, not the verb 'to broadcast' |
 
 ## Podcasts
 
 | String | What it is |
 | --- | --- |
-| `{n} podcast feeds could not be read.` |  |
-| `Add podcast` |  |
-| `Couldn't load your podcasts.` |  |
-| `Couldn't reach any of your podcast feeds.` |  |
-| `Couldn't read that feed.` |  |
-| `Couldn't read this feed` |  |
-| `Couldn't search for podcasts.` |  |
-| `Find a podcast` |  |
-| `No episodes yet` |  |
-| `No podcast found for “{term}”. Try pasting the feed address below.` |  |
-| `No podcasts` |  |
-| `Open website` |  |
-| `Podcasts` |  |
-| `Refresh` | Ask the server for this playlist again, in case it changed elsewhere. Also the button under suggested tracks to regenerate them |
-| `Remove “{name}” and its episodes from this device?` |  |
-| `Search for a podcast` |  |
-| `Search for a show, or paste the address of a feed below.` |  |
-| `Subscribe` |  |
-| `Tap + to subscribe to a show.` |  |
-| `Unsubscribe` |  |
-| `Unsubscribed from “{name}”` |  |
+| `{n} podcast feeds could not be read.` | After asking every kept show: how many feeds failed. The rest answered and still show |
+| `Add` | Podcasts › the add sheet's confirm button: keeps a show on this phone. Not adding a song to a list |
+| `Add podcast` | The Explore chip, the add-a-show sheet's title and the button that opens it: keeps a show on this phone from its feed. Not adding a song to a list |
+| `Couldn't load your podcasts.` | The list of kept shows would not read — the phone's own index, not a server. The Retry button reads it again |
+| `Couldn't reach any of your podcast feeds.` | Said after asking every kept show for new episodes: none of the feeds answered, so nothing new could be read |
+| `Couldn't read this feed` | Filed under a show whose feed would not load, so the reason is still there offline. One show, not the whole list |
+| `Feed URL` | The field in the add-a-show sheet: the address of the show's feed, pasted in |
+| `Find a podcast` | The placeholder in the search box on the shows you keep: searches the iTunes directory, which answers with a show's feed address |
+| `No episodes yet` | Where a show's episode count would be on the list of shows: nothing published yet |
+| `No podcasts` | Nothing kept on this phone yet: no show subscribed |
+| `Podcasts` | Shows kept on this phone, played from the address the publisher gives. Not something the music server stores |
+| `The feed URL must start with http:// or https://` | Said when what was pasted is not an address. The two protocols are the answer, not part of the sentence to translate |
 
 ## Queue
 
@@ -635,6 +624,8 @@ you are actually typing into, which is easier than reading it here.
 | `Artist` | In search results, the little word under a result saying what kind of thing it is |
 | `Artists` | A heading over a list of them, never a count |
 | `Couldn't reach the server. Check your connection.` | Error on Home when the server does not answer at all |
+| `Podcast` | The kind word: a search result's type and a show's metadata line. A noun, not the verb 'to broadcast' |
+| `Podcasts` | Shows kept on this phone, played from the address the publisher gives. Not something the music server stores |
 | `Recent searches` | What was searched for before, kept on the phone |
 | `Search your music` |  |
 | `Song` | In search results, the little word under a result saying what kind of thing it is |
@@ -750,6 +741,7 @@ you are actually typing into, which is easier than reading it here.
 | `Other` | Two places, and the same word does for both: in that storage bar, the space used by things other than downloads; and on an artist's page, the last shelf of the discography, holding the records that fit none of the kinds above it |
 | `Pending changes` | A line of the storage breakdown: favourites and edits made offline, waiting to go up to the server |
 | `Playlist covers` | One line of the storage breakdown in Settings › Downloads: how much room the playlist cover images take. It is a size, not a setting |
+| `Podcast subscriptions` | Settings › Downloads storage breakdown: the SQLite index of the shows kept on the phone (feeds, what was read, hearts). The episode files are counted with Downloads |
 | `Radio station art` | A line of the storage breakdown: the pictures of radio stations. A size, not a setting |
 | `Simultaneous downloads` |  |
 | `Song cache` | Copies of streamed songs the app keeps by itself and deletes to make room. Not the same as Downloads, which the person chose |
@@ -780,14 +772,14 @@ you are actually typing into, which is easier than reading it here.
 
 | String | What it is |
 | --- | --- |
-| `Active` |  |
-| `Couldn't load the font` |  |
+| `Active` | Label showing which custom font is currently applied |
+| `Couldn't load the font` | Toast when the chosen file could not be loaded as a font |
 | `default` | Lower case on purpose: it goes in brackets after the system font's name, `Roboto (default)` |
 | `Font` |  |
-| `Load a .ttf or .otf file` |  |
-| `Loaded` |  |
-| `Make sure the file is a valid .ttf or .otf font.` |  |
-| `Remove custom font` |  |
+| `Load a .ttf or .otf file` | Button on the font picker screen to import a custom font file |
+| `Loaded` | Toast after a custom font was loaded successfully |
+| `Make sure the file is a valid .ttf or .otf font.` | Line under that toast, explaining what might be wrong |
+| `Remove custom font` | Button to remove the custom font and fall back to the system one |
 
 ## Settings › Greeting
 
@@ -915,7 +907,7 @@ you are actually typing into, which is easier than reading it here.
 | `At the top of Home, what is playing in your other apps and devices, ready to carry on here.` |  |
 | `Blur` | One of the values of “Navigation bar style” |
 | `Border radius` |  |
-| `Cover corners` |  |
+| `Cover corners` | The corners of every cover art picture in the app, whose choices are Square, Rounded and More rounded |
 | `Dark` | The appearance the app has always had, and what it uses unless the other is chosen. |
 | `Explore` | The tab holding everything the server has: all albums, artists, songs, genres, stations and folders |
 | `Explore sections` |  |
@@ -932,7 +924,7 @@ you are actually typing into, which is easier than reading it here.
 | `Interface` | Section header grouping toggles |
 | `Language` |  |
 | `Light` | The light appearance, in Settings › Theme |
-| `More rounded` | One of the values of “Cover corners” |
+| `More rounded` | Corners of the cover art: rounder than the usual |
 | `Navigation` | Section header: how you move around the app |
 | `Navigation bar` | Settings screen: which tabs are on the bar at the bottom, and in what order |
 | `Navigation bar style` |  |
@@ -944,12 +936,12 @@ you are actually typing into, which is easier than reading it here.
 | `Radios` |  |
 | `Round` | One of the values of “Border radius” |
 | `Round corners everywhere, or flatter ones` | The line under “Border radius”, explaining it |
-| `Rounded` | One of the values of “Cover corners” |
-| `Scheduled` |  |
+| `Rounded` | Corners of the cover art: slightly rounded, the usual look |
+| `Scheduled` | A theme mode: light from one hour of the day, dark from another |
 | `Show tab names` |  |
 | `Solid` | One of the values of “Navigation bar style” |
 | `Song lists` | The setting for how song lists look |
-| `Square` | One of the values of “Cover corners” |
+| `Square` | Corners of the cover art: sharp, not rounded at all |
 | `Start on your playlists` | A switch: with it on, Your library with no chip pressed shows the Favorites entry and the playlists, the way it used to, instead of albums, artists and playlists mixed together |
 | `Swipe left` | What dragging a song to the left in a list does |
 | `Swipe right` | What dragging a song to the right in a list does. Its values are the actions listed under it |
@@ -1020,37 +1012,37 @@ you are actually typing into, which is easier than reading it here.
 | `Background` | Section header over what is drawn behind the player. Its two values are `Plain` and `Blurred cover` |
 | `Blur inactive lyrics` | A switch in the Lyrics section: progressively softens synchronized lyric rows away from the current line |
 | `Blurred cover` | A value of `Background`: the album art, blurred, behind the player |
-| `Bold font weight` | One of the values of “Lyrics weight” |
+| `Bold font weight` | A lyrics font weight: bold strokes (700) |
 | `Bottom row` |  |
 | `Buttons` | Which player buttons to show |
 | `Buttons next to play` |  |
-| `Centered` | One of the values of “Lyrics alignment” |
+| `Centered` | Lyrics alignment: each line centred |
 | `Clips in the app too` | iOS setting: the animated cover clip also plays inside the app, not only on the lock screen |
 | `Colored mini player` | Tint the mini player with the colour of the cover art |
 | `Cover art` | Three places, one word: a section header in Settings › Player, a line of the storage bar in Settings › Downloads, and what the screen reader calls the picture in the song information sheet |
 | `Cover color` | The colour taken from the cover art |
 | `Disable online search` | A value of `Lyrics source`: only ever use the ones that came with the file |
 | `Elements` | Which player elements to show |
-| `Favorite` | One of the values of “Buttons next to play” |
+| `Favorite` | One of the choices for the button next to play on the mini player: the heart. Not a verb |
 | `Fit cover art` | Show the whole cover even if it is not square, instead of cropping it to fill |
 | `Go to album` | Leave this sheet and open the album the song is on |
 | `In the cover` | A value of `Animated artwork`: the animated cover plays inside the square where the cover is |
 | `Keep paused when skipping` |  |
-| `Large` | One of the values of “Lyrics size” |
-| `Left` | One of the values of “Lyrics alignment” |
-| `Light font weight` | One of the values of “Lyrics weight” |
+| `Large` | A lyrics size |
+| `Left` | Lyrics alignment: lines start at the left edge |
+| `Light font weight` | A lyrics font weight: thin strokes (300) |
 | `Lyrics alignment` |  |
 | `Lyrics background` | What is drawn behind the lyrics screen, the full screen one |
 | `Lyrics card background` | What is drawn behind the small lyrics card that peeks under the player. Not the same thing as `Lyrics background` |
-| `Lyrics size` |  |
+| `Lyrics size` | Text size on every lyrics surface: small, normal or large |
 | `Lyrics source` | Where lyrics are looked for. Its values are the three `Prefer…`/`Disable…` lines |
-| `Lyrics weight` |  |
-| `Medium font weight` | One of the values of “Lyrics weight” |
+| `Lyrics weight` | Thickness of text on every lyrics surface |
+| `Medium font weight` | A lyrics font weight: medium strokes and the default (500) |
 | `Mini player` |  |
 | `Mini player blur` |  |
 | `No` | A setting value meaning none or zero, not the answer to a question: no crossfade, no seek buttons |
-| `None` | One of the values of “Buttons next to play” |
-| `Normal` | One of the values of “Lyrics size” |
+| `None` | One of the choices for the buttons next to play on the mini player: no button at all |
+| `Normal` | A lyrics size, the default one |
 | `Nothing` | A value of `On cover tap`: tapping the cover does nothing |
 | `On cover double tap` | Settings > Player: what tapping the album artwork twice does |
 | `On cover tap` | What tapping the cover art in the player does. One tap and two share the same values, listed below |
@@ -1065,10 +1057,10 @@ you are actually typing into, which is easier than reading it here.
 | `Previous button` | What the previous button does when a song is already playing. Its values are the two lines below it |
 | `Providers` |  |
 | `Queue` | The list of songs waiting to play. Not a playlist |
-| `Regular font weight` | One of the values of “Lyrics weight” |
+| `Regular font weight` | A lyrics font weight: regular strokes (400) |
 | `Restart, then previous track` | A value of `Previous button`: the first press goes back to the start of this song, the second to the one before |
 | `Scroll long titles` | A title too long to fit slides sideways, over and over, instead of being cut off |
-| `Semi-bold font weight` | One of the values of “Lyrics weight” |
+| `Semi-bold font weight` | A lyrics font weight: semi-bold strokes (600) |
 | `Show album & year` |  |
 | `Show animated covers` | The switch for all of them: off, no cover moves anywhere in the app |
 | `Show artist card` |  |
@@ -1079,7 +1071,7 @@ you are actually typing into, which is easier than reading it here.
 | `Show quality label` |  |
 | `Show rating` |  |
 | `Skip buttons` | The seek forward / back buttons setting |
-| `Small` | One of the values of “Lyrics size” |
+| `Small` | A lyrics size |
 | `Swap favorite and menu` | Exchange the places of those two buttons in the player, for whichever hand you hold the phone in |
 
 ## Settings › Player buttons
@@ -1100,6 +1092,7 @@ you are actually typing into, which is easier than reading it here.
 | --- | --- |
 | `{n} cards` | How many tiles fit across the quick grid. `{n}` is a number of columns |
 | `Pin favorites` | Pin favourites to the quick grid |
+| `Podcasts` | Shows kept on this phone, played from the address the publisher gives. Not something the music server stores |
 | `Quick grid` | The grid of shortcut tiles on Home |
 | `Recent albums` | A source the quick grid can draw its tiles from |
 | `Show quick grid` | Whether the grid of shortcut tiles shows on Home |
@@ -1153,15 +1146,15 @@ you are actually typing into, which is easier than reading it here.
 | `Create custom color` |  |
 | `Custom color` |  |
 | `Dark` | The appearance the app has always had, and what it uses unless the other is chosen. |
-| `Dark from` |  |
+| `Dark from` | With the scheduled theme, the hour dark starts. Followed by a time such as 21:00 |
 | `Edit custom color` |  |
 | `Hex code` |  |
 | `Light` | The light appearance, in Settings › Theme |
-| `Light from` |  |
+| `Light from` | With the scheduled theme, the hour light starts. Followed by a time such as 07:00 |
 | `Mode` | Heading over the two appearances on the Theme screen. Not a playback mode and not a profile: dark or light. It is called this and not "Appearance" because Appearance is the settings screen one level up |
 | `Palette` |  |
 | `Pure black` |  |
-| `Scheduled` |  |
+| `Scheduled` | A theme mode: light from one hour of the day, dark from another |
 | `System` | Two places: a theme setting (use whichever appearance the phone itself is set to, light or dark), and `System::section`, the heading in Settings › Quality & playback over Keep screen on and the battery warning. Add `System::section` to your file if one word cannot do both |
 | `The accent Android takes from the wallpaper` | The line under “Use the system colors”, explaining it |
 | `Theme` | The screen where the appearance and the accent colour are chosen, and the name of the row that opens it |
@@ -1183,6 +1176,9 @@ you are actually typing into, which is easier than reading it here.
 | `“{name}” will no longer be available offline.` | The line under that title. `{name}` is the album, artist or playlist |
 | `{n} added to “{name}”` | Toast when several songs went in at once. `{n}` is a count of songs |
 | `{n} columns` | The other options in that menu: cards, this many across. `{n}` is 2, 3 or 4, so it is always plural |
+| `{n} episodes couldn't be downloaded` | Toast after a show's download: how many the publisher would not give |
+| `{n} episodes deleted` | Toast after clearing a show's downloads: how many files went |
+| `{n} episodes downloaded` | Toast after a show's download: how many episodes landed on the phone |
 | `{n} of {m} songs exported` | Toast when only some of them made it |
 | `{n} of {songs} are already in “{name}”.` | The same warning when adding several at once and only some of them are already there. `{n}` is how many of them are, and `{songs}` already reads as a count ("12 songs"), so the sentence is like "3 of 12 songs are already in “Rock”." |
 | `{n} removed from favorites` | Toast. `{n}` is a count of songs |
@@ -1232,6 +1228,7 @@ you are actually typing into, which is easier than reading it here.
 | `Download stopped` | Toast: the download was stopped part way |
 | `Downloading…` | Toast: the download has started. The songs arrive one by one after this |
 | `Drag to reorder, toggle to show or hide.` |  |
+| `Episode downloaded` | Toast when one episode finished downloading |
 | `Export` | Get the downloaded file itself out of the app, as a file. Not the same as `Share`, which makes a link on the server |
 | `Exporting…` | The file is being copied out |
 | `Favorites` | The songs, albums and artists you starred |
@@ -1258,10 +1255,13 @@ you are actually typing into, which is easier than reading it here.
 | `Radio` | Internet radio stations. Most languages keep the word |
 | `Rate {n} stars` | Read out by the screen reader for each star. `{n}` is which star it is |
 | `Recently added` | A sort order, and a section: newest first (in Favorites, last favorited first) |
+| `Refresh` | Ask the server for this playlist again, in case it changed elsewhere. Also the button under suggested tracks to regenerate them, and on a podcast show the action that reads its feed again from the publisher |
 | `Remove` | Take something out of a list. Deleting for good is `Delete` |
+| `Remove “{name}” and its episodes from this device?` |  |
 | `Remove download` | Delete the downloaded file, keeping the song in the library |
 | `Remove download?` | Dialog title: delete the files of something already downloaded |
 | `Remove from favorites` | The same button when it is already a favourite, and the menu entry that takes a whole selection out |
+| `Remove from this device` | A show's ⋯ menu and the dialog it opens: takes the show, its episodes and its downloads off this phone. Nothing on any server |
 | `Removed from favorites` | Toast |
 | `Reorder` | Enter drag-to-reorder mode |
 | `Retry` | The button on an error message: try again. A verb |
@@ -1290,4 +1290,6 @@ you are actually typing into, which is easier than reading it here.
 | `Unknown artist` | Fallback when the file and the server have no artist |
 | `View` | Title of the menu that chooses how a collection is drawn, and the label of the button that opens it. A noun: what you are looking at, not the verb |
 | `View cover` | The same as `View image`, for album and playlist artwork |
+| `Website` | A show's ⋯ sheet: opens the publisher's own web page in the browser. Not the feed file |
 | `Wrong username or password` |  |
+| `You're offline` | Said when a manual 'use no network' refused an action that needs the network |

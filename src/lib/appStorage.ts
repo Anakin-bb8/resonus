@@ -35,6 +35,12 @@ const FOLDERS = {
   legacyRadioCovers: `${base}radio-covers/`,
   /** Favourites, ratings and edits made offline, waiting to go up. */
   outbox: `${base}offline-queue/`,
+  /**
+   * The shows kept on the device: feeds, what was read from each, hearts. The
+   * episodes downloaded for them are counted with the downloads, whose sizes
+   * the database wrote down; what is left here is the index itself.
+   */
+  podcasts: `${base}podcasts/`,
 } as const;
 
 export type StorageParts = Record<keyof typeof FOLDERS, number>;

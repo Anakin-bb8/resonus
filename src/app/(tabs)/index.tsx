@@ -28,7 +28,14 @@ import {
   type Playlist,
   type Song,
 } from '@/api/data';
-import { listRecentEpisodes, type RecentEpisode } from '@/api/podcasts';
+import {
+  getChannel,
+  getStoredChannel,
+  isFeedUrl,
+  podcastCover,
+  listRecentEpisodes,
+  type RecentEpisode,
+} from '@/api/podcasts';
 import { AlbumCard } from '@/components/AlbumCard';
 import { AlbumCardsSkeleton } from '@/components/AlbumCardsSkeleton';
 import { ArtistCard } from '@/components/ArtistCard';
@@ -42,6 +49,7 @@ import { PodcastEpisodeCard } from '@/components/PodcastEpisodeCard';
 import { RadioCard } from '@/components/RadioCard';
 import { TrackRow } from '@/components/TrackRow';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
+import { episodeUnavailable } from '@/hooks/useEpisodeUnavailable';
 import { columnsFor, useScreenSize } from '@/hooks/useScreenSize';
 import { songsLabel, useT } from '@/i18n';
 import { greetingHours } from '@/i18n/languages';
@@ -55,6 +63,7 @@ import { useAuthStore } from '@/store/auth';
 import { checkAutoUrlNow } from '@/store/autoUrl';
 import { useLastPlayed } from '@/store/lastPlayed';
 import { usePlayerStore } from '@/store/player';
+import { useDownloads } from '@/store/downloads';
 import { useRadios } from '@/store/radios';
 import { useScanProgress } from '@/store/scanProgress';
 import {
@@ -140,6 +149,7 @@ function QuickGrid() {
   const withFavorites = useSettings((s) => s.quickGridFavorites);
   const withAlbums = useSettings((s) => s.quickGridAlbums);
   const withPlaylists = useSettings((s) => s.quickGridPlaylists);
+  const withPodcasts = useSettings((s) => s.quickGridPodcasts);
   const size = useSettings((s) => s.quickGridSize);
   const { data: playlists } = useQuery({
     queryKey: ['playlists'],
@@ -150,6 +160,34 @@ function QuickGrid() {
     queryKey: ['albumList', offline ? 'newest' : 'recent'],
     queryFn: () => getAlbumList(offline ? 'newest' : 'recent'),
     enabled: canFetch && withAlbums,
+  });
+  // A show's picture is the feed's own address, kept in its database row —
+  // there is no server cover id to build a URL from. So the tiles for played
+  // shows ask SQLite for the picture, keyed by the hrefs that were played.
+  const podcastHrefs = Object.keys(times).filter((h) => h.startsWith('/podcast/'));
+  const { data: podcastCovers } = useQuery({
+    // Keyed by the hrefs themselves: a show played for the first time is a
+    // new question. The `['podcast']` prefix is what the show screens
+    // invalidate, so a refresh that changes a picture lands here too.
+    queryKey: ['podcast', 'covers', ...podcastHrefs],
+    queryFn: async () => {
+      const out: Record<string, string> = {};
+      for (const href of podcastHrefs) {
+        // Everything after the kind, not the third piece: a show opened
+        // straight from its feed carries the feed's address, with its own
+        // slashes, as the id.
+        const id = href.slice('/podcast/'.length);
+        const ch = isFeedUrl(id)
+          ? await getStoredChannel(decodeURIComponent(id))
+          : await getChannel(id);
+        if (ch?.imageUrl) {
+          const art = podcastCover(ch);
+          if (art) out[href] = art;
+        }
+      }
+      return out;
+    },
+    enabled: withPodcasts && podcastHrefs.length > 0,
   });
 
   // Spotify-style dynamic grid: mixes playlists and recent albums sorted by
@@ -201,14 +239,34 @@ function QuickGrid() {
         const [, kind, id] = href.split('/');
         const name = names[href];
         if (!name || !id) return null;
-        if (kind === 'album' ? !withAlbums : kind === 'playlist' ? !withPlaylists : true) {
+        if (
+          kind === 'album'
+            ? !withAlbums
+            : kind === 'playlist'
+              ? !withPlaylists
+              : kind === 'podcast'
+                ? !withPodcasts
+                : true
+        ) {
           return null;
         }
-        return { key: href, href, name, cover: coverArtUrl(id, COVER.thumb), ts };
+        return {
+          key: href,
+          href,
+          name,
+          // A show's picture is the feed's own address, read from its database
+          // row above; `coverArtUrl` wears it the offline way (only a picture
+          // already on the phone answers) exactly as it does for remote art.
+          cover:
+            kind === 'podcast'
+              ? coverArtUrl(podcastCovers?.[href], COVER.thumb)
+              : coverArtUrl(id, COVER.thumb),
+          ts,
+        };
       })
       .filter((it): it is Item => it !== null);
     return [...al, ...pl, ...played].sort((x, y) => y.ts - x.ts).slice(0, dynamicCount);
-  }, [playlists, albums, times, names, withPlaylists, withAlbums, dynamicCount]);
+  }, [playlists, albums, podcastCovers, times, names, withPlaylists, withAlbums, withPodcasts, dynamicCount]);
 
   // Without active sources there's nothing to show (the master toggle still
   // decides if the block mounts; this covers "all off" from here).
@@ -486,9 +544,14 @@ function PlaylistsSection({ title }: { title: string }) {
   );
 }
 
-/** The newest podcast episodes. Local, and nothing at all without a subscription. */
+/** The newest podcast episodes. Local, and nothing at all until a show is kept. */
 function PodcastEpisodesSection({ title }: { title: string }) {
   const card = useShelfCard();
+  // Hide mode, offline: cards of episodes that are not on disk are not drawn
+  // (the cards themselves dim by the same rule, inside `PodcastEpisodeCard`).
+  const offline = useAuthStore((s) => s.offline);
+  const files = useDownloads((s) => s.files);
+  const hideUnavailable = useSettings((s) => s.hideUnavailableOffline);
   const { data, isLoading } = useQuery({
     // Invalidated by the podcast screens.
     queryKey: ['podcastRecentEpisodes'],
@@ -503,7 +566,11 @@ function PodcastEpisodesSection({ title }: { title: string }) {
       </View>
     );
   }
-  if (!data || data.length === 0) return null;
+  const shown =
+    hideUnavailable
+      ? (data ?? []).filter((r: RecentEpisode) => !episodeUnavailable(offline, files, r.episode.id))
+      : data;
+  if (!shown || shown.length === 0) return null;
 
   return (
     <View style={styles.section}>
@@ -511,7 +578,7 @@ function PodcastEpisodesSection({ title }: { title: string }) {
       <FlatList
         {...listPerf}
         horizontal
-        data={data}
+        data={shown}
         keyExtractor={(item: RecentEpisode) => item.episode.id}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.rowContent}
