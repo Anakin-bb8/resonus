@@ -293,15 +293,18 @@ export function parseFeed(xml: string, channelId: string): ParsedFeed {
     const title = text(block, 'title') ?? '';
     const publishedAt = parseFeedDate(text(block, 'pubDate', 'published', 'updated', 'date'));
     const enc = enclosure(block);
-    // `itunes:episode` is a plain count; a feed that numbers none gives NaN, and
-    // a zero-padded or non-positive one is no number worth showing, so it stays
-    // out rather than filing a 0 the song's info would then read as a track.
-    const epNum = Number(text(block, 'episode'));
+    // `itunes:episode` is a plain count, and feeds spell it however they like:
+    // one that numbers none gives NaN, a zero-padded one is the feed's own
+    // spelling and `Number` reads it as the count it means, so `07` stays 7.
+    // Rounded before it is tested, so a decimal never rounds down to a 0 that
+    // the song's info would then read as a track — a non-positive one is no
+    // number worth showing and stays out.
+    const epNum = Math.round(Number(text(block, 'episode')));
     const item: ParsedItem = {
       id: `${channelId}/${itemKey(block, title, publishedAt)}`,
       title,
       publishedAt,
-      ...(Number.isFinite(epNum) && epNum > 0 ? { episode: Math.round(epNum) } : {}),
+      ...(Number.isFinite(epNum) && epNum > 0 ? { episode: epNum } : {}),
       duration: parseDuration(text(block, 'duration')),
       url: enc.url,
       mimeType: enc.type,
