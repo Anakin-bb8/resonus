@@ -60,3 +60,7 @@ modules/*/android/.kotlin/
 # pnpm only
 package-lock.json
 yarn.lock
+
+# Local notes for coding assistants
+CLAUDE.md
+AGENTS.md
