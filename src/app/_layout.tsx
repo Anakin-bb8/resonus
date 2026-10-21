@@ -32,6 +32,7 @@ import { SongInfoSheet } from '@/components/SongInfoSheet';
 import { SongMenuSheet } from '@/components/SongMenuSheet';
 import { Toast } from '@/components/Toast';
 import { UpdatePrompt } from '@/components/UpdatePrompt';
+import { SELF_UPDATES } from '@/lib/distribution';
 import { installAppFont, setAppFont } from '@/lib/appFont';
 import { initAppLocale } from '@/lib/appLocale';
 import { initHomeWidget } from '@/lib/homeWidget';
@@ -481,7 +482,7 @@ export default function RootLayout() {
             {/* Not behind the profile guard on a whim: the check reaches
                 GitHub, not the music server, and somebody stuck on the login
                 screen because a two-release-old bug is exactly who needs it. */}
-            <UpdatePrompt />
+            {SELF_UPDATES ? <UpdatePrompt /> : null}
             <Toast />
           </View>
           </ErrorBoundary>

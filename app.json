@@ -42,6 +42,7 @@
     },
     "plugins": [
       "./plugins/withReleaseSigning",
+      "./plugins/withAbiVersionCode",
       "./plugins/withoutFontWeightAdjustment",
       "./plugins/withTrimmedPermissions",
       "./plugins/withAppLocales",

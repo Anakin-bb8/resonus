@@ -8,6 +8,7 @@
 import Constants from 'expo-constants';
 
 import { COVER, songCoverUrl, songListSorts } from '@/api/data';
+import { DISTRIBUTION, SELF_UPDATES } from '@/lib/distribution';
 import { widgetStatus } from '@/lib/homeWidget';
 import { coverSourceOf, mirrorCoverState } from '@/lib/mirrorCovers';
 import { repairStatus } from '@/lib/navidromeRepair';
@@ -40,7 +41,7 @@ export function profileLines(): string[] {
     st.autoOfflineSwitch && 'auto offline',
     st.syncQueueFromServer && 'queue sync',
     st.animatedCoverBackground && 'animated cover',
-    st.updateCheck && 'update check',
+    SELF_UPDATES && st.updateCheck && 'update check',
   ]
     .filter(Boolean)
     .join(', ');
@@ -48,7 +49,7 @@ export function profileLines(): string[] {
     // Which build this is, since a test APK carries the same version as the
     // release it was branched from and there is otherwise no telling them
     // apart from inside the app.
-    `build: ${Constants.expoConfig?.version ?? '?'}${COMMIT ? ` (${COMMIT})` : ' (local)'}`,
+    `build: ${Constants.expoConfig?.version ?? '?'}${COMMIT ? ` (${COMMIT})` : ' (local)'}${DISTRIBUTION === 'fdroid' ? ' F-Droid' : ''}`,
     `type: ${auth?.serverType ?? '—'}`,
     `native password: ${auth?.ndPassword || auth?.password ? 'yes' : 'no'}`,
     `plain auth: ${auth?.plainAuth ? 'yes' : 'no'}`,

@@ -9,6 +9,7 @@ import { Dialog } from '@/components/Dialog';
 import { Field, SettingRow, SettingsGroup, SettingsPage, SwitchList, settingsStyles } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
 import { fullReport } from '@/lib/diagnosticsReport';
+import { SELF_UPDATES } from '@/lib/distribution';
 import { pickSettingsFile, shareSettingsFile } from '@/lib/settingsFile';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
@@ -142,20 +143,22 @@ export default function AboutSettings() {
               question, one of them answered on the spot and the other left
               standing. Nothing between them, so the switch reads as the
               automatic version of the button above it. */}
-          <SettingRow
-            icon={checking ? 'hourglass-outline' : 'cloud-download-outline'}
-            label={t('Check for updates')}
-            onPress={() => {
-              if (checking) return;
-              void check(true).then(({ ok, release }) => {
-                // An update opens the prompt and speaks for itself. The other two
-                // answers have nowhere else to appear, and they are different
-                // answers: "nothing newer" is not "could not look".
-                if (!ok) toast(t("Couldn't check for updates"));
-                else if (!release) toast(t("You're on the latest version"));
-              });
-            }}
-          />
+          {SELF_UPDATES ? (
+            <SettingRow
+              icon={checking ? 'hourglass-outline' : 'cloud-download-outline'}
+              label={t('Check for updates')}
+              onPress={() => {
+                if (checking) return;
+                void check(true).then(({ ok, release }) => {
+                  // An update opens the prompt and speaks for itself. The other two
+                  // answers have nowhere else to appear, and they are different
+                  // answers: "nothing newer" is not "could not look".
+                  if (!ok) toast(t("Couldn't check for updates"));
+                  else if (!release) toast(t("You're on the latest version"));
+                });
+              }}
+            />
+          ) : null}
         </SettingsGroup>
         {/* Measuring is out in the open, unlike the screen it feeds: it is
             turned on when somebody is being walked through a slowdown, and it
@@ -164,11 +167,15 @@ export default function AboutSettings() {
             that conversation. */}
         <SwitchList
           options={[
-            {
-              label: t('Check for updates automatically'),
-              value: updateCheck,
-              onChange: setUpdateCheck,
-            },
+            ...(SELF_UPDATES
+              ? [
+                  {
+                    label: t('Check for updates automatically'),
+                    value: updateCheck,
+                    onChange: setUpdateCheck,
+                  },
+                ]
+              : []),
             {
               label: t('Measure performance'),
               value: diagnostics,
