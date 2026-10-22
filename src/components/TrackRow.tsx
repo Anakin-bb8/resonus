@@ -94,6 +94,9 @@ const SWIPE_ICON: Record<Exclude<SwipeAction, 'off'>, keyof typeof Icon.glyphMap
 
 /** Lines of an episode's show notes before "Show more" takes over (see `TrackRow`). */
 const EPISODE_DESCRIPTION_LINES = 2;
+/** Characters of the notes measured for that: far more than two lines hold
+ *  at any width a phone has. */
+const EPISODE_MEASURE_CHARS = 600;
 
 /**
  * Action strip that peeks out behind the row during swipe. Invisible at rest:
@@ -338,6 +341,9 @@ function TrackRowBase({
                     copy below can't tell whether anything was cut. */}
                 <Text
                   style={styles.episodeDescriptionMeasure}
+                  // A screen reader would read the notes twice otherwise.
+                  accessibilityElementsHidden
+                  importantForAccessibility="no-hide-descendants"
                   // The count answers after layout, so the answer arrives as a
                   // state write that re-renders the row. Only a real difference
                   // writes: layout runs again on every repaint, and a write on
@@ -353,7 +359,10 @@ function TrackRowBase({
                     }
                   }}
                 >
-                  {episode.description}
+                  {/* The opening is enough to tell whether the notes run past
+                      two lines, and some shows' notes are pages long: laying
+                      the whole text out twice per row would cost every scroll. */}
+                  {episode.description.slice(0, EPISODE_MEASURE_CHARS)}
                 </Text>
                 <Text
                   style={styles.episodeDescription}

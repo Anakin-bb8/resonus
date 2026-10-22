@@ -201,3 +201,31 @@ describe('sortEpisodes', () => {
     );
   });
 });
+
+describe('parseFeed: the episode number', () => {
+  const withEpisode = (value: string) =>
+    parseFeed(
+      `<rss xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"><channel><title>S</title>
+        <item><title>E</title><guid>e</guid><itunes:episode>${value}</itunes:episode>
+        <enclosure url="https://example.org/e.mp3" type="audio/mpeg"/></item>
+      </channel></rss>`,
+      'c',
+    ).items[0].episode;
+
+  it('reads the number a feed gives, zero-padded or not', () => {
+    assert.equal(withEpisode('7'), 7);
+    assert.equal(withEpisode('07'), 7);
+  });
+
+  it('leaves out what is no number worth showing', () => {
+    assert.equal(withEpisode(''), undefined);
+    assert.equal(withEpisode('0'), undefined);
+    assert.equal(withEpisode('0.4'), undefined);
+    assert.equal(withEpisode('-2'), undefined);
+    assert.equal(withEpisode('12abc'), undefined);
+  });
+
+  it('is absent when the feed numbers nothing', () => {
+    assert.equal(parseFeed(RSS, 'c1').items[0].episode, undefined);
+  });
+});

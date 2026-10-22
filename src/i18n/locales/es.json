@@ -819,5 +819,7 @@
   "Remove from this device": "Quitar de este dispositivo",
   "Favorite a show to keep it here.": "Marca un pódcast como favorito para tenerlo aquí.",
   "You're offline": "Estás sin conexión",
-  "Remove “{name}” and its episodes from this device?": "¿Quitar «{name}» y sus episodios de este dispositivo?"
+  "Remove “{name}” and its episodes from this device?": "¿Quitar «{name}» y sus episodios de este dispositivo?",
+  "New": "Nuevo",
+  "Refresh ({when} ago)": "Actualizar (hace {when})"
 }

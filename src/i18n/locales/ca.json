@@ -819,5 +819,7 @@
   "Remove from this device": "Treu d'aquest dispositiu",
   "Favorite a show to keep it here.": "Marca un pòdcast com a preferit per tenir-lo aquí.",
   "You're offline": "Estàs sense connexió",
-  "Remove “{name}” and its episodes from this device?": "Vols treure «{name}» i els seus episodis d'aquest dispositiu?"
+  "Remove “{name}” and its episodes from this device?": "Vols treure «{name}» i els seus episodis d'aquest dispositiu?",
+  "New": "Nou",
+  "Refresh ({when} ago)": "Actualitza (fa {when})"
 }
