@@ -11,17 +11,16 @@ Releases before 0.2.1 are only listed on the
 
 ### Added
 
-- Podcasts are part of the app. Their episodes can be downloaded and play with no connection, take a heart, go in the queue and show up in Library, search and the Home grid. A show has its own ⋯ menu, which also takes it off the device. Thanks to Garrit Schröder.
+- Podcasts: download episodes to play offline, favorite them, queue them, and find them in Library, search and Home. Thanks to Garrit Schröder.
 
 ### Fixed
 
-- Casting to a DLNA/UPnP speaker or TV holds up better (#285):
-  - A renderer that stops answering is looked for again. After 30 seconds without an answer, playback comes back to the phone, paused, with a notice, instead of the session hanging.
-  - The same happens when another app starts playing on the renderer.
-  - The queue moves on at the end of a song even when the renderer keeps saying it is playing with the clock stuck at the end, or guesses a transcoded song longer than it is.
-  - The next song is only handed to the renderer in advance when it can be seen starting it, so the screen no longer falls a song behind what is playing.
-  - A renderer stopped halfway (from its own remote, or giving up on the stream) shows as paused, and Play picks the song up where it stopped.
-- Android: closing the full-screen lyrics with the blurred cover behind them no longer turns them into a black panel for a moment on the way back to the player.
+- Casting (#285):
+  - If the speaker or TV stops responding for 30 seconds, playback returns to the phone, paused. The same happens if another app takes it over.
+  - The queue no longer gets stuck at the end of a song.
+  - The player no longer shows the wrong song after waking the phone.
+  - A song stopped from the TV's remote shows as paused and resumes where it was.
+- Lyrics no longer flash black when closed over the blurred cover (Android).
 
 ## [0.8.4] - 2026-10-20
 
