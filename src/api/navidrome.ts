@@ -50,10 +50,15 @@ async function ndLogin(auth: SubsonicAuth, fresh = false): Promise<string> {
   // the same password: no reason to ask for it twice.
   const password = auth.ndPassword ?? auth.password;
   if (!password) throw new NavidromeError('Sin contraseña guardada', 'auth');
+  // Offline mode stops here, before the socket (see netGate) — and it has to
+  // stop above the cached token, not below it. A token is not an answer, it is
+  // the key the caller goes to fetch with (see `ndJson`), so handing a warm one
+  // back while the mode is on lets that request out anyway: packets leaving a
+  // phone whose owner said not to ask for any, which is what the gate exists
+  // to rule out.
+  assertCanRequest();
   const key = tokenKey(auth);
   if (!fresh && cached?.key === key && Date.now() - cached.at < TOKEN_TTL) return cached.token;
-  // Offline mode stops here, before the socket (see netGate).
-  assertCanRequest();
   let res: Response;
   try {
     res = await fetch(`${auth.serverUrl}/auth/login`, {
