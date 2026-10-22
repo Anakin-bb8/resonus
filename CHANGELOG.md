@@ -13,6 +13,10 @@ Releases before 0.2.1 are only listed on the
 
 - Podcasts: download episodes to play offline, favorite them, queue them, and find them in Library, search and Home. Thanks to Garrit Schröder.
 
+### Changed
+
+- Search: filtering by Artists or Albums shows the results as a grid instead of a single sideways row (#280).
+
 ### Fixed
 
 - Casting (#285):

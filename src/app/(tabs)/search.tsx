@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Keyboard,
   Pressable,
+  StyleSheet,
   Text,
   TextInput,
   View,
@@ -17,7 +18,7 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { COVER, coverArtUrl, getPlaylists, search } from '@/api/data';
-import { getRadioStations } from '@/api/backend';
+import { getRadioStations, type Album, type Artist } from '@/api/backend';
 import { AlbumCard } from '@/components/AlbumCard';
 import { Cover } from '@/components/Cover';
 import { EmptyState } from '@/components/EmptyState';
@@ -40,7 +41,7 @@ import { useSettings } from '@/store/settings';
 import { useAccent } from '@/hooks/useAccent';
 import { colors, fontSize, radius, restyled, spacing, themed, useTheme, tracking } from '@/theme';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
-import { centredPadding, useScreenSize } from '@/hooks/useScreenSize';
+import { centredPadding, columnsFor, useScreenSize } from '@/hooks/useScreenSize';
 
 /**
  * What the chips under the box narrow the answer to.
@@ -62,6 +63,13 @@ const FILTERS: { key: SearchFilter; label: string }[] = [
   { key: 'podcasts', label: 'Podcasts' },
   { key: 'radio', label: 'Radio' },
 ];
+
+/** An artist in the row under `all`. */
+const ARTIST_SIZE = 110;
+/** The width a card in the filtered grid aims for, which sets the columns. */
+const ARTIST_IDEAL = 120;
+const ALBUM_IDEAL = 180;
+const GRID_GAP = spacing.md;
 
 export default function SearchScreen() {
   // Counted, to answer whether a tab you have visited keeps working
@@ -236,6 +244,68 @@ export default function SearchScreen() {
     (shows('podcasts') ? podcastMatches.length : 0) +
     (shows('radio') ? stationMatches.length : 0);
 
+  /**
+   * With its own chip pressed, a kind of card has the screen to itself, and a
+   * single row that has to be swiped sideways left the rest of it empty (#280).
+   * It wraps into a grid then, as wide as the screen gives it; under `all`
+   * it is one shelf among others and stays a row.
+   */
+  const contentWidth = width - pagePad * 2;
+  const gridCard = (ideal: number, min: number) => {
+    const columns = columnsFor(width, ideal, min);
+    // Rounded down: a width exact to the fraction wraps the last card of a
+    // row onto the next one as soon as layout rounds a pixel up.
+    return Math.floor((contentWidth - GRID_GAP * (columns - 1)) / columns);
+  };
+  const artistGrid = filter === 'artists';
+  const albumGrid = filter === 'albums';
+  const artistSize = artistGrid ? gridCard(ARTIST_IDEAL, 3) : ARTIST_SIZE;
+  const albumWidth = albumGrid ? gridCard(ALBUM_IDEAL, 2) : undefined;
+
+  const renderArtist = (artist: Artist) => (
+    <Link key={artist.id} href={`/artist/${artist.id}`} asChild>
+      <Pressable
+        style={StyleSheet.flatten([styles.artist, { width: artistSize }])}
+        onPress={() =>
+          addRecent({
+            kind: 'artist',
+            id: artist.id,
+            title: artist.name,
+            coverArt: artist.coverArt ?? artist.id,
+            href: `/artist/${artist.id}`,
+          })
+        }
+      >
+        <Cover
+          uri={coverArtUrl(artist.coverArt ?? artist.id, COVER.thumb)}
+          size={artistSize}
+          rounded
+        />
+        <Text style={styles.artistName} numberOfLines={1}>
+          {artist.name}
+        </Text>
+      </Pressable>
+    </Link>
+  );
+
+  const renderAlbum = (album: Album) => (
+    <AlbumCard
+      key={album.id}
+      album={album}
+      width={albumWidth}
+      onPress={() =>
+        addRecent({
+          kind: 'album',
+          id: album.id,
+          title: album.name,
+          artist: album.artist,
+          coverArt: album.coverArt ?? album.id,
+          href: `/album/${album.id}`,
+        })
+      }
+    />
+  );
+
   const isEmpty = query.trim().length === 0;
   // With the box empty the screen is what was opened from it before. Genres
   // are Explore's, and were a second Explore here.
@@ -380,72 +450,41 @@ export default function SearchScreen() {
         {shows('artists') && data && data.artists.length > 0 ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t('Artists')}</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.albumRow}
-              // Its own, and not the page's: a nested scroll view does not
-              // inherit it, so with the keyboard up the first tap on a card
-              // was spent closing it and the second one was the one that
-              // opened the artist.
-              keyboardShouldPersistTaps="handled"
-            >
-              {data.artists.map((artist) => (
-                <Link key={artist.id} href={`/artist/${artist.id}`} asChild>
-                  <Pressable
-                    style={styles.artist}
-                    onPress={() =>
-                      addRecent({
-                        kind: 'artist',
-                        id: artist.id,
-                        title: artist.name,
-                        coverArt: artist.coverArt ?? artist.id,
-                        href: `/artist/${artist.id}`,
-                      })
-                    }
-                  >
-                    <Cover
-                      uri={coverArtUrl(artist.coverArt ?? artist.id, COVER.thumb)}
-                      size={110}
-                      rounded
-                    />
-                    <Text style={styles.artistName} numberOfLines={1}>
-                      {artist.name}
-                    </Text>
-                  </Pressable>
-                </Link>
-              ))}
-            </ScrollView>
+            {artistGrid ? (
+              <View style={styles.grid}>{data.artists.map(renderArtist)}</View>
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.albumRow}
+                // Its own, and not the page's: a nested scroll view does not
+                // inherit it, so with the keyboard up the first tap on a card
+                // was spent closing it and the second one was the one that
+                // opened the artist.
+                keyboardShouldPersistTaps="handled"
+              >
+                {data.artists.map(renderArtist)}
+              </ScrollView>
+            )}
           </View>
         ) : null}
 
         {shows('albums') && data && data.albums.length > 0 ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t('Albums')}</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.albumRow}
-              // Its own, like the row of artists above it.
-              keyboardShouldPersistTaps="handled"
-            >
-              {data.albums.map((album) => (
-                <AlbumCard
-                  key={album.id}
-                  album={album}
-                  onPress={() =>
-                    addRecent({
-                      kind: 'album',
-                      id: album.id,
-                      title: album.name,
-                      artist: album.artist,
-                      coverArt: album.coverArt ?? album.id,
-                      href: `/album/${album.id}`,
-                    })
-                  }
-                />
-              ))}
-            </ScrollView>
+            {albumGrid ? (
+              <View style={styles.grid}>{data.albums.map(renderAlbum)}</View>
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.albumRow}
+                // Its own, like the row of artists above it.
+                keyboardShouldPersistTaps="handled"
+              >
+                {data.albums.map(renderAlbum)}
+              </ScrollView>
+            )}
           </View>
         ) : null}
 
@@ -659,8 +698,13 @@ const styles = themed((colors) => ({
   albumRow: {
     gap: spacing.md,
   },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    columnGap: GRID_GAP,
+    rowGap: spacing.lg,
+  },
   artist: {
-    width: 110,
     alignItems: 'center',
     gap: spacing.xs,
   },
