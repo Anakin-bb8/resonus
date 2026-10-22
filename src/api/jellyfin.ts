@@ -345,6 +345,13 @@ function toSong(it: JfItem): Song {
     track: it.IndexNumber,
     discNumber: it.ParentIndexNumber,
     starred: favDate(it),
+    // The `UserData` `favDate` just read carries the count as well: the song
+    // kept the favorite's date and threw the number away, while `toAlbum` below
+    // kept both. So "Song information" answered with nothing for a song that
+    // had plays, and a list merged here lost the only thing to sort by — the
+    // server's own "frequent" order says nothing about a page of another
+    // library's songs.
+    playCount: it.UserData?.PlayCount,
     suffix: src?.Container,
     bitRate: src?.Bitrate ? Math.round(src.Bitrate / 1000) : undefined,
     bitDepth: audio?.BitDepth,
