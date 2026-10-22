@@ -21,6 +21,7 @@ Releases before 0.2.1 are only listed on the
   - The queue moves on at the end of a song even when the renderer keeps saying it is playing with the clock stuck at the end, or guesses a transcoded song longer than it is.
   - The next song is only handed to the renderer in advance when it can be seen starting it, so the screen no longer falls a song behind what is playing.
   - A renderer stopped halfway (from its own remote, or giving up on the stream) shows as paused, and Play picks the song up where it stopped.
+- Android: closing the full-screen lyrics with the blurred cover behind them no longer turns them into a black panel for a moment on the way back to the player.
 
 ## [0.8.4] - 2026-10-20
 
