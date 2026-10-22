@@ -111,8 +111,8 @@ export default function PodcastScreen() {
   // mode drops the unplayable rows altogether, as `annotate` does for songs.
   // Memoized on the query's answer: TrackListView memoizes its own filtering
   // on the list's identity, and a fresh array every render would bust both.
-  const { songs, meta } = useMemo(() => {
-    if (!data.data) return { songs: [] as Song[], meta: '' };
+  const { songs, meta, episodeInfo } = useMemo(() => {
+    if (!data.data) return { songs: [] as Song[], meta: '', episodeInfo: undefined };
     const { channel, episodes: list } = data.data;
     const marked = markUnplayableOffline(list.map((e) => episodeToSong(e, channel)));
     const shown = hideUnavailable ? marked.filter((s) => !s.unavailable) : marked;
@@ -124,7 +124,24 @@ export default function PodcastScreen() {
     ]
       .filter(Boolean)
       .join(' · ');
-    return { songs: shown, meta: line };
+    // What each episode row shows under its title: the show notes, the publish
+    // date, and whether the episode came over with the show's last sync that
+    // landed something — the mark a row wears, read from the device's own
+    // first sighting rather than from the date. Built here from the episodes the
+    // screen already holds, so the row never has to ask per row, and its
+    // identity is stable across repaints (the row's memo keys on it).
+    const since = channel.newSinceAt;
+    const info = new Map<string, { description?: string; publishedAt?: number; fresh: boolean }>(
+      list.map((e) => [
+        e.id,
+        {
+          description: e.description,
+          publishedAt: e.publishedAt,
+          fresh: since !== undefined && (e.firstSeenAt ?? 0) >= since,
+        },
+      ]),
+    );
+    return { songs: shown, meta: line, episodeInfo: info };
   }, [data.data, hideUnavailable, lang]);
 
   // Stable between progress ticks (only changes with status): if its identity
@@ -170,6 +187,11 @@ export default function PodcastScreen() {
         description={showDescription ? ch.description : undefined}
         meta={meta}
         coverUri={coverArtUrl(podcastCover(ch), COVER.card)}
+        // Deliberately not `numbered`: an episode's place in the list is not
+        // something a show promises (a feed can add, drop or re-date items), and
+        // a number is either the row's place, which is a lie, or the feed's own,
+        // which most feeds get wrong or leave out altogether. What orders the
+        // rows is the publish date the row already prints under its title.
         songs={songs}
         currentId={playingId}
         // The heart marks the show as a favorite — the user's own heart, kept on
@@ -177,6 +199,9 @@ export default function PodcastScreen() {
         favorite={{ id: ch.id, type: 'song', starred: favSet.has(ch.id), podcast: true }}
         // The episodes' hearts read from the same SQLite favorites.
         podcastFavIds={favSet}
+        // The show notes and publish date each episode row shows under its title
+        // (the row drops the show's name, which is already this screen's title).
+        episodeInfo={episodeInfo}
         // The download button sits in the album's action row, exactly as an
         // album wires it: tapping downloads every episode of the show, tapping
         // again removes them, and while it runs a stop cancels it. Hidden only

@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 821 of them.
+Every string the app can show, under the screen it shows up on. 823 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -1238,6 +1238,7 @@ you are actually typing into, which is easier than reading it here.
 | `Lyrics` | The words of the song. Also a line of the storage bar, where it is their size on the phone |
 | `More` | A "see more" action, and the third button of the selection bar, the one that opens the rest of what it can do |
 | `More options` | Read out by the screen reader for the three-dot button, which is ⋮ on a song row and in the player and ⋯ in a screen's header |
+| `New` | One-word marker beside an episode's date, with a dot in the app's own accent in front of it: this episode came over with the show's last sync, so it arrived since the feed was last read — it is not a claim that it was published recently, a feed's own date can be rewritten and says nothing about that. Keep it one short word: it sits on the row's quiet meta line, after a length and a date, and a long one gets cut off with an ellipsis. Languages that keep the English word are fine, since podcast apps borrow it. |
 | `New playlist` | Row at the top of the playlist picker, and the button on an empty library: make one |
 | `Next` | Player control: the next track (accessibility label) |
 | `No results` | Nothing matched what was typed |
@@ -1256,6 +1257,7 @@ you are actually typing into, which is easier than reading it here.
 | `Rate {n} stars` | Read out by the screen reader for each star. `{n}` is which star it is |
 | `Recently added` | A sort order, and a section: newest first (in Favorites, last favorited first) |
 | `Refresh` | Ask the server for this playlist again, in case it changed elsewhere. Also the button under suggested tracks to regenerate them, and on a podcast show the action that reads its feed again from the publisher |
+| `Refresh ({when} ago)` | The podcast show's ⋯ sheet, the same action as `Refresh`, wearing the moment of the last feed read in parentheses. `{when}` arrives already coarse — `2 h`, `5 d`, `< 1 min` — so your language only has to put it in brackets and say the equivalent of `ago` the way it does: the words are the whole question, the number and its unit are already settled. The moment is when the show's episodes were written to the device, which is what tells the eye whether pressing is worth it at all. Languages whose word for that goes before the time can move `{when}` to the end. |
 | `Remove` | Take something out of a list. Deleting for good is `Delete` |
 | `Remove “{name}” and its episodes from this device?` |  |
 | `Remove download` | Delete the downloaded file, keeping the song in the library |

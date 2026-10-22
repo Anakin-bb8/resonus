@@ -174,6 +174,7 @@ function toEpisode(channelId: string, item: ParsedItem): PodcastEpisode {
   const episode: PodcastEpisode = { id: item.id, channelId, title: item.title };
   if (item.description) episode.description = item.description;
   if (item.publishedAt !== undefined) episode.publishedAt = item.publishedAt;
+  if (item.episode !== undefined) episode.episode = item.episode;
   if (item.duration !== undefined) episode.duration = item.duration;
   if (item.url) episode.url = item.url;
   if (item.mimeType) episode.mimeType = item.mimeType;
@@ -237,7 +238,22 @@ export async function refreshChannel(input: string): Promise<PodcastChannel> {
   const id = feedId(read.url);
   const existing = read.url === url ? stored : await Db.getChannel(s, id);
   const feed = parseFeed(read.body, id);
-  const episodes = sortEpisodes(feed.items).map((item) => toEpisode(id, item));
+  // Which of these the device already had: an episode that was there keeps the
+  // moment it first came over, one that was not gets this read's. A feed's `pubDate`
+  // cannot carry that: a publisher re-dates an old item, back-catalogs a season
+  // or ships no date at all, and the row then prints a date that says nothing
+  // about when the episode appeared. Read here and once — `replaceEpisodes`
+  // below throws the old rows out, and an episode filed before this field
+  // existed answers 0, which is as old as the device and never new.
+  const had = new Map<string, number>(
+    (await Db.listAllEpisodes(s, id)).map((e) => [e.id, e.firstSeenAt ?? 0]),
+  );
+  const landedAt = Date.now();
+  const episodes = sortEpisodes(feed.items).map((item) => {
+    const episode = toEpisode(id, item);
+    episode.firstSeenAt = had.get(episode.id) ?? landedAt;
+    return episode;
+  });
   const dates = episodes
     .map((e) => e.publishedAt)
     .filter((d): d is number => d !== undefined);
@@ -250,6 +266,14 @@ export async function refreshChannel(input: string): Promise<PodcastChannel> {
     episodeCount: episodes.length,
     lastPublishedAt: dates.length > 0 ? Math.max(...dates) : existing?.lastPublishedAt,
   };
+  // The episodes that came over with this read, and only when a read had
+  // something to land: the read that files a show for the first time brings its
+  // whole feed at once, and a badge under every title of a 66-episode show says
+  // nothing — the same for a feed that moved address, which reads as a first
+  // time. The mark stays until the next read that lands something.
+  const landed = episodes.filter((e) => e.firstSeenAt === landedAt).length;
+  if (landed > 0 && had.size > 0) channel.newSinceAt = landedAt;
+  else if (existing?.newSinceAt) channel.newSinceAt = existing.newSinceAt;
   if (feed.description) channel.description = feed.description;
   if (feed.author) channel.author = feed.author;
   if (feed.imageUrl) channel.imageUrl = feed.imageUrl;
@@ -419,6 +443,10 @@ export function episodeToSong(episode: PodcastEpisode, channel: PodcastChannel):
   if (cover) song.coverArt = cover;
   if (episode.duration !== undefined) song.duration = episode.duration;
   if (episode.publishedAt !== undefined) song.addedAt = episode.publishedAt;
+  // The feed's own episode number, kept for the song's info sheet: the show's
+  // screen leaves its rows unnumbered, since a place in the list is not something
+  // a feed promises, but a number the publisher did give is still worth having.
+  if (episode.episode !== undefined) song.track = episode.episode;
   const suffix = episode.mimeType ? SUFFIXES[episode.mimeType.toLowerCase()] : undefined;
   if (suffix) song.suffix = suffix;
   return song;

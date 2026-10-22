@@ -172,6 +172,14 @@ interface Props {
    * them); absent for albums/playlists, whose rows use the server's list.
    */
   podcastFavIds?: Set<string>;
+  /**
+   * Podcast episodes on the show's screen: per-episode description, publish
+   *  date and whether the episode arrived with the show's last sync, keyed by
+   *  episode id, so each row can show them (see `TrackRow`'s `episode`). The
+   *  screen builds it once from the episodes it already holds; absent for
+   *  albums and playlists, whose rows keep the artist line.
+   */
+  episodeInfo?: Map<string, { description?: string; publishedAt?: number; fresh: boolean }>;
   /** Offline download button (album/playlist header). */
   download?: {
     status: 'none' | 'active' | 'done';
@@ -248,6 +256,7 @@ export function TrackListView({
   discHeaders,
   favorite,
   podcastFavIds,
+  episodeInfo,
   download,
   onMenu,
   playlistId,
@@ -1125,9 +1134,14 @@ export function TrackListView({
           const rowKey = rowKeys[origIndex];
           // Disc header (only when not searching, where origIndex === index).
           const discLabel = filtered ? undefined : discHeaders?.[origIndex];
+          // This episode's description and date, when the screen passed them
+          // (only the show's own does); the row's identity is stable, so the
+          // row's memo holds across repaints.
+          const ep = episodeInfo?.get(item.id);
           const row = (
             <TrackRow
               song={item}
+              episode={ep}
               // With artwork visible the number is omitted: the album stays as
               // usual (only the artist's Popular shows number + cover).
               position={numbered && !showArtwork ? item.track ?? origIndex + 1 : undefined}
