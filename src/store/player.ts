@@ -76,13 +76,13 @@ import {
   moveIn,
   nextPlayable,
   queuedAfterMove,
+  queueKeyFor,
   removeFrom,
   restoreRemoved,
   shuffleOn,
   type RepeatMode,
 } from '@/lib/queue';
 import { moreRadioTracks } from '@/lib/radioBuild';
-import { primaryUrl } from '@/lib/serverUrls';
 import { getItem, setItem } from '@/lib/storage';
 import { useAuthStore } from './auth';
 import { checkAutoUrlNow } from './autoUrl';
@@ -3084,22 +3084,13 @@ function handleSleepAtSongEnd(): boolean {
 // downloaded songs and radios, which the server doesn't accept in
 // savePlayQueue.
 
-// SecureStore only accepts keys with [A-Za-z0-9._-] (same criterion as
-// playHistory); sanitize serverUrl/username.
-function safeKey(s: string): string {
-  return s.replace(/[^A-Za-z0-9._-]/g, '_');
-}
-
-/** Per-profile key, or null if no active profile. */
+/** Where the queue of the profile in use lives on disk, or null when no
+ *  profile is in use and there is nothing to save. The rule itself — the
+ *  account first, the mode not at all — is `queueKeyFor`, where the test can
+ *  reach it without the app's state. */
 function queueStorageKey(): string | null {
   const { auth, offline } = useAuthStore.getState();
-  if (offline) return 'resonus.queue.offline';
-  // The profile's own name (not the active URL): so the queue is not lost on a
-  // network switch, which changes the active URL. See auth store.
-  if (auth) {
-    return `resonus.queue.server.${safeKey(primaryUrl(auth))}.${safeKey(auth.username)}`;
-  }
-  return null;
+  return queueKeyFor(auth, offline);
 }
 
 interface StoredQueue {

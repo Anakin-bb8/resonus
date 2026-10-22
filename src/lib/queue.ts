@@ -3,7 +3,9 @@
  * "queued" block is what Play next added: `queuedCount` songs right after the
  * current one.
  */
-import type { Song } from '@/api/subsonic';
+import type { Song, SubsonicAuth } from '@/api/subsonic';
+
+import { primaryUrl } from '@/lib/serverUrls';
 
 export type RepeatMode = 'off' | 'all' | 'one';
 
@@ -152,4 +154,30 @@ export function shuffleOn(
 
 export function indexInOriginal(original: Song[], current: Song): number {
   return Math.max(0, original.findIndex((s) => s.id === current.id));
+}
+
+/** SecureStore only accepts keys with [A-Za-z0-9._-]; the URL has `:` and `/`. */
+function safeKey(s: string): string {
+  return s.replace(/[^A-Za-z0-9._-]/g, '_');
+}
+
+/**
+ * Which SecureStore bucket a profile's queue lives in, or null when no profile
+ * is in use and there is nothing to save.
+ *
+ * The account first, and the mode not at all: the songs an account plays are
+ * its songs whether or not a connection was there when it played them, and
+ * they play the same either way. Asking about the mode first filed every
+ * account's offline listening under one shared key, so the next write moved
+ * the queue under whichever profile the account had been, and switching
+ * profiles restored another account's queue. Song ids are only unique within
+ * the account that issued them (see the note in `player.ts` where a profile
+ * change throws the old queue's failures away), so what came back was at best
+ * another account's order and at worst songs this one cannot play. Only a
+ * local profile, which has no account, keeps the offline key, and it is the
+ * one it always had.
+ */
+export function queueKeyFor(auth: SubsonicAuth | null, offline: boolean): string | null {
+  if (auth) return `resonus.queue.server.${safeKey(primaryUrl(auth))}.${safeKey(auth.username)}`;
+  return offline ? 'resonus.queue.offline' : null;
 }
