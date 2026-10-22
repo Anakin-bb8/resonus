@@ -821,5 +821,7 @@
   "Animated covers": "Animated covers",
   "In the cover": "In the cover",
   "As the background": "As the background",
-  "Show animated covers": "Show animated covers"
+  "Show animated covers": "Show animated covers",
+  "Lost the connection to {name}": "Lost the connection to {name}",
+  "{name} is playing something else": "{name} is playing something else"
 }

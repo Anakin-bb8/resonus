@@ -347,6 +347,8 @@
     "Couldn't find anything to mix with this song": "Toast: the server had nothing similar to carry on with",
     "This song can't be cast": "Toast: the speaker or TV will not take this file",
     "Couldn't play the song": "Toast: the app could not start it at all",
+    "Lost the connection to {name}": "Toast: the speaker or TV stopped answering while casting, so playback came back to the phone, paused. `{name}` is the device",
+    "{name} is playing something else": "Toast: another app started playing on the speaker or TV being cast to, so playback came back to the phone, paused. `{name}` is the device",
 
     // ── Empty states and errors that offer another go ────────────────────────
     "Retry": "The button on an error message: try again. A verb",

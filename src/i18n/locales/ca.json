@@ -821,5 +821,7 @@
   "You're offline": "Estàs sense connexió",
   "Remove “{name}” and its episodes from this device?": "Vols treure «{name}» i els seus episodis d'aquest dispositiu?",
   "New": "Nou",
-  "Refresh ({when} ago)": "Actualitza (fa {when})"
+  "Refresh ({when} ago)": "Actualitza (fa {when})",
+  "Lost the connection to {name}": "S'ha perdut la connexió amb {name}",
+  "{name} is playing something else": "{name} està reproduint una altra cosa"
 }

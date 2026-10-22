@@ -3633,8 +3633,16 @@ export function initRemoteIntegration() {
       void upnpSetCrossfade(crossfadeSec > 0);
       if (queue[index]) void remoteLoadIndex(index, isPlaying, positionSec);
     },
-    onTrackChanged: (index, positionSec, durationSec) => {
+    onTrackChanged: (reportedIndex, positionSec, durationSec, id) => {
       const state = usePlayerStore.getState();
+      // By the song's id when the renderer's side knows it: found wherever it
+      // is in this queue, and nothing to do when it is the one on screen.
+      let index = reportedIndex;
+      if (id) {
+        if (state.queue[index]?.id !== id) index = state.queue.findIndex((s) => s.id === id);
+        if (index < 0) return;
+        if (index === state.index) return;
+      }
       const song = state.queue[index];
       if (!song) return;
       usePlayerStore.setState({
@@ -3643,6 +3651,14 @@ export function initRemoteIntegration() {
         durationSec: plausibleDuration(durationSec, song.duration || state.durationSec, song.duration),
       });
       onTrackChanged(song);
+    },
+    onLost: (reason, deviceName) => {
+      const name = deviceName || 'UPnP';
+      useToast.getState().show(
+        reason === 'replaced'
+          ? tg('{name} is playing something else', { name })
+          : tg('Lost the connection to {name}', { name }),
+      );
     },
     onDisconnected: (lastPositionSec) => {
       // The casting media session is already closed by `upnpDisconnect` (covers

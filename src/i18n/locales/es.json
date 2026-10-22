@@ -821,5 +821,7 @@
   "You're offline": "Estás sin conexión",
   "Remove “{name}” and its episodes from this device?": "¿Quitar «{name}» y sus episodios de este dispositivo?",
   "New": "Nuevo",
-  "Refresh ({when} ago)": "Actualizar (hace {when})"
+  "Refresh ({when} ago)": "Actualizar (hace {when})",
+  "Lost the connection to {name}": "Se perdió la conexión con {name}",
+  "{name} is playing something else": "{name} está reproduciendo otra cosa"
 }

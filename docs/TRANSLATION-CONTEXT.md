@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 823 of them.
+Every string the app can show, under the screen it shows up on. 825 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -1187,6 +1187,7 @@ you are actually typing into, which is easier than reading it here.
 | `{n} songs deleted` | Toast after deleting downloads. `{n}` is how many files went |
 | `{n} songs downloaded` | Toast: a whole album or playlist finished |
 | `{n} songs exported` | Toast when it finished |
+| `{name} is playing something else` | Toast: another app started playing on the speaker or TV being cast to, so playback came back to the phone, paused. `{name}` is the device |
 | `{songs} need about {size}, but only {free} is free. The download may stop partway.` | The same line when the phone is nearly full |
 | `{songs} will be saved to this device (about {size}).` | The same line when the size is known. `{size}` is like "340 MB" |
 | `{songs} will be saved to this device.` | The line under that title. `{songs}` is already worded and inflected, "12 songs" |
@@ -1235,6 +1236,7 @@ you are actually typing into, which is easier than reading it here.
 | `Find in playlist` | Placeholder of the search box hidden above a tracklist, for finding a song within it |
 | `Hold to go back to {tab}` | The hint on holding the back arrow. `{tab}` is Home, Search or Library |
 | `List` | An option in that menu: one row per item, instead of cards |
+| `Lost the connection to {name}` | Toast: the speaker or TV stopped answering while casting, so playback came back to the phone, paused. `{name}` is the device |
 | `Lyrics` | The words of the song. Also a line of the storage bar, where it is their size on the phone |
 | `More` | A "see more" action, and the third button of the selection bar, the one that opens the rest of what it can do |
 | `More options` | Read out by the screen reader for the three-dot button, which is ⋮ on a song row and in the player and ⋯ in a screen's header |

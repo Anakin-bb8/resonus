@@ -13,6 +13,15 @@ Releases before 0.2.1 are only listed on the
 
 - Podcasts are part of the app. Their episodes can be downloaded and play with no connection, take a heart, go in the queue and show up in Library, search and the Home grid. A show has its own ⋯ menu, which also takes it off the device. Thanks to Garrit Schröder.
 
+### Fixed
+
+- Casting to a DLNA/UPnP speaker or TV holds up better (#285):
+  - A renderer that stops answering is looked for again. After 30 seconds without an answer, playback comes back to the phone, paused, with a notice, instead of the session hanging.
+  - The same happens when another app starts playing on the renderer.
+  - The queue moves on at the end of a song even when the renderer keeps saying it is playing with the clock stuck at the end, or guesses a transcoded song longer than it is.
+  - The next song is only handed to the renderer in advance when it can be seen starting it, so the screen no longer falls a song behind what is playing.
+  - A renderer stopped halfway (from its own remote, or giving up on the stream) shows as paused, and Play picks the song up where it stopped.
+
 ## [0.8.4] - 2026-10-20
 
 ### Added
