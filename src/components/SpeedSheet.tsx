@@ -14,8 +14,8 @@
  * opening it re-renders the modal instead of the player behind it.
  *
  * Above the chips, a slider and two buttons that move it a hundredth at a
- * time, and below them the varispeed switch (#277): with it on, the pitch goes
- * with the speed, like a record on a turntable. When the song carries a BPM
+ * time, and below them the pitch switch (#277): turning it off is varispeed,
+ * the pitch going with the speed like a record on a turntable. When the song carries a BPM
  * tag, the tempo it plays at now is shown next to it.
  */
 import Slider from '@react-native-community/slider';
@@ -117,18 +117,13 @@ export const SpeedSheet = memo(function SpeedSheet({
           <Pressable
             style={({ pressed }) => [styles.switchRow, pressed && { opacity: 0.6 }]}
             accessibilityRole="switch"
-            accessibilityState={{ checked: varispeed }}
+            accessibilityState={{ checked: !varispeed }}
             onPress={() => setVarispeed(!varispeed)}
           >
-            <View style={styles.switchText}>
-              <Text style={styles.switchLabel}>{t('Varispeed')}</Text>
-              <Text style={styles.switchHint}>
-                {t('The pitch goes up and down with the speed, like a record played fast or slow.')}
-              </Text>
-            </View>
+            <Text style={[styles.switchLabel, styles.switchText]}>{t('Preserve pitch')}</Text>
             <Switch
-              value={varispeed}
-              onValueChange={setVarispeed}
+              value={!varispeed}
+              onValueChange={(keep) => setVarispeed(!keep)}
               trackColor={{ false: colors.control, true: colors.accent }}
               thumbColor={colors.knob}
             />
@@ -188,5 +183,4 @@ const styles = themed((colors) => ({
   },
   switchText: { flex: 1 },
   switchLabel: { color: colors.text, fontSize: fontSize.md },
-  switchHint: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: 2 },
 }));

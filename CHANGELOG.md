@@ -11,7 +11,7 @@ Releases before 0.2.1 are only listed on the
 
 ### Added
 
-- Playback speed: a slider and −/+ buttons in steps of 0.01, a Varispeed switch so the pitch follows the speed like a record, and the resulting BPM when the song has one (#277).
+- Playback speed: a slider and −/+ buttons in steps of 0.01, a Preserve pitch switch that, turned off, lets the pitch follow the speed like a record, and the resulting BPM when the song has one (#277).
 - Podcasts: download episodes to play offline, favorite them, queue them, and find them in Library, search and Home. Thanks to Garrit Schröder.
 
 ### Changed

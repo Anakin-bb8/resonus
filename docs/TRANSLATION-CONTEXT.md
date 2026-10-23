@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 830 of them.
+Every string the app can show, under the screen it shows up on. 829 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -481,6 +481,7 @@ you are actually typing into, which is easier than reading it here.
 | `Playback speed` |  |
 | `Playback stopped` | The mini player when there is nothing playing any more |
 | `PLAYING FROM` | Small label above the cover, followed by the name of the album, playlist or mix it is playing from, or by `Queue` while the song is one that was added to the queue by hand. Written in capitals by the design, so it can be capitals in your language too, or not, whichever reads right |
+| `Preserve pitch` | Switch in the playback speed sheet, on by default: the pitch stays the same at any speed. Turned off, the pitch goes up and down with the speed, like a record |
 | `Previous` | Player control: the previous track (accessibility label) |
 | `Queue` | The list of songs waiting to play. Not a playlist |
 | `Remove from the group` | The − beside `Add to the group`, and the same in reverse: it takes that room out of the group so it stops playing along. Read out by the screen reader, never shown, and Sonos only |
@@ -493,9 +494,7 @@ you are actually typing into, which is easier than reading it here.
 | `Show total time` |  |
 | `Sleep timer` | Stop playing after a while, for falling asleep to |
 | `Slower` | Button that lowers the playback speed by 0.01. Read by screen readers only |
-| `The pitch goes up and down with the speed, like a record played fast or slow.` | Explanation under the Varispeed switch |
 | `This phone` | The on-device profile, with no server account |
-| `Varispeed` | Switch in the playback speed sheet: the pitch changes together with the speed, like a tape or a record. A technical name musicians use; keep it if your language has no common word for it |
 | `View queue` | Read out by the screen reader for the button that opens the queue |
 
 ## Playlist
