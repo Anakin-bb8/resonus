@@ -1073,6 +1073,7 @@ async function loadIndex(index: number, autoplay: boolean): Promise<boolean> {
   setStreamOffset(0);
   sourceHasLength = null; // unknown until the new source is loaded
   resetListen();
+  playerFailed = false;
   consumeQueuedOnIndexChange(index);
   if (remoteKind()) {
     await remoteLoadIndex(index, autoplay);
@@ -2696,6 +2697,10 @@ const MAX_ERROR_ATTEMPTS = 2;
  *  come back (see `tryResumeAfterOutage`). Null the moment anything else
  *  owns the player again — validated, not cleared, at resume time. */
 let gaveUp: { songId: string; at: number } | null = null;
+/** The active player last reported a failure and has not sounded since. media3
+ *  parks it in an error state that `play()` does not leave: only installing
+ *  the source again does. Cleared by any new source and by sound. */
+let playerFailed = false;
 /** Auto-resume only soon after giving up: hours later it would be a surprise
  *  in a meeting, not a rescue in a tunnel. */
 const RESUME_WINDOW_MS = 15 * 60 * 1000;
@@ -2794,6 +2799,7 @@ function onPlaybackError(message: string, wasPlaying: boolean): void {
   const st = usePlayerStore.getState();
   const song = st.queue[st.index];
   bump(`player · playback error (${errorTag(message)})`);
+  playerFailed = true;
   if (!song) return;
   if (errorTrackId !== song.id) {
     errorTrackId = song.id;
@@ -2846,25 +2852,43 @@ function onPlaybackError(message: string, wasPlaying: boolean): void {
       failedSource.set(song.id, 'stream');
     }
   }
-  void reloadCurrent(st.positionSec, wasPlaying);
+  void reloadCurrent(st.positionSec, wasPlaying).then((loaded) => {
+    if (!loaded) waitForNetwork(song.id);
+  });
 }
 
-/** Installs the current track again, at the second it had got to. */
-async function reloadCurrent(atSec: number, autoplay: boolean): Promise<void> {
+/**
+ * A reload that installed nothing because the app went offline, with nothing
+ * of the song on the phone: it gives up before there is a second error to give
+ * up on. Same answer as giving up: where it stopped is kept, and the network
+ * coming back resumes it (see `tryResumeAfterOutage`).
+ */
+function waitForNetwork(songId: string): void {
+  if (!useAuthStore.getState().offline) return;
+  const now = usePlayerStore.getState();
+  if (now.queue[now.index]?.id !== songId) return;
+  saveQueueLocal(true);
+  gaveUp = { songId, at: Date.now() };
+}
+
+/** Installs the current track again, at the second it had got to. False when
+ *  nothing was installed. */
+async function reloadCurrent(atSec: number, autoplay: boolean): Promise<boolean> {
   const { index, queue } = usePlayerStore.getState();
   const song = queue[index];
-  if (!song) return;
-  if (!(await loadIndex(index, autoplay))) return;
+  if (!song) return false;
+  if (!(await loadIndex(index, autoplay))) return false;
   // `loadIndex` starts the song at zero, which is right for everything else
   // that calls it: what failed here was in the middle of one. And only if it is
   // still the same song, since anything the person did while this loaded owns
   // the player now.
   const now = usePlayerStore.getState();
-  if (now.queue[now.index]?.id !== song.id) return;
+  if (now.queue[now.index]?.id !== song.id) return true;
   if (atSec > 0) {
     seekActive(atSec);
     usePlayerStore.setState({ positionSec: atSec });
   }
+  return true;
 }
 
 /**
@@ -2892,6 +2916,10 @@ async function tryResumeAfterOutage(): Promise<void> {
     stopBgRetry();
     return;
   }
+  // The connection is back before the app has left offline mode, which takes
+  // a probe of its own: a reload now would only find nothing playable. Leaving
+  // offline mode asks again (see `attachAppState`).
+  if (useAuthStore.getState().offline) return;
   // Taking over: a background wait (if any) ends here, and the reload below
   // either plays or fails back into the wait through the error path.
   stopBgRetry();
@@ -2996,6 +3024,7 @@ function onStatus(status: AudioStatus, live = false) {
     return;
   }
   // Sound: whatever it took, this track is not the failing one any more.
+  if (status.playing) playerFailed = false;
   if (status.playing && errorTrackId) {
     errorTrackId = null;
     errorAttempts = 0;
@@ -3575,6 +3604,11 @@ function attachAppState() {
       netUp = true;
       void tryResumeAfterOutage();
     }
+  });
+  // And the app leaving offline mode, which is what makes the track playable
+  // again when the connection came back first.
+  useAuthStore.subscribe((now, prev) => {
+    if (prev.offline && !now.offline) void tryResumeAfterOutage();
   });
   AppState.addEventListener('change', (st) => {
     // The periodic sync rate follows the state (fast in foreground, slow in
@@ -4312,6 +4346,15 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       // is no ramp to wait on: the pause is what matters and it happens now.
       if (canFade()) fadeVolume(p, vol, 0, stop);
       else stop();
+    } else if (playerFailed) {
+      // Sitting on a failure, where `play()` would flip the button and sound
+      // nothing: install the track again at the second it stopped. Offline
+      // with nothing on the phone, that says so instead of pretending, and
+      // waits for the network like a failure does.
+      const songId = currentSong(get())?.id;
+      void reloadCurrent(get().positionSec, true).then((loaded) => {
+        if (!loaded && songId) waitForNetwork(songId);
+      });
     } else {
       const ramp = canFade();
       // Start silent and ramp up: fade-in on resume. Backgrounded it starts at

@@ -26,6 +26,7 @@ Releases before 0.2.1 are only listed on the
   - A song stopped from the TV's remote shows as paused and resumes where it was.
 - Lyrics no longer flash black when closed over the blurred cover (Android).
 - Opening the app no longer counts a listen of the song it was left on, and skipping ahead in a song no longer counts as listening to it.
+- When the connection drops and a song can't load, Play no longer pretends to play it, and the song picks up where it stopped once the connection is back.
 - The screen shown when something crashes is now in your language instead of always in Spanish.
 
 ## [0.8.4] - 2026-10-20
