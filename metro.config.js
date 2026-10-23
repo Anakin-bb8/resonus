@@ -3,10 +3,10 @@ const path = require('path');
 
 const config = getDefaultConfig(__dirname);
 
-// expo-router arrastra expo-symbols y con él ~6 MB de fuentes MaterialSymbols
-// en 7 pesos que solo usan SymbolView/NativeTabs, que esta app no usa
-// (expo/expo#43614). Resolvemos ese paquete a un stub para que Metro no
-// empaquete las fuentes. Si algún día usamos NativeTabs, quitar esto.
+// expo-router pulls in expo-symbols, and with it ~6 MB of MaterialSymbols fonts
+// in 7 weights that only SymbolView/NativeTabs use, which this app does not
+// (expo/expo#43614). That package resolves to a stub so Metro does not bundle
+// the fonts. If NativeTabs is ever used, remove this.
 const defaultResolveRequest = config.resolver.resolveRequest;
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (moduleName.startsWith('@expo-google-fonts/material-symbols')) {

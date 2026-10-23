@@ -100,15 +100,21 @@ function sameSource(a: OfflineSource, b: OfflineSource): boolean {
   return a.mode === b.mode;
 }
 
+/** The local profile's stored name when no folder names it. Never shown (the
+ *  list says "Local profile"), but it is what `same` compares, so profiles
+ *  saved under the old Spanish name are renamed when they are read. */
+const OFFLINE_NAME = 'Offline';
+const LEGACY_OFFLINE_NAME = 'Sin conexión';
+
 /** The profile's name: the first folder's, and only the first. Adding folders
  *  to a profile does not rename it, which it must not — profiles are told apart
  *  by name (see `same`). */
 function offlineLabel(source: OfflineSource): string {
   if (source.mode === 'folder' && source.uris[0]) {
     const decoded = decodeURIComponent(source.uris[0]);
-    return decoded.split(/[:/]/).filter(Boolean).pop() ?? 'Sin conexión';
+    return decoded.split(/[:/]/).filter(Boolean).pop() ?? OFFLINE_NAME;
   }
-  return 'Sin conexión';
+  return OFFLINE_NAME;
 }
 
 /**
@@ -238,7 +244,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             if (p._type === 'offline') {
               // A profile whose source cannot be read keeps its place in the
               // list, reading the phone, rather than disappearing from it.
-              return { ...p, source: migrateSource(p.source) ?? { mode: 'device' } } as OfflineProfile;
+              return {
+                ...p,
+                name: p.name === LEGACY_OFFLINE_NAME ? OFFLINE_NAME : p.name,
+                source: migrateSource(p.source) ?? { mode: 'device' },
+              } as OfflineProfile;
             }
             // Server profiles (with or without `_type`): ensure `urls`.
             return { ...withUrls(p), _type: 'server' } as ServerProfile;

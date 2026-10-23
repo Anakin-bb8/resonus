@@ -25,6 +25,7 @@ Releases before 0.2.1 are only listed on the
   - The player no longer shows the wrong song after waking the phone.
   - A song stopped from the TV's remote shows as paused and resumes where it was.
 - Lyrics no longer flash black when closed over the blurred cover (Android).
+- The screen shown when something crashes is now in your language instead of always in Spanish.
 
 ## [0.8.4] - 2026-10-20
 

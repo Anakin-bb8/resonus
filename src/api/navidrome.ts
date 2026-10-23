@@ -49,7 +49,7 @@ async function ndLogin(auth: SubsonicAuth, fresh = false): Promise<string> {
   // `password` is there when the profile authenticates in cleartext, and it is
   // the same password: no reason to ask for it twice.
   const password = auth.ndPassword ?? auth.password;
-  if (!password) throw new NavidromeError('Sin contraseña guardada', 'auth');
+  if (!password) throw new NavidromeError('No saved password', 'auth');
   // Offline mode stops here, before the socket (see netGate) — and it has to
   // stop above the cached token, not below it. A token is not an answer, it is
   // the key the caller goes to fetch with (see `ndJson`), so handing a warm one
@@ -67,24 +67,24 @@ async function ndLogin(auth: SubsonicAuth, fresh = false): Promise<string> {
       body: JSON.stringify({ username: auth.username, password }),
     });
   } catch {
-    throw new NavidromeError('No se pudo conectar con el servidor', 'other');
+    throw new NavidromeError('Could not reach the server', 'other');
   }
-  if (res.status === 401) throw new NavidromeError('Credenciales incorrectas', 'auth');
-  if (!res.ok) throw new NavidromeError(`Error de red (${res.status})`, 'other');
+  if (res.status === 401) throw new NavidromeError('Wrong credentials', 'auth');
+  if (!res.ok) throw new NavidromeError(`Network error (${res.status})`, 'other');
   const json = (await res.json()) as { token?: string };
-  if (!json.token) throw new NavidromeError('Respuesta inesperada del servidor', 'other');
+  if (!json.token) throw new NavidromeError('Unexpected response from the server', 'other');
   cached = { key, token: json.token, at: Date.now() };
   return json.token;
 }
 
 /** What an answer from the native API means, for the paths that write. */
 function ndStatusError(status: number): NavidromeError {
-  if (status === 401) return new NavidromeError('Credenciales incorrectas', 'auth');
-  if (status === 403) return new NavidromeError('Subida de carátulas deshabilitada', 'forbidden');
+  if (status === 401) return new NavidromeError('Wrong credentials', 'auth');
+  if (status === 403) return new NavidromeError('Cover upload is disabled', 'forbidden');
   if (status === 404 || status === 405) {
-    return new NavidromeError('El servidor no soporta carátulas', 'unsupported');
+    return new NavidromeError('The server does not support covers', 'unsupported');
   }
-  return new NavidromeError(`Error del servidor (${status})`, 'other', status);
+  return new NavidromeError(`Server error (${status})`, 'other', status);
 }
 
 /** Authenticated request to the native API, with errors mapped to NavidromeError. */
@@ -98,7 +98,7 @@ async function ndFetch(auth: SubsonicAuth, path: string, init: RequestInit): Pro
       headers: { ...init.headers, 'x-nd-authorization': `Bearer ${token}` },
     });
   } catch {
-    throw new NavidromeError('No se pudo conectar con el servidor', 'other');
+    throw new NavidromeError('Could not reach the server', 'other');
   }
   if (res.ok) return;
   throw ndStatusError(res.status);
@@ -177,7 +177,7 @@ export async function uploadCoverImage(
       },
     );
   } catch {
-    throw new NavidromeError('No se pudo conectar con el servidor', 'other');
+    throw new NavidromeError('Could not reach the server', 'other');
   }
   if (result.status < 200 || result.status >= 300) throw ndStatusError(result.status);
 }
@@ -338,18 +338,18 @@ async function ndJson<T>(auth: SubsonicAuth, path: string): Promise<T> {
         headers: { 'x-nd-authorization': `Bearer ${token}` },
       });
     } catch {
-      throw new NavidromeError('No se pudo conectar con el servidor', 'other');
+      throw new NavidromeError('Could not reach the server', 'other');
     }
     // A token this old server no longer accepts: drop it and ask for another,
     // once. Anything else is an answer, good or bad.
     if (res.status === 401 && !fresh) continue;
-    if (res.status === 401) throw new NavidromeError('Credenciales incorrectas', 'auth');
-    if (res.status === 403) throw new NavidromeError('Sin permiso', 'forbidden');
-    if (res.status === 404) throw new NavidromeError('El servidor no lo soporta', 'unsupported');
-    if (!res.ok) throw new NavidromeError(`Error del servidor (${res.status})`, 'other');
+    if (res.status === 401) throw new NavidromeError('Wrong credentials', 'auth');
+    if (res.status === 403) throw new NavidromeError('Not allowed', 'forbidden');
+    if (res.status === 404) throw new NavidromeError('The server does not support it', 'unsupported');
+    if (!res.ok) throw new NavidromeError(`Server error (${res.status})`, 'other');
     return (await res.json()) as T;
   }
-  throw new NavidromeError('Credenciales incorrectas', 'auth');
+  throw new NavidromeError('Wrong credentials', 'auth');
 }
 
 /**
