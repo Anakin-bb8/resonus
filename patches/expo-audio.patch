@@ -1,5 +1,5 @@
 diff --git a/android/src/main/AndroidManifest.xml b/android/src/main/AndroidManifest.xml
-index 36a19f2d9c4a979a940ab681a1fb844ce45f7c75..5480b0a7f7f587c13cfb03292831766e130aa2b2 100644
+index 36a19f2d9c4a979a940ab681a1fb844ce45f7c75..3509de4747f3ebdda1a014f05fb02f0710563498 100644
 --- a/android/src/main/AndroidManifest.xml
 +++ b/android/src/main/AndroidManifest.xml
 @@ -1,3 +1,8 @@
@@ -12,7 +12,7 @@ index 36a19f2d9c4a979a940ab681a1fb844ce45f7c75..5480b0a7f7f587c13cfb03292831766e
 +  <uses-permission android:name="android.permission.WAKE_LOCK" />
  </manifest>
 diff --git a/android/src/main/java/expo/modules/audio/AudioModule.kt b/android/src/main/java/expo/modules/audio/AudioModule.kt
-index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..540c3db368196321c22ec67f3f5ea347448733c4 100644
+index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..4ab89564158370534b36e9ceb73ca61cf3d322b8 100644
 --- a/android/src/main/java/expo/modules/audio/AudioModule.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioModule.kt
 @@ -18,6 +18,7 @@ import androidx.media3.common.C.CONTENT_TYPE_HLS
@@ -23,7 +23,15 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..540c3db368196321c22ec67f3f5ea347
  import androidx.media3.common.Player
  import androidx.media3.common.util.Util
  import androidx.media3.datasource.DataSource
-@@ -57,6 +58,8 @@ class AudioModule : Module() {
+@@ -28,6 +29,7 @@ import androidx.media3.exoplayer.hls.HlsMediaSource
+ import androidx.media3.exoplayer.smoothstreaming.SsMediaSource
+ import androidx.media3.exoplayer.source.MediaSource
+ import androidx.media3.exoplayer.source.ProgressiveMediaSource
++import expo.modules.audio.service.PreloadingBitmapLoader
+ import expo.modules.interfaces.permissions.Permissions
+ import expo.modules.kotlin.Promise
+ import expo.modules.kotlin.exception.Exceptions
+@@ -57,6 +59,8 @@ class AudioModule : Module() {
    private var shouldPlayInBackground = false
    private var audioEnabled = true
    private var shouldRouteThroughEarpiece = false
@@ -32,7 +40,7 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..540c3db368196321c22ec67f3f5ea347
    private var focusAcquired = false
    private var interruptionMode: InterruptionMode? = null
    private var allowsBackgroundRecording = false
-@@ -140,6 +143,17 @@ class AudioModule : Module() {
+@@ -140,6 +144,17 @@ class AudioModule : Module() {
      return playsInSilentMode || audioManager.ringerMode == AudioManager.RINGER_MODE_NORMAL
    }
  
@@ -50,7 +58,7 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..540c3db368196321c22ec67f3f5ea347
    private fun requestAudioFocus() {
      if (focusAcquired || !audioEnabled || interruptionMode == InterruptionMode.MIX_WITH_OTHERS) {
        return
-@@ -148,14 +162,23 @@ class AudioModule : Module() {
+@@ -148,14 +163,23 @@ class AudioModule : Module() {
      val result = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
        val requestType = interruptionMode?.let {
          if (it == InterruptionMode.DO_NOT_MIX) {
@@ -76,7 +84,7 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..540c3db368196321c22ec67f3f5ea347
              .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
              .build()
          )
-@@ -169,7 +192,7 @@ class AudioModule : Module() {
+@@ -169,7 +193,7 @@ class AudioModule : Module() {
      } else {
        @Suppress("DEPRECATION")
        val requestType = if (interruptionMode == InterruptionMode.DO_NOT_MIX) {
@@ -85,7 +93,7 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..540c3db368196321c22ec67f3f5ea347
        } else {
          AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
        }
-@@ -363,7 +386,16 @@ class AudioModule : Module() {
+@@ -363,7 +387,16 @@ class AudioModule : Module() {
              bufferDurationMs
            )
            player.onPlaybackStateChange = { isPlaying ->
@@ -103,7 +111,7 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..540c3db368196321c22ec67f3f5ea347
                releaseAudioFocus()
              }
            }
-@@ -376,6 +408,15 @@ class AudioModule : Module() {
+@@ -376,6 +409,15 @@ class AudioModule : Module() {
          player.id
        }
  
@@ -119,7 +127,7 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..540c3db368196321c22ec67f3f5ea347
        Property("isBuffering") { player ->
          runOnMain {
            player.ref.playbackState == Player.STATE_BUFFERING
-@@ -507,6 +548,27 @@ class AudioModule : Module() {
+@@ -507,6 +549,27 @@ class AudioModule : Module() {
          }
        }
  
@@ -147,7 +155,7 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..540c3db368196321c22ec67f3f5ea347
        Function("setActiveForLockScreen") { ref: AudioPlayer, active: Boolean, metadata: Metadata?, options: AudioLockScreenOptions? ->
          runOnMain {
            ref.setActiveForLockScreen(active, metadata, options)
-@@ -519,12 +581,26 @@ class AudioModule : Module() {
+@@ -519,12 +582,26 @@ class AudioModule : Module() {
          }
        }
  
@@ -174,7 +182,7 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..540c3db368196321c22ec67f3f5ea347
        Function("setAudioSamplingEnabled") { player: AudioPlayer, enabled: Boolean ->
          runOnMain {
            player.setSamplingEnabled(enabled)
-@@ -685,7 +761,16 @@ class AudioModule : Module() {
+@@ -685,7 +762,16 @@ class AudioModule : Module() {
            }
            playlist.loadInitialPlaylist()
            playlist.onPlaybackStateChange = { isPlaying ->
@@ -192,7 +200,7 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..540c3db368196321c22ec67f3f5ea347
                releaseAudioFocus()
              }
            }
-@@ -860,13 +945,29 @@ class AudioModule : Module() {
+@@ -860,13 +946,29 @@ class AudioModule : Module() {
  
    private fun createMediaItem(source: AudioSource?): MediaSource? = source?.uri?.let { uriString ->
      val uri = uriString.toUri()
@@ -215,7 +223,7 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..540c3db368196321c22ec67f3f5ea347
 +          .setTitle(meta.title)
 +          .setArtist(meta.artist)
 +          .setAlbumTitle(meta.albumTitle)
-+          .setArtworkUri(meta.artworkUrl?.toString()?.toUri())
++          .setArtworkUri(PreloadingBitmapLoader.mask(meta.artworkUrl?.toString()))
 +          .setDurationMs(meta.durationMs)
 +          .build()
 +      ).build()
@@ -223,7 +231,7 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..540c3db368196321c22ec67f3f5ea347
  
      val preloadedBytes = AudioPreloadManager.get(uriString)
      val factory: DataSource.Factory = if (preloadedBytes != null) {
-@@ -914,10 +1015,32 @@ class AudioModule : Module() {
+@@ -914,10 +1016,32 @@ class AudioModule : Module() {
      }
    }
  
@@ -257,7 +265,7 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..540c3db368196321c22ec67f3f5ea347
    }
  
    private fun retrieveStreamType(uri: Uri): Int = Util.inferContentType(uri)
-@@ -931,7 +1054,7 @@ class AudioModule : Module() {
+@@ -931,7 +1055,7 @@ class AudioModule : Module() {
        CONTENT_TYPE_SS -> SsMediaSource.Factory(factory)
        CONTENT_TYPE_DASH -> DashMediaSource.Factory(factory)
        CONTENT_TYPE_HLS -> HlsMediaSource.Factory(factory)
@@ -267,7 +275,7 @@ index 992239ba7631ce0c97c0b41c5fbf61cc842386fe..540c3db368196321c22ec67f3f5ea347
      }.createMediaSource(mediaItem)
    }
 diff --git a/android/src/main/java/expo/modules/audio/AudioPlayer.kt b/android/src/main/java/expo/modules/audio/AudioPlayer.kt
-index c76a9fd2a53743a691782e0f67d0d71401df58f6..d44d6822a4490c88f782e0cab14c318665590036 100644
+index c76a9fd2a53743a691782e0f67d0d71401df58f6..7c9025af6a1645f79f9964b67e040764d8eceb71 100644
 --- a/android/src/main/java/expo/modules/audio/AudioPlayer.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioPlayer.kt
 @@ -8,15 +8,19 @@ import android.util.Log
@@ -502,7 +510,7 @@ index c76a9fd2a53743a691782e0f67d0d71401df58f6..d44d6822a4490c88f782e0cab14c3186
  
    private fun sendAudioSampleUpdate(sample: List<Float>) {
 diff --git a/android/src/main/java/expo/modules/audio/AudioRecords.kt b/android/src/main/java/expo/modules/audio/AudioRecords.kt
-index 86880d92fd5b6413e8596e1b2b8ae28f2981addd..7f6248375cf03ffb5a1f9faa9e9b3d639ba70a76 100644
+index 86880d92fd5b6413e8596e1b2b8ae28f2981addd..34044354b228072c1020dfbde62fee049d1521fe 100644
 --- a/android/src/main/java/expo/modules/audio/AudioRecords.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioRecords.kt
 @@ -12,7 +12,27 @@ import expo.modules.kotlin.types.OptimizedRecord
@@ -563,7 +571,7 @@ index 86880d92fd5b6413e8596e1b2b8ae28f2981addd..7f6248375cf03ffb5a1f9faa9e9b3d63
  
  enum class InterruptionMode(val value: String) : Enumerable {
 diff --git a/android/src/main/java/expo/modules/audio/AudioUtils.kt b/android/src/main/java/expo/modules/audio/AudioUtils.kt
-index dca91c32a2787a7bc3ecba26f0f3f2ad9cc40d3d..354120331123b4a86378cd05d4fcdbd6c865c5f7 100644
+index dca91c32a2787a7bc3ecba26f0f3f2ad9cc40d3d..089dcee0b9fe6a369f0809ecdf99a1fa42ea9ef3 100644
 --- a/android/src/main/java/expo/modules/audio/AudioUtils.kt
 +++ b/android/src/main/java/expo/modules/audio/AudioUtils.kt
 @@ -3,6 +3,8 @@ package expo.modules.audio
@@ -703,7 +711,7 @@ index dca91c32a2787a7bc3ecba26f0f3f2ad9cc40d3d..354120331123b4a86378cd05d4fcdbd6
      .build()
  }
 diff --git a/android/src/main/java/expo/modules/audio/BaseAudioPlayer.kt b/android/src/main/java/expo/modules/audio/BaseAudioPlayer.kt
-index 149e9075c8630b14a69318aa6c37d9ff82b23f05..40f5d256923a603933c7c436367bac864d832b50 100644
+index 149e9075c8630b14a69318aa6c37d9ff82b23f05..422d2d18677223f48b0106e44f573659b90160dd 100644
 --- a/android/src/main/java/expo/modules/audio/BaseAudioPlayer.kt
 +++ b/android/src/main/java/expo/modules/audio/BaseAudioPlayer.kt
 @@ -78,7 +78,6 @@ abstract class BaseAudioPlayer(
@@ -739,7 +747,7 @@ index 149e9075c8630b14a69318aa6c37d9ff82b23f05..40f5d256923a603933c7c436367bac86
  
 diff --git a/android/src/main/java/expo/modules/audio/FragmentSeekingExtractor.kt b/android/src/main/java/expo/modules/audio/FragmentSeekingExtractor.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..3f16cfffc4d353c12330b45677215b0d717fcc4d
+index 0000000000000000000000000000000000000000..a4e9d208d0fa8f34440bc355de02f81129c91a76
 --- /dev/null
 +++ b/android/src/main/java/expo/modules/audio/FragmentSeekingExtractor.kt
 @@ -0,0 +1,425 @@
@@ -1169,7 +1177,7 @@ index 0000000000000000000000000000000000000000..3f16cfffc4d353c12330b45677215b0d
 +  }
 +}
 diff --git a/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt b/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
-index 196a5d57f887c2667a88543bd2f6a80044a044f2..0ddb26beedd3ca3ac064bf3682564c120e60f780 100644
+index 196a5d57f887c2667a88543bd2f6a80044a044f2..4e093dc6d2dea7acb919a41f694db6bf04772752 100644
 --- a/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
 +++ b/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
 @@ -27,6 +27,7 @@ import expo.modules.audio.AudioLockScreenOptions
@@ -1421,7 +1429,7 @@ index 196a5d57f887c2667a88543bd2f6a80044a044f2..0ddb26beedd3ca3ac064bf3682564c12
      const val SEEK_INTERVAL_MS = 10000L
    }
 diff --git a/android/src/main/java/expo/modules/audio/service/AudioMediaSessionCallback.kt b/android/src/main/java/expo/modules/audio/service/AudioMediaSessionCallback.kt
-index 839aaef12d7699ea1a89037b31849775daa079f4..a7785cd6b1fc49c5b51fede555bd675590ebb96f 100644
+index 839aaef12d7699ea1a89037b31849775daa079f4..1aff5091d68c19523e2374c0231f4c1da1a69163 100644
 --- a/android/src/main/java/expo/modules/audio/service/AudioMediaSessionCallback.kt
 +++ b/android/src/main/java/expo/modules/audio/service/AudioMediaSessionCallback.kt
 @@ -1,6 +1,9 @@
@@ -1510,7 +1518,7 @@ index 839aaef12d7699ea1a89037b31849775daa079f4..a7785cd6b1fc49c5b51fede555bd6755
      return super.onCustomCommand(session, controller, command, args)
    }
 diff --git a/android/src/main/java/expo/modules/audio/service/MetadataInjectingPlayer.kt b/android/src/main/java/expo/modules/audio/service/MetadataInjectingPlayer.kt
-index 18203a364d17dcf3de95d22a20175308e3363889..1f246fe53678289de51c7b63adff3a271c1919b1 100644
+index 18203a364d17dcf3de95d22a20175308e3363889..317382e2b89ec80576a0878675e52636d621f0a8 100644
 --- a/android/src/main/java/expo/modules/audio/service/MetadataInjectingPlayer.kt
 +++ b/android/src/main/java/expo/modules/audio/service/MetadataInjectingPlayer.kt
 @@ -3,10 +3,20 @@ package expo.modules.audio.service
@@ -1573,7 +1581,7 @@ index 18203a364d17dcf3de95d22a20175308e3363889..1f246fe53678289de51c7b63adff3a27
    override fun addListener(listener: Player.Listener) {
      val forwardingListener = synchronized(listeners) {
        listeners.getOrPut(listener) { MetadataForwardingListener(listener) }
-@@ -37,6 +79,9 @@ internal class MetadataInjectingPlayer(
+@@ -37,13 +79,16 @@ internal class MetadataInjectingPlayer(
    }
  
    override fun getMediaMetadata(): MediaMetadata {
@@ -1583,6 +1591,14 @@ index 18203a364d17dcf3de95d22a20175308e3363889..1f246fe53678289de51c7b63adff3a27
      val metadata = injectedMetadata
      return super.getMediaMetadata()
        .buildUpon()
+       .setTitle(metadata?.title)
+       .setArtist(metadata?.artist)
+       .setAlbumTitle(metadata?.albumTitle)
+-      .setArtworkUri(metadata?.artworkUrl?.toString()?.toUri())
++      .setArtworkUri(PreloadingBitmapLoader.mask(metadata?.artworkUrl?.toString()))
+       .setArtworkData(null, null)
+       .build()
+   }
 @@ -56,6 +101,9 @@ internal class MetadataInjectingPlayer(
  
      val previousMetadata = mediaMetadata
@@ -1718,10 +1734,10 @@ index 18203a364d17dcf3de95d22a20175308e3363889..1f246fe53678289de51c7b63adff3a27
  }
 diff --git a/android/src/main/java/expo/modules/audio/service/PreloadingBitmapLoader.kt b/android/src/main/java/expo/modules/audio/service/PreloadingBitmapLoader.kt
 new file mode 100644
-index 0000000000000000000000000000000000000000..e0bd757158c66f762766a76e6c486cbd26e0a827
+index 0000000000000000000000000000000000000000..5cd423a7887ac9b5748de734ccd13c08fd4c9cd5
 --- /dev/null
 +++ b/android/src/main/java/expo/modules/audio/service/PreloadingBitmapLoader.kt
-@@ -0,0 +1,77 @@
+@@ -0,0 +1,116 @@
 +package expo.modules.audio.service
 +
 +import android.content.Context
@@ -1735,6 +1751,7 @@ index 0000000000000000000000000000000000000000..e0bd757158c66f762766a76e6c486cbd
 +import com.google.common.util.concurrent.Futures
 +import com.google.common.util.concurrent.ListenableFuture
 +import com.google.common.util.concurrent.MoreExecutors
++import java.security.MessageDigest
 +
 +/**
 + * The media session's artwork loader, able to have a cover ready before the
@@ -1746,6 +1763,13 @@ index 0000000000000000000000000000000000000000..e0bd757158c66f762766a76e6c486cbd
 + * always come back for the second one: a Tesla keeps showing nothing. A cover
 + * fetched while the previous track plays is a done future, so the title and
 + * the picture reach the car in the same update.
++ *
++ * It is also the only thing that reads the real address of a cover. A server's
++ * cover URL carries the account's credentials in its query, and the session
++ * hands its metadata to every app allowed to control media: scrobblers,
++ * watches, automation apps. So the session is given an opaque
++ * `resonus-art://<id>` instead (see [mask]), and this loader, in our own
++ * process, is the one that knows which URL each id stands for.
 + */
 +@UnstableApi
 +internal class PreloadingBitmapLoader(context: Context) : BitmapLoader {
@@ -1756,11 +1780,41 @@ index 0000000000000000000000000000000000000000..e0bd757158c66f762766a76e6c486cbd
 +  override fun decodeBitmap(data: ByteArray): ListenableFuture<Bitmap> = delegate.decodeBitmap(data)
 +
 +  override fun loadBitmap(uri: Uri): ListenableFuture<Bitmap> {
-+    ready.get(uri.toString())?.let { return Futures.immediateFuture(it) }
-+    return load(delegate, uri)
++    val real = unmask(uri)
++    ready.get(real.toString())?.let { return Futures.immediateFuture(it) }
++    return load(delegate, real)
 +  }
 +
 +  companion object {
++    private const val MASKED_SCHEME = "resonus-art"
++
++    /** Opaque id to real address. Big enough to outlive the queue around the
++     *  track playing, which is all the session ever asks about. */
++    private val masked = LruCache<String, String>(256)
++
++    /**
++     * What the session publishes for [url]: the url itself when it is a local
++     * file or a resource, which tells nobody anything, and an opaque
++     * `resonus-art://<id>` for a network address, which may carry credentials.
++     */
++    fun mask(url: String?): Uri? {
++      if (url.isNullOrEmpty()) return null
++      val uri = Uri.parse(url)
++      if (uri.scheme != "http" && uri.scheme != "https") return uri
++      val id = MessageDigest.getInstance("SHA-256")
++        .digest(url.toByteArray())
++        .take(16)
++        .joinToString("") { "%02x".format(it) }
++      masked.put(id, url)
++      return Uri.parse("$MASKED_SCHEME://$id")
++    }
++
++    /** The address behind a masked uri, or the uri itself if it is not one. */
++    fun unmask(uri: Uri): Uri {
++      if (uri.scheme != MASKED_SCHEME) return uri
++      return masked.get(uri.host ?: return uri)?.let(Uri::parse) ?: uri
++    }
++
 +    /** A few: the track playing, the one queued behind it, and some slack. */
 +    private val ready = LruCache<String, Bitmap>(4)
 +
@@ -1794,13 +1848,14 @@ index 0000000000000000000000000000000000000000..e0bd757158c66f762766a76e6c486cbd
 +
 +    /** Fetches a cover ahead of its track. Does nothing if it is already here. */
 +    fun preload(context: Context, uri: Uri?) {
-+      if (uri == null || ready.get(uri.toString()) != null) return
-+      load(loaderFor(context), uri)
++      val real = uri?.let(::unmask) ?: return
++      if (ready.get(real.toString()) != null) return
++      load(loaderFor(context), real)
 +    }
 +  }
 +}
 diff --git a/build/Audio.types.d.ts b/build/Audio.types.d.ts
-index 25604783649fe9b64f6655172f08471a5efcbf45..885474cb5e5ce99b758c307f95bb6782d6d63ba0 100644
+index 25604783649fe9b64f6655172f08471a5efcbf45..dde071902d07312f2c0511ac4b34701e94701021 100644
 --- a/build/Audio.types.d.ts
 +++ b/build/Audio.types.d.ts
 @@ -34,6 +34,28 @@ export type AudioSource = string | number | null | {
@@ -1849,7 +1904,7 @@ index 25604783649fe9b64f6655172f08471a5efcbf45..885474cb5e5ce99b758c307f95bb6782
  /**
   * Loop mode for audio playlist playback.
 diff --git a/build/AudioConstants.d.ts b/build/AudioConstants.d.ts
-index cfd92ad0ff5765254c4e6db974fe44bce34aad06..d16fb49bb630dd95f26abfb6260ade9cbf3bee23 100644
+index cfd92ad0ff5765254c4e6db974fe44bce34aad06..78fa084cf34a5f56743d636b6501f90971d7898b 100644
 --- a/build/AudioConstants.d.ts
 +++ b/build/AudioConstants.d.ts
 @@ -15,5 +15,9 @@ export type AudioLockScreenOptions = {
@@ -1864,7 +1919,7 @@ index cfd92ad0ff5765254c4e6db974fe44bce34aad06..d16fb49bb630dd95f26abfb6260ade9c
  //# sourceMappingURL=AudioConstants.d.ts.map
 \ No newline at end of file
 diff --git a/build/AudioModule.types.d.ts b/build/AudioModule.types.d.ts
-index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..3dc08a6973d38362c1f1100623134acb1f4933b5 100644
+index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..42933ee69678b8bdfa28345582dd32e8f1d7efdb 100644
 --- a/build/AudioModule.types.d.ts
 +++ b/build/AudioModule.types.d.ts
 @@ -16,6 +16,30 @@ export declare class NativeAudioModule extends NativeModule {
@@ -1982,7 +2037,7 @@ index f3ae4ee4044d86032cd5c6dbcfee6f905d1ce99f..3dc08a6973d38362c1f1100623134acb
      /**
 diff --git a/ios/AnimatedArtwork.swift b/ios/AnimatedArtwork.swift
 new file mode 100644
-index 0000000000000000000000000000000000000000..12a91373c6e24c66c2de685d3914d0d624cf3c3a
+index 0000000000000000000000000000000000000000..2db79308e6395518e094d7f5b3e7806461523a6e
 --- /dev/null
 +++ b/ios/AnimatedArtwork.swift
 @@ -0,0 +1,989 @@
@@ -2977,7 +3032,7 @@ index 0000000000000000000000000000000000000000..12a91373c6e24c66c2de685d3914d0d6
 +#endif
 diff --git a/ios/ArtworkPreloader.swift b/ios/ArtworkPreloader.swift
 new file mode 100644
-index 0000000000000000000000000000000000000000..3f23f0177668f354b005580174b2a30bde0ccbfa
+index 0000000000000000000000000000000000000000..324f3800712d70577a341b40ed49666bd6bf993e
 --- /dev/null
 +++ b/ios/ArtworkPreloader.swift
 @@ -0,0 +1,103 @@
@@ -3085,7 +3140,7 @@ index 0000000000000000000000000000000000000000..3f23f0177668f354b005580174b2a30b
 +  }
 +}
 diff --git a/ios/AudioModule.swift b/ios/AudioModule.swift
-index d26560627c2dfa97370440ad28304617f3f9f0f7..40c2c9618a3c0fa06de784722b8884114981c494 100644
+index d26560627c2dfa97370440ad28304617f3f9f0f7..31a715beb88474b4029784074070a0c11d8ffc01 100644
 --- a/ios/AudioModule.swift
 +++ b/ios/AudioModule.swift
 @@ -32,6 +32,49 @@ public class AudioModule: Module {
@@ -3158,7 +3213,7 @@ index d26560627c2dfa97370440ad28304617f3f9f0f7..40c2c9618a3c0fa06de784722b888411
          player.ref.pause()
          if !player.keepAudioSessionActive {
 diff --git a/ios/AudioPlayer.swift b/ios/AudioPlayer.swift
-index 074294321e872bb53c0b2d41044dac3c612f14f0..1a44724736482ba08f7a1ccab694123548c3543e 100644
+index 074294321e872bb53c0b2d41044dac3c612f14f0..0b6786139c65a55568e4f886c7f82130f8ed7f1b 100644
 --- a/ios/AudioPlayer.swift
 +++ b/ios/AudioPlayer.swift
 @@ -4,6 +4,7 @@ import Combine
@@ -3428,7 +3483,7 @@ index 074294321e872bb53c0b2d41044dac3c612f14f0..1a44724736482ba08f7a1ccab6941235
          self.updateStatus(with: [
            "playing": false,
 diff --git a/ios/AudioRecords.swift b/ios/AudioRecords.swift
-index 33db27c3b8fb40fa9db6659a0787c6b2b503d1ab..ae00508e44a1632dafe1bedc2d326c31acc2a45c 100644
+index 33db27c3b8fb40fa9db6659a0787c6b2b503d1ab..a5c41356f93d3d4a45bf14020af1cb1943731751 100644
 --- a/ios/AudioRecords.swift
 +++ b/ios/AudioRecords.swift
 @@ -64,12 +64,17 @@ struct Metadata: Record {
@@ -3450,7 +3505,7 @@ index 33db27c3b8fb40fa9db6659a0787c6b2b503d1ab..ae00508e44a1632dafe1bedc2d326c31
  
  enum BitRateStrategy: String, Enumerable {
 diff --git a/ios/AudioSource.swift b/ios/AudioSource.swift
-index 0c8c2fede4b079f6d71217bafe07b5de55438821..9870ce6b1e038ab701591c7bebead6b95db80dd4 100644
+index 0c8c2fede4b079f6d71217bafe07b5de55438821..98b021e42f27fac73d103835779d65ec983c11b1 100644
 --- a/ios/AudioSource.swift
 +++ b/ios/AudioSource.swift
 @@ -10,4 +10,13 @@ struct AudioSource: Record {
@@ -3468,7 +3523,7 @@ index 0c8c2fede4b079f6d71217bafe07b5de55438821..9870ce6b1e038ab701591c7bebead6b9
 +  var metadata: Metadata?
  }
 diff --git a/ios/AudioUtils.swift b/ios/AudioUtils.swift
-index 79c7c0b256581a768c42a0291bf84bdff4c4b142..ca13e59c53a7f9a3a5fc49d94b266c621201983a 100644
+index 79c7c0b256581a768c42a0291bf84bdff4c4b142..13bbad46de02ac1b42a05877e510f9055769a2a5 100644
 --- a/ios/AudioUtils.swift
 +++ b/ios/AudioUtils.swift
 @@ -84,9 +84,23 @@ struct AudioUtils {
@@ -3498,7 +3553,7 @@ index 79c7c0b256581a768c42a0291bf84bdff4c4b142..ca13e59c53a7f9a3a5fc49d94b266c62
  
      let asset = AVURLAsset(url: finalUrl, options: options)
 diff --git a/ios/MediaController.swift b/ios/MediaController.swift
-index e977f577cd2e16b194b56537ad76b423f40d2496..5e489c0599f0af58783fe3cb48c566ec268da064 100644
+index e977f577cd2e16b194b56537ad76b423f40d2496..9100d311443441581fcb4c3b5e33b428771bdc95 100644
 --- a/ios/MediaController.swift
 +++ b/ios/MediaController.swift
 @@ -11,9 +11,20 @@ class MediaController {

@@ -20,5 +20,12 @@
         <action android:name="android.media.browse.MediaBrowserService" />
       </intent-filter>
     </service>
+    <!-- Remote covers for the Android Auto host, under opaque ids, so it never
+         sees a server URL with the account's credentials in it. Exported: the
+         host reads it from its own process, and an id says nothing on its own. -->
+    <provider
+      android:name="expo.modules.carauto.CarArtProvider"
+      android:authorities="${applicationId}.carart"
+      android:exported="true" />
   </application>
 </manifest>
