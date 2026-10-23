@@ -13,6 +13,7 @@ import * as Crypto from 'expo-crypto';
 // This one answers there, and honours `AbortSignal` properly with it.
 import { fetch } from 'expo/fetch';
 
+import { tg } from '@/i18n';
 import { markAbsentCovers, omitsAbsentCovers } from '@/lib/absentCovers';
 import { structuredSongLyrics, type ServerStructuredLyrics } from '@/lib/lyricWords';
 import { canonicalId, idWouldChange } from '@/lib/navidromeIds';
@@ -559,9 +560,9 @@ async function request<T>(
     // is one of the two shapes this report exists to tell apart.
     netTally(`${endpoint} (no answer)`);
     if (controller.signal.aborted) {
-      throw new SubsonicRequestError('Server took too long to respond', true);
+      throw new SubsonicRequestError(tg('Server took too long to respond'), true);
     }
-    throw new SubsonicRequestError('Could not connect to the server', true);
+    throw new SubsonicRequestError(tg('Could not connect to the server'), true);
   } finally {
     if (agent) agentSlots.release();
   }
@@ -597,14 +598,14 @@ async function request<T>(
     });
   } catch (e) {
     if (controller.signal.aborted) {
-      throw new SubsonicRequestError('Server took too long to respond', true);
+      throw new SubsonicRequestError(tg('Server took too long to respond'), true);
     }
     throw e;
   } finally {
     clearTimeout(timer);
   }
   const sub = json['subsonic-response'];
-  if (!sub) throw new SubsonicRequestError('Unexpected server response', false);
+  if (!sub) throw new SubsonicRequestError(tg('Unexpected server response'), false);
   if (sub.status === 'failed') {
     const code = typeof sub.error?.code === 'number' ? sub.error.code : undefined;
     if (!retried && code === ERR_NOT_FOUND) {
@@ -1009,7 +1010,9 @@ export async function reorderPlaylist(
     if (!res.ok) throw new Error(`Network error (${res.status})`);
     return res.json();
   }).catch((e) => {
-    throw e instanceof DeadlineError ? new SubsonicRequestError(e.message, true) : e;
+    throw e instanceof DeadlineError
+      ? new SubsonicRequestError(tg('Server took too long to respond'), true)
+      : e;
   });
   const sub = json['subsonic-response'];
   if (sub?.status === 'failed') throw new Error(sub.error?.message ?? 'Subsonic error');

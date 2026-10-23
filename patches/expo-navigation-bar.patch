@@ -1,0 +1,25 @@
+diff --git a/src/NavigationBar.android.ts b/src/NavigationBar.android.ts
+index 1835c237e2ed6e80627936c33008c1b6ebacbe8c..bdb7d5e7546706c129354ceac611a2544f3c4538 100644
+--- a/src/NavigationBar.android.ts
++++ b/src/NavigationBar.android.ts
+@@ -77,7 +77,10 @@ export function setStyle(style: NavigationBarStyle) {
+ 
+   if (resolvedStyle !== currentValues.style) {
+     currentValues.style = resolvedStyle;
+-    ExpoNavigationBar.setStyle(resolvedStyle);
++    // Rejects when there is no activity to set it on, which is how the app
++    // starts from the media session or the car: nothing to change then, and
++    // an unhandled rejection is all the call would leave behind.
++    ExpoNavigationBar.setStyle(resolvedStyle).catch(() => {});
+   }
+ }
+ 
+@@ -86,7 +89,7 @@ function setHidden(hidden: boolean) {
+ 
+   if (hidden !== currentValues.hidden) {
+     currentValues.hidden = hidden;
+-    ExpoNavigationBar.setHidden(hidden);
++    ExpoNavigationBar.setHidden(hidden).catch(() => {}); // see setStyle
+   }
+ }
+ 
