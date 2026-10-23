@@ -2213,7 +2213,8 @@ useSettings.subscribe((s) => {
 // Playing along with a record on an instrument is the reason this exists
 // (#151), so the pitch does not move with the speed: media3 stretches time
 // (`shouldCorrectPitch`, which expo-audio has on by default) and a song slowed
-// to three quarters is still in its own key.
+// to three quarters is still in its own key. Varispeed (#277) is the other
+// way, asked for by name: the pitch goes with it, like a tape.
 //
 // It is a property of the player and not of the source, so every place that
 // installs a source applies it: a `replace()` keeps whatever rate the player
@@ -2243,7 +2244,8 @@ function applySpeed(p: AudioPlayer | null, song: Song | null | undefined) {
   try {
     // Before the rate, not after: the pitch is worked out when the rate is
     // set, so a player told to correct it afterwards keeps the old parameters.
-    p.shouldCorrectPitch = true;
+    // Varispeed is the one case that lets the pitch follow the rate.
+    p.shouldCorrectPitch = !usePlayerStore.getState().varispeed;
     p.setPlaybackRate(speedFor(song));
   } catch {
     // ignore
@@ -3919,6 +3921,13 @@ interface PlayerState {
    * bug report, not a preference. While it is not 1 the player says so.
    */
   speed: number;
+  /**
+   * Varispeed (#277): the pitch moves with the speed, the way a record does on
+   * a turntable running fast or slow. Off by default, which keeps the pitch
+   * where it is (#151). Lives as long as the speed does, and for the same
+   * reason: it belongs to a session, not to how somebody listens.
+   */
+  varispeed: boolean;
   shuffle: boolean;
   /**
    * What is playing was dealt when it was started: the Shuffle button of an
@@ -4006,6 +4015,8 @@ interface PlayerState {
   /** Sets the playback speed (see `speed`). Heard right away, without
    *  reloading anything. */
   setSpeed: (v: number) => void;
+  /** Turns varispeed on or off (see `varispeed`). Heard right away. */
+  setVarispeed: (on: boolean) => void;
   jumpTo: (index: number, kind?: JumpKind) => void;
   /** Removes the song at `index`. Returns a function that reinserts it in its
    *  place (for the "Undo" toast), except when removing the current one or
@@ -4119,6 +4130,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   durationSec: 0,
   volume: 1,
   speed: 1,
+  varispeed: false,
   shuffle: false,
   queueDealt: false,
   repeat: 'off',
@@ -4525,10 +4537,17 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     // The ends of what is offered. Android clamps to 0.1–2 on its own, and a
     // rate that came back clamped would leave the list showing a speed that is
     // not the one playing.
-    const speed = Math.min(2, Math.max(0.5, v));
+    // To the hundredth: that is the slider's step (#277), and a float that is
+    // not quite 1.03 would be shown as one.
+    const speed = Math.round(Math.min(2, Math.max(0.5, v)) * 100) / 100;
     set({ speed });
     // Only the player that is sounding: the reserve gets it when a source is
     // installed on it, and a remote renderer plays at its own pace.
+    if (!remoteKind()) applySpeed(activePlayer(), currentSong(get()));
+  },
+
+  setVarispeed: (on) => {
+    set({ varispeed: on });
     if (!remoteKind()) applySpeed(activePlayer(), currentSong(get()));
   },
 
@@ -4951,7 +4970,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       // The speed goes with them, and for the same reason: it is about
       // listening, not about this queue. It does not outlive the run either
       // way (see `speed`).
-      ...(forProfile ? { shuffle: false, repeat: 'off' as const, speed: 1 } : {}),
+      ...(forProfile ? { shuffle: false, repeat: 'off' as const, speed: 1, varispeed: false } : {}),
       // Not one of those two: this is about the queue that is going away, not
       // about how somebody listens.
       queueDealt: false,

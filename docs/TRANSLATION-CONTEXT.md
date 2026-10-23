@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 826 of them.
+Every string the app can show, under the screen it shows up on. 830 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -464,10 +464,12 @@ you are actually typing into, which is easier than reading it here.
 | `AirPlay` |  |
 | `Back {n} seconds` | Read out by the screen reader for the seek button. `{n}` is how many seconds it is set to |
 | `Bluetooth` |  |
+| `BPM` | A property of the audio: beats per minute |
 | `Car` | Fallback label for the car stereo the phone is playing through, beside the devices button, when the system gives no name |
 | `Currently playing on` | Heading above the output the music is coming out of right now, at the top of the output sheet |
 | `Devices` | The audio output devices to cast to |
 | `Explicit` | A value of `Content`: the recording carries a parental advisory (strong language). Also read out for the E badge next to a title |
+| `Faster` | Button that raises the playback speed by 0.01. Read by screen readers only |
 | `Forward {n} seconds` | Read out by the screen reader for the seek button. `{n}` is how many seconds it is set to |
 | `Headphones` | Fallback label for wired headphones the phone is playing through, beside the devices button, when the system gives no name |
 | `History` | The listening history: what was played and when |
@@ -490,7 +492,10 @@ you are actually typing into, which is easier than reading it here.
 | `Show remaining time` |  |
 | `Show total time` |  |
 | `Sleep timer` | Stop playing after a while, for falling asleep to |
+| `Slower` | Button that lowers the playback speed by 0.01. Read by screen readers only |
+| `The pitch goes up and down with the speed, like a record played fast or slow.` | Explanation under the Varispeed switch |
 | `This phone` | The on-device profile, with no server account |
+| `Varispeed` | Switch in the playback speed sheet: the pitch changes together with the speed, like a tape or a record. A technical name musicians use; keep it if your language has no common word for it |
 | `View queue` | Read out by the screen reader for the button that opens the queue |
 
 ## Playlist

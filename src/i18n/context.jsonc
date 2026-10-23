@@ -352,6 +352,10 @@
 
     // ── Empty states and errors that offer another go ────────────────────────
     "Something went wrong": "Title of the screen shown when part of the app crashed, above the error and a Retry button",
+    "Varispeed": "Switch in the playback speed sheet: the pitch changes together with the speed, like a tape or a record. A technical name musicians use; keep it if your language has no common word for it",
+    "The pitch goes up and down with the speed, like a record played fast or slow.": "Explanation under the Varispeed switch",
+    "Slower": "Button that lowers the playback speed by 0.01. Read by screen readers only",
+    "Faster": "Button that raises the playback speed by 0.01. Read by screen readers only",
     "Retry": "The button on an error message: try again. A verb",
     "No results for “{q}”": "Empty state. `{q}` is what was typed",
     "Find in playlist": "Placeholder of the search box hidden above a tracklist, for finding a song within it",
