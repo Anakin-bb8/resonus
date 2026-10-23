@@ -983,7 +983,7 @@ async function remoteLoadIndex(index: number, autoplay: boolean, startSec = 0) {
   const state = usePlayerStore.getState();
   const song = state.queue[index];
   if (!song) return;
-  scrobbledThisTrack = false;
+  resetListen();
   const ok = isJukeboxActive()
     ? await jukeboxLoad(song, autoplay, startSec)
     : await loadUpnpRemoteTrack(
@@ -1072,7 +1072,7 @@ async function loadIndex(index: number, autoplay: boolean): Promise<boolean> {
   pendingSeek = null;
   setStreamOffset(0);
   sourceHasLength = null; // unknown until the new source is loaded
-  scrobbledThisTrack = false;
+  resetListen();
   consumeQueuedOnIndexChange(index);
   if (remoteKind()) {
     await remoteLoadIndex(index, autoplay);
@@ -1227,7 +1227,36 @@ function forgetHistoryOf(key: string) {
 // threshold in the settings (50% or 4 minutes by default), so skipping does not
 // inflate anybody's history. The offline counter and the outbox follow the same
 // rule.
+//
+// What counts is time actually heard, not where the playhead is: a queue
+// restored at 80% on launch, a seek to the chorus or a handoff back from a
+// speaker all land past the threshold without anybody listening to it.
 let scrobbledThisTrack = false;
+/** Seconds of this track that playback itself has covered. */
+let heardSec = 0;
+/** Where and when the last playing beat left off, or null while paused. */
+let heardMark: { pos: number; at: number } | null = null;
+
+/** A track (or a repeat of it) starts: nothing of it has been heard yet. */
+function resetListen() {
+  scrobbledThisTrack = false;
+  heardSec = 0;
+  heardMark = null;
+}
+
+/** Adds what the playhead moved since the last beat, if playback moved it. */
+function noteHeard(positionSec: number, playing: boolean) {
+  const now = Date.now();
+  const mark = heardMark;
+  heardMark = playing ? { pos: positionSec, at: now } : null;
+  if (!playing || !mark) return;
+  const moved = positionSec - mark.pos;
+  // Playback can only cover as much as the clock allows at this speed; a jump
+  // past that is a seek. The second and a half absorbs beats that arrive late.
+  const speed = usePlayerStore.getState().speed || 1;
+  const allowed = ((now - mark.at) / 1000) * speed + 1.5;
+  if (moved > 0 && moved <= allowed) heardSec += moved;
+}
 
 // ── What the server's Now Playing panel shows ────────────────────────────────
 // The announcement ("now playing") is one message at the start of a track and
@@ -1300,8 +1329,9 @@ function reportState(state: PlaybackState, song: Song | undefined, positionSec: 
 }
 
 /** Sends the real scrobble once per track when crossing the threshold. */
-function maybeScrobbleThreshold(positionSec: number) {
+function maybeScrobbleThreshold(positionSec: number, playing: boolean) {
   if (scrobbledThisTrack) return;
+  noteHeard(positionSec, playing);
   const st = usePlayerStore.getState();
   const song = st.queue[st.index];
   if (!song || song.url) return; // radios are not scrobbled
@@ -1310,7 +1340,7 @@ function maybeScrobbleThreshold(positionSec: number) {
   const threshold = scrobbleThresholdSec(duration, scrobblePercent, scrobbleSeconds);
   // Both rules off: nothing is ever reported, here or to the outbox, which is
   // what somebody who turned both off asked for.
-  if (threshold === null || positionSec < threshold) return;
+  if (threshold === null || heardSec < threshold) return;
   scrobbledThisTrack = true;
   const at = Date.now();
   const { auth, offline } = useAuthStore.getState();
@@ -2065,7 +2095,7 @@ function onTrackTransition() {
   // else needs queueing behind it.
   applyLoop(p);
   sourceHasLength = null; // another source: unknown until it reports
-  scrobbledThisTrack = false;
+  resetListen();
   // ReplayGain is per song. Not mid-ramp (sleep fade, pause fade): setting the
   // volume here would undo it.
   if (!sleepFadeTimer && !pauseFadeTimer) p.volume = effectiveVolume(song);
@@ -2438,7 +2468,7 @@ function startCrossfade(index: number, fadeSec: number) {
   activeIdx = 1 - activeIdx;
   setStreamOffset(0, p); // the incoming track starts from the beginning
   sourceHasLength = null; // and it's another source: unknown until it loads
-  scrobbledThisTrack = false;
+  resetListen();
   usePlayerStore.setState({
     index,
     positionSec: 0,
@@ -3021,7 +3051,7 @@ function onStatus(status: AudioStatus, live = false) {
       isBuffering: buffering,
     });
   }
-  maybeScrobbleThreshold(positionSec);
+  maybeScrobbleThreshold(positionSec, status.playing);
   maybeDetectStall(intendPlay, buffering, positionSec);
   // Queue sync with the server.
   if (status.playing) {
@@ -3683,7 +3713,7 @@ export function initRemoteIntegration() {
         durationSec: plausibleDuration(durationSec, cur.durationSec, currentSong(cur)?.duration),
       });
       const st = usePlayerStore.getState();
-      maybeScrobbleThreshold(positionSec);
+      maybeScrobbleThreshold(positionSec, st.isPlaying);
       // Updates the casting notification/lock screen scrubber.
       if (remoteKind()) castSetState(st.isPlaying, positionSec * 1000);
     },
@@ -4796,7 +4826,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     playedHistory = [];
     setStreamOffset(0);
     sourceHasLength = null;
-    scrobbledThisTrack = false;
+    resetListen();
     // timeOffset support is per server: re-check on change. The one in flight
     // goes with it, or the next profile would be handed this one's answer.
     transcodeOffsetSupported = null;
