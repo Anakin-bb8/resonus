@@ -30,6 +30,7 @@ Releases before 0.2.1 are only listed on the
 - A server that stops answering halfway no longer leaves a screen loading forever: it gives up after 15 seconds.
 - Connection errors from Navidrome and Subsonic servers are shown in your language.
 - A mix keeps growing after a moment without connection instead of stopping for good, and starting one on a song that can't load no longer turns the previous queue into a mix.
+- The sleep timer now stops playback on any speaker or TV you cast to, also with the screen off.
 - The screen shown when something crashes is now in your language instead of always in Spanish.
 
 ## [0.8.4] - 2026-10-20

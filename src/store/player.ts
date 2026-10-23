@@ -3775,6 +3775,15 @@ export function initRemoteIntegration() {
       })();
     },
     onProgress: (positionSec, durationSec) => {
+      // The sleep timer's fallback for frozen JS timers is in `onStatus`, which
+      // casting returns from at once, and only Sonos keeps a timer of its own.
+      // The renderer's progress is the beat that does arrive with the screen
+      // off, so it is checked here too.
+      const endsAt = sleepDeadline();
+      if (endsAt && Date.now() >= endsAt) {
+        fireSleepTimer();
+        return;
+      }
       const cur = usePlayerStore.getState();
       usePlayerStore.setState({
         positionSec,
