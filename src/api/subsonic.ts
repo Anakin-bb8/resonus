@@ -18,6 +18,7 @@ import { structuredSongLyrics, type ServerStructuredLyrics } from '@/lib/lyricWo
 import { canonicalId, idWouldChange } from '@/lib/navidromeIds';
 import { netTally, timed } from '@/lib/perfLog';
 import { createSlots } from '@/lib/slots';
+import { DeadlineError, untilAborted, withDeadline } from './deadline';
 import { assertCanRequest } from './netGate';
 
 export const CLIENT_NAME = 'Resonus';
@@ -552,6 +553,7 @@ async function request<T>(
       fetch(buildUrl(auth, endpoint, extra), { signal: controller.signal }),
     );
   } catch {
+    clearTimeout(timer);
     // Counted too, and apart. A request that never arrives costs the radio the
     // same as one that does, and a phone talking to a server that is not there
     // is one of the two shapes this report exists to tell apart.
@@ -561,14 +563,16 @@ async function request<T>(
     }
     throw new SubsonicRequestError('Could not connect to the server', true);
   } finally {
-    clearTimeout(timer);
     if (agent) agentSlots.release();
   }
 
   // Before the status is judged: an error is a request that went out and came
   // back like any other, and a storm of them is what a tally is for.
   netTally(endpoint, Number(res.headers.get('content-length')) || 0);
-  if (!res.ok) throw new SubsonicRequestError(`Network error (${res.status})`, false);
+  if (!res.ok) {
+    clearTimeout(timer);
+    throw new SubsonicRequestError(`Network error (${res.status})`, false);
+  }
   // Apart from the request: this is the part that runs on the JS thread, and
   // it grows with the size of the answer.
   //
@@ -577,12 +581,28 @@ async function request<T>(
   // response: a clone taken after `json()` has read it throws "body is already
   // used", synchronously and outside the try above, which took every request
   // with it. React Native's `fetch` let that pass; a spec-abiding one does not.
-  const json = await timed(`json ${endpoint}`, async () => {
-    if (!__DEV__) return res.json();
-    const text = await res.text();
-    console.log(`[perf] size ${endpoint} · ${Math.round(text.length / 1024)} KB`);
-    return JSON.parse(text);
-  });
+  //
+  // The deadline still runs while it reads: `expo/fetch` resolves on the
+  // headers, and the native client under it has no read timeout of its own, so
+  // a server or proxy that sends them and then stalls would otherwise leave the
+  // screen loading for good, with the offline detection never hearing of it.
+  // Raced, since the native read does not hear the abort (see `withDeadline`).
+  let json;
+  try {
+    json = await timed(`json ${endpoint}`, async () => {
+      if (!__DEV__) return Promise.race([res.json(), untilAborted(controller.signal)]);
+      const text = await Promise.race([res.text(), untilAborted(controller.signal)]);
+      console.log(`[perf] size ${endpoint} · ${Math.round(text.length / 1024)} KB`);
+      return JSON.parse(text);
+    });
+  } catch (e) {
+    if (controller.signal.aborted) {
+      throw new SubsonicRequestError('Server took too long to respond', true);
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
   const sub = json['subsonic-response'];
   if (!sub) throw new SubsonicRequestError('Unexpected server response', false);
   if (sub.status === 'failed') {
@@ -979,13 +999,18 @@ export async function reorderPlaylist(
   for (const sid of songIds) params.append('songId', sid);
   assertCanRequest();
   netTally('createPlaylist.view', params.toString().length);
-  const res = await fetch(`${auth.serverUrl}/rest/createPlaylist.view`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: params.toString(),
+  const json = await withDeadline(REQUEST_TIMEOUT_MS, async (signal) => {
+    const res = await fetch(`${auth.serverUrl}/rest/createPlaylist.view`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString(),
+      signal,
+    });
+    if (!res.ok) throw new Error(`Network error (${res.status})`);
+    return res.json();
+  }).catch((e) => {
+    throw e instanceof DeadlineError ? new SubsonicRequestError(e.message, true) : e;
   });
-  if (!res.ok) throw new Error(`Network error (${res.status})`);
-  const json = await res.json();
   const sub = json['subsonic-response'];
   if (sub?.status === 'failed') throw new Error(sub.error?.message ?? 'Subsonic error');
 }
@@ -1525,11 +1550,14 @@ export async function savePlayQueue(
     // one that grows with the queue. A mix left running all night is a body of
     // thousands of ids pushed every twenty seconds, which is worth seeing.
     netTally('savePlayQueue.view', params.toString().length);
-    await fetch(`${auth.serverUrl}/rest/savePlayQueue.view`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: params.toString(),
-    });
+    await withDeadline(REQUEST_TIMEOUT_MS, (signal) =>
+      fetch(`${auth.serverUrl}/rest/savePlayQueue.view`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString(),
+        signal,
+      }),
+    );
   } catch {
     // Best-effort; ignore network errors when saving the queue.
   }
