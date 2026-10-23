@@ -4431,6 +4431,13 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     if (ni != null) {
       pushHistory();
       void loadIndex(ni, skipAutoplay(get().isPlaying));
+      return;
+    }
+    // Offline with songs still ahead, none of them on the phone: the press did
+    // nothing and said nothing, which reads as a broken button.
+    const { queue, index } = get();
+    if (useAuthStore.getState().offline && index < queue.length - 1) {
+      useToast.getState().show(tg('Nothing here is downloaded'));
     }
   },
 

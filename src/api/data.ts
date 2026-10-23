@@ -218,7 +218,8 @@ export function coverArtUrl(id: string | undefined, _size?: number): string | un
  * which picture is better but which one is here: asking for art that was never
  * saved draws a grey square, and that is what the rows of a playlist used to
  * show. So offline the song's own is preferred only once this phone is known to
- * have it, and the album's is what stands in when it does not.
+ * have it, and the album's is what stands in when that one is. With neither on
+ * the phone it asks for what it asked for online (see below).
  *
  * Which pulls the two cases apart, and they were one before (#214). A download
  * saves a track's own picture and files the song under it (`downloadTrackArt`),
@@ -238,8 +239,14 @@ export function songCoverUrl(
 ): string | undefined {
   const album = song.url ? undefined : song.albumId;
   if (!isOffline()) return coverArtUrl(song.coverArt ?? album, size);
-  const here = song.coverArt && Local.coverUrl(song.coverArt) ? song.coverArt : undefined;
-  return coverArtUrl(here ?? album ?? song.coverArt, size);
+  if (song.coverArt && Local.coverUrl(song.coverArt)) return coverArtUrl(song.coverArt, size);
+  if (album && Local.coverUrl(album)) return coverArtUrl(album, size);
+  // Nothing of it downloaded: the address it had online, since that is the one
+  // the image cache filed the picture under. Standing the album's in here asked
+  // the cache for a picture it had never been given, and the cover that was on
+  // screen a second before turned into the placeholder the moment the app went
+  // offline.
+  return coverArtUrl(song.coverArt ?? album, size);
 }
 
 /**

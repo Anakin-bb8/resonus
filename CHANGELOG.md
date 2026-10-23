@@ -31,6 +31,9 @@ Releases before 0.2.1 are only listed on the
 - Connection errors from Navidrome and Subsonic servers are shown in your language.
 - A mix keeps growing after a moment without connection instead of stopping for good, and starting one on a song that can't load no longer turns the previous queue into a mix.
 - The sleep timer now stops playback on any speaker or TV you cast to, also with the screen off.
+- Offline, Next says when nothing ahead is downloaded instead of doing nothing.
+- A cover on screen no longer turns into the placeholder when the app goes offline.
+- "Download over Wi-Fi only" now stops a download that is running when the Wi-Fi drops, instead of carrying on over mobile data.
 - The screen shown when something crashes is now in your language instead of always in Spanish.
 
 ## [0.8.4] - 2026-10-20

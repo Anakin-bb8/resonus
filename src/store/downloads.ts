@@ -947,6 +947,16 @@ export function anyDownloads(s: { files: Record<string, string> }): boolean {
   return false;
 }
 
+/**
+ * Whether a group running in "Wi-Fi only" mode should stop before its next
+ * item: the connection it started on was Wi-Fi, but that is only true of the
+ * moment it started. Asked once per item, which is a cheap native call next
+ * to a download.
+ */
+async function lostWifi(): Promise<boolean> {
+  return useSettings.getState().downloadWifiOnly && (await onMobileData());
+}
+
 /** true only if the active connection is mobile data (for "Wi-Fi only" mode). */
 async function onMobileData(): Promise<boolean> {
   try {
@@ -1135,10 +1145,17 @@ export const useDownloads = create<DownloadsState>((set, get) => {
 
       let failed = 0;
       let next = 0;
+      let onData = false;
       // As many workers as slots at most: more would only queue up on the way in.
       const workers = Array.from({ length: Math.min(maxSlots(), pending.length) }, async () => {
         while (next < pending.length) {
-          if (cancelling.has(groupKey)) break; // stop requested by user
+          if (cancelling.has(groupKey) || onData) break; // stop requested by user
+          // The Wi-Fi went while the group ran: what is in flight finishes,
+          // nothing new starts on mobile data.
+          if (await lostWifi()) {
+            onData = true;
+            break;
+          }
           const song = pending[next++];
           for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
             // Held across the whole song, cover and lyrics included: they are
@@ -1175,6 +1192,8 @@ export const useDownloads = create<DownloadsState>((set, get) => {
       if (!cancelling.has(groupKey)) void mirrorAlbumTracklists(auth, pending);
       if (cancelling.has(groupKey)) {
         useToast.getState().show(tg('Download stopped'));
+      } else if (onData) {
+        useToast.getState().show(tg('Connect to Wi-Fi to download'));
       } else if (failed > 0) {
         useToast.getState().show(tg("{n} songs couldn't be downloaded", { n: failed }));
       } else {
@@ -1285,9 +1304,15 @@ export const useDownloads = create<DownloadsState>((set, get) => {
 
       let failed = 0;
       let next = 0;
+      let onData = false;
       const workers = Array.from({ length: Math.min(maxSlots(), pending.length) }, async () => {
         while (next < pending.length) {
-          if (cancelling.has(groupKey)) break; // stop requested by user
+          if (cancelling.has(groupKey) || onData) break; // stop requested by user
+          // Same as songs: no new episode on mobile data once the Wi-Fi went.
+          if (await lostWifi()) {
+            onData = true;
+            break;
+          }
           const ep = pending[next++];
           for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
             await takeSlot();
@@ -1314,6 +1339,8 @@ export const useDownloads = create<DownloadsState>((set, get) => {
       invalidate();
       if (cancelling.has(groupKey)) {
         useToast.getState().show(tg('Download stopped'));
+      } else if (onData) {
+        useToast.getState().show(tg('Connect to Wi-Fi to download'));
       } else if (failed > 0) {
         useToast.getState().show(tg("{n} episodes couldn't be downloaded", { n: failed }));
       } else {
