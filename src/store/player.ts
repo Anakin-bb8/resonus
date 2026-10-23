@@ -1632,6 +1632,11 @@ let autoplayFetchedFor: string | null = null;
  * message so obviously wrong to anybody reading it.
  */
 let autoplayRound: Promise<void> | null = null;
+/** Rounds that came back empty for the same tail, and the timed retry after
+ *  each (see `maybeQueueAutoplay`). */
+let autoplayRetry: { tail: string; tries: number } | null = null;
+const AUTOPLAY_RETRIES = 3;
+const AUTOPLAY_RETRY_MS = 30_000;
 
 /** Songs by the same artist that fit in one batch: what keeps a mix from
  *  turning into that artist's discography. */
@@ -1779,8 +1784,10 @@ async function extendWithArtistCatalog(auth: SubsonicAuth, artistId: string, hre
   const fill = artistFill;
   while (fill.next < fill.albums.length) {
     const album = fill.albums[fill.next];
-    fill.next += 1;
+    // Moved past only once it has answered: one that failed to load is asked
+    // for again next time, instead of dropping out of the artist's story.
     const { songs } = await getAlbum(auth, album.id);
+    fill.next += 1;
     const st = usePlayerStore.getState();
     // The queue may have moved on while the server answered.
     if (st.sourceHref !== href) return false;
@@ -1878,18 +1885,40 @@ async function maybeQueueAutoplay() {
   // the answer, so wait for it rather than reporting nothing.
   if (autoplayFetchedFor === last.id) return autoplayRound ?? undefined;
   autoplayFetchedFor = last.id;
-  autoplayRound = fetchAutoplay(auth, last, radioMode, radioSeed, queue);
+  autoplayRound = fetchAutoplay(auth, last, radioMode, radioSeed, queue).then((added) => {
+    // Came back with nothing, which a dropped connection looks just like: the
+    // tail is left unmarked so it is asked again. Marked for good, a second
+    // without signal at the wrong moment ended the mix for the rest of the
+    // session. A track change or the network coming back asks on its own; a
+    // short timer covers the queue that has no track left to change to, and
+    // stops after a few tries in case the answer really is empty.
+    if (added) {
+      autoplayRetry = null;
+      return;
+    }
+    if (autoplayFetchedFor !== last.id) return;
+    autoplayFetchedFor = null;
+    const tries = autoplayRetry?.tail === last.id ? autoplayRetry.tries + 1 : 1;
+    autoplayRetry = { tail: last.id, tries };
+    if (tries <= AUTOPLAY_RETRIES) {
+      setTimeout(() => {
+        const q = usePlayerStore.getState().queue;
+        if (q[q.length - 1]?.id === last.id) void maybeQueueAutoplay();
+      }, AUTOPLAY_RETRY_MS);
+    }
+  });
   return autoplayRound;
 }
 
-/** One round of it: asks the server and appends what is worth appending. */
+/** One round of it: asks the server and appends what is worth appending.
+ *  True if anything was. */
 async function fetchAutoplay(
   auth: SubsonicAuth,
   last: Song,
   radioMode: boolean,
   radioSeed: Song | null,
   queue: Song[],
-): Promise<void> {
+): Promise<boolean> {
   // A mix always extends from the track it was started on. Seeding off the tail
   // (which is what plain autoplay does, and rightly so) made every batch reseed
   // on the previous batch's last track, so the mix drifted arbitrarily far from
@@ -1903,15 +1932,15 @@ async function fetchAutoplay(
       ? await radioCandidates(auth, seed, new Set([seed.id, ...queue.map((s) => s.id)]))
       : await getSimilarSongs(auth, last.id, 20);
   } catch {
-    return; // without autoplay: playback will stop at the end, as before
+    return false; // without autoplay: playback will stop at the end, as before
   }
   const st = usePlayerStore.getState();
   // The queue may have changed while the server was responding; we only add if
   // the last song is still the same.
-  if (st.queue[st.queue.length - 1]?.id !== last.id) return;
+  if (st.queue[st.queue.length - 1]?.id !== last.id) return false;
   const have = new Set(st.queue.map((s) => s.id));
   const picked = similar.filter((s) => !have.has(s.id) && !s.url).slice(0, 10);
-  if (picked.length === 0) return;
+  if (picked.length === 0) return false;
   // Marked so the player can stop announcing the album or the playlist once
   // playback reaches them (`mixSeedOf`). Not in a radio: there the whole queue
   // is the mix and it already says so, and marking would have the header work
@@ -1919,6 +1948,7 @@ async function fetchAutoplay(
   const fresh = radioMode ? picked : picked.map((s) => ({ ...s, fromMix: true }));
   usePlayerStore.setState({ queue: [...st.queue, ...fresh] });
   scheduleSync();
+  return true;
 }
 
 /** Next index on end/skip; null if playback should stop. */
@@ -3608,7 +3638,12 @@ function attachAppState() {
   // And the app leaving offline mode, which is what makes the track playable
   // again when the connection came back first.
   useAuthStore.subscribe((now, prev) => {
-    if (prev.offline && !now.offline) void tryResumeAfterOutage();
+    if (!prev.offline || now.offline) return;
+    void tryResumeAfterOutage();
+    // And a mix whose last round came back empty while the connection was
+    // going asks again, rather than waiting for a track change that may never
+    // come if the queue has already run out.
+    void maybeQueueAutoplay();
   });
   AppState.addEventListener('change', (st) => {
     // The periodic sync rate follows the state (fast in foreground, slow in
@@ -3937,7 +3972,7 @@ interface PlayerState {
    * actually got tracks: a mix that found nothing must not be announced as
    * started.
    */
-  startRadio: (seed: Song, source: string) => Promise<boolean>;
+  startRadio: (seed: Song, source: string) => Promise<boolean | null>;
   /** Stops extending the queue. Doesn't touch it: finishes when it finishes. */
   stopRadio: () => void;
   /** At the very end of the queue, after everything (#184). */
@@ -4236,7 +4271,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     // that tells the player (`applyLoop` reads the state as it goes), and
     // `playQueue` writes it down with the rest of the queue.
     set({ repeat: 'off' });
-    await get().playQueue([seed], 0, source);
+    // A seed that did not load leaves the queue as it was (`playQueue` puts it
+    // back), and turning that into a mix made the album before it grow with
+    // songs like one that never played. The load has already said why.
+    if (!(await get().playQueue([seed], 0, source))) return null;
     set({ radioMode: true, radioSeed: seed });
     await maybeQueueAutoplay();
     return get().queue.length > 1;

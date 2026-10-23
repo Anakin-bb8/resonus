@@ -746,13 +746,16 @@ export function SongMenuSheet() {
                         // without this nothing on screen says the mix actually began.
                         // And it's only said once tracks have arrived: announcing a
                         // mix that came up empty is how the failure stayed invisible.
+                        // Null: the seed itself did not load, and that already said so.
                         void startRadio(song, t('Mix of “{name}”', { name: song.title })).then(
-                          (started) =>
+                          (started) => {
+                            if (started === null) return;
                             toast(
                               started
                                 ? t('Mix started')
                                 : t("Couldn't find anything to mix with this song"),
-                            ),
+                            );
+                          },
                         );
                       }}
                     />
