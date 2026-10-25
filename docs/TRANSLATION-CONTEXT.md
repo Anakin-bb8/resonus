@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 829 of them.
+Every string the app can show, under the screen it shows up on. 831 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -935,6 +935,7 @@ you are actually typing into, which is easier than reading it here.
 | `Navigation bar style` |  |
 | `Off` | A setting value meaning disabled (crossfade, normalization…) |
 | `Open the app on` | Which tab the app opens on, and comes back to after a while away |
+| `Pill-shaped navigation bar` |  |
 | `Playing on other devices` |  |
 | `Pointier` | One of the values of “Border radius” |
 | `Quick grid` | The grid of shortcut tiles on Home |
@@ -1052,6 +1053,7 @@ you are actually typing into, which is easier than reading it here.
 | `On cover double tap` | Settings > Player: what tapping the album artwork twice does |
 | `On cover tap` | What tapping the cover art in the player does. One tap and two share the same values, listed below |
 | `Open lyrics screen` | A value of `On cover tap` |
+| `Pill-shaped mini player` |  |
 | `Plain` | A value of `Background`: a flat colour behind the player, no picture |
 | `Play or pause` | One of its options: the same as the play button |
 | `Player` |  |

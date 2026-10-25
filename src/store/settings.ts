@@ -1105,6 +1105,8 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   batteryWarning: boolean;
   /** Player background: flat, cover color, or blurred cover art. */
   playerBackground: ScreenBackground;
+  navbarPills: boolean;
+  miniPlayerPills: boolean;
   /**
    * When the cover art is animated (GIF, animated WebP, APNG), use it as
    * the fullscreen player background and show a small static copy beside
@@ -1363,6 +1365,8 @@ function snapshot(get: () => SettingsState): Persisted {
 
 /** Factory default values for all preferences. */
 const DEFAULTS = {
+  navbarPills: false,
+  miniPlayerPills: false,
   maxBitRate: 0,
   maxBitRateCellular: 0,
   downloadBitRate: 0,

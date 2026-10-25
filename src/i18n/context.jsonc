@@ -813,5 +813,7 @@
   // Empty for now. The Diagnostics measurements used to be listed here, and
   // translators translated them anyway, so they no longer go through `t()` at
   // all: see `src/app/settings/diagnostics.tsx`.
+  "Pill-shaped navigation bar": "Optional rounded capsule outline and floating margins; the existing blur/background setting is unchanged.",
+  "Pill-shaped mini player": "Optional rounded capsule shape for the compact player; independent of the navigation bar shape.",
   "keepEnglish": []
 }

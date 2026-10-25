@@ -827,5 +827,7 @@
   "New": "Nou",
   "Refresh ({when} ago)": "Actualitza (fa {when})",
   "Lost the connection to {name}": "S'ha perdut la connexió amb {name}",
-  "{name} is playing something else": "{name} està reproduint una altra cosa"
+  "{name} is playing something else": "{name} està reproduint una altra cosa",
+  "Pill-shaped navigation bar": "Barra de navegació en forma de píndola",
+  "Pill-shaped mini player": "Minireproductor en forma de píndola"
 }

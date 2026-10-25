@@ -86,6 +86,8 @@ export default function PlayerSettings() {
   const setAnimatedCovers = useSettings((s) => s.setAnimatedCovers);
   const setAnimatedArtworkEndpoint = useSettings((s) => s.setAnimatedArtworkEndpoint);
   const miniPlayerColorBackground = useSettings((s) => s.miniPlayerColorBackground);
+  const miniPlayerPills = useSettings((s) => s.miniPlayerPills);
+  const setMiniPlayerPills = useSettings((s) => s.setMiniPlayerPills);
   const blurMiniPlayer = useSettings((s) => s.blurMiniPlayer);
   const miniPlayerProgress = useSettings((s) => s.miniPlayerProgress);
   const setMiniPlayerProgress = useSettings((s) => s.setMiniPlayerProgress);
@@ -160,6 +162,11 @@ export default function PlayerSettings() {
                     },
                   ]
                 : []),
+              {
+                label: t('Pill-shaped mini player'),
+                value: miniPlayerPills,
+                onChange: setMiniPlayerPills,
+              },
               {
                 label: t('Show progress bar'),
                 value: miniPlayerProgress,

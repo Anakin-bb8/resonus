@@ -58,6 +58,8 @@ export default function AppearanceSettings() {
   const setShowTabLabels = useSettings((s) => s.setShowTabLabels);
   const showPlayingElsewhere = useSettings((s) => s.showPlayingElsewhere);
   const setShowPlayingElsewhere = useSettings((s) => s.setShowPlayingElsewhere);
+  const navbarPills = useSettings((s) => s.navbarPills);
+  const setNavbarPills = useSettings((s) => s.setNavbarPills);
   const blurBars = useSettings((s) => s.blurBars);
   const setBlurBars = useSettings((s) => s.setBlurBars);
   const navBarStyle = useSettings((s) => s.navBarStyle);
@@ -142,6 +144,11 @@ export default function AppearanceSettings() {
                 label: t('Always show the navigation bar'),
                 value: alwaysShowTabs,
                 onChange: setAlwaysShowTabs,
+              },
+              {
+                label: t('Pill-shaped navigation bar'),
+                value: navbarPills,
+                onChange: setNavbarPills,
               },
               {
                 label: t('Show tab names'),

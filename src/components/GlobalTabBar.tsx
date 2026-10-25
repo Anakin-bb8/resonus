@@ -91,6 +91,7 @@ export function GlobalTabBar() {
   // the blur only works from out here (`BarBlur`). The setting only decides
   // where else it shows.
   const blur = useBarBlur('tabs');
+  const pills = useSettings((s) => s.navbarPills);
   // The style that is on wins over the blur, and over the solid colour too:
   // they fill the same pixels and only one of them is ever drawn.
   const navStyle = useSettings((s) => s.navBarStyle);
@@ -162,6 +163,7 @@ export function GlobalTabBar() {
         compact && styles.barCompact,
         navStyle === 'gradient' ? null : blur ? null : styles.solid,
         fadeStyle,
+        pills && { left: insets.left + 8, right: insets.right + 8, bottom: Math.max(insets.bottom, 8), height: barHeight, paddingBottom: 0, borderRadius: 32, overflow: 'hidden' },
       ]}
     >
       {blur && blurOn ? <BarBlur /> : null}
@@ -175,7 +177,7 @@ export function GlobalTabBar() {
         />
       ) : null}
       {/* Where the glass starts, when something bright passes under it. */}
-      {blur ? <View pointerEvents="none" style={styles.edge} /> : null}
+      {blur && !pills ? <View pointerEvents="none" style={styles.edge} /> : null}
       {/* The user's order, and only the ones they kept (Settings › Appearance
           › Navigation bar). `TABS` stays the catalogue: it is what says where
           each one goes and what it is called. */}
@@ -225,6 +227,7 @@ export function GlobalTabBar() {
           </Pressable>
           );
         })}
+      {pills ? <View pointerEvents="none" style={styles.pillOutline} /> : null}
     </Animated.View>
   );
 }
@@ -240,6 +243,12 @@ const styles = themed((colors) => ({
     paddingTop: 6,
   },
   solid: { backgroundColor: colors.background },
+  pillOutline: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: 32,
+    borderWidth: 0.5,
+    borderColor: colors.highlight,
+  },
   edge: {
     position: 'absolute',
     top: 0,

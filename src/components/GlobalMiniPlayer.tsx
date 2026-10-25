@@ -13,6 +13,7 @@ import { NO_MINI_PLAYER, useTabBarHeight, useTabBarShown } from '@/hooks/useTabB
 import { motion } from '@/theme/motion';
 import { MINI_PLAYER_GAP, spacing } from '@/theme';
 import { MiniPlayer } from './MiniPlayer';
+import { useSettings } from '@/store/settings';
 
 export function GlobalMiniPlayer() {
   const insets = useSafeAreaInsets();
@@ -22,12 +23,13 @@ export function GlobalMiniPlayer() {
   // is nearly everywhere and not only inside the tabs (see `useTabBarShown`).
   const withBar = useTabBarShown();
   const barHeight = useTabBarHeight();
+  const navbarPills = useSettings((s) => s.navbarPills);
 
   // favorites-add too: its search bar lives at the bottom and the mini would
   // cover it. The list is shared because whatever floats at the bottom (the
   // toast, the multi-select bar) has to know where the mini is not.
   const visible = !NO_MINI_PLAYER.includes(root as string);
-  const bottom = withBar ? barHeight + MINI_PLAYER_GAP + insets.bottom : insets.bottom + spacing.sm;
+  const bottom = withBar ? barHeight + MINI_PLAYER_GAP + Math.max(insets.bottom, navbarPills ? 8 : 0) : insets.bottom + spacing.sm;
 
   // Keep the last visible position so it doesn't jump while fading out
   // when opening a full-screen modal.
