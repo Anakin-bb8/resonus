@@ -12,6 +12,7 @@
  * One MediaSession on purpose: Android Auto needs it (see `modules/car-auto`),
  * and it uses its own `JsProxyPlayer`, not this player.
  */
+import { artworkNetworkAllowed } from '@/lib/artworkMotionPolicy';
 import {
   AudioModule,
   createAudioPlayer,
@@ -717,6 +718,10 @@ function warmArtwork(song: Song) {
 // background, where React Native's fetch does not answer.
 setAnimatedArtworkFetch((url, init) => expoFetch(url, init));
 
+function motionNetworkAllowed(): boolean {
+  return artworkNetworkAllowed(useSettings.getState().motionArtworkWifiOnly, useNetworkType.getState());
+}
+
 function publishAnimatedClip(song: Song) {
   if (Platform.OS !== 'ios') return;
   const artworkUrl = artworkUrlFor(song);
@@ -728,7 +733,7 @@ function publishAnimatedClip(song: Song) {
   const customUrl = customs[animatedArtworkKey(song.artist ?? '', song.album ?? '')];
   const artist = song.artist;
   const album = song.album ?? '';
-  if (!endpoint || !artist || !album) {
+  if (!motionNetworkAllowed() || !endpoint || !artist || !album) {
     try {
       audioModule.setAnimatedClipUrls(artworkUrl, null);
     } catch {
@@ -738,7 +743,7 @@ function publishAnimatedClip(song: Song) {
   }
   void fetchAnimatedArtwork(endpoint, artist, album, customUrl).then((clips) => {
     try {
-      audioModule.setAnimatedClipUrls(artworkUrl, clips?.tall ?? null);
+      audioModule.setAnimatedClipUrls(artworkUrl, motionNetworkAllowed() ? clips?.tall ?? null : null);
     } catch {
       // A build without the patched module: static covers as always.
     }
@@ -2034,7 +2039,7 @@ function scheduleNextSource(force = false) {
   // streaming while the track it belongs to is still the next one.
   {
     const endpoint = activeArtworkEndpoint(useSettings.getState());
-    if (endpoint) {
+    if (endpoint && motionNetworkAllowed()) {
       const customs = useSettings.getState().animatedArtworkUrls;
       for (let k = 0; k <= ARTWORK_LOOKAHEAD; k += 1) {
         const ahead =
@@ -3854,6 +3859,18 @@ export function initRemoteIntegration() {
       });
     }, LEFT_LAN_GRACE_MS);
   });
+  if (Platform.OS === 'ios') {
+    let lastMotionAllowed = motionNetworkAllowed();
+    const updateMotion = () => {
+      const allowed = motionNetworkAllowed();
+      if (allowed === lastMotionAllowed) return;
+      lastMotionAllowed = allowed;
+      const song = currentSong(usePlayerStore.getState());
+      if (song) publishAnimatedClip(song);
+    };
+    useNetworkType.subscribe(updateMotion);
+    useSettings.subscribe(updateMotion);
+  }
   // Sync crossfade toggle to Sonos whenever the setting changes.
   let lastCrossfadeSec = useSettings.getState().crossfadeSec;
   useSettings.subscribe((s) => {

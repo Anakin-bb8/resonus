@@ -1134,6 +1134,7 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
    * its first frame, and the endpoint is kept but not asked.
    */
   animatedCovers: boolean;
+  motionArtworkWifiOnly: boolean;
   /**
    * Play endpoint clips as in-app video (cover square and background).
    * Kills the video players without touching the lock-screen tall clips:
@@ -1458,6 +1459,7 @@ const DEFAULTS = {
   animatedCoverVideo: true,
   // On: what the app always did with an animated cover.
   animatedCovers: true,
+  motionArtworkWifiOnly: true,
   // Empty: search decides everything.
   animatedArtworkUrls: {},
   fitCoverArt: false,
