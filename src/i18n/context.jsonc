@@ -815,5 +815,6 @@
   // all: see `src/app/settings/diagnostics.tsx`.
   "Pill-shaped navigation bar": "Optional rounded capsule outline and floating margins; the existing blur/background setting is unchanged.",
   "Pill-shaped mini player": "Optional rounded capsule shape for the compact player; independent of the navigation bar shape.",
+  "Full-bleed album artwork": "Album detail layout: cover spans the screen width and fades into the background; not an audio effect.",
   "keepEnglish": []
 }
