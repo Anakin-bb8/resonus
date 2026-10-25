@@ -86,6 +86,8 @@ export default function PlayerSettings() {
   const setAnimatedCovers = useSettings((s) => s.setAnimatedCovers);
   const setAnimatedArtworkEndpoint = useSettings((s) => s.setAnimatedArtworkEndpoint);
   const miniPlayerColorBackground = useSettings((s) => s.miniPlayerColorBackground);
+  const playerFullBleed = useSettings((s) => s.playerFullBleed);
+  const setPlayerFullBleed = useSettings((s) => s.setPlayerFullBleed);
   const albumFullBleed = useSettings((s) => s.albumFullBleed);
   const setAlbumFullBleed = useSettings((s) => s.setAlbumFullBleed);
   const miniPlayerPills = useSettings((s) => s.miniPlayerPills);
@@ -140,6 +142,11 @@ export default function PlayerSettings() {
               label: t('Full-bleed album artwork'),
               value: albumFullBleed,
               onChange: setAlbumFullBleed,
+            },
+            {
+              label: t('Full-bleed Now Playing artwork'),
+              value: playerFullBleed,
+              onChange: setPlayerFullBleed,
             },
           ]} />
         </SettingsGroup>

@@ -48,6 +48,9 @@ import { MarqueeText } from '@/components/MarqueeText';
 import { OutputSheet } from '@/components/OutputSheet';
 import { SpeedSheet } from '@/components/SpeedSheet';
 import { StarRating } from '@/components/StarRating';
+import { StatusBar } from 'expo-status-bar';
+import { BleedArtwork } from '@/components/BleedArtwork';
+import { useArtworkEdgeColor } from '@/hooks/useArtworkEdgeColor';
 import { useAnimatedCover } from '@/hooks/useAnimatedCover';
 import { useAnimatedArtwork } from '@/hooks/useAnimatedArtwork';
 import { useAudioRoute } from '@/hooks/useAudioRoute';
@@ -162,9 +165,11 @@ function CircleButton({
   name,
   label,
   onPress,
+  color = colors.text,
 }: {
   name: keyof typeof Icon.glyphMap;
   label: string;
+  color?: string;
   onPress: (e: GestureResponderEvent) => void;
 }) {
   return (
@@ -175,7 +180,7 @@ function CircleButton({
       accessibilityLabel={label}
       onPress={onPress}
     >
-      <Icon name={name} size={22} color={colors.text} />
+      <Icon name={name} size={22} color={color} />
     </Pressable>
   );
 }
@@ -402,14 +407,19 @@ export default function PlayerScreen() {
   // A radio has no album, but the station may carry its own image (the server
   // holds it, so it's the same one every client shows).
   const coverOf = (s?: Song | null) =>
-    s ? songCoverUrl(s, COVER.card) : undefined;
+    s ? songCoverUrl(s, COVER.full) : undefined;
   const cover = coverOf(song);
   // Spotify-style background: gradient from the cover's dominant color
   // (toggle in Settings → Theme). The color transitions smoothly on song
   // change: a flat color is animated and the gradient toward the background is
   // a fixed overlay (same look as animating the gradient, which can't be done).
+  const { width: screenW, height: screenH, landscape } = useScreenSize();
   const background = useSettings((s) => s.playerBackground);
   const colorBackground = background === 'color';
+  const playerFullBleed = useSettings((s) => s.playerFullBleed);
+  const [headerHeight, setHeaderHeight] = useState(64);
+  const bottomEdge = useArtworkEdgeColor(cover);
+  const topEdge = useArtworkEdgeColor(cover, 'top', true);
   const animatedCoverBg = useSettings((s) => s.animatedCoverBackground);
   // An animated cover (GIF, animated WebP, APNG) can take the whole screen
   // instead of playing inside the square, with a still copy of itself next to
@@ -420,7 +430,7 @@ export default function PlayerScreen() {
   const animatedCovers = useSettings((s) => s.animatedCovers);
   const isAnimatedCover =
     animatedCovers &&
-    animatedCoverBg &&
+    (animatedCoverBg || playerFullBleed) &&
     isAnimatedDetected &&
     !!cover &&
     !cover.startsWith(CACHED_COVER);
@@ -437,8 +447,11 @@ export default function PlayerScreen() {
   const animatedCoverVideo = useSettings((s) => s.animatedCoverVideo || Platform.OS !== 'ios');
   const fetchedClips = useAnimatedArtwork(song);
   const animatedClips = animatedCoverVideo && canPlayAnimatedCovers() ? fetchedClips : null;
-  const animatedVideoSquare =
-    animatedCoverBg && animatedClips?.square ? animatedClips.square : null;
+  const animatedVideoBackground =
+    (animatedCoverBg || playerFullBleed) && animatedClips?.square ? playerFullBleed && !landscape ? animatedClips.square : animatedClips.tall || animatedClips.square : null;
+  const fullBleed = playerFullBleed && !!cover && !landscape;
+  const topRgb = /^#[\da-f]{6}$/i.test(topEdge) ? [1, 3, 5].map((i) => parseInt(topEdge.slice(i, i + 2), 16)) : [0, 0, 0];
+  const headerInk = fullBleed ? (topRgb[0] * 0.299 + topRgb[1] * 0.587 + topRgb[2] * 0.114 > 155 ? '#171717' : '#ffffff') : colors.text;
   // The backdrop holds the previous artwork on purpose while the next decodes,
   // so on its own it cannot tell "not decoded yet" from "never will be". Coming
   // back from the background is the second case (see `useRedrawOnReturn`), and
@@ -458,7 +471,7 @@ export default function PlayerScreen() {
   const animatedBg = useRedrawOnReturn(animatedBgRef, isAnimatedCover ? cover : undefined);
   // The full-screen animated cover needs the colour too, whatever the
   // background setting says: the gradient under it fades into that colour.
-  const dominant = useDominantColor(colorBackground || isAnimatedCover ? cover : undefined);
+  const dominant = useDominantColor(colorBackground || isAnimatedCover || !!animatedVideoBackground ? cover : undefined);
   const lightMode = useThemeMode() === 'light';
   // Play, the played part of the bar and, on light, the controls: pale with a
   // deep icon on dark, deep with a pale icon on light. Neutral whatever
@@ -470,7 +483,7 @@ export default function PlayerScreen() {
   // Under the blurred artwork the flat colour is irrelevant, but it still
   // paints the frame before the image decodes, so it stays dark rather than
   // flashing the old grey.
-  const targetBg = colorBackground ? dominant : background === 'cover' ? colors.background : colors.playerPlain;
+  const targetBg = fullBleed ? bottomEdge : colorBackground ? dominant : background === 'cover' ? colors.background : colors.playerPlain;
   const bgColor = useSharedValue(targetBg);
   useEffect(() => {
     // reduceMotion Never: the color fade is part of the look and some devices
@@ -499,9 +512,6 @@ export default function PlayerScreen() {
   // too, and it is the controls that keep clear of the navigation bar (see
   // `styles.bottom` below).
   const insets = useSafeAreaInsets();
-  // Measured as it draws, so turning the phone while the player is open lays
-  // it out for the screen it is on now (#131).
-  const { width: screenW, height: screenH, landscape } = useScreenSize();
   const approxPageH = screenH - insets.top;
   /** What the open before this one measured, if it was on this screen. */
   const remembered = lastLayout?.for === screenH ? lastLayout : null;
@@ -1152,11 +1162,18 @@ export default function PlayerScreen() {
   return (
     <GestureDetector gesture={dismissPan}>
       <Animated.View style={[styles.root, rootStyle]}>
+        {fullBleed ? <StatusBar style={headerInk === '#171717' ? 'dark' : 'light'} /> : null}
         <Animated.View style={[StyleSheet.absoluteFill, bgStyle]} />
-        {animatedVideoSquare && cover ? (
+        {fullBleed && !inlineLyrics ? (
+          <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, animatedBgStyle]}>
+            <View style={{ height: insets.top + headerHeight, backgroundColor: topEdge }} />
+            <BleedArtwork uri={cover} width={screenW} height={screenW} color={bottomEdge}
+              topColor={topEdge} video={animatedVideoBackground} autoplay={animatedCovers} onAnimatedDetected={onCoverLoad} />
+          </Animated.View>
+        ) : animatedVideoBackground && cover ? (
           /* The endpoint clip itself, unblurred, over the whole screen. */
           <Animated.View style={[StyleSheet.absoluteFill, animatedBgStyle]}>
-            <AnimatedArtworkBackground key={animatedVideoSquare} square={animatedVideoSquare} />
+            <AnimatedArtworkBackground key={animatedVideoBackground} square={animatedVideoBackground} fallbackUri={cover} />
             {/* Its bottom edge fades into the cover's own colour, so the
                 picture ends somewhere instead of being cut off. Inside the
                 same wrapper: it has to travel with it. */}
@@ -1218,7 +1235,7 @@ export default function PlayerScreen() {
         {/* Only the lower half, where the controls are: the top is left to
             the cover's colour. */}
         <LinearGradient
-          colors={[colors.background + '00', colors.background + 'B3'] as const}
+          colors={fullBleed ? [transparentOf(bottomEdge), bottomEdge] : [colors.background + '00', colors.background + 'B3']}
           locations={[0.45, 1]}
           style={StyleSheet.absoluteFill}
         />
@@ -1275,8 +1292,8 @@ export default function PlayerScreen() {
               (pageH || approxPageH) - (cardRoom ? LYRICS_PEEK : 0),
           }}
         >
-        <View style={styles.topBar}>
-          <CircleButton name="chevron-down" label={t('Close')} onPress={() => router.back()} />
+        <View style={styles.topBar} onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}>
+          <CircleButton color={headerInk} name="chevron-down" label={t('Close')} onPress={() => router.back()} />
           <Pressable
             style={styles.topTitleWrap}
             disabled={!canOpenSource}
@@ -1297,13 +1314,13 @@ export default function PlayerScreen() {
           >
             {sourceLabel ? (
               <>
-                <Text style={styles.topLabel}>{t('PLAYING FROM')}</Text>
-                <Text style={styles.topSource} numberOfLines={1}>
+                <Text style={[styles.topLabel, { color: headerInk }]}>{t('PLAYING FROM')}</Text>
+                <Text style={[styles.topSource, { color: headerInk }]} numberOfLines={1}>
                   {sourceLabel}
                 </Text>
               </>
             ) : (
-              <Text style={styles.topTitle}>{t('NOW PLAYING')}</Text>
+              <Text style={[styles.topTitle, { color: headerInk }]}>{t('NOW PLAYING')}</Text>
             )}
           </Pressable>
           {/* Both of these used to sit behind `song.localUri && !offline`, meant
@@ -1335,7 +1352,7 @@ export default function PlayerScreen() {
               />
             </View>
           ) : (
-            <CircleButton name="ellipsis-horizontal" label={t('More options')} onPress={() => openMenu(song, undefined, menuOptions())} />
+            <CircleButton color={headerInk} name="ellipsis-horizontal" label={t('More options')} onPress={() => openMenu(song, undefined, menuOptions())} />
           )}
         </View>
 
@@ -1352,7 +1369,8 @@ export default function PlayerScreen() {
             styles.coverWrap,
             landscape && styles.coverColumn,
             {
-              paddingTop: coverTopPad,
+              paddingTop: fullBleed ? 0 : coverTopPad,
+              ...(fullBleed ? { marginTop: 0 } : {}),
               // Side by side the cover is the thing that reaches the bottom
               // edge, and the navigation bar is down there: in a column it was
               // the block of controls that kept clear of it for both.
@@ -1371,8 +1389,8 @@ export default function PlayerScreen() {
                 panel's content only changes off-screen and a fade is pointless
                 here. An animated cover is not here at all: it is the background,
                 and the empty slot it leaves is what the picture shows through. */}
-            <Animated.View style={[{ width: coverSize, height: coverSize }, coverAppearStyle]}>
-              {!isAnimatedCover && !animatedVideoSquare ? (
+            <Animated.View style={[{ width: fullBleed ? screenW - insets.left - insets.right : coverSize, height: fullBleed ? Math.max(coverSize, coverBoxH - starsBlock) : coverSize }, coverAppearStyle]}>
+              {!fullBleed && !isAnimatedCover && !animatedVideoBackground ? (
                 paneStyles.map((paneStyle, k) => {
                   const rel = paneRel(k);
                   const paneSong = rel === 0 ? song : rel === 1 ? nextSong : prevSong;
@@ -1425,7 +1443,7 @@ export default function PlayerScreen() {
             // above it is still resolving is what put the stars on screen at
             // one height and then moved them.
             <Animated.View
-              style={[styles.belowCover, { marginTop: starsGap }, coverAppearStyle]}
+              style={[styles.belowCover, { marginTop: fullBleed ? STARS_GAP_MIN : starsGap }, coverAppearStyle]}
               onLayout={(e) => setStarsH(e.nativeEvent.layout.height)}
             >
               <StarRating
@@ -1459,7 +1477,7 @@ export default function PlayerScreen() {
           <View style={styles.meta}>
             {/* With the cover on the wall behind, a still copy of it sits by
                 the title, the height of the two lines of text. */}
-            {(isAnimatedCover || animatedVideoSquare) && cover ? (
+            {!playerFullBleed && (isAnimatedCover || animatedVideoBackground) && cover ? (
               <Cover
                 uri={cover}
                 size={MINI_COVER}
