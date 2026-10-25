@@ -817,5 +817,7 @@
   "Pill-shaped mini player": "Optional rounded capsule shape for the compact player; independent of the navigation bar shape.",
   "Full-bleed album artwork": "Album detail layout: cover spans the screen width and fades into the background; not an audio effect.",
   "Full-bleed Now Playing artwork": "Now Playing layout: the complete artwork sits below the header and fades into colours from its edges.",
+  "Full bleed": "Third animated-artwork layout: fitted edge-to-edge artwork, independent of static full bleed.",
+  "For static covers. Choose animated artwork separately below.": "Description of the static full-bleed switch; animated artwork has a separate three-way selector.",
   "keepEnglish": []
 }

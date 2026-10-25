@@ -1,4 +1,6 @@
 /** Full-screen player (modal): cover art, progress and controls. */
+import { playerArtworkLayout } from '@/lib/artworkLayout';
+import { useArtworkMotionAllowed } from '@/hooks/useArtworkMotionAllowed';
 import Icon from '@/components/Icon';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Image } from 'expo-image';
@@ -420,20 +422,16 @@ export default function PlayerScreen() {
   const [headerHeight, setHeaderHeight] = useState(64);
   const bottomEdge = useArtworkEdgeColor(cover);
   const topEdge = useArtworkEdgeColor(cover, 'top', true);
-  const animatedCoverBg = useSettings((s) => s.animatedCoverBackground);
+  const motionMode = useSettings((s) => s.animatedArtworkMode);
+  const motionAllowed = useArtworkMotionAllowed();
   // An animated cover (GIF, animated WebP, APNG) can take the whole screen
   // instead of playing inside the square, with a still copy of itself next to
-  // the title. Off by default. A cover that is only in the image cache
+  // the title, when its background mode is selected. A cover only in the image cache
   // (`CACHED_COVER`, offline) is not a URL and would leave the background
   // empty, so it keeps the ordinary layout, where `Cover` knows how to read it.
   const { isAnimated: isAnimatedDetected, onCoverLoad } = useAnimatedCover(cover);
   const animatedCovers = useSettings((s) => s.animatedCovers);
-  const isAnimatedCover =
-    animatedCovers &&
-    (animatedCoverBg || playerFullBleed) &&
-    isAnimatedDetected &&
-    !!cover &&
-    !cover.startsWith(CACHED_COVER);
+  const animatedImage = animatedCovers && isAnimatedDetected && !!cover && !cover.startsWith(CACHED_COVER);
   // HLS cover clips from the animated-artwork endpoint win over sniffed
   // GIF/WebP: they were asked for, so they are the animated cover when the
   // background option is on — fullscreen video with a still copy by the
@@ -447,9 +445,15 @@ export default function PlayerScreen() {
   const animatedCoverVideo = useSettings((s) => s.animatedCoverVideo || Platform.OS !== 'ios');
   const fetchedClips = useAnimatedArtwork(song);
   const animatedClips = animatedCoverVideo && canPlayAnimatedCovers() ? fetchedClips : null;
-  const animatedVideoBackground =
-    (animatedCoverBg || playerFullBleed) && animatedClips?.square ? playerFullBleed && !landscape ? animatedClips.square : animatedClips.tall || animatedClips.square : null;
-  const fullBleed = playerFullBleed && !!cover && !landscape;
+  const artworkLayout = playerArtworkLayout({
+    motionMode, hasMotion: animatedImage || !!animatedClips?.square,
+    staticFullBleed: playerFullBleed, hasCover: !!cover, landscape,
+  });
+  const fullBleed = artworkLayout === 'fullBleed';
+  const isAnimatedCover = artworkLayout === 'background' && animatedImage;
+  // The original background variant uses the square clip. Full bleed fits it
+  // inside the artwork frame; cover mode renders it only in the carousel.
+  const animatedVideoBackground = artworkLayout !== 'cover' ? animatedClips?.square : null;
   const topRgb = /^#[\da-f]{6}$/i.test(topEdge) ? [1, 3, 5].map((i) => parseInt(topEdge.slice(i, i + 2), 16)) : [0, 0, 0];
   const headerInk = fullBleed ? (topRgb[0] * 0.299 + topRgb[1] * 0.587 + topRgb[2] * 0.114 > 155 ? '#171717' : '#ffffff') : colors.text;
   // The backdrop holds the previous artwork on purpose while the next decodes,
@@ -1193,6 +1197,7 @@ export default function PlayerScreen() {
               style={StyleSheet.absoluteFill}
               contentFit="cover"
               transition={BACKDROP_FADE}
+              autoplay={motionAllowed}
               onDisplay={animatedBg.onDisplay}
             />
             {/* Its bottom edge fades into the cover's own colour, so the
@@ -1477,7 +1482,7 @@ export default function PlayerScreen() {
           <View style={styles.meta}>
             {/* With the cover on the wall behind, a still copy of it sits by
                 the title, the height of the two lines of text. */}
-            {!playerFullBleed && (isAnimatedCover || animatedVideoBackground) && cover ? (
+            {artworkLayout === 'background' && (isAnimatedCover || animatedVideoBackground) && cover ? (
               <Cover
                 uri={cover}
                 size={MINI_COVER}

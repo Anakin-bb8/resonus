@@ -1,4 +1,5 @@
 /** Settings › Player: looks and extras for the playback screen. */
+import type { AnimatedArtworkMode } from '@/lib/artworkLayout';
 import { useRouter } from 'expo-router';
 import { Platform, ScrollView, Text } from 'react-native';
 
@@ -75,8 +76,8 @@ export default function PlayerSettings() {
   const setPlayerBackground = useSettings((s) => s.setPlayerBackground);
   const fitCoverArt = useSettings((s) => s.fitCoverArt);
   const setFitCoverArt = useSettings((s) => s.setFitCoverArt);
-  const animatedCoverBackground = useSettings((s) => s.animatedCoverBackground);
-  const setAnimatedCoverBackground = useSettings((s) => s.setAnimatedCoverBackground);
+  const animatedArtworkMode = useSettings((s) => s.animatedArtworkMode);
+  const setAnimatedArtworkMode = useSettings((s) => s.setAnimatedArtworkMode);
   const animatedCoverVideo = useSettings((s) => s.animatedCoverVideo);
   const setAnimatedCoverVideo = useSettings((s) => s.setAnimatedCoverVideo);
   const animatedArtworkFps = useSettings((s) => s.animatedArtworkFps);
@@ -145,6 +146,7 @@ export default function PlayerSettings() {
             },
             {
               label: t('Full-bleed Now Playing artwork'),
+              description: t('For static covers. Choose animated artwork separately below.'),
               value: playerFullBleed,
               onChange: setPlayerFullBleed,
             },
@@ -260,14 +262,15 @@ export default function PlayerSettings() {
           />
           {/* Where, not whether: it also places a GIF or WebP cover from the
               server, with no endpoint at all. */}
-          <SelectList<'cover' | 'background'>
+          <SelectList<AnimatedArtworkMode>
             label={t('Animated artwork')}
             options={[
               { value: 'cover', label: t('In the cover') },
               { value: 'background', label: t('As the background') },
+              { value: 'fullBleed', label: t('Full bleed') },
             ]}
-            value={animatedCoverBackground ? 'background' : 'cover'}
-            onChange={(v) => setAnimatedCoverBackground(v === 'background')}
+            value={animatedArtworkMode}
+            onChange={setAnimatedArtworkMode}
           />
           {/* iOS only: there the lock screen has a clip of its own, so the one
               in the app can go while that one stays. On Android an empty

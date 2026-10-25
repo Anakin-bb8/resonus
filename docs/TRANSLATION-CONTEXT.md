@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 833 of them.
+Every string the app can show, under the screen it shows up on. 835 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -1031,6 +1031,8 @@ you are actually typing into, which is easier than reading it here.
 | `Elements` | Which player elements to show |
 | `Favorite` | One of the choices for the button next to play on the mini player: the heart. Not a verb |
 | `Fit cover art` | Show the whole cover even if it is not square, instead of cropping it to fill |
+| `For static covers. Choose animated artwork separately below.` | The line under “Full-bleed Now Playing artwork”, explaining it |
+| `Full bleed` | One of the values of “Animated artwork” |
 | `Full-bleed album artwork` |  |
 | `Full-bleed Now Playing artwork` |  |
 | `Go to album` | Leave this sheet and open the album the song is on |
