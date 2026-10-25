@@ -822,5 +822,6 @@
   "Full bleed": "Third animated-artwork layout: fitted edge-to-edge artwork, independent of static full bleed.",
   "For static covers. Choose animated artwork separately below.": "Description of the static full-bleed switch; animated artwork has a separate three-way selector.",
   "Artist signatures": "Handwritten autographs in artist-page headers, not cryptographic signatures or artist names from the music server.",
+  "Apple Music artist logos": "Artist title graphics from Apple Music, separate from handwritten autographs. Independent opt-in; default off.",
   "keepEnglish": []
 }

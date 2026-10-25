@@ -1,4 +1,5 @@
 /** Artist detail, Spotify-style: large header, actions, sections. */
+import { useArtworkNetworkAllowed } from '@/hooks/useArtworkMotionAllowed';
 import Icon from '@/components/Icon';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -37,6 +38,8 @@ import { Dialog } from '@/components/Dialog';
 import { FavoriteButton } from '@/components/FavoriteButton';
 import { TopBarBackground } from '@/components/BarBlur';
 import { ArtistSignature } from '@/components/ArtistSignature';
+import { AnimatedArtworkBackground, canPlayAnimatedCovers } from '@/components/AnimatedArtworkView';
+import { getAppleArtistArt } from '@/lib/appleArtistArtCache';
 import { BackButton } from '@/components/BackButton';
 import { Message } from '@/components/Message';
 import { SheetModal } from '@/components/SheetModal';
@@ -251,6 +254,18 @@ export default function ArtistScreen() {
     enabled: canFetch && !!id,
   });
   const name = data?.artist.name;
+  const appleImages = useSettings((s) => s.appleArtistImages);
+  const motionNetworkAllowed = useArtworkNetworkAllowed();
+  const appleVideos = useSettings((s) => s.appleArtistVideos);
+  const [failedAppleImage, setFailedAppleImage] = useState<string>();
+  const [headerVisible, setHeaderVisible] = useState(true);
+  const { data: appleArt } = useQuery({
+    queryKey: ['apple-artist-art', name, offline],
+    queryFn: () => getAppleArtistArt(name!),
+    enabled: !!name && (appleImages || (appleVideos && motionNetworkAllowed)),
+    staleTime: 30 * 60 * 1000,
+    retry: false,
+  });
 
   // The artist's own `coverArt`, not their id, and it is worth the wait for
   // `data`. Navidrome 0.64 stopped treating the two as interchangeable: an
@@ -327,8 +342,10 @@ export default function ArtistScreen() {
   const shuffleActive = isCurrentArtistQueue && playerShuffle;
   const { own: albums, guest: guestAlbums } = splitArtistAlbums(data.albums, appearsOn ?? []);
   const releaseGroups = groupArtistAlbums(albums);
-  const headerUri =
-    info?.imageUrl ?? coverArtUrl( data.artist.coverArt ?? data.artist.id, COVER.full);
+  const serverHeader = info?.imageUrl ?? coverArtUrl(data.artist.coverArt ?? data.artist.id, COVER.full);
+  const artistVideo = appleVideos && motionNetworkAllowed && !offline && canPlayAnimatedCovers() ? appleArt?.videoUrl : undefined;
+  const appleImage = artistVideo ? appleArt?.previewUrl ?? appleArt?.heroUrl : appleImages ? appleArt?.heroUrl : undefined;
+  const headerUri = appleImage && appleImage !== failedAppleImage ? appleImage : serverHeader;
 
   async function shufflePlay() {
     if (shuffling) return;
@@ -513,6 +530,7 @@ export default function ArtistScreen() {
           listener: (e: NativeSyntheticEvent<NativeScrollEvent>) => {
             const y = e.nativeEvent.contentOffset.y;
             lastOffsetY.current = y;
+            setHeaderVisible(y < headerH);
             const should = y >= behindAtRef.current;
             if (should !== overBarRef.current) {
               overBarRef.current = should;
@@ -533,12 +551,19 @@ export default function ArtistScreen() {
           >
             <Animated.Image
               source={{ uri: headerUri }}
+              onError={() => { if (appleImage) setFailedAppleImage(appleImage); }}
               style={[
                 styles.headerImg,
                 { width: screenW, height: headerH, transform: [{ translateY: imgTranslate }] },
               ]}
               resizeMode="cover"
             />
+            {artistVideo && headerVisible ? (
+              <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { transform: [{ translateY: imgTranslate }] }]}>
+                <AnimatedArtworkBackground key={artistVideo} square={artistVideo} fallbackUri={headerUri}
+                  frame={{ width: screenW, height: headerH }} enabled />
+              </Animated.View>
+            ) : null}
           </Pressable>
           {/* Both sit on top of the photo and neither is there to be touched:
               without this they take the tap and it never reaches the image. */}

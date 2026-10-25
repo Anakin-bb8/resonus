@@ -840,5 +840,9 @@
   "Artist signatures": "Artist signatures",
   "Artist signatures API": "Artist signatures API",
   "Show signature source": "Show signature source",
-  "Optional HTTPS provider. Artist names are sent when signatures are enabled.": "Optional HTTPS provider. Artist names are sent when signatures are enabled."
+  "Optional HTTPS provider. Artist names are sent when signatures are enabled.": "Optional HTTPS provider. Artist names are sent when signatures are enabled.",
+  "Apple Music artist logos": "Apple Music artist logos",
+  "Apple Music artist images": "Apple Music artist images",
+  "Animated Apple Music artist images": "Animated Apple Music artist images",
+  "Apple options contact Apple using artist names. Missing artwork keeps the server image or name.": "Apple options contact Apple using artist names. Missing artwork keeps the server image or name."
 }

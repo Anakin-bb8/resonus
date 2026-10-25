@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 842 of them.
+Every string the app can show, under the screen it shows up on. 846 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -910,7 +910,11 @@ you are actually typing into, which is easier than reading it here.
 | String | What it is |
 | --- | --- |
 | `Always show the navigation bar` |  |
+| `Animated Apple Music artist images` |  |
 | `Appearance` |  |
+| `Apple Music artist images` |  |
+| `Apple Music artist logos` |  |
+| `Apple options contact Apple using artist names. Missing artwork keeps the server image or name.` |  |
 | `Artist pages` |  |
 | `Artist signatures` |  |
 | `Artist signatures API` |  |

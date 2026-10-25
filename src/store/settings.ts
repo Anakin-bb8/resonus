@@ -1107,6 +1107,9 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   batteryWarning: boolean;
   /** Player background: flat, cover color, or blurred cover art. */
   playerBackground: ScreenBackground;
+  appleArtistImages: boolean;
+  appleArtistVideos: boolean;
+  appleArtistLogos: boolean;
   artistSignaturesEnabled: boolean;
   artistSignaturesApi: string;
   playerFullBleed: boolean;
@@ -1370,6 +1373,9 @@ function snapshot(get: () => SettingsState): Persisted {
 
 /** Factory default values for all preferences. */
 const DEFAULTS = {
+  appleArtistImages: false,
+  appleArtistVideos: false,
+  appleArtistLogos: false,
   artistSignaturesEnabled: false,
   artistSignaturesApi: "",
   playerFullBleed: false,

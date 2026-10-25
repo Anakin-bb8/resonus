@@ -5,6 +5,8 @@ import { Alert, Pressable, Text, View } from 'react-native';
 
 import { useT } from '@/i18n';
 import { getArtistSignature } from '@/lib/signatureCache';
+import { getAppleArtistArt } from '@/lib/appleArtistArtCache';
+import { useAuthStore } from '@/store/auth';
 import { colors, fontSize, spacing } from '@/theme';
 import { useSettings } from '@/store/settings';
 import { publicHttpsUrl } from '@/lib/artworkSources';
@@ -13,9 +15,11 @@ import { publicHttpsUrl } from '@/lib/artworkSources';
 export function ArtistSignature({ name, width }: { name: string; width: number }) {
   const t = useT();
   const enabled = useSettings((s) => s.artistSignaturesEnabled);
+  const appleLogos = useSettings((s) => s.appleArtistLogos);
+  const offline = useAuthStore((s) => s.offline);
   const api = useSettings((s) => s.artistSignaturesApi);
   const { data } = useQuery({
-    queryKey: ['artist-signature', api, name],
+    queryKey: ['artist-signature', api, name, offline],
     queryFn: () => getArtistSignature(name, api),
     enabled: enabled && !!publicHttpsUrl(api),
     staleTime: 5 * 60 * 1000,
@@ -23,7 +27,15 @@ export function ArtistSignature({ name, width }: { name: string; width: number }
   });
   const [displayed, setDisplayed] = useState<string>();
   const [failed, setFailed] = useState<string>();
-  const signature = enabled && publicHttpsUrl(api) ? data : null;
+  const providerSignature = enabled && publicHttpsUrl(api) ? data : null;
+  const { data: appleArt } = useQuery({
+    queryKey: ['apple-artist-art', name, offline],
+    queryFn: () => getAppleArtistArt(name),
+    enabled: appleLogos && !providerSignature,
+    staleTime: 30 * 60 * 1000,
+    retry: false,
+  });
+  const signature = providerSignature ?? (appleLogos ? appleArt?.logo : null);
   const shown = !!signature && displayed === signature.imageUrl && failed !== signature.imageUrl;
   const imageWidth = Math.min(280, width - spacing.lg * 2);
   return (
