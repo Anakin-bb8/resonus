@@ -1107,6 +1107,8 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   batteryWarning: boolean;
   /** Player background: flat, cover color, or blurred cover art. */
   playerBackground: ScreenBackground;
+  artistSignaturesEnabled: boolean;
+  artistSignaturesApi: string;
   playerFullBleed: boolean;
   albumFullBleed: boolean;
   navbarPills: boolean;
@@ -1367,6 +1369,8 @@ function snapshot(get: () => SettingsState): Persisted {
 
 /** Factory default values for all preferences. */
 const DEFAULTS = {
+  artistSignaturesEnabled: false,
+  artistSignaturesApi: "",
   playerFullBleed: false,
   albumFullBleed: false,
   navbarPills: false,
@@ -1638,6 +1642,9 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
   set(flags as Partial<SettingsState>);
   const motionMode = savedAnimatedArtworkMode(parsed);
   if (motionMode) set({ animatedArtworkMode: motionMode, animatedCoverBackground: motionMode === 'background' });
+  if (typeof parsed.artistSignaturesApi === 'string' && parsed.artistSignaturesApi.length <= 2048) {
+    set({ artistSignaturesApi: parsed.artistSignaturesApi.trim() });
+  }
   // One switch used to blur both bars.
   if (typeof parsed.blurMiniPlayer !== 'boolean' && typeof parsed.blurBars === 'boolean') {
     set({ blurMiniPlayer: parsed.blurBars });

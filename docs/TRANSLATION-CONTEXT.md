@@ -5,7 +5,7 @@
      `src/i18n/context.jsonc`, and where a string shows up is read off the
      code, so both are fixed at the source and this page follows. -->
 
-Every string the app can show, under the screen it shows up on. 835 of them.
+Every string the app can show, under the screen it shows up on. 840 of them.
 The second column is only filled in where the English is ambiguous on its own
 If one tripped you up and the column is empty, that is worth telling us, and
 the answer goes into `src/i18n/context.jsonc` where the next translator of the
@@ -166,6 +166,7 @@ you are actually typing into, which is easier than reading it here.
 | `Popular` | The artist's popular / top tracks |
 | `Rate` | Verb: give it stars. Used for a song and for an artist. Not "bitrate" |
 | `Remixes` | Shelf heading: records that are mostly remixed material. `Remixes` is widely used as-is in several languages; keep it if that is true of yours |
+| `Show signature source` |  |
 | `Similar artists` | Related artists |
 | `Singles` | Shelf heading: records built around one song |
 | `Soundtracks` | Shelf heading: the music of a film, a series, a play or a game |
@@ -719,6 +720,7 @@ you are actually typing into, which is easier than reading it here.
 | --- | --- |
 | `All downloaded music will be removed from this device.` |  |
 | `Applies to new downloads only.` | The line under “Download quality”, explaining it |
+| `Artist signatures` |  |
 | `At “Original” quality nothing is transcoded.` |  |
 | `Automatic offline mode` | Fall into offline mode by itself when the server cannot be reached, and come back when it can |
 | `Cache size` |  |
@@ -909,6 +911,9 @@ you are actually typing into, which is easier than reading it here.
 | --- | --- |
 | `Always show the navigation bar` |  |
 | `Appearance` |  |
+| `Artist pages` |  |
+| `Artist signatures` |  |
+| `Artist signatures API` |  |
 | `At the top of Home, what is playing in your other apps and devices, ready to carry on here.` |  |
 | `Blur` | One of the values of “Navigation bar style” |
 | `Border radius` |  |
@@ -935,6 +940,7 @@ you are actually typing into, which is easier than reading it here.
 | `Navigation bar style` |  |
 | `Off` | A setting value meaning disabled (crossfade, normalization…) |
 | `Open the app on` | Which tab the app opens on, and comes back to after a while away |
+| `Optional HTTPS provider. Artist names are sent when signatures are enabled.` |  |
 | `Pill-shaped navigation bar` |  |
 | `Playing on other devices` |  |
 | `Pointier` | One of the values of “Border radius” |

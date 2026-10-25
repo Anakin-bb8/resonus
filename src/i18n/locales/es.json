@@ -833,5 +833,10 @@
   "Full-bleed album artwork": "Portada del álbum de borde a borde",
   "Full-bleed Now Playing artwork": "Portada de borde a borde en Ahora suena",
   "Full bleed": "A sangre",
-  "For static covers. Choose animated artwork separately below.": "Para portadas estáticas. Elige las animaciones por separado más abajo."
+  "For static covers. Choose animated artwork separately below.": "Para portadas estáticas. Elige las animaciones por separado más abajo.",
+  "Artist pages": "Páginas de artistas",
+  "Artist signatures": "Firmas de artistas",
+  "Artist signatures API": "API de firmas de artistas",
+  "Show signature source": "Mostrar la fuente de la firma",
+  "Optional HTTPS provider. Artist names are sent when signatures are enabled.": "Proveedor HTTPS opcional. Se envían los nombres de los artistas al activar las firmas."
 }

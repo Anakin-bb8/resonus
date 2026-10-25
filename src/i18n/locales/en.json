@@ -833,5 +833,10 @@
   "Full-bleed album artwork": "Full-bleed album artwork",
   "Full-bleed Now Playing artwork": "Full-bleed Now Playing artwork",
   "Full bleed": "Full bleed",
-  "For static covers. Choose animated artwork separately below.": "For static covers. Choose animated artwork separately below."
+  "For static covers. Choose animated artwork separately below.": "For static covers. Choose animated artwork separately below.",
+  "Artist pages": "Artist pages",
+  "Artist signatures": "Artist signatures",
+  "Artist signatures API": "Artist signatures API",
+  "Show signature source": "Show signature source",
+  "Optional HTTPS provider. Artist names are sent when signatures are enabled.": "Optional HTTPS provider. Artist names are sent when signatures are enabled."
 }
