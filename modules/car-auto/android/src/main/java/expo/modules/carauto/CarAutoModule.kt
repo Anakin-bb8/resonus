@@ -25,7 +25,8 @@ class CarAutoModule : Module() {
 
     Function("setNodes") { json: String ->
       val context = appContext.reactContext ?: return@Function
-      BrowseTreeCache.setFromJson(context, json)
+      val changed = BrowseTreeCache.setFromJson(context, json)
+      ResonusCarBrowserService.notifyTreeChanged(changed)
       CarAutoLog.d("setNodes ${BrowseTreeCache.debugSummary()}")
     }
 
