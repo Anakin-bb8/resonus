@@ -4,7 +4,7 @@
  */
 import Icon from '@/components/Icon';
 import { useEffect } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Extrapolation,
@@ -65,7 +65,7 @@ function MiniProgress({ song }: { song: Song }) {
   );
 }
 
-export function MiniPlayer() {
+export function MiniPlayer({ active = true }: { active?: boolean }) {
   const { width: screenW, height: screenH, wide } = useScreenSize();
   const song = usePlayerStore(currentSong);
   // A radio saying what it plays says it here too: down here there is only room
@@ -191,6 +191,7 @@ export function MiniPlayer() {
   const dominant = useDominantColor(miniColor ? colorSource : undefined);
   const bg = miniColor ? dominant : colors.surfaceHighlight;
   const blur = useBarBlur('miniPlayer');
+  const pills = useSettings((s) => s.miniPlayerPills);
   const buttons = useSettings((s) => s.miniPlayerButtons);
   const showProgress = useSettings((s) => s.miniPlayerProgress);
   // Not "unless the file is on the phone": see the player screen, which had the
@@ -215,14 +216,14 @@ export function MiniPlayer() {
             and nothing about a bar with three things in it needs 1280 points
             (#131). */}
         {/* The shadow sits outside the card, which clips its own contents. */}
-        <View style={[styles.card, wide && styles.narrow]}>
+        <View style={[styles.card, wide && styles.narrow, pills && { borderRadius: 32, boxShadow: undefined }]}>
         <Pressable
-          style={[styles.container, { backgroundColor: blur ? 'transparent' : bg }]}
+          style={[styles.container, { backgroundColor: blur ? 'transparent' : bg }, pills && { borderRadius: 32 }]}
           onPress={() => pushOnce('/player')}
         >
           {blur ? <BarBlur tint={bg} alpha={0.55} /> : null}
       <Animated.View style={[styles.details, detailsStyle]}>
-        <Cover uri={cover} size={44} placeholderIcon={song.url ? 'radio' : 'musical-notes'} />
+        <Cover uri={cover} size={44} autoplay={active} placeholderIcon={song.url ? 'radio' : 'musical-notes'} />
         <View style={styles.info}>
           <MarqueeText
             text={live?.title ?? song.title}
@@ -298,6 +299,7 @@ export function MiniPlayer() {
       ) : null}
 
           {showProgress ? <MiniProgress song={song} /> : null}
+          {pills ? <View pointerEvents="none" style={styles.pillOutline} /> : null}
         </Pressable>
         </View>
       </Animated.View>
@@ -321,6 +323,12 @@ const styles = themed((colors) => ({
     // lg with Round, a step down with Pointier.
     borderRadius: restyled(radius.lg, radius.md),
     overflow: 'hidden',
+  },
+  pillOutline: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: 32,
+    borderWidth: 0.5,
+    borderColor: colors.highlight,
   },
   /** Centred and no wider than a wide screen wants it. */
   narrow: { maxWidth: CONTENT_MAX_WIDTH, width: '100%', alignSelf: 'center' },

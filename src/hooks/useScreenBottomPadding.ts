@@ -1,5 +1,6 @@
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useSettings } from '@/store/settings';
 import { MINI_PLAYER_GAP, MINI_PLAYER_HEIGHT, spacing } from '@/theme';
 import { useMiniPlayerShown, useTabBarHeight, useTabBarShown } from './useTabBar';
 
@@ -18,7 +19,8 @@ export function useScreenBottomPadding(): number {
   const insets = useSafeAreaInsets();
   const withBar = useTabBarShown();
   const barHeight = useTabBarHeight();
-  const miniBottom = withBar ? barHeight + MINI_PLAYER_GAP + insets.bottom : insets.bottom + spacing.sm;
+  const pills = useSettings((s) => s.navbarPills);
+  const miniBottom = withBar ? barHeight + MINI_PLAYER_GAP + Math.max(insets.bottom, pills ? 8 : 0) : insets.bottom + spacing.sm;
   return miniBottom + MINI_PLAYER_HEIGHT + spacing.md;
 }
 
@@ -35,6 +37,7 @@ export function useFloatingBottom(): number {
   const withBar = useTabBarShown();
   const withMini = useMiniPlayerShown();
   const barHeight = useTabBarHeight();
-  const base = withBar ? barHeight + MINI_PLAYER_GAP + insets.bottom : insets.bottom + spacing.sm;
+  const pills = useSettings((s) => s.navbarPills);
+  const base = withBar ? barHeight + MINI_PLAYER_GAP + Math.max(insets.bottom, pills ? 8 : 0) : insets.bottom + spacing.sm;
   return base + (withMini ? MINI_PLAYER_HEIGHT + spacing.md : spacing.md);
 }
