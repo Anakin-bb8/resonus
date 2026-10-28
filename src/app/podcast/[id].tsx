@@ -1,279 +1,226 @@
-/** One podcast and its episodes, played straight from the publisher's files. */
+/**
+ * One podcast and its episodes — a first-class entity, drawn by the album's
+ * renderer so it behaves like an album: big cover that scrolls away, a sticky
+ * bar with the name, the action row, the ⋯ menu.
+ *
+ * SQLite is the store, iTunes is the refresh. Opening a show reads it from
+ * SQLite; if it was never opened it is read from the publisher and filed there.
+ * A show whose last write is older than three days is re-read in the background
+ * and the surface updated once it lands. Nothing is subscribed: opening lands it.
+ */
+import { useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Linking,
-  Pressable,
-  RefreshControl,
-  Text,
-  View,
-} from 'react-native';
+import { View } from 'react-native';
 
-import { getChannel, listEpisodes, episodeToSong, refreshChannel, type PodcastEpisode } from '@/api/podcasts';
-import { COVER, coverArtUrl } from '@/api/data';
+import {
+  episodeToSong,
+  getChannel,
+  getStoredChannel,
+  listAllEpisodes,
+  refreshChannel,
+  isFeedUrl,
+  podcastCover,
+  type PodcastChannel,
+} from '@/api/podcasts';
+import { COVER, coverArtUrl, markUnplayableOffline, type Song } from '@/api/data';
+import { isManualOffline } from '@/api/netGate';
 import { BackButton } from '@/components/BackButton';
-import { Cover } from '@/components/Cover';
 import { EmptyState } from '@/components/EmptyState';
-import Icon from '@/components/Icon';
 import { Message } from '@/components/Message';
-import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
-import { useT } from '@/i18n';
-import { formatDuration } from '@/lib/format';
-import { listPerf } from '@/lib/listPerf';
-import { queryClient } from '@/lib/query';
+import { TrackListSkeleton } from '@/components/TrackListSkeleton';
+import { TrackListView } from '@/components/TrackListView';
+import { openPodcastMenu } from '@/components/PodcastMenuSheet';
+import { episodesLabel, useT } from '@/i18n';
+import { formatTotalDuration } from '@/lib/format';
+import { usePodcastFavoriteIds } from '@/lib/podcastFavorites';
+import { invalidatePodcastCaches } from '@/lib/query';
 import { useSettings } from '@/store/settings';
 import { currentSong, usePlayerStore } from '@/store/player';
-import { useToast } from '@/store/toast';
-import { colors, fontSize, radius, spacing, themed, tracking, useTheme } from '@/theme';
+import { groupDownloadState, useDownloads } from '@/store/downloads';
+import { colors, useTheme } from '@/theme';
+import { useShallow } from 'zustand/react/shallow';
 
-/** The date an episode was published, in the app's language. */
-function dayLabel(at: number, lang: string): string {
-  const d = new Date(at);
-  const now = new Date();
-  return d.toLocaleDateString(lang, {
-    day: 'numeric',
-    month: 'short',
-    year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
-  });
-}
+/** A show older than this is quietly re-read from the publisher on opening. */
+const STALE_MS = 1000 * 60 * 60 * 72;
 
 export default function PodcastScreen() {
+  // Repaints on a change of appearance or accent: a stack keeps this screen
+  // mounted while you are on another one, out of reach of anything else.
   useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const t = useT();
   const lang = useSettings((s) => s.language);
-  const bottomPad = useScreenBottomPadding();
-  const toast = useToast((s) => s.show);
+  const hideUnavailable = useSettings((s) => s.hideUnavailableOffline);
+  const showDescription = useSettings((s) => s.showPlaylistDescription);
   const playQueue = usePlayerStore((s) => s.playQueue);
   const playingId = usePlayerStore((s) => currentSong(s)?.id);
-  const [refreshing, setRefreshing] = useState(false);
 
-  const channel = useQuery({
-    queryKey: ['podcastChannel', id],
-    queryFn: () => getChannel(id),
-    enabled: !!id,
-  });
-
-  const episodes = useQuery({
-    queryKey: ['podcastEpisodes', id],
-    queryFn: () => listEpisodes(id),
-    enabled: !!id,
-  });
-
-  const reload = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: ['podcastChannel', id] });
-    void queryClient.invalidateQueries({ queryKey: ['podcastEpisodes', id] });
-    void queryClient.invalidateQueries({ queryKey: ['podcastRecentEpisodes'] });
-  }, [id]);
-
-  const refresh = useCallback(async () => {
-    const feedUrl = channel.data?.feedUrl;
-    if (!feedUrl) return;
-    setRefreshing(true);
-    try {
-      await refreshChannel(feedUrl);
-      reload();
-    } catch {
-      toast(t("Couldn't read this feed"));
-    } finally {
-      setRefreshing(false);
-    }
-  }, [channel.data?.feedUrl, reload, t, toast]);
-
-  /** The whole playable list, starting at the one tapped. */
-  const play = useCallback(
-    (list: PodcastEpisode[], from: number) => {
-      const ch = channel.data;
-      if (!ch) return;
-      const playable = list.filter((e) => !!e.url);
-      const start = playable.findIndex((e) => e.id === list[from]?.id);
-      void playQueue(
-        playable.map((e) => episodeToSong(e, ch)),
-        start < 0 ? 0 : start,
-        ch.title,
-        `/podcast/${ch.id}`,
-      );
+  // SQLite first. A show never opened is read from the publisher and filed; a
+  // show written more than three days ago is served from SQLite now and re-read
+  // in the background, which invalidates this query once the new data lands.
+  const data = useQuery({
+    queryKey: ['podcast', id],
+    queryFn: async () => {
+      let ch: PodcastChannel | undefined;
+      let feedUrl: string | undefined;
+      if (isFeedUrl(id)) {
+        feedUrl = decodeURIComponent(id);
+        ch = await getStoredChannel(feedUrl);
+        if (!ch) ch = await refreshChannel(feedUrl);
+      } else {
+        ch = await getChannel(id);
+        feedUrl = ch?.feedUrl;
+      }
+      if (!ch) return null;
+      // Automatic offline (the server not answering) leaves the publisher
+      // reachable; only a manual "use no network" stops this background re-read.
+      if (!isManualOffline() && feedUrl && Date.now() - (ch.refreshedAt ?? 0) > STALE_MS) {
+        void refreshChannel(feedUrl)
+          .then(() => invalidatePodcastCaches())
+          .catch(() => {});
+      }
+      const episodes = await listAllEpisodes(ch.id);
+      return { channel: ch, episodes };
     },
-    [channel.data, playQueue],
+    enabled: !!id,
+    staleTime: Infinity,
+  });
+
+  // The hearts, so the favorite pill can show whether this show is hearted.
+  const favSet = usePodcastFavoriteIds();
+
+  // The show's download, read the way an album's is: the same `files` map the
+  // player uses, keyed by episode id, so "done" means every episode is on disk.
+  // Only episodes that have an enclosure can go on disk: a publisher that
+  // lists an item without a file would keep "done" out of reach forever, and
+  // the pill would turn into another whole-show download on every tap.
+  const episodeIds = data.data?.episodes.filter((e) => e.url).map((e) => e.id) ?? [];
+  const download = useDownloads(
+    useShallow((s) => groupDownloadState(s, `podcast:${data.data?.channel?.id ?? id}`, episodeIds)),
+  );
+  const downloadPodcast = useDownloads((s) => s.downloadPodcast);
+  const cancelDownload = useDownloads((s) => s.cancelDownload);
+  const deletePodcastChannelDownloads = useDownloads(
+    (s) => s.deletePodcastChannelDownloads,
   );
 
-  if (channel.isLoading || episodes.isLoading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator color={colors.accent} />
-      </View>
+  // The episodes, bridged to songs so the album renderer can list and play
+  // them, and marked like the offline song lists: offline, only a downloaded
+  // episode stays playable (dim rows, and `playQueue` drops the rest); hide
+  // mode drops the unplayable rows altogether, as `annotate` does for songs.
+  // Memoized on the query's answer: TrackListView memoizes its own filtering
+  // on the list's identity, and a fresh array every render would bust both.
+  const { songs, meta, episodeInfo } = useMemo(() => {
+    if (!data.data) return { songs: [] as Song[], meta: '', episodeInfo: undefined };
+    const { channel, episodes: list } = data.data;
+    const marked = markUnplayableOffline(list.map((e) => episodeToSong(e, channel)));
+    const shown = hideUnavailable ? marked.filter((s) => !s.unavailable) : marked;
+    const totalSec = list.reduce((acc, e) => acc + (e.duration ?? 0), 0);
+    const line = [
+      t('Podcast'),
+      episodesLabel(channel.episodeCount ?? list.length, lang),
+      totalSec > 0 ? formatTotalDuration(totalSec) : null,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+    // What each episode row shows under its title: the show notes, the publish
+    // date, and whether the episode came over with the show's last sync that
+    // landed something — the mark a row wears, read from the device's own
+    // first sighting rather than from the date. Built here from the episodes the
+    // screen already holds, so the row never has to ask per row, and its
+    // identity is stable across repaints (the row's memo keys on it).
+    const since = channel.newSinceAt;
+    const info = new Map<string, { description?: string; publishedAt?: number; fresh: boolean }>(
+      list.map((e) => [
+        e.id,
+        {
+          description: e.description,
+          publishedAt: e.publishedAt,
+          fresh: since !== undefined && (e.firstSeenAt ?? 0) >= since,
+        },
+      ]),
     );
+    return { songs: shown, meta: line, episodeInfo: info };
+  }, [data.data, hideUnavailable, lang]);
+
+  // Stable between progress ticks (only changes with status): if its identity
+  // changed on every % update, the Pressable would lose its touch and you'd
+  // have to press multiple times — the album screen answers the same way.
+  const onDownloadPress = useCallback(() => {
+    const ch = data.data?.channel;
+    if (!ch) return;
+    if (download.status === 'done') void deletePodcastChannelDownloads(ch.id);
+    else if (download.status === 'active') cancelDownload(`podcast:${ch.id}`);
+    else void downloadPodcast(ch.id);
+  }, [download.status, data.data]);
+
+  if (data.isLoading) {
+    return <TrackListSkeleton />;
   }
 
-  if (channel.isError || !channel.data) {
+  if (data.isError || !data.data) {
     return (
-      <View style={styles.center}>
+      <View style={{ flex: 1, justifyContent: 'center', backgroundColor: colors.background }}>
         <BackButton />
-        <Message text={t("Couldn't load this podcast.")} onRetry={reload} />
+        <Message text={t("Couldn't load this podcast.")} onRetry={() => data.refetch()} />
       </View>
     );
   }
 
-  const ch = channel.data;
-  const list = episodes.data ?? [];
-  const siteUrl = ch.siteUrl;
+  const ch = data.data.channel;
+
+  // The play button hands the show over in feed order (newest first); the
+  // shuffle button asks for the same list dealt (`shuffled`), which playQueue
+  // honors without turning the shuffle mode on.
+  const play = (start: number, opts?: { shuffled?: boolean }) => {
+    // The show's own id, never the route param: opened straight from a feed
+    // that param is an address with slashes, and a route id with slashes is
+    // one no `Link` can come back to — the Home tile would be dead.
+    void playQueue(songs, start, ch.title, `/podcast/${ch.id}`, opts);
+  };
 
   return (
-    <FlatList
-      {...listPerf}
-      data={list}
-      keyExtractor={(item) => item.id}
-      contentContainerStyle={[styles.list, { paddingBottom: bottomPad }]}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.accent} />
-      }
-      ListHeaderComponent={
-        <View style={styles.header}>
-          <Cover
-            uri={coverArtUrl(ch.imageUrl, COVER.card)}
-            size={160}
-            rounded
-            placeholderIcon="headset-outline"
-          />
-          <Text style={styles.title}>{ch.title}</Text>
-          {ch.author ? <Text style={styles.author}>{ch.author}</Text> : null}
-          {ch.description ? (
-            <Text style={styles.description} numberOfLines={6}>
-              {ch.description}
-            </Text>
-          ) : null}
-          {ch.error ? (
-            <Text style={styles.error}>
-              {t("This podcast's feed could not be read, so these episodes may be out of date.")}
-            </Text>
-          ) : null}
-          <View style={styles.actions}>
-            {list.length > 0 ? (
-              <Pressable
-                style={({ pressed }) => [styles.primary, pressed && { opacity: 0.7 }]}
-                onPress={() => play(list, 0)}
-              >
-                <Icon name="play" size={18} color={colors.onAccent} />
-                <Text style={styles.primaryText}>{t('Play latest')}</Text>
-              </Pressable>
-            ) : null}
-            {siteUrl ? (
-              <Pressable
-                style={({ pressed }) => [styles.secondary, pressed && { opacity: 0.7 }]}
-                onPress={() => void Linking.openURL(siteUrl).catch(() => {})}
-              >
-                <Icon name="link-outline" size={18} color={colors.text} />
-                <Text style={styles.secondaryText}>{t('Website')}</Text>
-              </Pressable>
-            ) : null}
-          </View>
-          {list.length > 0 ? <Text style={styles.sectionTitle}>{t('Episodes')}</Text> : null}
-        </View>
-      }
-      renderItem={({ item, index }: { item: PodcastEpisode; index: number }) => {
-        const playing = playingId === item.id;
-        return (
-          <Pressable
-            style={({ pressed }) => [styles.episode, pressed && { opacity: 0.6 }]}
-            disabled={!item.url}
-            onPress={() => play(list, index)}
-          >
-            <View style={{ flex: 1 }}>
-              <Text
-                style={[styles.episodeTitle, playing && { color: colors.accent }]}
-                numberOfLines={2}
-              >
-                {item.title || t('Untitled episode')}
-              </Text>
-              <Text style={styles.episodeSub} numberOfLines={1}>
-                {[item.publishedAt ? dayLabel(item.publishedAt, lang) : null, formatDuration(item.duration)]
-                  .filter(Boolean)
-                  .join(' · ')}
-              </Text>
-            </View>
-            {item.url ? (
-              <Icon name="play" size={18} color={playing ? colors.accent : colors.textSecondary} />
-            ) : (
-              <Text style={styles.unplayable}>{t('No audio available')}</Text>
-            )}
-          </Pressable>
-        );
-      }}
-      ListEmptyComponent={
-        <EmptyState
-          icon="headset-outline"
-          title={t('No episodes')}
-          subtitle={t('Pull down to read the feed again.')}
-        />
-      }
-    />
+    <TrackListView
+        title={ch.title}
+        subtitle={ch.author}
+        description={showDescription ? ch.description : undefined}
+        meta={meta}
+        coverUri={coverArtUrl(podcastCover(ch), COVER.card)}
+        // Deliberately not `numbered`: an episode's place in the list is not
+        // something a show promises (a feed can add, drop or re-date items), and
+        // a number is either the row's place, which is a lie, or the feed's own,
+        // which most feeds get wrong or leave out altogether. What orders the
+        // rows is the publish date the row already prints under its title.
+        songs={songs}
+        currentId={playingId}
+        // The heart marks the show as a favorite — the user's own heart, kept on
+        // the device (SQLite), which is what puts it in the Library's shelf.
+        favorite={{ id: ch.id, type: 'song', starred: favSet.has(ch.id), podcast: true }}
+        // The episodes' hearts read from the same SQLite favorites.
+        podcastFavIds={favSet}
+        // The show notes and publish date each episode row shows under its title
+        // (the row drops the show's name, which is already this screen's title).
+        episodeInfo={episodeInfo}
+        // The download button sits in the album's action row, exactly as an
+        // album wires it: tapping downloads every episode of the show, tapping
+        // again removes them, and while it runs a stop cancels it. Hidden only
+        // when offline was asked for: automatic offline (server down) leaves
+        // the publishers reachable, and a podcast download never asks the server.
+        download={
+          !isManualOffline()
+            ? {
+                ...download,
+                onPress: onDownloadPress,
+              }
+            : undefined
+        }
+        // The ⋯ opens the show's own sheet (store-driven, mounted globally).
+        onMenu={() => openPodcastMenu(ch)}
+        emptyState={
+          <EmptyState icon="headset-outline" title={t('No episodes')} />
+        }
+        onPlay={play}
+      />
   );
 }
-
-const styles = themed((colors) => ({
-  center: { flex: 1, justifyContent: 'center', backgroundColor: colors.background },
-  list: { padding: spacing.lg, gap: spacing.xs },
-  header: { alignItems: 'center', gap: spacing.sm, marginBottom: spacing.lg },
-  title: {
-    color: colors.text,
-    fontSize: fontSize.lg,
-    letterSpacing: tracking.heading,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginTop: spacing.sm,
-  },
-  author: { color: colors.textSecondary, fontSize: fontSize.sm, textAlign: 'center' },
-  description: {
-    color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    lineHeight: 20,
-    textAlign: 'center',
-    marginTop: spacing.xs,
-  },
-  error: {
-    color: colors.danger,
-    fontSize: fontSize.xs,
-    textAlign: 'center',
-    marginTop: spacing.xs,
-  },
-  actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
-  primary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
-    backgroundColor: colors.accent,
-  },
-  primaryText: { color: colors.onAccent, fontSize: fontSize.sm, fontWeight: '600' },
-  secondary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surfaceHighlight,
-  },
-  secondaryText: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
-  sectionTitle: {
-    alignSelf: 'flex-start',
-    color: colors.text,
-    fontSize: fontSize.md,
-    fontWeight: '600',
-    marginTop: spacing.lg,
-  },
-  episode: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  episodeTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
-  episodeSub: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2 },
-  unplayable: { color: colors.textMuted, fontSize: fontSize.xs },
-}));

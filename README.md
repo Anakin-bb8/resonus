@@ -41,6 +41,16 @@ Get the latest APK from the [Releases](https://github.com/juananzzz/resonus/rele
 
 Also available on [Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/juananzzz/resonus) for automatic updates.
 
+### F-Droid
+
+Resonus is not on F-Droid yet. Once it is, keep in mind that F-Droid builds
+the app itself and signs it with its own key, so the APK from GitHub (or
+Obtainium) and the one from F-Droid cannot update each other. Moving from one
+to the other means uninstalling first; Settings › About › Export settings
+keeps your settings to import afterwards. The F-Droid build is updated by
+F-Droid, a few days after each release here, so it has no update check of its
+own.
+
 ### iOS (experimental)
 
 Download the `.ipa` from the [Releases](https://github.com/juananzzz/resonus/releases/latest)
@@ -56,7 +66,7 @@ Not available on iOS yet: CarPlay, casting, the equalizer and gapless playback.
 - **Local mode**: play music straight from your device or a folder, no server needed
 - **Offline mode**: your favorites, playlists and albums stay browsable with no connection; downloaded songs play, the rest show grayed out, and it switches automatically when the server is unreachable
 - **Downloads**: albums, playlists, an artist's whole discography or single songs, in original quality or transcoded
-- **Synced lyrics**: karaoke view with tap-to-seek, word-by-word highlighting (TTML and enhanced LRC), full-screen mode, optional LRCLIB lookup
+- **Synced lyrics**: karaoke view with tap-to-seek, word-by-word highlighting (TTML and enhanced LRC), full-screen mode, optional lookup on [LRCLIB](https://lrclib.net) and [lrc.red](https://lrc.red)
 - **Internet radio**: browse and manage your stations
 - **Cast to speakers**: UPnP/DLNA renderers and Sonos, with room grouping; local music streams to them too
 - **Playback**: gapless, crossfade, built-in equalizer, ReplayGain normalization, playback speed, sleep timer, queue with undo, shuffle, repeat, background & lock-screen controls
@@ -67,7 +77,7 @@ Not available on iOS yet: CarPlay, casting, the equalizer and gapless playback.
 - **Android Auto** (experimental)
 - **Landscape and tablet layouts**
 - **Queue sync across devices**
-- **In 12 languages**: English, Spanish, German, Catalan, Russian, Italian, Simplified Chinese, Ukrainian, Polish, Swedish, Brazilian Portuguese, Turkish
+- **In 13 languages**: English, Spanish, German, Catalan, Russian, Italian, Simplified Chinese, Ukrainian, Polish, Swedish, Brazilian Portuguese, Turkish, French
 
 ## FAQ
 

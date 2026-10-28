@@ -1,6 +1,6 @@
 /** Song row inside a list (album, playlist, search results). */
 import Icon from '@/components/Icon';
-import { memo, useRef } from 'react';
+import { memo, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import ReanimatedSwipeable, {
@@ -10,9 +10,10 @@ import ReanimatedSwipeable, {
 import Reanimated, { useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
 
 import { COVER, songCoverUrl, star } from '@/api/data';
-import { type Song } from '@/api/subsonic';
+import { episodeHeart, heartedSong, NO_FAVORITES, togglePodcastHeart } from '@/api/podcasts';
+import { streamReachable, type Song } from '@/api/subsonic';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
-import { formatDuration } from '@/lib/format';
+import { formatDuration, formatEpisodeDate } from '@/lib/format';
 import { applyStarChange, resyncFavorites, unstarWithUndo } from '@/lib/favoritesCache';
 import { useAuthStore } from '@/store/auth';
 import { useDownloads } from '@/store/downloads';
@@ -22,7 +23,7 @@ import { useSettings, type SwipeAction } from '@/store/settings';
 import { haptic } from '@/lib/haptics';
 import { useToast } from '@/store/toast';
 import { useT } from '@/i18n';
-import { colors, fontSize, spacing, themed, useTheme } from '@/theme';
+import { colors, DIM_OPACITY, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 import { Cover, useCoverRadius } from './Cover';
 import { usePressFeedback } from '@/hooks/usePressFeedback';
 import { bump } from '@/lib/perfLog';
@@ -46,6 +47,23 @@ interface Props {
    * (no server favorites).
    */
   showFavorite?: boolean;
+  /**
+   * Podcast episodes: the ids the user has hearted in SQLite. When the song is
+   * an episode (`song.podcastChannelId`), its heart reads from here instead of
+   * the server's favorites list.
+   */
+  podcastFavIds?: Set<string>;
+  /**
+   * Podcast episode on the show's screen: its description, its publish date and
+   *  whether it came over with the show's last sync. When present the row drops
+   *  the artist line — the show is already the screen's title, so repeating it
+   *  under every episode says nothing — and instead shows the title over two
+   *  lines, the full description, and a line with the duration and the date,
+   *  wearing the dot and the word "new" behind that date when the episode is
+   *  one of the new arrivals: the words a listener needs to pick an episode out
+   *  of a feed. Absent for albums, playlists and search.
+   */
+  episode?: { description?: string; publishedAt?: number; fresh?: boolean };
   /** Shows the ⋯ menu button (default true; works offline too). */
   showMenu?: boolean;
   /** Shows the mini album cover on the left (Spotify style). */
@@ -73,6 +91,12 @@ const SWIPE_ICON: Record<Exclude<SwipeAction, 'off'>, keyof typeof Icon.glyphMap
   favorite: 'heart',
   menu: 'ellipsis-horizontal',
 };
+
+/** Lines of an episode's show notes before "Show more" takes over (see `TrackRow`). */
+const EPISODE_DESCRIPTION_LINES = 2;
+/** Characters of the notes measured for that: far more than two lines hold
+ *  at any width a phone has. */
+const EPISODE_MEASURE_CHARS = 600;
 
 /**
  * Action strip that peeks out behind the row during swipe. Invisible at rest:
@@ -119,6 +143,8 @@ function TrackRowBase({
   onLongPress,
   onPress,
   onPressIn,
+  podcastFavIds,
+  episode,
 }: Props) {
   bump('render · TrackRow');
   const openMenu = useSongMenu((s) => s.open);
@@ -135,6 +161,19 @@ function TrackRowBase({
   const playNext = usePlayerStore((s) => s.playNext);
   const toast = useToast((s) => s.show);
   const swipeRef = useRef<SwipeableMethods>(null);
+  // An episode's show notes open and close like a podcast's description: the
+  // first `EPISODE_DESCRIPTION_LINES` of them at rest, the whole thing once
+  // "Show more" is tapped. Per row, so expanding one episode does not expand
+  // the ones above and below it — and keyed to the episode, because the row is
+  // not a new component when the list hands it another one: scrolling
+  // recycles the row and `propsEqual` below is there exactly so that a change
+  // of song does not re-render it, which leaves a plain boolean behind on the
+  // episode that used to sit here. An episode nobody tapped would then come
+  // back unfolded, offering "Show less". One state, carrying the id, so a row
+  // that arrives with a new episode starts folded.
+  const [desc, setDesc] = useState({ id: '', expanded: false, hasMore: false });
+  const descExpanded = desc.id === song.id && desc.expanded;
+  const descHasMore = desc.id === song.id && desc.hasMore;
 
   // Favorite: the central favorites list (`favIds`) is the reliable source —
   // it reflects mark/unmark upon invalidation. The song's `starred` (which
@@ -142,7 +181,8 @@ function TrackRowBase({
   // list is still loading; otherwise, unmarking on an album would keep the heart
   // visible (the OR with `song.starred` never became false).
   const favIds = useFavoriteIds(showFavorite);
-  const favorited = showFavorite && (favIds ? favIds.has(song.id) : !!song.starred);
+  const favorited =
+    showFavorite && heartedSong(song, podcastFavIds ?? NO_FAVORITES, favIds);
   const downloaded = useDownloads((s) => !!s.files[song.id]);
   const offline = useAuthStore((s) => s.offline);
   /**
@@ -156,15 +196,36 @@ function TrackRowBase({
    * what the player will refuse.
    */
   const unavailable = offline
-    ? !song.url && !song.localUri && !downloaded
+    ? !song.localUri && !downloaded && !streamReachable(song)
     : !!song.unavailable;
   const explicit = useExplicitBadge(song.explicitStatus);
+  // The language, so an episode's publish date reads the way the rest of the
+  // screen does (see `formatEpisodeDate`).
+  const lang = useSettings((s) => s.language);
+  // An episode's "how long · when": the two facts a listener needs to tell
+  // episodes apart. The duration leaves the row's right edge for episodes and
+  // comes up here instead, so the date has a home and the two read together.
+  const episodeMeta =
+    episode &&
+    [
+      song.duration ? formatDuration(song.duration) : null,
+      episode.publishedAt ? formatEpisodeDate(episode.publishedAt, lang) : null,
+    ].filter(Boolean).join(' · ');
 
   // Swipe right = configurable action (Spotify-style gesture). The row returns
   // on its own; the background strip only peaks during the gesture.
   // NOTE: the gesture only coexists well with scroll if the parent list uses
   // react-native-gesture-handler (FlatList/ScrollView from that library).
   async function toggleFavoriteSwipe() {
+    // A podcast episode: the device's own SQLite favorite, not the server's.
+    if (song.podcastChannelId) {
+      void togglePodcastHeart(song.id, 'episode', song.podcastChannelId)
+        .then((on) => {
+          toast(on ? t('Added to favorites') : t('Removed from favorites'));
+        })
+        .catch(() => toast(t("Couldn't complete the action")));
+      return;
+    }
     // Removing is deferred behind «Undo»; the heart here reads from the cached
     // list, so there is no state of its own to put back.
     if (favorited) {
@@ -263,30 +324,123 @@ function TrackRowBase({
       <View style={styles.info}>
         <Text
           style={[styles.title, isCurrent && { color: colors.accent }]}
-          numberOfLines={1}
+          // An episode's title is a sentence, so it gets the two lines it needs;
+          // a track's is short and stays on one.
+          numberOfLines={episode ? 2 : 1}
         >
           {song.title}
         </Text>
-        {downloaded || explicit || song.artist ? (
-          <View style={styles.subRow}>
-            {downloaded ? (
-              <Icon name="arrow-down-circle" size={13} color={colors.accent} />
+        {episode ? (
+          <>
+            {/* The whole description: an episode's is the show notes, and cutting
+                it would hide the one thing that tells this episode from the next. */}
+            {episode.description ? (
+              <View>
+                {/* The whole text, drawn invisibly: with `numberOfLines` set,
+                    onTextLayout only reports the lines that survived, so the
+                    copy below can't tell whether anything was cut. */}
+                <Text
+                  style={styles.episodeDescriptionMeasure}
+                  // A screen reader would read the notes twice otherwise.
+                  accessibilityElementsHidden
+                  importantForAccessibility="no-hide-descendants"
+                  // The count answers after layout, so the answer arrives as a
+                  // state write that re-renders the row. Only a real difference
+                  // writes: layout runs again on every repaint, and a write on
+                  // each one would churn the row forever. A row that came over
+                  // with another episode differs by the id alone, so it writes
+                  // once — and that write is what starts a fresh episode:
+                  // folded, with the pill only offered once the notes were cut.
+                  onTextLayout={(e) => {
+                    const more =
+                      e.nativeEvent.lines.length > EPISODE_DESCRIPTION_LINES;
+                    if (desc.id !== song.id || desc.hasMore !== more) {
+                      setDesc({ id: song.id, expanded: descExpanded, hasMore: more });
+                    }
+                  }}
+                >
+                  {/* The opening is enough to tell whether the notes run past
+                      two lines, and some shows' notes are pages long: laying
+                      the whole text out twice per row would cost every scroll. */}
+                  {episode.description.slice(0, EPISODE_MEASURE_CHARS)}
+                </Text>
+                <Text
+                  style={styles.episodeDescription}
+                  numberOfLines={descExpanded ? undefined : EPISODE_DESCRIPTION_LINES}
+                >
+                  {episode.description}
+                </Text>
+                {descHasMore ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => setDesc((s) => ({ ...s, expanded: !s.expanded }))}
+                    style={styles.episodeDescriptionMore}
+                    hitSlop={spacing.sm}
+                  >
+                    <Text style={styles.episodeDescriptionMoreText}>
+                      {descExpanded ? t('Show less') : t('Show more')}
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </View>
             ) : null}
-            {/* Ahead of the name, like every other player draws it: the badge
-                is about the track, and an artist name long enough to be cut
-                would take the badge off the row with it. */}
-            <ExplicitBadge status={song.explicitStatus} />
-            {song.artist ? (
-              <Text style={styles.artist} numberOfLines={1}>
-                {song.artist}
-              </Text>
+            {downloaded || episodeMeta || episode.fresh ? (
+              <View style={styles.subRow}>
+                {downloaded ? (
+                  <Icon name="arrow-down-circle" size={13} color={colors.accent} />
+                ) : null}
+                {episodeMeta ? (
+                  <Text style={styles.episodeMeta} numberOfLines={1}>
+                    {episodeMeta}
+                  </Text>
+                ) : null}
+                {episode.fresh ? (
+                  <>
+                    {/* The mark an episode wears when it came over with the show's
+                        last sync — read from the device's own first sighting, not
+                        from the date beside it, which a publisher can rewrite. The
+                        dot is drawn rather than an icon: it is a dot of the app's
+                        own accent, and an icon would have to be cut into the font
+                        for it. The word a step brighter than the metadata behind
+                        it, so the mark reads as the row's own and not as more
+                        furniture on it. */}
+                    <View style={styles.episodeNewMark} />
+                    <Text style={styles.episodeNew} numberOfLines={1}>
+                      {t('New')}
+                    </Text>
+                  </>
+                ) : null}
+              </View>
             ) : null}
-          </View>
-        ) : null}
+          </>
+        ) : (
+          <>{downloaded || explicit || song.artist ? (
+            <View style={styles.subRow}>
+              {downloaded ? (
+                <Icon name="arrow-down-circle" size={13} color={colors.accent} />
+              ) : null}
+              {/* Ahead of the name, like every other player draws it: the badge
+                  is about the track, and an artist name long enough to be cut
+                  would take the badge off the row with it. */}
+              <ExplicitBadge status={song.explicitStatus} />
+              {song.artist ? (
+                <Text style={styles.artist} numberOfLines={1}>
+                  {song.artist}
+                </Text>
+              ) : null}
+            </View>
+          ) : null}</>
+        )}
       </View>
 
       {favorited && !selecting && !unavailable ? (
-        <FavoriteButton id={song.id} starred undo size={20} />
+        <FavoriteButton
+          id={song.id}
+          starred
+          undo
+          size={20}
+          podcast={episodeHeart(song)}
+        />
       ) : null}
       {showRating && song.userRating ? (
         <View style={styles.rating} accessibilityLabel={t('Rate {n} stars', { n: song.userRating })}>
@@ -295,7 +449,9 @@ function TrackRowBase({
           ))}
         </View>
       ) : null}
-      {showDuration ? <Text style={styles.duration}>{formatDuration(song.duration)}</Text> : null}
+      {/* An episode carries its duration in the meta line under the title, so
+          the right edge stays quiet for it; a track still answers the setting. */}
+      {showDuration && !episode ? <Text style={styles.duration}>{formatDuration(song.duration)}</Text> : null}
       {showMenu && !selecting && !unavailable ? (
         <Pressable
           hitSlop={8}
@@ -381,6 +537,8 @@ function propsEqual(a: Props, b: Props): boolean {
     a.selecting === b.selecting &&
     a.swipeable === b.swipeable &&
     a.selected === b.selected &&
+    a.podcastFavIds === b.podcastFavIds &&
+    a.episode === b.episode &&
     !!a.onLongPress === !!b.onLongPress &&
     sameMenuContext(a.menuContext, b.menuContext)
   );
@@ -468,6 +626,64 @@ const styles = themed((colors) => ({
     fontSize: fontSize.xs,
     flexShrink: 1,
   },
+  // An episode's show notes: quieter than the title, and left to run the full
+  // width so a long one wraps under the two-line title rather than beside it.
+  episodeDescription: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    lineHeight: 20,
+    marginTop: 2,
+  },
+  // Same text, same width, no paint: only here to count the lines.
+  episodeDescriptionMeasure: {
+    position: 'absolute',
+    opacity: 0,
+    pointerEvents: 'none',
+    width: '100%',
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    lineHeight: 20,
+  },
+  // Under the text, never over it.
+  episodeDescriptionMore: {
+    alignSelf: 'flex-start',
+    marginTop: spacing.xs,
+  },
+  // The button belongs to the notes it unfolds, so it takes their grey: the
+  // block under a title reads as one thing, and the heavier weight already
+  // says this one line can be tapped. `textMuted` would put it as far back as
+  // a disabled icon, and a tap target that looks dead is worse than one that
+  // shouts. Episodes only — the header's "Show more" stays at full text, where
+  // it sits over the cover's gradient and has no grey of its own to match.
+  episodeDescriptionMoreText: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    fontWeight: '500',
+  },
+  // The "how long · when" line under an episode.
+  episodeMeta: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    flexShrink: 1,
+  },
+  // The word behind the dot that marks an episode as a new arrival: a step
+  // above the metadata line it follows, so the mark reads as the row's own and
+  // not as more of its furniture. The dot carries the accent; this only has to
+  // say what the dot means.
+  episodeNew: {
+    color: colors.textSecondary,
+    fontSize: fontSize.xs,
+    flexShrink: 1,
+  },
+  // The dot itself: the app's accent, drawn as a circle rather than an icon, so
+  // a name the icon font was never cut for cannot answer blank. One gap step
+  // across, which is what the row's own gap puts between it and the word.
+  episodeNewMark: {
+    width: spacing.sm,
+    height: spacing.sm,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accent,
+  },
   duration: {
     color: colors.textMuted,
     fontSize: fontSize.sm,
@@ -478,6 +694,6 @@ const styles = themed((colors) => ({
   },
   // Song not available offline (mirror): dimmed and not tappable.
   dimmed: {
-    opacity: 0.4,
+    opacity: DIM_OPACITY,
   },
 }));

@@ -406,17 +406,25 @@ export default function QueueScreen() {
       <SheetModal openRef={menuRef}>
         {(close) => (
           <>
-            <Pressable
-              style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
-              onPress={() => {
-                close();
-                const q = usePlayerStore.getState().queue;
-                if (q.length > 0) usePlaylistPicker.getState().open(q);
-              }}
-            >
-              <Icon name="add" size={24} color={colors.text} />
-              <Text style={styles.actionText}>{t('Add to a playlist')}</Text>
-            </Pressable>
+            {/* An episode's id means nothing to the server, so only the
+                server songs in the queue can go into a playlist — and when
+                the queue holds nothing else, the action is not offered. */}
+            {queue.some((s) => !s.podcastChannelId) ? (
+              <Pressable
+                style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+                onPress={() => {
+                  close();
+                  const server = usePlayerStore
+                    .getState()
+                    .queue
+                    .filter((s) => !s.podcastChannelId);
+                  usePlaylistPicker.getState().open(server);
+                }}
+              >
+                <Icon name="add" size={24} color={colors.text} />
+                <Text style={styles.actionText}>{t('Add to a playlist')}</Text>
+              </Pressable>
+            ) : null}
             {/* The queue is pushed to the server as it changes, but what comes
                 back is only read when this device has none of its own: the copy
                 here is the faithful one and replacing it behind somebody's back

@@ -25,6 +25,8 @@ export default function QuickGridSettings() {
   const setWithAlbums = useSettings((s) => s.setQuickGridAlbums);
   const withPlaylists = useSettings((s) => s.quickGridPlaylists);
   const setWithPlaylists = useSettings((s) => s.setQuickGridPlaylists);
+  const withPodcasts = useSettings((s) => s.quickGridPodcasts);
+  const setWithPodcasts = useSettings((s) => s.setQuickGridPodcasts);
   const size = useSettings((s) => s.quickGridSize);
   const setSize = useSettings((s) => s.setQuickGridSize);
 
@@ -48,6 +50,14 @@ export default function QuickGridSettings() {
       label: t('Playlists'),
       value: withPlaylists,
       onChange: setWithPlaylists,
+    },
+    // A show you played, the way an album you played rises: the grid draws it
+    // from what was listened to, and its picture is the feed's own address,
+    // read from the show's database row.
+    {
+      label: t('Podcasts'),
+      value: withPodcasts,
+      onChange: setWithPodcasts,
     },
   ];
 

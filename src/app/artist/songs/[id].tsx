@@ -324,7 +324,7 @@ export default function ArtistSongsScreen() {
               accessibilityLabel={t('Play')}
               onPress={() => void playQueue(shown, 0, name, `/artist/${id}`)}
             >
-              <Icon name="play" size={28} color={colors.onAccent} style={{ marginLeft: 3 }} />
+              <Icon name="play" size={28} color={colors.onAccent} />
             </Pressable>
           </View>
         </View>

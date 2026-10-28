@@ -7,6 +7,7 @@
     "@expo/vector-icons": "^15.1.1",
     "@react-native-community/datetimepicker": "9.1.0",
     "@react-native-community/slider": "5.2.0",
+    "@react-native-masked-view/masked-view": "0.3.2",
     "@tanstack/react-query": "^5.101.1",
     "expo": "~57.0.15",
     "expo-asset": "~57.0.13",
@@ -33,9 +34,11 @@
     "expo-sqlite": "~57.0.1",
     "expo-status-bar": "~57.0.1",
     "expo-system-ui": "~57.0.2",
+    "expo-video": "~57.0.5",
     "expo-web-browser": "~57.0.2",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "react-freeze": "^1.0.4",
     "react-native": "0.86.2",
     "react-native-gesture-handler": "~2.32.0",
     "react-native-image-colors": "^2.6.0",
@@ -70,6 +73,7 @@
     "i18n:docs": "node scripts/i18n-docs.mjs",
     "i18n:check": "node scripts/i18n-check.mjs",
     "i18n:rename": "node scripts/i18n-rename.mjs",
+    "fastlane:changelog": "node scripts/fastlane-changelog.mjs",
     "harness:extractor": "bash scripts/native-harness/run.sh"
   },
   "private": true,
@@ -81,7 +85,12 @@
       "buildFromSource": [
         "expo-audio",
         "expo-network"
-      ]
+      ],
+      "android": {
+        "buildFromSource": [
+          ".*"
+        ]
+      }
     }
   }
 }

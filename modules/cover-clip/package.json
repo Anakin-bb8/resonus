@@ -1,0 +1,7 @@
+{
+  "name": "cover-clip",
+  "version": "0.0.1",
+  "description": "Decorative looping cover clips for Resonus (local Expo module, iOS only)",
+  "main": "index.ts",
+  "private": true
+}

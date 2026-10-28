@@ -3,17 +3,27 @@ import { useRouter } from 'expo-router';
 import { Platform, ScrollView, Text } from 'react-native';
 
 import { canBlurBars } from '@/components/BarBlur';
-import { SelectList, SettingRow, SettingsGroup, SettingsPage, settingsStyles, SwitchList } from '@/components/SettingsUI';
+import {
+  SelectList,
+  SettingRow,
+  SettingsGroup,
+  SettingsPage,
+  settingsStyles,
+  SwitchList,
+  TextRow,
+} from '@/components/SettingsUI';
 import { useLocalProfile } from '@/hooks/useLocalProfile';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
 import { useTheme } from '@/theme';
 import {
   type CardBackground,
+  LYRICS_PROVIDER_NAMES,
   type CoverDoubleTapAction,
   type CoverTapAction,
   type LyricsAlign,
   type LyricsSize,
+  type LyricsWeight,
   type MiniPlayerButtons,
   type LyricsSource,
   type ScreenBackground,
@@ -67,8 +77,14 @@ export default function PlayerSettings() {
   const setFitCoverArt = useSettings((s) => s.setFitCoverArt);
   const animatedCoverBackground = useSettings((s) => s.animatedCoverBackground);
   const setAnimatedCoverBackground = useSettings((s) => s.setAnimatedCoverBackground);
+  const animatedCoverVideo = useSettings((s) => s.animatedCoverVideo);
+  const setAnimatedCoverVideo = useSettings((s) => s.setAnimatedCoverVideo);
   const animatedArtworkFps = useSettings((s) => s.animatedArtworkFps);
   const setAnimatedArtworkFps = useSettings((s) => s.setAnimatedArtworkFps);
+  const animatedArtworkEndpoint = useSettings((s) => s.animatedArtworkEndpoint);
+  const animatedCovers = useSettings((s) => s.animatedCovers);
+  const setAnimatedCovers = useSettings((s) => s.setAnimatedCovers);
+  const setAnimatedArtworkEndpoint = useSettings((s) => s.setAnimatedArtworkEndpoint);
   const miniPlayerColorBackground = useSettings((s) => s.miniPlayerColorBackground);
   const blurMiniPlayer = useSettings((s) => s.blurMiniPlayer);
   const miniPlayerProgress = useSettings((s) => s.miniPlayerProgress);
@@ -77,8 +93,12 @@ export default function PlayerSettings() {
   const setMiniPlayerButtons = useSettings((s) => s.setMiniPlayerButtons);
   const lyricsSize = useSettings((s) => s.lyricsSize);
   const setLyricsSize = useSettings((s) => s.setLyricsSize);
+  const lyricsWeight = useSettings((s) => s.lyricsWeight);
+  const setLyricsWeight = useSettings((s) => s.setLyricsWeight);
   const lyricsAlign = useSettings((s) => s.lyricsAlign);
   const setLyricsAlign = useSettings((s) => s.setLyricsAlign);
+  const blurInactiveLyrics = useSettings((s) => s.blurInactiveLyrics);
+  const setBlurInactiveLyrics = useSettings((s) => s.setBlurInactiveLyrics);
   const setBlurMiniPlayer = useSettings((s) => s.setBlurMiniPlayer);
   const setMiniPlayerColorBackground = useSettings((s) => s.setMiniPlayerColorBackground);
   const lyricsBackground = useSettings((s) => s.lyricsBackground);
@@ -95,6 +115,7 @@ export default function PlayerSettings() {
   const setCoverTapAction = useSettings((s) => s.setCoverTapAction);
   const lyricsSource = useSettings((s) => s.lyricsSource);
   const setLyricsSource = useSettings((s) => s.setLyricsSource);
+  const lyricsProviders = useSettings((s) => s.lyricsProviders);
   const marqueeTitles = useSettings((s) => s.marqueeTitles);
   const setMarqueeTitles = useSettings((s) => s.setMarqueeTitles);
   const seekButtonsSec = useSettings((s) => s.seekButtonsSec);
@@ -168,11 +189,6 @@ export default function PlayerSettings() {
                 value: fitCoverArt,
                 onChange: setFitCoverArt,
               },
-              {
-                label: t('Animated cover background'),
-                value: animatedCoverBackground,
-                onChange: setAnimatedCoverBackground,
-              },
             ]}
           />
           <SelectList<CoverTapAction>
@@ -187,17 +203,73 @@ export default function PlayerSettings() {
             value={coverDoubleTapAction}
             onChange={setCoverDoubleTapAction}
           />
-          {/* The lock screen clip is an iOS thing; Android has none to encode. */}
-          {Platform.OS === 'ios' ? (
-            <SelectList<number>
-              label={t('Animated cover frame rate')}
-              options={[
-                { value: 30, label: t('30 fps') },
-                { value: 60, label: t('60 fps') },
-              ]}
-              value={animatedArtworkFps}
-              onChange={setAnimatedArtworkFps}
-            />
+        </SettingsGroup>
+
+        {/* Their own section, the source first: what decides whether there is
+            a clip at all comes before where it is shown (#263). */}
+        <Text style={settingsStyles.sectionTitle}>{t('Animated covers')}</Text>
+        <SettingsGroup>
+          {/* The one switch for all of it. Off, the rest is hidden and kept: the
+              server's address is not something to type again. */}
+          <SwitchList
+            options={[
+              {
+                label: t('Show animated covers'),
+                value: animatedCovers,
+                onChange: setAnimatedCovers,
+              },
+            ]}
+          />
+          {animatedCovers ? (
+          <>
+          <TextRow
+            label={t('Animated artwork endpoint')}
+            value={animatedArtworkEndpoint}
+            placeholder="https://artwork.example.com"
+            maxLength={200}
+            keyboardType="url"
+            autoCapitalize="none"
+            // Stored raw: trimming trailing slashes here would eat the `//`
+            // of `https://` while typing. The fetch normalizes before asking.
+            onChange={setAnimatedArtworkEndpoint}
+          />
+          {/* Where, not whether: it also places a GIF or WebP cover from the
+              server, with no endpoint at all. */}
+          <SelectList<'cover' | 'background'>
+            label={t('Animated artwork')}
+            options={[
+              { value: 'cover', label: t('In the cover') },
+              { value: 'background', label: t('As the background') },
+            ]}
+            value={animatedCoverBackground ? 'background' : 'cover'}
+            onChange={(v) => setAnimatedCoverBackground(v === 'background')}
+          />
+          {/* iOS only: there the lock screen has a clip of its own, so the one
+              in the app can go while that one stays. On Android an empty
+              server is the same thing. */}
+          {Platform.OS === 'ios' && animatedArtworkEndpoint ? (
+            <>
+              <SwitchList
+                options={[
+                  {
+                    label: t('Clips in the app too'),
+                    value: animatedCoverVideo,
+                    onChange: setAnimatedCoverVideo,
+                  },
+                ]}
+              />
+              <SelectList<number>
+                label={t('Animated cover frame rate')}
+                options={[
+                  { value: 30, label: t('30 fps') },
+                  { value: 60, label: t('60 fps') },
+                ]}
+                value={animatedArtworkFps}
+                onChange={setAnimatedArtworkFps}
+              />
+            </>
+          ) : null}
+          </>
           ) : null}
         </SettingsGroup>
 
@@ -307,9 +379,6 @@ export default function PlayerSettings() {
         <SettingsGroup>
           <SelectList<LyricsSource>
             label={t('Lyrics source')}
-            description={t(
-              'Where to get lyrics from. Online search uses LRCLIB (sends the artist and title).',
-            )}
             options={[
               { value: 'local', label: t('Prefer local lyrics') },
               { value: 'online', label: t('Prefer online search') },
@@ -318,6 +387,22 @@ export default function PlayerSettings() {
             value={lyricsSource}
             onChange={setLyricsSource}
           />
+          {/* Which services online search asks and in what order, on a screen
+              of their own like the bottom row's buttons. Hidden with the
+              search off, when there is nobody to ask. */}
+          {lyricsSource !== 'off' ? (
+            <SettingRow
+              label={t('Providers')}
+              right={
+                lyricsProviders
+                  .filter((p) => p.enabled)
+                  .map((p) => LYRICS_PROVIDER_NAMES[p.key])
+                  .join(', ') || t('None')
+              }
+              chevron
+              onPress={() => router.push('/settings/lyrics-providers')}
+            />
+          ) : null}
           <SelectList<LyricsSize>
             label={t('Lyrics size')}
             options={[
@@ -327,6 +412,18 @@ export default function PlayerSettings() {
             ]}
             value={lyricsSize}
             onChange={setLyricsSize}
+          />
+          <SelectList<LyricsWeight>
+            label={t('Lyrics weight')}
+            options={[
+              { value: '300', label: t('Light font weight') },
+              { value: '400', label: t('Regular font weight') },
+              { value: '500', label: t('Medium font weight') },
+              { value: '600', label: t('Semi-bold font weight') },
+              { value: '700', label: t('Bold font weight') },
+            ]}
+            value={lyricsWeight}
+            onChange={setLyricsWeight}
           />
           <SelectList<LyricsAlign>
             label={t('Lyrics alignment')}
@@ -339,6 +436,15 @@ export default function PlayerSettings() {
           />
           <SwitchList
             options={[
+              ...(Platform.OS === 'android'
+                ? [
+                    {
+                      label: t('Blur inactive lyrics'),
+                      value: blurInactiveLyrics,
+                      onChange: setBlurInactiveLyrics,
+                    },
+                  ]
+                : []),
               {
                 label: t('Show lyrics card'),
                 value: showLyricsCard,

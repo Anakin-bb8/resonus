@@ -23,13 +23,13 @@ export interface ParsedItem {
   description?: string;
   /** Publication date in ms since the epoch. */
   publishedAt?: number;
+  /** The feed's own episode number (`itunes:episode`), when it gave one. */
+  episode?: number;
   /** Seconds. */
   duration?: number;
   /** Where the audio is. An episode with none of this cannot be played. */
   url?: string;
   mimeType?: string;
-  size?: number;
-  imageUrl?: string;
 }
 
 const ENTITIES: Record<string, string> = {
@@ -221,24 +221,20 @@ export function parseDuration(value: string | undefined): number | undefined {
 }
 
 /** The enclosure of an item: RSS `<enclosure>`, or Atom's `rel="enclosure"` link. */
-function enclosure(block: string): { url?: string; type?: string; length?: number } {
+function enclosure(block: string): { url?: string; type?: string } {
   const attrs = openTag(block, 'enclosure');
   if (attrs) {
-    const length = Number(attr(attrs, 'length'));
     return {
       url: attr(attrs, 'url'),
       type: attr(attrs, 'type'),
-      length: Number.isFinite(length) && length > 0 ? length : undefined,
     };
   }
   for (const m of block.matchAll(/<link(\s[^>]*?)?\/?>/gi)) {
     const linkAttrs = m[1];
     if ((attr(linkAttrs, 'rel') ?? '').toLowerCase() !== 'enclosure') continue;
-    const length = Number(attr(linkAttrs, 'length'));
     return {
       url: attr(linkAttrs, 'href'),
       type: attr(linkAttrs, 'type'),
-      length: Number.isFinite(length) && length > 0 ? length : undefined,
     };
   }
   return {};
@@ -297,19 +293,24 @@ export function parseFeed(xml: string, channelId: string): ParsedFeed {
     const title = text(block, 'title') ?? '';
     const publishedAt = parseFeedDate(text(block, 'pubDate', 'published', 'updated', 'date'));
     const enc = enclosure(block);
+    // `itunes:episode` is a plain count, and feeds spell it however they like:
+    // one that numbers none gives NaN, a zero-padded one is the feed's own
+    // spelling and `Number` reads it as the count it means, so `07` stays 7.
+    // Rounded before it is tested, so a decimal never rounds down to a 0 that
+    // the song's info would then read as a track — a non-positive one is no
+    // number worth showing and stays out.
+    const epNum = Math.round(Number(text(block, 'episode')));
     const item: ParsedItem = {
       id: `${channelId}/${itemKey(block, title, publishedAt)}`,
       title,
       publishedAt,
+      ...(Number.isFinite(epNum) && epNum > 0 ? { episode: epNum } : {}),
       duration: parseDuration(text(block, 'duration')),
       url: enc.url,
       mimeType: enc.type,
-      size: enc.length,
     };
     const description = plain(block, 'description', 'summary', 'content', 'encoded');
     if (description) item.description = description;
-    const image = attr(openTag(block, 'image'), 'href');
-    if (image) item.imageUrl = image;
     items.push(item);
   }
 

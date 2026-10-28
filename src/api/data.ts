@@ -17,6 +17,7 @@ import {
   readAlbumCache,
   writeAlbumCache,
 } from '@/store/libraries';
+import { byArtistSortName } from '@/lib/librarySort';
 import { hashKey } from '@/lib/localLibrary';
 import { bump } from '@/lib/perfLog';
 import { queryClient } from '@/lib/query';
@@ -26,12 +27,13 @@ import { useLibraryMirror } from '@/store/libraryMirror';
 import { outboxFileFor, useOfflineQueue, type PlayOp, type QueuePlaylist } from '@/store/offlineQueue';
 import { usePlayHistory } from '@/store/playHistory';
 import { isManualOffline } from './netGate';
-import { getLocalLyrics, getOnlineLyrics } from '@/lib/localLyrics';
+import { anyOnline, getLocalLyrics, getOnlineLyrics, NO_ONLINE, type OnlineProviders } from '@/lib/localLyrics';
 import { useSettings, type LyricsSource } from '@/store/settings';
 import { cachedUri } from '@/store/songCache';
 import * as Navidrome from './navidrome';
 import * as Subsonic from './backend';
 import * as Local from '@/lib/localQueries';
+import { streamReachable } from './subsonic';
 import type { Song } from './subsonic';
 
 function isOffline() { return useAuthStore.getState().offline; }
@@ -179,7 +181,12 @@ function isRemoteArt(id: string): boolean {
 export function coverArtUrl(id: string | undefined, _size?: number): string | undefined {
   // Empty is an item the server says has no artwork (see `lib/absentCovers`).
   if (!id) return undefined;
-  if (isRemoteArt(id)) return id;
+  // A remote address (a podcast feed's picture, an iTunes artwork): a URL given
+  // to the image loader is a request like any other, so a manual "use no
+  // network" wears the `cached-cover:` mark and the `Cover` component shows it
+  // only if it is already on the phone. Automatic offline (server down,
+  // connection fine) leaves the publisher's pictures reachable.
+  if (isRemoteArt(id)) return isManualOffline() ? CACHED_COVER + id : id;
   // If the album art is downloaded (album/artist on disk), use it even
   // when in server mode: it works offline and doesn't use data, just
   // like audio plays from the downloaded file.
@@ -211,7 +218,8 @@ export function coverArtUrl(id: string | undefined, _size?: number): string | un
  * which picture is better but which one is here: asking for art that was never
  * saved draws a grey square, and that is what the rows of a playlist used to
  * show. So offline the song's own is preferred only once this phone is known to
- * have it, and the album's is what stands in when it does not.
+ * have it, and the album's is what stands in when that one is. With neither on
+ * the phone it asks for what it asked for online (see below).
  *
  * Which pulls the two cases apart, and they were one before (#214). A download
  * saves a track's own picture and files the song under it (`downloadTrackArt`),
@@ -231,8 +239,14 @@ export function songCoverUrl(
 ): string | undefined {
   const album = song.url ? undefined : song.albumId;
   if (!isOffline()) return coverArtUrl(song.coverArt ?? album, size);
-  const here = song.coverArt && Local.coverUrl(song.coverArt) ? song.coverArt : undefined;
-  return coverArtUrl(here ?? album ?? song.coverArt, size);
+  if (song.coverArt && Local.coverUrl(song.coverArt)) return coverArtUrl(song.coverArt, size);
+  if (album && Local.coverUrl(album)) return coverArtUrl(album, size);
+  // Nothing of it downloaded: the address it had online, since that is the one
+  // the image cache filed the picture under. Standing the album's in here asked
+  // the cache for a picture it had never been given, and the cover that was on
+  // screen a second before turned into the placeholder the moment the app went
+  // offline.
+  return coverArtUrl(song.coverArt ?? album, size);
 }
 
 /**
@@ -249,7 +263,10 @@ export function markUnplayableOffline(songs: Song[]): Song[] {
   const files = useDownloads.getState().files;
   return songs.map((s) => {
     const uri = s.localUri ?? files[s.id] ?? cachedUri(s.id);
-    if (s.url) return { ...s, unavailable: false };
+    // A podcast episode's `url` is the publisher's address, not a stream the
+    // phone may reach while offline mode says no to: only a downloaded file
+    // plays it. Radios keep their own rule (a station is what it is).
+    if (streamReachable(s)) return { ...s, unavailable: false };
     return uri ? { ...s, localUri: uri, unavailable: false } : { ...s, unavailable: true };
   });
 }
@@ -365,7 +382,7 @@ export function getArtists(): Promise<Subsonic.Artist[]> {
   if (ids.length === 1) return Subsonic.getArtists(a, ids[0]);
   return Promise.all(ids.map((id) => Subsonic.getArtists(a, id))).then((lists) => {
     const merged = dedupeById(lists.flat());
-    merged.sort((x, y) => (x.name ?? '').localeCompare(y.name ?? ''));
+    merged.sort(byArtistSortName);
     return merged;
   });
 }
@@ -1560,42 +1577,45 @@ export function search(query: string): Promise<Subsonic.SearchResult> {
  *
  * Three places have them, and they are not interchangeable. A downloaded song
  * kept its `.lrc` beside the file, and a track from the phone's own library can
- * carry them inside (USLT). The server has whatever it was given. LRCLIB is a
- * public database, and whether it is asked at all is the person's choice
- * (Settings › Lyrics): as a fallback, as the first place to look, or never.
+ * carry them inside (USLT). The server has whatever it was given. LRCLIB and
+ * lrc.red are public databases, and whether they are asked at all is the
+ * person's choice (Settings › Lyrics): which of them, as a fallback, as the
+ * first place to look, or never.
  */
 export async function getSongLyrics(
   song: Song,
   source: LyricsSource,
+  providers: OnlineProviders,
 ): Promise<Subsonic.SongLyrics | null> {
-  const allowOnline = source !== 'off';
+  const allowOnline = source !== 'off' && anyOnline(providers);
+  const online = allowOnline ? providers : NO_ONLINE;
   const preferOnline = source === 'online';
   const downloaded = () =>
     song.localUri ?? useDownloads.getState().files[song.id] ?? cachedUri(song.id);
   // Offline: the phone first, and the question is whether anything else is
-  // allowed at all. LRCLIB is not this server: an offline the app fell into
+  // allowed at all. LRCLIB and lrc.red are not this server: an offline the app fell into
   // means one server stopped answering, and the phone's connection is very
   // probably fine, so the lyrics are still there to be found. An offline
-  // somebody chose means use no network, and that covers LRCLIB too (#89).
+  // somebody chose means use no network, and that covers them too (#89).
   if (isOffline()) {
-    const online = allowOnline && !isManualOffline();
+    const reachable = isManualOffline() ? NO_ONLINE : online;
     const uri = downloaded();
-    if (uri) return getLocalLyrics({ ...song, localUri: uri }, online, preferOnline);
-    return online ? getOnlineLyrics(song) : null;
+    if (uri) return getLocalLyrics({ ...song, localUri: uri }, reachable, preferOnline);
+    return getOnlineLyrics(song, reachable);
   }
   // A file already on the phone is read first even online: it is right there,
   // and it is what the person chose to carry.
-  if (song.localUri) return getLocalLyrics(song, allowOnline, preferOnline);
+  if (song.localUri) return getLocalLyrics(song, online, preferOnline);
   if (!useAuthStore.getState().auth) return null;
   if (__DEV__) {
     console.log(`[lyrics] asking · source=${source} · ${song.artist} — ${song.title}`);
   }
   try {
-    // 'online': LRCLIB first (it absorbs its own network errors and answers
+    // 'online': the online providers first (they absorb its own network errors and answers
     // null), then the server.
     if (preferOnline) {
-      const online = await getOnlineLyrics(song);
-      if (online) return online;
+      const found = await getOnlineLyrics(song, online);
+      if (found) return found;
     }
     try {
       const structured = await Subsonic.getLyricsBySongId(auth(), song.id);
@@ -1605,14 +1625,14 @@ export async function getSongLyrics(
       // already given: seventy of them in a twenty three minute session, queued
       // in front of what the screens were waiting for (#50). Only a server that
       // rejects the modern one, which throws, gets the old question.
-      return allowOnline && !preferOnline ? getOnlineLyrics(song) : null;
+      return !preferOnline ? getOnlineLyrics(song, online) : null;
     } catch {
       // Server without the songLyrics extension: try the classic endpoint.
     }
     const plain = await Subsonic.getLyrics(auth(), song.artist ?? '', song.title ?? '');
     if (plain) return { synced: false, lines: plain.split('\n').map((value) => ({ value })) };
-    // The server has none: LRCLIB if allowed and not already tried above.
-    if (allowOnline && !preferOnline) return getOnlineLyrics(song);
+    // The server has none: online if allowed and not already tried above.
+    if (!preferOnline) return getOnlineLyrics(song, online);
     return null;
   } catch (e) {
     if (__DEV__) console.log('[lyrics] the server path threw', e);
@@ -1620,7 +1640,7 @@ export async function getSongLyrics(
     // absorbed a server without the extension. A downloaded song still has the
     // `.lrc` saved next to it when it was downloaded.
     const dl = downloaded();
-    if (dl) return getLocalLyrics({ ...song, localUri: dl }, allowOnline, preferOnline);
+    if (dl) return getLocalLyrics({ ...song, localUri: dl }, online, preferOnline);
     throw e;
   }
 }
@@ -1676,10 +1696,38 @@ export function getPlaylist(id: string): Promise<{ playlist: Subsonic.Playlist; 
     if (serverOffline()) return mirrorPlaylist(id);
     return Local.getPlaylist(id);
   }
-  return Subsonic.getPlaylist(auth(), id).then((res) => {
+  const a = auth();
+  return Subsonic.getPlaylist(a, id).then(async (res) => {
     useLibraryMirror.getState().savePlaylistDetail(id, res.playlist, res.songs);
-    return res;
+    return { ...res, songs: await keepToLibraries(a, id, res.songs) };
   });
+}
+
+/**
+ * A playlist's songs without the ones from libraries turned off in the app
+ * (#275). Only Navidrome says which library a playlist track is in; anywhere
+ * else, or if asking fails, the playlist stays whole: better every song than
+ * an empty list.
+ */
+async function keepToLibraries(
+  a: Subsonic.SubsonicAuth,
+  playlistId: string,
+  songs: Subsonic.Song[],
+): Promise<Subsonic.Song[]> {
+  const ids = enabledFolderIds(a);
+  if (!ids || !canListNative(a) || songs.length === 0) return songs;
+  try {
+    const libraries = await Navidrome.playlistTrackLibraries(a, playlistId);
+    const keep = new Set(ids);
+    // A song the native listing did not mention is kept: not knowing is not
+    // a reason to hide it.
+    return songs.filter((s) => {
+      const library = libraries.get(s.id);
+      return library === undefined || keep.has(library);
+    });
+  } catch {
+    return songs;
+  }
 }
 
 async function mirrorPlaylist(

@@ -27,7 +27,7 @@ import { getItem, setItem } from '@/lib/storage';
 import { useAuthStore } from '@/store/auth';
 import { useLastPlayed } from '@/store/lastPlayed';
 import { favoriteLabel, favoriteState, onFavoritesChange, toggleFavorite } from '@/lib/remoteFavorite';
-import { currentSong, usePlayerStore, type StreamInfo } from '@/store/player';
+import { bringPlaybackToPhone, currentSong, usePlayerStore, type StreamInfo } from '@/store/player';
 
 const REBUILD_DEBOUNCE_MS = 600;
 /** How long after opening before the tree is filled in. Long enough that the
@@ -141,7 +141,10 @@ export function CarAutoSync() {
     // app in the foreground is a thing that never happens to somebody who
     // opens Resonus, puts the phone in a pocket and drives off, so what the
     // car got were the lists with no songs inside them.
-    const connectSub = onCarConnected(() => {
+    const connectSub = onCarConnected((e) => {
+      // The car plays what the phone plays: a speaker at home would go on
+      // playing to an empty house with nothing in the car to say so (#272).
+      if (e.projection) void bringPlaybackToPhone();
       if (!carSeen) {
         carSeen = true;
         void setItem(CAR_SEEN_KEY, String(Date.now())).catch(() => {});

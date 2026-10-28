@@ -1,86 +1,91 @@
-# Publicar una release (APK en GitHub Releases)
+# Publishing a release (APK on GitHub Releases)
 
-El APK se genera y se publica con GitHub Actions (`.github/workflows/release.yml`)
-al empujar un tag `v*`. El workflow hace `expo prebuild` + `gradlew assembleRelease`
-firmando con tu keystore (guardada en los Secrets del repo) y crea un **borrador**
-de Release con el APK adjunto, para que lo revises antes de publicarlo.
+The APK is built and published by GitHub Actions (`.github/workflows/release.yml`)
+when a `v*` tag is pushed. The workflow runs `expo prebuild` + `gradlew assembleRelease`,
+signing with your keystore (kept in the repo Secrets), and creates a **draft**
+Release with the APK attached, so you can review it before publishing.
 
-## Una sola vez: keystore + secrets
+## Once: keystore + secrets
 
-1. Genera tu keystore de release (¡guárdala y haz copia! si la pierdes no podrás
-   actualizar la app para quien ya la tenga instalada):
+1. Generate your release keystore (keep it and back it up! If you lose it you
+   will not be able to update the app for anyone who already has it installed):
 
    ```sh
    keytool -genkeypair -v -keystore resonus-release.jks \
      -alias resonus -keyalg RSA -keysize 2048 -validity 10000
    ```
 
-2. Pásala a base64 (una sola línea):
+2. Convert it to base64 (a single line):
 
    ```sh
    base64 -w0 resonus-release.jks > keystore.b64
    ```
 
-3. En GitHub: **Settings → Secrets and variables → Actions → New repository secret**,
-   crea estos cuatro:
+3. On GitHub: **Settings → Secrets and variables → Actions → New repository secret**,
+   create these four:
 
-   | Secret | Valor |
+   | Secret | Value |
    |---|---|
-   | `ANDROID_KEYSTORE_BASE64` | contenido de `keystore.b64` |
-   | `ANDROID_KEYSTORE_PASSWORD` | la contraseña del almacén |
+   | `ANDROID_KEYSTORE_BASE64` | contents of `keystore.b64` |
+   | `ANDROID_KEYSTORE_PASSWORD` | the keystore password |
    | `ANDROID_KEY_ALIAS` | `resonus` |
-   | `ANDROID_KEY_PASSWORD` | la contraseña de la clave |
+   | `ANDROID_KEY_PASSWORD` | the key password |
 
-   La keystore y `keystore.b64` **no** se suben a git.
+   The keystore and `keystore.b64` are **not** committed to git.
 
-## Cada release
+## Every release
 
-1. Sube la versión en `app.json`: `expo.version` (nombre visible) y
-   `expo.android.versionCode` (entero, debe **incrementarse** en cada release).
-   Cuadra también el texto de la pantalla About si hace falta.
-2. Commitea, crea el tag y empújalo:
+1. Bump the version in `app.json`: `expo.version` (visible name) and
+   `expo.android.versionCode` (an integer, it must **increase** with every release).
+   Update the About screen text too if needed.
+2. Generate the F-Droid notes with `pnpm fastlane:changelog`: they come from
+   that version's section of `CHANGELOG.md` and go to
+   `fastlane/metadata/android/en-US/changelogs/`. F-Droid reads them from the
+   tagged commit, so they have to be in before the tag is created.
+3. Commit, create the tag and push it:
 
    ```sh
    git tag v0.1.0-beta
    git push origin v0.1.0-beta
    ```
 
-3. El workflow construye el APK y crea un **borrador** de Release con
-   `resonus-v0.1.0-beta.apk`. El mismo tag dispara
-   `.github/workflows/unsignedipa.yaml`, que adjunta `resonus-v0.1.0-beta.ipa`
-   a ese mismo borrador. Ábrelo en la pestaña Releases, revisa las notas y
-   pulsa **Publish**.
-4. Añade la versión a `Source.json` (ver abajo).
+4. The workflow builds the APK and creates a **draft** Release with
+   `resonus-v0.1.0-beta.apk`. The same tag triggers
+   `.github/workflows/unsignedipa.yaml`, which attaches `resonus-v0.1.0-beta.ipa`
+   to that same draft. Open it in the Releases tab, review the notes and
+   press **Publish**.
+5. Add the version to `Source.json` (see below).
 
-## `Source.json`: la fuente de iOS
+## `Source.json`: the iOS source
 
-`Source.json`, en la raíz del repo, es la fuente de AltStore/SideStore desde la
-que se instala la versión de iOS. Dos cosas:
+`Source.json`, at the repo root, is the AltStore/SideStore source the iOS
+version is installed from. Two things:
 
-- **No lo muevas de sitio ni lo renombres.** Su URL está guardada dentro del
-  AltStore de cada persona suscrita a la fuente, así que cambiarla se las rompe
-  a todas a la vez y no hay manera de avisarlas. Por lo mismo, el enlace que se
-  reparte tiene que ser el de `raw.githubusercontent.com`: la URL de `blob`
-  devuelve la página HTML de GitHub y AltStore espera JSON.
-- **Añade una entrada por release**, y ponla **la primera del array
-  `versions`**: AltStore toma la primera como la última versión, así que una
-  añadida al final deja el fichero válido y a nadie actualizado.
+- **Do not move or rename it.** Its URL is saved inside the AltStore of everyone
+  subscribed to the source, so changing it breaks it for all of them at once and
+  there is no way to tell them. For the same reason, the link handed out has to
+  be the `raw.githubusercontent.com` one: the `blob` URL returns GitHub's HTML
+  page and AltStore expects JSON.
+- **Add one entry per release**, and make it **the first in the `versions`
+  array**: AltStore takes the first one as the latest version, so one added at
+  the end leaves the file valid and nobody updated.
 
-Cada entrada lleva `version`, `date` en ISO 8601, `size` en bytes, el
-`downloadURL` del `.ipa` de la Release y `localizedDescription` con el changelog
-de esa versión en texto plano. El tamaño exacto se saca sin descargar nada:
+Each entry has `version`, `date` in ISO 8601, `size` in bytes, the
+`downloadURL` of the Release's `.ipa` and `localizedDescription` with that
+version's changelog in plain text. The exact size can be read without
+downloading anything:
 
 ```sh
 gh release view v0.1.0-beta --json assets --jq '.assets[] | "\(.name) \(.size)"'
 ```
 
-## Notas
+## Notes
 
-- La firma se inyecta con el config plugin `plugins/withReleaseSigning.js` durante
-  el prebuild (la carpeta `android/` está en `.gitignore` y se regenera). En builds
-  locales sin esas variables de entorno, el release sigue firmándose con la clave de
-  debug, así que no afecta al desarrollo.
-- El APK es universal pero solo con arquitecturas de dispositivos reales
-  (`armeabi-v7a` + `arm64-v8a`); x86/x86_64 (emuladores) se excluyen para
-  reducir tamaño. El release además va minificado con R8 (`enableProguardInReleaseBuilds`
-  y `enableShrinkResourcesInReleaseBuilds` en `app.json`).
+- Signing is injected by the `plugins/withReleaseSigning.js` config plugin during
+  prebuild (the `android/` folder is in `.gitignore` and is regenerated). In local
+  builds without those environment variables, the release is still signed with the
+  debug key, so development is not affected.
+- The APK is universal but only with real device architectures
+  (`armeabi-v7a` + `arm64-v8a`); x86/x86_64 (emulators) are left out to keep it
+  smaller. The release is also minified with R8 (`enableProguardInReleaseBuilds`
+  and `enableShrinkResourcesInReleaseBuilds` in `app.json`).

@@ -34,12 +34,13 @@ import { EmptyState } from '@/components/EmptyState';
 import { Message } from '@/components/Message';
 import { RadioEditSheet, type RadioEdit } from '@/components/RadioEditSheet';
 import { useT } from '@/i18n';
+import { playRadio } from '@/lib/playRadio';
 import { queryClient } from '@/lib/query';
 import { useAuthStore } from '@/store/auth';
 import { MAX_PINS, usePins } from '@/store/pins';
 import { currentSong, usePlayerStore } from '@/store/player';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, radius, SCREEN_BOTTOM_PADDING, SHEET_MAX_WIDTH, spacing, themed, useTheme, tracking } from '@/theme';
+import { colors, fontSize, radius, restyled, SCREEN_BOTTOM_PADDING, SHEET_MAX_WIDTH, spacing, themed, useTheme, tracking } from '@/theme';
 import { BackChevron } from '@/components/BackChevron';
 import { BrowseFrame, useSearchBox, type BrowserProps } from '@/components/BrowseFrame';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
@@ -66,7 +67,6 @@ export function RadioBrowser({ embedded, actionRef, searchOpen }: BrowserProps) 
   const insets = useSafeAreaInsets();
   const auth = useAuthStore((s) => s.auth);
   const offline = useAuthStore((s) => s.offline);
-  const playQueue = usePlayerStore((s) => s.playQueue);
   const playingId = usePlayerStore((s) => currentSong(s)?.id);
   const toast = useToast((s) => s.show);
 
@@ -234,22 +234,7 @@ export function RadioBrowser({ embedded, actionRef, searchOpen }: BrowserProps) 
             return (
               <Pressable
                 style={styles.row}
-                onPress={() =>
-                  playQueue(
-                    [
-                      {
-                        id: item.id,
-                        title: item.name,
-                        url: item.streamUrl,
-                        artist: t('Radio'),
-                        coverArt: item.coverArt,
-                      },
-                    ],
-                    0,
-                    item.name,
-                    '/radio',
-                  )
-                }
+                onPress={() => void playRadio(item)}
                 onLongPress={() => setMenu(item)}
               >
                 <Cover
@@ -293,7 +278,11 @@ export function RadioBrowser({ embedded, actionRef, searchOpen }: BrowserProps) 
               subtitle={
                 canManage
                   ? t('Tap + to add an internet radio station.')
-                  : t("Add internet radio stations on your server and they'll show up here.")
+                  : auth?.serverType === 'jellyfin'
+                    ? // Jellyfin keeps its stations as Live TV channels (see
+                      // `getRadioStations` there): where to add them is not obvious.
+                      t('In Jellyfin, add your stations as an M3U tuner under Live TV and they will show up here.')
+                    : t("Add internet radio stations on your server and they'll show up here.")
               }
             />
           }
@@ -418,7 +407,8 @@ const styles = themed((colors) => ({
     marginHorizontal: spacing.lg,
     marginBottom: spacing.md,
     paddingHorizontal: spacing.lg,
-    borderRadius: radius.pill,
+    // A capsule with Round, a rounded rectangle with Pointier.
+    borderRadius: restyled(radius.pill, radius.md),
     backgroundColor: colors.surfaceHighlight,
   },
   searchInput: { flex: 1, color: colors.text, fontSize: fontSize.md, padding: 0 },

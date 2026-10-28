@@ -10,6 +10,7 @@
 import { File, UploadType, type UploadResult } from 'expo-file-system';
 import { fetch } from 'expo/fetch';
 import { type Album, type Song, type SortDirection, type SubsonicAuth } from './subsonic';
+import { DeadlineError, withDeadline } from './deadline';
 import { assertCanRequest } from './netGate';
 import { netTally } from '@/lib/perfLog';
 
@@ -40,6 +41,19 @@ export class NavidromeError extends Error {
 let cached: { key: string; token: string; at: number } | null = null;
 const TOKEN_TTL = 30 * 60 * 1000;
 
+/** Each request, its answer read included (see `withDeadline`). */
+const ND_TIMEOUT_MS = 15000;
+
+/** `withDeadline`, with running out said the way the rest of this file says things. */
+async function ndWithin<T>(work: (signal: AbortSignal) => Promise<T>): Promise<T> {
+  try {
+    return await withDeadline(ND_TIMEOUT_MS, work);
+  } catch (e) {
+    if (e instanceof DeadlineError) throw new NavidromeError('Server took too long to respond', 'other');
+    throw e;
+  }
+}
+
 function tokenKey(auth: SubsonicAuth): string {
   return `${auth.serverUrl}|${auth.username}`;
 }
@@ -49,54 +63,64 @@ async function ndLogin(auth: SubsonicAuth, fresh = false): Promise<string> {
   // `password` is there when the profile authenticates in cleartext, and it is
   // the same password: no reason to ask for it twice.
   const password = auth.ndPassword ?? auth.password;
-  if (!password) throw new NavidromeError('Sin contraseña guardada', 'auth');
+  if (!password) throw new NavidromeError('No saved password', 'auth');
+  // Offline mode stops here, before the socket (see netGate) — and it has to
+  // stop above the cached token, not below it. A token is not an answer, it is
+  // the key the caller goes to fetch with (see `ndJson`), so handing a warm one
+  // back while the mode is on lets that request out anyway: packets leaving a
+  // phone whose owner said not to ask for any, which is what the gate exists
+  // to rule out.
+  assertCanRequest();
   const key = tokenKey(auth);
   if (!fresh && cached?.key === key && Date.now() - cached.at < TOKEN_TTL) return cached.token;
-  // Offline mode stops here, before the socket (see netGate).
-  assertCanRequest();
-  let res: Response;
-  try {
-    res = await fetch(`${auth.serverUrl}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: auth.username, password }),
-    });
-  } catch {
-    throw new NavidromeError('No se pudo conectar con el servidor', 'other');
-  }
-  if (res.status === 401) throw new NavidromeError('Credenciales incorrectas', 'auth');
-  if (!res.ok) throw new NavidromeError(`Error de red (${res.status})`, 'other');
-  const json = (await res.json()) as { token?: string };
-  if (!json.token) throw new NavidromeError('Respuesta inesperada del servidor', 'other');
+  const json = await ndWithin(async (signal) => {
+    let res: Response;
+    try {
+      res = await fetch(`${auth.serverUrl}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: auth.username, password }),
+        signal,
+      });
+    } catch {
+      throw new NavidromeError('Could not reach the server', 'other');
+    }
+    if (res.status === 401) throw new NavidromeError('Wrong credentials', 'auth');
+    if (!res.ok) throw new NavidromeError(`Network error (${res.status})`, 'other');
+    return (await res.json()) as { token?: string };
+  });
+  if (!json.token) throw new NavidromeError('Unexpected response from the server', 'other');
   cached = { key, token: json.token, at: Date.now() };
   return json.token;
 }
 
 /** What an answer from the native API means, for the paths that write. */
 function ndStatusError(status: number): NavidromeError {
-  if (status === 401) return new NavidromeError('Credenciales incorrectas', 'auth');
-  if (status === 403) return new NavidromeError('Subida de carátulas deshabilitada', 'forbidden');
+  if (status === 401) return new NavidromeError('Wrong credentials', 'auth');
+  if (status === 403) return new NavidromeError('Cover upload is disabled', 'forbidden');
   if (status === 404 || status === 405) {
-    return new NavidromeError('El servidor no soporta carátulas', 'unsupported');
+    return new NavidromeError('The server does not support covers', 'unsupported');
   }
-  return new NavidromeError(`Error del servidor (${status})`, 'other', status);
+  return new NavidromeError(`Server error (${status})`, 'other', status);
 }
 
 /** Authenticated request to the native API, with errors mapped to NavidromeError. */
 async function ndFetch(auth: SubsonicAuth, path: string, init: RequestInit): Promise<void> {
   const token = await ndLogin(auth, true);
-  let res: Response;
   netTally(`nd ${path.split('?')[0]}`);
-  try {
-    res = await fetch(`${auth.serverUrl}${path}`, {
-      ...init,
-      headers: { ...init.headers, 'x-nd-authorization': `Bearer ${token}` },
-    });
-  } catch {
-    throw new NavidromeError('No se pudo conectar con el servidor', 'other');
-  }
-  if (res.ok) return;
-  throw ndStatusError(res.status);
+  const status = await ndWithin(async (signal) => {
+    try {
+      const res = await fetch(`${auth.serverUrl}${path}`, {
+        ...init,
+        headers: { ...init.headers, 'x-nd-authorization': `Bearer ${token}` },
+        signal,
+      });
+      return res.ok ? 0 : res.status;
+    } catch {
+      throw new NavidromeError('Could not reach the server', 'other');
+    }
+  });
+  if (status) throw ndStatusError(status);
 }
 
 /**
@@ -172,7 +196,7 @@ export async function uploadCoverImage(
       },
     );
   } catch {
-    throw new NavidromeError('No se pudo conectar con el servidor', 'other');
+    throw new NavidromeError('Could not reach the server', 'other');
   }
   if (result.status < 200 || result.status >= 300) throw ndStatusError(result.status);
 }
@@ -261,6 +285,8 @@ interface NdSong {
   rgTrackPeak?: number;
   rgAlbumGain?: number;
   rgAlbumPeak?: number;
+  /** Every tag the file has, by lower-case name; `isrc` is the one read. */
+  tags?: Record<string, string[] | undefined>;
 }
 
 /**
@@ -298,6 +324,9 @@ function toSong(m: NdSong): Song {
     genre: m.genre,
     comment: m.comment,
     explicitStatus: spellExplicit(m.explicitStatus),
+    // What Subsonic sends as `isrc`, here among the tags. lrc.red finds a
+    // song's lyrics by it.
+    isrc: m.tags?.isrc?.length ? m.tags.isrc : undefined,
     playCount: m.playCount,
     starred: m.starred ? (m.starredAt ?? new Date().toISOString()) : undefined,
     userRating: m.rating || undefined,
@@ -318,28 +347,33 @@ function toSong(m: NdSong): Song {
 async function ndJson<T>(auth: SubsonicAuth, path: string): Promise<T> {
   for (const fresh of [false, true]) {
     const token = await ndLogin(auth, fresh);
-    let res: Response;
     // By the endpoint and not by the whole path: the sort and the window are
     // in the query string, and a table keyed by those would have one row per
     // call and say nothing.
     netTally(`nd ${path.split('?')[0]}`);
-    try {
-      res = await fetch(`${auth.serverUrl}${path}`, {
-        headers: { 'x-nd-authorization': `Bearer ${token}` },
-      });
-    } catch {
-      throw new NavidromeError('No se pudo conectar con el servidor', 'other');
-    }
-    // A token this old server no longer accepts: drop it and ask for another,
-    // once. Anything else is an answer, good or bad.
-    if (res.status === 401 && !fresh) continue;
-    if (res.status === 401) throw new NavidromeError('Credenciales incorrectas', 'auth');
-    if (res.status === 403) throw new NavidromeError('Sin permiso', 'forbidden');
-    if (res.status === 404) throw new NavidromeError('El servidor no lo soporta', 'unsupported');
-    if (!res.ok) throw new NavidromeError(`Error del servidor (${res.status})`, 'other');
-    return (await res.json()) as T;
+    const answer = await ndWithin(async (signal) => {
+      let res: Response;
+      try {
+        res = await fetch(`${auth.serverUrl}${path}`, {
+          headers: { 'x-nd-authorization': `Bearer ${token}` },
+          signal,
+        });
+      } catch {
+        throw new NavidromeError('Could not reach the server', 'other');
+      }
+      // A token this old server no longer accepts: drop it and ask for another,
+      // once. Anything else is an answer, good or bad.
+      if (res.status === 401 && !fresh) return { retry: true as const };
+      if (res.status === 401) throw new NavidromeError('Wrong credentials', 'auth');
+      if (res.status === 403) throw new NavidromeError('Not allowed', 'forbidden');
+      if (res.status === 404) throw new NavidromeError('The server does not support it', 'unsupported');
+      if (!res.ok) throw new NavidromeError(`Server error (${res.status})`, 'other');
+      return { retry: false as const, value: (await res.json()) as T };
+    });
+    if (answer.retry) continue;
+    return answer.value;
   }
-  throw new NavidromeError('Credenciales incorrectas', 'auth');
+  throw new NavidromeError('Wrong credentials', 'auth');
 }
 
 /**
@@ -418,6 +452,8 @@ interface NdAlbum {
   explicitStatus?: string;
   /** Navidrome 0.64: the album has no artwork. */
   imageAbsent?: boolean;
+  /** This user's rating, 0 when none. */
+  rating?: number;
 }
 
 function toAlbum(a: NdAlbum): Album {
@@ -440,6 +476,7 @@ function toAlbum(a: NdAlbum): Album {
     playCount: a.playCount,
     genre: a.genre,
     explicitStatus: spellExplicit(a.explicitStatus),
+    userRating: a.rating || undefined,
   };
 }
 
@@ -529,4 +566,26 @@ export async function listStarredPlaylistIds(auth: SubsonicAuth): Promise<string
   // `starred` is checked as well as filtered on, so a server that ignored the
   // filter hands back nothing rather than everything.
   return rows.filter((p) => p?.id && p.starred).map((p) => p.id as string);
+}
+
+/**
+ * The library each track of a playlist lives in, by song id. The Subsonic
+ * playlist says nothing about libraries, so with only some of them turned on
+ * in the app it listed songs from all of them (#275); the native listing of
+ * the same tracks carries `libraryId`, which is the Subsonic music folder id.
+ */
+export async function playlistTrackLibraries(
+  auth: SubsonicAuth,
+  playlistId: string,
+): Promise<Map<string, string>> {
+  const rows = await ndJson<{ mediaFileId?: string; libraryId?: number | string }[]>(
+    auth,
+    `/api/playlist/${encodeURIComponent(playlistId)}/tracks?_start=0&_end=100000`,
+  );
+  const out = new Map<string, string>();
+  if (!Array.isArray(rows)) return out;
+  for (const r of rows) {
+    if (r?.mediaFileId && r.libraryId != null) out.set(r.mediaFileId, String(r.libraryId));
+  }
+  return out;
 }

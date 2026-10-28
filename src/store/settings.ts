@@ -9,10 +9,12 @@ import { hashKey } from '@/lib/localLibrary';
 import { setPerfEnabled } from '@/lib/perfLog';
 import { profileScopeGuard } from '@/lib/profileScope';
 import { queryClient } from '@/lib/query';
+import { getSystemAccent } from '@/lib/materialYou';
 import { getItem, setItem } from '@/lib/storage';
 import {
   applyAccents,
   applyBackgroundTint,
+  applyBorderStyle,
   applyPureBlack,
   BACKGROUND_TINTS,
   applyThemePreference,
@@ -20,6 +22,7 @@ import {
   DEFAULT_ACCENT,
   isThemePreference,
   type BackgroundTint,
+  type BorderStyle,
   type ThemeMode,
   type ThemePreference,
 } from '@/theme';
@@ -347,8 +350,14 @@ export type CoverDoubleTapAction = CoverTapAction;
  */
 export type LyricsSource = 'local' | 'online' | 'off';
 
-/** Type size on the full-screen lyrics. */
+/** Type size on every lyrics surface. */
 export type LyricsSize = 'small' | 'normal' | 'large';
+/** Each size in full-screen points; the compact surfaces scale from these. */
+export const LYRICS_SIZE_POINTS: Record<LyricsSize, number> = { small: 22, normal: 28, large: 34 };
+
+/** Font weights Android and iOS can both synthesize consistently. */
+export const LYRICS_WEIGHTS = ['300', '400', '500', '600', '700'] as const;
+export type LyricsWeight = (typeof LYRICS_WEIGHTS)[number];
 export type LyricsAlign = 'left' | 'center';
 /** What sits next to play on the mini player. */
 export type MiniPlayerButtons = 'favorite' | 'next' | 'previousNext' | 'none';
@@ -693,8 +702,55 @@ export const DEFAULT_PLAYER_BUTTONS: PlayerButton[] = [
   { key: 'queue', enabled: true },
 ];
 
-/** Grouped in the middle, or spread across the width with equal gaps. */
-export type PlayerButtonsLayout = 'centered' | 'spread';
+/** The online lyrics services, asked in this order, the ones turned on. */
+export type LyricsProviderKey = 'lrcRed' | 'lrclib';
+
+/** Their own names: brands, never translated. */
+export const LYRICS_PROVIDER_NAMES: Record<LyricsProviderKey, string> = {
+  lrcRed: 'lrc.red',
+  lrclib: 'LRCLIB',
+};
+
+export interface LyricsProvider {
+  key: LyricsProviderKey;
+  enabled: boolean;
+}
+
+/**
+ * LRCLIB on, as it always was. lrc.red off, a new service is not sent
+ * anything until somebody turns it on, but first in the list: it matches the
+ * exact recording by ISRC, so once on it is the better first question.
+ */
+export const DEFAULT_LYRICS_PROVIDERS: LyricsProvider[] = [
+  { key: 'lrcRed', enabled: false },
+  { key: 'lrclib', enabled: true },
+];
+
+/** Saved order kept, unknown keys dropped, new ones added at the end, off. */
+function normalizeLyricsProviders(raw: unknown): LyricsProvider[] {
+  if (!Array.isArray(raw)) return DEFAULT_LYRICS_PROVIDERS.map((p) => ({ ...p }));
+  const known = new Set(DEFAULT_LYRICS_PROVIDERS.map((p) => p.key));
+  const seen = new Set<LyricsProviderKey>();
+  const out: LyricsProvider[] = [];
+  for (const item of raw) {
+    const key = item?.key as LyricsProviderKey;
+    if (known.has(key) && !seen.has(key)) {
+      seen.add(key);
+      out.push({ key, enabled: item.enabled === true });
+    }
+  }
+  for (const def of DEFAULT_LYRICS_PROVIDERS) {
+    if (!seen.has(def.key)) out.push({ key: def.key, enabled: false });
+  }
+  return out;
+}
+
+/**
+ * Grouped in the middle, spread across the width with equal gaps, or split:
+ * devices (and the name of what it casts to) on the left, the rest together on
+ * the right (#259).
+ */
+export type PlayerButtonsLayout = 'centered' | 'spread' | 'split';
 
 /** Saved order kept, unknown keys dropped, new ones added at the end. */
 function normalizePlayerButtons(raw: unknown): PlayerButton[] {
@@ -802,12 +858,14 @@ type PersistedKey = keyof Persisted;
  *  anything and checks. */
 type Reshaped =
   | 'showAudioQuality'
+  | 'lyricsSize'
   | 'homeSections'
   | 'homeChips'
   | 'exploreSections'
   | 'bottomTabs'
   | 'homeButtons'
-  | 'playerButtons';
+  | 'playerButtons'
+  | 'lyricsProviders';
 
 /**
  * `setX(value)` for every saved setting: stores it and saves the profile.
@@ -826,11 +884,13 @@ type CustomSetter =
   | 'setCustomGreeting'
   | 'setGridColumns'
   | 'setAccentColor'
+  | 'setSystemAccent'
   | 'setThemeMode'
   | 'setThemeLightFrom'
   | 'setThemeDarkFrom'
   | 'setPureBlack'
   | 'setAnimatedArtworkFps'
+  | 'setAnimatedArtworkUrls'
   | 'setBackgroundTint';
 
 interface SettingsState extends Omit<AutoSetters, CustomSetter> {
@@ -999,8 +1059,18 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
    * disabled. Defaults to 'local' (local first, LRCLIB as fallback).
    */
   lyricsSource: LyricsSource;
+  /**
+   * The online lyrics services, in the order they are asked, each on or off:
+   * lrc.red (the song's ISRC, often timed word by word) and LRCLIB (artist
+   * and title).
+   */
+  lyricsProviders: LyricsProvider[];
   lyricsSize: LyricsSize;
+  /** Thickness of lyric glyphs, from light (300) to bold (700). */
+  lyricsWeight: LyricsWeight;
   lyricsAlign: LyricsAlign;
+  /** Progressively blur synchronized lyric rows away from the current line. */
+  blurInactiveLyrics: boolean;
   /** The names under the icons of the navigation bar. */
   showTabLabels: boolean;
   miniPlayerButtons: MiniPlayerButtons;
@@ -1008,6 +1078,8 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   /** The time right of the seek bar counts down what is left, not the length. */
   showRemainingTime: boolean;
   coverCorners: CoverCorners;
+  /** Which corner ladder the app draws: this one or the flatter one. */
+  borderStyle: BorderStyle;
   /** When a downloaded song plays from disk instead of being streamed. */
   preferDownloads: PreferDownloads;
   /** Circular artist photo next to the name on the album screen. */
@@ -1046,6 +1118,29 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
    */
   animatedArtworkFps: number;
   /**
+   * Animated-artwork server: base URL whose `/api/v1/artwork/search`
+   * answers the square and tall HLS covers for an artist and album. Empty
+   * means off: covers stay still images.
+   */
+  animatedArtworkEndpoint: string;
+  /**
+   * Covers that move at all: the endpoint's clips, in the app and on the lock
+   * screen, and GIF or WebP covers anywhere in the app. Off, every cover is
+   * its first frame, and the endpoint is kept but not asked.
+   */
+  animatedCovers: boolean;
+  /**
+   * Play endpoint clips as in-app video (cover square and background).
+   * Kills the video players without touching the lock-screen tall clips:
+   * the escape hatch if a cover ever misbehaves.
+   */
+  animatedCoverVideo: boolean;
+  /**
+   * Hand-picked artwork URLs per album (artist + album key), asked before
+   * the search and trusted as chosen. Album menus write these.
+   */
+  animatedArtworkUrls: Record<string, string>;
+  /**
    * Show non-square artwork whole in the player instead of cropping it to a
    * square. Off by default: cropping is what it has always done, and every
    * other place in the app (lists, cards, grids) keeps cropping regardless.
@@ -1067,6 +1162,11 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   /** The row under the player's controls: which buttons, in what order. */
   playerButtons: PlayerButton[];
   playerButtonsLayout: PlayerButtonsLayout;
+  /**
+   * The devices button names the phone's own output (headphones, a Bluetooth
+   * speaker, the car) the way it names a cast target (#274).
+   */
+  showLocalOutput: boolean;
   /** Seek ±N seconds buttons next to play (0 = hidden). Only 5/10/30: these are the numbered icons that exist in MaterialIcons. */
   seekButtonsSec: number;
   /** "Previous" button behavior (restart track or always go to previous). */
@@ -1096,6 +1196,8 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   quickGridAlbums: boolean;
   /** Include playlists in the quick grid. */
   quickGridPlaylists: boolean;
+  /** Include the shows you played in the quick grid. */
+  quickGridPodcasts: boolean;
   /** Total number of tiles in the quick grid (4, 6, or 8). */
   quickGridSize: number;
   /** Show the greeting ("Good morning"…) on Home. */
@@ -1170,6 +1272,12 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   /** The same under the light one, which is a separate choice: a colour picked
    *  for near-black is not always the one wanted on white. */
   accentColorLight: string;
+  /**
+   * Android 12+: the accent is the one the system takes from the wallpaper
+   * (Material You) instead of the two above, which stay as they were for when
+   * it goes back off (#259).
+   */
+  systemAccent: boolean;
   /** The user's own colour (hex), kept apart so picking one from the palette
    *  does not lose it; '' until one is made. */
   customAccentColor: string;
@@ -1203,13 +1311,21 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   setBottomTab: (key: TabSegment, value: boolean) => void;
   setHomeButton: (key: HomeButtonKey, value: boolean) => void;
   setPlayerButton: (key: PlayerButtonKey, value: boolean) => void;
+  setLyricsProvider: (key: LyricsProviderKey, value: boolean) => void;
+  /** A hand-picked artwork URL for one album key, or null to forget it. */
+  setAnimatedArtworkUrl: (key: string, url: string | null) => void;
   setGridColumns: (key: GridSizeKey, value: number) => void;
   setAccentColor: (value: string, appearance: ThemeMode) => void;
+  setSystemAccent: (value: boolean) => void;
+  /** Reads the wallpaper's accent again, if it is the one in use: a new
+   *  wallpaper brings a new one, and coming back to the app is when to look. */
+  refreshSystemAccent: () => void;
   setThemeMode: (value: ThemePreference) => void;
   setThemeLightFrom: (hour: number) => void;
   setThemeDarkFrom: (hour: number) => void;
   setPureBlack: (value: boolean) => void;
   setBackgroundTint: (value: BackgroundTint) => void;
+  setBorderStyle: (value: BorderStyle) => void;
   setCustomFont: (fontFamily: string | null, uri: string | null) => void;
   /** Resets to factory defaults (language is preserved). */
   resetToDefaults: () => void;
@@ -1301,13 +1417,18 @@ const DEFAULTS = {
   lyricsBackground: 'cover' as ScreenBackground,
   lyricsCardBackground: 'color' as CardBackground,
   lyricsSource: 'local' as LyricsSource,
+  lyricsProviders: DEFAULT_LYRICS_PROVIDERS.map((p) => ({ ...p })),
   lyricsSize: 'normal' as LyricsSize,
+  lyricsWeight: '500' as LyricsWeight,
   lyricsAlign: 'left' as LyricsAlign,
+  // Opt-in, matching Primuse: it changes the reading treatment substantially.
+  blurInactiveLyrics: false,
   showTabLabels: true,
   miniPlayerButtons: 'favorite' as MiniPlayerButtons,
   miniPlayerProgress: true,
   showRemainingTime: false,
   coverCorners: 'rounded' as CoverCorners,
+  borderStyle: 'round' as BorderStyle,
   preferDownloads: 'always' as PreferDownloads,
   showArtistPhoto: true,
   showDiscHeaders: true,
@@ -1318,6 +1439,14 @@ const DEFAULTS = {
   // 30: half the frames of 60 for a cover that reads the same; see
   // `ANIMATED_ARTWORK_FPS_OPTIONS`.
   animatedArtworkFps: 30,
+  // Empty: no server, still covers.
+  animatedArtworkEndpoint: '',
+  // On: endpoint clips play over the still covers.
+  animatedCoverVideo: true,
+  // On: what the app always did with an animated cover.
+  animatedCovers: true,
+  // Empty: search decides everything.
+  animatedArtworkUrls: {},
   fitCoverArt: false,
   miniPlayerColorBackground: true,
   // Off by default: the card pushes the controls up on shorter screens, and
@@ -1332,6 +1461,9 @@ const DEFAULTS = {
   marqueeTitles: true,
   playerButtons: DEFAULT_PLAYER_BUTTONS.map((b) => ({ ...b })),
   playerButtonsLayout: 'spread' as PlayerButtonsLayout,
+  // Off: a speaker the phone plays through is not a cast target, and its name
+  // took the room the rest of the row was spread across (#274).
+  showLocalOutput: false,
   seekButtonsSec: 0,
   previousButtonMode: 'restart' as PreviousButtonMode,
   keepPausedOnSkip: false,
@@ -1345,6 +1477,7 @@ const DEFAULTS = {
   quickGridFavorites: true,
   quickGridAlbums: true,
   quickGridPlaylists: true,
+  quickGridPodcasts: true,
   quickGridSize: 8,
   showGreeting: false,
   customGreeting: '',
@@ -1397,6 +1530,7 @@ const DEFAULTS = {
   syncQueueFromServer: true,
   accentColor: DEFAULT_ACCENT,
   accentColorLight: DEFAULT_ACCENT,
+  systemAccent: false,
   customAccentColor: '',
   // Dark: the appearance the app was designed in. Light is opt-in.
   themeMode: 'dark' as ThemePreference,
@@ -1427,6 +1561,22 @@ function autoSetters(
   return out as AutoSetters;
 }
 
+/**
+ * Paints the accent the settings ask for: the device's own pair while
+ * `systemAccent` is on and the device has one, the stored pair otherwise.
+ * Everything that applies a chosen accent goes through here, so no path puts
+ * the stored colours back over the system's.
+ */
+function applyChosenAccent(s: {
+  systemAccent: boolean;
+  accentColor: string;
+  accentColorLight: string;
+}): void {
+  const system = s.systemAccent ? getSystemAccent() : null;
+  if (system) applyAccents(system.dark, system.light);
+  else applyAccents(s.accentColor, s.accentColorLight);
+}
+
 /** The appearance side effects of the factory values: they live outside the
  *  store, so putting the store back does not put them back. */
 function applyFactoryLook() {
@@ -1435,6 +1585,7 @@ function applyFactoryLook() {
   applyThemePreference(DEFAULTS.themeMode);
   applyPureBlack(DEFAULTS.pureBlack);
   applyBackgroundTint(DEFAULTS.backgroundTint);
+  applyBorderStyle(DEFAULTS.borderStyle);
 }
 
 /**
@@ -1454,11 +1605,13 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
     bottomTabs?: unknown;
     homeButtons?: unknown;
     playerButtons?: unknown;
+    lyricsProviders?: unknown;
     showQueueButton?: boolean;
     showDevicesButton?: boolean;
     showSpeedButton?: boolean;
     lyricsColorBackground?: boolean;
     lyricsOnlineFallback?: boolean;
+    lyricsSize?: unknown;
     playerColorBackground?: boolean;
     swipeToQueue?: boolean;
     showExploreChips?: boolean;
@@ -1497,6 +1650,27 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
   }
   if ((ANIMATED_ARTWORK_FPS_OPTIONS as readonly number[]).includes(parsed.animatedArtworkFps as number)) {
     set({ animatedArtworkFps: parsed.animatedArtworkFps as number });
+  }
+  {
+    // Hand-picked artwork URLs: string keys to string URLs, anything else
+    // dropped, capped so a corrupt file cannot grow the profile forever.
+    const raw = (parsed as { animatedArtworkUrls?: unknown }).animatedArtworkUrls;
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+      const urls: Record<string, string> = {};
+      for (const [key, value] of Object.entries(raw)) {
+        if (typeof key === 'string' && typeof value === 'string' && key && value) {
+          urls[key] = value;
+          if (Object.keys(urls).length >= 500) break;
+        }
+      }
+      set({ animatedArtworkUrls: urls });
+    }
+    // An endpoint is a base URL or nothing: anything else never worked, so it
+    // hydrates as off rather than as a broken address.
+    if (typeof parsed.animatedArtworkEndpoint === 'string') {
+      const endpoint = parsed.animatedArtworkEndpoint.trim().replace(/\/+$/, '');
+      set({ animatedArtworkEndpoint: endpoint.startsWith('http') ? endpoint : '' });
+    }
   }
   if ((RADIO_COUNT_OPTIONS as readonly number[]).includes(parsed.radioCount as number)) {
     set({ radioCount: parsed.radioCount as number });
@@ -1581,6 +1755,13 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
     all.includes(v as T);
   if (oneOf(parsed.lyricsSize, ['small', 'normal', 'large'] as const)) {
     set({ lyricsSize: parsed.lyricsSize });
+  } else if (typeof parsed.lyricsSize === 'number') {
+    // A build briefly stored it as points: the nearest of the three.
+    const pts = parsed.lyricsSize;
+    set({ lyricsSize: pts < 25 ? 'small' : pts < 31 ? 'normal' : 'large' });
+  }
+  if (oneOf(parsed.lyricsWeight, LYRICS_WEIGHTS)) {
+    set({ lyricsWeight: parsed.lyricsWeight });
   }
   if (oneOf(parsed.lyricsAlign, ['left', 'center'] as const)) {
     set({ lyricsAlign: parsed.lyricsAlign });
@@ -1590,6 +1771,10 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
   }
   if (oneOf(parsed.coverCorners, ['square', 'rounded', 'round'] as const)) {
     set({ coverCorners: parsed.coverCorners });
+  }
+  if (oneOf(parsed.borderStyle, ['round', 'pointier'] as const)) {
+    set({ borderStyle: parsed.borderStyle });
+    applyBorderStyle(parsed.borderStyle);
   }
   if (
     parsed.preferDownloads === 'always' ||
@@ -1692,8 +1877,15 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
       ),
     });
   }
-  if (parsed.playerButtonsLayout === 'centered' || parsed.playerButtonsLayout === 'spread') {
+  if (
+    parsed.playerButtonsLayout === 'centered' ||
+    parsed.playerButtonsLayout === 'spread' ||
+    parsed.playerButtonsLayout === 'split'
+  ) {
     set({ playerButtonsLayout: parsed.playerButtonsLayout });
+  }
+  if (Array.isArray(parsed.lyricsProviders)) {
+    set({ lyricsProviders: normalizeLyricsProviders(parsed.lyricsProviders) });
   }
   if (Array.isArray(parsed.playerButtons)) {
     set({ playerButtons: normalizePlayerButtons(parsed.playerButtons) });
@@ -1775,6 +1967,19 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
     set({ accentColor: dark, accentColorLight: light });
     applyAccents(dark, light);
   }
+  if (typeof parsed.systemAccent === 'boolean') set({ systemAccent: parsed.systemAccent });
+  // After both: whichever of the two pairs is chosen, painted once.
+  if (parsed.systemAccent === true) {
+    applyChosenAccent({
+      systemAccent: true,
+      accentColor: isHexColor(parsed.accentColor) ? parsed.accentColor : DEFAULT_ACCENT,
+      accentColorLight: isHexColor(parsed.accentColorLight)
+        ? parsed.accentColorLight
+        : isHexColor(parsed.accentColor)
+          ? parsed.accentColor
+          : DEFAULT_ACCENT,
+    });
+  }
   if (isHexColor(parsed.customAccentColor)) {
     set({ customAccentColor: parsed.customAccentColor });
   }
@@ -1830,6 +2035,14 @@ export const useSettings = create<SettingsState>((set, get) => ({
     // The encoder reads this the next time a clip is built; one already on
     // disk keeps the rate it was written at, which is the rate it holds.
     pushArtworkEncodeFps(animatedArtworkFps);
+  },
+
+  setAnimatedArtworkUrl: (key, url) => {
+    const next = { ...get().animatedArtworkUrls };
+    if (url) next[key] = url;
+    else delete next[key];
+    set({ animatedArtworkUrls: next });
+    persist(snapshot(get));
   },
 
   // Both at once, and one write: put back separately, the first of the two
@@ -1909,6 +2122,13 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setLyricsProvider: (key, value) => {
+    set((s) => ({
+      lyricsProviders: s.lyricsProviders.map((x) => (x.key === key ? { ...x, enabled: value } : x)),
+    }));
+    persist(snapshot(get));
+  },
+
   setGridColumns: (key, value) => {
     set({ gridColumns: { ...get().gridColumns, [key]: value } });
     persist(snapshot(get));
@@ -1916,8 +2136,18 @@ export const useSettings = create<SettingsState>((set, get) => ({
 
   setAccentColor: (value, appearance) => {
     set(appearance === 'light' ? { accentColorLight: value } : { accentColor: value });
-    applyAccents(get().accentColor, get().accentColorLight);
+    applyChosenAccent(get());
     persist(snapshot(get));
+  },
+
+  setSystemAccent: (systemAccent) => {
+    set({ systemAccent });
+    applyChosenAccent(get());
+    persist(snapshot(get));
+  },
+
+  refreshSystemAccent: () => {
+    if (get().systemAccent) applyChosenAccent(get());
   },
 
   setThemeMode: (themeMode) => {
@@ -1947,6 +2177,12 @@ export const useSettings = create<SettingsState>((set, get) => ({
   setBackgroundTint: (backgroundTint) => {
     applyBackgroundTint(backgroundTint);
     set({ backgroundTint });
+    persist(snapshot(get));
+  },
+
+  setBorderStyle: (borderStyle) => {
+    applyBorderStyle(borderStyle);
+    set({ borderStyle });
     persist(snapshot(get));
   },
 
@@ -2066,4 +2302,9 @@ export function exportedSettings(): Record<string, unknown> {
   delete out.customFontFamily;
   delete out.customFontUri;
   return out;
+}
+
+/** The animated-artwork server in force: none while animated covers are off. */
+export function activeArtworkEndpoint(s: { animatedCovers: boolean; animatedArtworkEndpoint: string }): string {
+  return s.animatedCovers ? s.animatedArtworkEndpoint : '';
 }

@@ -7,13 +7,22 @@
  */
 import Icon from '@/components/Icon';
 import { LinearGradient } from 'expo-linear-gradient';
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, Pressable, ScrollView, Text, View } from 'react-native';
+import * as Font from 'expo-font';
+import { Fragment, memo, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  type TextStyle,
+} from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   cancelAnimation,
   Easing,
-  interpolateColor,
   ReduceMotion,
   scrollTo,
   useAnimatedReaction,
@@ -22,21 +31,28 @@ import Animated, {
   useScrollViewOffset,
   useSharedValue,
   type SharedValue,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { COVER, songCoverUrl } from '@/api/data';
 import { useCoverRadius } from '@/components/Cover';
+import { KaraokeWords } from '@/components/KaraokeWords';
 import { type LyricLine, type LyricWord } from '@/api/subsonic';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useLyrics } from '@/hooks/useLyrics';
 import { useT } from '@/i18n';
-import { wordEnds } from '@/lib/lyricWords';
+import { lyricBlurRadius, WORD_SWEEP_LEAD_MS } from '@/lib/lyricMotion';
+import { clamp01, hasGapAfter, hasIntroGap, lineEndMs } from '@/lib/lyricSweep';
 import { pushOnce } from '@/lib/pushOnce';
 import { currentSong, usePlayerStore } from '@/store/player';
-import { type LyricsSize, useSettings } from '@/store/settings';
+import {
+  LYRICS_SIZE_POINTS,
+  APP_FONT_FAMILY,
+  type LyricsSize,
+  type LyricsWeight,
+  useSettings,
+} from '@/store/settings';
 import { colors, fontSize, radius, spacing, themed, useTheme } from '@/theme';
 import { motion } from '@/theme/motion';
 
@@ -91,27 +107,29 @@ export function LyricsCard() {
 /**
  * Lyrics in place of the cover art ("Lyrics on the cover" setting): occupies
  * the same box as the player cover. Same karaoke as the card, with a button
- * in the corner to go back to the cover. If there are no lyrics, nothing is
- * rendered (the caller only mounts it when lyrics exist).
+ * in the corner to go back to the cover. Shows a spinner while fetching and
+ * an empty message if no lyrics are available.
  */
 export function CoverLyrics({ size, onClose }: { size: number; onClose: () => void }) {
   const t = useT();
   const corner = useCoverRadius(size);
   const song = usePlayerStore(currentSong);
-  const { data } = useLyrics(song ?? undefined);
+  const { data, isLoading } = useLyrics(song ?? undefined);
   const lineStyle = useLyricsLineStyle();
   const centered = useSettings((s) => s.lyricsAlign) === 'center';
-
-  if (!data) return null;
 
   return (
     // Transparent background: the lyrics go directly over the player background
     // (the cover is hidden while showing).
     <View style={[styles.coverBox, { width: size, height: size, borderRadius: corner }]}>
       <View style={styles.coverBody}>
-        {data.synced ? (
+        {isLoading ? (
+          <View style={styles.coverStatus}>
+            <ActivityIndicator color={colors.text} />
+          </View>
+        ) : data?.synced ? (
           <SyncedLyricsView lines={data.lines} nested />
-        ) : (
+        ) : data ? (
           <ScrollView
             nestedScrollEnabled
             showsVerticalScrollIndicator={false}
@@ -119,6 +137,10 @@ export function CoverLyrics({ size, onClose }: { size: number; onClose: () => vo
           >
             <Text style={lineStyle}>{data.lines.map((l) => l.value).join('\n')}</Text>
           </ScrollView>
+        ) : (
+          <View style={styles.coverStatus}>
+            <Text style={styles.coverEmpty}>{t('No lyrics available for this song.')}</Text>
+          </View>
         )}
       </View>
       <Pressable
@@ -136,7 +158,7 @@ export function CoverLyrics({ size, onClose }: { size: number; onClose: () => vo
 
 /**
  * Reusable karaoke list (card and full screen): the current line lights up
- * and grows a little (spring), the rest are dimmed. Auto-scroll keeps the
+ * and grows a little, the rest are dimmed. Auto-scroll keeps the
  * focus above; manual scroll pauses it for a few seconds. Tapping a line
  * seeks to that point in the song.
  */
@@ -156,14 +178,45 @@ export function SyncedLyricsView({
 }) {
   // The line, not the position: the position moves twice a second and the
   // line every few, and only a new line has anything to redraw.
-  const current = usePlayerStore((s) => {
-    // Small advance so the highlight doesn't lag behind the ear.
-    const posMs = s.positionSec * 1000 + LINE_LEAD_MS;
+  // Word timing is already precise, so it only gets a small pre-roll.
+  // Hand-tapped line LRC keeps a little more compensation for human reaction.
+  const wordTimed = lines.some((line) => line.words && line.words.length > 0);
+  const lead = wordTimed ? WORD_SWEEP_LEAD_MS : 250;
+  const tickCurrent = usePlayerStore((s) => {
+    const posMs = s.positionSec * 1000 + lead;
     let at = -1;
     for (let i = 0; i < lines.length && (lines[i].start ?? 0) <= posMs; i++) at = i;
     return at;
   });
   const seekTo = usePlayerStore((s) => s.seekTo);
+  // Millisecond clock shared by the gap leaders: same runway pattern as the
+  // karaoke words (re-anchored on every store beat, gliding between them),
+  // one per list instead of one per row.
+  const gapClock = useGapClock();
+  // The store beats twice a second: a line whose first word is shorter than
+  // the wait mounts already sung, and the sweep jumps straight past it. The
+  // list clock glides on the UI thread instead, so the flip is derived from
+  // it exactly at the boundary (same rule as the store pass, same lead). It
+  // fires once per line, like before - only on time.
+  const [liveCurrent, setLiveCurrent] = useState(-1);
+  const startsRef = useSharedValue<number[]>([]);
+  useEffect(() => {
+    startsRef.value = lines.map((line) => line.start ?? 0);
+    setLiveCurrent(-1);
+  }, [lines, startsRef]);
+  useAnimatedReaction(
+    () => {
+      const posMs = gapClock.value + lead;
+      const starts = startsRef.value;
+      let at = -1;
+      for (let i = 0; i < starts.length && starts[i] <= posMs; i++) at = i;
+      return at;
+    },
+    (at, prev) => {
+      if (at !== prev) scheduleOnRN(setLiveCurrent, at);
+    },
+  );
+  const current = liveCurrent >= 0 ? liveCurrent : tickCurrent;
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   // Real scroll position (regardless of who moved it: user or auto-scroll).
   const liveY = useScrollViewOffset(scrollRef);
@@ -176,6 +229,7 @@ export function SyncedLyricsView({
   const userScroll = useRef(false);
   const resumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [viewH, setViewH] = useState(0);
+  const [browsing, setBrowsing] = useState(false);
   /**
    * Bumped when the line being aimed at finally reports where it is.
    *
@@ -199,13 +253,22 @@ export function SyncedLyricsView({
   // readable, not stuck to the top edge. On the small card, higher up.
   const anchor = large ? 0.42 : 0.3;
   const size = useSettings((s) => s.lyricsSize);
+  const weight = useSettings((s) => s.lyricsWeight);
   const centered = useSettings((s) => s.lyricsAlign) === 'center';
+  const blurInactiveLyrics = useSettings((s) => s.blurInactiveLyrics);
+  const blurEnabled = blurInactiveLyrics && !browsing;
 
   const onMeasure = useCallback((index: number, y: number, h: number) => {
+    const previous = offsets.current[index];
     offsets.current[index] = { y, h };
-    // Only the line being waited for, and only until it has been reached: one
-    // render, not one per line.
-    if (index === currentRef.current && placedFor.current !== index) setPlaced((n) => n + 1);
+    // The active row speaks once when it first appears, then again only if a
+    // typography change actually moved or resized it. That recentres a line
+    // immediately after the listener changes the font size without turning
+    // every ordinary layout pass into another render.
+    const changed = previous === undefined || previous.y !== y || previous.h !== h;
+    if (index === currentRef.current && (placedFor.current !== index || changed)) {
+      setPlaced((n) => n + 1);
+    }
   }, []);
 
   // Each targetY change pushes the scroll from the UI thread.
@@ -223,6 +286,7 @@ export function SyncedLyricsView({
     (sec: number) => {
       if (resumeTimer.current) clearTimeout(resumeTimer.current);
       userScroll.current = false;
+      setBrowsing(false);
       seekTo(sec);
     },
     [seekTo],
@@ -289,12 +353,14 @@ export function SyncedLyricsView({
         onLayout={(e) => setViewH(e.nativeEvent.layout.height)}
         onScrollBeginDrag={() => {
           userScroll.current = true;
+          setBrowsing(true);
           cancelAnimation(targetY);
           if (resumeTimer.current) clearTimeout(resumeTimer.current);
         }}
         onScrollEndDrag={() => {
           resumeTimer.current = setTimeout(() => {
             userScroll.current = false;
+            setBrowsing(false);
           }, 3000);
         }}
         contentContainerStyle={[
@@ -306,7 +372,18 @@ export function SyncedLyricsView({
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {lines.map((line, i) => (
+        {hasIntroGap(lines) && (lines[0].start ?? 0) > 0 ? (
+          <GapDots start={0} end={lines[0].start ?? 0} pos={gapClock} large={large} />
+        ) : null}
+        {lines.map((line, i) => {
+          // Computed here so the leader below reads the same silence the
+          // scroll lead was derived from.
+          const gap = hasGapAfter(lines, i) ? gapBounds(lines, i) : null;
+          return (
+          // Fragment, not a View: LyricRow's own onLayout must report `y`
+          // relative to the scroll content. A wrapper would reset every row
+          // to y≈0 and both auto-scroll and tap-to-seek would aim at the top.
+          <Fragment key={i}>
           <LyricRow
             key={i}
             index={i}
@@ -314,14 +391,17 @@ export function SyncedLyricsView({
             words={line.words}
             active={i === current}
             past={current >= 0 && i < current}
-            next={i === current + 1}
-            handover={handoverOf(lines, i)}
+            blurRadius={lyricBlurRadius(i, current, blurEnabled)}
             large={large}
             size={size}
+            weight={weight}
             centered={centered}
             onMeasure={onMeasure}
           />
-        ))}
+            {gap ? <GapDots start={gap.start} end={gap.end} pos={gapClock} large={large} /> : null}
+          </Fragment>
+          );
+        })}
       </Animated.ScrollView>
       </GestureDetector>
       {fadeColor ? (
@@ -342,17 +422,17 @@ export function SyncedLyricsView({
   );
 }
 
-/** A lyric line with animated focus (spring on activation). */
+/** A lyric line with animated focus. */
 const LyricRow = memo(({
   index,
   text,
   words,
   active,
   past,
-  next,
-  handover,
+  blurRadius,
   large,
   size,
+  weight,
   centered,
   onMeasure,
 }: {
@@ -362,308 +442,272 @@ const LyricRow = memo(({
   active: boolean;
   /** Lines before the current one: same colour as active, slightly dimmer. */
   past: boolean;
-  next: boolean;
-  /** When the row stops being the active one, in the clock the words fill at. */
-  handover?: number;
+  /** Primuse-style depth blur; zero keeps the row's filter layer disabled. */
+  blurRadius: number;
   large?: boolean;
   size: LyricsSize;
+  weight: LyricsWeight;
   centered: boolean;
   onMeasure: (index: number, y: number, h: number) => void;
 }) => {
   // Memoized, so the screen repainting is not enough to bring this one along.
   useTheme();
-  // Only the active line grows (spring) and is visible at 100%. Past lines are
-  // nearly as bright; the next one is semi-dimmed; everything else is faint.
+  // Same custom-font rule as the style hook below: with a user font file the
+  // weight is dropped or iOS falls back to the system font.
+  const appFont = useSettings((s) => s.appFont);
+  const customFontFamily = useSettings((s) => s.customFontFamily);
+  const customFont = appFont === 'custom' && !!customFontFamily;
+  // Animated texts skip the global family injection (it only patches `Text`),
+  // so the karaoke words carry the resolved family explicitly. Unloaded custom
+  // files resolve to nothing and the system font stands in until they load.
+  const fontFamily =
+    appFont === 'custom'
+      ? (customFontFamily && Font.isLoaded(customFontFamily) ? customFontFamily : undefined)
+      : APP_FONT_FAMILY[appFont];
+  // The line takeover coordinates scale and opacity with auto-scroll.
+  // Blur takes a gentler path because a fast change reads as the completed
+  // line suddenly losing focus.
   const focus = useSharedValue(active ? 1 : 0);
-  const dim = useSharedValue(past ? 0.85 : active ? 1 : next ? 0.55 : 0.3);
-  // reduceMotion Never: the transition between lines (karaoke) is the essence
-  // of the screen; without this, devices with "reduce motion" skip it.
+  const dim = useSharedValue(active ? 1 : past ? 0.36 : 0.46);
+  const blur = useSharedValue(blurRadius);
   useEffect(() => {
-    focus.value = withSpring(active ? 1 : 0, {
-      damping: 20,
-      stiffness: 180,
-      mass: 0.5,
-      reduceMotion: ReduceMotion.Never,
+    focus.value = withTiming(active ? 1 : 0, {
+      duration: motion.duration.scroll,
+      easing: motion.easing.move,
+      reduceMotion: motion.reduceMotion.essential,
     });
   }, [active, focus]);
   useEffect(() => {
-    dim.value = withTiming(past ? 0.85 : active ? 1 : next ? 0.55 : 0.3, {
-      duration: motion.duration.enter,
+    dim.value = withTiming(active ? 1 : past ? 0.36 : 0.46, {
+      duration: motion.duration.scroll,
+      easing: motion.easing.move,
       reduceMotion: motion.reduceMotion.essential,
     });
-  }, [active, past, next, dim]);
+  }, [active, past, dim]);
+  useEffect(() => {
+    blur.value = withTiming(blurRadius, {
+      duration: motion.duration.depth,
+      easing: motion.easing.depth,
+      reduceMotion: motion.reduceMotion.essential,
+    });
+  }, [blur, blurRadius]);
   // The growth (8%) is compensated by the right margin of `content` so the
-  // active line, scaling from the left, doesn't overflow the edge.
-  const anim = useAnimatedStyle(() => ({
-    opacity: dim.value,
-    transform: [{ scale: 1 + focus.value * 0.08 }],
-  }));
+  // active line, scaling from the left, doesn't overflow the edge. iOS is
+  // left out of the magnification: like the word bounce, scaling rasterized
+  // masked text softens the glyphs, so there the takeover is dim only.
+  const anim = useAnimatedStyle(() => {
+    const radius = blur.value;
+    return {
+      opacity: dim.value,
+      transform: Platform.OS === 'ios' ? [] : [{ scale: 1 + focus.value * 0.08 }],
+      // RN's Android filter clips descendants. Omitting it entirely at zero
+      // keeps the active word bounce free to rise outside its glyph box.
+      filter: radius > 0.01 ? [{ blur: radius }] : undefined,
+    };
+  });
+  const lineStyle = lyricsLineStyle(large, size, weight, centered, customFont);
+  const flattened = StyleSheet.flatten(lineStyle) as TextStyle;
+  // No `undefined` keys, ever: RN's flatten copies them over earlier styles,
+  // which would wipe the injected font family (killing custom fonts) and the
+  // Android weight fix. Only set keys carry over.
+  const wordTextStyle: TextStyle = {
+    ...(fontFamily ? { fontFamily } : {}),
+    fontSize: flattened.fontSize,
+    ...(flattened.fontStyle ? { fontStyle: flattened.fontStyle } : {}),
+    ...(flattened.fontWeight ? { fontWeight: flattened.fontWeight } : {}),
+    ...(flattened.letterSpacing ? { letterSpacing: flattened.letterSpacing } : {}),
+    lineHeight: flattened.lineHeight,
+  };
+  const paddingVertical = typeof flattened.paddingVertical === 'number'
+    ? flattened.paddingVertical
+    : 0;
+
   return (
     <View
       onLayout={(e) => onMeasure(index, e.nativeEvent.layout.y, e.nativeEvent.layout.height)}
     >
-      <Animated.Text style={[lyricsLineStyle(large, size, centered), centered ? styles.centerOrigin : styles.leftOrigin, anim]}>
-        {active && words ? <SungWords words={words} handover={handover} /> : text}
-      </Animated.Text>
+      <Animated.View style={[centered ? styles.centerOrigin : styles.leftOrigin, anim]}>
+        {words && words.length > 0 ? (
+          <KaraokeWords
+            words={words}
+            active={active}
+            centered={centered}
+            textStyle={wordTextStyle}
+            activeColor={colors.text}
+            inactiveColor={`${colors.text}6B`}
+            paddingVertical={paddingVertical}
+          />
+        ) : (
+          <Text style={lineStyle}>{text}</Text>
+        )}
+      </Animated.View>
     </View>
   );
 });
 LyricRow.displayName = 'LyricRow';
 
-/** Ahead of the ear, like the line's own advance, but less: a word is short. */
-const WORD_LEAD_MS = 100;
+/** Runway a shared ms clock glides over between store beats (no timer). */
+const GAP_CLOCK_RUNWAY_MS = 1200;
 
-/** How far ahead of the ear a line is highlighted as the one being sung. */
-const LINE_LEAD_MS = 300;
-
-/**
- * When a line stops being the one on screen, in the clock the words fill at.
- *
- * The line is highlighted LINE_LEAD_MS before its own start and the words
- * fill WORD_LEAD_MS ahead of the ear, so from where the fill reads, the row
- * goes when the next line is LINE_LEAD_MS - WORD_LEAD_MS out. Ending words
- * there rather than at whatever the source says is what keeps the last word
- * of a phrase - the held one, the one this was all asked for - from jumping
- * to full colour (and its shine from vanishing) the moment its row stops
- * being the active one.
- */
-function handoverOf(lines: LyricLine[], i: number): number | undefined {
-  const next = lines[i + 1]?.start;
-  return next === undefined ? undefined : next - LINE_LEAD_MS + WORD_LEAD_MS;
-}
-
-/**
- * How often JS reads the position and aims the fill at where the song will
- * be by the next read. Not how often the fill moves: that is every frame, on
- * the UI thread, between one read and the next.
- */
-const TICK_MS = 50;
-
-/**
- * The position the words fill at, as a shared value rather than as state.
- *
- * The player moves `positionSec` twice a second, which is fine for a line and
- * far too coarse for a word: a quick one used to light up late or not at all.
- * So between those updates this runs on by itself while playing, never more
- * than a second past the last real one in case they stop coming. Each read is
- * handed over as a timing aimed at where the next read will land, so the
- * value keeps moving at the song's own rate and arrives on every read: the
- * fill neither steps (as a value set raw every 50 ms would) nor lags (as one
- * aimed only at the present would, by a tick).
- */
-function useSungPosition(): SharedValue<number> {
-  const pos = useSharedValue(usePlayerStore.getState().positionSec * 1000 + WORD_LEAD_MS);
+/** List-level song clock for the gap leaders, mirroring the karaoke words. */
+function useGapClock(): SharedValue<number> {
+  const positionSec = usePlayerStore((s) => s.positionSec);
+  const isPlaying = usePlayerStore((s) => s.isPlaying);
+  const speed = usePlayerStore((s) => s.speed);
+  const clockMs = useSharedValue(positionSec * 1000);
   useEffect(() => {
-    let anchor = { sec: usePlayerStore.getState().positionSec, at: Date.now() };
-    const unsubscribe = usePlayerStore.subscribe((s, prev) => {
-      if (s.positionSec !== prev.positionSec) anchor = { sec: s.positionSec, at: Date.now() };
-    });
-    const read = () => {
-      const { isPlaying, speed } = usePlayerStore.getState();
-      const ahead = isPlaying ? Math.min((Date.now() - anchor.at) * (speed || 1), 1000) : 0;
-      return anchor.sec * 1000 + ahead + WORD_LEAD_MS;
-    };
-    let last = pos.value;
-    // 20 reads a second nobody watches in the background: on iOS (audio mode)
-    // timers keep running out there, so the tick only runs in the foreground.
-    // The store subscription above stays always on, so the anchor is fresh on
-    // return and the fill resumes without a jump.
-    let timer: ReturnType<typeof setInterval> | null = null;
-    const tick = () => {
-      const { isPlaying, speed } = usePlayerStore.getState();
-      const target = read() + TICK_MS * (isPlaying ? speed || 1 : 0);
-      // A seek is somewhere else entirely: it lands there rather than
-      // travelling, which would light up every word on the way through.
-      if (Math.abs(target - last) > 1000) pos.value = target;
-      else
-        pos.value = withTiming(target, {
-          duration: TICK_MS,
-          easing: Easing.linear,
-          // Same answer as the line's own transition: the fill is the
-          // karaoke, not something decorating it.
-          reduceMotion: motion.reduceMotion.essential,
-        });
-      last = target;
-    };
-    const start = () => {
-      if (!timer) timer = setInterval(tick, TICK_MS);
-    };
-    const stop = () => {
-      if (timer) {
-        clearInterval(timer);
-        timer = null;
-      }
-    };
-    if (AppState.currentState === 'active') start();
-    const appStateSub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') start();
-      else stop();
-    });
-    return () => {
-      unsubscribe();
-      stop();
-      appStateSub.remove();
-    };
-  }, [pos]);
-  return pos;
+    cancelAnimation(clockMs);
+    const start = positionSec * 1000;
+    clockMs.value = start;
+    if (isPlaying) {
+      clockMs.value = withTiming(start + GAP_CLOCK_RUNWAY_MS * (speed || 1), {
+        duration: GAP_CLOCK_RUNWAY_MS,
+        easing: Easing.linear,
+        reduceMotion: ReduceMotion.Never,
+      });
+    }
+  }, [clockMs, isPlaying, positionSec, speed]);
+  return clockMs;
 }
 
-/** The word's own colour at the 40% it waits at, as it always has been. */
-function waitingColor(text: string): string {
-  const m = /^#([0-9a-f]{6})$/i.exec(text);
-  if (!m) return `${text}66`;
-  const n = parseInt(m[1], 16);
-  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, 0.4)`;
-}
-
-/** Where a word is in its own span: before its start, past its end, between. */
-function clamp01(value: number): number {
-  // The fill calls this from a worklet, which runs on the UI thread: without
-  // the directive it arrives there as a remote function and throws - hard
-  // enough to take the whole app down with it.
-  'worklet';
-  if (!Number.isFinite(value)) return 0;
-  return value < 0 ? 0 : value > 1 ? 1 : value;
-}
-
-/**
- * How long a word is sung before it counts as one sung slowly: nothing for a
- * word got through under a quarter of a second, everything for a note held
- * over a second. The case this was asked for - the last word of a phrase,
- * held while the line waits for the next one - lands at the far end of it.
- */
-const QUICK_WORD_MS = 250;
-const HELD_WORD_MS = 1200;
-
-/** The shine: how much even a quick word gets, how far it spreads, how bright. */
-const BLOOM_FLOOR = 0.2;
-const BLOOM_RADIUS = 9;
-const BLOOM_ALPHA = 0.6;
-
-/** How long the shine lingers after the word it belongs to is out. */
-const BLOOM_FADE_MS = 500;
-
-/**
- * The least it is allowed to linger, for when the row hands over before the
- * full fade would have run: a shine cut off at full strength shows, one
- * dimmed over this is simply gone.
- */
-const BLOOM_FADE_MIN_MS = 120;
-
-/**
- * One word, filling with colour for as long as it is sung.
- *
- * Not a light switched on at its start: the fill is where the song is against
- * this word's own span, read on the UI thread every frame, so it moves at the
- * song's own rate and never steps. `slow` is how long the word is given, and
- * it is what the shine answers to - a word pronounced slowly blooms as it
- * fills, a quick one barely does. The shine is gone again shortly after the
- * word is out, and always before the row does, so what shines is the word
- * being sung and not the line it sits in.
- */
-const SungWord = memo(function SungWord({
-  value,
+/** One dot of an instrumental gap leader, lit as the silence travels. */
+const GapDot = memo(function GapDot({
   start,
   end,
-  handover,
+  dot,
   pos,
+  large,
 }: {
-  value: string;
   start: number;
   end: number;
-  /** When the row hands over, which the shine never outlives. */
-  handover?: number;
+  dot: number;
   pos: SharedValue<number>;
+  large?: boolean;
 }) {
-  // Memoized, so the theme has to come in from here (like LyricRow's own).
   const theme = useTheme();
-  const waiting = waitingColor(theme.text);
   const lit = theme.text;
-  const dur = Math.max(end - start, 1);
-  /** How slowly this word is sung: 0 for a quick one, 1 for a held note. */
-  const slow = clamp01((dur - QUICK_WORD_MS) / (HELD_WORD_MS - QUICK_WORD_MS));
-  // When the shine is out: the full fade when there is room for it, and
-  // whatever room there is when there is not - but never past the handover,
-  // where the row leaves the screen and it would vanish instead of dimming.
-  const fadeEnd = Math.min(end + BLOOM_FADE_MS, handover ?? Infinity);
-  const fadeStart = Math.min(end, fadeEnd - BLOOM_FADE_MIN_MS);
-  const fadeDur = Math.max(fadeEnd - fadeStart, 1);
   const style = useAnimatedStyle(() => {
-    const fill = clamp01((pos.value - start) / dur);
-    const after = clamp01((pos.value - fadeStart) / fadeDur);
-    const bloom = fill * (1 - after) * (BLOOM_FLOOR + (1 - BLOOM_FLOOR) * slow);
+    const through = clamp01((pos.value - start) / Math.max(end - start, 1));
+    const litAt = clamp01(through * 3 - dot);
+    // Each dot hops as the silence reaches its third of the gap, over a
+    // gentle continuous bob tied to the song clock (frozen on pause, like
+    // everything else karaoke).
+    const hop = Math.sin(Math.PI * clamp01(through * 3 - dot));
+    const bob = Math.sin(pos.value / 350 + dot * 2.094);
     return {
-      color: interpolateColor(fill, [0, 1], [waiting, lit]),
-      textShadowColor: `rgba(255, 255, 255, ${Math.round(bloom * BLOOM_ALPHA * 100) / 100})`,
-      textShadowRadius: bloom * BLOOM_RADIUS,
+      opacity: 0.25 + 0.75 * litAt,
+      transform: [{ translateY: -(hop * 4) + bob * 1.5 }, { scale: 0.76 + 0.24 * litAt }],
+      backgroundColor: lit,
     };
-  }, [start, dur, fadeStart, fadeDur, waiting, lit, slow]);
-  return (
-    <Animated.Text style={[{ textShadowOffset: { width: 0, height: 0 } }, style]}>
-      {value}
-    </Animated.Text>
-  );
+  }, [start, end, dot, lit]);
+  return <Animated.View style={[styles.gapDot, large && styles.gapDotLarge, style]} />;
 });
-SungWord.displayName = 'SungWord';
+GapDot.displayName = 'GapDot';
+
+/** How early the dots zoom in before the silence, how late they leave after. */
+const GAP_LEAD_MS = 400;
+const GAP_TAIL_MS = 600;
+/** The zoom itself: fast both ways. */
+const GAP_ZOOM_MS = 220;
 
 /**
- * The line being sung, word by word (#165): what has been sung is filled and
- * the rest waits, dimmer - each word taking as long to fill as it takes to
- * sing. Only the active line runs.
+ * Instrumental silence worth showing: three dots that zoom in just before
+ * the silence, ride it out hopping one after another, and zoom away once the
+ * singing resumes. The row collapses when closed so the lines below glide
+ * instead of jumping over a hole. Full size on the lyrics screen, smaller on
+ * cards, relative to the text.
  */
-function SungWords({ words, handover }: { words: LyricWord[]; handover?: number }) {
-  const pos = useSungPosition();
-  const ends = wordEnds(words, handover);
-  return (
-    <>
-      {words.map((w, i) => (
-        <SungWord
-          key={i}
-          value={w.value}
-          start={w.start}
-          end={ends[i]}
-          handover={handover}
-          pos={pos}
-        />
-      ))}
-    </>
+function GapDots({ start, end, pos, large }: { start: number; end: number; pos: SharedValue<number>; large?: boolean }) {
+  const height = useSharedValue(0);
+  const open = useSharedValue(0);
+  const essential = motion.reduceMotion.essential;
+  useAnimatedReaction(
+    () => (pos.value >= start - GAP_LEAD_MS && pos.value < end + GAP_TAIL_MS ? 1 : 0),
+    (show, prev) => {
+      if (show !== prev) {
+        open.value = withTiming(show, {
+          duration: GAP_ZOOM_MS,
+          easing: motion.easing.move,
+          reduceMotion: essential,
+        });
+      }
+    },
   );
+  const zoom = useAnimatedStyle(() => ({
+    height: height.value * open.value,
+    opacity: open.value,
+    transform: [{ scale: 0.7 + 0.3 * open.value }],
+  }));
+  return (
+    <Animated.View style={[styles.gapClip, zoom]}>
+      <View
+        onLayout={(e) => {
+          height.value = e.nativeEvent.layout.height;
+        }}
+        style={[styles.gapRow, large && styles.gapRowLarge]}
+      >
+        {[0, 1, 2].map((d) => (
+          <GapDot key={d} start={start} end={end} dot={d} pos={pos} large={large} />
+        ))}
+      </View>
+    </Animated.View>
+  );
+}
+
+/** Bounds of the silence after line `i`, for its dot leader. */
+function gapBounds(lines: LyricLine[], i: number): { start: number; end: number } {
+  const nextStart = lines[i + 1]?.start ?? 0;
+  return { start: lineEndMs(lines[i], nextStart) ?? nextStart, end: nextStart };
 }
 
 /** Typography shared by the card and the full screen. */
 export const lyricsStyles = themed((colors) => ({
   line: {
     color: colors.text,
-    fontSize: 20,
-    lineHeight: 30,
-    fontWeight: '500',
     paddingVertical: spacing.xs,
   },
-  lineLarge: { fontSize: 28, lineHeight: 40, paddingVertical: spacing.sm },
-  lineLargeSmall: { fontSize: 22, lineHeight: 32, paddingVertical: spacing.sm },
-  lineLargeLarge: { fontSize: 34, lineHeight: 48, paddingVertical: spacing.sm },
+  lineLarge: { paddingVertical: spacing.sm },
   centered: { textAlign: 'center' },
 }));
 
 /**
- * The line style with the reader's settings on it: the size only on the full
- * screen (`large`), the alignment everywhere lyrics are shown.
+ * The line style with the reader's size, weight and alignment on every lyrics
+ * surface. Compact cards scale the chosen full-screen size proportionally.
  */
 export function useLyricsLineStyle(large?: boolean) {
   const size = useSettings((s) => s.lyricsSize);
+  const weight = useSettings((s) => s.lyricsWeight);
   const centered = useSettings((s) => s.lyricsAlign) === 'center';
-  return lyricsLineStyle(large, size, centered);
+  // A user-picked font file holds a single face: on iOS naming both it and a
+  // weight makes CoreText miss the file and fall back to the system font, so
+  // the custom font would never apply to lyrics. With one, the weight goes.
+  const appFont = useSettings((s) => s.appFont);
+  const customFontFamily = useSettings((s) => s.customFontFamily);
+  const customFont = appFont === 'custom' && !!customFontFamily;
+  return lyricsLineStyle(large, size, weight, centered, customFont);
 }
 
-function lyricsLineStyle(large: boolean | undefined, size: LyricsSize, centered: boolean) {
+function lyricsLineStyle(
+  large: boolean | undefined,
+  size: LyricsSize,
+  weight: LyricsWeight,
+  centered: boolean,
+  customFont: boolean,
+) {
+  // The setting is expressed in full-screen points. Compact surfaces retain
+  // the old 20:28 ratio, so the default is visually unchanged while every
+  // other size still follows the listener's choice.
+  const points = LYRICS_SIZE_POINTS[size];
+  const textSize = large
+    ? points
+    : Math.max(16, Math.round((points * 20) / LYRICS_SIZE_POINTS.normal));
+  const lineHeight = Math.round(textSize * (large ? 10 / 7 : 1.5));
   return [
     lyricsStyles.line,
-    large &&
-      (size === 'small'
-        ? lyricsStyles.lineLargeSmall
-        : size === 'large'
-          ? lyricsStyles.lineLargeLarge
-          : lyricsStyles.lineLarge),
+    large && lyricsStyles.lineLarge,
+    // No weight key at all with a custom font file (see above): even an
+    // `undefined` would read as set here.
+    { fontSize: textSize, lineHeight, ...(customFont ? {} : { fontWeight: weight }) },
     centered && lyricsStyles.centered,
   ];
 }
@@ -684,6 +728,8 @@ const styles = themed((colors) => ({
   // Lyrics in place of the cover: box exactly the size of the cover.
   coverBox: { overflow: 'hidden', padding: spacing.lg },
   coverBody: { flex: 1, overflow: 'hidden' },
+  coverStatus: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  coverEmpty: { color: colors.textSecondary, fontSize: fontSize.md, textAlign: 'center' },
   wrap: { flex: 1 },
   // Right margin so the active line (which grows 8% from the left) doesn't get
   // clipped against the edge.
@@ -692,6 +738,13 @@ const styles = themed((colors) => ({
   centerOrigin: { transformOrigin: 'center center' },
   // Centred, the 8% growth spills to both sides, so the margin is split.
   contentCentered: { paddingRight: '5%', paddingLeft: '5%' },
+  // Instrumental gap leaders: full size on the lyrics screen, smaller on
+  // cards, relative to the text. The row collapses when the dots zoom away.
+  gapClip: { overflow: 'hidden' },
+  gapRow: { flexDirection: 'row', gap: spacing.sm, paddingVertical: spacing.md, paddingLeft: spacing.xs },
+  gapRowLarge: { gap: spacing.md, paddingVertical: spacing.lg },
+  gapDot: { width: 8, height: 8, borderRadius: 4 },
+  gapDotLarge: { width: 14, height: 14, borderRadius: 7 },
   fade: { position: 'absolute', left: 0, right: 0 },
   expand: {
     position: 'absolute',

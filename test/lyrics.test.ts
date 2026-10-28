@@ -7,7 +7,8 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { parseLrc, serializeLrc } from '@/lib/lrc';
-import { indexOfByte, wordEnds, wordsFromCues } from '@/lib/lyricWords';
+import { activeIndex } from '@/lib/lyricSweep';
+import { indexOfByte, structuredSongLyrics, wordEnds, wordsFromCues } from '@/lib/lyricWords';
 import { parseTtml, ttmlTime } from '@/lib/ttml';
 
 /** The start of the file attached to #165, and one line from its end. */
@@ -56,6 +57,49 @@ describe('TTML', () => {
     const [line] = lyrics!.lines;
     assert.equal(line.value, 'Hey');
     assert.deepEqual(pairs(line.words), [[1000, 'Hey']]);
+  });
+
+  it('keeps backing vocals apart, under the lead line, timed', () => {
+    const lyrics = parseTtml(
+      '<tt><body><div><p begin="1s" end="5s"><span begin="1s" end="2s">Hey</span> ' +
+        '<span role="x-bg"><span begin="2s" end="2.5s">ooh</span> ' +
+        '<span begin="2.5s" end="3s">ooh</span></span></p></div></body></tt>',
+    );
+    const [line] = lyrics!.lines;
+    assert.equal(line.value, 'Hey');
+    assert.equal(line.backing?.length, 1);
+    assert.equal(line.backing?.[0].value, 'ooh ooh');
+    assert.equal(line.backing?.[0].start, 2000);
+    assert.equal(line.backing?.[0].end, 3000);
+    assert.deepEqual(pairs(line.backing?.[0].words), [
+      [2000, 'ooh '],
+      [2500, 'ooh'],
+    ]);
+  });
+
+  it('drops a backing vocal nobody timed', () => {
+    const lyrics = parseTtml(
+      '<tt><body><div><p begin="1s"><span begin="1s">Hey</span> ' +
+        '<span role="x-bg">ooh</span></p></div></body></tt>',
+    );
+    const [line] = lyrics!.lines;
+    assert.equal(line.value, 'Hey');
+    assert.equal(line.backing, undefined);
+  });
+
+  it('marks the first line of each later song part a new stanza', () => {
+    const lyrics = parseTtml(
+      '<tt><body><div><p begin="1s">One</p><p begin="2s">Two</p></div>' +
+        '<div><p begin="10s">Three</p></div></body></tt>',
+    );
+    assert.deepEqual(
+      lyrics!.lines.map((l) => [l.value, l.newStanza]),
+      [
+        ['One', undefined],
+        ['Two', undefined],
+        ['Three', true],
+      ],
+    );
   });
 
   it('reads a file timed by the line, without words', () => {
@@ -149,6 +193,13 @@ describe('Enhanced LRC', () => {
   it('leaves plain LRC as it was', () => {
     const text = '[00:01.00]Hello world\n[00:02.50]Again';
     assert.equal(serializeLrc(parseLrc(text)!), text);
+  });
+
+  it('parts stanzas at blank lines, in time and in plain text', () => {
+    const timed = parseLrc('[00:01.00]One\n\n[00:05.00]Two')!;
+    assert.equal(timed.lines[0].newStanza, undefined);
+    assert.equal(timed.lines[1].newStanza, true);
+    assert.equal(parseLrc('One\n\nTwo')!.lines.map((l) => l.value).join('\n'), 'One\n\nTwo');
   });
 });
 
@@ -259,5 +310,85 @@ describe('Word ends', () => {
 
   it('never ends before it starts', () => {
     assert.deepEqual(wordEnds([{ start: 500, end: 100, value: 'odd' }]), [500]);
+  });
+});
+
+describe('Server structured lyrics', () => {
+  it('puts synced lines in the order they are sung', () => {
+    // A chorus stored once with two timestamps comes back after the verses.
+    const lyrics = structuredSongLyrics({
+      synced: true,
+      line: [
+        { start: 1000, value: 'Verse one' },
+        { start: 9000, value: 'Verse two' },
+        { start: 5000, value: 'Chorus' },
+        { start: 13000, value: 'Chorus' },
+      ],
+    });
+    assert.deepEqual(
+      lyrics?.lines.map((l) => l.start),
+      [1000, 5000, 9000, 13000],
+    );
+    assert.equal(activeIndex(lyrics!.lines, 10_000), 2);
+  });
+
+  it('reads the lead voice like before, with no backing', () => {
+    const lyrics = structuredSongLyrics({
+      synced: true,
+      line: [{ start: 1000, value: 'Hey' }],
+      cueLine: [{ index: 0, value: 'Hey', cue: [{ start: 1000, end: 2000, value: 'Hey', byteStart: 0 }] }],
+    });
+    assert.ok(lyrics?.synced);
+    assert.equal(lyrics.lines.length, 1);
+    assert.equal(lyrics.lines[0].value, 'Hey');
+    assert.equal(lyrics.lines[0].backing, undefined);
+  });
+
+  it('keeps further cue lines of an index as backing vocals', () => {
+    const lyrics = structuredSongLyrics({
+      synced: true,
+      line: [{ start: 1000, value: 'Hey (ooh ooh)' }],
+      cueLine: [
+        { index: 0, value: 'Hey ', cue: [{ start: 1000, end: 2000, value: 'Hey ', byteStart: 0 }] },
+        {
+          index: 0,
+          value: '(ooh ooh)',
+          cue: [{ start: 2000, end: 3000, value: '(ooh ooh)', byteStart: 0 }],
+        },
+      ],
+    });
+    const [line] = lyrics!.lines;
+    assert.equal(line.value, 'Hey ');
+    assert.equal(line.backing?.length, 1);
+    assert.equal(line.backing?.[0].value, '(ooh ooh)');
+    assert.equal(line.backing?.[0].start, 2000);
+    assert.equal(line.backing?.[0].end, 3000);
+  });
+
+  it('still times a backing vocal whose words cannot be trusted', () => {
+    const lyrics = structuredSongLyrics({
+      synced: true,
+      line: [{ start: 1000, value: 'Hey' }],
+      cueLine: [
+        { index: 0, value: 'Hey', cue: [{ start: 1000, value: 'Hey', byteStart: 0 }] },
+        { index: 0, value: 'ooh', cue: [{ start: 2000, end: 2500 }] },
+      ],
+    });
+    assert.equal(lyrics!.lines[0].backing?.[0].start, 2000);
+    assert.equal(lyrics!.lines[0].backing?.[0].end, 2500);
+  });
+});
+
+describe('parseLrc blank lines in plain text', () => {
+  it('keeps one gap per stanza break, none at either end', () => {
+    const lyrics = parseLrc('\n\nFirst\n\n\n\nSecond\nThird\n\n')!;
+    assert.deepEqual(
+      lyrics.lines.map((l) => l.value),
+      ['First', '', 'Second', 'Third'],
+    );
+  });
+
+  it('is no lyrics when there are only blank lines', () => {
+    assert.equal(parseLrc('\n\n  \n'), null);
   });
 });

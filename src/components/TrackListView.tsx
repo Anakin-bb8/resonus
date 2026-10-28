@@ -44,7 +44,7 @@ import { matches } from '@/lib/librarySort';
 import { listPerf } from '@/lib/listPerf';
 import { useArtistPicker } from '@/store/artistPicker';
 import { usePlayerStore } from '@/store/player';
-import { colors, fontSize, radius, spacing, themed, tracking } from '@/theme';
+import { colors, fontSize, radius, restyled, spacing, themed, tracking } from '@/theme';
 import { motion } from '@/theme/motion';
 import { BackChevron } from './BackChevron';
 import { TopBarBackground } from './BarBlur';
@@ -161,7 +161,21 @@ interface Props {
    */
   discHeaders?: Record<number, string>;
   /** If provided, shows a heart to mark the album as a favorite. */
-  favorite?: { id: string; type: StarType; starred: boolean };
+  favorite?: { id: string; type: StarType; starred: boolean; podcast?: true };
+  /**
+   * Podcast episodes: the ids the user has hearted in SQLite, so each row can
+   * light its own heart. Passed in by the podcast screen (which already reads
+   * them); absent for albums/playlists, whose rows use the server's list.
+   */
+  podcastFavIds?: Set<string>;
+  /**
+   * Podcast episodes on the show's screen: per-episode description, publish
+   *  date and whether the episode arrived with the show's last sync, keyed by
+   *  episode id, so each row can show them (see `TrackRow`'s `episode`). The
+   *  screen builds it once from the episodes it already holds; absent for
+   *  albums and playlists, whose rows keep the artist line.
+   */
+  episodeInfo?: Map<string, { description?: string; publishedAt?: number; fresh: boolean }>;
   /** Offline download button (album/playlist header). */
   download?: {
     status: 'none' | 'active' | 'done';
@@ -237,6 +251,8 @@ export function TrackListView({
   numbered,
   discHeaders,
   favorite,
+  podcastFavIds,
+  episodeInfo,
   download,
   onMenu,
   playlistId,
@@ -988,6 +1004,7 @@ export function TrackListView({
                     id={favorite.id}
                     type={favorite.type}
                     starred={favorite.starred}
+                    podcast={favorite.podcast ? { kind: 'channel', channelId: favorite.id } : undefined}
                     size={28}
                   />
                 ) : null}
@@ -1112,14 +1129,20 @@ export function TrackListView({
           const rowKey = rowKeys[origIndex];
           // Disc header (only when not searching, where origIndex === index).
           const discLabel = filtered ? undefined : discHeaders?.[origIndex];
+          // This episode's description and date, when the screen passed them
+          // (only the show's own does); the row's identity is stable, so the
+          // row's memo holds across repaints.
+          const ep = episodeInfo?.get(item.id);
           const row = (
             <TrackRow
               song={item}
+              episode={ep}
               // With artwork visible the number is omitted: the album stays as
               // usual (only the artist's Popular shows number + cover).
               position={numbered && !showArtwork ? item.track ?? origIndex + 1 : undefined}
               isCurrent={currentId === item.id}
               showArtwork={showArtwork}
+              podcastFavIds={podcastFavIds}
               menuContext={
                 playlistId
                   ? { playlistId, index: playlistIndices ? playlistIndices[origIndex] : origIndex }
@@ -1300,7 +1323,8 @@ const styles = themed((colors) => ({
     gap: spacing.sm,
     // Translucent to let the header's dominant color through (Spotify).
     backgroundColor: colors.highlight,
-    borderRadius: radius.pill,
+    // A capsule with Round, a rounded rectangle with Pointier.
+    borderRadius: restyled(radius.pill, radius.md),
     paddingHorizontal: spacing.lg,
     height: 44,
   },

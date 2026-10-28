@@ -225,3 +225,4 @@ missing, so it is much better said early than translated around.
 | Svenska | [Jonatan Nyberg](https://github.com/NickWick13) |
 | Português (Brasil) | [Victor Santos](https://github.com/vicsantus) |
 | Türkçe | [Section](https://github.com/sectns) |
+| Français | [Willyflam](https://github.com/Willyflam) |

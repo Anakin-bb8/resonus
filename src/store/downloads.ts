@@ -42,6 +42,7 @@ import {
   normKey,
   registerCover,
   replaceCover,
+  urlExtension,
   UNKNOWN_ARTIST,
 } from '@/lib/localLibrary';
 import { serializeLrc } from '@/lib/lrc';
@@ -51,12 +52,44 @@ import type { DlAlbum } from '@/lib/downloadsDb';
 import { netTally, timed } from '@/lib/perfLog';
 import { queryClient } from '@/lib/query';
 import { primaryUrl } from '@/lib/serverUrls';
-import { useAuthStore } from './auth';
+import { isManualOffline } from '@/api/netGate';
+import { profileScopeId, useAuthStore } from './auth';
 import { useLibraryMirror } from './libraryMirror';
 import { useSettings } from './settings';
 import { useToast } from './toast';
+import {
+  clearDownloadRecords,
+  downloadedBytes,
+  downloadedForChannel,
+  dropDownloads,
+  listAllEpisodes,
+  listDownloads,
+  saveDownload,
+} from '@/lib/podcastDb';
+
+// What a podcast download needs from an episode: its address and the show it
+// belongs to. Both a stored `PodcastEpisode` and the episode-as-song the menu
+// hands over (id, url, podcastChannelId) satisfy this shape.
+interface EpisodeSource {
+  id: string;
+  url?: string;
+  channelId: string;
+}
 
 const ROOT_DIR = FileSystem.documentDirectory + 'downloads/';
+
+// Podcast episode files: no server, so no auth-keyed directory — one folder per
+// profile, next to that profile's podcast database. The player finds them through
+// the same `files` map it uses for server downloads (see `hydrate`).
+const PODCAST_ROOT = FileSystem.documentDirectory + 'podcast-downloads/';
+
+function podcastScope(): string {
+  return hashKey(profileScopeId());
+}
+
+function podcastFileDir(): string {
+  return `${PODCAST_ROOT}${podcastScope()}/files/`;
+}
 
 // ── How much of the server we take at once ──────────────────────────────────
 // The limit used to be three per group, and a group is not the unit anybody
@@ -868,6 +901,19 @@ interface DownloadsState {
   /** Deletes files for those songs and removes them from the catalog. */
   deleteSongs: (songIds: string[]) => Promise<void>;
   /**
+   * Downloads episodes straight from their enclosure address. Podcasts have no
+   * server to fetch through, so this is a separate path from `downloadGroup`:
+   * same slots, same progress, same `files` map the player reads, but the bytes
+   * come from the episode's own url and land in that profile's podcast folder.
+   */
+  downloadPodcast: (channelId: string) => Promise<void>;
+  downloadPodcastEpisode: (episode: EpisodeSource) => Promise<void>;
+  /** Deletes downloaded episode files and drops them from the podcast record. */
+  deletePodcastDownloads: (episodeIds: string[]) => Promise<void>;
+  /** Deletes every downloaded episode of a show, however many the screen
+   *  never loaded; returns how many went. */
+  deletePodcastChannelDownloads: (channelId: string) => Promise<number>;
+  /**
    * Forgets a download whose file is not on the disk any more, and says whether
    * it did.
    *
@@ -900,6 +946,16 @@ interface DownloadsState {
 export function anyDownloads(s: { files: Record<string, string> }): boolean {
   for (const _ in s.files) return true;
   return false;
+}
+
+/**
+ * Whether a group running in "Wi-Fi only" mode should stop before its next
+ * item: the connection it started on was Wi-Fi, but that is only true of the
+ * moment it started. Asked once per item, which is a cheap native call next
+ * to a download.
+ */
+async function lostWifi(): Promise<boolean> {
+  return useSettings.getState().downloadWifiOnly && (await onMobileData());
 }
 
 /** true only if the active connection is mobile data (for "Wi-Fi only" mode). */
@@ -1107,10 +1163,17 @@ export const useDownloads = create<DownloadsState>((set, get) => {
 
       let failed = 0;
       let next = 0;
+      let onData = false;
       // As many workers as slots at most: more would only queue up on the way in.
       const workers = Array.from({ length: Math.min(maxSlots(), pending.length) }, async () => {
         while (next < pending.length) {
-          if (cancelling.has(groupKey)) break; // stop requested by user
+          if (cancelling.has(groupKey) || onData) break; // stop requested by user
+          // The Wi-Fi went while the group ran: what is in flight finishes,
+          // nothing new starts on mobile data.
+          if (await lostWifi()) {
+            onData = true;
+            break;
+          }
           const song = pending[next++];
           for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
             // Held across the whole song, cover and lyrics included: they are
@@ -1147,6 +1210,8 @@ export const useDownloads = create<DownloadsState>((set, get) => {
       if (!cancelling.has(groupKey)) void mirrorAlbumTracklists(auth, pending);
       if (cancelling.has(groupKey)) {
         useToast.getState().show(tg('Download stopped'));
+      } else if (onData) {
+        useToast.getState().show(tg('Connect to Wi-Fi to download'));
       } else if (failed > 0) {
         useToast.getState().show(tg("{n} songs couldn't be downloaded", { n: failed }));
       } else {
@@ -1168,6 +1233,170 @@ export const useDownloads = create<DownloadsState>((set, get) => {
         return { active };
       });
     }
+  }
+
+  /**
+   * Downloads a show's episodes from their enclosure urls. The same shape as
+   * `downloadGroup` (slots, progress, cancel, the `files` map) but with no
+   * server: the bytes come straight from each episode's own address, and the
+   * record of them lives in that profile's SQLite rather than a server catalog.
+   */
+  async function downloadPodcastGroup(groupKey: string, episodes: EpisodeSource[]): Promise<void> {
+    // A podcast download never touches the server: the bytes come from the
+    // publisher. Automatic offline (server down) may still download; only a
+    // manual "use no network" says no. The rule lives here because the
+    // transfer goes through expo-file-system, under the API gate's nose.
+    if (isManualOffline()) return;
+    if (get().active[groupKey]) return; // already in progress
+    // No duplicates, nothing already on disk, nothing without an address.
+    const seen = new Set<string>();
+    const pending = episodes.filter((e) => {
+      if (get().files[e.id] || !e.url || seen.has(e.id)) return false;
+      seen.add(e.id);
+      return true;
+    });
+    if (pending.length === 0) return;
+
+    // "Wi-Fi only" mode: don't start on mobile data.
+    if (useSettings.getState().downloadWifiOnly && (await onMobileData())) {
+      useToast.getState().show(tg('Connect to Wi-Fi to download'));
+      return;
+    }
+
+    const dir = podcastFileDir();
+    set((st) => ({ active: { ...st.active, [groupKey]: { done: 0, total: pending.length, fraction: 0 } } }));
+
+    try {
+      await FileSystem.makeDirectoryAsync(dir, { intermediates: true }).catch(() => {});
+
+      const tasks = new Set<ReturnType<typeof FileSystem.createDownloadResumable>>();
+      activeTasks.set(groupKey, tasks);
+
+      /** One attempt at one episode. Throws, so the worker decides about retrying. */
+      const fetchEpisode = async (ep: EpisodeSource): Promise<void> => {
+        // The container the enclosure's address names, so a show serving .m4a
+        // stays .m4a (expo-audio reads it by content anyway); mp3 when the
+        // address says nothing.
+        const file = `${dir}${hashKey(ep.id)}.${urlExtension(ep.url, 'mp3')}`;
+        const task = FileSystem.createDownloadResumable(ep.url!, file, {}, (p) => {
+          if (p.totalBytesExpectedToWrite > 0) {
+            const fraction = p.totalBytesWritten / p.totalBytesExpectedToWrite;
+            const cur = get().active[groupKey];
+            if (cur && fraction - cur.fraction > 0.05) {
+              set((st) => ({ active: { ...st.active, [groupKey]: { ...cur, fraction } } }));
+            }
+          }
+        });
+        tasks.add(task);
+        try {
+          const res = await task.downloadAsync();
+          // An enclosure host that answers other than "here is the file" is a
+          // failure, not a half-written episode.
+          if (!res || res.status < 200 || res.status >= 300)
+            throw new TransferError(`HTTP ${res?.status}`, res?.status);
+          // A portal or paywall page answers 200 with HTML: the album path
+          // calls the same helper, and without it the page would be saved as
+          // an episode and marked downloaded.
+          if (isErrorBody(res?.headers))
+            throw new TransferError('error body, not audio', 200);
+          const bytes = Number(header(res?.headers, 'content-length')) || (await fileSize(file));
+          // Persisted on completion: if the app dies mid-show, finished episodes
+          // survive a restart.
+          await saveDownload(podcastScope(), ep, file, bytes);
+          set((st) => {
+            const cur = st.active[groupKey];
+            return {
+              files: { ...st.files, [ep.id]: file },
+              active: cur
+                ? { ...st.active, [groupKey]: { ...cur, done: cur.done + 1, fraction: 0 } }
+                : st.active,
+            };
+          });
+        } catch (e) {
+          await FileSystem.deleteAsync(file, { idempotent: true }).catch(() => {});
+          throw e;
+        } finally {
+          tasks.delete(task);
+        }
+      };
+
+      let failed = 0;
+      let next = 0;
+      let onData = false;
+      const workers = Array.from({ length: Math.min(maxSlots(), pending.length) }, async () => {
+        while (next < pending.length) {
+          if (cancelling.has(groupKey) || onData) break; // stop requested by user
+          // Same as songs: no new episode on mobile data once the Wi-Fi went.
+          if (await lostWifi()) {
+            onData = true;
+            break;
+          }
+          const ep = pending[next++];
+          for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
+            await takeSlot();
+            try {
+              if (cancelling.has(groupKey)) break;
+              await fetchEpisode(ep);
+              break; // done
+            } catch (e) {
+              if (cancelling.has(groupKey)) break;
+              const status = e instanceof TransferError ? e.status : undefined;
+              if (attempt === ATTEMPTS || !worthRetrying(status)) {
+                failed++;
+                break;
+              }
+            } finally {
+              freeSlot();
+            }
+            await new Promise((r) => setTimeout(r, RETRY_PAUSE_MS * attempt));
+          }
+        }
+      });
+      await Promise.all(workers);
+
+      invalidate();
+      if (cancelling.has(groupKey)) {
+        useToast.getState().show(tg('Download stopped'));
+      } else if (onData) {
+        useToast.getState().show(tg('Connect to Wi-Fi to download'));
+      } else if (failed > 0) {
+        useToast.getState().show(tg("{n} episodes couldn't be downloaded", { n: failed }));
+      } else {
+        useToast.getState().show(
+          pending.length === 1
+            ? tg('Episode downloaded')
+            : tg('{n} episodes downloaded', { n: pending.length }),
+        );
+      }
+    } finally {
+      cancelling.delete(groupKey);
+      activeTasks.delete(groupKey);
+      set((st) => {
+        const active = { ...st.active };
+        delete active[groupKey];
+        return { active };
+      });
+    }
+  }
+
+  /** Takes the given episode downloads off the phone: the files, the map and
+   *  the podcast record. The two delete actions differ only in where the ids
+   *  come from — one from a screen, one from the record itself. */
+  async function removeEpisodeDownloads(ids: string[]): Promise<number> {
+    if (ids.length === 0) return 0;
+    const paths = ids.map((id) => get().files[id]).filter(Boolean);
+    set((st) => {
+      const files = { ...st.files };
+      for (const id of ids) delete files[id];
+      return { files };
+    });
+    await locked(async () => {
+      for (const p of paths) await FileSystem.deleteAsync(p, { idempotent: true }).catch(() => {});
+      await dropDownloads(podcastScope(), ids);
+    });
+    invalidate();
+    queryClient.invalidateQueries({ queryKey: ['podcastDownloads'] });
+    return ids.length;
   }
 
   return {
@@ -1204,6 +1433,16 @@ export const useDownloads = create<DownloadsState>((set, get) => {
           // downloads, not the app without an answer: `hydrated` is what the
           // queue waits on before restoring itself.
         }
+      }
+      // Podcast episode files, for the profile that owns them. There is no
+      // server to key them by, so they live in that profile's SQLite instead of
+      // the server catalog; the player reads the same `files` map either way, so
+      // a downloaded episode plays offline with no further plumbing.
+      try {
+        Object.assign(files, await listDownloads(podcastScope()));
+      } catch {
+        // A podcast database that cannot be read leaves the show's downloads
+        // absent, not the app without its server downloads.
       }
       if (run !== hydrateRun) return;
       set({ files, hydrated: true });
@@ -1271,6 +1510,33 @@ export const useDownloads = create<DownloadsState>((set, get) => {
           playlist.comment,
         );
       }
+    },
+
+    downloadPodcast: async (channelId) => {
+      // The database, not the screen: a show only half loaded still
+      // downloads completely.
+      const episodes = await listAllEpisodes(podcastScope(), channelId);
+      await downloadPodcastGroup(`podcast:${channelId}`, episodes);
+      queryClient.invalidateQueries({ queryKey: ['podcastDownloads'] });
+    },
+
+    downloadPodcastEpisode: async (episode) => {
+      // Its own group, so a stop on one episode doesn't disturb another.
+      await downloadPodcastGroup(`episode:${episode.id}`, [episode]);
+      queryClient.invalidateQueries({ queryKey: ['podcastDownloads'] });
+    },
+
+    deletePodcastDownloads: async (episodeIds) => {
+      // The ids a screen holds: one episode's undo hands its own id over.
+      await removeEpisodeDownloads(episodeIds);
+    },
+
+    deletePodcastChannelDownloads: async (channelId) => {
+      // The record answers, never the screen: whatever is on disk for this
+      // show goes, including episodes no loaded list ever showed. Returns
+      // how many went, for the toast.
+      const { ids } = await downloadedForChannel(podcastScope(), channelId);
+      return await removeEpisodeDownloads(ids);
     },
 
     downloadGenre: async (genre, songs) => {
@@ -1364,6 +1630,13 @@ export const useDownloads = create<DownloadsState>((set, get) => {
       } catch {
         return false;
       }
+      // The file's own address says which record promises it: a podcast
+      // file lives under the podcast root, and its row is in the podcast
+      // database, not in the server catalog `deleteSongs` walks.
+      if (uri.startsWith(PODCAST_ROOT)) {
+        await get().deletePodcastDownloads([songId]);
+        return true;
+      }
       await get().deleteSongs([songId]);
       return true;
     },
@@ -1374,6 +1647,12 @@ export const useDownloads = create<DownloadsState>((set, get) => {
         // would outlive the files they are pointing at.
         await Db.closeCatalogs();
         await FileSystem.deleteAsync(ROOT_DIR, { idempotent: true }).catch(() => {});
+        // Podcast episodes: their files live under a root of their own, outside
+        // the server folders. The databases stay — the shows and the hearts are
+        // the person's own — but every row pointing at a file that is about to
+        // go goes too, with the handles closed before the folder does.
+        await clearDownloadRecords();
+        await FileSystem.deleteAsync(PODCAST_ROOT, { idempotent: true }).catch(() => {});
       });
       // Local playlists created by downloads no longer resolve songs;
       // they are removed to avoid leaving empty lists.
@@ -1381,6 +1660,10 @@ export const useDownloads = create<DownloadsState>((set, get) => {
       await require('@/lib/localQueries').deleteLocalPlaylistsByPrefix('dl_');
       set({ files: {}, dlBitRates: {}, active: {} });
       invalidate();
+      // The sheet caches a show's download count with no expiry, and online
+      // `invalidate` leaves the lists alone: without this, „Delete downloads"
+      // is still offered for a show whose episodes just went.
+      queryClient.invalidateQueries({ queryKey: ['podcastDownloads'] });
     },
 
     usageBytes: async () => timed('storage used', async () => {
@@ -1398,6 +1681,22 @@ export const useDownloads = create<DownloadsState>((set, get) => {
         // Downloaded before sizes were recorded: measured once, written down,
         // and never measured again.
         if (missing.length > 0) total += await measureMissing(dir, missing);
+      }
+      // Podcast episodes, whose sizes the podcast database wrote down too.
+      // Every profile's folder answers for its own episodes — the signed-in
+      // one alone would drop another account's downloads out of the number,
+      // the same shape the album side had fixed for #50.
+      try {
+        for (const scope of await FileSystem.readDirectoryAsync(PODCAST_ROOT)) {
+          try {
+            total += await downloadedBytes(scope);
+          } catch {
+            // A podcast database that cannot be read leaves its episodes out
+            // of the number, not the screen without one.
+          }
+        }
+      } catch {
+        // No podcast folder at all: nothing was ever downloaded to count.
       }
       return total;
     }),

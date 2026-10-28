@@ -112,7 +112,11 @@ export function onTransport(cb: (e: TransportEvent) => void): { remove: () => vo
   return native?.addListener('transport', cb);
 }
 
-/** A car asked for the browse tree's root, which is Android Auto opening. */
-export function onCarConnected(cb: () => void): { remove: () => void } | undefined {
+/**
+ * A car asked for the browse tree's root, which is Android Auto opening.
+ * `projection` is true when it is Android Auto itself asking, and not another
+ * browser of the library.
+ */
+export function onCarConnected(cb: (e: { projection?: boolean }) => void): { remove: () => void } | undefined {
   return native?.addListener('connect', cb);
 }

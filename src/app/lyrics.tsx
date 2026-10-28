@@ -4,9 +4,14 @@
  * and basic controls (progress and play/pause) at the bottom.
  */
 import Icon from '@/components/Icon';
+import MaskedView from '@react-native-masked-view/masked-view';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
+import * as Font from 'expo-font';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation, useRouter } from 'expo-router';
+import { useEffect } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { COVER, songCoverUrl } from '@/api/data';
@@ -34,22 +39,62 @@ export default function LyricsScreen() {
   const previous = usePlayerStore((s) => s.previous);
   const next = usePlayerStore((s) => s.next);
   const { data, isLoading } = useLyrics(song ?? undefined);
+  // Cover mode's mask breaks on Android once the screen starts to close: the
+  // fade back to the player draws it as a solid black panel over the lyrics.
+  // The screen is frozen by then and cannot render again, so the masked
+  // lyrics are hidden from the UI thread instead, the moment it starts.
+  const navigation = useNavigation();
+  const maskedOpacity = useSharedValue(1);
+  const maskedStyle = useAnimatedStyle(() => ({ opacity: maskedOpacity.value }));
+  useEffect(
+    () => navigation.addListener('beforeRemove', () => {
+      maskedOpacity.value = 0;
+    }),
+    [navigation, maskedOpacity],
+  );
+  // The close button gets there late: by the time its press reaches
+  // `beforeRemove` the fade has begun. It hides them a frame ahead instead.
+  const close = () => {
+    maskedOpacity.value = 0;
+    requestAnimationFrame(() => router.back());
+  };
   const plainLineStyle = useLyricsLineStyle(true);
+  // Same iOS rule as the lyrics rows: a custom font file and an explicit
+  // weight do not mix, so the title drops its weight with one set.
+  const appFont = useSettings((s) => s.appFont);
+  const customFontFamily = useSettings((s) => s.customFontFamily);
+  const customFont = appFont === 'custom' && !!customFontFamily;
   const background = useSettings((s) => s.lyricsBackground);
   const cover = song ? songCoverUrl(song, COVER.card) : undefined;
   // Only extract the palette when it's actually going to be used.
   const dominant = useDominantColor(background === 'color' ? cover : undefined);
   const bg = background === 'color' ? dominant : colors.background;
-  // No edge fade over the artwork: that effect paints a gradient from a SOLID
-  // colour, and with an image behind there is no colour to fade into — it came
-  // out as two black bands with hard edges, only as wide as the lyrics body.
-  // The scrim already keeps the text readable, so the fade just goes away.
+  // A solid-colour overlay cannot fade into artwork without painting a visible
+  // band over it. Cover mode instead masks the lyrics themselves below, so the
+  // real blurred artwork remains continuous behind the soft top edge.
   const fadeColor = background === 'cover' ? undefined : bg;
   const duration = durationSec || song?.duration || 0;
   const insets = useSafeAreaInsets();
   // Inside a full-screen modal iOS reports no top inset, and the close
   // button would sit against the edge.
   const topPad = insets.top > 0 ? insets.top : 12;
+  const lyricsContent = (
+    <View style={[styles.bodyContent, { paddingHorizontal: centredPadding(width, spacing.xl) }]}>
+      {isLoading ? (
+        <ActivityIndicator style={{ marginTop: spacing.xxl }} color={colors.text} />
+      ) : data?.synced ? (
+        <SyncedLyricsView lines={data.lines} large fadeColor={fadeColor} />
+      ) : data ? (
+        <ScrollView contentContainerStyle={styles.plainContent} showsVerticalScrollIndicator={false}>
+          <Text style={plainLineStyle}>
+            {data.lines.map((l) => l.value).join('\n')}
+          </Text>
+        </ScrollView>
+      ) : (
+        <Text style={styles.empty}>{t('No lyrics available for this song.')}</Text>
+      )}
+    </View>
+  );
 
   return (
     <View style={[styles.root, { backgroundColor: bg }]}>
@@ -72,11 +117,11 @@ export default function LyricsScreen() {
       ) : null}
       <View style={[styles.safe, { paddingTop: topPad, paddingBottom: insets.bottom }]}>
       <View style={styles.header}>
-        <Pressable hitSlop={12} accessibilityRole="button" accessibilityLabel={t('Close')} onPress={() => router.back()}>
+        <Pressable hitSlop={12} accessibilityRole="button" accessibilityLabel={t('Close')} onPress={close}>
           <Icon name="close" size={26} color={colors.text} />
         </Pressable>
         <View style={styles.titleBox}>
-          <Text style={styles.title} numberOfLines={1}>
+          <Text style={[styles.title, customFont && styles.titleCustomFont]} numberOfLines={1}>
             {song?.title ?? t('Lyrics')}
           </Text>
           {song?.artist ? (
@@ -89,22 +134,28 @@ export default function LyricsScreen() {
       </View>
 
       {/* Lyrics are a column of text: across a tablet a line runs the whole
-          width and the eye loses the next one on the way back (#131). */}
-      <View style={[styles.body, { paddingHorizontal: centredPadding(width, spacing.xl) }]}>
-        {isLoading ? (
-          <ActivityIndicator style={{ marginTop: spacing.xxl }} color={colors.text} />
-        ) : data?.synced ? (
-          <SyncedLyricsView lines={data.lines} large fadeColor={fadeColor} />
-        ) : data ? (
-          <ScrollView contentContainerStyle={styles.plainContent} showsVerticalScrollIndicator={false}>
-            <Text style={plainLineStyle}>
-              {data.lines.map((l) => l.value).join('\n')}
-            </Text>
-          </ScrollView>
-        ) : (
-          <Text style={styles.empty}>{t('No lyrics available for this song.')}</Text>
-        )}
-      </View>
+          width and the eye loses the next one on the way back (#131). Cover
+          mode fades the content's alpha rather than painting over the art. */}
+      {background === 'cover' ? (
+        <Animated.View style={[styles.body, maskedStyle]}>
+        <MaskedView
+          style={styles.body}
+          maskElement={(
+            <View style={styles.lyricsMask}>
+              <LinearGradient
+                colors={['transparent', '#000']}
+                style={styles.lyricsMaskFade}
+              />
+              <View style={styles.lyricsMaskSolid} />
+            </View>
+          )}
+        >
+          {lyricsContent}
+        </MaskedView>
+        </Animated.View>
+      ) : (
+        <View style={styles.body}>{lyricsContent}</View>
+      )}
 
       <View style={styles.controls}>
         <SeekBar duration={duration} />
@@ -157,8 +208,16 @@ const styles = themed((colors) => ({
   },
   titleBox: { flex: 1, alignItems: 'center' },
   title: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
+  // With a custom font the weight is left out entirely (see above): an
+  // `undefined` would lose against the base style, so this is the whole
+  // style without the key. The family comes from the global injection.
+  titleCustomFont: { color: colors.text, fontSize: fontSize.md },
   artist: { color: colors.textSecondary, fontSize: fontSize.xs },
   body: { flex: 1 },
+  bodyContent: { flex: 1 },
+  lyricsMask: { flex: 1 },
+  lyricsMaskFade: { height: 72 },
+  lyricsMaskSolid: { flex: 1, backgroundColor: '#000' },
   plainContent: { paddingVertical: spacing.lg, paddingBottom: spacing.xxl },
   empty: {
     color: colors.textSecondary,

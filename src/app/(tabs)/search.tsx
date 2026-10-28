@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Keyboard,
   Pressable,
+  StyleSheet,
   Text,
   TextInput,
   View,
@@ -17,7 +18,7 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { COVER, coverArtUrl, getPlaylists, search } from '@/api/data';
-import { getRadioStations } from '@/api/backend';
+import { getRadioStations, type Album, type Artist } from '@/api/backend';
 import { matches } from '@/lib/librarySort';
 import { AlbumCard } from '@/components/AlbumCard';
 import { Cover } from '@/components/Cover';
@@ -26,7 +27,10 @@ import { Message } from '@/components/Message';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { TrackRow } from '@/components/TrackRow';
 import { useDebounce } from '@/hooks/useDebounce';
-import { songsLabel, useT } from '@/i18n';
+import { songsLabel, episodesLabel, useT } from '@/i18n';
+import { listChannels, podcastCover } from '@/api/podcasts';
+import { openPodcastMenu } from '@/components/PodcastMenuSheet';
+import { playRadio } from '@/lib/playRadio';
 import { haptic } from '@/lib/haptics';
 import { onTabReselect, takeSearchFocus } from '@/lib/tabOrigin';
 import { bump } from '@/lib/perfLog';
@@ -36,9 +40,9 @@ import { currentSong, usePlayerStore } from '@/store/player';
 import { useRecentSearches, type RecentItem } from '@/store/recentSearches';
 import { useSettings } from '@/store/settings';
 import { useAccent } from '@/hooks/useAccent';
-import { colors, fontSize, radius, spacing, themed, useTheme, tracking } from '@/theme';
+import { colors, fontSize, radius, restyled, spacing, themed, useTheme, tracking } from '@/theme';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
-import { centredPadding, useScreenSize } from '@/hooks/useScreenSize';
+import { centredPadding, columnsFor, useScreenSize } from '@/hooks/useScreenSize';
 
 /**
  * What the chips under the box narrow the answer to.
@@ -48,7 +52,7 @@ import { centredPadding, useScreenSize } from '@/hooks/useScreenSize';
  * always there: a Jellyfin account does not manage them and offline there is
  * nothing to stream (see the query).
  */
-type SearchFilter = 'all' | 'songs' | 'artists' | 'albums' | 'playlists' | 'radio';
+type SearchFilter = 'all' | 'songs' | 'artists' | 'albums' | 'playlists' | 'radio' | 'podcasts';
 
 /** In the order the chips read, which is the order the results come in. */
 const FILTERS: { key: SearchFilter; label: string }[] = [
@@ -57,8 +61,16 @@ const FILTERS: { key: SearchFilter; label: string }[] = [
   { key: 'artists', label: 'Artists' },
   { key: 'albums', label: 'Albums' },
   { key: 'playlists', label: 'Playlists' },
+  { key: 'podcasts', label: 'Podcasts' },
   { key: 'radio', label: 'Radio' },
 ];
+
+/** An artist in the row under `all`. */
+const ARTIST_SIZE = 110;
+/** The width a card in the filtered grid aims for, which sets the columns. */
+const ARTIST_IDEAL = 120;
+const ALBUM_IDEAL = 180;
+const GRID_GAP = spacing.md;
 
 export default function SearchScreen() {
   // Counted, to answer whether a tab you have visited keeps working
@@ -177,10 +189,11 @@ export default function SearchScreen() {
       ? (playlists ?? []).filter((p) => matches(debouncedQuery, p.name))
       : [];
   // Stations, filtered the same way and for the same reason. Server only:
-  // Jellyfin doesn't manage them and offline there's nothing to stream.
+  // offline there's nothing to stream. Jellyfin's are its Live TV radio
+  // channels, and a server without them simply has none.
   /** Whether this account has stations at all, which is also whether the chip
    *  for them is worth drawing. */
-  const canSearchStations = !!auth && !offline && auth.serverType !== 'jellyfin';
+  const canSearchStations = !!auth && !offline;
   const { data: stations } = useQuery({
     queryKey: ['radioStations'],
     queryFn: () => getRadioStations(auth!),
@@ -189,6 +202,19 @@ export default function SearchScreen() {
   const stationMatches =
     debouncedQuery.length > 1
       ? (stations ?? []).filter((r) => matches(debouncedQuery, r.name))
+      : [];
+
+  // Subscriptions are the phone's own: searched with no server and no gate.
+  const { data: podcastChannels } = useQuery({
+    queryKey: ['podcastChannels'],
+    queryFn: () => listChannels(),
+  });
+  const podcastMatches =
+    debouncedQuery.length > 1
+      ? (podcastChannels ?? []).filter((c) =>
+          c.title.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
+          (c.author ?? '').toLowerCase().includes(debouncedQuery.toLowerCase()),
+        )
       : [];
 
   /**
@@ -212,7 +238,70 @@ export default function SearchScreen() {
     (shows('albums') ? (data?.albums.length ?? 0) : 0) +
     (shows('songs') ? (data?.songs.length ?? 0) : 0) +
     (shows('playlists') ? playlistMatches.length : 0) +
+    (shows('podcasts') ? podcastMatches.length : 0) +
     (shows('radio') ? stationMatches.length : 0);
+
+  /**
+   * With its own chip pressed, a kind of card has the screen to itself, and a
+   * single row that has to be swiped sideways left the rest of it empty (#280).
+   * It wraps into a grid then, as wide as the screen gives it; under `all`
+   * it is one shelf among others and stays a row.
+   */
+  const contentWidth = width - pagePad * 2;
+  const gridCard = (ideal: number, min: number) => {
+    const columns = columnsFor(width, ideal, min);
+    // Rounded down: a width exact to the fraction wraps the last card of a
+    // row onto the next one as soon as layout rounds a pixel up.
+    return Math.floor((contentWidth - GRID_GAP * (columns - 1)) / columns);
+  };
+  const artistGrid = filter === 'artists';
+  const albumGrid = filter === 'albums';
+  const artistSize = artistGrid ? gridCard(ARTIST_IDEAL, 3) : ARTIST_SIZE;
+  const albumWidth = albumGrid ? gridCard(ALBUM_IDEAL, 2) : undefined;
+
+  const renderArtist = (artist: Artist) => (
+    <Link key={artist.id} href={`/artist/${artist.id}`} asChild>
+      <Pressable
+        style={StyleSheet.flatten([styles.artist, { width: artistSize }])}
+        onPress={() =>
+          addRecent({
+            kind: 'artist',
+            id: artist.id,
+            title: artist.name,
+            coverArt: artist.coverArt ?? artist.id,
+            href: `/artist/${artist.id}`,
+          })
+        }
+      >
+        <Cover
+          uri={coverArtUrl(artist.coverArt ?? artist.id, COVER.thumb)}
+          size={artistSize}
+          rounded
+        />
+        <Text style={styles.artistName} numberOfLines={1}>
+          {artist.name}
+        </Text>
+      </Pressable>
+    </Link>
+  );
+
+  const renderAlbum = (album: Album) => (
+    <AlbumCard
+      key={album.id}
+      album={album}
+      width={albumWidth}
+      onPress={() =>
+        addRecent({
+          kind: 'album',
+          id: album.id,
+          title: album.name,
+          artist: album.artist,
+          coverArt: album.coverArt ?? album.id,
+          href: `/album/${album.id}`,
+        })
+      }
+    />
+  );
 
   const isEmpty = query.trim().length === 0;
   // With the box empty the screen is what was opened from it before. Genres
@@ -222,6 +311,7 @@ export default function SearchScreen() {
   /** Recent item subtitle: type (+ artist for albums/songs). */
   const recentLabel = (item: RecentItem): string => {
     if (item.kind === 'artist') return t('Artist');
+    if (item.kind === 'podcast') return t('Podcast');
     const type = item.kind === 'album' ? t('Album') : t('Song');
     return item.artist ? `${type} · ${item.artist}` : type;
   };
@@ -357,72 +447,41 @@ export default function SearchScreen() {
         {shows('artists') && data && data.artists.length > 0 ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t('Artists')}</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.albumRow}
-              // Its own, and not the page's: a nested scroll view does not
-              // inherit it, so with the keyboard up the first tap on a card
-              // was spent closing it and the second one was the one that
-              // opened the artist.
-              keyboardShouldPersistTaps="handled"
-            >
-              {data.artists.map((artist) => (
-                <Link key={artist.id} href={`/artist/${artist.id}`} asChild>
-                  <Pressable
-                    style={styles.artist}
-                    onPress={() =>
-                      addRecent({
-                        kind: 'artist',
-                        id: artist.id,
-                        title: artist.name,
-                        coverArt: artist.coverArt ?? artist.id,
-                        href: `/artist/${artist.id}`,
-                      })
-                    }
-                  >
-                    <Cover
-                      uri={coverArtUrl(artist.coverArt ?? artist.id, COVER.thumb)}
-                      size={110}
-                      rounded
-                    />
-                    <Text style={styles.artistName} numberOfLines={1}>
-                      {artist.name}
-                    </Text>
-                  </Pressable>
-                </Link>
-              ))}
-            </ScrollView>
+            {artistGrid ? (
+              <View style={styles.grid}>{data.artists.map(renderArtist)}</View>
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.albumRow}
+                // Its own, and not the page's: a nested scroll view does not
+                // inherit it, so with the keyboard up the first tap on a card
+                // was spent closing it and the second one was the one that
+                // opened the artist.
+                keyboardShouldPersistTaps="handled"
+              >
+                {data.artists.map(renderArtist)}
+              </ScrollView>
+            )}
           </View>
         ) : null}
 
         {shows('albums') && data && data.albums.length > 0 ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t('Albums')}</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.albumRow}
-              // Its own, like the row of artists above it.
-              keyboardShouldPersistTaps="handled"
-            >
-              {data.albums.map((album) => (
-                <AlbumCard
-                  key={album.id}
-                  album={album}
-                  onPress={() =>
-                    addRecent({
-                      kind: 'album',
-                      id: album.id,
-                      title: album.name,
-                      artist: album.artist,
-                      coverArt: album.coverArt ?? album.id,
-                      href: `/album/${album.id}`,
-                    })
-                  }
-                />
-              ))}
-            </ScrollView>
+            {albumGrid ? (
+              <View style={styles.grid}>{data.albums.map(renderAlbum)}</View>
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.albumRow}
+                // Its own, like the row of artists above it.
+                keyboardShouldPersistTaps="handled"
+              >
+                {data.albums.map(renderAlbum)}
+              </ScrollView>
+            )}
           </View>
         ) : null}
 
@@ -479,6 +538,47 @@ export default function SearchScreen() {
           </View>
         ) : null}
 
+        {shows('podcasts') && podcastMatches.length > 0 ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{t('Podcasts')}</Text>
+            {podcastMatches.map((c) => (
+              <Link key={c.id} href={`/podcast/${c.id}`} asChild>
+                <Pressable
+                  style={styles.recentRow}
+                  onLongPress={() => {
+                    haptic('light');
+                    openPodcastMenu(c);
+                  }}
+                  onPress={() =>
+                    addRecent({
+                      kind: 'podcast',
+                      id: c.id,
+                      title: c.title,
+                      artist: c.author,
+                      coverArt: c.imageUrl ?? c.id,
+                      href: `/podcast/${c.id}`,
+                    })
+                  }
+                >
+                  <Cover
+                    uri={coverArtUrl(podcastCover(c) ?? c.id, COVER.thumb)}
+                    size={48}
+                    placeholderIcon="headset-outline"
+                  />
+                  <View style={styles.recentInfo}>
+                    <Text style={styles.recentTitle} numberOfLines={1}>
+                      {c.title}
+                    </Text>
+                    <Text style={styles.recentSub} numberOfLines={1}>
+                      {episodesLabel(c.episodeCount ?? 0, lang)}
+                    </Text>
+                  </View>
+                </Pressable>
+              </Link>
+            ))}
+          </View>
+        ) : null}
+
         {shows('radio') && stationMatches.length > 0 ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t('Radio')}</Text>
@@ -486,22 +586,7 @@ export default function SearchScreen() {
               <Pressable
                 key={r.id}
                 style={styles.recentRow}
-                onPress={() =>
-                  playQueue(
-                    [
-                      {
-                        id: r.id,
-                        title: r.name,
-                        url: r.streamUrl,
-                        artist: t('Radio'),
-                        coverArt: r.coverArt,
-                      },
-                    ],
-                    0,
-                    r.name,
-                    '/radio',
-                  )
-                }
+                onPress={() => void playRadio(r)}
               >
                 <Cover
                   uri={coverArtUrl(r.coverArt, COVER.thumb)}
@@ -543,7 +628,8 @@ const styles = themed((colors) => ({
     backgroundColor: colors.surfaceHighlight,
     margin: spacing.lg,
     paddingHorizontal: spacing.lg,
-    borderRadius: radius.pill,
+    // A capsule with Round, a rounded rectangle with Pointier.
+    borderRadius: restyled(radius.pill, radius.md),
   },
   input: {
     flex: 1,
@@ -609,8 +695,13 @@ const styles = themed((colors) => ({
   albumRow: {
     gap: spacing.md,
   },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    columnGap: GRID_GAP,
+    rowGap: spacing.lg,
+  },
   artist: {
-    width: 110,
     alignItems: 'center',
     gap: spacing.xs,
   },

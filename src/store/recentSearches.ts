@@ -7,7 +7,7 @@ import { useAuthStore } from './auth';
 
 const MAX = 12;
 
-export type RecentKind = 'artist' | 'album' | 'song';
+export type RecentKind = 'artist' | 'album' | 'song' | 'podcast';
 
 /** A result that was tapped, kept with its cover so it can be shown again. */
 export interface RecentItem {

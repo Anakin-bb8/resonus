@@ -133,9 +133,11 @@ export interface Palette {
    */
   coverWash: string;
   /**
-   * Flat backdrop of the player with no cover colour ("None"). Not
-   * `background`: it is deliberately a step away from the page, so the screen
-   * that covers the app looks like a different room.
+   * Flat backdrop of the player with no cover colour ("Plain"). Under the dark
+   * appearances it is the page's own background, set in `rebuild` so it follows
+   * the shade picked and pure black (#259): it used to be a fixed grey a step
+   * away from the page, which stayed bluish over every other shade. The light
+   * appearance keeps its own.
    */
   playerPlain: string;
   /** The unfilled part of the player's and the lyrics screen's slider, which
@@ -183,6 +185,7 @@ const DARK: BasePalette = {
   veil: 'rgba(20,22,25,0.6)',
   highlight: 'rgba(255,255,255,0.14)',
   coverWash: 'rgba(0,0,0,0.42)',
+  // Replaced by the background of the shade in force (see `rebuild`).
   playerPlain: '#3a4042',
   mediaTrack: 'rgba(255,255,255,0.35)',
   control: '#2B2D34',
@@ -604,6 +607,8 @@ function rebuild(): void {
   // the darkened one.
   const accent = readableOn(picked, light ? LIGHT.background : base.background);
   Object.assign(colors, base, {
+    // See `playerPlain`: the page itself under the dark appearances.
+    playerPlain: light ? base.playerPlain : base.background,
     accent,
     accentPressed: darken(accent),
     accentVivid: picked,
@@ -832,16 +837,59 @@ export const spacing = {
  * The whole ladder went up a step in August 2026: it used to top out at 16 and
  * almost everything in the app sat on 8, which reads flat next to anything
  * drawn in the last few years.
+ *
+ * Which ladder is drawn is a setting (Appearance > Border radius): `round`
+ * keeps this one, `pointier` steps down and goes flat on the big surfaces
+ * (4/8/12, then 12). The object below is rewritten in place when it changes,
+ * the way `colors` is: anything reading `radius.md` while rendering gets the
+ * current step, and `themed()` styles rebuild with it.
  */
-export const radius = {
-  sm: 6,
-  md: 10,
-  lg: 16,
-  xl: 24,
+/**
+ * Which corner ladder the app draws.
+ */
+export type BorderStyle = 'round' | 'pointier';
+
+/** This ladder: sm 6, md 10, lg 16, xl 24, sheets 32. */
+const RADIUS_ROUND = { sm: 6, md: 10, lg: 16, xl: 24, xxl: 32, pill: 999 };
+/** The flatter ladder: 4/8/12, then 12 everywhere but pills. */
+const RADIUS_POINTIER = { sm: 4, md: 8, lg: 12, xl: 12, xxl: 12, pill: 999 };
+
+export interface RadiusScale {
+  sm: number;
+  md: number;
+  lg: number;
+  xl: number;
   /** A sheet rising from the bottom, and anything else that owns the screen. */
-  xxl: 32,
-  pill: 999,
-} as const;
+  xxl: number;
+  pill: number;
+}
+
+/** The corner ladder in force. Rewritten in place by `applyBorderStyle`. */
+export const radius: RadiusScale = { ...RADIUS_ROUND };
+
+/** The ladder `radius` currently draws. Read live by the helpers below. */
+let borderStyle: BorderStyle = 'round';
+
+/**
+ * Swaps the corner ladder for the whole app and repaints everyone reading
+ * it (same wake-up as a theme change: `themed()` styles rebuild, subscribed
+ * components paint again).
+ */
+export function applyBorderStyle(style: BorderStyle): void {
+  borderStyle = style;
+  Object.assign(radius, style === 'round' ? RADIUS_ROUND : RADIUS_POINTIER);
+  rebuild();
+}
+
+/**
+ * A value that differs between the two ladders by more than the ladder step:
+ * `round` with Round, `pointy` with Pointier. Reads the live style, so `themed()` styles (rebuilt on
+ * every theme wake-up, which a style switch triggers) follow it with no
+ * subscription. Pass ladder steps, not numbers, so both stay in scale.
+ */
+export function restyled(round: number, pointy: number): number {
+  return borderStyle === 'round' ? round : pointy;
+}
 
 /**
  * The type scale, from the smallest label to the biggest heading.
@@ -888,6 +936,15 @@ export const tracking = {
 } as const;
 
 /**
+ * How dim a row is that you can see but cannot play: an offline song whose
+ * download was deleted, an episode whose file went. One value, so a song
+ * row, an episode card, a shelf row and a settings row dim alike — and a
+ * surface that dims something else (a disabled action, a swatch) says so
+ * itself rather than borrowing this.
+ */
+export const DIM_OPACITY = 0.4;
+
+/**
  * How wide a bottom sheet is allowed to get.
  *
  * A phone never reaches it, so nothing moves there. On a tablet it is what
@@ -899,6 +956,9 @@ export const SHEET_MAX_WIDTH = 560;
 
 /** Height of the tab bar (not including the bottom safe area). */
 export const TAB_BAR_HEIGHT = 60;
+
+/** The same bar on a screen too short for it, names beside the icons (#131). */
+export const TAB_BAR_HEIGHT_COMPACT = 44;
 
 /** Approximate height of the floating MiniPlayer (44px artwork + padding). */
 export const MINI_PLAYER_HEIGHT = 60;

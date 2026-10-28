@@ -17,6 +17,8 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { COVER, songCoverUrl, type Song } from '@/api/data';
+import { episodeHeart, heartedSong } from '@/api/podcasts';
+import { usePodcastFavoriteIds } from '@/lib/podcastFavorites';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { useT } from '@/i18n';
@@ -28,7 +30,7 @@ import { currentSong, useLiveInfo, usePlayerStore } from '@/store/player';
 import { CONTENT_MAX_WIDTH, useScreenSize } from '@/hooks/useScreenSize';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, radius, spacing, themed } from '@/theme';
+import { colors, fontSize, radius, restyled, spacing, themed } from '@/theme';
 import { motion } from '@/theme/motion';
 import { BarBlur, useBarBlur } from './BarBlur';
 import { Cover } from './Cover';
@@ -194,12 +196,16 @@ export function MiniPlayer() {
   // Not "unless the file is on the phone": see the player screen, which had the
   // same test in the same two places and the same hole under it.
   const favIds = useFavoriteIds(!!song && buttons === 'favorite');
+  // A podcast episode's heart is the device's own, filed in SQLite.
+  const podcastFav = usePodcastFavoriteIds(!!song?.podcastChannelId && buttons === 'favorite');
 
   if (!song) return null;
 
   // The central list wins when loaded; `song.starred` from the queue becomes
   // stale (only kept as backup for local files or while loading).
-  const favorited = favIds ? favIds.has(song.id) : !!song.starred;
+  const favorited = heartedSong(song, podcastFav, favIds);
+  // The heart writes the device's own SQLite favorite for an episode.
+  const podcastHeart = episodeHeart(song);
 
   return (
     <GestureDetector gesture={pan}>
@@ -230,7 +236,9 @@ export function MiniPlayer() {
           ) : null}
         </View>
       </Animated.View>
-      {buttons === 'favorite' ? <FavoriteButton id={song.id} starred={favorited} size={24} /> : null}
+      {buttons === 'favorite' ? (
+        <FavoriteButton id={song.id} starred={favorited} podcast={podcastHeart} size={24} />
+      ) : null}
       {buttons === 'previousNext' ? (
         <Pressable
           hitSlop={12}
@@ -300,7 +308,8 @@ export function MiniPlayer() {
 const styles = themed((colors) => ({
   card: {
     marginHorizontal: spacing.sm,
-    borderRadius: radius.lg,
+    // lg with Round, a step down with Pointier.
+    borderRadius: restyled(radius.lg, radius.md),
     boxShadow: '0px 6px 16px rgba(0, 0, 0, 0.3)',
   },
   container: {
@@ -309,15 +318,18 @@ const styles = themed((colors) => ({
     gap: spacing.md,
     backgroundColor: colors.surfaceHighlight,
     padding: spacing.sm,
-    borderRadius: radius.lg,
+    // lg with Round, a step down with Pointier.
+    borderRadius: restyled(radius.lg, radius.md),
     overflow: 'hidden',
   },
   /** Centred and no wider than a wide screen wants it. */
   narrow: { maxWidth: CONTENT_MAX_WIDTH, width: '100%', alignSelf: 'center' },
   progressTrack: {
     position: 'absolute',
-    left: 14,
-    right: 14,
+    // 14 in from both sides with Round; with Pointier it lines up with the
+    // cover's own edges instead.
+    left: restyled(14, spacing.sm),
+    right: restyled(14, spacing.sm),
     bottom: 0,
     height: 3,
     borderRadius: radius.pill,
