@@ -2,6 +2,8 @@
 package expo.modules.carauto
 
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -31,6 +33,7 @@ import com.google.common.util.concurrent.ListenableFuture
 class ResonusCarBrowserService : MediaLibraryService() {
   private var session: MediaLibrarySession? = null
   private var jsPlayer: JsProxyPlayer? = null
+  private val mainHandler = Handler(Looper.getMainLooper())
 
   override fun onCreate() {
     super.onCreate()
@@ -44,6 +47,7 @@ class ResonusCarBrowserService : MediaLibraryService() {
       .setId("ResonusCarBrowserSession")
       .setMediaButtonPreferences(modeButtons(player))
       .build()
+    activeService = this
     // Each of those two buttons carries the state it will put the player in,
     // so its icon has to be rebuilt whenever the state changes: shuffle turned
     // on from the phone has to come out lit in the car, and pressing it there
@@ -115,11 +119,23 @@ class ResonusCarBrowserService : MediaLibraryService() {
   override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? = session
 
   override fun onDestroy() {
+    if (activeService === this) activeService = null
     if (activePlayer === jsPlayer) activePlayer = null
     session?.run { player.release(); release() }
     session = null
     jsPlayer = null
     super.onDestroy()
+  }
+
+  private fun notifyTreeChanged(changed: Map<String, Int>) {
+    if (changed.isEmpty()) return
+    mainHandler.post {
+      val currentSession = session ?: return@post
+      for ((parentId, itemCount) in changed) {
+        currentSession.notifyChildrenChanged(parentId, itemCount, null)
+      }
+      CarAutoLog.d("notified changedParents=${changed.size}")
+    }
   }
 
   private inner class LibraryCallback : MediaLibrarySession.Callback {
@@ -419,6 +435,11 @@ class ResonusCarBrowserService : MediaLibraryService() {
   companion object {
     @Volatile var activePlayer: JsProxyPlayer? = null
       private set
+    @Volatile private var activeService: ResonusCarBrowserService? = null
+
+    fun notifyTreeChanged(changed: Map<String, Int>) {
+      activeService?.notifyTreeChanged(changed)
+    }
 
     /** The heart on the car's playback screen. */
     const val FAVORITE_COMMAND = "expo.modules.carauto.FAVORITE"

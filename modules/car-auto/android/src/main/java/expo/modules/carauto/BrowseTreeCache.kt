@@ -49,12 +49,13 @@ object BrowseTreeCache {
    * a partial tree too, and merging that would leave the car browsing the
    * albums of an account that is no longer open.
    */
-  fun setFromJson(context: Context, json: String) {
-    val incoming = parse(json) ?: return
+  fun setFromJson(context: Context, json: String): Map<String, Int> {
+    val incoming = parse(json) ?: return emptyMap()
     // What is on disk is the last tree that had songs in it. Read it before
     // deciding what to keep, or a partial push on a cold start has nothing to
     // be laid over and the albums come back empty anyway.
     loadFromDiskIfNeeded(context)
+    val before = nodes
     val sameAccount = profile == null || incoming.profile == null || profile == incoming.profile
     val keepWhatWeHave = incoming.partial && sameAccount
     nodes = if (keepWhatWeHave) nodes + incoming.nodes else incoming.nodes
@@ -69,6 +70,9 @@ object BrowseTreeCache {
       // Nothing to lay this over, so what is on disk is another account's.
       else if (!sameAccount) file.delete()
     }
+    return (before.keys + nodes.keys)
+      .filter { parentId -> before[parentId] != nodes[parentId] }
+      .associateWith { parentId -> nodes[parentId]?.size ?: 0 }
   }
 
   // For when JS has not pushed a tree into this process yet, which is what
