@@ -1150,6 +1150,16 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   batteryWarning: boolean;
   /** Player background: flat, cover color, or blurred cover art. */
   playerBackground: ScreenBackground;
+  /**
+   * Artist page extras, all opt-in and independent: handwritten autographs
+   * from a provider, and Apple's own logos, photos and motion for the header.
+   * Off by default like the rest of the appearance work (#292, #295).
+   */
+  artistSignaturesEnabled: boolean;
+  artistSignaturesApi: string;
+  appleArtistLogos: boolean;
+  appleArtistImages: boolean;
+  appleArtistVideos: boolean;
   playerFullBleed: boolean;
   albumFullBleed: boolean;
   navbarPills: boolean;
@@ -1496,6 +1506,13 @@ const DEFAULTS = {
   showGenreChips: false,
   batteryWarning: true,
   playerBackground: 'cover' as ScreenBackground,
+  // Off by default: they need a third-party provider, and the page is
+  // complete without them.
+  appleArtistImages: false,
+  appleArtistVideos: false,
+  appleArtistLogos: false,
+  artistSignaturesEnabled: false,
+  artistSignaturesApi: '',
   animatedCoverBackground: false,
   animatedArtworkMode: 'cover' as AnimatedArtworkMode,
   // 30: half the frames of 60 for a cover that reads the same; see
@@ -1696,6 +1713,11 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
   set(flags as Partial<SettingsState>);
   const motionMode = savedAnimatedArtworkMode(parsed);
   if (motionMode) set({ animatedArtworkMode: motionMode, animatedCoverBackground: motionMode === 'background' });
+  // A provider URL is just text: the cap keeps a corrupt file from growing the
+  // backup, and the trim makes an empty answer mean no provider.
+  if (typeof parsed.artistSignaturesApi === 'string' && parsed.artistSignaturesApi.length <= 2048) {
+    set({ artistSignaturesApi: parsed.artistSignaturesApi.trim() });
+  }
   // One switch used to blur both bars.
   if (typeof parsed.blurMiniPlayer !== 'boolean' && typeof parsed.blurBars === 'boolean') {
     set({ blurMiniPlayer: parsed.blurBars });
@@ -2194,9 +2216,8 @@ export const useSettings = create<SettingsState>((set, get) => ({
   },
 
   setHomeButton: (key, value) => {
-    // The gear's switch is not drawn, but a saved file could still say
-    // otherwise.
-    if (key === 'settings') return;
+    // The gear can be switched off like any other icon: Home then shows the
+    // profile picture instead, which leads to the same screen (PR #266).
     set((s) => ({
       homeButtons: s.homeButtons.map((x) => (x.key === key ? { ...x, enabled: value } : x)),
     }));

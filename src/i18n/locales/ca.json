@@ -849,5 +849,14 @@
   "{episodes} will be saved to this device ({duration}).": "{episodes} es guardaran en aquest dispositiu ({duration}).",
   "{episodes} will be saved to this device.": "{episodes} es guardaran en aquest dispositiu.",
   "Your library chips": "Xips de La teva biblioteca",
-  "Only downloaded": "Només el que s'ha baixat"
+  "Only downloaded": "Només el que s'ha baixat",
+  "Artist pages": "Pàgines d’artistes",
+  "Artist signatures": "Signatures d’artistes",
+  "Artist signatures API": "API de signatures d’artistes",
+  "Optional HTTPS provider. Artist names are sent when signatures are enabled.": "Proveïdor HTTPS opcional. S’envien els noms dels artistes en activar les signatures.",
+  "Show signature source": "Mostra la font de la signatura",
+  "Apple Music artist logos": "Logotips d’artistes d’Apple Music",
+  "Apple Music artist images": "Imatges d’artistes d’Apple Music",
+  "Animated Apple Music artist images": "Imatges animades d’artistes d’Apple Music",
+  "Apple options contact Apple using artist names. Missing artwork keeps the server image or name.": "Les opcions d’Apple envien noms d’artistes a Apple. Si falta una imatge, es conserva la del servidor o el nom."
 }

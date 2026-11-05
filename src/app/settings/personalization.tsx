@@ -10,6 +10,7 @@ import {
   SettingsScroll,
   settingsStyles,
   SwitchList,
+  TextRow,
 } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
@@ -65,6 +66,17 @@ export default function AppearanceSettings() {
   const setSwipeAction = useSettings((s) => s.setSwipeAction);
   const swipeLeftAction = useSettings((s) => s.swipeLeftAction);
   const setSwipeLeftAction = useSettings((s) => s.setSwipeLeftAction);
+  // Artist page extras: all opt-in, each independent of the others.
+  const artistSignaturesEnabled = useSettings((s) => s.artistSignaturesEnabled);
+  const setArtistSignaturesEnabled = useSettings((s) => s.setArtistSignaturesEnabled);
+  const artistSignaturesApi = useSettings((s) => s.artistSignaturesApi);
+  const setArtistSignaturesApi = useSettings((s) => s.setArtistSignaturesApi);
+  const appleArtistLogos = useSettings((s) => s.appleArtistLogos);
+  const setAppleArtistLogos = useSettings((s) => s.setAppleArtistLogos);
+  const appleArtistImages = useSettings((s) => s.appleArtistImages);
+  const setAppleArtistImages = useSettings((s) => s.setAppleArtistImages);
+  const appleArtistVideos = useSettings((s) => s.appleArtistVideos);
+  const setAppleArtistVideos = useSettings((s) => s.setAppleArtistVideos);
 
   const swipeOptions: { value: SwipeAction; label: string }[] = [
     { value: 'off', label: t('Off') },
@@ -195,6 +207,50 @@ export default function AppearanceSettings() {
             onChange={setSwipeLeftAction}
           />
         </SettingsGroup>
+
+        <Text style={settingsStyles.sectionTitle}>{t('Artist pages')}</Text>
+        <SettingsGroup>
+          <SwitchList
+            options={[
+              {
+                label: t('Artist signatures'),
+                value: artistSignaturesEnabled,
+                onChange: setArtistSignaturesEnabled,
+              },
+              {
+                label: t('Apple Music artist logos'),
+                value: appleArtistLogos,
+                onChange: setAppleArtistLogos,
+              },
+              {
+                label: t('Apple Music artist images'),
+                value: appleArtistImages,
+                onChange: setAppleArtistImages,
+              },
+              {
+                label: t('Animated Apple Music artist images'),
+                value: appleArtistVideos,
+                onChange: setAppleArtistVideos,
+              },
+            ]}
+          />
+          <TextRow
+            label={t('Artist signatures API')}
+            description={t(
+              'Optional HTTPS provider. Artist names are sent when signatures are enabled.',
+            )}
+            value={artistSignaturesApi}
+            onChange={setArtistSignaturesApi}
+            maxLength={2048}
+            keyboardType="url"
+            autoCapitalize="none"
+          />
+        </SettingsGroup>
+        <Text style={settingsStyles.sectionDescription}>
+          {t(
+            'Apple options contact Apple using artist names. Missing artwork keeps the server image or name.',
+          )}
+        </Text>
       </SettingsScroll>
     </SettingsPage>
   );

@@ -20,6 +20,8 @@ const base = Legacy.documentDirectory ?? '';
 
 /** Folders that are neither the music nor the mirror. */
 const FOLDERS = {
+  /** Autographs and Apple artist art cached as images. */
+  artistSignatures: `${base}artist-signatures/`,
   /** LRCLIB answers cached as `.lrc`, and the ones saved with a download. */
   lyrics: `${base}lyrics-cache/`,
   /**

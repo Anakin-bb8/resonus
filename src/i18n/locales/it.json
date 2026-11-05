@@ -799,5 +799,14 @@
   "New features": "Novità",
   "Changes": "Modifiche",
   "Fixes": "Correzioni",
-  "{n} more": "{n} in più"
+  "{n} more": "{n} in più",
+  "Artist pages": "Pagine artisti",
+  "Artist signatures": "Firme degli artisti",
+  "Artist signatures API": "API delle firme degli artisti",
+  "Optional HTTPS provider. Artist names are sent when signatures are enabled.": "Provider HTTPS facoltativo. I nomi degli artisti vengono inviati quando le firme sono attive.",
+  "Show signature source": "Mostra la fonte della firma",
+  "Apple Music artist logos": "Loghi degli artisti di Apple Music",
+  "Apple Music artist images": "Immagini degli artisti di Apple Music",
+  "Animated Apple Music artist images": "Immagini animate degli artisti di Apple Music",
+  "Apple options contact Apple using artist names. Missing artwork keeps the server image or name.": "Le opzioni Apple inviano i nomi degli artisti ad Apple. Se manca un'immagine restano quella del server o il nome."
 }

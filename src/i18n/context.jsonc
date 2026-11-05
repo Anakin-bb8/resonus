@@ -805,7 +805,9 @@
     "Full-bleed album artwork": "Album detail layout: cover spans the screen width and fades into the background; not an audio effect.",
     "Full-bleed artwork": "Now Playing layout: the complete artwork sits below the header and fades into colours from its edges.",
     "Full bleed": "Third animated-artwork layout: fitted edge-to-edge artwork, independent of static full bleed.",
-    "Static covers in portrait. Replaces the background below; animated covers are set further down.": "Description of the static full-bleed switch; animated artwork has a separate three-way selector."
+    "Static covers in portrait. Replaces the background below; animated covers are set further down.": "Description of the static full-bleed switch; animated artwork has a separate three-way selector.",
+    "Artist signatures": "Handwritten autographs in artist-page headers, not cryptographic signatures or artist names from the music server.",
+    "Apple Music artist logos": "Artist title graphics from Apple Music, separate from handwritten autographs. Independent opt-in; default off."
   },
 
   // Strings that are meant to stay in English, and are not counted as missing.
