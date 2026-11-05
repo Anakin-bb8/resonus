@@ -30,12 +30,12 @@ import { scheduleOnRN } from 'react-native-worklets';
 
 import { BarBlur, useBarBlur } from '@/components/BarBlur';
 
-import { useTabBarShown } from '@/hooks/useTabBar';
+import { useCompactTabBar, useTabBarHeight, useTabBarShown } from '@/hooks/useTabBar';
 import { motion } from '@/theme/motion';
 import { useT } from '@/i18n';
 import { rememberTab, reselectTab, tabOrigin, TABS } from '@/lib/tabOrigin';
 import { useSettings } from '@/store/settings';
-import { colors, MINI_PLAYER_GAP, MINI_PLAYER_HEIGHT, TAB_BAR_HEIGHT, themed, useThemeMode } from '@/theme';
+import { colors, MINI_PLAYER_GAP, MINI_PLAYER_HEIGHT, PILL_MARGIN, PILL_RADIUS, themed, useThemeMode } from '@/theme';
 
 const ICONS: Record<string, 'home' | 'search' | 'library' | 'albums' | 'settings'> = {
   index: 'home',
@@ -46,7 +46,7 @@ const ICONS: Record<string, 'home' | 'search' | 'library' | 'albums' | 'settings
 };
 
 /**
- * The gradient fill (Settings › Appearance › Navigation bar style: Gradient).
+ * The gradient fill (Settings › Navigation › Navigation bar style: Gradient).
  *
  * The shape the first draft was after, taken off a Figma ramp: clear at the
  * bar's top edge, a scrim by 19%, most of the ink in by the middle, solid a
@@ -91,6 +91,7 @@ export function GlobalTabBar() {
   // the blur only works from out here (`BarBlur`). The setting only decides
   // where else it shows.
   const blur = useBarBlur('tabs');
+  const pills = useSettings((s) => s.navbarPills);
   // The style that is on wins over the blur, and over the solid colour too:
   // they fill the same pixels and only one of them is ever drawn.
   const navStyle = useSettings((s) => s.navBarStyle);
@@ -100,6 +101,8 @@ export function GlobalTabBar() {
   const mode = useThemeMode();
   const bottomTabs = useSettings((s) => s.bottomTabs);
   const showLabels = useSettings((s) => s.showTabLabels);
+  const compact = useCompactTabBar();
+  const barHeight = useTabBarHeight();
   const root = segments[0];
   const inTabs = root === '(tabs)' || root === undefined;
   // Where a stack opened from here would belong; the back arrow reads the same
@@ -156,9 +159,11 @@ export function GlobalTabBar() {
       pointerEvents={shown ? 'auto' : 'none'}
       style={[
         styles.bar,
-        { height: TAB_BAR_HEIGHT + insets.bottom, paddingBottom: insets.bottom },
+        { height: barHeight + insets.bottom, paddingBottom: insets.bottom },
+        compact && styles.barCompact,
         navStyle === 'gradient' ? null : blur ? null : styles.solid,
         fadeStyle,
+        pills && { left: insets.left + PILL_MARGIN, right: insets.right + PILL_MARGIN, bottom: Math.max(insets.bottom, PILL_MARGIN), height: barHeight, paddingBottom: 0, borderRadius: PILL_RADIUS, overflow: 'hidden' },
       ]}
     >
       {blur && blurOn ? <BarBlur /> : null}
@@ -172,8 +177,8 @@ export function GlobalTabBar() {
         />
       ) : null}
       {/* Where the glass starts, when something bright passes under it. */}
-      {blur ? <View pointerEvents="none" style={styles.edge} /> : null}
-      {/* The user's order, and only the ones they kept (Settings › Appearance
+      {blur && !pills ? <View pointerEvents="none" style={styles.edge} /> : null}
+      {/* The user's order, and only the ones they kept (Settings › Navigation
           › Navigation bar). `TABS` stays the catalogue: it is what says where
           each one goes and what it is called. */}
       {bottomTabs
@@ -192,7 +197,10 @@ export function GlobalTabBar() {
             key={tab.href}
             // Same height without the names, so nothing else has to move: the
             // icons just sit in the middle of it.
-            style={[styles.item, !showLabels && styles.itemIconOnly]}
+            style={[
+              styles.item,
+              compact ? styles.itemCompact : !showLabels && styles.itemIconOnly,
+            ]}
             accessibilityRole="button"
             accessibilityState={{ selected: here }}
             accessibilityLabel={t(tab.label)}
@@ -212,13 +220,14 @@ export function GlobalTabBar() {
               />
             </View>
             {showLabels ? (
-              <Text style={[styles.label, { color }]} numberOfLines={1}>
+              <Text style={[styles.label, compact && styles.labelCompact, { color }]} numberOfLines={1}>
                 {t(tab.label)}
               </Text>
             ) : null}
           </Pressable>
           );
         })}
+      {pills ? <View pointerEvents="none" style={styles.pillOutline} /> : null}
     </Animated.View>
   );
 }
@@ -234,6 +243,12 @@ const styles = themed((colors) => ({
     paddingTop: 6,
   },
   solid: { backgroundColor: colors.background },
+  pillOutline: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: PILL_RADIUS,
+    borderWidth: 0.5,
+    borderColor: colors.highlight,
+  },
   edge: {
     position: 'absolute',
     top: 0,
@@ -244,6 +259,11 @@ const styles = themed((colors) => ({
   },
   item: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', padding: 5 },
   itemIconOnly: { justifyContent: 'center', paddingBottom: 11 },
+  // A short screen (#131): the name beside the icon, the row centred in the
+  // shorter bar.
+  barCompact: { paddingTop: 0 },
+  itemCompact: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 },
+  labelCompact: { fontSize: 12 },
   iconBox: { width: 31, height: 28, alignItems: 'center', justifyContent: 'center' },
   label: { fontSize: 10 },
 }));

@@ -1,0 +1,20 @@
+<p>Resonus es un reproductor de música limpio para tu servidor propio y para la música de tu móvil.</p>
+
+<ul>
+<li><b>Navidrome, OpenSubsonic, Jellyfin y Ampache</b>: varios perfiles y bibliotecas, y varias direcciones para un mismo servidor con cambio automático</li>
+<li><b>Modo local</b>: reproduce la música del móvil o de una carpeta, sin servidor</li>
+<li><b>Modo sin conexión</b>: favoritos, listas y álbumes se pueden explorar sin conexión, y las canciones descargadas suenan</li>
+<li><b>Descargas</b>: álbumes, listas, discografías enteras o canciones sueltas, en calidad original o transcodificadas</li>
+<li><b>Letras sincronizadas</b>: modo karaoke, toca una línea para saltar a ella y resaltado palabra a palabra, con búsqueda opcional en LRCLIB y lrc.red</li>
+<li><b>Pódcasts y radio por internet</b></li>
+<li><b>Envío a altavoces</b>: UPnP/DLNA y Sonos, con grupos de salas</li>
+<li><b>Reproducción</b>: sin pausas, fundido, ecualizador, ReplayGain, velocidad, temporizador y cola con deshacer</li>
+<li><b>Reproducción automática y mixes</b> con canciones parecidas</li>
+<li><b>Temas</b>: oscuro, claro o el del móvil, con cualquier color de acento</li>
+<li><b>A tu manera</b>: ordena las secciones de Inicio, las pestañas, los botones del minirreproductor, los gestos y más</li>
+<li><b>Android Auto</b> (experimental), y diseño para horizontal y tablet</li>
+</ul>
+
+<p>La búsqueda y el ranking de pódcasts usan el directorio de iTunes, y las carátulas animadas vienen de Apple Music. Las dos cosas son opcionales.</p>
+
+<p>Comunidad y soporte: https://discord.gg/pecE8MTPVr</p>

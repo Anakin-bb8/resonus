@@ -1,12 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-  <!-- Permite instalar en Android Automotive OS sin exigir hardware de coche
-       (así también funciona como app de proyección Android Auto en el móvil). -->
+  <!-- Allows installing on Android Automotive OS without requiring car hardware
+       (so it also works as an Android Auto projection app on the phone). -->
   <uses-feature
     android:name="android.hardware.type.automotive"
     android:required="false" />
 
   <application>
-    <!-- Declara la app como app de medios para Android Auto (proyección). -->
+    <!-- Declares the app as a media app for Android Auto (projection). -->
     <meta-data
       android:name="com.google.android.gms.car.application"
       android:resource="@xml/automotive_app_desc" />
@@ -20,5 +20,12 @@
         <action android:name="android.media.browse.MediaBrowserService" />
       </intent-filter>
     </service>
+    <!-- Remote covers for the Android Auto host, under opaque ids, so it never
+         sees a server URL with the account's credentials in it. Exported: the
+         host reads it from its own process, and an id says nothing on its own. -->
+    <provider
+      android:name="expo.modules.carauto.CarArtProvider"
+      android:authorities="${applicationId}.carart"
+      android:exported="true" />
   </application>
 </manifest>

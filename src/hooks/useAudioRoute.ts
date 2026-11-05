@@ -1,46 +1,28 @@
 /**
- * The live audio route: refreshed on mount, on every native route change and
- * whenever the app comes back, since nothing fires while it was away.
- *
- * On Android 12+, a Bluetooth route without a class asks once per route for
- * the permission that names it; denied or missing, the generic Bluetooth
- * mark stays and nobody is nagged again until the route changes.
+ * The live output of the phone: read on mount, on every native route change
+ * and whenever the app comes back, since a change while it was away may
+ * never have reached it.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 
-import { getAudioRoute, requestBluetoothPermission, subscribeAudioRoute } from '@/lib/audioRoute';
-import type { AudioRoute } from '@/lib/audioRouteTypes';
+import { getAudioRoute, subscribeAudioRoute } from '@/lib/audioRoute';
+import { sameRoute, type AudioRoute } from '@/lib/audioRouteTypes';
 
 export function useAudioRoute(): AudioRoute | null {
-  const [route, setRoute] = useState<AudioRoute | null>(() => getAudioRoute());
-  const askedFor = useRef<string | null>(null);
+  const [route, setRoute] = useState(getAudioRoute);
   useEffect(() => {
-    const unsubscribe = subscribeAudioRoute(setRoute);
-    const appStateSub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') setRoute(getAudioRoute());
+    const update = (next: AudioRoute | null) =>
+      setRoute((prev) => (sameRoute(prev, next) ? prev : next));
+    update(getAudioRoute());
+    const unsubscribe = subscribeAudioRoute(update);
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') update(getAudioRoute());
     });
     return () => {
-      unsubscribe?.();
-      appStateSub.remove();
+      unsubscribe();
+      sub.remove();
     };
   }, []);
-  useEffect(() => {
-    // Ask in context, once per route: a Bluetooth device whose class the OS
-    // withholds for want of permission.
-    const key = route ? `${route.kind}:${route.name}` : null;
-    if (
-      key &&
-      key !== askedFor.current &&
-      route?.kind === 'bluetooth' &&
-      !route.deviceClass &&
-      route.needsPermission
-    ) {
-      askedFor.current = key;
-      void requestBluetoothPermission().then(() => {
-        setRoute(getAudioRoute());
-      });
-    }
-  }, [route]);
   return route;
 }

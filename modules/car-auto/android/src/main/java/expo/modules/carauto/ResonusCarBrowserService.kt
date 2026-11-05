@@ -2,6 +2,8 @@
 package expo.modules.carauto
 
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -14,9 +16,11 @@ import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
+import androidx.media3.session.SessionError
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.MoreExecutors
 
 /**
  * The MediaLibraryService that shows Android Auto the BrowseTree built in JS.
@@ -31,19 +35,26 @@ import com.google.common.util.concurrent.ListenableFuture
 class ResonusCarBrowserService : MediaLibraryService() {
   private var session: MediaLibrarySession? = null
   private var jsPlayer: JsProxyPlayer? = null
+  private val mainHandler = Handler(Looper.getMainLooper())
+  private lateinit var albumLoader: AlbumBrowseLoader
 
   override fun onCreate() {
     super.onCreate()
     CarArtwork.init(applicationContext)
     BrowseTreeCache.loadFromDiskIfNeeded(applicationContext)
+    albumLoader = AlbumBrowseLoader(applicationContext, mainHandler, { id, parent, profile ->
+      CarAutoModule.instance?.emitBrowse(id, parent, profile) == true
+    }, ::notifyTreeChanged)
     val player = JsProxyPlayer().also {
       jsPlayer = it
       activePlayer = it
+      CarPlaybackMirror.attach(it)
     }
     session = MediaLibrarySession.Builder(this, player, LibraryCallback())
       .setId("ResonusCarBrowserSession")
       .setMediaButtonPreferences(modeButtons(player))
       .build()
+    activeService = this
     // Each of those two buttons carries the state it will put the player in,
     // so its icon has to be rebuilt whenever the state changes: shuffle turned
     // on from the phone has to come out lit in the car, and pressing it there
@@ -114,12 +125,32 @@ class ResonusCarBrowserService : MediaLibraryService() {
 
   override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? = session
 
+  // This is a bound mirror, not the audio engine. expo-audio's playback
+  // service already owns the foreground notification. Restoring a playing
+  // mirror must not start a second foreground service from the background.
+  override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) = Unit
+
   override fun onDestroy() {
+    albumLoader.close()
+    jsPlayer?.let(CarPlaybackMirror::detach)
+    if (activeService === this) activeService = null
     if (activePlayer === jsPlayer) activePlayer = null
     session?.run { player.release(); release() }
     session = null
     jsPlayer = null
     super.onDestroy()
+  }
+
+  private fun notifyTreeChanged(changed: Map<String, Int>) {
+    mainHandler.post {
+      albumLoader.onTreeChanged()
+      if (changed.isEmpty()) return@post
+      val currentSession = session ?: return@post
+      for ((parentId, itemCount) in changed) {
+        currentSession.notifyChildrenChanged(parentId, itemCount, null)
+      }
+      CarAutoLog.d("notified changedParents=${changed.size}")
+    }
   }
 
   private inner class LibraryCallback : MediaLibrarySession.Callback {
@@ -158,7 +189,12 @@ class ResonusCarBrowserService : MediaLibraryService() {
       // for a root asked for as "recent": that is the system's own media
       // resumption (SystemUI on boot, say), not somebody in a car, and taking
       // it for one filled the whole tree on phones that never saw a car (#221).
-      if (params?.isRecent != true) CarAutoModule.instance?.emitConnected()
+      // `projection` is Android Auto itself, as opposed to any other browser
+      // (a watch, the assistant): the car plays what the phone plays, so
+      // whatever was on a speaker comes back to the phone (#272).
+      if (params?.isRecent != true) {
+        CarAutoModule.instance?.emitConnected(browser.packageName == ANDROID_AUTO_PACKAGE)
+      }
       val rootExtras = Bundle().apply {
         // Hints for Android Auto: the root's children are drawn as tabs
         // (category list items), and anything browsable below that as a list.
@@ -211,6 +247,14 @@ class ResonusCarBrowserService : MediaLibraryService() {
     ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
       val children = BrowseTreeCache.getChildren(parentId)
       CarAutoLog.d("children of=$parentId have=${children.size} page=$page pageSize=$pageSize")
+      if (children.isEmpty() && parentId.startsWith("album:") && findNode(parentId) != null) {
+        // Wait for exactly this album. Returning an empty success here made
+        // every album beyond the prefetch cap appear permanently empty.
+        return Futures.transform(albumLoader.load(parentId), { loaded ->
+          if (loaded == true) pageOf(BrowseTreeCache.getChildren(parentId), page, pageSize, params)
+          else LibraryResult.ofError(SessionError.ERROR_IO)
+        }, MoreExecutors.directExecutor())
+      }
       // Paged, like the search results and for the same reason (see `pageOf`).
       return Futures.immediateFuture(pageOf(children, page, pageSize, params))
     }
@@ -414,9 +458,25 @@ class ResonusCarBrowserService : MediaLibraryService() {
   companion object {
     @Volatile var activePlayer: JsProxyPlayer? = null
       private set
+    @Volatile private var activeService: ResonusCarBrowserService? = null
+
+    fun notifyTreeChanged(changed: Map<String, Int>) {
+      activeService?.notifyTreeChanged(changed)
+    }
+
+    fun browseReady() {
+      activeService?.let { service -> service.mainHandler.post { service.albumLoader.onReady() } }
+    }
+
+    fun completeBrowse(requestId: String, json: String?) {
+      activeService?.let { service -> service.mainHandler.post { service.albumLoader.complete(requestId, json) } }
+    }
 
     /** The heart on the car's playback screen. */
     const val FAVORITE_COMMAND = "expo.modules.carauto.FAVORITE"
+
+    /** Android Auto's own package, the one browsing the library from a car. */
+    private const val ANDROID_AUTO_PACKAGE = "com.google.android.projection.gearhead"
 
     /**
      * How much cover art one page of browse results may carry. Below the

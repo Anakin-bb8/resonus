@@ -7,7 +7,8 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { parseLrc, serializeLrc } from '@/lib/lrc';
-import { indexOfByte, structuredSongLyrics, wordEnds, wordsFromCues } from '@/lib/lyricWords';
+import { activeIndex } from '@/lib/lyricSweep';
+import { indexOfByte, structuredSongLyrics, wordEnds, wordGroups, wordsFromCues } from '@/lib/lyricWords';
 import { parseTtml, ttmlTime } from '@/lib/ttml';
 
 /** The start of the file attached to #165, and one line from its end. */
@@ -313,6 +314,24 @@ describe('Word ends', () => {
 });
 
 describe('Server structured lyrics', () => {
+  it('puts synced lines in the order they are sung', () => {
+    // A chorus stored once with two timestamps comes back after the verses.
+    const lyrics = structuredSongLyrics({
+      synced: true,
+      line: [
+        { start: 1000, value: 'Verse one' },
+        { start: 9000, value: 'Verse two' },
+        { start: 5000, value: 'Chorus' },
+        { start: 13000, value: 'Chorus' },
+      ],
+    });
+    assert.deepEqual(
+      lyrics?.lines.map((l) => l.start),
+      [1000, 5000, 9000, 13000],
+    );
+    assert.equal(activeIndex(lyrics!.lines, 10_000), 2);
+  });
+
   it('reads the lead voice like before, with no backing', () => {
     const lyrics = structuredSongLyrics({
       synced: true,
@@ -357,5 +376,37 @@ describe('Server structured lyrics', () => {
     });
     assert.equal(lyrics!.lines[0].backing?.[0].start, 2000);
     assert.equal(lyrics!.lines[0].backing?.[0].end, 2500);
+  });
+});
+
+describe('parseLrc blank lines in plain text', () => {
+  it('keeps one gap per stanza break, none at either end', () => {
+    const lyrics = parseLrc('\n\nFirst\n\n\n\nSecond\nThird\n\n')!;
+    assert.deepEqual(
+      lyrics.lines.map((l) => l.value),
+      ['First', '', 'Second', 'Third'],
+    );
+  });
+
+  it('is no lyrics when there are only blank lines', () => {
+    assert.equal(parseLrc('\n\n  \n'), null);
+  });
+});
+
+describe('wordGroups (#312)', () => {
+  const words = (values: string[]) => values.map((value, i) => ({ start: i * 100, value }));
+
+  it('keeps the syllables of one word together', () => {
+    const line = parseLrc("[00:01.00]<00:01.00>L'A<00:01.30>MOUR <00:01.80>DE <00:02.40>VI<00:02.70>E")!;
+    const timed = line.lines.find((l) => l.words)!.words!;
+    assert.deepEqual(wordGroups(timed), [[0, 1], [2], [3, 4]]);
+  });
+
+  it('breaks anywhere in scripts written without spaces', () => {
+    assert.deepEqual(wordGroups(words(['君', 'の', '声'])), [[0], [1], [2]]);
+  });
+
+  it('breaks where the space sits at the start of the next word', () => {
+    assert.deepEqual(wordGroups(words(['one', ' two'])), [[0], [1]]);
   });
 });

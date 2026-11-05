@@ -3,9 +3,9 @@
  * order.
  *
  * The same draggable list as the navigation bar, with the same kind of
- * exemption: there, Home has no switch. Here every icon has one, the gear
- * included: turning it off forces the profile picture on, so Settings stay
- * one tap away through it.
+ * exemption: there, Home has no switch; here, the gear has none. Settings is
+ * only reachable from that icon, so turning it off would leave no way back to
+ * this very screen.
  */
 import Icon from '@/components/Icon';
 import { Pressable, Switch, Text, View } from 'react-native';
@@ -45,6 +45,9 @@ function ButtonRow({ button }: { button: HomeButton }) {
   const setHomeButton = useSettings((s) => s.setHomeButton);
   const accent = useAccent();
   const { label, icon } = BUTTONS[button.key];
+  // The gear stays. Where it sits is a preference like any other; whether it
+  // is there at all is not.
+  const fixed = button.key === 'settings';
   return (
     <View style={styles.row}>
       <Pressable
@@ -60,12 +63,16 @@ function ButtonRow({ button }: { button: HomeButton }) {
       </Pressable>
       <Icon name={icon} size={20} color={colors.textSecondary} />
       <Text style={styles.label}>{t(label)}</Text>
-      <Switch
-        value={button.enabled}
-        onValueChange={(v) => setHomeButton(button.key, v)}
-        trackColor={{ false: colors.control, true: accent }}
-        thumbColor={colors.knob}
-      />
+      {fixed ? (
+        <Text style={styles.fixed}>{t('Always shown')}</Text>
+      ) : (
+        <Switch
+          value={button.enabled}
+          onValueChange={(v) => setHomeButton(button.key, v)}
+          trackColor={{ false: colors.control, true: accent }}
+          thumbColor={colors.knob}
+        />
+      )}
     </View>
   );
 }
@@ -123,4 +130,7 @@ const styles = themed((colors) => ({
     borderRadius: radius.md,
   },
   label: { flex: 1, color: colors.text, fontSize: fontSize.md },
+  // Where the switch would be, in the voice of something that is not a
+  // control: it is an answer to "why can I not turn this one off".
+  fixed: { color: colors.textMuted, fontSize: fontSize.xs },
 }));

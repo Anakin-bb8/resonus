@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-  <!-- Servicio foreground que mantiene viva la sesión de medios (controles de
-       bloqueo + botones de volumen) mientras se castea por UPnP. Los permisos
-       FOREGROUND_SERVICE(_MEDIA_PLAYBACK) ya los declara la app. -->
+  <!-- Foreground service that keeps the media session alive (lock screen
+       controls + volume buttons) while casting over UPnP. The app already
+       declares the FOREGROUND_SERVICE(_MEDIA_PLAYBACK) permissions. -->
   <application>
     <service
       android:name="expo.modules.castmedia.CastMediaService"

@@ -170,10 +170,9 @@ export default function FavoritesScreen() {
     return (
       <View style={styles.center}>
         <EmptyState
-          icon="add-circle-outline"
-          iconSolid
+          icon="heart-outline"
           title={t('No favorites yet')}
-          subtitle={t('Tap the plus button on songs to see them here.')}
+          subtitle={t('Tap the heart on songs to see them here.')}
         />
       </View>
     );

@@ -4,7 +4,7 @@
  */
 import Icon from '@/components/Icon';
 import { useEffect } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Extrapolation,
@@ -16,7 +16,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { COVER, songCoverUrl, type Song } from '@/api/data';
+import { COVER, canGoIntoPlaylist, songCoverUrl, type Song } from '@/api/data';
+import { episodeHeart, heartedSong } from '@/api/podcasts';
+import { usePodcastFavoriteIds } from '@/lib/podcastFavorites';
 import { useDominantColor } from '@/hooks/useDominantColor';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { useT } from '@/i18n';
@@ -25,10 +27,11 @@ import { router } from 'expo-router';
 import { revealOffset } from '@/lib/playerReveal';
 import { pushOnce } from '@/lib/pushOnce';
 import { currentSong, useLiveInfo, usePlayerStore } from '@/store/player';
+import { usePlaylistPicker } from '@/store/playlistPicker';
 import { CONTENT_MAX_WIDTH, useScreenSize } from '@/hooks/useScreenSize';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
-import { colors, fontSize, radius, restyled, spacing, themed } from '@/theme';
+import { colors, fontSize, PILL_RADIUS, radius, restyled, spacing, themed } from '@/theme';
 import { motion } from '@/theme/motion';
 import { BarBlur, useBarBlur } from './BarBlur';
 import { Cover } from './Cover';
@@ -63,7 +66,7 @@ function MiniProgress({ song }: { song: Song }) {
   );
 }
 
-export function MiniPlayer() {
+export function MiniPlayer({ active = true }: { active?: boolean }) {
   const { width: screenW, height: screenH, wide } = useScreenSize();
   const song = usePlayerStore(currentSong);
   // A radio saying what it plays says it here too: down here there is only room
@@ -189,17 +192,32 @@ export function MiniPlayer() {
   const dominant = useDominantColor(miniColor ? colorSource : undefined);
   const bg = miniColor ? dominant : colors.surfaceHighlight;
   const blur = useBarBlur('miniPlayer');
+  const pills = useSettings((s) => s.miniPlayerPills);
   const buttons = useSettings((s) => s.miniPlayerButtons);
   const showProgress = useSettings((s) => s.miniPlayerProgress);
   // Not "unless the file is on the phone": see the player screen, which had the
   // same test in the same two places and the same hole under it.
   const favIds = useFavoriteIds(!!song && buttons === 'favorite');
+  // A podcast episode's heart is the device's own, filed in SQLite.
+  const podcastFav = usePodcastFavoriteIds(!!song?.podcastChannelId && buttons === 'favorite');
 
   if (!song) return null;
 
   // The central list wins when loaded; `song.starred` from the queue becomes
   // stale (only kept as backup for local files or while loading).
-  const favorited = favIds ? favIds.has(song.id) : !!song.starred;
+  const favorited = heartedSong(song, podcastFav, favIds);
+  // The heart writes the device's own SQLite favorite for an episode.
+  const podcastHeart = episodeHeart(song);
+  /**
+   * What holding the heart does: the app's playlist sheet, with this song
+   *  (#286). The sheet is the one mounted in the root layout above this bar,
+   *  so opening it is a store write and no navigation. A station's and an
+   *  episode's id names no track a playlist can take (`canGoIntoPlaylist`),
+   *  so those are handed nothing and their heart stays a tap, as it was.
+   */
+  const openPlaylistSheet = canGoIntoPlaylist(song)
+    ? () => usePlaylistPicker.getState().open([song])
+    : undefined;
 
   return (
     <GestureDetector gesture={pan}>
@@ -209,14 +227,14 @@ export function MiniPlayer() {
             and nothing about a bar with three things in it needs 1280 points
             (#131). */}
         {/* The shadow sits outside the card, which clips its own contents. */}
-        <View style={[styles.card, wide && styles.narrow]}>
+        <View style={[styles.card, wide && styles.narrow, pills && { borderRadius: PILL_RADIUS, boxShadow: undefined }]}>
         <Pressable
-          style={[styles.container, { backgroundColor: blur ? 'transparent' : bg }]}
+          style={[styles.container, { backgroundColor: blur ? 'transparent' : bg }, pills && { borderRadius: PILL_RADIUS }]}
           onPress={() => pushOnce('/player')}
         >
           {blur ? <BarBlur tint={bg} alpha={0.55} /> : null}
       <Animated.View style={[styles.details, detailsStyle]}>
-        <Cover uri={cover} size={44} placeholderIcon={song.url ? 'radio' : 'musical-notes'} />
+        <Cover uri={cover} size={44} autoplay={active} placeholderIcon={song.url ? 'radio' : 'musical-notes'} />
         <View style={styles.info}>
           <MarqueeText
             text={live?.title ?? song.title}
@@ -230,7 +248,15 @@ export function MiniPlayer() {
           ) : null}
         </View>
       </Animated.View>
-      {buttons === 'favorite' ? <FavoriteButton id={song.id} starred={favorited} size={26} /> : null}
+      {buttons === 'favorite' ? (
+        <FavoriteButton
+          id={song.id}
+          starred={favorited}
+          podcast={podcastHeart}
+          size={24}
+          hold={openPlaylistSheet}
+        />
+      ) : null}
       {buttons === 'previousNext' ? (
         <Pressable
           hitSlop={12}
@@ -270,7 +296,7 @@ export function MiniPlayer() {
         ) : (
           <Icon
             name={isPlaying ? 'pause' : 'play'}
-            size={26}
+            size={28}
             color={colors.text}
           />
         )}
@@ -290,6 +316,7 @@ export function MiniPlayer() {
       ) : null}
 
           {showProgress ? <MiniProgress song={song} /> : null}
+          {pills ? <View pointerEvents="none" style={styles.pillOutline} /> : null}
         </Pressable>
         </View>
       </Animated.View>
@@ -300,7 +327,7 @@ export function MiniPlayer() {
 const styles = themed((colors) => ({
   card: {
     marginHorizontal: spacing.sm,
-    // Stepped down by the fork (lg upstream): round draws it back.
+    // lg with Round, a step down with Pointier.
     borderRadius: restyled(radius.lg, radius.md),
     boxShadow: '0px 6px 16px rgba(0, 0, 0, 0.3)',
   },
@@ -310,28 +337,32 @@ const styles = themed((colors) => ({
     gap: spacing.md,
     backgroundColor: colors.surfaceHighlight,
     padding: spacing.sm,
-    // A step in from the edge: the buttons sit further left, clear of it.
-    paddingRight: spacing.md,
-    // Stepped down by the fork (lg upstream): round draws it back.
+    // lg with Round, a step down with Pointier.
     borderRadius: restyled(radius.lg, radius.md),
     overflow: 'hidden',
+  },
+  pillOutline: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: PILL_RADIUS,
+    borderWidth: 0.5,
+    borderColor: colors.highlight,
   },
   /** Centred and no wider than a wide screen wants it. */
   narrow: { maxWidth: CONTENT_MAX_WIDTH, width: '100%', alignSelf: 'center' },
   progressTrack: {
     position: 'absolute',
-    // Shorter on both sides upstream (14): the fork lines it up with the
-    // cover's own edges instead. Round draws that back.
+    // 14 in from both sides with Round; with Pointier it lines up with the
+    // cover's own edges instead.
     left: restyled(14, spacing.sm),
     right: restyled(14, spacing.sm),
     bottom: 0,
-    height: 2,
+    height: 3,
     borderRadius: radius.pill,
     backgroundColor: colors.highlight,
     overflow: 'hidden',
   },
-  progressFill: { height: 2, borderRadius: radius.pill, backgroundColor: colors.text },
-  spinner: { width: 26, height: 26 },
+  progressFill: { height: 3, borderRadius: radius.pill, backgroundColor: colors.text },
+  spinner: { width: 28, height: 28 },
   details: {
     flex: 1,
     flexDirection: 'row',

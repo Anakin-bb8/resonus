@@ -13,11 +13,13 @@ import * as Crypto from 'expo-crypto';
 // This one answers there, and honours `AbortSignal` properly with it.
 import { fetch } from 'expo/fetch';
 
+import { tg } from '@/i18n';
 import { markAbsentCovers, omitsAbsentCovers } from '@/lib/absentCovers';
 import { structuredSongLyrics, type ServerStructuredLyrics } from '@/lib/lyricWords';
 import { canonicalId, idWouldChange } from '@/lib/navidromeIds';
 import { netTally, timed } from '@/lib/perfLog';
 import { createSlots } from '@/lib/slots';
+import { DeadlineError, untilAborted, withDeadline } from './deadline';
 import { assertCanRequest } from './netGate';
 
 export const CLIENT_NAME = 'Resonus';
@@ -114,6 +116,8 @@ export interface Song {
   url?: string;
   /** `url` is a file (a podcast episode), not a live station: speed applies. */
   vod?: boolean;
+  /** Set on a podcast episode: the show it belongs to, for "Go to Podcast". */
+  podcastChannelId?: string;
   /** Song genre (sent by Subsonic and Jellyfin). Used by radio so it doesn't
    *  die when similar artist tracks run out. */
   genre?: string;
@@ -210,9 +214,22 @@ export interface Song {
   };
 }
 
+/** Whether a song's `url` is a stream the phone may reach: radio yes, a
+ *  podcast episode no — its address belongs to the publisher and offline
+ *  mode says no to it like to any other request. The one rule the rows,
+ *  the queue marking and the player's source decision all read. */
+export function streamReachable(song: Song): boolean {
+  return !!song.url && !song.podcastChannelId;
+}
+
 export interface Album {
   id: string;
   name: string;
+  /**
+   * 1-5, absent if never rated. Navidrome keeps a rating per album as it does
+   * per song and per artist, and `setRating` takes the album's id (#261).
+   */
+  userRating?: number;
   artist?: string;
   artistId?: string;
   /** Album description from the comment tag (OpenSubsonic; Navidrome sends it). */
@@ -296,6 +313,12 @@ export interface Artist {
   albumCount?: number;
   starred?: string;
   /**
+   * What the artist is filed under (OpenSubsonic): the sort tag if the files
+   * have one, else the name without a leading article, so "The Knife" sorts
+   * as "knife" (#275).
+   */
+  sortName?: string;
+  /**
    * 1-5, absent if never rated. `getArtist` passes the artist element through
    * as it comes, so this only needs declaring to be read: a server that rates
    * artists (Navidrome keeps an annotation per artist, same as for a song)
@@ -316,10 +339,14 @@ export interface Playlist {
   public?: boolean;
   /** Playlist owner ("System" for Ampache stock smartlists). */
   owner?: string;
+  /** OpenSubsonic: this user can't change the tracks (smart, synced, someone else's). */
+  readonly?: boolean;
   /** Creation date (ISO); sent by Navidrome/Subsonic and the local profile. */
   created?: string;
   /** Last modification (ISO). */
   changed?: string;
+  /** Offline only: whether any of its songs can play. Unset online. */
+  availableOffline?: boolean;
 }
 
 /** Generates a random salt in hexadecimal. */
@@ -430,7 +457,12 @@ const REQUEST_TIMEOUT_MS = 15000;
  * also ran out their timeout before leaving the phone. Two at a time leaves the
  * others free, and the timeout starts when the request does.
  */
-const AGENT_ENDPOINTS = new Set(['getSimilarSongs2.view', 'getTopSongs.view', 'getArtistInfo2.view']);
+const AGENT_ENDPOINTS = new Set([
+  'getSimilarSongs2.view',
+  'getTopSongs.view',
+  'getArtistInfo2.view',
+  'getAlbumInfo2.view',
+]);
 const agentSlots = createSlots(2);
 
 /** Makes a request and unwraps the Subsonic response. */
@@ -531,23 +563,26 @@ async function request<T>(
       fetch(buildUrl(auth, endpoint, extra), { signal: controller.signal }),
     );
   } catch {
+    clearTimeout(timer);
     // Counted too, and apart. A request that never arrives costs the radio the
     // same as one that does, and a phone talking to a server that is not there
     // is one of the two shapes this report exists to tell apart.
     netTally(`${endpoint} (no answer)`);
     if (controller.signal.aborted) {
-      throw new SubsonicRequestError('Server took too long to respond', true);
+      throw new SubsonicRequestError(tg('Server took too long to respond'), true);
     }
-    throw new SubsonicRequestError('Could not connect to the server', true);
+    throw new SubsonicRequestError(tg('Could not connect to the server'), true);
   } finally {
-    clearTimeout(timer);
     if (agent) agentSlots.release();
   }
 
   // Before the status is judged: an error is a request that went out and came
   // back like any other, and a storm of them is what a tally is for.
   netTally(endpoint, Number(res.headers.get('content-length')) || 0);
-  if (!res.ok) throw new SubsonicRequestError(`Network error (${res.status})`, false);
+  if (!res.ok) {
+    clearTimeout(timer);
+    throw new SubsonicRequestError(`Network error (${res.status})`, false);
+  }
   // Apart from the request: this is the part that runs on the JS thread, and
   // it grows with the size of the answer.
   //
@@ -556,14 +591,30 @@ async function request<T>(
   // response: a clone taken after `json()` has read it throws "body is already
   // used", synchronously and outside the try above, which took every request
   // with it. React Native's `fetch` let that pass; a spec-abiding one does not.
-  const json = await timed(`json ${endpoint}`, async () => {
-    if (!__DEV__) return res.json();
-    const text = await res.text();
-    console.log(`[perf] size ${endpoint} · ${Math.round(text.length / 1024)} KB`);
-    return JSON.parse(text);
-  });
+  //
+  // The deadline still runs while it reads: `expo/fetch` resolves on the
+  // headers, and the native client under it has no read timeout of its own, so
+  // a server or proxy that sends them and then stalls would otherwise leave the
+  // screen loading for good, with the offline detection never hearing of it.
+  // Raced, since the native read does not hear the abort (see `withDeadline`).
+  let json;
+  try {
+    json = await timed(`json ${endpoint}`, async () => {
+      if (!__DEV__) return Promise.race([res.json(), untilAborted(controller.signal)]);
+      const text = await Promise.race([res.text(), untilAborted(controller.signal)]);
+      console.log(`[perf] size ${endpoint} · ${Math.round(text.length / 1024)} KB`);
+      return JSON.parse(text);
+    });
+  } catch (e) {
+    if (controller.signal.aborted) {
+      throw new SubsonicRequestError(tg('Server took too long to respond'), true);
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
   const sub = json['subsonic-response'];
-  if (!sub) throw new SubsonicRequestError('Unexpected server response', false);
+  if (!sub) throw new SubsonicRequestError(tg('Unexpected server response'), false);
   if (sub.status === 'failed') {
     const code = typeof sub.error?.code === 'number' ? sub.error.code : undefined;
     if (!retried && code === ERR_NOT_FOUND) {
@@ -958,15 +1009,22 @@ export async function reorderPlaylist(
   for (const sid of songIds) params.append('songId', sid);
   assertCanRequest();
   netTally('createPlaylist.view', params.toString().length);
-  const res = await fetch(`${auth.serverUrl}/rest/createPlaylist.view`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: params.toString(),
+  const json = await withDeadline(REQUEST_TIMEOUT_MS, async (signal) => {
+    const res = await fetch(`${auth.serverUrl}/rest/createPlaylist.view`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString(),
+      signal,
+    });
+    if (!res.ok) throw new Error(`Network error (${res.status})`);
+    return res.json();
+  }).catch((e) => {
+    throw e instanceof DeadlineError
+      ? new SubsonicRequestError(tg('Server took too long to respond'), true)
+      : e;
   });
-  if (!res.ok) throw new Error(`Error de red (${res.status})`);
-  const json = await res.json();
   const sub = json['subsonic-response'];
-  if (sub?.status === 'failed') throw new Error(sub.error?.message ?? 'Error de Subsonic');
+  if (sub?.status === 'failed') throw new Error(sub.error?.message ?? 'Subsonic error');
 }
 
 /** Removes a song from a playlist by its index (position in the list). */
@@ -1251,6 +1309,19 @@ export interface ArtistInfo {
   similarArtists: Artist[];
 }
 
+/**
+ * An address for the album's cover that carries no credentials: Navidrome
+ * answers `getAlbumInfo2` with a signed `/share/img` link, the one Feishin
+ * hands to Discord too. Other servers may send an outside image or nothing.
+ */
+export async function getPublicAlbumArt(auth: SubsonicAuth, id: string): Promise<string | undefined> {
+  const res = await request<{
+    albumInfo?: { largeImageUrl?: string; mediumImageUrl?: string; smallImageUrl?: string };
+  }>(auth, 'getAlbumInfo2.view', { id });
+  const info = res.albumInfo ?? {};
+  return [info.largeImageUrl, info.mediumImageUrl, info.smallImageUrl].find((u) => u?.startsWith('http'));
+}
+
 /** Extended artist info (bio, photo and similars) from getArtistInfo2. */
 export async function getArtistInfo(
   auth: SubsonicAuth,
@@ -1504,11 +1575,14 @@ export async function savePlayQueue(
     // one that grows with the queue. A mix left running all night is a body of
     // thousands of ids pushed every twenty seconds, which is worth seeing.
     netTally('savePlayQueue.view', params.toString().length);
-    await fetch(`${auth.serverUrl}/rest/savePlayQueue.view`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: params.toString(),
-    });
+    await withDeadline(REQUEST_TIMEOUT_MS, (signal) =>
+      fetch(`${auth.serverUrl}/rest/savePlayQueue.view`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString(),
+        signal,
+      }),
+    );
   } catch {
     // Best-effort; ignore network errors when saving the queue.
   }
@@ -1724,13 +1798,15 @@ export async function deleteRadioStation(
  * small circle, anything card-sized up to the player's full width, and the
  * viewer, which is the picture on its own. `thumb` is also what the palette
  * asks for, so the tint of a list comes from the file the list already has.
+ * The default is `card`, one of the three: a caller that omits `size` must
+ * not invent a fourth one, it would split the cache.
  */
 export const COVER = { thumb: 200, card: 600, full: 1200 } as const;
 
 export function coverArtUrl(
   auth: SubsonicAuth,
   id: string | undefined,
-  size = 300,
+  size: number = COVER.card,
 ): string | undefined {
   if (!id) return undefined;
   return buildUrl(auth, 'getCoverArt.view', { id, size });
@@ -1909,14 +1985,30 @@ export interface PodcastChannel {
   imageUrl?: string;
   /** The channel's own web page, not the feed file. */
   siteUrl?: string;
-  /** The feed this was read from. Absent for a channel read another way. */
-  feedUrl?: string;
+  /** The feed this was read from, and the identity of the show: the id is a
+   *  hash of it. A show is only ever opened through that address. */
+  feedUrl: string;
   /** How many episodes are stored. */
   episodeCount?: number;
   /** When the newest stored episode was published. */
   lastPublishedAt?: number;
-  /** When the feed was last read. */
+  /** When the feed was last read — a re-read is asked for past three days. */
   refreshedAt?: number;
+  /** When a read first landed an episode of this show. The episodes whose own
+   *  `firstSeenAt` reaches this are the ones the row marks as new: the moments
+   *  belong to the same read, so "new" means "came over with the last sync that
+   *  landed something". Deliberately not set by the read that files the show
+   *  for the first time — a whole feed arriving at once would wear a badge
+   *  under every title and say nothing. */
+  newSinceAt?: number;
+  /** What the last read got back to re-ask for it: sent again as
+   *  `if-none-match`/`if-modified-since`, so a feed that answers "unchanged"
+   *  costs a header, not its whole body. */
+  etag?: string;
+  lastModified?: string;
+  /** The show's picture on disk, filed by the read that brought the address.
+   *  Drawn instead of `imageUrl`, so manual offline still has a file. */
+  artFile?: string;
   /** Why the last read failed, if it did. */
   error?: string;
 }
@@ -1930,11 +2022,17 @@ export interface PodcastEpisode {
   description?: string;
   /** Publication date, in ms since the epoch. */
   publishedAt?: number;
+  /** The feed's own episode number (`itunes:episode`), when it gave one. */
+  episode?: number;
+  /** When a read first landed this episode, in ms since the epoch — the
+   *  device's own first sighting, which is not the same moment as `publishedAt`:
+   *  a publisher re-dates an old item, back-catalogs a season, or ships no date,
+   *  and the row then prints a date that says nothing about when the episode
+   *  appeared. The row that wears the "new" mark reads this, not the date. */
+  firstSeenAt?: number;
   /** Seconds. */
   duration?: number;
   /** The enclosure, played as `Song.url`. */
   url?: string;
   mimeType?: string;
-  size?: number;
-  imageUrl?: string;
 }

@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { byCodepoint, matches, normQ, sortItems } from '@/lib/librarySort';
+import { byArtistSortName, byCodepoint, byLibraryName, matches, normQ, sortItems } from '@/lib/librarySort';
 
 interface Row {
   name: string;
@@ -66,6 +66,13 @@ describe('byCodepoint', () => {
   });
 });
 
+describe('byLibraryName', () => {
+  it('keeps "+" playlists on top and accents among the letters', () => {
+    const out = ['Zoo', 'Álbum', '[x]', '+pin', 'Beta'].sort(byLibraryName);
+    assert.deepEqual(out, ['+pin', '[x]', 'Álbum', 'Beta', 'Zoo']);
+  });
+});
+
 describe('normQ', () => {
   it('lowercases and drops accents', () => {
     assert.equal(normQ('Café Niño'), 'cafe nino');
@@ -120,6 +127,27 @@ describe('matches', () => {
   });
 
   it('forgives three edits in a long word', () => {
-    assert.equal(matches('abXdeYgZ', 'Abcdefgh'), true);
+    assert.equal(matches('abXdeYghiZ', 'Abcdefghij'), true);
+  });
+
+  it('takes one slip in a short word, not two', () => {
+    assert.equal(matches('qeen', 'Queen'), true);
+    assert.equal(matches('drake', 'Brave'), false);
+    assert.equal(matches('queen', 'Green'), false);
+  });
+});
+
+describe('byArtistSortName', () => {
+  it('files an artist under its sort name, the name where there is none (#275)', () => {
+    const artists = [
+      { name: 'The Knife', sortName: 'knife' },
+      { name: 'Air' },
+      { name: 'The Beatles', sortName: 'Beatles, The' },
+      { name: 'Muse', sortName: 'muse' },
+    ];
+    assert.deepEqual(
+      artists.slice().sort(byArtistSortName).map((a) => a.name),
+      ['Air', 'The Beatles', 'The Knife', 'Muse'],
+    );
   });
 });

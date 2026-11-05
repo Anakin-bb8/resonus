@@ -21,6 +21,7 @@ import { tg } from '@/i18n';
 import { wordsAt } from '@/lib/lyricWords';
 import {
   CLIENT_NAME,
+  COVER,
   normalizeUrl,
   SubsonicRequestError,
   type Album,
@@ -47,6 +48,7 @@ import {
 // Not the global `fetch`: it never resolves in the background. See the note
 // in `src/api/subsonic.ts`.
 import { fetch } from 'expo/fetch';
+import { untilAborted } from './deadline';
 import { assertCanRequest } from './netGate';
 import { netTally } from '@/lib/perfLog';
 
@@ -111,6 +113,10 @@ interface JfItem {
   /** Normalization gain in dB (server LUFS analysis, 10.9+). */
   NormalizationGain?: number;
   MediaSources?: {
+    /** The source's own address: for a radio channel, the station's stream. */
+    Path?: string;
+    /** A stream the server built for this client, relative to the server. */
+    TranscodingUrl?: string;
     Container?: string;
     Bitrate?: number;
     MediaStreams?: { Type?: string; BitDepth?: number; SampleRate?: number }[];
@@ -206,6 +212,27 @@ async function request<T>(
       signal: controller.signal,
     });
   } catch {
+    clearTimeout(timer);
+    if (controller.signal.aborted) {
+      throw new SubsonicRequestError(tg('Server took too long to respond'), true);
+    }
+    throw new SubsonicRequestError(tg('Could not connect to the server'), true);
+  }
+
+  if (res.status === 401) {
+    clearTimeout(timer);
+    throw new SubsonicRequestError(tg('Session expired: sign in again'), false);
+  }
+  if (!res.ok) {
+    clearTimeout(timer);
+    throw new SubsonicRequestError(`Network error (${res.status})`, false, res.status);
+  }
+  // The deadline covers reading the body too: `expo/fetch` resolves on the
+  // headers, and nothing under it would ever give up on a stalled answer.
+  let text: string;
+  try {
+    text = await Promise.race([res.text(), untilAborted(controller.signal)]);
+  } catch {
     if (controller.signal.aborted) {
       throw new SubsonicRequestError(tg('Server took too long to respond'), true);
     }
@@ -213,12 +240,6 @@ async function request<T>(
   } finally {
     clearTimeout(timer);
   }
-
-  if (res.status === 401) {
-    throw new SubsonicRequestError(tg('Session expired: sign in again'), false);
-  }
-  if (!res.ok) throw new SubsonicRequestError(`Network error (${res.status})`, false, res.status);
-  const text = await res.text();
   return (text ? JSON.parse(text) : undefined) as T;
 }
 
@@ -251,17 +272,27 @@ export async function makeAuth(
       signal: controller.signal,
     });
   } catch {
+    clearTimeout(timer);
     if (controller.signal.aborted) {
       throw new Error(tg('Server took too long to respond'));
     }
     throw new Error(tg('Could not connect to the server'));
+  }
+
+  if (res.status === 401 || !res.ok) clearTimeout(timer);
+  if (res.status === 401) throw new Error(tg('Wrong username or password'));
+  if (!res.ok) throw new Error(`Network error (${res.status})`);
+  // Read under the same deadline (see `request`).
+  let data: { AccessToken?: string; User?: { Id?: string } };
+  try {
+    data = (await Promise.race([res.json(), untilAborted(controller.signal)])) as typeof data;
+  } catch {
+    throw new Error(
+      tg(controller.signal.aborted ? 'Server took too long to respond' : 'Unexpected server response'),
+    );
   } finally {
     clearTimeout(timer);
   }
-
-  if (res.status === 401) throw new Error(tg('Wrong username or password'));
-  if (!res.ok) throw new Error(`Network error (${res.status})`);
-  const data = (await res.json()) as { AccessToken?: string; User?: { Id?: string } };
   if (!data.AccessToken || !data.User?.Id) {
     throw new Error(tg('Unexpected server response'));
   }
@@ -341,6 +372,13 @@ function toSong(it: JfItem): Song {
     track: it.IndexNumber,
     discNumber: it.ParentIndexNumber,
     starred: favDate(it),
+    // The `UserData` `favDate` just read carries the count as well: the song
+    // kept the favorite's date and threw the number away, while `toAlbum` below
+    // kept both. So "Song information" answered with nothing for a song that
+    // had plays, and a list merged here lost the only thing to sort by — the
+    // server's own "frequent" order says nothing about a page of another
+    // library's songs.
+    playCount: it.UserData?.PlayCount,
     suffix: src?.Container,
     bitRate: src?.Bitrate ? Math.round(src.Bitrate / 1000) : undefined,
     bitDepth: audio?.BitDepth,
@@ -409,6 +447,7 @@ function toPlaylist(it: JfItem): Playlist {
 const ALBUM_SORT: Record<AlbumListType, { SortBy: string; SortOrder?: string; Filters?: string }> =
   {
     newest: { SortBy: 'DateCreated', SortOrder: 'Descending' },
+    // Albums carry no plays: `getAlbumList` ranks these by their songs instead.
     recent: { SortBy: 'DatePlayed', SortOrder: 'Descending' },
     frequent: { SortBy: 'PlayCount', SortOrder: 'Descending' },
     random: { SortBy: 'Random' },
@@ -425,6 +464,78 @@ export async function getMusicFolders(_auth: SubsonicAuth): Promise<MusicFolder[
   return [];
 }
 
+const PLAYED_PAGE = 500;
+const PLAYED_MAX = 5000;
+const PLAYS_TTL_MS = 2 * 60 * 1000;
+let playsCache:
+  | { key: string; at: number; stats: Map<string, { played: string; count: number }> }
+  | undefined;
+
+/**
+ * Plays per album, added up from its songs: Jellyfin keeps them per track
+ * only, so sorting albums by `DatePlayed` or `PlayCount` tied them all and
+ * fell back to the name (#316, #317). In the order of the last play.
+ */
+async function albumPlays(
+  auth: SubsonicAuth,
+  enough: number,
+  all: boolean,
+): Promise<Map<string, { played: string; count: number }>> {
+  const key = `${auth.jfUserId}|${all}`;
+  const c = playsCache;
+  if (c?.key === key && Date.now() - c.at < PLAYS_TTL_MS && (all || c.stats.size > enough)) {
+    return c.stats;
+  }
+  const stats = new Map<string, { played: string; count: number }>();
+  for (let start = 0; start < PLAYED_MAX; start += PLAYED_PAGE) {
+    const res = await request<JfItems>(auth, `/Users/${auth.jfUserId}/Items`, {
+      IncludeItemTypes: 'Audio',
+      Recursive: true,
+      Filters: 'IsPlayed',
+      SortBy: 'DatePlayed',
+      SortOrder: 'Descending',
+      Limit: PLAYED_PAGE,
+      StartIndex: start,
+      EnableImages: false,
+    });
+    const items = res.Items ?? [];
+    for (const it of items) {
+      if (!it.AlbumId) continue;
+      const s = stats.get(it.AlbumId) ?? { played: it.UserData?.LastPlayedDate ?? '', count: 0 };
+      s.count += it.UserData?.PlayCount ?? 0;
+      stats.set(it.AlbumId, s);
+    }
+    // By last play, an album's first song is its latest: later pages can't move it.
+    if (items.length < PLAYED_PAGE || (!all && stats.size > enough)) break;
+  }
+  playsCache = { key, at: Date.now(), stats };
+  return stats;
+}
+
+async function albumsByPlays(
+  auth: SubsonicAuth,
+  type: 'recent' | 'frequent',
+  size: number,
+  offset: number,
+): Promise<Album[]> {
+  const stats = await albumPlays(auth, offset + size, type === 'frequent');
+  const ranked = [...stats.keys()];
+  if (type === 'frequent') ranked.sort((a, b) => stats.get(b)!.count - stats.get(a)!.count);
+  const ids = ranked.slice(offset, offset + size);
+  if (ids.length === 0) return [];
+  const res = await request<JfItems>(auth, `/Users/${auth.jfUserId}/Items`, {
+    Ids: ids.join(','),
+    Fields: ALBUM_FIELDS,
+  });
+  const byId = new Map((res.Items ?? []).map((it) => [it.Id, toAlbum(it)]));
+  return ids.flatMap((id) => {
+    const album = byId.get(id);
+    if (!album) return [];
+    const s = stats.get(id)!;
+    return [{ ...album, played: s.played || undefined, playCount: s.count }];
+  });
+}
+
 export async function getAlbumList(
   auth: SubsonicAuth,
   type: AlbumListType = 'newest',
@@ -432,6 +543,7 @@ export async function getAlbumList(
   offset = 0,
   _musicFolderId?: string,
 ): Promise<Album[]> {
+  if (type === 'recent' || type === 'frequent') return albumsByPlays(auth, type, size, offset);
   const res = await request<JfItems>(auth, `/Users/${auth.jfUserId}/Items`, {
     IncludeItemTypes: 'MusicAlbum',
     Recursive: true,
@@ -607,6 +719,11 @@ export async function getAppearsOn(
   return (res.Items ?? []).map((i) => ({ ...toAlbum(i), confirmed: true }));
 }
 
+/** Jellyfin serves item images without a token, so the plain path is already public. */
+export function getPublicAlbumArt(auth: SubsonicAuth, id: string): Promise<string | undefined> {
+  return Promise.resolve(`${auth.serverUrl}/Items/${encodeURIComponent(id)}/Images/Primary?maxHeight=512`);
+}
+
 export async function getArtistInfo(auth: SubsonicAuth, id: string): Promise<ArtistInfo> {
   const [item, similar] = await Promise.all([
     request<JfItem>(auth, `/Users/${auth.jfUserId}/Items/${id}`),
@@ -618,7 +735,7 @@ export async function getArtistInfo(auth: SubsonicAuth, id: string): Promise<Art
   ]);
   return {
     biography: item.Overview?.replace(/<[^>]+>/g, '').trim() || undefined,
-    imageUrl: item.ImageTags?.Primary ? coverArtUrl(auth, item.Id, 600) : undefined,
+    imageUrl: item.ImageTags?.Primary ? coverArtUrl(auth, item.Id, COVER.card) : undefined,
     similarArtists: (similar.Items ?? []).map(toArtist),
   };
 }
@@ -1106,9 +1223,71 @@ export async function getPlayQueue(_auth: SubsonicAuth): Promise<SavedQueue | nu
   return null;
 }
 
-/** Jellyfin has no internet radio stations. */
-export async function getRadioStations(_auth: SubsonicAuth): Promise<RadioStation[]> {
-  return [];
+/**
+ * Jellyfin has no radio of its own: the way its docs give for internet radio
+ * is an M3U tuner under Live TV, each station a radio channel. Those are
+ * listed here, and only those: a TV channel is not a station.
+ *
+ * The station's own address is taken when the channel carries it (an M3U
+ * entry is a plain stream URL), so it plays like a Navidrome station, straight
+ * from the source. When it does not, `streamUrl` stays empty and
+ * `resolveRadioStream` asks the server for a stream at the moment of playing.
+ * A server without Live TV answers with an error or nothing: no stations.
+ */
+export async function getRadioStations(auth: SubsonicAuth): Promise<RadioStation[]> {
+  let res: { Items?: JfItem[] } | undefined;
+  try {
+    res = await request<{ Items?: JfItem[] }>(auth, '/LiveTv/Channels', {
+      userId: auth.jfUserId,
+      type: 'Radio',
+      fields: 'MediaSources',
+      enableImages: true,
+      limit: 10_000,
+    });
+  } catch {
+    return [];
+  }
+  return (res?.Items ?? []).map((c) => ({
+    id: c.Id,
+    name: c.Name ?? '',
+    streamUrl: directStreamOf(c.MediaSources) ?? '',
+    coverArt: c.ImageTags?.Primary ? c.Id : undefined,
+  }));
+}
+
+/** The source's own http(s) address, if the server let it through as is. */
+function directStreamOf(sources: JfItem['MediaSources']): string | undefined {
+  for (const source of sources ?? []) {
+    const path = source.Path;
+    if (path && /^https?:\/\//i.test(path)) return path;
+  }
+  return undefined;
+}
+
+/**
+ * A stream for a radio channel that came without its own address: the server
+ * is asked to open it (`AutoOpenLiveStream`) and its answer says how to take
+ * it, the source's address when it can be played directly, else the URL the
+ * server built for this client. Null if it offers neither.
+ */
+export async function resolveRadioStream(
+  auth: SubsonicAuth,
+  channelId: string,
+): Promise<string | null> {
+  const res = await request<{ MediaSources?: JfItem['MediaSources'] }>(
+    auth,
+    `/Items/${channelId}/PlaybackInfo`,
+    { UserId: auth.jfUserId, AutoOpenLiveStream: true, IsPlayback: true },
+    { method: 'POST', body: {} },
+  );
+  const direct = directStreamOf(res?.MediaSources);
+  if (direct) return direct;
+  const built = res?.MediaSources?.find((m) => m.TranscodingUrl)?.TranscodingUrl;
+  if (!built) return null;
+  const url = `${auth.serverUrl}${built}`;
+  // The built URL already names the session; the token is what lets a
+  // player that sends no headers of its own in.
+  return /[?&]api_?key=/i.test(url) ? url : `${url}${url.includes('?') ? '&' : '?'}ApiKey=${auth.jfToken}`;
 }
 
 /** Jellyfin does not support managing radio stations. */
@@ -1232,7 +1411,7 @@ export async function reportPlayback(
 export function coverArtUrl(
   auth: SubsonicAuth,
   id: string | undefined,
-  size = 300,
+  size: number = COVER.card,
 ): string | undefined {
   if (!id) return undefined;
   return buildUrl(auth, `/Items/${id}/Images/Primary`, {

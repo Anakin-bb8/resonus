@@ -79,6 +79,25 @@ export interface PlayEvent {
   parentId?: string;
 }
 
+export interface BrowseEvent {
+  requestId: string;
+  parentId: string;
+  profile: string;
+}
+
+export function onBrowse(cb: (e: BrowseEvent) => void): { remove: () => void } | undefined {
+  return native?.addListener('browse', cb);
+}
+
+/** Subscribe before enabling delivery, so a car request during startup is not lost. */
+export function setBrowseReady(ready: boolean): void {
+  native?.setBrowseReady(ready);
+}
+
+export function completeBrowse(requestId: string, tree: CarTree | null): void {
+  native?.completeBrowse(requestId, tree ? JSON.stringify(tree) : null);
+}
+
 export function setNodes(tree: CarTree): void {
   native?.setNodes(JSON.stringify(tree));
 }
@@ -112,7 +131,11 @@ export function onTransport(cb: (e: TransportEvent) => void): { remove: () => vo
   return native?.addListener('transport', cb);
 }
 
-/** A car asked for the browse tree's root, which is Android Auto opening. */
-export function onCarConnected(cb: () => void): { remove: () => void } | undefined {
+/**
+ * A car asked for the browse tree's root, which is Android Auto opening.
+ * `projection` is true when it is Android Auto itself asking, and not another
+ * browser of the library.
+ */
+export function onCarConnected(cb: (e: { projection?: boolean }) => void): { remove: () => void } | undefined {
   return native?.addListener('connect', cb);
 }

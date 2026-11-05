@@ -1,4 +1,5 @@
 /** App settings (persisted): streaming quality and language. */
+import { isAnimatedArtworkMode, savedAnimatedArtworkMode, type AnimatedArtworkMode } from '@/lib/artworkLayout';
 import { Platform } from 'react-native';
 import { create } from 'zustand';
 
@@ -9,6 +10,7 @@ import { hashKey } from '@/lib/localLibrary';
 import { setPerfEnabled } from '@/lib/perfLog';
 import { profileScopeGuard } from '@/lib/profileScope';
 import { queryClient } from '@/lib/query';
+import { getSystemAccent } from '@/lib/materialYou';
 import { getItem, setItem } from '@/lib/storage';
 import {
   applyAccents,
@@ -475,7 +477,10 @@ function normalizeExploreSections(raw: unknown): ExploreSection[] {
     out.push({ key, enabled: typeof enabled === 'boolean' ? enabled : true });
   }
   for (const def of DEFAULT_EXPLORE_SECTIONS) {
-    if (!seen.has(def.key)) out.push({ ...def });
+    // The filter pill goes ahead of the sections, where it starts out.
+    if (seen.has(def.key)) continue;
+    if (def.key === 'downloaded') out.unshift({ ...def });
+    else out.push({ ...def });
   }
   return out;
 }
@@ -557,7 +562,9 @@ export type ExploreSectionKey =
   | 'genres'
   | 'radio'
   | 'podcasts'
-  | 'folders';
+  | 'folders'
+  /** Not a section: the pill that keeps the others to what is downloaded (#310). */
+  | 'downloaded';
 
 /** A section with its state, the shape the Home chips already have (order is
  *  its position in the list). */
@@ -567,6 +574,7 @@ export interface ExploreSection {
 }
 
 const EXPLORE_SECTION_KEYS: ExploreSectionKey[] = [
+  'downloaded',
   'playlists',
   'albums',
   'artists',
@@ -591,6 +599,39 @@ export const DEFAULT_EXPLORE_SECTIONS: ExploreSection[] = EXPLORE_SECTION_KEYS.m
   key,
   enabled: true,
 }));
+
+/** One of the chips at the top of Your library. */
+export type LibraryChipKey = 'playlists' | 'albums' | 'artists' | 'podcasts';
+
+export interface LibraryChip {
+  key: LibraryChipKey;
+  enabled: boolean;
+}
+
+const LIBRARY_CHIP_KEYS: LibraryChipKey[] = ['playlists', 'albums', 'artists', 'podcasts'];
+
+/** All on. Unlike Explore they can all go: with no chip the tab is still everything you keep. */
+export const DEFAULT_LIBRARY_CHIPS: LibraryChip[] = LIBRARY_CHIP_KEYS.map((key) => ({
+  key,
+  enabled: true,
+}));
+
+/** Same as the Explore sections. */
+function normalizeLibraryChips(raw: unknown): LibraryChip[] {
+  if (!Array.isArray(raw)) return DEFAULT_LIBRARY_CHIPS.map((c) => ({ ...c }));
+  const seen = new Set<LibraryChipKey>();
+  const out: LibraryChip[] = [];
+  for (const item of raw) {
+    const key = item?.key as LibraryChipKey;
+    if (!LIBRARY_CHIP_KEYS.includes(key) || seen.has(key)) continue;
+    seen.add(key);
+    out.push({ key, enabled: typeof item.enabled === 'boolean' ? item.enabled : true });
+  }
+  for (const def of DEFAULT_LIBRARY_CHIPS) {
+    if (!seen.has(def.key)) out.push({ ...def });
+  }
+  return out;
+}
 
 /**
  * The bar at the bottom: which tabs are on it and in what order.
@@ -701,8 +742,55 @@ export const DEFAULT_PLAYER_BUTTONS: PlayerButton[] = [
   { key: 'queue', enabled: true },
 ];
 
-/** Grouped in the middle, or spread across the width with equal gaps. */
-export type PlayerButtonsLayout = 'centered' | 'spread';
+/** The online lyrics services, asked in this order, the ones turned on. */
+export type LyricsProviderKey = 'lrcRed' | 'lrclib';
+
+/** Their own names: brands, never translated. */
+export const LYRICS_PROVIDER_NAMES: Record<LyricsProviderKey, string> = {
+  lrcRed: 'lrc.red',
+  lrclib: 'LRCLIB',
+};
+
+export interface LyricsProvider {
+  key: LyricsProviderKey;
+  enabled: boolean;
+}
+
+/**
+ * LRCLIB on, as it always was. lrc.red off, a new service is not sent
+ * anything until somebody turns it on, but first in the list: it matches the
+ * exact recording by ISRC, so once on it is the better first question.
+ */
+export const DEFAULT_LYRICS_PROVIDERS: LyricsProvider[] = [
+  { key: 'lrcRed', enabled: false },
+  { key: 'lrclib', enabled: true },
+];
+
+/** Saved order kept, unknown keys dropped, new ones added at the end, off. */
+function normalizeLyricsProviders(raw: unknown): LyricsProvider[] {
+  if (!Array.isArray(raw)) return DEFAULT_LYRICS_PROVIDERS.map((p) => ({ ...p }));
+  const known = new Set(DEFAULT_LYRICS_PROVIDERS.map((p) => p.key));
+  const seen = new Set<LyricsProviderKey>();
+  const out: LyricsProvider[] = [];
+  for (const item of raw) {
+    const key = item?.key as LyricsProviderKey;
+    if (known.has(key) && !seen.has(key)) {
+      seen.add(key);
+      out.push({ key, enabled: item.enabled === true });
+    }
+  }
+  for (const def of DEFAULT_LYRICS_PROVIDERS) {
+    if (!seen.has(def.key)) out.push({ key: def.key, enabled: false });
+  }
+  return out;
+}
+
+/**
+ * Grouped in the middle, spread across the width with equal gaps, or split:
+ * devices (and the name of what it casts to) on the left, the rest together on
+ * the right (#259).
+ */
+export type PlayerButtonsLayout = 'centered' | 'spread' | 'split';
 
 /** Saved order kept, unknown keys dropped, new ones added at the end. */
 function normalizePlayerButtons(raw: unknown): PlayerButton[] {
@@ -734,7 +822,8 @@ function normalizeHomeButtons(raw: unknown): HomeButton[] {
       seen.add(key);
       out.push({
         key,
-        enabled: typeof item.enabled === 'boolean' ? item.enabled : true,
+        enabled:
+          key === 'settings' ? true : typeof item.enabled === 'boolean' ? item.enabled : true,
       });
     }
   }
@@ -813,9 +902,11 @@ type Reshaped =
   | 'homeSections'
   | 'homeChips'
   | 'exploreSections'
+  | 'libraryChips'
   | 'bottomTabs'
   | 'homeButtons'
-  | 'playerButtons';
+  | 'playerButtons'
+  | 'lyricsProviders';
 
 /**
  * `setX(value)` for every saved setting: stores it and saves the profile.
@@ -834,10 +925,12 @@ type CustomSetter =
   | 'setCustomGreeting'
   | 'setGridColumns'
   | 'setAccentColor'
+  | 'setSystemAccent'
   | 'setThemeMode'
   | 'setThemeLightFrom'
   | 'setThemeDarkFrom'
   | 'setPureBlack'
+  | 'setAnimatedArtworkMode'
   | 'setAnimatedArtworkFps'
   | 'setAnimatedArtworkUrls'
   | 'setBackgroundTint';
@@ -986,6 +1079,8 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
    * offline library only shows playable content.
    */
   hideUnavailableOffline: boolean;
+  /** The old switch for every favorite, read once by `refreshAutoDownloadShows`. */
+  podcastAutoDownload: boolean;
   /** Volume normalization (ReplayGain): off, per track, or per album. */
   replayGain: ReplayGainMode;
   /**
@@ -997,6 +1092,8 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   replayGainPreampDb: number;
   /** Keep screen on while the app is in the foreground. */
   keepScreenAwake: boolean;
+  /** The song playing on the Discord profile, through the Discord app (Android). */
+  discordPresence: boolean;
   /** Subtle vibration on key actions (favorite, long-press, drag…). */
   hapticsEnabled: boolean;
   /** Lyrics screen background: flat, cover color, or blurred cover art. */
@@ -1008,6 +1105,12 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
    * disabled. Defaults to 'local' (local first, LRCLIB as fallback).
    */
   lyricsSource: LyricsSource;
+  /**
+   * The online lyrics services, in the order they are asked, each on or off:
+   * lrc.red (the song's ISRC, often timed word by word) and LRCLIB (artist
+   * and title).
+   */
+  lyricsProviders: LyricsProvider[];
   lyricsSize: LyricsSize;
   /** Thickness of lyric glyphs, from light (300) to bold (700). */
   lyricsWeight: LyricsWeight;
@@ -1021,7 +1124,7 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   /** The time right of the seek bar counts down what is left, not the length. */
   showRemainingTime: boolean;
   coverCorners: CoverCorners;
-  /** Which corner ladder the app draws: upstream's or the fork's. */
+  /** Which corner ladder the app draws: this one or the flatter one. */
   borderStyle: BorderStyle;
   /** When a downloaded song plays from disk instead of being streamed. */
   preferDownloads: PreferDownloads;
@@ -1048,12 +1151,13 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   batteryWarning: boolean;
   /** Player background: flat, cover color, or blurred cover art. */
   playerBackground: ScreenBackground;
-  /**
-   * When the cover art is animated (GIF, animated WebP, APNG), use it as
-   * the fullscreen player background and show a small static copy beside
-   * the title. Off by default: the cover plays inside the square as before.
-   */
+  playerFullBleed: boolean;
+  albumFullBleed: boolean;
+  navbarPills: boolean;
+  miniPlayerPills: boolean;
+  /** Legacy export compatibility; animatedArtworkMode controls the player. */
   animatedCoverBackground: boolean;
+  animatedArtworkMode: AnimatedArtworkMode;
   /**
    * The fps animated covers encode at for the lock screen (30 or 60). A clip
    * already on disk keeps the rate it was written at; the next one picks up
@@ -1061,11 +1165,18 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
    */
   animatedArtworkFps: number;
   /**
-   * Animated-artwork server (m8tec apple-music-animated-artworks): base URL
-   * whose `/api/v1/artwork/search` answers the square and tall HLS covers
-   * for an artist and album. Empty means off: covers stay still images.
+   * Animated-artwork server: base URL whose `/api/v1/artwork/search`
+   * answers the square and tall HLS covers for an artist and album. Empty
+   * means off: covers stay still images.
    */
   animatedArtworkEndpoint: string;
+  /**
+   * Covers that move at all: the endpoint's clips, in the app and on the lock
+   * screen, and GIF or WebP covers anywhere in the app. Off, every cover is
+   * its first frame, and the endpoint is kept but not asked.
+   */
+  animatedCovers: boolean;
+  motionArtworkWifiOnly: boolean;
   /**
    * Play endpoint clips as in-app video (cover square and background).
    * Kills the video players without touching the lock-screen tall clips:
@@ -1073,8 +1184,8 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
    */
   animatedCoverVideo: boolean;
   /**
-   * Hand-picked Apple Music URLs per album (artist + album key), asked
-   * before the search and trusted as chosen. Album menus write these.
+   * Hand-picked artwork URLs per album (artist + album key), asked before
+   * the search and trusted as chosen. Album menus write these.
    */
   animatedArtworkUrls: Record<string, string>;
   /**
@@ -1087,10 +1198,6 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   miniPlayerColorBackground: boolean;
   /** Lyrics card below the player controls. */
   showLyricsCard: boolean;
-  /** Output name beside the devices button (headphones, cast target, …). */
-  showDeviceName: boolean;
-  /** Lossless tag beside the output when the stream is bit-perfect. */
-  showLosslessTag: boolean;
   /** Artist card below the player controls. */
   showArtistCard: boolean;
   /** What tapping the player cover does (nothing / lyrics screen /
@@ -1103,6 +1210,11 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   /** The row under the player's controls: which buttons, in what order. */
   playerButtons: PlayerButton[];
   playerButtonsLayout: PlayerButtonsLayout;
+  /**
+   * The devices button names the phone's own output (headphones, a Bluetooth
+   * speaker, the car) the way it names a cast target (#274).
+   */
+  showLocalOutput: boolean;
   /** Seek ±N seconds buttons next to play (0 = hidden). Only 5/10/30: these are the numbered icons that exist in MaterialIcons. */
   seekButtonsSec: number;
   /** "Previous" button behavior (restart track or always go to previous). */
@@ -1132,6 +1244,8 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   quickGridAlbums: boolean;
   /** Include playlists in the quick grid. */
   quickGridPlaylists: boolean;
+  /** Include the shows you played in the quick grid. */
+  quickGridPodcasts: boolean;
   /** Total number of tiles in the quick grid (4, 6, or 8). */
   quickGridSize: number;
   /** Show the greeting ("Good morning"…) on Home. */
@@ -1143,20 +1257,15 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   homeChips: HomeChip[];
   /** The order of the pills at the top of Explore. */
   exploreSections: ExploreSection[];
+  libraryChips: LibraryChip[];
   bottomTabs: BottomTab[];
   /** Whether those chips carry their icon, or are their name and nothing else. */
   homeChipIcons: boolean;
   /** "Folders" section in the Library (directory browsing; Subsonic). */
   showFolderBrowser: boolean;
   /** The buttons at the top right of Home, in order (each with its state).
-   *  All of them can go, the gear included: with it off the profile picture
-   *  is forced on, so Settings stay one tap away. */
+   *  For those who prefer a minimal UI: all but the gear can go. */
   homeButtons: HomeButton[];
-  /** The profile picture beside the Home chips: tapping it opens Settings.
-   *  Forced on while the settings gear is off, so settings stay one tap away. */
-  showProfileImage: boolean;
-  /** Local file of that picture (picked on the profile screen), if any. */
-  profileImageUri: string | null;
   /** App startup tab (Home/Search/Library). */
   defaultTab: DefaultTab;
   /** Your library with no chip pressed shows Favorites and the playlists, as
@@ -1212,6 +1321,12 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   /** The same under the light one, which is a separate choice: a colour picked
    *  for near-black is not always the one wanted on white. */
   accentColorLight: string;
+  /**
+   * Android 12+: the accent is the one the system takes from the wallpaper
+   * (Material You) instead of the two above, which stay as they were for when
+   * it goes back off (#259).
+   */
+  systemAccent: boolean;
   /** The user's own colour (hex), kept apart so picking one from the palette
    *  does not lose it; '' until one is made. */
   customAccentColor: string;
@@ -1232,6 +1347,7 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   customFontUri: string | null;
   setLanguage: (language: Language) => void;
   setDiagnostics: (value: boolean) => void;
+  setAnimatedArtworkMode: (value: AnimatedArtworkMode) => void;
   setAnimatedArtworkFps: (value: number) => void;
   resetScrobbleRules: () => void;
   setHideUnavailableOffline: (value: boolean) => void;
@@ -1242,18 +1358,25 @@ interface SettingsState extends Omit<AutoSetters, CustomSetter> {
   setHomeChip: (key: HomeChipKey, value: boolean) => void;
   /** One section on or off, by key, the way the Home chips do it. */
   setExploreSection: (key: ExploreSectionKey, value: boolean) => void;
+  setLibraryChip: (key: LibraryChipKey, value: boolean) => void;
   setBottomTab: (key: TabSegment, value: boolean) => void;
   setHomeButton: (key: HomeButtonKey, value: boolean) => void;
   setPlayerButton: (key: PlayerButtonKey, value: boolean) => void;
+  setLyricsProvider: (key: LyricsProviderKey, value: boolean) => void;
   /** A hand-picked artwork URL for one album key, or null to forget it. */
   setAnimatedArtworkUrl: (key: string, url: string | null) => void;
   setGridColumns: (key: GridSizeKey, value: number) => void;
   setAccentColor: (value: string, appearance: ThemeMode) => void;
+  setSystemAccent: (value: boolean) => void;
+  /** Reads the wallpaper's accent again, if it is the one in use: a new
+   *  wallpaper brings a new one, and coming back to the app is when to look. */
+  refreshSystemAccent: () => void;
   setThemeMode: (value: ThemePreference) => void;
   setThemeLightFrom: (hour: number) => void;
   setThemeDarkFrom: (hour: number) => void;
   setPureBlack: (value: boolean) => void;
   setBackgroundTint: (value: BackgroundTint) => void;
+  setBorderStyle: (value: BorderStyle) => void;
   setCustomFont: (fontFamily: string | null, uri: string | null) => void;
   /** Resets to factory defaults (language is preserved). */
   resetToDefaults: () => void;
@@ -1291,6 +1414,10 @@ function snapshot(get: () => SettingsState): Persisted {
 
 /** Factory default values for all preferences. */
 const DEFAULTS = {
+  playerFullBleed: false,
+  albumFullBleed: false,
+  navbarPills: false,
+  miniPlayerPills: false,
   maxBitRate: 0,
   maxBitRateCellular: 0,
   downloadBitRate: 0,
@@ -1336,15 +1463,18 @@ const DEFAULTS = {
   preferPreciseTiming: false,
   autoOfflineSwitch: true,
   hideUnavailableOffline: false,
+  podcastAutoDownload: false,
   replayGain: 'off' as ReplayGainMode,
   replayGainPreampDb: 0,
   keepScreenAwake: false,
+  discordPresence: false,
   hapticsEnabled: false,
   // Same as the player's: the blurred artwork, which is what the screen it
   // opens from is already showing.
   lyricsBackground: 'cover' as ScreenBackground,
   lyricsCardBackground: 'color' as CardBackground,
   lyricsSource: 'local' as LyricsSource,
+  lyricsProviders: DEFAULT_LYRICS_PROVIDERS.map((p) => ({ ...p })),
   lyricsSize: 'normal' as LyricsSize,
   lyricsWeight: '500' as LyricsWeight,
   lyricsAlign: 'left' as LyricsAlign,
@@ -1363,6 +1493,7 @@ const DEFAULTS = {
   batteryWarning: true,
   playerBackground: 'cover' as ScreenBackground,
   animatedCoverBackground: false,
+  animatedArtworkMode: 'cover' as AnimatedArtworkMode,
   // 30: half the frames of 60 for a cover that reads the same; see
   // `ANIMATED_ARTWORK_FPS_OPTIONS`.
   animatedArtworkFps: 30,
@@ -1370,6 +1501,9 @@ const DEFAULTS = {
   animatedArtworkEndpoint: '',
   // On: endpoint clips play over the still covers.
   animatedCoverVideo: true,
+  // On: what the app always did with an animated cover.
+  animatedCovers: true,
+  motionArtworkWifiOnly: true,
   // Empty: search decides everything.
   animatedArtworkUrls: {},
   fitCoverArt: false,
@@ -1377,9 +1511,6 @@ const DEFAULTS = {
   // Off by default: the card pushes the controls up on shorter screens, and
   // the lyrics screen is one tap away on the cover.
   showLyricsCard: false,
-  // Both on: the devices button carries the output, so they read as one.
-  showDeviceName: true,
-  showLosslessTag: true,
   // Off for the same reason, and it also needs a biography to show anything.
   showArtistCard: false,
   // By default, tapping the cover opens the lyrics screen (as always).
@@ -1389,6 +1520,9 @@ const DEFAULTS = {
   marqueeTitles: true,
   playerButtons: DEFAULT_PLAYER_BUTTONS.map((b) => ({ ...b })),
   playerButtonsLayout: 'spread' as PlayerButtonsLayout,
+  // Off: a speaker the phone plays through is not a cast target, and its name
+  // took the room the rest of the row was spread across (#274).
+  showLocalOutput: false,
   seekButtonsSec: 0,
   previousButtonMode: 'restart' as PreviousButtonMode,
   keepPausedOnSkip: false,
@@ -1402,17 +1536,17 @@ const DEFAULTS = {
   quickGridFavorites: true,
   quickGridAlbums: true,
   quickGridPlaylists: true,
+  quickGridPodcasts: true,
   quickGridSize: 8,
   showGreeting: false,
   customGreeting: '',
   homeChips: DEFAULT_HOME_CHIPS.map((c) => ({ ...c })),
   exploreSections: DEFAULT_EXPLORE_SECTIONS.map((s) => ({ ...s })),
+  libraryChips: DEFAULT_LIBRARY_CHIPS.map((c) => ({ ...c })),
   bottomTabs: DEFAULT_BOTTOM_TABS.map((t) => ({ ...t })),
   homeChipIcons: true,
   showFolderBrowser: false,
   homeButtons: DEFAULT_HOME_BUTTONS.map((b) => ({ ...b })),
-  showProfileImage: false,
-  profileImageUri: null as string | null,
   defaultTab: 'index' as DefaultTab,
   libraryShowsPlaylists: false,
   librarySort: 'recent' as LibrarySort,
@@ -1456,6 +1590,7 @@ const DEFAULTS = {
   syncQueueFromServer: true,
   accentColor: DEFAULT_ACCENT,
   accentColorLight: DEFAULT_ACCENT,
+  systemAccent: false,
   customAccentColor: '',
   // Dark: the appearance the app was designed in. Light is opt-in.
   themeMode: 'dark' as ThemePreference,
@@ -1486,6 +1621,22 @@ function autoSetters(
   return out as AutoSetters;
 }
 
+/**
+ * Paints the accent the settings ask for: the device's own pair while
+ * `systemAccent` is on and the device has one, the stored pair otherwise.
+ * Everything that applies a chosen accent goes through here, so no path puts
+ * the stored colours back over the system's.
+ */
+function applyChosenAccent(s: {
+  systemAccent: boolean;
+  accentColor: string;
+  accentColorLight: string;
+}): void {
+  const system = s.systemAccent ? getSystemAccent() : null;
+  if (system) applyAccents(system.dark, system.light);
+  else applyAccents(s.accentColor, s.accentColorLight);
+}
+
 /** The appearance side effects of the factory values: they live outside the
  *  store, so putting the store back does not put them back. */
 function applyFactoryLook() {
@@ -1511,9 +1662,11 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
     homeSections?: unknown;
     homeChips?: unknown;
     exploreSections?: unknown;
+    libraryChips?: unknown;
     bottomTabs?: unknown;
     homeButtons?: unknown;
     playerButtons?: unknown;
+    lyricsProviders?: unknown;
     showQueueButton?: boolean;
     showDevicesButton?: boolean;
     showSpeedButton?: boolean;
@@ -1535,6 +1688,8 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
     if (typeof DEFAULTS[key] === 'boolean' && typeof value === 'boolean') flags[key] = value;
   }
   set(flags as Partial<SettingsState>);
+  const motionMode = savedAnimatedArtworkMode(parsed);
+  if (motionMode) set({ animatedArtworkMode: motionMode, animatedCoverBackground: motionMode === 'background' });
   // One switch used to blur both bars.
   if (typeof parsed.blurMiniPlayer !== 'boolean' && typeof parsed.blurBars === 'boolean') {
     set({ blurMiniPlayer: parsed.blurBars });
@@ -1558,6 +1713,27 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
   }
   if ((ANIMATED_ARTWORK_FPS_OPTIONS as readonly number[]).includes(parsed.animatedArtworkFps as number)) {
     set({ animatedArtworkFps: parsed.animatedArtworkFps as number });
+  }
+  {
+    // Hand-picked artwork URLs: string keys to string URLs, anything else
+    // dropped, capped so a corrupt file cannot grow the profile forever.
+    const raw = (parsed as { animatedArtworkUrls?: unknown }).animatedArtworkUrls;
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+      const urls: Record<string, string> = {};
+      for (const [key, value] of Object.entries(raw)) {
+        if (typeof key === 'string' && typeof value === 'string' && key && value) {
+          urls[key] = value;
+          if (Object.keys(urls).length >= 500) break;
+        }
+      }
+      set({ animatedArtworkUrls: urls });
+    }
+    // An endpoint is a base URL or nothing: anything else never worked, so it
+    // hydrates as off rather than as a broken address.
+    if (typeof parsed.animatedArtworkEndpoint === 'string') {
+      const endpoint = parsed.animatedArtworkEndpoint.trim().replace(/\/+$/, '');
+      set({ animatedArtworkEndpoint: endpoint.startsWith('http') ? endpoint : '' });
+    }
   }
   if ((RADIO_COUNT_OPTIONS as readonly number[]).includes(parsed.radioCount as number)) {
     set({ radioCount: parsed.radioCount as number });
@@ -1726,9 +1902,6 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
   if (typeof parsed.customGreeting === 'string') {
     set({ customGreeting: parsed.customGreeting.slice(0, GREETING_MAX) });
   }
-  if (typeof parsed.profileImageUri === 'string' && parsed.profileImageUri.length > 0) {
-    set({ profileImageUri: parsed.profileImageUri });
-  }
   // Two older names are still read here, and this is the whole of the
   // rename's cost. The row used to be called the Explore chips, one word
   // away from the Explore tab and meaning something else entirely; a
@@ -1755,6 +1928,9 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
   if (Array.isArray(parsed.exploreSections)) {
     set({ exploreSections: normalizeExploreSections(parsed.exploreSections) });
   }
+  if (Array.isArray(parsed.libraryChips)) {
+    set({ libraryChips: normalizeLibraryChips(parsed.libraryChips) });
+  }
   if (Array.isArray(parsed.homeButtons)) {
     set({ homeButtons: normalizeHomeButtons(parsed.homeButtons) });
   } else if (parsed.showHistoryButton === false) {
@@ -1767,8 +1943,15 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
       ),
     });
   }
-  if (parsed.playerButtonsLayout === 'centered' || parsed.playerButtonsLayout === 'spread') {
+  if (
+    parsed.playerButtonsLayout === 'centered' ||
+    parsed.playerButtonsLayout === 'spread' ||
+    parsed.playerButtonsLayout === 'split'
+  ) {
     set({ playerButtonsLayout: parsed.playerButtonsLayout });
+  }
+  if (Array.isArray(parsed.lyricsProviders)) {
+    set({ lyricsProviders: normalizeLyricsProviders(parsed.lyricsProviders) });
   }
   if (Array.isArray(parsed.playerButtons)) {
     set({ playerButtons: normalizePlayerButtons(parsed.playerButtons) });
@@ -1850,6 +2033,19 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
     set({ accentColor: dark, accentColorLight: light });
     applyAccents(dark, light);
   }
+  if (typeof parsed.systemAccent === 'boolean') set({ systemAccent: parsed.systemAccent });
+  // After both: whichever of the two pairs is chosen, painted once.
+  if (parsed.systemAccent === true) {
+    applyChosenAccent({
+      systemAccent: true,
+      accentColor: isHexColor(parsed.accentColor) ? parsed.accentColor : DEFAULT_ACCENT,
+      accentColorLight: isHexColor(parsed.accentColorLight)
+        ? parsed.accentColorLight
+        : isHexColor(parsed.accentColor)
+          ? parsed.accentColor
+          : DEFAULT_ACCENT,
+    });
+  }
   if (isHexColor(parsed.customAccentColor)) {
     set({ customAccentColor: parsed.customAccentColor });
   }
@@ -1881,27 +2077,6 @@ function applySaved(raw: unknown, set: (partial: Partial<SettingsState>) => void
   if (parsed.customFontUri) {
     set({ customFontUri: parsed.customFontUri });
   }
-  // Hand-picked artwork URLs: string keys to string URLs, anything else
-  // dropped, capped so a corrupt file cannot grow the profile forever.
-  {
-    const raw = (parsed as { animatedArtworkUrls?: unknown }).animatedArtworkUrls;
-    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-      const urls: Record<string, string> = {};
-      for (const [key, value] of Object.entries(raw)) {
-        if (typeof key === 'string' && typeof value === 'string' && value.startsWith('http')) {
-          urls[key] = value;
-          if (Object.keys(urls).length >= 500) break;
-        }
-      }
-      set({ animatedArtworkUrls: urls });
-    }
-  }
-  // An endpoint is a base URL or nothing: anything else never worked, so it
-  // hydrates as off rather than as a broken address.
-  if (typeof parsed.animatedArtworkEndpoint === 'string') {
-    const endpoint = parsed.animatedArtworkEndpoint.trim().replace(/\/+$/, '');
-    set({ animatedArtworkEndpoint: endpoint.startsWith('http') ? endpoint : '' });
-  }
 }
 
 export const useSettings = create<SettingsState>((set, get) => ({
@@ -1917,6 +2092,12 @@ export const useSettings = create<SettingsState>((set, get) => ({
   setDiagnostics: (diagnostics) => {
     set({ diagnostics });
     setPerfEnabled(diagnostics);
+    persist(snapshot(get));
+  },
+
+  setAnimatedArtworkMode: (animatedArtworkMode) => {
+    if (!isAnimatedArtworkMode(animatedArtworkMode)) return;
+    set({ animatedArtworkMode, animatedCoverBackground: animatedArtworkMode === 'background' });
     persist(snapshot(get));
   },
 
@@ -1996,9 +2177,17 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setLibraryChip: (key, value) => {
+    set({
+      libraryChips: get().libraryChips.map((c) => (c.key === key ? { ...c, enabled: value } : c)),
+    });
+    persist(snapshot(get));
+  },
+
   setHomeButton: (key, value) => {
-    // Every icon has a switch now, the gear included: turning it off forces
-    // the profile picture on, so Settings stay one tap away.
+    // The gear's switch is not drawn, but a saved file could still say
+    // otherwise.
+    if (key === 'settings') return;
     set((s) => ({
       homeButtons: s.homeButtons.map((x) => (x.key === key ? { ...x, enabled: value } : x)),
     }));
@@ -2012,6 +2201,13 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist(snapshot(get));
   },
 
+  setLyricsProvider: (key, value) => {
+    set((s) => ({
+      lyricsProviders: s.lyricsProviders.map((x) => (x.key === key ? { ...x, enabled: value } : x)),
+    }));
+    persist(snapshot(get));
+  },
+
   setGridColumns: (key, value) => {
     set({ gridColumns: { ...get().gridColumns, [key]: value } });
     persist(snapshot(get));
@@ -2019,8 +2215,18 @@ export const useSettings = create<SettingsState>((set, get) => ({
 
   setAccentColor: (value, appearance) => {
     set(appearance === 'light' ? { accentColorLight: value } : { accentColor: value });
-    applyAccents(get().accentColor, get().accentColorLight);
+    applyChosenAccent(get());
     persist(snapshot(get));
+  },
+
+  setSystemAccent: (systemAccent) => {
+    set({ systemAccent });
+    applyChosenAccent(get());
+    persist(snapshot(get));
+  },
+
+  refreshSystemAccent: () => {
+    if (get().systemAccent) applyChosenAccent(get());
   },
 
   setThemeMode: (themeMode) => {
@@ -2175,4 +2381,9 @@ export function exportedSettings(): Record<string, unknown> {
   delete out.customFontFamily;
   delete out.customFontUri;
   return out;
+}
+
+/** The animated-artwork server in force: none while animated covers are off. */
+export function activeArtworkEndpoint(s: { animatedCovers: boolean; animatedArtworkEndpoint: string }): string {
+  return s.animatedCovers ? s.animatedArtworkEndpoint : '';
 }

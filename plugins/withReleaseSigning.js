@@ -9,7 +9,9 @@
  *   RESONUS_KEY_PASSWORD        the key's password
  *
  * With those unset, as in a local debug build, release keeps signing with the
- * debug key, so ordinary development is not held up by any of this.
+ * debug key, so ordinary development is not held up by any of this. A build
+ * for F-Droid (`EXPO_PUBLIC_DISTRIBUTION=fdroid`) comes out unsigned instead:
+ * F-Droid signs it with its own key, and wants the APK left for it to sign.
  *
  * android/ is in .gitignore and prebuild regenerates it, so this has to be a
  * plugin: an edit to build.gradle by hand would not survive.
@@ -40,7 +42,7 @@ function applyReleaseSigning(gradle) {
   // 2) The release buildType signs with it when there is a keystore to sign with.
   out = out.replace(
     /(\/\/ see https:\/\/reactnative\.dev\/docs\/signed-apk-android\.\n\s*)signingConfig signingConfigs\.debug/,
-    `$1signingConfig System.getenv('RESONUS_KEYSTORE_FILE') ? signingConfigs.release : signingConfigs.debug`,
+    `$1signingConfig System.getenv('RESONUS_KEYSTORE_FILE') ? signingConfigs.release : System.getenv('EXPO_PUBLIC_DISTRIBUTION') == 'fdroid' ? null : signingConfigs.debug`,
   );
 
   return out;

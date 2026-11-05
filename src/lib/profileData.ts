@@ -39,6 +39,7 @@ const SCOPED_KEYS = [
 const DOWNLOADS_DIR = `${FileSystem.documentDirectory}downloads/`;
 const MIRROR_DIR = `${FileSystem.documentDirectory}library-mirror/`;
 const SONG_CACHE_DIR = `${FileSystem.documentDirectory}song-cache/`;
+const PODCAST_DOWNLOADS_DIR = `${FileSystem.documentDirectory}podcast-downloads/`;
 
 async function remove(uri: string): Promise<void> {
   await FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
@@ -66,6 +67,10 @@ export async function deleteProfileData(auth: SubsonicAuth): Promise<void> {
 
   // The podcast subscriptions.
   await remove(podcastDbDir(scope));
+
+  // The episodes downloaded for that profile, which live in a folder of their
+  // own next to the database, keyed by the same hash.
+  await remove(`${PODCAST_DOWNLOADS_DIR}${scope}/`);
 
   // The song cache, index and all (#180).
   const cacheDir = `${SONG_CACHE_DIR}${scope}/`;

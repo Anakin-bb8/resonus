@@ -1,16 +1,15 @@
-/** Settings › Library: scanning, server libraries and cache clearing. */
+/** Settings › Library: scanning and server libraries, or the local profile's music. */
 import Icon from '@/components/Icon';
 import { useQuery } from '@tanstack/react-query';
-import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { rescanLocal } from '@/api/data';
 import { getScanStatus, startScan } from '@/api/backend';
-import { Field, SettingRow, SettingsPage, SwitchList, settingsStyles } from '@/components/SettingsUI';
+import { SettingsScroll, Field, SettingRow, SettingsPage, SwitchList, settingsStyles } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
-import { clearExportCache } from '@/lib/exportSong';
+import { clearTemporaryData } from '@/lib/clearCache';
 import { ensureAudioPermission, folderNameFromUri, pickFolder } from '@/lib/localLibrary';
 import { queryClient } from '@/lib/query';
 import { useAuthStore } from '@/store/auth';
@@ -135,17 +134,13 @@ export default function LibrarySettings() {
   }
 
   async function clearCache() {
-    queryClient.clear();
-    // The copy left behind by the last "send to another app" counts as cache
-    // too, and it is the biggest thing in it: a whole song.
-    clearExportCache();
-    await Promise.all([Image.clearMemoryCache(), Image.clearDiskCache()]).catch(() => {});
-    toast(t('Cache cleared'));
+    await clearTemporaryData();
+    toast(t('Temporary data cleared'));
   }
 
   return (
     <SettingsPage title={offline ? t('Local music') : t('Library')}>
-      <ScrollView contentContainerStyle={settingsStyles.content}>
+      <SettingsScroll>
         {offline ? (
           <>
             <Field
@@ -182,6 +177,10 @@ export default function LibrarySettings() {
               onPress={rescanNow}
             />
             <SettingRow icon="swap-horizontal" label={t('Change source')} onPress={() => setChanging(true)} />
+            {/* A server account has this in Downloads & offline, which the local
+                profile does not get. */}
+            <Text style={settingsStyles.sectionTitle}>{t('Storage')}</Text>
+            <SettingRow icon="trash-outline" label={t('Clear temporary data')} onPress={clearCache} />
           </>
         ) : (
           <>
@@ -210,11 +209,7 @@ export default function LibrarySettings() {
             ) : null}
           </>
         )}
-
-        {/* Separated from scanning/source: it's maintenance, not configuration. */}
-        <Text style={settingsStyles.sectionTitle}>{t('Storage')}</Text>
-        <SettingRow icon="trash-outline" label={t('Clear cache')} onPress={clearCache} />
-      </ScrollView>
+      </SettingsScroll>
 
       <Modal
         transparent

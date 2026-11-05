@@ -238,7 +238,7 @@ export default function ArtistSongsScreen() {
           <BackChevron />
         )}
         <Text style={styles.title} numberOfLines={1}>
-          {selecting ? t('{n} selected', { n: selectedIds.size }) : (name ?? '')}
+          {selecting ? t(selectedIds.size === 1 ? '{n} selected::one' : '{n} selected', { n: selectedIds.size }) : (name ?? '')}
         </Text>
         {selecting ? (
           <Pressable
@@ -324,7 +324,7 @@ export default function ArtistSongsScreen() {
               accessibilityLabel={t('Play')}
               onPress={() => void playQueue(shown, 0, name, `/artist/${id}`)}
             >
-              <Icon name="play" size={28} color={colors.onAccent} style={{ marginLeft: 3 }} />
+              <Icon name="play" size={28} color={colors.onAccent} />
             </Pressable>
           </View>
         </View>

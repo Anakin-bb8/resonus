@@ -1,59 +1,47 @@
 /**
- * Audio route mapping: native answers cut down to what the UI may trust, and
- * device kinds to their button icon.
+ * The phone's output: native answers cut down to what the UI may trust, and
+ * which kinds the devices button names.
  */
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { normalizeRoute, routeIcon } from '@/lib/audioRouteTypes';
+import { normalizeRoute, routeLook, sameRoute } from '@/lib/audioRouteTypes';
 
 describe('normalizeRoute', () => {
-  it('keeps known kinds with their name', () => {
-    assert.deepEqual(normalizeRoute({ kind: 'bluetooth', name: 'AirPods' }), {
+  it('keeps a known kind with its name, trimmed', () => {
+    assert.deepEqual(normalizeRoute({ kind: 'bluetooth', name: ' Pixel Buds ' }), {
       kind: 'bluetooth',
-      name: 'AirPods',
+      name: 'Pixel Buds',
     });
   });
 
-  it('keeps a known device class and the permission flag', () => {
-    assert.deepEqual(
-      normalizeRoute({ kind: 'bluetooth', name: '', deviceClass: 'headphones', needsPermission: 'false' }),
-      { kind: 'bluetooth', name: '', deviceClass: 'headphones' },
-    );
-  });
-
-  it('drops unknown kinds, classes and missing answers', () => {
+  it('drops unknown kinds and missing answers', () => {
     assert.equal(normalizeRoute({ kind: 'telepathy', name: 'X' }), null);
-    assert.deepEqual(normalizeRoute({ kind: 'bluetooth', name: '', deviceClass: 'toaster' }), {
-      kind: 'bluetooth',
-      name: '',
-    });
     assert.equal(normalizeRoute(null), null);
     assert.equal(normalizeRoute(undefined), null);
   });
 
-  it('reads a missing name as empty, never as undefined', () => {
-    assert.deepEqual(normalizeRoute({ kind: 'wired', name: undefined as never }), {
-      kind: 'wired',
-      name: '',
-    });
+  it('reads a missing name as empty', () => {
+    assert.deepEqual(normalizeRoute({ kind: 'wired' }), { kind: 'wired', name: '' });
   });
 });
 
-describe('routeIcon', () => {
-  it('names an icon per device kind, default for the rest', () => {
-    assert.equal(routeIcon('bluetooth'), 'bluetooth');
-    assert.equal(routeIcon('wired'), 'headset-outline');
-    assert.equal(routeIcon('car'), 'car');
-    assert.equal(routeIcon('airplay'), 'tv');
-    assert.equal(routeIcon('builtin'), undefined);
-    assert.equal(routeIcon('other'), undefined);
+describe('sameRoute', () => {
+  it('compares kind and name', () => {
+    assert.ok(sameRoute({ kind: 'wired', name: 'A' }, { kind: 'wired', name: 'A' }));
+    assert.ok(!sameRoute({ kind: 'wired', name: 'A' }, { kind: 'wired', name: 'B' }));
+    assert.ok(!sameRoute(null, { kind: 'builtin', name: '' }));
+    assert.ok(sameRoute(null, null));
   });
+});
 
-  it('reads a placed Bluetooth device as what it is', () => {
-    assert.equal(routeIcon('bluetooth', 'headphones'), 'headset-outline');
-    assert.equal(routeIcon('bluetooth', 'speaker'), 'volume-high-outline');
-    assert.equal(routeIcon('bluetooth', 'car'), 'car');
-    assert.equal(routeIcon('bluetooth', null), 'bluetooth');
+describe('routeLook', () => {
+  it('names headsets, the car and AirPlay, not the speaker', () => {
+    assert.equal(routeLook('bluetooth')?.icon, 'bluetooth');
+    assert.equal(routeLook('wired')?.fallback, 'Headphones');
+    assert.equal(routeLook('car')?.icon, 'car-outline');
+    assert.equal(routeLook('airplay')?.icon, 'tv-outline');
+    assert.equal(routeLook('builtin'), null);
+    assert.equal(routeLook('other'), null);
   });
 });

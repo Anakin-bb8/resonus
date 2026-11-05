@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import type { Song } from '@/api/subsonic';
+import type { Song, SubsonicAuth } from '@/api/subsonic';
 import {
   appendEnd,
   dealt,
@@ -11,6 +11,7 @@ import {
   moveIn,
   nextPlayable,
   queuedAfterMove,
+  queueKeyFor,
   removeFrom,
   restoreRemoved,
   shuffleOn,
@@ -199,5 +200,48 @@ describe('shuffle', () => {
     const out = dealt(l);
     assert.equal(ids(l), 'a b c d e f');
     assert.equal(ids([...out].sort((x, y) => x.id.localeCompare(y.id))), 'a b c d e f');
+  });
+});
+
+describe('queueKeyFor: the queue belongs to a profile, not to a mode', () => {
+  const account = (url: string, username: string): SubsonicAuth => ({
+    serverUrl: url,
+    username,
+    token: 't',
+    salt: 's',
+  });
+  const one = account('https://one.example.com:8443', 'anna');
+  const two = account('https://two.example.com:8443', 'bertha');
+
+  it('an account that fell into offline mode is still the same account', () => {
+    assert.equal(queueKeyFor(one, true), queueKeyFor(one, false));
+  });
+
+  it('two accounts offline get two queues, not one shared one', () => {
+    assert.notEqual(queueKeyFor(one, true), queueKeyFor(two, true));
+    assert.notEqual(queueKeyFor(one, true), queueKeyFor(null, true));
+  });
+
+  it('the local profile, which has no account, owns the offline key', () => {
+    assert.equal(queueKeyFor(null, true), 'resonus.queue.offline');
+  });
+
+  it('no session has nothing to write to', () => {
+    assert.equal(queueKeyFor(null, false), null);
+  });
+
+  it('the queue does not move when the active network does', () => {
+    const onTheRoad = { ...one, serverUrl: 'http://192.168.1.10:8080', urls: ['https://one.example.com:8443'] };
+    assert.equal(queueKeyFor(onTheRoad, false), queueKeyFor(one, false));
+  });
+
+  it('a profile keeps the name it was filed under, ahead of its addresses', () => {
+    const moved = {
+      ...one,
+      serverUrl: 'http://192.168.1.10:8080',
+      urls: ['http://192.168.1.10:8080'],
+      scopeUrl: 'https://one.example.com:8443',
+    };
+    assert.equal(queueKeyFor(moved, false), queueKeyFor(one, false));
   });
 });

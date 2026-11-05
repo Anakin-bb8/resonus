@@ -25,7 +25,7 @@ import ReorderableList, {
 } from 'react-native-reorderable-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { COVER, songCoverUrl } from '@/api/data';
+import { COVER, canGoIntoPlaylist, songCoverUrl } from '@/api/data';
 import { type Song } from '@/api/subsonic';
 import { Cover } from '@/components/Cover';
 import { PlayingBars } from '@/components/PlayingBars';
@@ -37,21 +37,13 @@ import { useListPadding } from '@/hooks/useScreenSize';
 import { songsLabel, useT } from '@/i18n';
 import { formatTotalDuration } from '@/lib/format';
 import { haptic } from '@/lib/haptics';
-import { listPerf } from '@/lib/listPerf';
+import { reorderListPerf } from '@/lib/listPerf';
 import { useAuthStore } from '@/store/auth';
 import { mixSeedOf, SOURCE_FAVORITES, SOURCE_HISTORY, usePlayerStore } from '@/store/player';
 import { usePlaylistPicker } from '@/store/playlistPicker';
 import { useSettings } from '@/store/settings';
 import { useToast } from '@/store/toast';
 import { colors, fontSize, spacing, themed, useTheme, tracking } from '@/theme';
-
-// ReorderableList doesn't support removeClippedSubviews (needs cells mounted
-// to animate the drag); we use the rest of the performance props.
-const queueListPerf = {
-  initialNumToRender: listPerf.initialNumToRender,
-  maxToRenderPerBatch: listPerf.maxToRenderPerBatch,
-  windowSize: listPerf.windowSize,
-};
 
 function SectionHeader({ title, gap }: { title: string; gap?: boolean }) {
   return <Text style={[styles.sectionHeader, gap && styles.sectionGap]}>{title}</Text>;
@@ -339,7 +331,7 @@ export default function QueueScreen() {
 
       {current ? (
         <ReorderableList
-          {...queueListPerf}
+          {...reorderListPerf}
           data={rows}
           // The cursor is not in `data`: without this, advancing a track would
           // leave the accent and the speaker on the row that just ended.
@@ -406,17 +398,27 @@ export default function QueueScreen() {
       <SheetModal openRef={menuRef}>
         {(close) => (
           <>
-            <Pressable
-              style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
-              onPress={() => {
-                close();
-                const q = usePlayerStore.getState().queue;
-                if (q.length > 0) usePlaylistPicker.getState().open(q);
-              }}
-            >
-              <Icon name="add" size={24} color={colors.text} />
-              <Text style={styles.actionText}>{t('Add to a playlist')}</Text>
-            </Pressable>
+            {/* Only the tracks the server can name go into a playlist: an
+                episode's id means nothing to it, and so does a station's: its
+                id belongs to the station list. `canGoIntoPlaylist` is the rule
+                the heart's hold and the song menu read as well, and when the
+                queue holds nothing else, the action is not offered. */}
+            {queue.some(canGoIntoPlaylist) ? (
+              <Pressable
+                style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
+                onPress={() => {
+                  close();
+                  const server = usePlayerStore
+                    .getState()
+                    .queue
+                    .filter(canGoIntoPlaylist);
+                  usePlaylistPicker.getState().open(server);
+                }}
+              >
+                <Icon name="add" size={24} color={colors.text} />
+                <Text style={styles.actionText}>{t('Add to a playlist')}</Text>
+              </Pressable>
+            ) : null}
             {/* The queue is pushed to the server as it changes, but what comes
                 back is only read when this device has none of its own: the copy
                 here is the faithful one and replacing it behind somebody's back

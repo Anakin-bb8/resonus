@@ -173,10 +173,8 @@ export interface ServerStructuredLyrics {
 /**
  * A backing vocal from a server cue line that shares its lead line's index.
  *
- * The spec puts the main voice first and the backing ones after it, which a
- * TTML-backed server (Navidrome with nd-lyrics on YouLy+ sources) answers
- * for `x-bg` segments. Without word timings the segment still shows, timed
- * at line level from its cues.
+ * The spec puts the main voice first and the backing ones after it. Without
+ * word timings the segment still shows, timed at line level from its cues.
  */
 function backingFromCue(cl: ServerCueLine, offset: number): LyricBacking | null {
   const value = cl.value;
@@ -225,26 +223,68 @@ export function structuredSongLyrics(pick: ServerStructuredLyrics): SongLyrics |
       else cues.set(at, [cl]);
     });
   }
-  return {
-    synced,
-    lines: pick.line.map((ln, i): LyricLine => {
-      const all = cues.get(i) ?? [];
-      const text = all[0]?.value;
-      const cue = all[0]?.cue;
-      const words = text && cue?.length ? wordsFromCues(text, cue, offset) : undefined;
-      const backing: LyricBacking[] = [];
-      for (const extra of all.slice(1)) {
-        const seg = backingFromCue(extra, offset);
-        if (seg) backing.push(seg);
-      }
-      return {
-        // The cue line's own text when it has words, since they are cut out of
-        // it, and `line` may carry the backing vocals alongside.
-        value: words && text ? text : (ln.value ?? ''),
-        ...(synced && ln.start !== undefined ? { start: Math.max(0, ln.start - offset) } : {}),
-        ...(words ? { words } : {}),
-        ...(backing.length > 0 ? { backing } : {}),
-      };
-    }),
-  };
+  const lines = pick.line.map((ln, i): LyricLine => {
+    const all = cues.get(i) ?? [];
+    const text = all[0]?.value;
+    const cue = all[0]?.cue;
+    const words = text && cue?.length ? wordsFromCues(text, cue, offset) : undefined;
+    const backing: LyricBacking[] = [];
+    for (const extra of all.slice(1)) {
+      const seg = backingFromCue(extra, offset);
+      if (seg) backing.push(seg);
+    }
+    return {
+      // The cue line's own text when it has words, since they are cut out of
+      // it, and `line` may carry the backing vocals alongside.
+      value: words && text ? text : (ln.value ?? ''),
+      ...(synced && ln.start !== undefined
+        ? { start: Math.max(0, ln.start - offset) }
+        : {}),
+      ...(words ? { words } : {}),
+      ...(backing.length > 0 ? { backing } : {}),
+    };
+  });
+  return { synced, lines: synced ? inTimeOrder(lines) : lines };
+}
+
+/**
+ * Synced lines in the order they are sung. The server hands them over in the
+ * order it stored them, which for some files is not that: a chorus written
+ * once with several timestamps, or sections moved around. The player looks
+ * for the line being sung by walking forward until a line starts later, so
+ * one late line near the top kept the first line lit for the whole song, while
+ * tapping a line still jumped to the right place. Stable, and a line with no
+ * time stays after the one before it.
+ */
+function inTimeOrder(lines: LyricLine[]): LyricLine[] {
+  let last = 0;
+  const keyed = lines.map((line, i) => {
+    if (line.start !== undefined) last = line.start;
+    return { line, at: line.start ?? last, i };
+  });
+  keyed.sort((a, b) => a.at - b.at || a.i - b.i);
+  return keyed.map((k) => k.line);
+}
+
+/** Scripts written without spaces, where a line may break between any two timed words. */
+const UNSPACED_RE = /[\u0E00-\u0EFF\u1000-\u109F\u1780-\u17FF\u3000-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uFF00-\uFFEF]/;
+
+/**
+ * Word indices grouped into what a line may not break inside: syllables of
+ * one word come as separate timed words with no space between them (#312).
+ */
+export function wordGroups(words: LyricWord[]): number[][] {
+  const groups: number[][] = [];
+  words.forEach((word, i) => {
+    const prev = words[i - 1]?.value;
+    const joined =
+      prev != null &&
+      !/\s$/.test(prev) &&
+      !/^\s/.test(word.value) &&
+      !UNSPACED_RE.test(prev.slice(-1)) &&
+      !UNSPACED_RE.test(word.value.charAt(0));
+    if (joined) groups[groups.length - 1].push(i);
+    else groups.push([i]);
+  });
+  return groups;
 }

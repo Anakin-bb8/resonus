@@ -1,10 +1,12 @@
 /** Full-screen player (modal): cover art, progress and controls. */
+import { playerArtworkLayout } from '@/lib/artworkLayout';
+import { useArtworkAnimationAllowed } from '@/hooks/useArtworkMotionAllowed';
 import Icon from '@/components/Icon';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useIsFocused, useRouter } from 'expo-router';
-import { Fragment, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   AppState,
@@ -30,11 +32,17 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { CACHED_COVER, COVER, songCoverUrl, star, unstar, type Song } from '@/api/data';
+import { CACHED_COVER, COVER, canGoIntoPlaylist, songCoverUrl, star, unstar, type Song } from '@/api/data';
+import { episodeHeart, heartedSong, togglePodcastHeart } from '@/api/podcasts';
 import { ArtistPlayerCard } from '@/components/ArtistPlayerCard';
 import { AudioQualityBadge } from '@/components/AudioQualityBadge';
 import { SeekBar } from '@/components/SeekBar';
 import { Cover, coverRadius, useRedrawOnReturn, useSettledSource } from '@/components/Cover';
+import {
+  AnimatedArtworkBackground,
+  AnimatedArtworkView,
+  canPlayAnimatedCovers,
+} from '@/components/AnimatedArtworkView';
 import { ExplicitBadge } from '@/components/ExplicitBadge';
 import { FavoriteButton } from '@/components/FavoriteButton';
 import { CoverLyrics, LyricsCard } from '@/components/LyricsCard';
@@ -42,26 +50,28 @@ import { MarqueeText } from '@/components/MarqueeText';
 import { OutputSheet } from '@/components/OutputSheet';
 import { SpeedSheet } from '@/components/SpeedSheet';
 import { StarRating } from '@/components/StarRating';
-import { AnimatedArtworkBackground, AnimatedArtworkView } from '@/components/AnimatedArtworkView';
-import { useAnimatedArtwork } from '@/hooks/useAnimatedArtwork';
+import { StatusBar } from 'expo-status-bar';
+import { BleedArtwork } from '@/components/BleedArtwork';
+import { useArtworkEdgeColor } from '@/hooks/useArtworkEdgeColor';
 import { useAnimatedCover } from '@/hooks/useAnimatedCover';
+import { useAnimatedArtwork } from '@/hooks/useAnimatedArtwork';
 import { useAudioRoute } from '@/hooks/useAudioRoute';
 import { toneOf, useDominantColor } from '@/hooks/useDominantColor';
 import { useFavoriteIds } from '@/hooks/useFavoriteIds';
 import { useLocalProfile } from '@/hooks/useLocalProfile';
-import { useLosslessTag } from '@/hooks/useLosslessTag';
 import { useLyrics } from '@/hooks/useLyrics';
 import { useScreenSize } from '@/hooks/useScreenSize';
 import { useT } from '@/i18n';
 import { revealOffset } from '@/lib/playerReveal';
 import { artistTargets } from '@/lib/artistNav';
+import { routeLook } from '@/lib/audioRouteTypes';
 import { formatGroupedDeviceLabel } from '@/lib/format';
-import { routeIcon, type AudioRouteKind } from '@/lib/audioRouteTypes';
 import { applyStarChange, resyncFavorites } from '@/lib/favoritesCache';
 import { haptic } from '@/lib/haptics';
 import { localHttpAvailable } from '@/lib/localHttp';
 import { pushOnce } from '@/lib/pushOnce';
 import { pushOrReplace } from '@/lib/pushOrReplace';
+import { usePodcastFavoriteIds } from '@/lib/podcastFavorites';
 import { getItem, setItem } from '@/lib/storage';
 import { useArtistPicker } from '@/store/artistPicker';
 import { useAuthStore } from '@/store/auth';
@@ -75,6 +85,7 @@ import {
   useLiveInfo,
   usePlayerStore,
 } from '@/store/player';
+import { usePlaylistPicker } from '@/store/playlistPicker';
 import { useSettings, type CoverTapAction } from '@/store/settings';
 import { useSongMenu } from '@/store/songMenu';
 import { useToast } from '@/store/toast';
@@ -103,6 +114,14 @@ const COVER_MIN = 200;
  * cover sits a touch high, which reads better than dead centre.
  */
 const COVER_TOP_SHARE = 0.4;
+/**
+ * The least room between the cover and the rating under it. Above that floor
+ * the spare height is shared out evenly between the three gaps the rating
+ * makes (over the cover, cover to stars, stars to title), so the stars sit in
+ * the middle of what is left instead of hanging off the artwork with a hole
+ * under them (#259).
+ */
+const STARS_GAP_MIN = spacing.md;
 /** How far a finger has to travel across the cover to count as a skip. */
 const SWIPE_SHARE = 0.25;
 const DISMISS_THRESHOLD = 120;
@@ -149,9 +168,11 @@ function CircleButton({
   name,
   label,
   onPress,
+  color = colors.text,
 }: {
   name: keyof typeof Icon.glyphMap;
   label: string;
+  color?: string;
   onPress: (e: GestureResponderEvent) => void;
 }) {
   return (
@@ -162,7 +183,7 @@ function CircleButton({
       accessibilityLabel={label}
       onPress={onPress}
     >
-      <Icon name={name} size={22} color={colors.text} />
+      <Icon name={name} size={22} color={color} />
     </Pressable>
   );
 }
@@ -234,17 +255,6 @@ function SleepButton({ onPress, color }: { onPress: () => void; color: string })
   );
 }
 
-/** Generic label for a route kind whose system withheld the real name. */
-function routeFallbackKey(kind: AudioRouteKind, deviceClass?: 'headphones' | 'speaker' | 'car' | null): string {
-  if (kind === 'bluetooth' && deviceClass === 'headphones') return 'Headphones';
-  if (kind === 'bluetooth' && deviceClass === 'speaker') return 'Speaker';
-  if (kind === 'bluetooth' && deviceClass === 'car') return 'Car';
-  if (kind === 'bluetooth') return 'Bluetooth';
-  if (kind === 'wired') return 'Wired headphones';
-  if (kind === 'car') return 'Car';
-  return 'AirPlay';
-}
-
 function usePaneStyle(offset: SharedValue<number>, k: number, step: SharedValue<number>) {
   return useAnimatedStyle(() => {
     // A screen's width, and it is a shared value rather than a constant
@@ -308,18 +318,8 @@ export default function PlayerScreen() {
   const marqueeTitles = useSettings((s) => s.marqueeTitles);
   const playerButtons = useSettings((s) => s.playerButtons);
   const coverCorners = useSettings((s) => s.coverCorners);
-  // Device extras widen the row: with any of them on the row is always
-  // spread across the width, and holds at most three buttons (two when
-  // both are on). The editor locks itself to the same numbers.
-  const showDeviceName = useSettings((s) => s.showDeviceName);
-  const showLosslessTag = useSettings((s) => s.showLosslessTag);
-  const deviceExtrasOn = (showDeviceName ? 1 : 0) + (showLosslessTag ? 1 : 0);
-  const spreadButtons =
-    useSettings((s) => s.playerButtonsLayout === 'spread') || deviceExtrasOn > 0;
-  const maxBarButtons =
-    deviceExtrasOn === 2 ? 2 : deviceExtrasOn === 1 ? 3 : Number.POSITIVE_INFINITY;
-  const route = useAudioRoute();
-  const losslessTag = useLosslessTag(song ?? null);
+  const buttonsLayout = useSettings((s) => s.playerButtonsLayout);
+  const spreadButtons = buttonsLayout === 'spread';
   const local = useLocalProfile();
   // The local profile can cast now that the phone serves its own files
   // (`lib/localHttp`), so the only reason left to hide the button there is a
@@ -346,6 +346,16 @@ export default function PlayerScreen() {
   }, [upnpConnectedDevice, upnpDevices]);
   const jukeboxActive = useJukebox((s) => s.active);
   const remoteDevice = upnpDevice ?? (jukeboxActive ? t('Server speakers (Jukebox)') : null);
+  // Not casting, and only if asked for (#274), the phone's own output when it
+  // is worth naming (headphones, the car): its icon on the devices button and
+  // its name beside it, the way a cast target shows. The speaker keeps the
+  // plain button.
+  const showLocalOutput = useSettings((s) => s.showLocalOutput);
+  const audioRoute = useAudioRoute();
+  const routeShown =
+    remoteDevice || !showLocalOutput || !audioRoute ? null : routeLook(audioRoute.kind);
+  const localDevice = routeShown ? audioRoute?.name || t(routeShown.fallback) : null;
+  const deviceLabel = remoteDevice ?? localDevice;
   const [outputOpen, setOutputOpen] = useState(false);
   // The speed sheet holds its own visibility (see `SheetModal`): opening it
   // repaints the modal and not this screen, which is the whole reason the
@@ -369,6 +379,12 @@ export default function PlayerScreen() {
   // Whether it draws anything is the card's own question (it needs a
   // biography), and the room below is kept either way, as for the lyrics.
   const wantsArtistCard = !!song?.artistId && showArtistCard;
+  // The room below the first page goes by the settings, not by the song: a
+  // track with no artist to ask about moved the controls and the bottom row
+  // up a peek's worth, for that one track (#259). A station keeps it too,
+  // although it has neither card: going from songs to the radio and back
+  // moved the whole player the same way (#258).
+  const cardRoom = showLyricsCard || showArtistCard;
   /**
    * The heart's state, and it does not ask whether the file is on the phone.
    *
@@ -385,37 +401,65 @@ export default function PlayerScreen() {
    * there is a song.
    */
   const favIds = useFavoriteIds(!!song);
+  // A podcast episode's heart is the device's own, filed in SQLite, so it reads
+  // from the podcast favorites rather than the server's starred list.
+  const podcastFav = usePodcastFavoriteIds(!!song?.podcastChannelId);
 
   // The data layer resolves the cover: from the server (online) or from the
   // local index by album (offline). Base64 is no longer stored per song.
   // A radio has no album, but the station may carry its own image (the server
   // holds it, so it's the same one every client shows).
+  const playerFullBleed = useSettings((s) => s.playerFullBleed);
+  const motionMode = useSettings((s) => s.animatedArtworkMode);
+  // Off, the player costs what it always did: the size `warmArtwork` already
+  // loaded, and no edge sampling.
+  const mayBleed = playerFullBleed || motionMode === 'fullBleed';
   const coverOf = (s?: Song | null) =>
-    s ? songCoverUrl(s, COVER.card) : undefined;
+    s ? songCoverUrl(s, mayBleed ? COVER.full : COVER.card) : undefined;
   const cover = coverOf(song);
   // Spotify-style background: gradient from the cover's dominant color
   // (toggle in Settings → Theme). The color transitions smoothly on song
   // change: a flat color is animated and the gradient toward the background is
   // a fixed overlay (same look as animating the gradient, which can't be done).
+  const { width: screenW, height: screenH, landscape } = useScreenSize();
   const background = useSettings((s) => s.playerBackground);
   const colorBackground = background === 'color';
-  const animatedCoverBg = useSettings((s) => s.animatedCoverBackground);
+  const [headerHeight, setHeaderHeight] = useState(64);
+  const bottomEdge = useArtworkEdgeColor(mayBleed ? cover : undefined);
+  const topEdge = useArtworkEdgeColor(mayBleed ? cover : undefined, 'top', true);
+  const motionAllowed = useArtworkAnimationAllowed();
   // An animated cover (GIF, animated WebP, APNG) can take the whole screen
   // instead of playing inside the square, with a still copy of itself next to
-  // the title. Off by default. A cover that is only in the image cache
+  // the title, when its background mode is selected. A cover only in the image cache
   // (`CACHED_COVER`, offline) is not a URL and would leave the background
   // empty, so it keeps the ordinary layout, where `Cover` knows how to read it.
   const { isAnimated: isAnimatedDetected, onCoverLoad } = useAnimatedCover(cover);
-  const isAnimatedCover =
-    animatedCoverBg && isAnimatedDetected && !!cover && !cover.startsWith(CACHED_COVER);
+  const animatedCovers = useSettings((s) => s.animatedCovers);
+  const animatedImage = animatedCovers && isAnimatedDetected && !!cover && !cover.startsWith(CACHED_COVER);
   // HLS cover clips from the animated-artwork endpoint win over sniffed
   // GIF/WebP: they were asked for, so they are the animated cover when the
   // background option is on — fullscreen video with a still copy by the
   // title, same as the GIF path. With the option off the clip plays inside
   // the square instead.
-  const animatedClips = useAnimatedArtwork(song);
-  const animatedVideoSquare =
-    animatedCoverBg && animatedClips?.square ? animatedClips.square : null;
+  // Only a clip this build can play, with clip videos on: otherwise the
+  // background drew nothing while the still cover stood aside for it, and
+  // the player had no cover at all.
+  // Android has no switch for it (an empty server is the same thing), so a
+  // value left off there by an older build is not obeyed.
+  const animatedCoverVideo = useSettings((s) => s.animatedCoverVideo || Platform.OS !== 'ios');
+  const fetchedClips = useAnimatedArtwork(song);
+  const animatedClips = animatedCoverVideo && canPlayAnimatedCovers() ? fetchedClips : null;
+  const artworkLayout = playerArtworkLayout({
+    motionMode, hasMotion: animatedImage || !!animatedClips?.square,
+    staticFullBleed: playerFullBleed, hasCover: !!cover, landscape,
+  });
+  const fullBleed = artworkLayout === 'fullBleed';
+  const isAnimatedCover = artworkLayout === 'background' && animatedImage;
+  // The original background variant uses the square clip. Full bleed fits it
+  // inside the artwork frame; cover mode renders it only in the carousel.
+  const animatedVideoBackground = artworkLayout !== 'cover' ? animatedClips?.square : null;
+  const topRgb = /^#[\da-f]{6}$/i.test(topEdge) ? [1, 3, 5].map((i) => parseInt(topEdge.slice(i, i + 2), 16)) : [0, 0, 0];
+  const headerInk = fullBleed ? (topRgb[0] * 0.299 + topRgb[1] * 0.587 + topRgb[2] * 0.114 > 155 ? '#171717' : '#ffffff') : colors.text;
   // The backdrop holds the previous artwork on purpose while the next decodes,
   // so on its own it cannot tell "not decoded yet" from "never will be". Coming
   // back from the background is the second case (see `useRedrawOnReturn`), and
@@ -435,7 +479,7 @@ export default function PlayerScreen() {
   const animatedBg = useRedrawOnReturn(animatedBgRef, isAnimatedCover ? cover : undefined);
   // The full-screen animated cover needs the colour too, whatever the
   // background setting says: the gradient under it fades into that colour.
-  const dominant = useDominantColor(colorBackground || isAnimatedCover ? cover : undefined);
+  const dominant = useDominantColor(colorBackground || isAnimatedCover || !!animatedVideoBackground ? cover : undefined);
   const lightMode = useThemeMode() === 'light';
   // Play, the played part of the bar and, on light, the controls: pale with a
   // deep icon on dark, deep with a pale icon on light. Neutral whatever
@@ -447,7 +491,7 @@ export default function PlayerScreen() {
   // Under the blurred artwork the flat colour is irrelevant, but it still
   // paints the frame before the image decodes, so it stays dark rather than
   // flashing the old grey.
-  const targetBg = colorBackground ? dominant : background === 'cover' ? colors.background : colors.playerPlain;
+  const targetBg = fullBleed ? bottomEdge : colorBackground ? dominant : background === 'cover' ? colors.background : colors.playerPlain;
   const bgColor = useSharedValue(targetBg);
   useEffect(() => {
     // reduceMotion Never: the color fade is part of the look and some devices
@@ -476,9 +520,6 @@ export default function PlayerScreen() {
   // too, and it is the controls that keep clear of the navigation bar (see
   // `styles.bottom` below).
   const insets = useSafeAreaInsets();
-  // Measured as it draws, so turning the phone while the player is open lays
-  // it out for the screen it is on now (#131).
-  const { width: screenW, height: screenH, landscape } = useScreenSize();
   const approxPageH = screenH - insets.top;
   /** What the open before this one measured, if it was on this screen. */
   const remembered = lastLayout?.for === screenH ? lastLayout : null;
@@ -776,6 +817,18 @@ export default function PlayerScreen() {
     const current = usePlayerStore.getState();
     const track = currentSong(current);
     if (!track) return;
+    // A podcast episode: the device's own SQLite favorite, no server starring.
+    if (track.podcastChannelId) {
+      const next = !podcastFav.has(track.id);
+      haptic('medium');
+      try {
+        await togglePodcastHeart(track.id, 'episode', track.podcastChannelId);
+        useToast.getState().show(next ? t('Added to favorites') : t('Removed from favorites'));
+      } catch {
+        useToast.getState().show(t("Couldn't complete the action"));
+      }
+      return;
+    }
     const next = !(favIds ? favIds.has(track.id) : !!track.starred);
     haptic('medium');
     applyStarChange('song', track.id, next, track);
@@ -921,21 +974,38 @@ export default function PlayerScreen() {
   // The central list wins when loaded (refreshes when starred from any
   // screen); `song.starred` from the queue becomes stale, so it only serves
   // as a fallback for local songs or while loading.
-  const favorited = favIds ? favIds.has(song.id) : !!song.starred;
+  const favorited = heartedSong(song, podcastFav, favIds);
+  // The heart writes the device's own SQLite favorite for an episode, so the
+  // button is told which show it belongs to.
+  const podcastHeart = episodeHeart(song);
+  /**
+   * What holding the heart does: opens the app's playlist sheet with this song
+   *  (#286). Nothing about the favourite happens in a hold, and the sheet is
+   *  the one mounted in the root layout, so opening it is a store write and not
+   *  a navigation: the player stays where it is with the sheet over it.
+   *
+   *  A station and a podcast episode are handed nothing: their id names no
+   *  track a playlist can name (`canGoIntoPlaylist`), so their heart stays a
+   *  tap and a hold does nothing, as it always did.
+   */
+  const openPlaylistSheet = canGoIntoPlaylist(song)
+    ? () => usePlaylistPicker.getState().open([song])
+    : undefined;
   // What the header announces, most specific first (#65). A song added by hand
   // is the queue's own, so the queue is what it says, and only for as long as
   // that song plays. A mix that autoplay grew takes over next, since by then
   // the source underneath is the album that ran out. Otherwise it is the source
   // as before: a station says "Radio", the two sentinels are translated, and a
   // queue that never had a source (one recovered from the server) leaves
-  // "NOW PLAYING" as it did.
+  // "NOW PLAYING" as it did. A podcast episode is a file, not a station, so it
+  // names its show (the source) exactly as an album names its record.
   const sourceLabel = queuedNow
     ? t('Queue')
     : mixSeed
       ? t('Mix of “{name}”', { name: mixSeed.title })
       : !source
         ? null
-        : song.url
+        : song.url && !song.vod
           ? t('Radio')
           : source === SOURCE_FAVORITES
             ? t('Favorites')
@@ -968,17 +1038,25 @@ export default function PlayerScreen() {
   // the top first. Side by side the slot is half the screen, which is why the
   // cap is measured rather than taken from the screen (#131).
   const coverMax = (landscape ? screenW / 2 : screenW) - spacing.xl * 2;
+  const starsBlock = canRate ? starsH + STARS_GAP_MIN : 0;
   const coverSize = coverBoxH
-    ? Math.max(COVER_MIN, Math.min(coverBoxW || coverMax, coverBoxH - (canRate ? starsH : 0)))
+    ? Math.max(COVER_MIN, Math.min(coverBoxW || coverMax, coverBoxH - starsBlock))
     : coverMax;
-  // Plain function, not the hook: the size is measured past the no-song
-  // return above, where no hook may run anymore.
   const coverCorner = coverRadius(coverCorners, coverSize);
   // Left-over height once the cover and the stars have taken their share, split
   // between the two sides. Padding doesn't feed back into the measurement: the
   // slot's height comes from `flex: 1`, not from its contents.
-  const coverSlack = Math.max(0, coverBoxH - coverSize - (canRate ? starsH : 0));
-  const coverTopPad = Math.round(coverSlack * COVER_TOP_SHARE);
+  const coverSlack = Math.max(0, coverBoxH - coverSize - starsBlock);
+  // With the rating the spare height goes in three equal parts, so what the
+  // eye sees above the cover, under it and under the stars is the same. The
+  // first already has the top bar's padding and the slot's own margin in it,
+  // and the second the stars' floor. Without the rating, the old split.
+  const aboveCover = spacing.md + spacing.lg;
+  const evenGap = (coverSlack + aboveCover + STARS_GAP_MIN) / 3;
+  const coverTopPad = canRate
+    ? Math.round(Math.max(0, evenGap - aboveCover))
+    : Math.round(coverSlack * COVER_TOP_SHARE);
+  const starsGap = canRate ? Math.round(Math.max(STARS_GAP_MIN, evenGap)) : 0;
   const duration = durationSec || song.duration || 0;
   const repeatActive = repeat !== 'off';
   /**
@@ -1005,42 +1083,125 @@ export default function PlayerScreen() {
     devices: !buttonOn('devices') && canDevices && !remoteDevice ? () => setOutputOpen(true) : undefined,
     speed: !buttonOn('speed') && canSpeed && speed === 1 ? () => openSpeedSheet.current() : undefined,
   });
-  // With device extras the row is crowded: pinned essentials (the cast way
-  // out, an off-normal speed with no other way back) always stay, the rest
-  // fills the row up to the cap, in the listener's order.
-  const barKeys = (() => {
-    const out: string[] = [];
-    let n = 0;
-    for (const { key, enabled } of playerButtons) {
-      const pinned = (key === 'devices' && !!remoteDevice) || (key === 'speed' && speed !== 1);
-      const shown =
-        key === 'devices'
-          ? (enabled && canDevices) || !!remoteDevice
-          : key === 'lyrics'
-            ? enabled
-            : key === 'speed'
-              ? enabled || speed !== 1
-              : enabled;
-      if (!shown) continue;
-      if (pinned || n < maxBarButtons) {
-        out.push(key);
-        if (!pinned) n++;
-      }
+
+  /** One button of the bottom row, or nothing when it is hidden. */
+  const bottomButton = ({ key, enabled }: { key: string; enabled: boolean }) => {
+    switch (key) {
+      case 'devices':
+        // Connected to a remote device it's always shown: it's the
+        // only way to disconnect the cast. Never disabled any more:
+        // downloads cast from the phone, so offline there is
+        // something to send, and going offline mid-cast used to
+        // leave the way out barred.
+        return (enabled && canDevices) || remoteDevice ? (
+          <Pressable
+            key={key}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={t('Devices')}
+            onPress={() => setOutputOpen(true)}
+            style={styles.deviceRow}
+          >
+            <Icon
+              name={routeShown?.icon ?? 'laptop-outline'}
+              size={26}
+              color={deviceLabel ? colors.accent : ink}
+            />
+            {deviceLabel ? (
+              <Text style={[styles.deviceName, { color: colors.accent }]} numberOfLines={1}>
+                {deviceLabel}
+              </Text>
+            ) : null}
+          </Pressable>
+        ) : null;
+      case 'lyrics':
+        return enabled ? (
+          <Pressable
+            key={key}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={t('Lyrics')}
+            disabled={!canOpenLyrics}
+            onPress={() => pushOnce('/lyrics')}
+            style={[styles.bottomButton, !canOpenLyrics && styles.bottomButtonOff]}
+          >
+            <Icon name="mic-outline" size={26} color={ink} />
+          </Pressable>
+        ) : null;
+      case 'speed':
+        // Also while hidden, as long as the speed is not 1×: a mode
+        // that is on has to be seen to be turned off.
+        return enabled || speed !== 1 ? (
+          <Pressable
+            key={key}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={t('Playback speed')}
+            disabled={!canSpeed}
+            onPress={() => openSpeedSheet.current()}
+            style={[styles.bottomButton, !canSpeed && styles.bottomButtonOff]}
+          >
+            <Icon
+              name="speedometer-outline"
+              size={26}
+              color={speed === 1 ? ink : colors.accent}
+            />
+            {/* The number only once it says something, in the accent
+                like the device name beside its own icon. */}
+            {speed === 1 ? null : <Text style={styles.speedText}>{`${speed}×`}</Text>}
+          </Pressable>
+        ) : null;
+      case 'sleep':
+        return enabled ? (
+          <SleepButton
+            key={key}
+            color={ink}
+            onPress={() => openMenu(song, undefined, { ...menuOptions(), sleep: true })}
+          />
+        ) : null;
+      case 'queue':
+        return enabled ? (
+          <Pressable
+            key={key}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={t('View queue')}
+            onPress={() => pushOnce('/queue')}
+            style={styles.bottomButton}
+          >
+            <Icon name="layers-outline" size={26} color={ink} />
+          </Pressable>
+        ) : null;
     }
-    return new Set(out);
-  })();
-  // The row in render order, so the lossless mark can sit after the first
-  // button.
-  const visibleBarButtons = playerButtons.filter(({ key }) => barKeys.has(key));
+    return null;
+  };
+  // Devices on the left and the rest on the right (#259), when there is a
+  // devices button to put there: without one the row is grouped as before.
+  const devicesShown = buttonOn('devices') && canDevices ? true : !!remoteDevice;
+  const splitRow = buttonsLayout === 'split' && devicesShown;
 
   return (
     <GestureDetector gesture={dismissPan}>
       <Animated.View style={[styles.root, rootStyle]}>
-        <Animated.View style={[StyleSheet.absoluteFill, bgStyle]} />
-        {animatedVideoSquare && cover ? (
+        {fullBleed ? <StatusBar style={headerInk === '#171717' ? 'dark' : 'light'} /> : null}
+        {fullBleed ? (
+          // Match the cover gradient's endpoint in the same React render.
+          // A separately animated base can retain its old shade on return
+          // from the background, exposing a hard edge below the artwork.
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: bottomEdge }]} />
+        ) : (
+          <Animated.View style={[StyleSheet.absoluteFill, bgStyle]} />
+        )}
+        {fullBleed && !inlineLyrics ? (
+          <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, animatedBgStyle]}>
+            <View style={{ height: insets.top + headerHeight, backgroundColor: topEdge }} />
+            <BleedArtwork uri={cover} width={screenW} height={screenW} color={bottomEdge}
+              topColor={topEdge} video={animatedVideoBackground} autoplay={animatedCovers} onAnimatedDetected={onCoverLoad} />
+          </Animated.View>
+        ) : animatedVideoBackground && cover ? (
           /* The endpoint clip itself, unblurred, over the whole screen. */
           <Animated.View style={[StyleSheet.absoluteFill, animatedBgStyle]}>
-            <AnimatedArtworkBackground key={animatedVideoSquare} square={animatedVideoSquare} />
+            <AnimatedArtworkBackground key={animatedVideoBackground} square={animatedVideoBackground} fallbackUri={cover} />
             {/* Its bottom edge fades into the cover's own colour, so the
                 picture ends somewhere instead of being cut off. Inside the
                 same wrapper: it has to travel with it. */}
@@ -1060,6 +1221,7 @@ export default function PlayerScreen() {
               style={StyleSheet.absoluteFill}
               contentFit="cover"
               transition={BACKDROP_FADE}
+              autoplay={motionAllowed}
               onDisplay={animatedBg.onDisplay}
             />
             {/* Its bottom edge fades into the cover's own colour, so the
@@ -1102,7 +1264,7 @@ export default function PlayerScreen() {
         {/* Only the lower half, where the controls are: the top is left to
             the cover's colour. */}
         <LinearGradient
-          colors={[colors.background + '00', colors.background + 'B3'] as const}
+          colors={fullBleed ? [transparentOf(bottomEdge), bottomEdge] : [colors.background + '00', colors.background + 'B3']}
           locations={[0.45, 1]}
           style={StyleSheet.absoluteFill}
         />
@@ -1153,14 +1315,14 @@ export default function PlayerScreen() {
             //
             // The cost is the strip of empty background under a song with no
             // lyrics. That is the same trade as before, taken the other way: the
-            // gap is quiet, the layout jumping on every skip is not. Only a radio
-            // (no lyrics ever, `wantsLyricsCard` false) gets the room back.
+            // gap is quiet, the layout jumping on every skip is not. A radio,
+            // with no lyrics ever, keeps the room as well (`cardRoom`).
             height:
-              (pageH || approxPageH) - (wantsLyricsCard || wantsArtistCard ? LYRICS_PEEK : 0),
+              (pageH || approxPageH) - (cardRoom ? LYRICS_PEEK : 0),
           }}
         >
-        <View style={styles.topBar}>
-          <CircleButton name="chevron-down" label={t('Close')} onPress={() => router.back()} />
+        <View style={styles.topBar} onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}>
+          <CircleButton color={headerInk} name="chevron-down" label={t('Close')} onPress={() => router.back()} />
           <Pressable
             style={styles.topTitleWrap}
             disabled={!canOpenSource}
@@ -1181,13 +1343,13 @@ export default function PlayerScreen() {
           >
             {sourceLabel ? (
               <>
-                <Text style={styles.topLabel}>{t('PLAYING FROM')}</Text>
-                <Text style={styles.topSource} numberOfLines={1}>
+                <Text style={[styles.topLabel, { color: headerInk }]}>{t('PLAYING FROM')}</Text>
+                <Text style={[styles.topSource, { color: headerInk }]} numberOfLines={1}>
                   {sourceLabel}
                 </Text>
               </>
             ) : (
-              <Text style={styles.topTitle}>{t('NOW PLAYING')}</Text>
+              <Text style={[styles.topTitle, { color: headerInk }]}>{t('NOW PLAYING')}</Text>
             )}
           </Pressable>
           {/* Both of these used to sit behind `song.localUri && !offline`, meant
@@ -1211,10 +1373,16 @@ export default function PlayerScreen() {
             // Swapped: the heart takes the corner. It only reports state here —
             // tapping it still works, it's just the awkward spot to reach.
             <View style={styles.topFavorite}>
-              <FavoriteButton id={song.id} starred={favorited} size={24} />
+              <FavoriteButton
+                id={song.id}
+                starred={favorited}
+                podcast={podcastHeart}
+                size={24}
+                hold={openPlaylistSheet}
+              />
             </View>
           ) : (
-            <CircleButton name="ellipsis-horizontal" label={t('More options')} onPress={() => openMenu(song, undefined, menuOptions())} />
+            <CircleButton color={headerInk} name="ellipsis-horizontal" label={t('More options')} onPress={() => openMenu(song, undefined, menuOptions())} />
           )}
         </View>
 
@@ -1231,7 +1399,8 @@ export default function PlayerScreen() {
             styles.coverWrap,
             landscape && styles.coverColumn,
             {
-              paddingTop: coverTopPad,
+              paddingTop: fullBleed ? 0 : coverTopPad,
+              ...(fullBleed ? { marginTop: 0 } : {}),
               // Side by side the cover is the thing that reaches the bottom
               // edge, and the navigation bar is down there: in a column it was
               // the block of controls that kept clear of it for both.
@@ -1250,17 +1419,8 @@ export default function PlayerScreen() {
                 panel's content only changes off-screen and a fade is pointless
                 here. An animated cover is not here at all: it is the background,
                 and the empty slot it leaves is what the picture shows through. */}
-            <Animated.View
-              style={[
-                { width: coverSize, height: coverSize },
-                coverAppearStyle,
-                // The still cover sits on the page the way the album one does,
-                // only softer. Not an animated one: that is the background
-                // itself, and the small copy by the title stays flat too.
-                !(isAnimatedCover || animatedVideoSquare) && styles.coverShadow,
-              ]}
-            >
-              {!isAnimatedCover && !animatedVideoSquare ? (
+            <Animated.View style={[{ width: fullBleed ? screenW - insets.left - insets.right : coverSize, height: fullBleed ? Math.max(coverSize, coverBoxH - starsBlock) : coverSize }, coverAppearStyle]}>
+              {!fullBleed && !isAnimatedCover && !animatedVideoBackground ? (
                 paneStyles.map((paneStyle, k) => {
                   const rel = paneRel(k);
                   const paneSong = rel === 0 ? song : rel === 1 ? nextSong : prevSong;
@@ -1313,13 +1473,13 @@ export default function PlayerScreen() {
             // above it is still resolving is what put the stars on screen at
             // one height and then moved them.
             <Animated.View
-              style={[styles.belowCover, coverAppearStyle]}
+              style={[styles.belowCover, { marginTop: fullBleed ? STARS_GAP_MIN : starsGap }, coverAppearStyle]}
               onLayout={(e) => setStarsH(e.nativeEvent.layout.height)}
             >
               <StarRating
                 id={song.id}
                 rating={song.userRating}
-                size={20}
+                size={24}
                 onRated={(r) => rateSong(song.id, r)}
               />
             </Animated.View>
@@ -1336,16 +1496,18 @@ export default function PlayerScreen() {
             landscape && styles.bottomColumn,
             // With no card peeking below, the row of buttons would sit on the
             // navigation bar; the room comes out of the spare height above.
+            // Over a card it sits close to it and a little further from the
+            // controls, which is what reads as one row belonging to the card's
+            // edge rather than to the controls (#259).
             {
-              paddingBottom:
-                insets.bottom + (wantsLyricsCard || wantsArtistCard ? spacing.md : spacing.xl),
+              paddingBottom: insets.bottom + (cardRoom ? 0 : spacing.xl),
             },
           ]}
         >
           <View style={styles.meta}>
             {/* With the cover on the wall behind, a still copy of it sits by
                 the title, the height of the two lines of text. */}
-            {(isAnimatedCover || animatedVideoSquare) && cover ? (
+            {artworkLayout === 'background' && (isAnimatedCover || animatedVideoBackground) && cover ? (
               <Cover
                 uri={cover}
                 size={MINI_COVER}
@@ -1436,11 +1598,13 @@ export default function PlayerScreen() {
                 onPress={() => openMenu(song, undefined, menuOptions())}
               />
             ) : (
-              // Sitting on the title/artist boundary, following those two
-              // lines rather than centred across the block.
-              <View style={styles.favWrap}>
-                <FavoriteButton id={song.id} starred={favorited} size={34} />
-              </View>
+              <FavoriteButton
+                id={song.id}
+                starred={favorited}
+                podcast={podcastHeart}
+                size={26}
+                hold={openPlaylistSheet}
+              />
             )}
           </View>
 
@@ -1582,141 +1746,22 @@ export default function PlayerScreen() {
           <View
             style={[
               styles.bottomRow,
-              spreadButtons && styles.bottomRowSpread,
+              (spreadButtons || splitRow) && styles.bottomRowSpread,
               // Set a little apart from the controls, in the room the padding
               // below gave up.
-              !(wantsLyricsCard || wantsArtistCard) && { marginTop: spacing.xl },
+              { marginTop: cardRoom ? spacing.lg : spacing.xl },
             ]}
           >
-            {visibleBarButtons.map(({ key, enabled }, i) => {
-              const el = (() => {
-                switch (key) {
-                    case 'devices': {
-                  // Connected to a remote device it's always shown: it's the
-                  // only way to disconnect the cast. Never disabled any more:
-                  // downloads cast from the phone, so offline there is
-                  // something to send, and going offline mid-cast used to
-                  // leave the way out barred.
-                  if (!((enabled && canDevices) || remoteDevice)) return null;
-                  // A local route worth naming: headphones, Bluetooth, the car
-                  // or AirPlay. The speaker and the unknown read as no device.
-                  const local =
-                    !remoteDevice &&
-                    route &&
-                    route.kind !== 'builtin' &&
-                    route.kind !== 'other'
-                      ? route
-                      : null;
-                  const icon = remoteDevice
-                    ? 'laptop-outline'
-                    : (local && routeIcon(local.kind, local.deviceClass)) || 'laptop-outline';
-                  const lit = !!remoteDevice || !!local;
-                  const name = showDeviceName
-                    ? (remoteDevice ??
-                      (local ? local.name || t(routeFallbackKey(local.kind, local.deviceClass)) : null))
-                    : null;
-                  return (
-                    <Pressable
-                      key={key}
-                      hitSlop={10}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('Devices')}
-                      onPress={() => setOutputOpen(true)}
-                      style={styles.deviceRow}
-                    >
-                      <View style={styles.deviceIconSlot}>
-                        <Icon name={icon} size={26} color={lit ? colors.accent : ink} />
-                      </View>
-                      {name ? (
-                        <Text style={[styles.deviceName, { color: colors.accent }]} numberOfLines={1}>
-                          {name}
-                        </Text>
-                      ) : null}
-                    </Pressable>
-                  );
-                }
-                case 'lyrics':
-                  return enabled ? (
-                    <Pressable
-                      key={key}
-                      hitSlop={10}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('Lyrics')}
-                      disabled={!canOpenLyrics}
-                      onPress={() => pushOnce('/lyrics')}
-                      style={[styles.bottomButton, !canOpenLyrics && styles.bottomButtonOff]}
-                    >
-                      <Icon name="mic-outline" size={26} color={ink} />
-                    </Pressable>
-                  ) : null;
-                case 'speed':
-                  // Also while hidden, as long as the speed is not 1×: a mode
-                  // that is on has to be seen to be turned off.
-                  return enabled || speed !== 1 ? (
-                    <Pressable
-                      key={key}
-                      hitSlop={10}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('Playback speed')}
-                      disabled={!canSpeed}
-                      onPress={() => openSpeedSheet.current()}
-                      style={[styles.bottomButton, !canSpeed && styles.bottomButtonOff]}
-                    >
-                      <Icon
-                        name="speedometer-outline"
-                        size={26}
-                        color={speed === 1 ? ink : colors.accent}
-                      />
-                      {/* The number only once it says something, in the accent
-                          like the device name beside its own icon. */}
-                      {speed === 1 ? null : <Text style={styles.speedText}>{`${speed}×`}</Text>}
-                    </Pressable>
-                  ) : null;
-                case 'sleep':
-                  return enabled ? (
-                    <SleepButton
-                      key={key}
-                      color={ink}
-                      onPress={() => openMenu(song, undefined, { ...menuOptions(), sleep: true })}
-                    />
-                  ) : null;
-                case 'queue':
-                  return enabled ? (
-                    <Pressable
-                      key={key}
-                      hitSlop={10}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('View queue')}
-                      onPress={() => pushOnce('/queue')}
-                      style={styles.bottomButton}
-                    >
-                      <Icon name="layers-outline" size={26} color={ink} />
-                    </Pressable>
-                  ) : null;
-                }
-              })();
-              const tag = showLosslessTag && losslessTag ? (
-                // The lossless mark rides with the leftmost button, whatever
-                // it is: a dot and a word, in the accent like the device.
-                <View style={styles.losslessTag}>
-                  <View style={styles.losslessDot} />
-                  <Text style={styles.losslessText} numberOfLines={1}>
-                    {losslessTag === 'high-res' ? t('High-Res Lossless') : t('Lossless')}
-                  </Text>
+            {splitRow ? (
+              <>
+                {bottomButton({ key: 'devices', enabled: true })}
+                <View style={styles.bottomRight}>
+                  {playerButtons.filter((b) => b.key !== 'devices').map(bottomButton)}
                 </View>
-              ) : null;
-              if (i === 0 && tag) {
-                // One flex item, so spread keeps button and mark together at
-                // the edge instead of distributing the mark to the middle.
-                return (
-                  <View key={key} style={styles.leadCluster}>
-                    {el}
-                    {tag}
-                  </View>
-                );
-              }
-              return <Fragment key={key}>{el}</Fragment>;
-            })}
+              </>
+            ) : (
+              playerButtons.map(bottomButton)
+            )}
           </View>
         </View>
         </View>
@@ -1808,15 +1853,6 @@ const styles = themed((colors) => ({
   // Carousel panels are absolute (usePaneStyle positions them); the row that
   // reserves the cover art slot is sized inline, since it's dynamic now.
   coverPane: { position: 'absolute', top: 0, left: 0 },
-  coverShadow: {
-    // The album and playlist covers cast this same shadow, only heavier: the
-    // weight sits underneath, and the offset is what puts it there.
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.32,
-    shadowRadius: 12,
-    elevation: 6,
-  },
   // Lyrics overlay on top of the cover frame: same height (set inline, it
   // follows the cover) and horizontally centered (coverWrap is wider than the
   // cover; without this the lyrics would be left-aligned).
@@ -1836,16 +1872,10 @@ const styles = themed((colors) => ({
   },
   meta: {
     flexDirection: 'row',
-    // Top-aligned: the mark sits by the title line rather than centred
-    // across the whole block.
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: spacing.md,
-    // Centred in the cover-to-slider gap: as much above as below it.
-    marginTop: spacing.md,
     marginBottom: spacing.md,
   },
-  /** The favourite mark down on the title/artist boundary. */
-  favWrap: { marginTop: spacing.md },
   // The tappable area fits the text (not the full width), to avoid navigating
   // when tapping the empty space on the right.
   // Hugs the text: the tappable area is just the title/artist, not the row.
@@ -1891,7 +1921,8 @@ const styles = themed((colors) => ({
     justifyContent: 'center',
   },
   // Stars centered below the cover (optional element).
-  belowCover: { alignItems: 'center', marginTop: spacing.md },
+  // Its top margin is the even share worked out with `coverTopPad`.
+  belowCover: { alignItems: 'center' },
   // Same footprint as the CircleButton it replaces when swapped, so the
   // centered title doesn't shift.
   topFavorite: { width: 40, alignItems: 'center', justifyContent: 'center' },
@@ -1904,54 +1935,30 @@ const styles = themed((colors) => ({
     paddingHorizontal: spacing.sm,
     marginTop: spacing.xs,
   },
-  bottomRowSpread: { justifyContent: 'space-between', gap: 0 },
+  // Edge to edge like the controls above, so the outer icons sit under the
+  // shuffle and the repeat instead of a step further in (#259).
+  bottomRowSpread: { justifyContent: 'space-between', gap: 0, paddingHorizontal: 0 },
+  /** The right-hand group of the split row: devices alone on the left. */
+  bottomRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.xl, flexShrink: 0 },
   // Like Spotify Connect: icon + device name in accent when casting.
-  // The same box as the other buttons in the row; the name makes it wider,
-  // and it is capped so the row stays centred.
+  // The same box as the other buttons in the row; only the device name, while
+  // casting, makes it wider, and it is capped so the row stays centred. With
+  // every button on and a long name it is the one that gives way, the name
+  // cut short, instead of pushing the row past both edges of the screen.
   deviceRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
     height: 40,
     maxWidth: 160,
+    flexShrink: 1,
+    minWidth: 0,
   },
   deviceName: {
     color: colors.accent,
     fontSize: fontSize.xs,
     fontWeight: '500',
     flexShrink: 1,
-  },
-  // Glyphs draw at different optical widths (laptop vs headphones), so the
-  // icon sits in a fixed centered slot: named or not, its ink starts where
-  // the bare devices icon always did.
-  deviceIconSlot: {
-    width: 26,
-    height: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  // The lossless mark after the first button: a dot and a word in the
-  // accent, the same step from the button as between dot and word.
-  // The first button and the mark ride one flex item (below), so spread
-  // keeps them together at the edge.
-  leadCluster: { flexDirection: 'row', alignItems: 'center' },
-  losslessTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    height: 40,
-    marginLeft: spacing.sm,
-  },
-  losslessDot: {
-    width: 9,
-    height: 9,
-    borderRadius: 4.5,
-    backgroundColor: colors.accent,
-  },
-  losslessText: {
-    color: colors.accent,
-    fontSize: fontSize.sm,
-    fontWeight: '600',
   },
   bottomButton: {
     flexDirection: 'row',

@@ -89,6 +89,13 @@ interface RadiosState {
   /** Radio id (its seed's id) → uri of the generated icon file. */
   icons: Record<string, string>;
   hydrated: boolean;
+  /**
+   * A new set is being made over the one on screen (a pull of Home, or the
+   * settings). Building takes a while, and with nothing to show for it the
+   * pull looked like it had done nothing, so people pulled again.
+   */
+  building: boolean;
+  setBuilding: (building: boolean) => void;
   hydrate: () => Promise<void>;
   setDefs: (defs: RadioDef[]) => Promise<void>;
   setIcon: (id: string, uri: string) => void;
@@ -122,6 +129,8 @@ export const useRadios = create<RadiosState>((set, get) => ({
   defs: [],
   icons: {},
   hydrated: false,
+  building: false,
+  setBuilding: (building) => set({ building }),
 
   hydrate: async () => {
     if (get().hydrated) return;

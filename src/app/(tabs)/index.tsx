@@ -28,7 +28,14 @@ import {
   type Playlist,
   type Song,
 } from '@/api/data';
-import { listRecentEpisodes, type RecentEpisode } from '@/api/podcasts';
+import {
+  getChannel,
+  getStoredChannel,
+  isFeedUrl,
+  podcastCover,
+  listRecentEpisodes,
+  type RecentEpisode,
+} from '@/api/podcasts';
 import { AlbumCard } from '@/components/AlbumCard';
 import { AlbumCardsSkeleton } from '@/components/AlbumCardsSkeleton';
 import { ArtistCard } from '@/components/ArtistCard';
@@ -39,10 +46,10 @@ import { Message } from '@/components/Message';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { PlaylistCard } from '@/components/PlaylistCard';
 import { PodcastEpisodeCard } from '@/components/PodcastEpisodeCard';
-import { ProfileAvatar } from '@/components/ProfileAvatar';
 import { RadioCard } from '@/components/RadioCard';
 import { TrackRow } from '@/components/TrackRow';
 import { useScreenBottomPadding } from '@/hooks/useScreenBottomPadding';
+import { episodeUnavailable } from '@/hooks/useEpisodeUnavailable';
 import { columnsFor, useScreenSize } from '@/hooks/useScreenSize';
 import { songsLabel, useT } from '@/i18n';
 import { greetingHours } from '@/i18n/languages';
@@ -56,6 +63,7 @@ import { useAuthStore } from '@/store/auth';
 import { checkAutoUrlNow } from '@/store/autoUrl';
 import { useLastPlayed } from '@/store/lastPlayed';
 import { usePlayerStore } from '@/store/player';
+import { useDownloads } from '@/store/downloads';
 import { useRadios } from '@/store/radios';
 import { useScanProgress } from '@/store/scanProgress';
 import {
@@ -141,6 +149,7 @@ function QuickGrid() {
   const withFavorites = useSettings((s) => s.quickGridFavorites);
   const withAlbums = useSettings((s) => s.quickGridAlbums);
   const withPlaylists = useSettings((s) => s.quickGridPlaylists);
+  const withPodcasts = useSettings((s) => s.quickGridPodcasts);
   const size = useSettings((s) => s.quickGridSize);
   const { data: playlists } = useQuery({
     queryKey: ['playlists'],
@@ -151,6 +160,34 @@ function QuickGrid() {
     queryKey: ['albumList', offline ? 'newest' : 'recent'],
     queryFn: () => getAlbumList(offline ? 'newest' : 'recent'),
     enabled: canFetch && withAlbums,
+  });
+  // A show's picture is the feed's own address, kept in its database row —
+  // there is no server cover id to build a URL from. So the tiles for played
+  // shows ask SQLite for the picture, keyed by the hrefs that were played.
+  const podcastHrefs = Object.keys(times).filter((h) => h.startsWith('/podcast/'));
+  const { data: podcastCovers } = useQuery({
+    // Keyed by the hrefs themselves: a show played for the first time is a
+    // new question. The `['podcast']` prefix is what the show screens
+    // invalidate, so a refresh that changes a picture lands here too.
+    queryKey: ['podcast', 'covers', ...podcastHrefs],
+    queryFn: async () => {
+      const out: Record<string, string> = {};
+      for (const href of podcastHrefs) {
+        // Everything after the kind, not the third piece: a show opened
+        // straight from its feed carries the feed's address, with its own
+        // slashes, as the id.
+        const id = href.slice('/podcast/'.length);
+        const ch = isFeedUrl(id)
+          ? await getStoredChannel(decodeURIComponent(id))
+          : await getChannel(id);
+        if (ch?.imageUrl) {
+          const art = podcastCover(ch);
+          if (art) out[href] = art;
+        }
+      }
+      return out;
+    },
+    enabled: withPodcasts && podcastHrefs.length > 0,
   });
 
   // Spotify-style dynamic grid: mixes playlists and recent albums sorted by
@@ -202,14 +239,34 @@ function QuickGrid() {
         const [, kind, id] = href.split('/');
         const name = names[href];
         if (!name || !id) return null;
-        if (kind === 'album' ? !withAlbums : kind === 'playlist' ? !withPlaylists : true) {
+        if (
+          kind === 'album'
+            ? !withAlbums
+            : kind === 'playlist'
+              ? !withPlaylists
+              : kind === 'podcast'
+                ? !withPodcasts
+                : true
+        ) {
           return null;
         }
-        return { key: href, href, name, cover: coverArtUrl(id, COVER.thumb), ts };
+        return {
+          key: href,
+          href,
+          name,
+          // A show's picture is the feed's own address, read from its database
+          // row above; `coverArtUrl` wears it the offline way (only a picture
+          // already on the phone answers) exactly as it does for remote art.
+          cover:
+            kind === 'podcast'
+              ? coverArtUrl(podcastCovers?.[href], COVER.thumb)
+              : coverArtUrl(id, COVER.thumb),
+          ts,
+        };
       })
       .filter((it): it is Item => it !== null);
     return [...al, ...pl, ...played].sort((x, y) => y.ts - x.ts).slice(0, dynamicCount);
-  }, [playlists, albums, times, names, withPlaylists, withAlbums, dynamicCount]);
+  }, [playlists, albums, podcastCovers, times, names, withPlaylists, withAlbums, withPodcasts, dynamicCount]);
 
   // Without active sources there's nothing to show (the master toggle still
   // decides if the block mounts; this covers "all off" from here).
@@ -487,9 +544,14 @@ function PlaylistsSection({ title }: { title: string }) {
   );
 }
 
-/** The newest podcast episodes. Local, and nothing at all without a subscription. */
+/** The newest podcast episodes. Local, and nothing at all until a show is kept. */
 function PodcastEpisodesSection({ title }: { title: string }) {
   const card = useShelfCard();
+  // Hide mode, offline: cards of episodes that are not on disk are not drawn
+  // (the cards themselves dim by the same rule, inside `PodcastEpisodeCard`).
+  const offline = useAuthStore((s) => s.offline);
+  const files = useDownloads((s) => s.files);
+  const hideUnavailable = useSettings((s) => s.hideUnavailableOffline);
   const { data, isLoading } = useQuery({
     // Invalidated by the podcast screens.
     queryKey: ['podcastRecentEpisodes'],
@@ -504,7 +566,11 @@ function PodcastEpisodesSection({ title }: { title: string }) {
       </View>
     );
   }
-  if (!data || data.length === 0) return null;
+  const shown =
+    hideUnavailable
+      ? (data ?? []).filter((r: RecentEpisode) => !episodeUnavailable(offline, files, r.episode.id))
+      : data;
+  if (!shown || shown.length === 0) return null;
 
   return (
     <View style={styles.section}>
@@ -512,7 +578,7 @@ function PodcastEpisodesSection({ title }: { title: string }) {
       <FlatList
         {...listPerf}
         horizontal
-        data={data}
+        data={shown}
         keyExtractor={(item: RecentEpisode) => item.episode.id}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.rowContent}
@@ -666,6 +732,9 @@ function RadiosSection({ title, reshuffleKey }: { title: string; reshuffleKey: n
   // Fewer asked for than are saved: the shelf shortens at once, without
   // waiting on the rebuild Settings starts.
   const defs = useRadios((s) => s.defs).slice(0, count);
+  // A new set on its way over the old one: the old one dims and the title
+  // says so, until the new one swaps in whole.
+  const building = useRadios((s) => s.building);
   const { isLoading } = useQuery({
     queryKey: ['radios'],
     queryFn: () => refreshRadios().catch(() => useRadios.getState().defs),
@@ -691,10 +760,14 @@ function RadiosSection({ title, reshuffleKey }: { title: string; reshuffleKey: n
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <View style={styles.sectionTitleRow}>
+        <Text style={[styles.sectionTitle, styles.sectionTitleInRow]}>{title}</Text>
+        {building ? <ActivityIndicator size={16} color={colors.textSecondary} /> : null}
+      </View>
       <FlatList
         {...listPerf}
         horizontal
+        style={building ? styles.rebuilding : undefined}
         data={defs}
         keyExtractor={(item) => item.seed.id}
         showsHorizontalScrollIndicator={false}
@@ -735,7 +808,7 @@ const OFFLINE_KEYS = new Set<HomeChipKey>([
   'history',
 ]);
 
-function HomeChips({ offline, slid }: { offline: boolean; slid?: boolean }) {
+function HomeChips({ offline }: { offline: boolean }) {
   const t = useT();
   const chips = useSettings((s) => s.homeChips).filter(
     (c) => c.enabled && (!offline || OFFLINE_KEYS.has(c.key)),
@@ -743,11 +816,6 @@ function HomeChips({ offline, slid }: { offline: boolean; slid?: boolean }) {
   // Icons off leaves the name on its own (Settings › Home chips): the row
   // reads as words rather than as buttons, and more of it fits on screen.
   const icons = useSettings((s) => s.homeChipIcons);
-  // The picture is forced on while the settings gear is off, so Settings
-  // stay one tap away through it.
-  const avatarOn = useSettings(
-    (s) => s.showProfileImage || !s.homeButtons.some((b) => b.key === 'settings' && b.enabled),
-  );
   // The shuffle one takes whatever the server returns: without this, you tap
   // and nothing happens for half a second and it feels broken.
   const [shuffling, setShuffling] = useState(false);
@@ -762,17 +830,15 @@ function HomeChips({ offline, slid }: { offline: boolean; slid?: boolean }) {
     }
   }
 
-  // No chips means no row, unless the picture is on: that replaces the master
-  // toggle that was there.
-  if (chips.length === 0 && !avatarOn) return null;
+  // No chips means no row: this replaces the master toggle that was there.
+  if (chips.length === 0) return null;
   return (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      style={[styles.chipsRow, slid && styles.chipsRowSlid]}
-      contentContainerStyle={[styles.chips, slid && styles.chipsSlid]}
+      style={styles.chipsRow}
+      contentContainerStyle={styles.chips}
     >
-      {avatarOn ? <ProfileAvatar /> : null}
       {chips.map(({ key }) => {
         const cfg = CHIPS[key];
         // The shuffle one is the only one that plays instead of taking you
@@ -951,10 +1017,6 @@ export default function HomeScreen() {
   const showPlayingElsewhere = useSettings((s) => s.showPlayingElsewhere);
   const showGreeting = useSettings((s) => s.showGreeting);
   const customGreeting = useSettings((s) => s.customGreeting);
-  // With the greeting off and the gear off, the chips slide up into the
-  // greeting's place: the icons left on keep the right end of the row.
-  const gearOn = homeButtons.some((b) => b.key === 'settings' && b.enabled);
-  const slidUp = !showGreeting && !gearOn;
   const language = useSettings((s) => s.language);
   const homeSections = useSettings((s) => s.homeSections);
   const radiosEnabled = useSettings((s) => s.radiosEnabled);
@@ -1035,22 +1097,8 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* Scrolls away with the rest: pinned, it only took room. Slid up,
-            the chips take the greeting's place: greeting off, gear off. */}
+        {/* Scrolls away with the rest: pinned, it only took room. */}
         <View style={styles.topHeader}>
-        {slidUp ? (
-          <View style={styles.headerSlid}>
-            <HomeChips offline={offline} slid />
-            <View style={styles.headerRight}>
-              {/* Before the buttons, and dimmer than them, so it reads as a state
-                  and not as something to press. */}
-              <OfflineIndicator />
-              {homeButtons.map(({ key, enabled }) =>
-                enabled ? <HomeHeaderButton key={key} which={key} /> : null,
-              )}
-            </View>
-          </View>
-        ) : (
           <View style={styles.header}>
             {/* `flexShrink` and `numberOfLines`: the greeting is customizable,
                 and although the setting caps it at GREETING_MAX, those characters
@@ -1081,14 +1129,13 @@ export default function HomeScreen() {
               )}
             </View>
           </View>
-          )}
 
           {offline && scanning ? <ScanningPanel /> : null}
         </View>
         {/* First, above the chips: what was playing on the computer is the
             thing to pick up on opening the app, when there is one. */}
         {showPlayingElsewhere ? <PlayingElsewhereCard /> : null}
-        {slidUp ? null : <HomeChips offline={offline} />}
+        <HomeChips offline={offline} />
         {!offline && serverUnreachable ? (
           <Message
             text={t("Couldn't reach the server. Check your connection.")}
@@ -1170,20 +1217,8 @@ const styles = themed((colors) => ({
     alignItems: 'center',
     gap: spacing.md,
   },
-  /** Chips in the greeting's place, icons keeping the right end. */
-  headerSlid: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.lg,
-  },
   chipsRow: { flexGrow: 0, marginBottom: spacing.lg },
-  /** Slid into the header: fills the row's free half, no margins of its own. */
-  chipsRowSlid: { flex: 1, flexGrow: 1, marginBottom: 0 },
-  chips: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg },
-  /** Slid into the header: the row's own padding is the inset. */
-  chipsSlid: { paddingHorizontal: 0 },
+  chips: { gap: spacing.sm, paddingHorizontal: spacing.lg },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1205,13 +1240,13 @@ const styles = themed((colors) => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.surfaceHighlight,
-    // A step down from md upstream: round draws that back.
+    backgroundColor: colors.surface,
+    // md with Round; with Pointier a little over its small step.
     borderRadius: restyled(radius.md, radius.sm + 1),
     overflow: 'hidden',
     paddingRight: spacing.sm,
   },
-  /** Square upstream, a touch rounder than the small step here. */
+  /** Square with Round (the tile's own corners round it); Pointier rounds it a little. */
   tileCover: { borderRadius: restyled(0, radius.sm + 1) },
   tileText: {
     flex: 1,
@@ -1231,6 +1266,16 @@ const styles = themed((colors) => ({
   },
   sectionHeaderTitle: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '500' },
   showAll: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '500' },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  sectionTitleInRow: { paddingHorizontal: 0, marginBottom: 0 },
+  // The radios on screen while new ones are made over them.
+  rebuilding: { opacity: 0.45 },
   sectionTitle: {
     color: colors.text,
     fontSize: fontSize.lg,

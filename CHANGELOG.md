@@ -9,11 +9,185 @@ Releases before 0.2.1 are only listed on the
 
 ## [Unreleased]
 
+### Added
+
+- Your library: its chips can be reordered and hidden, in Settings › Navigation.
+
+### Changed
+
+- Podcasts: shows you add stay in Explore, and the ones you favorite also appear in Your library.
+- Podcasts: Download new episodes is now chosen per show, in its ⋯ menu.
+- Your library: fully downloaded playlists show ↓, as albums do.
+- Settings: Home & navigation is now called Navigation.
+- Explore: the Downloads chip is now a Downloaded filter that keeps Playlists, Albums, Artists and Songs to what is on your phone.
+
+### Fixed
+
+- Jellyfin: Recently played and Most played albums follow your plays instead of the alphabet.
+- Lyrics: a word synced by syllables no longer splits across two lines.
+- Spanish and Catalan: one selected song no longer reads as plural.
+- Podcasts: downloading a whole show asks first, with how many episodes and how long they run.
+- Home widget: no longer rewritten every few seconds while music plays in the background.
+- Casting: a song no longer starts halfway through when you start a new list.
+- Casting: more renderers move on to the next song when one ends.
+
+## [0.8.7] - 2026-11-01
+
+### Added
+
+- Holding an artist opens a menu with Play, radio and favorite.
+- Your library: albums and playlists with nothing to play are dimmed or hidden offline, and downloaded albums show ↓.
+- Your library: the empty Podcasts list has a button to find one.
+
+### Changed
+
+- Moving a song in a playlist saves the new order right away, and the selection bar has Add to playlist and Remove again (#279).
+- Holding a song to start a selection marks that song again (#279).
+- Lyrics settings are back in the Settings > Player page.
+- Explore > Podcasts lists only the shows you added, and its + finds a show or takes a feed address.
+- Your library: a new playlist opens as soon as it is created.
+- Your library: the search stays when you open a result and come back.
+- Your library: podcasts sort by when you favorited or last listened to them.
+
+### Fixed
+
+- Your library: Favorites no longer shows up in search results or under the playlist filters.
+- Your library: a failed refresh no longer replaces the list with an error.
+- Your library: podcast search ignores accents and forgives typos, like the rest.
+- Your library: artists sort by their sort name, and "+" playlists stay on top in the mixed list.
+- Your library: every row and card responds to a press, and albums keep the explicit badge in the mixed list.
+- Casting: more cases where the queue stayed on a song after it ended are handled (#285).
+
+## [0.8.6] - 2026-10-31
+
+### Added
+
+- Explore has a Downloads chip with your downloaded albums (#310).
+- Podcasts: mark episodes as played or unplayed.
+- Podcasts: new episodes of favorite shows can download by themselves over Wi-Fi.
+- Option to show album artwork across the full width (#289).
+- Option to show the player artwork across the full width (#290).
+- Option to keep motion artwork off mobile data, on by default (#294).
+
+### Changed
+
+- Settings: list, album and swipe options are now in Appearance, and keeping a radio playing in Quality & playback.
+- Animated covers on Android stay in a 150 MB cache instead of downloading again (#293).
+- To reorder a playlist, choose Reorder in its ⋯ menu or hold a song, drag the rows, and press Save order (#279).
+- Holding a song to start a selection no longer marks that song (#279).
+- Add to a playlist marks the playlists a song is already in, and a tap adds or removes it without closing the sheet.
+- Settings has a new Home & navigation category, with what used to fill Appearance: Home, Explore, the navigation bar, swipes and haptics.
+- Lyrics settings have their own screen, inside Settings > Player.
+- Clear cache is now Clear temporary data, in Settings > Downloads & offline.
+- Song lists settings are now Lists & albums, and options that did nothing on Jellyfin or the local profile are gone.
+
+### Fixed
+
+- With on-screen navigation buttons, the mini player no longer covers the last option in Settings.
+- A playlist's page no longer freezes while songs are selected, and leaving the selection no longer jumps to the top (#279).
+- The progress bar looks the same on every Android phone.
+- Next and previous from other apps and devices, like Garmin watches, should now work (#307).
+- Podcast episodes pick up where you left them, even after playing music or restarting the app.
+- The podcasts screen says how to find a show when it is empty, and the feed address field is ready to type in.
+
+## [0.8.5] - 2026-10-30
+
+### Added
+
+- Playback speed: a slider and −/+ buttons in steps of 0.01, a Preserve pitch switch that, turned off, lets the pitch follow the speed like a record, and the resulting BPM when the song has one (#277).
+- Podcasts: download episodes to play offline, favorite them, queue them, and find them in Library, search and Home. Thanks to Garrit Schröder.
+- Optional pill shapes for the navigation bar and the Mini Player.
+- Holding the heart in the player or the Mini Player opens the sheet to add the song to a playlist (#286). Thanks to @Lennardsmw.
+
+### Changed
+
+- Search: filtering by Artists or Albums shows the results as a grid instead of a single sideways row (#280).
+
+### Fixed
+
+- Casting (#285):
+  - If the speaker or TV stops responding for 30 seconds, playback returns to the phone, paused. The same happens if another app takes it over.
+  - The queue no longer gets stuck at the end of a song.
+  - The player no longer shows the wrong song after waking the phone.
+  - A song stopped from the TV's remote shows as paused and resumes where it was.
+- Lyrics no longer flash black when closed over the blurred cover (Android).
+- Opening the app no longer counts a listen of the song it was left on, and skipping ahead in a song no longer counts as listening to it.
+- When the connection drops and a song can't load, Play no longer pretends to play it, and the song picks up where it stopped once the connection is back.
+- A server that stops answering halfway no longer leaves a screen loading forever: it gives up after 15 seconds.
+- Connection errors from Navidrome and Subsonic servers are shown in your language.
+- A mix keeps growing after a moment without connection instead of stopping for good, and starting one on a song that can't load no longer turns the previous queue into a mix.
+- The sleep timer now stops playback on any speaker or TV you cast to, also with the screen off.
+- Offline, Next says when nothing ahead is downloaded instead of doing nothing.
+- A cover on screen no longer turns into the placeholder when the app goes offline.
+- "Download over Wi-Fi only" now stops a download that is running when the Wi-Fi drops, instead of carrying on over mobile data.
+- Cover art no longer passes your server login to other apps that read what is playing (lock screen widgets, watches, the car). On Android Automotive the covers in the browse lists show up again.
+- A tapped song no longer waits behind preloading and cover downloads on servers that fetch each track first (#269).
+- Dates on the History screen now follow the app language.
+- Pulling to refresh on the Library's All tab now also updates podcasts.
+- Android Auto now updates a list that is already open when the library finishes loading.
+- Albums in Android Auto no longer open empty when they are beyond the first 40 loaded.
+- Android Auto no longer crashes on a queue with the same song twice, and shows what is playing when it connects after playback started.
+- On iOS, tapping the song on the lock screen now opens the app.
+- The screen shown when something crashes is now in your language instead of always in Spanish.
+
+## [0.8.4] - 2026-10-20
+
+### Added
+
+- Lyrics from [lrc.red](https://lrc.red), found by the song's ISRC and often timed word by word. Off by default: Settings > Player > Lyrics > Providers turns each service on or off and sorts them, the one on top asked first. Thanks to ricce on Discord for the suggestion.
+- Jellyfin: radio. Jellyfin keeps internet radio as an M3U tuner under Live TV, and its radio channels now show up in Radio, search and Explore, ready to play; they are added and edited on the server.
+
+### Changed
+
+- Pulling Home to get new radios dims the ones on screen and shows a spinner beside the title until the new set is ready, instead of looking like nothing happened.
+- A phone on its side gets a shorter navigation bar, each name beside its icon, so the screens keep more room for the list (#131).
+- The devices button only names the headphones or Bluetooth speaker the phone plays through if Settings > Player > Bottom row > Name the headphones or speaker is on. It is off by default, so the row stays evenly spread; a cast target is still always named (#274).
+
+### Fixed
+
+- A song the server converts while it plays no longer shows 0:00 as its length with the bar full, and seeking in it no longer jumps back to the start: when the player's own length is far below the song's, the song's is used.
+- Spread across the width and Devices on the left line the bottom row up with the controls above it: the outer buttons sit right under the shuffle and the repeat (#259).
+- With every bottom-row button on, a long device name (a DLNA renderer, Bluetooth headphones) is cut short instead of pushing the row past the edges of the screen.
+- Synced lyrics from the server follow the song again when the server sends their lines out of order, such as a chorus written once with several timestamps, instead of staying on the first line.
+- Artists A-Z follows the server's sort names, so "The Knife" is under K and an artist tagged with a sort name is filed by it (#275).
+- Navidrome: with only some libraries turned on in Settings > Libraries, a playlist leaves out the songs from the others (#275).
+
+## [0.8.3] - 2026-10-19
+
+### Added
+
+- Animated album covers from an animated-artwork server you set in Settings > Player, in the player and, on iOS, on the lock screen; an album's ⋯ menu can pin it to an Apple Music album (#263).
+- Appearance > Border radius: the round corners as before, or flatter ones (#262).
+- French, thanks to @Willyflam (#257).
+- Rate an album from its ⋯ menu, as songs and artists already could (#261).
+- The library's search forgives typos and takes the words in any order (#268).
+- Lyrics: three dots hop through the instrumental gaps, verses get a little air between them, and the karaoke sweep moves more calmly, with the line changing exactly when it starts (#265).
+- Android 12 and up: Appearance > Theme > Use the system colors takes the accent from the wallpaper (Material You), for the stars, the heart and everything else in the accent (#259).
+- Player > Bottom row > Arrangement > Devices on the left: the devices button, with the name of what it casts to, on the left and the rest of the row together on the right (#259).
+- The player's devices button shows where the phone itself is playing: headphones, a Bluetooth speaker or the car get their own icon and their name beside it, the way a cast target does. No new permission is asked for (#264).
+
+### Changed
+
+- Player settings: the animated covers get a section of their own, with the server first and a choice of where the animated cover plays, in the cover or as the background. The in-app clips switch is only on iOS, where the lock screen has a clip of its own; on Android an empty server already turns them off (#263).
+- Player settings > Show animated covers turns every animated cover off at once, the server's clips and GIF or WebP covers alike, and keeps the server's address for when it goes back on.
+- The player's rating sits halfway between the cover and the title, with the same room above the cover, and the stars are a little bigger (#259).
+- With the lyrics or artist card on, the player's bottom row sits a little lower, closer to the card, and stays put for a song with no artist (#259).
+- With the lyrics or artist card on, a radio station gets the same player layout as a song, instead of the controls sitting lower (#258).
+- The player's plain background is the app's own background colour, so it follows the background shade and pure black instead of staying a bluish grey (#259).
+
+### Fixed
+
+- Android: in jukebox mode the volume buttons change the jukebox volume, and the notification and lock screen controls show what it plays (#270).
+- Android: casting to a DLNA/UPnP renderer moves on to the next track with the screen off, instead of stopping at the end of a track when loading the next one fails (#271).
+- Android: connecting to Android Auto brings playback from a DLNA/UPnP renderer or the jukebox back to the phone, still playing (#272).
+- Android: coming back to the app after a long while in the background shows the song playing at once, instead of freezing on an earlier one and walking through every song played since.
+- Android Auto: a very long queue, such as a big favourites list played shuffled, no longer closes the app; the car's queue shows the songs around the one playing.
+- The play button in Explore, on an artist's songs and on a genre sits in the middle of its circle.
+
 ## [0.8.2] - 2026-10-10
 
 ### Added
 
-- A profile picture beside the Home chips, opening Settings on tap and forced on while the settings gear is off; the gear itself can now be hidden from Home buttons, and with the greeting off too the chips slide up into the header.
 - Artist radios on Home, built from your most played artists, with new ones each time Home is pulled to refresh (#252).
 - A radio's ⋯ menu, also on a long press of its card, to queue it, save it as a playlist, refresh it or go to its artist.
 - Any artist's radio from the artist's ⋯ menu or a song's menu, and a radio keeps playing once its songs run out.
@@ -27,11 +201,6 @@ Releases before 0.2.1 are only listed on the
 
 ### Changed
 
-- Alternative look: a flatter corner scale across the app (small controls keep
-  their steps; cards, panels, sheets and search boxes sit on 12 or below), a
-  shadow gradient in the album, playlist and artist top bars fading in with
-  the bar itself, a slightly larger header cover lined up with the back
-  chevron, and favorites marked with a plus that fills into an accent check.
 - Word-timed lyrics sweep across each word as it is sung, with a small bounce (#244).
 - The lyrics size also applies to the lyrics card and the lyrics on the cover (#244).
 - Lyrics fade out softly under the header over a blurred cover (#244).

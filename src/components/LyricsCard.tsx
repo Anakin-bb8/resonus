@@ -178,7 +178,7 @@ export function SyncedLyricsView({
 }) {
   // The line, not the position: the position moves twice a second and the
   // line every few, and only a new line has anything to redraw.
-  // Word timing is already precise, so it only gets Primuse's small pre-roll.
+  // Word timing is already precise, so it only gets a small pre-roll.
   // Hand-tapped line LRC keeps a little more compensation for human reaction.
   const wordTimed = lines.some((line) => line.words && line.words.length > 0);
   const lead = wordTimed ? WORD_SWEEP_LEAD_MS : 250;
@@ -464,7 +464,7 @@ const LyricRow = memo(({
     appFont === 'custom'
       ? (customFontFamily && Font.isLoaded(customFontFamily) ? customFontFamily : undefined)
       : APP_FONT_FAMILY[appFont];
-  // Primuse's line takeover coordinates scale and opacity with auto-scroll.
+  // The line takeover coordinates scale and opacity with auto-scroll.
   // Blur takes a gentler path because a fast change reads as the completed
   // line suddenly losing focus.
   const focus = useSharedValue(active ? 1 : 0);

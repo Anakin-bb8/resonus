@@ -1,0 +1,20 @@
+<p>Resonus is a clean music player for your self-hosted server, and for the music on your phone.</p>
+
+<ul>
+<li><b>Navidrome, OpenSubsonic, Jellyfin and Ampache</b>: several profiles and libraries, and several addresses for one server with automatic switching</li>
+<li><b>Local mode</b>: play music straight from your phone or a folder, no server needed</li>
+<li><b>Offline mode</b>: favorites, playlists and albums stay browsable with no connection, and downloaded songs play</li>
+<li><b>Downloads</b>: albums, playlists, whole discographies or single songs, original or transcoded</li>
+<li><b>Synced lyrics</b>: karaoke view with tap to seek and word by word highlighting, with optional lookup on LRCLIB and lrc.red</li>
+<li><b>Podcasts and internet radio</b></li>
+<li><b>Cast to speakers</b>: UPnP/DLNA renderers and Sonos, with room grouping</li>
+<li><b>Playback</b>: gapless, crossfade, equalizer, ReplayGain, playback speed, sleep timer and a queue with undo</li>
+<li><b>Autoplay and mixes</b> built from similar songs</li>
+<li><b>Themes</b>: dark, light or the phone's own, with any accent color</li>
+<li><b>Make it yours</b>: reorder Home sections, tabs, mini player buttons, swipe actions and more</li>
+<li><b>Android Auto</b> (experimental), landscape and tablet layouts</li>
+</ul>
+
+<p>Podcast search and charts use the iTunes directory, and animated album covers come from Apple Music. Both are optional.</p>
+
+<p>Community and support: https://discord.gg/pecE8MTPVr</p>

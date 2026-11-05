@@ -1,6 +1,5 @@
-// The plugin, not the old `ExpoModulesCorePlugin.gradle` helpers: since SDK 56
-// it also applies the Kotlin compiler plugin that resolves the reified types
-// the module DSL relies on. (Copied from the audio-eq module.)
+// See the note in modules/audio-eq/android/build.gradle: the plugin is what
+// brings the compiler plugin the module DSL needs from SDK 56 on.
 plugins {
   id 'com.android.library'
   id 'expo-module-gradle-plugin'

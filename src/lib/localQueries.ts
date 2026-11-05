@@ -1026,6 +1026,11 @@ export async function removeFromPlaylist(id: string, index: number): Promise<voi
   );
 }
 
+/** Every local playlist's song ids, including songs no longer in the source. */
+export async function playlistTracklists(): Promise<Map<string, string[]>> {
+  return new Map((await loadPlaylists()).map((p) => [p.id, p.songIds]));
+}
+
 /** Rewrites a local playlist's order with the new sequence of ids. */
 export async function reorderPlaylist(id: string, songIds: string[]): Promise<void> {
   const list = await loadPlaylists();

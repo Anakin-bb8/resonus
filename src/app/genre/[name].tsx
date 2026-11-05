@@ -352,7 +352,7 @@ export default function GenreScreen() {
           <BackChevron />
         )}
         <Text style={styles.title} numberOfLines={1}>
-          {selecting ? t('{n} selected', { n: selectedIds.size }) : genre}
+          {selecting ? t(selectedIds.size === 1 ? '{n} selected::one' : '{n} selected', { n: selectedIds.size }) : genre}
         </Text>
         {selecting ? (
           <Pressable
@@ -469,7 +469,7 @@ export default function GenreScreen() {
               {starting ? (
                 <ActivityIndicator color={colors.onAccent} />
               ) : (
-                <Icon name="play" size={28} color={colors.onAccent} style={{ marginLeft: 3 }} />
+                <Icon name="play" size={28} color={colors.onAccent} />
               )}
             </Pressable>
           </View>

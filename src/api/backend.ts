@@ -150,6 +150,9 @@ export const getArtist = (auth: SubsonicAuth, id: string) => api(auth).getArtist
 
 export const getArtistInfo = (auth: SubsonicAuth, id: string) => api(auth).getArtistInfo(auth, id);
 
+export const getPublicAlbumArt = (auth: SubsonicAuth, id: string) =>
+  api(auth).getPublicAlbumArt(auth, id);
+
 export const getAppearsOn = (
   auth: SubsonicAuth,
   artistId: string,
@@ -273,6 +276,18 @@ export const reportPlayback = (
     : Subsonic.reportPlayback(auth, id, state, positionSec);
 
 export const getRadioStations = (auth: SubsonicAuth) => api(auth).getRadioStations(auth);
+
+/**
+ * A station's stream, at the moment of playing it: its own address where it
+ * has one (every Subsonic station, most Jellyfin ones), else whatever
+ * Jellyfin opens for that channel.
+ */
+export const radioStreamUrl = async (
+  auth: SubsonicAuth,
+  station: Subsonic.RadioStation,
+): Promise<string | null> =>
+  station.streamUrl ||
+  (auth.serverType === 'jellyfin' ? Jellyfin.resolveRadioStream(auth, station.id) : null);
 
 export const createRadioStation = (
   auth: SubsonicAuth,

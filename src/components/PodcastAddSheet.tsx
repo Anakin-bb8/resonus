@@ -1,78 +1,80 @@
-/** Sheet to subscribe to a podcast: search the iTunes directory, or paste a feed. */
-import Icon from '@/components/Icon';
+/** Sheet to add a podcast: find it in the Store, or paste the address of its feed. */
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
   KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
-  StyleSheet,
+  ScrollView,
   Text,
   TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { search as searchPodcasts, subscribe, type PodcastSearchResult } from '@/api/podcasts';
-import { Cover } from '@/components/Cover';
-import { Message } from '@/components/Message';
+import Icon from '@/components/Icon';
+import { COVER, coverArtUrl } from '@/api/data';
+import { addChannel, feedErrorMessage, refreshChannel, search as searchPodcasts } from '@/api/podcasts';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useT } from '@/i18n';
-import { listPerf } from '@/lib/listPerf';
 import { colors, fontSize, radius, spacing, themed } from '@/theme';
+import { Cover } from './Cover';
 
 interface Props {
   visible: boolean;
-  /** Feed URLs already subscribed to, which the results mark as taken. */
-  subscribed: string[];
   onCancel: () => void;
-  onSubscribed: () => void;
+  onAdded: () => void;
 }
 
-export function PodcastAddSheet({ visible, subscribed, onCancel, onSubscribed }: Props) {
+export function PodcastAddSheet({ visible, onCancel, onAdded }: Props) {
   const t = useT();
-  const [term, setTerm] = useState('');
   const [feedUrl, setFeedUrl] = useState('');
+  const [query, setQuery] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const debounced = useDebounce(term, 400);
+  const input = useRef<TextInput>(null);
 
+  // Resets fields every time it opens.
   useEffect(() => {
     if (visible) {
-      setTerm('');
       setFeedUrl('');
+      setQuery('');
       setError(null);
       setBusy(null);
     }
   }, [visible]);
 
-  const { data, isFetching, isError, refetch } = useQuery({
-    queryKey: ['podcastSearch', debounced],
-    queryFn: () => searchPodcasts(debounced),
-    enabled: visible && debounced.trim().length > 1,
-    staleTime: 1000 * 60 * 10,
-  });
-
   // Errors go on the sheet: a toast would be hidden under the modal.
-  async function run(what: string, subscribeTo: string) {
-    setBusy(what);
+  async function run(feed: string) {
+    setBusy(feed);
     setError(null);
     try {
-      await subscribe(subscribeTo);
-      onSubscribed();
+      const channel = await refreshChannel(feed);
+      await addChannel(channel.id);
+      onAdded();
       onCancel();
-    } catch {
-      setError(t("Couldn't read that feed."));
+    } catch (e) {
+      setError(feedErrorMessage(t, e));
     } finally {
       setBusy(null);
     }
   }
 
+  const term = useDebounce(query.trim());
+  const results = useQuery({
+    queryKey: ['podcastDiscover', term],
+    queryFn: () => searchPodcasts(term),
+    enabled: visible && term.length > 1,
+    staleTime: 1000 * 60 * 60 * 72,
+  });
+  const searching = query.trim().length > 0;
+
   const pasted = feedUrl.trim();
-  const canPaste = pasted.length > 0 && busy === null;
+  const urlOk = /^https?:\/\//i.test(pasted);
+  const showUrlError = pasted.length > 0 && !urlOk;
+  const canAdd = urlOk && busy === null;
 
   return (
     <Modal
@@ -80,6 +82,8 @@ export function PodcastAddSheet({ visible, subscribed, onCancel, onSubscribed }:
       animationType="slide"
       presentationStyle="pageSheet"
       onRequestClose={onCancel}
+      // `autoFocus` does not take inside a Modal on Android.
+      onShow={() => input.current?.focus()}
     >
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.header}>
@@ -87,126 +91,105 @@ export function PodcastAddSheet({ visible, subscribed, onCancel, onSubscribed }:
             <Text style={[styles.headerAction, { color: colors.accent }]}>{t('Cancel')}</Text>
           </Pressable>
           <Text style={styles.title}>{t('Add podcast')}</Text>
-          <View style={styles.headerSpacer} />
+          {/* For the address: a search result adds itself with a tap. */}
+          <Pressable
+            hitSlop={12}
+            disabled={!canAdd || searching}
+            onPress={() => void run(pasted)}
+          >
+            <Text
+              style={[
+                styles.headerAction,
+                { color: colors.accent },
+                (!canAdd || searching) && styles.disabled,
+              ]}
+            >
+              {t('Add')}
+            </Text>
+          </Pressable>
         </View>
 
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <View style={styles.searchBar}>
-            <Icon name="search" size={18} color={colors.textMuted} />
+          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+            <Text style={styles.label}>{t('Search')}</Text>
             <TextInput
-              style={styles.searchInput}
-              value={term}
-              onChangeText={setTerm}
-              placeholder={t('Search for a podcast')}
+              style={styles.input}
+              value={query}
+              onChangeText={setQuery}
+              placeholder={t('Find a podcast')}
               placeholderTextColor={colors.textMuted}
               autoCapitalize="none"
               autoCorrect={false}
-              autoFocus
+              ref={input}
             />
-            {term ? (
-              <Pressable hitSlop={8} onPress={() => setTerm('')} accessibilityLabel={t('Clear')}>
-                <Icon name="close-circle" size={18} color={colors.textMuted} />
-              </Pressable>
-            ) : null}
-          </View>
-
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-
-          {debounced.trim().length > 1 ? (
-            isFetching && !data ? (
-              <ActivityIndicator style={{ marginTop: spacing.xl }} color={colors.accent} />
-            ) : isError ? (
-              <Message text={t("Couldn't search for podcasts.")} onRetry={() => refetch()} />
-            ) : (
-              <FlatList
-                {...listPerf}
-                keyboardShouldPersistTaps="handled"
-                data={data ?? []}
-                keyExtractor={(item) => item.feedUrl}
-                contentContainerStyle={styles.results}
-                renderItem={({ item }: { item: PodcastSearchResult }) => {
-                  const taken = subscribed.includes(item.feedUrl);
-                  const working = busy === item.feedUrl;
-                  return (
-                    <Pressable
-                      style={({ pressed }) => [styles.row, pressed && { opacity: 0.6 }]}
-                      disabled={taken || busy !== null}
-                      onPress={() => void run(item.feedUrl, item.feedUrl)}
-                    >
-                      <Cover
-                        uri={item.imageUrl}
-                        size={44}
-                        rounded
-                        placeholderIcon="headset-outline"
-                      />
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.rowTitle} numberOfLines={1}>
-                          {item.title}
-                        </Text>
-                        {item.author ? (
-                          <Text style={styles.rowSub} numberOfLines={1}>
-                            {item.author}
-                          </Text>
-                        ) : null}
-                      </View>
-                      {working ? (
-                        <ActivityIndicator color={colors.accent} />
-                      ) : taken ? (
-                        <Icon name="checkmark-circle" size={22} color={colors.accent} />
-                      ) : (
-                        <Icon name="add-circle-outline" size={22} color={colors.textSecondary} />
-                      )}
-                    </Pressable>
-                  );
-                }}
-                ListEmptyComponent={
-                  <Text style={styles.empty}>
-                    {t('No podcast found for “{term}”. Try pasting the feed address below.', {
-                      term: debounced.trim(),
-                    })}
-                  </Text>
-                }
-              />
-            )
-          ) : (
-            <Text style={styles.empty}>
-              {t('Search for a show, or paste the address of a feed below.')}
-            </Text>
-          )}
-
-          <View style={styles.pasteRow}>
-            <TextInput
-              style={styles.pasteInput}
-              value={feedUrl}
-              onChangeText={setFeedUrl}
-              placeholder="https://…"
-              placeholderTextColor={colors.textMuted}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="url"
-              inputMode="url"
-            />
-            <Pressable
-              disabled={!canPaste}
-              onPress={() => void run(pasted, pasted)}
-              accessibilityRole="button"
-              accessibilityLabel={t('Subscribe')}
-              style={({ pressed }) => [
-                styles.subscribe,
-                !canPaste && styles.subscribeOff,
-                pressed && canPaste ? { opacity: 0.7 } : null,
-              ]}
-            >
-              {busy === pasted ? (
-                <ActivityIndicator color={colors.onAccent} />
+            {searching ? (
+              results.isError ? (
+                <Text style={styles.error}>{t("Couldn't load your podcasts.")}</Text>
+              ) : results.isLoading ? (
+                <ActivityIndicator style={{ marginTop: spacing.md }} color={colors.accent} />
+              ) : results.data?.length === 0 && term.length > 1 ? (
+                <Text style={styles.empty}>{t('No results for “{q}”', { q: term })}</Text>
               ) : (
-                <Text style={styles.subscribeText}>{t('Subscribe')}</Text>
-              )}
-            </Pressable>
-          </View>
+                (results.data ?? []).map((item) => (
+                  <Pressable
+                    key={item.feedUrl}
+                    style={({ pressed }) => [styles.result, pressed && { opacity: 0.6 }]}
+                    disabled={busy !== null}
+                    accessibilityLabel={t('Add')}
+                    onPress={() => void run(item.feedUrl)}
+                  >
+                    <Cover
+                      uri={coverArtUrl(item.imageUrl, COVER.thumb)}
+                      size={56}
+                      placeholderIcon="headset-outline"
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.resultTitle} numberOfLines={1}>
+                        {item.title}
+                      </Text>
+                      {item.author ? (
+                        <Text style={styles.resultSub} numberOfLines={1}>
+                          {item.author}
+                        </Text>
+                      ) : null}
+                    </View>
+                    {busy === item.feedUrl ? (
+                      <ActivityIndicator color={colors.accent} />
+                    ) : (
+                      <Icon name="add" size={24} color={colors.textSecondary} />
+                    )}
+                  </Pressable>
+                ))
+              )
+            ) : (
+              <>
+                <Text style={styles.label}>{t('Feed URL')}</Text>
+                <TextInput
+                  style={styles.input}
+                  value={feedUrl}
+                  onChangeText={setFeedUrl}
+                  placeholder="https://…"
+                  placeholderTextColor={colors.textMuted}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="url"
+                  inputMode="url"
+                />
+              </>
+            )}
+            {busy !== null && !searching ? (
+              <ActivityIndicator style={{ marginTop: spacing.md }} color={colors.accent} />
+            ) : showUrlError && !searching ? (
+              <Text style={styles.error}>
+                {t('The feed URL must start with http:// or https://')}
+              </Text>
+            ) : error ? (
+              <Text style={styles.error}>{error}</Text>
+            ) : null}
+          </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </Modal>
@@ -224,52 +207,25 @@ const styles = themed((colors) => ({
   },
   title: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
   headerAction: { color: colors.accent, fontSize: fontSize.md, fontWeight: '600' },
-  headerSpacer: { width: 52 },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    height: 44,
-    marginHorizontal: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surfaceHighlight,
-  },
-  searchInput: { flex: 1, color: colors.text, fontSize: fontSize.md, padding: 0 },
-  results: { padding: spacing.lg, gap: spacing.md },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  rowTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
-  rowSub: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2 },
-  empty: {
-    color: colors.textMuted,
+  disabled: { color: colors.textMuted },
+  content: { padding: spacing.lg, gap: spacing.sm },
+  label: {
+    color: colors.textSecondary,
     fontSize: fontSize.sm,
-    textAlign: 'center',
-    marginTop: spacing.xl,
-    marginHorizontal: spacing.lg,
+    fontWeight: '500',
+    marginTop: spacing.md,
   },
-  error: { color: colors.danger, fontSize: fontSize.sm, marginTop: spacing.sm, marginHorizontal: spacing.lg },
-  pasteRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    padding: spacing.lg,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-  },
-  pasteInput: {
-    flex: 1,
+  input: {
     backgroundColor: colors.surfaceHighlight,
     borderRadius: radius.md,
     color: colors.text,
-    fontSize: fontSize.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  subscribe: {
+    fontSize: fontSize.md,
     paddingHorizontal: spacing.lg,
-    justifyContent: 'center',
-    borderRadius: radius.md,
-    backgroundColor: colors.accent,
+    paddingVertical: spacing.md,
   },
-  subscribeOff: { opacity: 0.4 },
-  subscribeText: { color: colors.onAccent, fontSize: fontSize.sm, fontWeight: '600' },
+  error: { color: colors.danger, fontSize: fontSize.sm, marginTop: spacing.xs },
+  empty: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: spacing.md },
+  result: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.sm },
+  resultTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
+  resultSub: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2 },
 }));

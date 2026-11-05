@@ -13,34 +13,45 @@ class CarAutoModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("CarAuto")
 
-    Events("play", "transport", "connect")
+    Events("play", "transport", "connect", "browse")
 
     OnCreate {
       instance = this@CarAutoModule
     }
 
     OnDestroy {
-      if (instance === this@CarAutoModule) instance = null
+      if (instance === this@CarAutoModule) {
+        browseReady = false
+        instance = null
+      }
+    }
+
+    Function("setBrowseReady") { ready: Boolean ->
+      browseReady = ready
+      if (ready) ResonusCarBrowserService.browseReady()
+    }
+
+    Function("completeBrowse") { requestId: String, json: String? ->
+      ResonusCarBrowserService.completeBrowse(requestId, json)
     }
 
     Function("setNodes") { json: String ->
       val context = appContext.reactContext ?: return@Function
-      BrowseTreeCache.setFromJson(context, json)
+      val changed = BrowseTreeCache.setFromJson(context, json)
+      ResonusCarBrowserService.notifyTreeChanged(changed)
       CarAutoLog.d("setNodes ${BrowseTreeCache.debugSummary()}")
     }
 
     Function("setNowPlaying") { json: String? ->
-      val player = ResonusCarBrowserService.activePlayer ?: return@Function
       if (json.isNullOrEmpty() || json == "null") {
-        player.applyNowPlaying(null)
+        CarPlaybackMirror.setNowPlaying(null)
         return@Function
       }
       val np = runCatching { parseNowPlaying(json) }.getOrNull() ?: return@Function
-      player.applyNowPlaying(np)
+      CarPlaybackMirror.setNowPlaying(np)
     }
 
     Function("setQueue") { json: String ->
-      val player = ResonusCarBrowserService.activePlayer ?: return@Function
       val o = runCatching { JSONObject(json) }.getOrNull() ?: return@Function
       val arr = o.optJSONArray("tracks") ?: return@Function
       val items = ArrayList<JsProxyPlayer.NowPlaying>(arr.length())
@@ -57,16 +68,14 @@ class CarAutoModule : Module() {
           ),
         )
       }
-      player.applyQueue(items, o.optInt("currentIndex", 0))
+      CarPlaybackMirror.setQueue(items, o.optInt("currentIndex", 0))
     }
 
     Function("setQueueIndex") { index: Int ->
-      val player = ResonusCarBrowserService.activePlayer ?: return@Function
-      player.applyQueueIndex(index)
+      CarPlaybackMirror.setQueueIndex(index)
     }
 
     Function("setPlaybackState") { json: String ->
-      val player = ResonusCarBrowserService.activePlayer ?: return@Function
       val o = runCatching { JSONObject(json) }.getOrNull() ?: return@Function
       val isPlaying = o.optBoolean("isPlaying", false)
       val posMs = o.optLong("positionMs", 0L)
@@ -76,8 +85,8 @@ class CarAutoModule : Module() {
         "all" -> Player.REPEAT_MODE_ALL
         else -> Player.REPEAT_MODE_OFF
       }
-      player.applyPlaybackState(isPlaying, posMs, shuf, repeat)
-      player.applyFavorite(
+      CarPlaybackMirror.setPlaybackState(
+        isPlaying, posMs, shuf, repeat,
         if (o.isNull("favorite")) null else o.optBoolean("favorite"),
         o.optString("favoriteLabel").takeIf { it.isNotEmpty() },
       )
@@ -91,11 +100,17 @@ class CarAutoModule : Module() {
     sendEvent("play", payload)
   }
 
+  fun emitBrowse(requestId: String, parentId: String, profile: String): Boolean {
+    if (!browseReady) return false
+    sendEvent("browse", mapOf("requestId" to requestId, "parentId" to parentId, "profile" to profile))
+    return true
+  }
+
   /** A browser asked for the root, which is a car opening the app. JS answers
    *  by filling the tree in, so what it holds is not whatever was left there
    *  the last time somebody had the phone in their hand. */
-  fun emitConnected() {
-    sendEvent("connect", emptyMap<String, Any>())
+  fun emitConnected(projection: Boolean) {
+    sendEvent("connect", mapOf("projection" to projection))
   }
 
   fun emitTransport(action: String, value: Double?) {
@@ -110,6 +125,7 @@ class CarAutoModule : Module() {
   }
 
   companion object {
+    @Volatile private var browseReady = false
     @Volatile var instance: CarAutoModule? = null
       private set
   }

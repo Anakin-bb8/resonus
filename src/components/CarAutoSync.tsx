@@ -12,22 +12,25 @@ import { useEffect } from 'react';
 import { CACHED_COVER, COVER, songCoverUrl, type Song } from '@/api/data';
 import {
   carAutoAvailable,
+  completeBrowse,
+  onBrowse,
   onCarConnected,
   onPlay,
   onTransport,
   setNodes,
+  setBrowseReady,
   setNowPlaying,
   setPlaybackState,
   setQueue,
   type CarTrack,
 } from '@/lib/carAuto';
-import { buildBrowseTree, buildLatestRecent, handleBrowsePlay } from '@/lib/carAutoTree';
+import { buildAlbumChildren, buildBrowseTree, buildLatestRecent, handleBrowsePlay } from '@/lib/carAutoTree';
 import { bump } from '@/lib/perfLog';
 import { getItem, setItem } from '@/lib/storage';
-import { useAuthStore } from '@/store/auth';
+import { profileScopeId, useAuthStore } from '@/store/auth';
 import { useLastPlayed } from '@/store/lastPlayed';
 import { favoriteLabel, favoriteState, onFavoritesChange, toggleFavorite } from '@/lib/remoteFavorite';
-import { currentSong, usePlayerStore, type StreamInfo } from '@/store/player';
+import { bringPlaybackToPhone, currentSong, usePlayerStore, type StreamInfo } from '@/store/player';
 
 const REBUILD_DEBOUNCE_MS = 600;
 /** How long after opening before the tree is filled in. Long enough that the
@@ -71,6 +74,20 @@ export function CarAutoSync() {
     let cancelled = false;
     let rebuildTimer: ReturnType<typeof setTimeout> | null = null;
 
+    const browseSub = onBrowse((event) => {
+      const { auth, offline } = useAuthStore.getState();
+      if ((!auth && !offline) || event.profile !== profileScopeId()) {
+        completeBrowse(event.requestId, null);
+        return;
+      }
+      void buildAlbumChildren(event.parentId, event.profile)
+        .catch(() => null)
+        .then((tree) => {
+          if (!cancelled) completeBrowse(event.requestId, tree);
+        });
+    });
+    setBrowseReady(true);
+
     // ── Browse tree ──
     // Twice: the lists as soon as there is a session, and the songs of every
     // album in them once the app is done opening. Filling it in is dozens of
@@ -82,7 +99,7 @@ export function CarAutoSync() {
         const { auth, offline } = useAuthStore.getState();
         if (!auth && !offline) return;
         const tree = await buildBrowseTree(deep).catch(() => null);
-        if (!cancelled && tree) setNodes(tree);
+        if (!cancelled && tree && tree.profile === profileScopeId()) setNodes(tree);
       }, REBUILD_DEBOUNCE_MS);
     };
     // The lists now, the songs once the app has settled. `scheduleDeep` is also
@@ -113,6 +130,9 @@ export function CarAutoSync() {
     // profiles and the hydration flag, and each of those restarted the build.
     const unsubAuth = useAuthStore.subscribe((s, prev) => {
       if (s.auth === prev.auth && s.offline === prev.offline) return;
+      // Invalidate the native account immediately, before the debounced lists
+      // arrive or an old album response can be delivered to the car.
+      setNodes({ nodes: {}, partial: true, profile: profileScopeId() });
       rebuild(false);
       scheduleDeep();
     });
@@ -130,10 +150,10 @@ export function CarAutoSync() {
         const { auth, offline } = useAuthStore.getState();
         if (!auth && !offline) return;
         const lists = await buildBrowseTree(false).catch(() => null);
-        if (cancelled || !lists) return;
+        if (cancelled || !lists || lists.profile !== profileScopeId()) return;
         setNodes(lists);
         const latest = await buildLatestRecent().catch(() => null);
-        if (!cancelled && latest) setNodes(latest);
+        if (!cancelled && latest && latest.profile === profileScopeId()) setNodes(latest);
       }, REBUILD_DEBOUNCE_MS);
     });
     // Plugging into a car is the one moment the tree is certain to be needed,
@@ -141,7 +161,10 @@ export function CarAutoSync() {
     // app in the foreground is a thing that never happens to somebody who
     // opens Resonus, puts the phone in a pocket and drives off, so what the
     // car got were the lists with no songs inside them.
-    const connectSub = onCarConnected(() => {
+    const connectSub = onCarConnected((e) => {
+      // The car plays what the phone plays: a speaker at home would go on
+      // playing to an empty house with nothing in the car to say so (#272).
+      if (e.projection) void bringPlaybackToPhone();
       if (!carSeen) {
         carSeen = true;
         void setItem(CAR_SEEN_KEY, String(Date.now())).catch(() => {});
@@ -263,6 +286,8 @@ export function CarAutoSync() {
       unsubPlayer();
       unsubFavorites();
       connectSub?.remove();
+      setBrowseReady(false);
+      browseSub?.remove();
       playSub?.remove();
       transportSub?.remove();
     };

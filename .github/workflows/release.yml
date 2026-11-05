@@ -1,12 +1,12 @@
 name: Release APK
 
-# Genera el APK firmado y lo publica como borrador de Release al empujar un
-# tag con formato v* (p. ej. v0.1.0-beta). El borrador se revisa y se publica
-# a mano desde GitHub.
+# Builds the signed APK and publishes it as a draft Release when a tag shaped
+# v* (e.g. v0.1.0-beta) is pushed. The draft is reviewed and published by hand
+# from GitHub.
 
-# `workflow_dispatch` para poder relanzarlo a mano contra un tag que ya existe:
-# si GitHub no despacha el build (una caída de Actions, sin ir más lejos), la
-# alternativa era borrar y recrear el tag.
+# `workflow_dispatch` so it can be rerun by hand against a tag that already
+# exists: if GitHub does not dispatch the build (an Actions outage, say), the
+# alternative was deleting and recreating the tag.
 on:
   workflow_dispatch:
   push:
@@ -48,8 +48,8 @@ jobs:
       - name: Decode release keystore
         run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.jks"
 
-      # Solo arquitecturas de dispositivos reales: x86/x86_64 son emuladores
-      # y engordan el APK universal sin beneficio para nadie.
+      # Real device architectures only: x86/x86_64 are emulators and only
+      # make the universal APK bigger for nobody's benefit.
       - name: Build release APK
         env:
           # Stamped into the bundle so the diagnostics screen can say which
@@ -67,9 +67,21 @@ jobs:
       - name: Rename APK
         run: cp android/app/build/outputs/apk/release/app-release.apk "resonus-${{ github.ref_name }}.apk"
 
+      # The notes are this version's section of the changelog, with the
+      # Discord server under it instead of GitHub's compare link.
+      - name: Release notes
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v v="$version" '
+            index($0, "## [" v "]") == 1 { f = 1; next }
+            /^## \[/ { f = 0 }
+            f
+          ' CHANGELOG.md | sed '/./,$!d' > release-notes.md
+          printf '\n**Discord**: https://discord.gg/pecE8MTPVr\n' >> release-notes.md
+
       - name: Publish draft Release
         uses: softprops/action-gh-release@v2
         with:
           files: resonus-${{ github.ref_name }}.apk
           draft: true
-          generate_release_notes: true
+          body_path: release-notes.md

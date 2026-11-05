@@ -36,11 +36,10 @@ const BUTTONS: Record<PlayerButtonKey, { label: string; icon: keyof typeof Icon.
   queue: { label: 'Queue', icon: 'layers-outline' },
 };
 
-function ButtonRow({ button, capped }: { button: PlayerButton; capped: boolean }) {
+function ButtonRow({ button }: { button: PlayerButton }) {
   const t = useT();
   const drag = useReorderableDrag();
   const setPlayerButton = useSettings((s) => s.setPlayerButton);
-  const setShowDeviceName = useSettings((s) => s.setShowDeviceName);
   const accent = useAccent();
   const { label, icon } = BUTTONS[button.key];
   return (
@@ -62,13 +61,7 @@ function ButtonRow({ button, capped }: { button: PlayerButton; capped: boolean }
       </View>
       <Switch
         value={button.enabled}
-        disabled={capped}
-        onValueChange={(v) => {
-          setPlayerButton(button.key, v);
-          // The name hangs off the devices button: with it gone the toggle
-          // has nothing to name, so it goes off too instead of freezing on.
-          if (button.key === 'devices' && !v) setShowDeviceName(false);
-        }}
+        onValueChange={(v) => setPlayerButton(button.key, v)}
         trackColor={{ false: colors.control, true: accent }}
         thumbColor={colors.knob}
       />
@@ -87,67 +80,42 @@ export default function PlayerButtonsSettings() {
   const setPlayerButtons = useSettings((s) => s.setPlayerButtons);
   const layout = useSettings((s) => s.playerButtonsLayout);
   const setLayout = useSettings((s) => s.setPlayerButtonsLayout);
-  const showDeviceName = useSettings((s) => s.showDeviceName);
-  const setShowDeviceName = useSettings((s) => s.setShowDeviceName);
-  const showLosslessTag = useSettings((s) => s.showLosslessTag);
-  const setShowLosslessTag = useSettings((s) => s.setShowLosslessTag);
-  // Device extras widen the row: with any of them on the row is always
-  // spread, and holds at most three buttons (two when both are on) — the
-  // player enforces the same cap, so a saved row from before still fits.
-  const extrasOn = (showDeviceName ? 1 : 0) + (showLosslessTag ? 1 : 0);
-  const maxEnabled = extrasOn === 2 ? 2 : extrasOn === 1 ? 3 : playerButtons.length;
-  const enabledCount = playerButtons.filter((b) => b.enabled).length;
-  // The device name hangs off the devices button: without it the toggle has
-  // nothing to name and stays greyed out.
-  const devicesEnabled = playerButtons.some((b) => b.key === 'devices' && b.enabled);
+  const showLocalOutput = useSettings((s) => s.showLocalOutput);
+  const setShowLocalOutput = useSettings((s) => s.setShowLocalOutput);
   return (
     <SettingsSafeArea>
       <ScreenHeader title={t('Bottom row')} />
       <View style={[styles.layout, { paddingHorizontal: centredPadding(width, spacing.lg) }]}>
         <SelectList
           label={t('Arrangement')}
-          value={extrasOn > 0 ? 'spread' : layout}
+          value={layout}
           onChange={setLayout}
-          disabled={extrasOn > 0}
-          disabledLabel={t('Spread across the width')}
           options={[
             { value: 'centered', label: t('Grouped in the middle') },
             { value: 'spread', label: t('Spread across the width') },
+            { value: 'split', label: t('Devices on the left') },
           ]}
         />
-      </View>
-      <View style={[styles.toggles, { paddingHorizontal: centredPadding(width, spacing.lg) }]}>
+        {/* A cast target is always named: it is the way back to the phone.
+            The phone's own output only if asked for (#274). */}
         <SwitchList
           options={[
             {
-              label: t('Show device name'),
-              description: t('Show the output name beside the devices button.'),
-              value: showDeviceName,
-              onChange: setShowDeviceName,
-              disabled: !devicesEnabled,
-            },
-            {
-              label: t('Show lossless tag'),
-              description: t('Show a lossless badge beside the output when the stream is bit-perfect.'),
-              value: showLosslessTag,
-              onChange: setShowLosslessTag,
+              label: t('Name the headphones or speaker'),
+              description: t(
+                'The devices button shows the Bluetooth or wired device the phone is playing through.',
+              ),
+              value: showLocalOutput,
+              onChange: setShowLocalOutput,
             },
           ]}
         />
       </View>
-      <Text style={styles.hint}>
-        {extrasOn > 0
-          ? t('With device info on, the row holds at most {n} buttons, spread across the width.', {
-              n: maxEnabled,
-            })
-          : t('Drag to reorder, toggle to show or hide.')}
-      </Text>
+      <Text style={styles.hint}>{t('Drag to reorder, toggle to show or hide.')}</Text>
       <ReorderableList
         data={playerButtons}
         keyExtractor={(item) => item.key}
-        renderItem={({ item }) => (
-          <ButtonRow button={item} capped={!item.enabled && enabledCount >= maxEnabled} />
-        )}
+        renderItem={({ item }) => <ButtonRow button={item} />}
         onReorder={({ from, to }: ReorderableListReorderEvent) => {
           const next = playerButtons.slice();
           const [moved] = next.splice(from, 1);
@@ -164,9 +132,7 @@ export default function PlayerButtonsSettings() {
 }
 
 const styles = themed((colors) => ({
-  layout: { marginBottom: spacing.md },
-  // A step between the arrangement card and the toggles below it.
-  toggles: { marginTop: spacing.lg },
+  layout: { marginBottom: spacing.md, gap: spacing.sm },
   hint: {
     color: colors.textMuted,
     fontSize: fontSize.xs,

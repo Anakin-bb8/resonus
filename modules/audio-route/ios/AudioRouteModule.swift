@@ -1,21 +1,17 @@
-import ExpoModulesCore
 import AVFoundation
+import ExpoModulesCore
 
 /**
- * Where the sound is going, from AVAudioSession. Route info needs no
- * permission and no entitlement: the port name is what the system calls the
- * device ("AirPods Pro", "iPhone"), and `routeChanged` fires on every
- * plug, pairing and handoff.
- *
- * iOS never says what a Bluetooth device is beyond its transport: there is
- * no public API for the device class, so Bluetooth stays Bluetooth here and
- * the icon with it. (Android resolves headphones/speaker/car properly.)
+ * Where the phone's own sound is going, from AVAudioSession. Route info needs
+ * no permission and no entitlement: the port name is what the system calls
+ * the device ("AirPods Pro"), and the route change notification fires on
+ * every plug, pairing and handoff.
  */
 public class AudioRouteModule: Module {
   private var observer: NSObjectProtocol?
 
-  private func kind(of portType: AVAudioSession.Port) -> String {
-    switch portType {
+  private func kind(of port: AVAudioSession.Port) -> String {
+    switch port {
     case .bluetoothA2DP, .bluetoothLE, .bluetoothHFP:
       return "bluetooth"
     case .headphones, .headsetMic, .usbAudio, .lineOut:
@@ -33,9 +29,11 @@ public class AudioRouteModule: Module {
 
   private func currentRoute() -> [String: String] {
     guard let output = AVAudioSession.sharedInstance().currentRoute.outputs.first else {
-      return ["kind": "builtin", "name": "", "deviceClass": "", "needsPermission": "false"]
+      return ["kind": "builtin", "name": ""]
     }
-    return ["kind": kind(of: output.portType), "name": output.portName, "deviceClass": "", "needsPermission": "false"]
+    let kind = kind(of: output.portType)
+    // The speaker's port name is just "Speaker", which says nothing.
+    return ["kind": kind, "name": kind == "builtin" ? "" : output.portName]
   }
 
   public func definition() -> ModuleDefinition {

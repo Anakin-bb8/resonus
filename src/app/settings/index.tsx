@@ -6,11 +6,9 @@
  */
 import Icon from '@/components/Icon';
 import { useRouter } from 'expo-router';
-import { Image } from 'expo-image';
-import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import { Pressable, Switch, Text, View } from 'react-native';
 
-import { ScreenHeader, SettingsSafeArea, settingsStyles } from '@/components/SettingsUI';
+import { SettingsScroll, ScreenHeader, SettingsSafeArea, settingsStyles } from '@/components/SettingsUI';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/store/auth';
 import { anyDownloads, useDownloads } from '@/store/downloads';
@@ -53,12 +51,6 @@ export default function SettingsScreen({ asTab = false }: { asTab?: boolean }) {
     : offline
       ? t('Music on your device')
       : auth?.serverUrl.replace(/^https?:\/\//, '') ?? '';
-  // The picture for Home lives here: tapping it opens its screen.
-  const profileImageUri = useSettings((s) => s.profileImageUri);
-  const [photoFailed, setPhotoFailed] = useState(false);
-  useEffect(() => {
-    setPhotoFailed(false);
-  }, [profileImageUri]);
 
   // Offline, the categories are the same categories: each screen greys out what
   // needs a server rather than taking it away, so nothing here has to disappear
@@ -111,6 +103,7 @@ export default function SettingsScreen({ asTab = false }: { asTab?: boolean }) {
     ...(auth ? [{ key: 'network', title: 'Network', icon: 'git-network-outline' as const }] : []),
     // Theme lives inside Appearance (row with chevron, like Language).
     { key: 'personalization', title: 'Appearance', icon: 'color-palette-outline' as const },
+    { key: 'home-navigation', title: 'Navigation', icon: 'grid-outline' as const },
     { key: 'about', title: 'About::app', icon: 'information-circle-outline' as const },
   ];
 
@@ -120,26 +113,12 @@ export default function SettingsScreen({ asTab = false }: { asTab?: boolean }) {
       {/* The same centred pane every other settings screen gets from
           `SettingsPage`; this one draws its own header, so it says it here. */}
       <View style={settingsStyles.pane}>
-      <ScrollView contentContainerStyle={settingsStyles.content}>
+      <SettingsScroll>
         <View style={[settingsStyles.cardBox, styles.accountCard]}>
           <View style={[settingsStyles.row, styles.profileRow]}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t('Profile picture')}
-              onPress={() => router.push('/settings/profile-picture')}
-            >
-              {profileImageUri && !photoFailed ? (
-                <Image
-                  source={{ uri: profileImageUri }}
-                  style={styles.avatarPhoto}
-                  onError={() => setPhotoFailed(true)}
-                />
-              ) : (
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{initial}</Text>
-                </View>
-              )}
-            </Pressable>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{initial}</Text>
+            </View>
             <View style={settingsStyles.rowLabelBox}>
               <Text style={styles.profileName}>{name}</Text>
               <Text style={settingsStyles.rowDescription} numberOfLines={1}>
@@ -209,7 +188,7 @@ export default function SettingsScreen({ asTab = false }: { asTab?: boolean }) {
           </Pressable>
         ))}
 
-      </ScrollView>
+      </SettingsScroll>
       </View>
     </SettingsSafeArea>
   );
@@ -228,11 +207,6 @@ const styles = themed((colors) => ({
     justifyContent: 'center',
   },
   avatarText: { color: colors.text, fontSize: fontSize.lg, letterSpacing: tracking.heading, fontWeight: '500' },
-  avatarPhoto: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.pill,
-  },
   profileName: { color: colors.text, fontSize: fontSize.md, fontWeight: '500' },
   flex: { flex: 1 },
   sectionRow: {

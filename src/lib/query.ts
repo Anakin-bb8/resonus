@@ -27,3 +27,34 @@ export function clearProfileCache(): void {
   void queryClient.cancelQueries();
   queryClient.clear();
 }
+
+/**
+ * The lists that show whole shows and single episodes: the browser
+ * (`podcastChannels`), Home's shelf (`podcastRecentEpisodes`) and the two
+ * favorite lists. A feed read changes what these hold even when the show's
+ * own screen is the query doing the reading — that one answers itself, so it
+ * is deliberately not touched here.
+ */
+export function invalidatePodcastLists(): void {
+  queryClient.invalidateQueries({ queryKey: ['podcastChannels'] });
+  queryClient.invalidateQueries({ queryKey: ['podcastRecentEpisodes'] });
+  queryClient.invalidateQueries({ queryKey: ['podcastFavoriteChannels'] });
+  queryClient.invalidateQueries({ queryKey: ['podcastFavoriteEpisodes'] });
+}
+
+/**
+ * Everything that shows a podcast: the open show screens (`['podcast', id]`)
+ * and the quick grid's covers (`['podcast','covers',…]` — the prefix matches
+ * them too), plus every list. Read after a show is added, removed or
+ * refreshed, so no surface keeps an answer that the read just changed.
+ */
+export function invalidatePodcastCaches(): void {
+  queryClient.invalidateQueries({ queryKey: ['podcast'] });
+  invalidatePodcastLists();
+}
+
+/** The hearts and the two favorite lists, after a podcast heart goes on or off. */
+export function invalidatePodcastFavorites(): void {
+  queryClient.invalidateQueries({ queryKey: ['podcastFavorites'] });
+  invalidatePodcastLists();
+}

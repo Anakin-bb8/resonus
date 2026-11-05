@@ -1,43 +1,47 @@
 package expo.modules.audioroute
 
-import android.Manifest
-import android.bluetooth.BluetoothClass
-import android.bluetooth.BluetoothManager
 import android.content.Context
-import android.content.pm.PackageManager
+import android.media.AudioAttributes
+import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import androidx.core.content.ContextCompat
-import expo.modules.interfaces.permissions.Permissions.askForPermissionsWithPermissionsManager
-import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
 /**
- * Where the sound is going, from the framework's AudioManager.
+ * Where the phone's own sound is going: the kind of output and the name the
+ * system gives it ("Pixel Buds", "USB-C headphones").
  *
- * Only the device kinds: no permission is needed to list them, while reading
- * a Bluetooth device's advertised name or class wants BLUETOOTH_CONNECT,
- * which is asked for lazily the first time a Bluetooth route has neither.
- * Everything is wrapped: audio hardware that misbehaves reports no route
- * rather than taking the bridge down.
+ * Nothing here needs a permission. The product name of a Bluetooth device
+ * comes with the AudioDeviceInfo; its address and class would want
+ * BLUETOOTH_CONNECT, which a music player has no business asking for, so a
+ * Bluetooth device is just Bluetooth. Everything is wrapped: audio hardware
+ * that misbehaves reports the phone itself rather than taking the bridge down.
  */
 class AudioRouteModule : Module() {
   private val audioManager: AudioManager? by lazy {
     appContext.reactContext?.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
   }
 
-  private val deviceCallback = object : AudioManager.AudioDeviceCallback() {
-    override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>?) {
-      sendEvent("routeChanged", currentRoute())
-    }
+  private val handler = Handler(Looper.getMainLooper())
 
-    override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>?) {
-      sendEvent("routeChanged", currentRoute())
-    }
+  // A headset is listed a moment before the music is routed to it, so the
+  // route is told again once the switch has had time to happen.
+  private val resend = Runnable { sendEvent("routeChanged", currentRoute()) }
+
+  private val deviceCallback = object : AudioDeviceCallback() {
+    override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>?) = changed()
+
+    override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>?) = changed()
+  }
+
+  private fun changed() {
+    sendEvent("routeChanged", currentRoute())
+    handler.removeCallbacks(resend)
+    handler.postDelayed(resend, 800)
   }
 
   private fun kindOf(type: Int): String = when (type) {
@@ -45,18 +49,24 @@ class AudioRouteModule : Module() {
     AudioDeviceInfo.TYPE_BLUETOOTH_SCO,
     AudioDeviceInfo.TYPE_BLE_HEADSET,
     AudioDeviceInfo.TYPE_BLE_SPEAKER,
+    AudioDeviceInfo.TYPE_BLE_BROADCAST,
     AudioDeviceInfo.TYPE_HEARING_AID -> "bluetooth"
     AudioDeviceInfo.TYPE_WIRED_HEADSET,
     AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
     AudioDeviceInfo.TYPE_USB_DEVICE,
     AudioDeviceInfo.TYPE_USB_HEADSET,
-    AudioDeviceInfo.TYPE_USB_ACCESSORY -> "wired"
+    AudioDeviceInfo.TYPE_USB_ACCESSORY,
+    AudioDeviceInfo.TYPE_LINE_ANALOG,
+    AudioDeviceInfo.TYPE_LINE_DIGITAL,
+    AudioDeviceInfo.TYPE_AUX_LINE -> "wired"
     AudioDeviceInfo.TYPE_BUILTIN_SPEAKER,
-    AudioDeviceInfo.TYPE_BUILTIN_EARPIECE -> "builtin"
+    AudioDeviceInfo.TYPE_BUILTIN_SPEAKER_SAFE,
+    AudioDeviceInfo.TYPE_BUILTIN_EARPIECE,
+    AudioDeviceInfo.TYPE_TELEPHONY -> "builtin"
     else -> "other"
   }
 
-  /** Lower wins: the first interesting output, else whatever is there. */
+  /** Lower wins, for when the system won't say which output music takes. */
   private fun rankOf(type: Int): Int = when (kindOf(type)) {
     "bluetooth" -> 0
     "wired" -> 1
@@ -64,80 +74,35 @@ class AudioRouteModule : Module() {
     else -> 3
   }
 
-  private fun hasBtConnect(): Boolean {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
-    val context = appContext.reactContext ?: return false
-    return ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) ==
-      PackageManager.PERMISSION_GRANTED
-  }
-
   /**
-   * What the system says the Bluetooth device is (headphones, a speaker, the
-   * car), looked up by hardware address among the bonded devices. Null when
-   * there is nothing to ask — no address, no permission, or an unknown class —
-   * and the client keeps the generic Bluetooth mark.
+   * The output music goes to. Android 13+ answers that directly; before it,
+   * the likeliest of the connected outputs, the way the system itself picks
+   * (a headset over the speaker).
    */
-  private fun bluetoothClassFor(address: String?): String? {
-    if (address.isNullOrEmpty() || !hasBtConnect()) return null
-    return runCatching {
-      val context = appContext.reactContext ?: return null
-      val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
-      val adapter = try {
-        manager?.adapter
-      } catch (_: SecurityException) {
-        null
-      } ?: return null
-      val cls = try {
-        adapter.getRemoteDevice(address).bluetoothClass
-      } catch (_: IllegalArgumentException) {
-        null
-      } catch (_: SecurityException) {
-        null
-      } ?: return null
-      if (cls.majorDeviceClass != BluetoothClass.Device.Major.AUDIO_VIDEO) return null
-      when (cls.deviceClass) {
-        BluetoothClass.Device.AUDIO_VIDEO_HEADPHONES,
-        BluetoothClass.Device.AUDIO_VIDEO_HEADSET,
-        BluetoothClass.Device.AUDIO_VIDEO_HANDSFREE,
-        BluetoothClass.Device.AUDIO_VIDEO_MICROPHONE,
-        BluetoothClass.Device.AUDIO_VIDEO_PORTABLE_AUDIO,
-        BluetoothClass.Device.AUDIO_VIDEO_HIFI_AUDIO -> "headphones"
-        BluetoothClass.Device.AUDIO_VIDEO_LOUDSPEAKER -> "speaker"
-        BluetoothClass.Device.AUDIO_VIDEO_CAR_AUDIO -> "car"
-        else -> null
-      }
-    }.getOrNull()
+  private fun mediaOutput(manager: AudioManager): AudioDeviceInfo? {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      val attributes = AudioAttributes.Builder()
+        .setUsage(AudioAttributes.USAGE_MEDIA)
+        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+        .build()
+      runCatching { manager.getAudioDevicesForAttributes(attributes).firstOrNull() }
+        .getOrNull()
+        ?.let { return it }
+    }
+    val outputs = runCatching { manager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).toList() }
+      .getOrElse { emptyList() }
+    return outputs.minWithOrNull(compareBy({ rankOf(it.type) }, { it.id }))
   }
 
   private fun currentRoute(): Map<String, String> {
-    val none = mapOf("kind" to "builtin", "name" to "", "deviceClass" to "", "needsPermission" to "false")
-    val manager = audioManager ?: return none
-    val outputs = runCatching {
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-        manager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).toList()
-      } else {
-        emptyList()
-      }
-    }.getOrElse { emptyList() }
-    if (outputs.isEmpty()) return none
-    val device = outputs.minWithOrNull(compareBy({ rankOf(it.type) }, { it.id })) ?: outputs[0]
+    val phone = mapOf("kind" to "builtin", "name" to "")
+    val manager = audioManager ?: return phone
+    val device = runCatching { mediaOutput(manager) }.getOrNull() ?: return phone
     val kind = kindOf(device.type)
-    val name = runCatching { device.productName?.toString().orEmpty() }.getOrElse { "" }
-    // The hardware address is withheld without BLUETOOTH_CONNECT on Android
-    // 12+, which is also what the class lookup needs: one permission covers
-    // both the real name and the real kind.
-    val address = runCatching { device.address.orEmpty() }.getOrElse { "" }
-    val deviceClass = if (kind == "bluetooth") bluetoothClassFor(address) else null
-    val needsPermission = kind == "bluetooth" &&
-      deviceClass == null &&
-      (address.isNullOrEmpty() || name.isEmpty()) &&
-      !hasBtConnect()
-    return mapOf(
-      "kind" to kind,
-      "name" to name,
-      "deviceClass" to deviceClass.orEmpty(),
-      "needsPermission" to if (needsPermission) "true" else "false",
-    )
+    // The speaker's product name is the phone model, which says nothing.
+    val name = if (kind == "builtin") "" else
+      runCatching { device.productName?.toString()?.trim().orEmpty() }.getOrElse { "" }
+    return mapOf("kind" to kind, "name" to name)
   }
 
   override fun definition() = ModuleDefinition {
@@ -147,35 +112,13 @@ class AudioRouteModule : Module() {
 
     Function("getRoute") { currentRoute() }
 
-    AsyncFunction("requestBluetoothPermission") { promise: Promise ->
-      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || hasBtConnect()) {
-        promise.resolve(true)
-        return@AsyncFunction
-      }
-      askForPermissionsWithPermissionsManager(
-        appContext.permissions,
-        promise,
-        Manifest.permission.BLUETOOTH_CONNECT,
-      )
-    }
-
     OnCreate {
-      runCatching {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-          audioManager?.registerAudioDeviceCallback(
-            deviceCallback,
-            Handler(Looper.getMainLooper()),
-          )
-        }
-      }
+      runCatching { audioManager?.registerAudioDeviceCallback(deviceCallback, handler) }
     }
 
     OnDestroy {
-      runCatching {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-          audioManager?.unregisterAudioDeviceCallback(deviceCallback)
-        }
-      }
+      handler.removeCallbacks(resend)
+      runCatching { audioManager?.unregisterAudioDeviceCallback(deviceCallback) }
     }
   }
 }
