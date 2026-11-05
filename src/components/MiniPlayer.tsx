@@ -253,7 +253,7 @@ export function MiniPlayer({ active = true }: { active?: boolean }) {
           id={song.id}
           starred={favorited}
           podcast={podcastHeart}
-          size={24}
+          size={26}
           hold={openPlaylistSheet}
         />
       ) : null}
@@ -296,7 +296,7 @@ export function MiniPlayer({ active = true }: { active?: boolean }) {
         ) : (
           <Icon
             name={isPlaying ? 'pause' : 'play'}
-            size={28}
+            size={26}
             color={colors.text}
           />
         )}
@@ -337,6 +337,8 @@ const styles = themed((colors) => ({
     gap: spacing.md,
     backgroundColor: colors.surfaceHighlight,
     padding: spacing.sm,
+    // A step in from the edge: the buttons sit further left, clear of it.
+    paddingRight: spacing.md,
     // lg with Round, a step down with Pointier.
     borderRadius: restyled(radius.lg, radius.md),
     overflow: 'hidden',
@@ -362,7 +364,7 @@ const styles = themed((colors) => ({
     overflow: 'hidden',
   },
   progressFill: { height: 3, borderRadius: radius.pill, backgroundColor: colors.text },
-  spinner: { width: 28, height: 28 },
+  spinner: { width: 26, height: 26 },
   details: {
     flex: 1,
     flexDirection: 'row',

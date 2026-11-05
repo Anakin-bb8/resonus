@@ -1,4 +1,4 @@
-/** Heart to mark/unmark favorites (Subsonic star/unstar). */
+/** Plus-in-a-circle to mark favorites, filled check when marked (Subsonic star/unstar). */
 import Icon from '@/components/Icon';
 import { useEffect, useState } from 'react';
 import { Pressable, type GestureResponderEvent } from 'react-native';
@@ -21,9 +21,9 @@ interface Props {
   /** Song lists only: take the favourite off behind an «Undo» toast (#98). */
   undo?: boolean;
   /**
-   * What holding the heart does: opens the sheet that adds the song to a
+   * What holding the mark does: opens the sheet that adds the song to a
    * playlist, and nothing is asked of the favourite. Only the screens that
-   * have such a sheet and a song that can go into one pass it; a heart in a
+   * have such a sheet and a song that can go into one pass it; a mark in a
    * song list passes nothing and stays a tap.
    *
    * Offering it is also what makes React Native swallow the tap that comes
@@ -32,16 +32,27 @@ interface Props {
    */
   hold?: () => void;
   /**
-   * Podcasts keep their hearts in SQLite, not the server's starring. The heart
+   * Podcasts keep their marks in SQLite, not the server's starring. The mark
    * behaves the same — it lights, it is guarded against a double tap, it toasts
    * — but the tap writes the device's own favorite and refreshes the podcast
    * lists instead of asking a server. `kind` says whether the id is a show or
    * one of its episodes; `channelId` is the show either way.
    */
   podcast?: { kind: 'channel' | 'episode'; channelId: string };
+  /** Dimmed when unmarked, like the quieter header buttons around it. */
+  dimmed?: boolean;
 }
 
-export function FavoriteButton({ id, type = 'song', starred, size = 22, undo, podcast, hold: onHold }: Props) {
+export function FavoriteButton({
+  id,
+  type = 'song',
+  starred,
+  size = 22,
+  undo,
+  podcast,
+  hold: onHold,
+  dimmed,
+}: Props) {
   const auth = useAuthStore((s) => s.auth);
   const offline = useAuthStore((s) => s.offline);
   const t = useT();
@@ -50,7 +61,7 @@ export function FavoriteButton({ id, type = 'song', starred, size = 22, undo, po
   const [busy, setBusy] = useState(false);
 
   // Resync with the current song: the same component is reused when switching
-  // tracks (mini-player/player), so without this the heart would stay "stuck"
+  // tracks (mini-player/player), so without this the mark would stay "stuck"
   // to the previous song's state.
   useEffect(() => {
     setFav(!!starred);
@@ -134,9 +145,9 @@ export function FavoriteButton({ id, type = 'song', starred, size = 22, undo, po
       accessibilityLabel={fav ? t('Remove from favorites') : t('Add to favorites')}
     >
       <Icon
-        name={fav ? 'heart' : 'heart-outline'}
+        name={fav ? 'checkmark-circle' : 'add-circle-outline'}
         size={size}
-        color={fav ? colors.accent : colors.textSecondary}
+        color={fav ? colors.accent : dimmed ? colors.textSecondary : colors.text}
       />
     </Pressable>
   );
