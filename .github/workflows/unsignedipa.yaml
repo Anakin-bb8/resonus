@@ -12,7 +12,10 @@ on:
 
 jobs:
   build:
-    runs-on: macos-latest
+    # macos-15, not macos-latest: both images carry Xcode 26 (macos-15 has
+    # 26.3), but the 26 arm64 pool macOS-latest points at can sit queued past
+    # GitHub's 15-minute runner wait and the job is cancelled before it starts.
+    runs-on: macos-15
     permissions:
       contents: write
 
